@@ -166,14 +166,16 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
   try {
     const { data: authData } = await supabase.auth.getUser();
     if (authData?.user?.id) {
+      const campusCode = authorInstitutionCode || 'UI';
       const { error } = await supabase.from('posts').insert({
         id: postId,
         author_id: authData.user.id,
+        campus_code: campusCode,
         title: payload.title,
         content: payload.content,
-        category: payload.category,
+        category: payload.category || 'General',
         visibility_scope: payload.visibilityScope || 'campus',
-        image_url: payload.imageUrl,
+        image_url: payload.imageUrl || null,
       });
       if (error) {
         console.warn('[Posts] Supabase create post error:', error.message);
@@ -369,6 +371,14 @@ export async function voteOnPoll(postId: string, optionId: string): Promise<void
 export async function deletePost(postId: string): Promise<boolean> {
   postsState = postsState.filter((p) => p.id !== postId);
   delete commentsState[postId];
+  try {
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) {
+      console.warn('[Posts] Supabase deletePost error:', error.message);
+    }
+  } catch (err) {
+    console.warn('[Posts] Backend deletePost error:', err);
+  }
   return true;
 }
 
@@ -382,7 +392,21 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
     return p;
   });
   if (!updated) throw new Error('Post not found');
+
+  try {
+    const dbPayload: any = {};
+    if (updates.title) dbPayload.title = updates.title;
+    if (updates.content) dbPayload.content = updates.content;
+    if (updates.category) dbPayload.category = updates.category;
+    if (updates.imageUrl) dbPayload.image_url = updates.imageUrl;
+    if (updates.isPinned !== undefined) dbPayload.is_pinned = updates.isPinned;
+
+    if (Object.keys(dbPayload).length > 0) {
+      await supabase.from('posts').update(dbPayload).eq('id', postId);
+    }
+  } catch (err) {
+    console.warn('[Posts] Backend updatePost error:', err);
+  }
+
   return updated;
 }
-
-

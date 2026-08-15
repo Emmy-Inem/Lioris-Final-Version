@@ -96,6 +96,12 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         queryClient.invalidateQueries({ queryKey: ['feed'] });
       }
 
+      // If user ban/suspension or reported user target, enforce is_suspended on profiles
+      if (punishmentType === 'permaban' || punishmentType === 'shadowban' || report.targetType === 'user') {
+        const { supabase } = await import('@/api/supabase');
+        await supabase.from('profiles').update({ is_suspended: true }).eq('id', report.targetId);
+      }
+
       recordAuditLogEntry({
         action: 'report_resolved',
         summary: `Moderation Action on #${report.id.substring(0, 8)} (${report.targetType}): ${actionLabel}`,

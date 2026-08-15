@@ -193,9 +193,6 @@ export async function listIncomingConnectionRequests(): Promise<IncomingConnecti
   return incomingRequestsState;
 }
 
-// "People you may know" — a mixed-role suggestion list, distinct from
-// searchAlumniDirectory (which only returns alumni). Backs the
-// Notifications > Connections tab's suggestion cards.
 export interface SuggestedConnection {
   id: string;
   name: string;
@@ -205,18 +202,30 @@ export interface SuggestedConnection {
   level: number;
 }
 
-const MOCK_SUGGESTIONS: SuggestedConnection[] = [
-  { id: 'sugg-1', name: 'Lioris Admin', avatarUrl: null, roleLabel: 'Staff', department: 'Administration', level: 12 },
-  { id: 'sugg-2', name: 'Chioma Nwosu', avatarUrl: null, roleLabel: 'Student', department: 'Computer Science', level: 2 },
-  { id: 'sugg-3', name: 'Alex Hunter', avatarUrl: null, roleLabel: 'Student', department: 'Graphic Design', level: 2 },
-  { id: 'sugg-4', name: 'Sam Richards', avatarUrl: null, roleLabel: 'Student', department: 'Biology', level: 2 },
-];
-
 export async function listSuggestedConnections(): Promise<SuggestedConnection[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: SuggestedConnection[] }>('/connections/suggestions');
-    return data.items;
-  }, MOCK_SUGGESTIONS);
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+    let query = supabase.from('profiles').select('id, full_name, role, department, level, avatar_url').limit(10);
+    if (currentUserId) {
+      query = query.neq('id', currentUserId);
+    }
+    const { data, error } = await query;
+    if (!error && data && data.length > 0) {
+      return data.map((p: any) => ({
+        id: p.id,
+        name: p.full_name || 'Campus Peer',
+        avatarUrl: p.avatar_url || null,
+        roleLabel: (p.role === 'admin' || p.role === 'staff') ? 'Staff' : p.role === 'alumni' ? 'Alumni' : 'Student',
+        department: p.department || 'Academic Department',
+        level: p.level || 300,
+      }));
+    }
+  } catch (err) {
+    console.warn('[Connections] Supabase suggestions error:', err);
+  }
+
+  return [];
 }
 
 // User Safety & Content Filtering — Persists user blocking to Supabase & active session

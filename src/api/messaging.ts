@@ -237,7 +237,6 @@ export async function sendMessage(
         channel_id: conversationId,
         sender_id: authUid,
         content,
-        message_type: 'text',
       });
       if (error) {
         console.warn('[Messaging] Supabase persistence error:', error.message);

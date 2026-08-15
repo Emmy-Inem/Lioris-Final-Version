@@ -113,26 +113,26 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
   try {
     const { data, error } = await supabase
       .from('events')
-      .select('*')
-      .order('start_at', { ascending: true });
+      .select('*, profiles:creator_id(full_name)')
+      .order('start_time', { ascending: true });
 
     if (!error && data && data.length > 0) {
       const dbEvents: CampusEvent[] = data.map((row: any) => ({
         id: row.id,
-        organizerId: row.organizer_id || 'organizer',
-        organizerName: row.organizer_name || 'Campus Event Organizer',
+        organizerId: row.creator_id || 'organizer',
+        organizerName: row.profiles?.full_name || 'Campus Event Organizer',
         title: row.title,
         description: row.description,
         category: row.category as any,
-        location: row.location,
-        startAt: row.start_at,
-        endAt: row.end_at,
+        location: row.venue || 'Campus Main Venue',
+        startAt: row.start_time,
+        endAt: row.end_time,
         capacity: row.capacity,
-        rsvpCount: row.rsvp_count || 0,
+        rsvpCount: row.registered_count || 0,
         isRsvpd: false,
-        approvalStatus: (row.approval_status as any) || 'approved',
+        approvalStatus: row.status === 'cancelled' ? 'rejected' : 'approved',
         visibilityScope: (row.visibility_scope as any) || 'global',
-        coverImageUrl: row.image_url,
+        coverImageUrl: row.banner_url,
       }));
       // Merge unique
       const merged = [...dbEvents];
@@ -144,8 +144,8 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
       eventsState = merged;
       return filterMockEvents(query);
     }
-  } catch {
-    // Fallback to local session
+  } catch (err) {
+    console.warn('[Events] Supabase listEvents error:', err);
   }
   return filterMockEvents(query);
 }
@@ -155,28 +155,32 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
   const found = eventsState.find((e) => e.id === id);
   if (found) return found;
   try {
-    const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('events')
+      .select('*, profiles:creator_id(full_name)')
+      .eq('id', id)
+      .single();
     if (!error && data) {
       return {
         id: data.id,
-        organizerId: data.organizer_id,
-        organizerName: data.organizer_name || 'Campus Event Organizer',
+        organizerId: data.creator_id,
+        organizerName: data.profiles?.full_name || 'Campus Event Organizer',
         title: data.title,
         description: data.description,
         category: data.category,
-        location: data.location,
-        startAt: data.start_at,
-        endAt: data.end_at,
+        location: data.venue || 'Campus Main Venue',
+        startAt: data.start_time,
+        endAt: data.end_time,
         capacity: data.capacity,
-        rsvpCount: data.rsvp_count || 0,
+        rsvpCount: data.registered_count || 0,
         isRsvpd: false,
-        approvalStatus: data.approval_status || 'approved',
+        approvalStatus: data.status === 'cancelled' ? 'rejected' : 'approved',
         visibilityScope: data.visibility_scope || 'global',
-        coverImageUrl: data.image_url,
+        coverImageUrl: data.banner_url,
       };
     }
-  } catch {
-    // Fallback
+  } catch (err) {
+    console.warn('[Events] Supabase getEvent error:', err);
   }
   return null;
 }
@@ -184,9 +188,10 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
 export interface CreateEventPayload {
   title: string;
   description: string;
-  category: EventCategory;
+  category: string;
   location: string;
-  visibilityScope: 'student' | 'alumni' | 'global';
+  campusCode?: string;
+  visibilityScope?: 'campus' | 'global';
   startAt: string;
   endAt: string;
   imageUrl?: string | null;
@@ -217,25 +222,31 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
     rsvpCount: 0,
     capacity: null,
     isRsvpd: false,
-    approvalStatus: 'pending',
+    approvalStatus: 'approved' as const,
     ...payload,
+    category: (payload.category as any) || 'academic',
+    visibilityScope: (payload.visibilityScope as any) || 'global',
+    coverImageUrl: payload.imageUrl,
   };
   eventsState = [created, ...eventsState];
 
   try {
     const { data: authData } = await supabase.auth.getUser();
     if (authData?.user?.id) {
+      const campusCode = payload.campusCode || 'UI';
       const { error } = await supabase.from('events').insert({
         id: eventId,
         creator_id: authData.user.id,
+        campus_code: campusCode,
         title: payload.title,
         description: payload.description,
-        category: payload.category,
-        location: payload.location,
+        category: payload.category || 'Academic',
+        venue: payload.location || 'Campus Auditorium',
         visibility_scope: payload.visibilityScope || 'global',
-        start_at: payload.startAt,
-        end_at: payload.endAt,
-        image_url: payload.imageUrl,
+        start_time: payload.startAt,
+        end_time: payload.endAt,
+        banner_url: payload.imageUrl || null,
+        registered_count: 0,
       });
       if (error) {
         console.warn('[Events] Supabase create event error:', error.message);
@@ -267,7 +278,7 @@ export async function rsvpToEvent(
 
     if (userId) {
       if (action === 'rsvp') {
-        const { error } = await supabase.from('event_attendees').insert({ event_id: id, user_id: userId, status: 'confirmed' });
+        const { error } = await supabase.from('event_attendees').insert({ event_id: id, user_id: userId });
         if (error) console.warn('[Events] RSVP error:', error.message);
       } else {
         const { error } = await supabase.from('event_attendees').delete().eq('event_id', id).eq('user_id', userId);
@@ -282,36 +293,42 @@ export async function rsvpToEvent(
 }
 
 export async function updateEvent(id: string, updates: Partial<CampusEvent>): Promise<CampusEvent | null> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.patch<CampusEvent>(`/events/${id}`, updates);
-    return data;
-  }
+  let updated: CampusEvent | null = null;
+  eventsState = eventsState.map((e) => {
+    if (e.id === id) {
+      updated = { ...e, ...updates };
+      return updated;
+    }
+    return e;
+  });
+
   try {
-    const { data } = await api.patch<CampusEvent>(`/events/${id}`, updates);
-    return data;
-  } catch {
-    let updated: CampusEvent | null = null;
-    eventsState = eventsState.map((e) => {
-      if (e.id === id) {
-        updated = { ...e, ...updates };
-        return updated;
-      }
-      return e;
-    });
-    return updated;
+    const dbPayload: any = {};
+    if (updates.title) dbPayload.title = updates.title;
+    if (updates.description) dbPayload.description = updates.description;
+    if (updates.category) dbPayload.category = updates.category;
+    if (updates.location) dbPayload.venue = updates.location;
+    if (updates.startAt) dbPayload.start_time = updates.startAt;
+    if (updates.endAt) dbPayload.end_time = updates.endAt;
+    if (updates.coverImageUrl) dbPayload.banner_url = updates.coverImageUrl;
+
+    if (Object.keys(dbPayload).length > 0) {
+      await supabase.from('events').update(dbPayload).eq('id', id);
+    }
+  } catch (err) {
+    console.warn('[Events] Supabase updateEvent error:', err);
   }
+
+  return updated;
 }
 
 export async function approveEvent(id: string) {
   const target = eventsState.find((e) => e.id === id);
-  if (!FALL_BACK_TO_MOCKS) {
-    await api.patch(`/events/${id}`, { approvalStatus: 'approved' });
-  } else {
-    try {
-      await api.patch(`/events/${id}`, { approvalStatus: 'approved' });
-    } catch {
-      eventsState = eventsState.map((e) => (e.id === id ? { ...e, approvalStatus: 'approved' } : e));
-    }
+  eventsState = eventsState.map((e) => (e.id === id ? { ...e, approvalStatus: 'approved' } : e));
+  try {
+    await supabase.from('events').update({ status: 'upcoming' }).eq('id', id);
+  } catch (err) {
+    console.warn('[Events] Supabase approveEvent error:', err);
   }
   await recordAuditLogEntry({
     action: 'event_approval_revoked',
@@ -324,19 +341,15 @@ export async function approveEvent(id: string) {
 // Admin moderation actions — backs the Events tab in the Admin Workdesk.
 export async function revokeEventApproval(id: string) {
   const target = eventsState.find((e) => e.id === id);
-  if (!FALL_BACK_TO_MOCKS) {
-    await api.patch(`/events/${id}`, { approvalStatus: 'rejected' });
-  } else {
-    try {
-      await api.patch(`/events/${id}`, { approvalStatus: 'rejected' });
-    } catch {
-      eventsState = eventsState.map((e) => (e.id === id ? { ...e, approvalStatus: 'rejected' } : e));
-    }
+  eventsState = eventsState.map((e) => (e.id === id ? { ...e, approvalStatus: 'rejected' } : e));
+  try {
+    await supabase.from('events').update({ status: 'cancelled' }).eq('id', id);
+  } catch (err) {
+    console.warn('[Events] Supabase revokeEventApproval error:', err);
   }
-  // PRD Section 6.2 — moderation decisions must be audit-logged.
   await recordAuditLogEntry({
     action: 'event_approval_revoked',
-    summary: `Revoked approval on event"${target?.title ?? id}"`,
+    summary: `Revoked approval on event "${target?.title ?? id}"`,
     targetType: 'event',
     targetId: id,
   });
@@ -344,18 +357,15 @@ export async function revokeEventApproval(id: string) {
 
 export async function purgeEvent(id: string) {
   const target = eventsState.find((e) => e.id === id);
-  if (!FALL_BACK_TO_MOCKS) {
-    await api.delete(`/events/${id}`);
-  } else {
-    try {
-      await api.delete(`/events/${id}`);
-    } catch {
-      eventsState = eventsState.filter((e) => e.id !== id);
-    }
+  eventsState = eventsState.filter((e) => e.id !== id);
+  try {
+    await supabase.from('events').delete().eq('id', id);
+  } catch (err) {
+    console.warn('[Events] Supabase purgeEvent error:', err);
   }
   await recordAuditLogEntry({
     action: 'event_purged',
-    summary: `Purged event"${target?.title ?? id}"`,
+    summary: `Purged event "${target?.title ?? id}"`,
     targetType: 'event',
     targetId: id,
   });

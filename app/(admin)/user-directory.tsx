@@ -50,7 +50,42 @@ export default function UserDirectoryScreen() {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('All Roles');
   const [campus, setCampus] = useState('All Campuses');
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const [users, setUsers] = useState<DirectoryUser[]>(INITIAL_USERS);
+
+  React.useEffect(() => {
+    async function loadProfiles() {
+      try {
+        const { supabase } = await import('@/api/supabase');
+        const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          const mapped: DirectoryUser[] = data.map((p: any) => ({
+            id: p.id,
+            fullName: p.full_name || 'Campus Member',
+            username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
+            email: p.email || '',
+            role: (p.role ? p.role.charAt(0).toUpperCase() + p.role.slice(1) : 'Student') as any,
+            campus: p.campus_code || 'UI',
+            department: p.department || 'General Studies',
+            matricNo: p.student_id_number || 'STU/2024/001',
+            suspended: p.is_suspended ?? false,
+            isVerified: p.verification_status === 'verified',
+            trustScore: p.trust_score ? Math.round(Number(p.trust_score)) : 85,
+            joinedDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2024',
+          }));
+          const merged = [...mapped];
+          for (const u of INITIAL_USERS) {
+            if (!merged.some((m) => m.id === u.id || m.email === u.email)) {
+              merged.push(u);
+            }
+          }
+          setUsers(merged);
+        }
+      } catch (err) {
+        console.warn('[UserDirectory] Supabase profiles load error:', err);
+      }
+    }
+    loadProfiles();
+  }, []);
 
   // Selected User Actions & Details Drawer
   const [selectedUser, setSelectedUser] = useState<DirectoryUser | null>(null);
@@ -111,7 +146,7 @@ export default function UserDirectoryScreen() {
           data: {
             full_name: newFullName.trim(),
             username,
-            role: newRole,
+            role: newRole.toLowerCase(),
             campus_code: newCampus,
             department: newDepartment.trim() || 'General Studies',
           },
@@ -126,7 +161,7 @@ export default function UserDirectoryScreen() {
           email: newEmail.trim(),
           full_name: newFullName.trim(),
           username,
-          role: newRole,
+          role: newRole.toLowerCase(),
           campus_code: newCampus,
           department: newDepartment.trim() || 'General Studies',
           student_id_number: matricNo,
@@ -212,9 +247,16 @@ export default function UserDirectoryScreen() {
     );
   }
 
-  function handleMutateRole(target: DirectoryUser, targetRole: DirectoryUser['role']) {
+  async function handleMutateRole(target: DirectoryUser, targetRole: DirectoryUser['role']) {
     haptics.medium();
     setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, role: targetRole } : u)));
+
+    try {
+      const { supabase } = await import('@/api/supabase');
+      await supabase.from('profiles').update({ role: targetRole.toLowerCase() }).eq('id', target.id);
+    } catch (err) {
+      console.warn('[UserDirectory] Supabase role update error:', err);
+    }
 
     recordAuditLogEntry({
       action: 'verification_approved',
@@ -229,7 +271,7 @@ export default function UserDirectoryScreen() {
     Alert.alert('Role Mutated', `${target.fullName} is now assigned the ${targetRole} role.`);
   }
 
-  function handleWipeAccount(target: DirectoryUser) {
+  async function handleWipeAccount(target: DirectoryUser) {
     haptics.error();
     Alert.alert(
       'Wipe Account Permanently?',
@@ -239,8 +281,14 @@ export default function UserDirectoryScreen() {
         {
           text: 'Wipe & Revoke',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             setUsers((prev) => prev.filter((u) => u.id !== target.id));
+            try {
+              const { supabase } = await import('@/api/supabase');
+              await supabase.from('profiles').delete().eq('id', target.id);
+            } catch (err) {
+              console.warn('[UserDirectory] Supabase wipe error:', err);
+            }
             recordAuditLogEntry({
               action: 'report_resolved',
               summary: `Wiped all account data and sessions for ${target.fullName} (@${target.username})`,

@@ -27,6 +27,7 @@ export async function listMentorships(): Promise<Mentorship[]> {
         const dbMentorships: Mentorship[] = data.map((row: any) => ({
           id: row.id,
           studentId: row.student_id,
+          studentName: row.student?.full_name || 'Student Mentee',
           mentorId: row.mentor_id,
           mentorName: row.mentor?.full_name || 'Verified Mentor',
           status: row.status as any,

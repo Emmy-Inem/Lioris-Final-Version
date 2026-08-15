@@ -136,6 +136,55 @@ export function UserProfilesTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
 
+  React.useEffect(() => {
+    async function loadProfiles() {
+      try {
+        const { supabase } = await import('@/api/supabase');
+        const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          const mapped: UserProfile[] = data.map((p: any) => ({
+            id: p.id,
+            fullName: p.full_name || 'Campus Member',
+            username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
+            email: p.email || '',
+            userType: (p.role || 'student') as UserRole,
+            graduationYear: 2026,
+            connectionsCount: 88,
+            bio: p.bio || `Verified ${p.role} on ${p.campus_code || 'UI'} node.`,
+            department: p.department || 'General Studies',
+            interests: ['Academic Excellence', 'Campus Life'],
+            institutionName: 'University of Ibadan',
+            institutionCode: p.campus_code || 'UI',
+            avatarUrl: (p.avatar_url || 'avatar_male') as any,
+            isVerified: p.verification_status === 'verified',
+            verificationStatus: p.verification_status === 'verified' ? 'verified' : 'none',
+            xp: 850,
+            level: 4,
+            reputationScore: 320,
+            trustLevel: 8,
+            streakDays: 14,
+            postsCount: 6,
+            resourcesCount: 12,
+            eventsCount: 4,
+            badgesCount: 3,
+            followersCount: 112,
+            followingCount: 80,
+          }));
+          const merged = [...mapped];
+          for (const u of INITIAL_USERS) {
+            if (!merged.some((m) => m.id === u.id || m.email === u.email)) {
+              merged.push(u);
+            }
+          }
+          setUsers(merged);
+        }
+      } catch (err) {
+        console.warn('[UserProfilesTab] Supabase load error:', err);
+      }
+    }
+    loadProfiles();
+  }, []);
+
   // Edit Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -168,7 +217,7 @@ export function UserProfilesTab() {
     setEditModalOpen(true);
   }
 
-  function handleSaveUser() {
+  async function handleSaveUser() {
     if (!selectedUser) return;
     haptics.medium();
     const updated = users.map((u) => {
@@ -179,7 +228,7 @@ export function UserProfilesTab() {
           userType: editRole,
           department: editDept.trim() || u.department,
           isVerified: editVerified,
-          verificationStatus: editVerified ? ('verified'as const) : ('none'as const),
+          verificationStatus: editVerified ? ('verified' as const) : ('none' as const),
           bio: editBio.trim() || u.bio,
         };
       }
@@ -187,6 +236,20 @@ export function UserProfilesTab() {
     });
 
     setUsers(updated);
+
+    try {
+      const { supabase } = await import('@/api/supabase');
+      await supabase.from('profiles').update({
+        full_name: editName.trim() || selectedUser.fullName,
+        role: editRole.toLowerCase(),
+        department: editDept.trim() || selectedUser.department,
+        verification_status: editVerified ? 'verified' : 'none',
+        bio: editBio.trim() || selectedUser.bio,
+      }).eq('id', selectedUser.id);
+    } catch (err) {
+      console.warn('[UserProfilesTab] Supabase profile update error:', err);
+    }
+
     recordAuditLogEntry({
       action: 'verification_approved',
       summary: `Updated profile governance & role credentials for ${editName} (${editRole.toUpperCase()})`,
@@ -200,7 +263,7 @@ export function UserProfilesTab() {
     Alert.alert('Profile Updated', `Credentials and role permissions saved for ${editName}.`);
   }
 
-  function handleToggleSuspend(user: UserProfile) {
+  async function handleToggleSuspend(user: UserProfile) {
     haptics.error();
     Alert.alert(
       'Account Security Action',
@@ -210,7 +273,20 @@ export function UserProfilesTab() {
         {
           text: 'Suspend User',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            try {
+              const { supabase } = await import('@/api/supabase');
+              await supabase.from('profiles').update({ is_suspended: true }).eq('id', user.id);
+            } catch (err) {
+              console.warn('[UserProfilesTab] Supabase suspend error:', err);
+            }
+            recordAuditLogEntry({
+              action: 'report_resolved',
+              summary: `Suspended account access for ${user.fullName} (${user.email})`,
+              targetType: 'user',
+              targetId: user.id,
+              reason: 'Administrative security suspension',
+            });
             Alert.alert('Account Suspended', `${user.fullName}'s account has been restricted.`);
           },
         },

@@ -9,8 +9,9 @@ import { Avatar } from'./Avatar';
 import { useTheme } from'@/theme/ThemeProvider';
 import { MarketplaceListing } from'@/api/types';
 import { isWishlisted, toggleWishlist } from'@/api/marketplace';
-import { getOrCreateConversationWithUser } from'@/api/messaging';
-import { haptics } from'@/utils/haptics';
+import { getOrCreateConversationWithUser } from '@/api/messaging';
+import { useAuth } from '@/auth/AuthContext';
+import { haptics } from '@/utils/haptics';
 
 function trustLabel(level: number) {
   if (level >= 10) return { icon: 'trophy'as const, color: '#FFD700' };
@@ -21,6 +22,7 @@ function trustLabel(level: number) {
 
 export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
   const segments = useSegments();
   const roleGroup = segments[0];
   const [saved, setSaved] = useState(isWishlisted(item.id));
@@ -31,7 +33,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   const [orderComplete, setOrderComplete] = useState(false);
 
   const trust = trustLabel(item.sellerTrustLevel);
-  const isOwnListing = item.sellerId === 'me';
+  const isOwnListing = item.sellerId === 'me' || (!!user?.id && item.sellerId === user.id);
 
   async function handleToggleWishlist() {
     haptics.light();

@@ -261,6 +261,22 @@ export async function updateResource(id: string, payload: Partial<Resource>): Pr
     return r;
   });
   if (!updated) throw new Error('Resource not found');
+
+  try {
+    const dbPayload: any = {};
+    if (payload.title) dbPayload.title = payload.title;
+    if (payload.description !== undefined) dbPayload.description = payload.description;
+    if (payload.courseCode) dbPayload.course_code = payload.courseCode;
+    if (payload.semester) dbPayload.semester = payload.semester;
+    if (payload.fileUrl) dbPayload.file_url = payload.fileUrl;
+
+    if (Object.keys(dbPayload).length > 0) {
+      await supabase.from('resources').update(dbPayload).eq('id', id);
+    }
+  } catch (err) {
+    console.warn('[Resources] Supabase updateResource error:', err);
+  }
+
   return updated;
 }
 

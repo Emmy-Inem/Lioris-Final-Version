@@ -34,7 +34,7 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
     // fallback
   }
 
-  const targetRecipientId = payload.recipientId || currentUserId || 'me';
+  const targetRecipientId = payload.recipientId;
   const notificationSenderId = payload.senderId || currentUserId || null;
 
   const notification: AppNotification = {
@@ -51,7 +51,7 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
   notificationsState = [notification, ...notificationsState];
 
   try {
-    if (targetRecipientId && targetRecipientId !== 'me') {
+    if (targetRecipientId) {
       const { error } = await supabase.from('notifications').insert({
         id: notifId,
         recipient_id: targetRecipientId,
@@ -64,6 +64,21 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
       });
       if (error) {
         console.warn('[Notifications] Supabase persistence error:', error.message);
+      }
+    } else {
+      // Broadcast to all active profiles
+      const { data: profiles } = await supabase.from('profiles').select('id').limit(100);
+      if (profiles && profiles.length > 0) {
+        const rows = profiles.map((p) => ({
+          recipient_id: p.id,
+          sender_id: notificationSenderId,
+          title: payload.title,
+          body: payload.body,
+          type: payload.type || 'system_announcement',
+          action_url: payload.deepLinkPath,
+          is_read: false,
+        }));
+        await supabase.from('notifications').insert(rows);
       }
     }
   } catch (err) {
@@ -82,32 +97,38 @@ export async function listNotifications(
   query: NotificationsQuery = {},
 ): Promise<AppNotification[]> {
   try {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data: authData } = await supabase.auth.getUser();
+    const uid = authData?.user?.id;
 
-    if (!error && data && data.length > 0) {
-      const dbNotifs: AppNotification[] = data.map((row: any) => ({
-        id: row.id,
-        channel: 'in_app',
-        type: row.type || 'system_announcement',
-        title: row.title,
-        body: row.body,
-        deepLinkPath: row.action_url,
-        deliveryStatus: 'delivered',
-        openedAt: row.is_read ? row.created_at : null,
-        createdAt: row.created_at,
-      }));
-      // Merge unique
-      const merged = [...dbNotifs];
-      for (const n of notificationsState) {
-        if (!merged.some((m) => m.id === n.id)) {
-          merged.push(n);
+    if (uid) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('recipient_id', uid)
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const dbNotifs: AppNotification[] = data.map((row: any) => ({
+          id: row.id,
+          channel: 'in_app',
+          type: row.type || 'system_announcement',
+          title: row.title,
+          body: row.body,
+          deepLinkPath: row.action_url,
+          deliveryStatus: 'delivered',
+          openedAt: row.is_read ? row.created_at : null,
+          createdAt: row.created_at,
+        }));
+        // Merge unique
+        const merged = [...dbNotifs];
+        for (const n of notificationsState) {
+          if (!merged.some((m) => m.id === n.id)) {
+            merged.push(n);
+          }
         }
+        notificationsState = merged;
+        return query.status === 'unread' ? merged.filter((n) => !n.openedAt) : merged;
       }
-      notificationsState = merged;
-      return query.status === 'unread' ? merged.filter((n) => !n.openedAt) : merged;
     }
   } catch {
     // Session fallback
@@ -134,7 +155,11 @@ export async function markAllNotificationsRead() {
   const openedAt = new Date().toISOString();
   notificationsState = notificationsState.map((n) => ({ ...n, openedAt }));
   try {
-    await supabase.from('notifications').update({ is_read: true }).eq('is_read', false);
+    const { data: authData } = await supabase.auth.getUser();
+    const uid = authData?.user?.id;
+    if (uid) {
+      await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', uid).eq('is_read', false);
+    }
   } catch {
     // Fallback
   }
@@ -143,10 +168,24 @@ export async function markAllNotificationsRead() {
 
 export async function clearAllNotifications() {
   notificationsState = [];
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const uid = authData?.user?.id;
+    if (uid) {
+      await supabase.from('notifications').delete().eq('recipient_id', uid);
+    }
+  } catch {
+    // Fallback
+  }
 }
 
 export async function deleteNotification(id: string) {
   notificationsState = notificationsState.filter((n) => n.id !== id);
+  try {
+    await supabase.from('notifications').delete().eq('id', id);
+  } catch {
+    // Fallback
+  }
 }
 
 export async function registerDevicePushToken(token: string): Promise<void> {

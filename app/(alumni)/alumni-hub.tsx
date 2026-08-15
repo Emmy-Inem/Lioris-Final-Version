@@ -339,6 +339,7 @@ function MemberSearchTab() {
       {members?.map((m) => (
         <MemberRow
           key={m.id}
+          id={m.id}
           name={m.fullName}
           username={m.id}
           department={m.department}
@@ -350,11 +351,13 @@ function MemberSearchTab() {
 }
 
 function MemberRow({
+  id,
   name,
   username,
   department,
   gradYear,
 }: {
+  id: string;
   name: string;
   username: string;
   department?: string | null;
@@ -363,6 +366,16 @@ function MemberRow({
   const { spacing } = useTheme();
   const [connected, setConnected] = useState(false);
 
+  async function handleConnect() {
+    haptics.light();
+    setConnected(true);
+    try {
+      const { sendConnectionRequest } = await import('@/api/connections');
+      await sendConnectionRequest(id);
+    } catch {}
+    Alert.alert('Connection Sent', `Invitation sent to ${name}.`);
+  }
+
   return (
     <SolidCard radius={18} style={{ marginBottom: spacing.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -370,15 +383,15 @@ function MemberRow({
           <Avatar name={name} size={42} role="alumni" />
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <AppText weight="bold"variant="bodySmall">
+              <AppText weight="bold" variant="bodySmall">
                 {name}
               </AppText>
               <UserTypeBadge role="alumni" />
             </View>
-            <AppText tone="secondary"variant="caption">
+            <AppText tone="secondary" variant="caption">
               @{username}
             </AppText>
-            <AppText tone="secondary"variant="caption">
+            <AppText tone="secondary" variant="caption">
               {department ?? 'General'} {'\u00b7'} Class of {gradYear ?? '\u2014'}
             </AppText>
           </View>
@@ -386,11 +399,7 @@ function MemberRow({
         <AppButton
           label={connected ? 'Connected ✓' : '+ Connect'}
           variant={connected ? 'secondary' : 'primary'}
-          onPress={() => {
-            haptics.light();
-            setConnected(true);
-            Alert.alert('Connection Sent', `Invitation sent to ${name}.`);
-          }}
+          onPress={handleConnect}
           disabled={connected}
         />
       </View>

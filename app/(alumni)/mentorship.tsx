@@ -67,8 +67,9 @@ export default function AlumniMentorshipScreen() {
     const meetUrl = `https://meet.google.com/lio-${Math.random().toString(36).substring(2, 6)}-${Math.random().toString(36).substring(2, 6)}`;
     createNotification({
       type: 'event',
+      recipientId: selectedMentee.id,
       title: 'Mentorship Video Call Scheduled',
-      body: `Your 1-on-1 session on"${sessionTopic}"is scheduled for ${sessionDate}. Link: ${meetUrl}`,
+      body: `Your 1-on-1 session on "${sessionTopic}" is scheduled for ${sessionDate}. Link: ${meetUrl}`,
       deepLinkPath: '/(student)/mentorship',
     });
     setScheduleModalOpen(false);
@@ -92,27 +93,27 @@ export default function AlumniMentorshipScreen() {
       <AppHeader />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
         <View style={{ paddingTop: spacing.md, marginBottom: spacing.md }}>
-          <AppText variant="h1"weight="bold">
+          <AppText variant="h1" weight="bold">
             Alumni Mentorship Desk 
           </AppText>
-          <AppText tone="secondary"variant="bodySmall">
+          <AppText tone="secondary" variant="bodySmall">
             Guide university students, review portfolio code, and conduct 1-on-1 video calls.
           </AppText>
         </View>
 
         {/* Overview Stats */}
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
-          <StatBox label="Active Mentees"value={mentorships?.filter((m) => m.status === 'active').length ?? 2} icon="people" />
-          <StatBox label="Pending Requests"value={mentorships?.filter((m) => m.status === 'pending').length ?? 1} icon="time" />
-          <StatBox label="Sessions Done"value={8} icon="videocam" />
+          <StatBox label="Active Mentees" value={mentorships?.filter((m) => m.status === 'active').length ?? 0} icon="people" />
+          <StatBox label="Pending Requests" value={mentorships?.filter((m) => m.status === 'pending').length ?? 0} icon="time" />
+          <StatBox label="Sessions Done" value={mentorships?.filter((m) => m.status === 'completed').length ?? 0} icon="videocam" />
         </View>
 
-        <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.sm }}>
+        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
           Student Mentorship Inquiries ({mentorships?.length ?? 0})
         </AppText>
 
         {mentorships?.map((m) => {
-          const studentName = m.studentName ?? 'Diana Adebayo (300L CS)';
+          const studentName = m.studentName || 'Student Mentee';
           return (
             <SolidCard key={m.id} radius={18} style={{ marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>

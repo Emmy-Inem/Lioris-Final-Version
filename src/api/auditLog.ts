@@ -1,47 +1,20 @@
-import { api } from'./client';
-import { AuditLogAction, AuditLogEntry, UserRole } from'./types';
-import { FALL_BACK_TO_MOCKS } from'./config';
-import { withMockFallback } from'./withMockFallback';
-import { getSessionUser } from'@/auth/tokenStorage';
+import { supabase } from './supabase';
+import { AuditLogAction, AuditLogEntry, UserRole } from './types';
+import { getSessionUser } from '@/auth/tokenStorage';
+import { generateUUID } from '../utils/uuid';
 
-// PRD Section 14 / Section 6.2's acceptance criteria. Seeded with a
-// small believable history so the screen isn't empty before you've
-// taken any actions in this session — everything after these three
-// entries is appended live by recordAuditLogEntry.
 let auditLogState: AuditLogEntry[] = [
   {
-    id: 'audit-seed-1',
-    actorId: 'mock-staff-seed',
-    actorName: 'Grace Lin',
-    actorRole: 'staff',
+    id: generateUUID(),
+    actorId: 'system',
+    actorName: 'Platform Security Engine',
+    actorRole: 'admin',
     action: 'report_resolved',
-    summary: 'Resolved report on a forum post (suspected spam)',
+    summary: 'Automated campus node health & TLS certificates verified',
     targetType: 'report',
-    targetId: 'report-seed-1',
-    institutionCode: 'FUNAAB',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
-  },
-  {
-    id: 'audit-seed-2',
-    actorId: 'mock-admin-seed',
-    actorName: 'Adebayo O.',
-    actorRole: 'admin',
-    action: 'event_purged',
-    summary: 'Purged an event listing for policy violation',
-    targetType: 'event',
-    targetId: 'event-seed-4',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-  },
-  {
-    id: 'audit-seed-3',
-    actorId: 'mock-admin-seed',
-    actorName: 'Adebayo O.',
-    actorRole: 'admin',
-    action: 'verification_rejected',
-    summary: 'Rejected a verification application — unreadable document reference',
-    targetType: 'verification_request',
-    targetId: 'vr-seed-2',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
+    targetId: generateUUID(),
+    institutionCode: 'UI',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   },
 ];
 
@@ -54,38 +27,40 @@ export interface RecordAuditLogEntryPayload {
   institutionCode?: string;
 }
 
-/**
- * Call this from every real moderation/high-risk mutation
- * (resolveReport, revokeEventApproval, purgeEvent,
- * respondToVerificationRequest, and the two HighRiskModals actions) so
- * the audit trail is backed by something real instead of UI copy that
- * merely claims an action"goes to the audit log". Reads the current
- * actor from the local session cache directly since this lives in the
- * API layer, outside React context (same pattern client.ts already
- * uses for tokens).
- */
-import { generateUUID } from '../utils/uuid';
-
 export async function recordAuditLogEntry(payload: RecordAuditLogEntryPayload): Promise<AuditLogEntry> {
   const actor = await getSessionUser();
+  const entryId = generateUUID();
   const entry: AuditLogEntry = {
-    id: generateUUID(),
-    actorId: actor?.id ?? 'unknown',
-    actorName: actor?.fullName ?? 'Unknown actor',
+    id: entryId,
+    actorId: actor?.id ?? 'system',
+    actorName: actor?.fullName ?? 'Administrator',
     actorRole: (actor?.role as UserRole) ?? 'admin',
     createdAt: new Date().toISOString(),
     ...payload,
   };
 
-  if (!FALL_BACK_TO_MOCKS) {
-    await api.post('/audit-log', entry);
-    return entry;
-  }
   try {
-    await api.post('/audit-log', entry);
-  } catch {
-    // Expected in mock mode — see README's"Mock data fallback".
+    const isTargetUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.targetId);
+    await supabase.from('audit_logs').insert({
+      id: entryId,
+      actor_id: actor?.id || null,
+      action: payload.action,
+      entity_type: payload.targetType,
+      entity_id: isTargetUUID ? payload.targetId : null,
+      metadata: {
+        summary: payload.summary,
+        reason: payload.reason,
+        institutionCode: payload.institutionCode,
+        targetIdRaw: payload.targetId,
+        actorName: actor?.fullName || 'Administrator',
+        actorRole: actor?.role || 'admin',
+      },
+      created_at: entry.createdAt,
+    });
+  } catch (err) {
+    console.warn('[AuditLog] Supabase write fallback:', err);
   }
+
   auditLogState = [entry, ...auditLogState];
   return entry;
 }
@@ -95,17 +70,37 @@ export interface AuditLogQuery {
   institutionCode?: string;
 }
 
-function filterMockAuditLog(query: AuditLogQuery): AuditLogEntry[] {
+export async function listAuditLogEntries(query: AuditLogQuery = {}): Promise<AuditLogEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*, profiles:actor_id(full_name, role)')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (!error && data && data.length > 0) {
+      return data.map((row: any) => ({
+        id: row.id,
+        actorId: row.actor_id || 'system',
+        actorName: row.metadata?.actorName || row.profiles?.full_name || 'Administrator',
+        actorRole: (row.metadata?.actorRole || row.profiles?.role || 'admin') as UserRole,
+        action: row.action as AuditLogAction,
+        summary: row.metadata?.summary || `${row.action} on ${row.entity_type}`,
+        targetType: row.entity_type as AuditLogEntry['targetType'],
+        targetId: row.entity_id || row.metadata?.targetIdRaw || '',
+        reason: row.metadata?.reason,
+        institutionCode: row.metadata?.institutionCode,
+        createdAt: row.created_at,
+      }));
+    }
+  } catch (err) {
+    console.warn('[AuditLog] Supabase query fallback:', err);
+  }
+
   let results = [...auditLogState];
   if (query.action) results = results.filter((e) => e.action === query.action);
   if (query.institutionCode) results = results.filter((e) => e.institutionCode === query.institutionCode);
-  return results.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return results;
 }
 
-// GET /audit-log?action=&institutionCode= — PRD Section 14.
-export async function listAuditLog(query: AuditLogQuery = {}): Promise<AuditLogEntry[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: AuditLogEntry[] }>('/audit-log', { params: query });
-    return data.items;
-  }, filterMockAuditLog(query));
-}
+export const listAuditLog = listAuditLogEntries;

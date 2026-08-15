@@ -12,7 +12,8 @@ import { useTheme } from'@/theme/ThemeProvider';
 import { useRealtimeChannel } from'@/realtime/useRealtimeChannel';
 import { listMessages, sendMessage, listConversations } from'@/api/messaging';
 import { Message } from'@/api/types';
-import { haptics } from'@/utils/haptics';
+import { useAuth } from '@/auth/AuthContext';
+import { haptics } from '@/utils/haptics';
 
 interface OutgoingMessage extends Message {
   failed?: boolean;
@@ -20,6 +21,7 @@ interface OutgoingMessage extends Message {
 
 export function ChatThread({ conversationId }: { conversationId: string }) {
   const { colors, spacing, radius, isDark } = useTheme();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   useRealtimeChannel();
 
@@ -151,7 +153,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
-          const isMe = item.senderId === 'me';
+          const isMe = item.senderId === 'me' || (!!user?.id && item.senderId === user.id);
           return (
             <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start', marginVertical: 2 }}>
               <Pressable

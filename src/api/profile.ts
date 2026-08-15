@@ -54,8 +54,8 @@ function mockProfileFor(user: { id: string; fullName: string; role: UserRole; em
       ? 'avatar_alumni_2'
       : 'avatar_male',
     coverUrl: 'campus_students_photo',
-    isVerified: true,
-    verificationStatus: 'verified',
+    isVerified: isSpecialAdmin || isAdmin,
+    verificationStatus: (isSpecialAdmin || isAdmin) ? 'verified' : 'none',
     xp: isSpecialAdmin ? 3200 : 850,
     level: isSpecialAdmin ? 10 : 4,
     reputationScore: isSpecialAdmin ? 980 : 320,
@@ -84,6 +84,8 @@ export async function getMyProfile(user: {
   try {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     if (!error && data) {
+      const isVerified = data.is_verified ?? (data.verification_status === 'verified');
+      const verificationStatus = data.verification_status || (isVerified ? 'verified' : 'none');
       const merged: UserProfile = {
         ...fallback,
         fullName: data.full_name || fallback.fullName,
@@ -91,7 +93,8 @@ export async function getMyProfile(user: {
         department: data.department || fallback.department,
         institutionName: data.institution_name || fallback.institutionName,
         institutionCode: data.institution_code || fallback.institutionCode,
-        isVerified: data.is_verified ?? fallback.isVerified,
+        isVerified,
+        verificationStatus,
       };
       profileState.set(user.id, merged);
       return merged;

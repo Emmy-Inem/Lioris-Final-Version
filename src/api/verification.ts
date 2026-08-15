@@ -116,7 +116,7 @@ export async function listVerificationRequests(): Promise<VerificationRequest[]>
   try {
     const { data, error } = await supabase
       .from('verifications')
-      .select('*, profiles(full_name, role, campus_code)')
+      .select('*, profiles!verifications_user_id_fkey(full_name, role, campus_code)')
       .order('created_at', { ascending: false });
 
     if (!error && data && data.length > 0) {

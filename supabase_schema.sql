@@ -428,10 +428,37 @@ CREATE POLICY "Users can view their own block list" ON user_blocks FOR SELECT TO
 CREATE POLICY "Users can block other users" ON user_blocks FOR INSERT TO authenticated WITH CHECK (auth.uid() = blocker_id);
 CREATE POLICY "Users can unblock users" ON user_blocks FOR DELETE TO authenticated USING (auth.uid() = blocker_id);
 
--- Profiles: Public Read, Self Insert/Update, Admin Full Access
+-- Profiles: Public Read, Self Insert/Update (Protected against role/verification escalation), Admin Full Access
+CREATE OR REPLACE FUNCTION prevent_profile_role_escalation()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- If role, is_verified, or verification_status is modified by non-admin
+    IF (NEW.role IS DISTINCT FROM OLD.role) OR (NEW.verification_status IS DISTINCT FROM OLD.verification_status) THEN
+        IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+            NEW.role := OLD.role;
+            NEW.verification_status := OLD.verification_status;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tr_prevent_profile_role_escalation ON profiles;
+CREATE TRIGGER tr_prevent_profile_role_escalation
+BEFORE UPDATE ON profiles
+FOR EACH ROW
+EXECUTE FUNCTION prevent_profile_role_escalation();
+
 CREATE POLICY "Profiles are viewable by authenticated users" ON profiles FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO authenticated 
+USING (auth.uid() = id)
+WITH CHECK (
+    auth.uid() = id AND (
+        role = (SELECT role FROM profiles WHERE id = auth.uid()) OR
+        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    )
+);
 CREATE POLICY "Admins have full profile access" ON profiles FOR ALL TO authenticated USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
@@ -657,6 +684,19 @@ CREATE TABLE IF NOT EXISTS waitlist_entries (
     email TEXT NOT NULL,
     status TEXT DEFAULT 'pending',
     submitted_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS platform_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE platform_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Platform settings viewable by authenticated users" ON platform_settings FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can manage platform settings" ON platform_settings FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
 CREATE POLICY "Waitlist viewable by admins" ON waitlist_entries FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
