@@ -72,13 +72,35 @@ export default function AuditLogsScreen() {
       Alert.alert('Audit Ledger Exported 📥', 'Compliance CSV download has been initiated.');
     } else {
       try {
-        const { Share } = await import('react-native');
-        await Share.share({
-          title: 'Campus Audit Ledger CSV',
-          message: csvContent,
-        });
-      } catch (err) {
-        Alert.alert('Export Error', 'Unable to initiate export share sheet.');
+        const { File, Paths } = await import('expo-file-system');
+        const Sharing = await import('expo-sharing');
+        const file = new File(Paths.cache, `campus_audit_ledger_${Date.now()}.csv`);
+        file.create({ overwrite: true });
+        file.write(csvContent);
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(file.uri, {
+            mimeType: 'text/csv',
+            dialogTitle: 'Export Campus Audit Ledger CSV',
+            UTI: 'public.comma-separated-values-text',
+          });
+        } else {
+          const { Share } = await import('react-native');
+          await Share.share({
+            title: 'Campus Audit Ledger CSV',
+            message: csvContent,
+          });
+        }
+      } catch {
+        try {
+          const { Share } = await import('react-native');
+          await Share.share({
+            title: 'Campus Audit Ledger CSV',
+            message: csvContent,
+          });
+        } catch {
+          Alert.alert('Export Error', 'Unable to initiate export share sheet.');
+        }
       }
     }
   }

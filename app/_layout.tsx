@@ -15,6 +15,8 @@ import { ErrorBoundary } from'@/components/ErrorBoundary';
 import { OfflineBanner, setupNetworkAwareQueries } from'@/components/OfflineBanner';
 import { addNotificationResponseListener } from'@/notifications/push';
 
+import { loadBlockedUserIds } from '@/api/connections';
+
 SplashScreen.preventAutoHideAsync().catch(() => {
   // No-op: harmless if called more than once (e.g. fast refresh in dev).
 });
@@ -32,18 +34,15 @@ export default function RootLayout() {
 
   useEffect(() => {
     onLayoutRootView();
+    loadBlockedUserIds().catch(() => {
+      // background load
+    });
     if (typeof document !== 'undefined') {
       document.title = 'Lioris';
     }
   }, [onLayoutRootView]);
 
   useEffect(() => {
-    // Was built (expo-notifications wiring, Android channel setup, the
-    // works) but never actually mounted anywhere — its own comment said
-    // "mount once near the app root"and nothing did. Handles someone
-    // tapping a push notification while the app is backgrounded/closed,
-    // routing them straight to the relevant screen instead of just
-    // opening to whatever the app happened to be showing.
     const subscription = addNotificationResponseListener((path) => {
       router.push(path as any);
     });

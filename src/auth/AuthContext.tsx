@@ -15,6 +15,8 @@ import { registerForPushNotificationsAsync } from'@/notifications/push';
 
 import { supabase } from '@/api/supabase';
 
+import { loadBlockedUserIds } from '@/api/connections';
+
 interface SessionUser {
   id: string;
   fullName: string;
@@ -60,7 +62,7 @@ async function persist(user: SessionUser) {
 function deriveRoleFromEmail(email?: string): UserRole {
   if (!email) return 'student';
   const lower = email.toLowerCase();
-  if (lower.includes('admin') || lower === 'inememmanuel@gmail.com') return 'admin';
+  if (lower.includes('admin')) return 'admin';
   if (lower.includes('staff') || lower.includes('prof') || lower.includes('dr.')) return 'staff';
   if (lower.includes('alumni') || lower.includes('grad')) return 'alumni';
   return 'student';
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const stored = await getSessionUser();
         if (mounted && stored) {
           setUser({ ...stored, mfaVerified: stored.mfaVerified ?? false } as SessionUser);
+          loadBlockedUserIds().catch(() => {});
         }
       }
 
@@ -102,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await persist(nextUser);
           await setTokens(session.access_token, session.refresh_token ?? session.access_token);
           setUser(nextUser);
+          loadBlockedUserIds().catch(() => {});
         }
       } catch {
         // OAuth check fallback
@@ -130,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await persist(nextUser);
         await setTokens(session.access_token, session.refresh_token ?? session.access_token);
         setUser(nextUser);
+        loadBlockedUserIds().catch(() => {});
       }
     });
 
@@ -146,10 +151,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async login(email, password) {
         const session = await authApi.login({ email, password });
         await setTokens(session.accessToken, session.refreshToken);
-        // Login is for returning users — treat them as already onboarded.
-        // Staff/admin still owe an MFA challenge every sign-in (PRD
-        // Section 11) before the resolver/RoleGate will let them past
-        // the (auth) group — see mfaPolicy.ts.
         const nextUser: SessionUser = {
           ...session.user,
           onboardingComplete: true,
@@ -157,12 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         await persist(nextUser);
         setUser(nextUser);
-        // Built (permission request, Android channels, token
-        // registration) but never actually called from anywhere before
-        // this — its own comment said"call this after login rather
-        // than on cold start."Fire-and-forget: idempotent if
-        // permission was already granted/denied, and must never block
-        // the sign-in flow itself.
+        loadBlockedUserIds().catch(() => {});
         registerForPushNotificationsAsync().catch(() => {});
       },
       async register(payload) {

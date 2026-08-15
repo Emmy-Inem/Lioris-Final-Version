@@ -163,7 +163,10 @@ export interface CreateResourcePayload {
   academicLevel?: Resource['academicLevel'];
 }
 
-export async function createResource(payload: CreateResourcePayload): Promise<Resource> {
+export async function createResource(
+  payload: CreateResourcePayload,
+  fileBlob?: Blob | ArrayBuffer,
+): Promise<Resource> {
   const resourceId = `res-${Date.now()}`;
   const created: Resource = {
     id: resourceId,
@@ -186,22 +189,51 @@ export async function createResource(payload: CreateResourcePayload): Promise<Re
   try {
     const { data: authData } = await supabase.auth.getUser();
     let uploaderId: string | null = authData?.user?.id || null;
+    let campusCode = 'GLOBAL';
+
     if (!uploaderId) {
       const stored = await getSessionUser();
       if (stored?.id) uploaderId = stored.id;
     }
 
     if (uploaderId) {
+      // Fetch uploader's campus
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('campus_code')
+        .eq('id', uploaderId)
+        .maybeSingle();
+
+      if (profile?.campus_code) {
+        campusCode = profile.campus_code;
+      }
+
+      const fileExt = payload.fileType === 'ZIP' ? 'zip' : 'pdf';
+      const storagePath = `${uploaderId}/${resourceId}.${fileExt}`;
+
+      // If binary file blob is provided, upload directly to Supabase Storage
+      if (fileBlob) {
+        await supabase.storage.from('resources').upload(storagePath, fileBlob, {
+          contentType: payload.fileType === 'ZIP' ? 'application/zip' : 'application/pdf',
+          upsert: true,
+        });
+      }
+
+      const { data: publicUrlData } = supabase.storage.from('resources').getPublicUrl(storagePath);
+      const fileUrl = publicUrlData?.publicUrl || `https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/${storagePath}`;
+
+      created.fileUrl = fileUrl;
+
       const { error } = await supabase.from('resources').insert({
         id: resourceId,
         uploader_id: uploaderId,
-        campus_code: 'UNILAG',
+        campus_code: campusCode,
         course_code: payload.courseCode,
         course_title: payload.department || payload.title,
         title: payload.title,
         description: payload.description || '',
         resource_type: mapCategoryToResourceType(payload.category),
-        file_url: `https://storage.lioris.app/resources/${resourceId}.pdf`,
+        file_url: fileUrl,
         file_size_bytes: 3565158,
         file_mime_type: payload.fileType === 'ZIP' ? 'application/zip' : 'application/pdf',
         is_approved: true,

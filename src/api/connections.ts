@@ -121,12 +121,14 @@ export async function respondToConnectionRequest(
     // Only mutate the local mock inbox once we know there's no real
     // backend to talk to — withMockFallback's plain-value API would
     // otherwise run this eagerly even when a real call succeeds.
+    const target = incomingRequestsState.find((r) => r.id === connectionId);
     incomingRequestsState = incomingRequestsState.filter((r) => r.id !== connectionId);
     if (action === 'accept') {
       createNotification({
+        recipientId: target?.requesterId,
         type: 'system',
         title: 'Connection accepted',
-        body: 'You have a new connection — start a conversation!',
+        body: `${target?.requesterName ? `${target.requesterName} accepted your connection request` : 'Your connection request was accepted'} — start a conversation!`,
       });
     }
     return {

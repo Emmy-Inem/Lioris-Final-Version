@@ -85,7 +85,50 @@ export default function UserDirectoryScreen() {
     haptics.medium();
 
     const username = newEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-    const userId = `u-${Date.now()}`;
+    const matricNo = newMatric.trim() || `${newCampus}/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+    let userId = `u-${Date.now()}`;
+    let provisionSucceeded = false;
+
+    try {
+      const { supabase } = await import('@/api/supabase');
+      // Attempt real user creation in Supabase auth
+      const tempPassword = `Lioris#${Math.floor(100000 + Math.random() * 900000)}!`;
+      const { data, error } = await supabase.auth.signUp({
+        email: newEmail.trim(),
+        password: tempPassword,
+        options: {
+          data: {
+            full_name: newFullName.trim(),
+            username,
+            role: newRole,
+            campus_code: newCampus,
+            department: newDepartment.trim() || 'General Studies',
+          },
+        },
+      });
+
+      if (!error && data?.user?.id) {
+        userId = data.user.id;
+        provisionSucceeded = true;
+        await supabase.from('profiles').upsert({
+          id: userId,
+          email: newEmail.trim(),
+          full_name: newFullName.trim(),
+          username,
+          role: newRole,
+          campus_code: newCampus,
+          department: newDepartment.trim() || 'General Studies',
+          student_id_number: matricNo,
+          verification_status: 'verified',
+          is_suspended: false,
+        });
+      } else if (error) {
+        console.warn('[UserDirectory] Supabase signUp note:', error.message);
+      }
+    } catch (err) {
+      console.warn('[UserDirectory] Auth provision exception:', err);
+    }
+
     const newUser: DirectoryUser = {
       id: userId,
       fullName: newFullName.trim(),
@@ -94,7 +137,7 @@ export default function UserDirectoryScreen() {
       role: newRole,
       campus: newCampus,
       department: newDepartment.trim() || 'General Studies',
-      matricNo: newMatric.trim() || `${newCampus}/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`,
+      matricNo,
       suspended: false,
       isVerified: true,
       trustScore: 85,
@@ -102,24 +145,6 @@ export default function UserDirectoryScreen() {
     };
 
     setUsers((prev) => [newUser, ...prev]);
-
-    try {
-      const { supabase } = await import('@/api/supabase');
-      await supabase.from('profiles').upsert({
-        id: userId,
-        email: newUser.email,
-        full_name: newUser.fullName,
-        username: newUser.username,
-        role: newUser.role,
-        campus_code: newUser.campus,
-        department: newUser.department,
-        student_id_number: newUser.matricNo,
-        verification_status: 'verified',
-        is_suspended: false,
-      });
-    } catch (err) {
-      console.warn('[UserDirectory] Supabase profile provision error:', err);
-    }
 
     recordAuditLogEntry({
       action: 'verification_approved',
@@ -134,7 +159,18 @@ export default function UserDirectoryScreen() {
     setNewFullName('');
     setNewEmail('');
     setNewMatric('');
-    Alert.alert('User Provisioned', `${newUser.fullName} has been registered as a verified ${newRole}.`);
+
+    if (provisionSucceeded) {
+      Alert.alert(
+        'User Provisioned in Supabase',
+        `${newUser.fullName} has been registered with ID ${userId.slice(0, 8)}... A confirmation email has been dispatched by Supabase to ${newUser.email}.`,
+      );
+    } else {
+      Alert.alert(
+        'User Provisioned Locally',
+        `${newUser.fullName} has been created in the local directory for this session. (Note: Direct client-side user creation requires Supabase service role privileges).`,
+      );
+    }
   }
 
   async function handleToggleSuspend(target: DirectoryUser) {

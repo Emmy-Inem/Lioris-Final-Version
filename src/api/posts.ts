@@ -249,6 +249,39 @@ let commentsState: Record<string, PostComment[]> = {
 };
 
 export async function listPostComments(postId: string): Promise<PostComment[]> {
+  try {
+    const { data, error } = await supabase
+      .from('post_comments')
+      .select('*')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      const dbComments: PostComment[] = data.map((row: any) => ({
+        id: row.id,
+        postId: row.post_id,
+        authorName: 'Campus Member',
+        authorRole: 'student',
+        content: row.content,
+        createdAt: row.created_at,
+        likesCount: row.likes_count || 0,
+        isLikedByMe: false,
+      }));
+      // Merge unique
+      const local = commentsState[postId] ?? [];
+      const merged = [...dbComments];
+      for (const c of local) {
+        if (!merged.some((m) => m.id === c.id)) {
+          merged.push(c);
+        }
+      }
+      commentsState[postId] = merged;
+      return merged;
+    }
+  } catch {
+    // fallback
+  }
+
   return withMockFallback(async () => {
     const { data } = await api.get<{ items: PostComment[] }>(`/feed/${postId}/comments`);
     return data.items;
@@ -274,8 +307,9 @@ export async function createPostComment(
   authorRole: 'student' | 'staff' | 'alumni' | 'admin' = 'student',
   imageUrl?: string | null,
 ): Promise<PostComment> {
+  const commentId = `c-${Date.now()}`;
   const created: PostComment = {
-    id: `c-${Date.now()}`,
+    id: commentId,
     postId,
     authorName,
     authorRole,
@@ -288,6 +322,30 @@ export async function createPostComment(
   };
   commentsState[postId] = [...(commentsState[postId] ?? []), created];
   postsState = postsState.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let authorId = authData?.user?.id;
+    if (!authorId) {
+      const stored = await getSessionUser();
+      if (stored?.id) authorId = stored.id;
+    }
+
+    if (authorId) {
+      const { error } = await supabase.from('post_comments').insert({
+        id: commentId,
+        post_id: postId,
+        author_id: authorId,
+        content,
+      });
+      if (error) {
+        console.warn('[Posts] Supabase comment insert error:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Posts] Comment insert error:', err);
+  }
+
   return created;
 }
 

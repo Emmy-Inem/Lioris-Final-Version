@@ -586,4 +586,16 @@ DO $$ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, chat_messages, notifications, moderation_queue;
 EXCEPTION WHEN OTHERS THEN null; END $$;
 
+-- ============================================================================
+-- 15. STORAGE BUCKETS & POLICIES (Academic Documents & Media)
+-- ============================================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('resources', 'resources', true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+
 
