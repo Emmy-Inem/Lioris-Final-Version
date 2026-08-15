@@ -15,7 +15,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ greetingOverride, notificationsPath }: DashboardHeaderProps) {
-  const { spacing } = useTheme();
+  const { colors, spacing } = useTheme();
   const { user } = useAuth();
   const segments = useSegments();
   const roleGroup = segments[0];
@@ -62,7 +62,7 @@ export function DashboardHeader({ greetingOverride, notificationsPath }: Dashboa
         accessibilityLabel="Notifications"
       >
         <View>
-          <Ionicons name="notifications-outline" size={24} />
+          <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
           {unreadCount > 0 ? (
             <View
               style={{

@@ -1,36 +1,67 @@
 import React from 'react';
+import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
 
-// Bottom nav matches the reference app's staff/admin shared bar: Home,
-// Forum, Messages, Admin Desk (MainActivity.kt's combined
-// `userRoleClean == "admin" || userTypeClean == "staff"` branch).
 export default function AdminLayout() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
     <RoleGate allow="admin">
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.tabActive,
+          tabBarActiveTintColor: colors.brandPrimary,
           tabBarInactiveTintColor: colors.tabInactive,
-          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+          tabBarStyle: {
+            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.85)' : 'rgba(255, 255, 255, 0.88)',
+            borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            borderTopWidth: 1,
+            height: 68,
+            paddingBottom: 10,
+            paddingTop: 8,
+            ...(Platform.OS === 'web'
+              ? ({
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
+                  boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.06)',
+                } as any)
+              : {}),
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+          },
         }}
       >
         <Tabs.Screen
           name="dashboard"
-          options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} /> }}
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ focused, size }) => (
+              <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} size={size} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="forum"
-          options={{ title: 'Forum', tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" color={color} size={size} /> }}
+          options={{
+            title: 'Forum',
+            tabBarIcon: ({ focused, size }) => (
+              <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="platform-config"
-          options={{ title: 'Admin Desk', tabBarIcon: ({ color, size }) => <Ionicons name="shield" color={color} size={size} /> }}
+          options={{
+            title: 'Admin Desk',
+            tabBarIcon: ({ focused, size }) => (
+              <TabIcon name={focused ? 'shield' : 'shield-outline'} focused={focused} size={size} />
+            ),
+          }}
         />
 
         {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
@@ -49,7 +80,29 @@ export default function AdminLayout() {
         <Tabs.Screen name="search" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ href: null }} />
         <Tabs.Screen name="messages" options={{ href: null }} />
+        <Tabs.Screen name="events" options={{ href: null }} />
+        <Tabs.Screen name="events/[id]" options={{ href: null }} />
+        <Tabs.Screen name="post/[id]" options={{ href: null }} />
+        <Tabs.Screen name="post" options={{ href: null }} />
       </Tabs>
     </RoleGate>
+  );
+}
+
+function TabIcon({ name, focused, size }: { name: keyof typeof Ionicons.glyphMap; focused: boolean; size: number }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: focused ? colors.pastelPrimaryBg : 'transparent',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Ionicons name={name} size={size - 1} color={focused ? colors.brandPrimary : colors.tabInactive} />
+    </View>
   );
 }

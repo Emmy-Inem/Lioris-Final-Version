@@ -45,10 +45,24 @@ export interface UserProfile {
 export interface AuthSession {
   accessToken: string;
   refreshToken: string;
-  user: Pick<UserProfile, 'id' | 'fullName'> & { role: UserRole };
+  user: Pick<UserProfile, 'id' | 'fullName'> & { role: UserRole; email?: string };
 }
 
 export type PostVisibilityScope = 'global' | 'alumni' | 'staff' | 'student';
+
+export interface PostPollOption {
+  id: string;
+  label: string;
+  votes: number;
+  isVotedByMe?: boolean;
+}
+
+export interface PostPoll {
+  question: string;
+  options: PostPollOption[];
+  totalVotes: number;
+  expiresIn?: string;
+}
 
 export interface Post {
   id: string;
@@ -68,9 +82,11 @@ export interface Post {
   imageUrl?: string | null;
   videoUrl?: string | null;
   pollQuestion?: string | null;
+  poll?: PostPoll | null;
   likesCount: number;
   commentsCount: number;
   isLikedByMe?: boolean;
+  isPinned?: boolean;
   createdAt: string;
   /** Collected in PublishThreadModal's checkbox but previously never stored anywhere — now backs a "Sponsored" badge on PostCard. */
   sponsored?: boolean;
@@ -104,8 +120,15 @@ export interface CampusEvent {
   isRsvpd?: boolean;
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   attendeeNames?: string[];
-  /** Backs the "Sponsored & Featured" section on the Events screen — previously collected in PublishEventModal's checkbox but never stored or displayed anywhere. */
   sponsored?: boolean;
+  isSpotlight?: boolean;
+  coverImageUrl?: string | null;
+  venueType?: 'Physical Auditorium' | 'Virtual (Google Meet/Zoom)' | 'Hybrid Room';
+  virtualLink?: string | null;
+  ticketPrice?: string;
+  speakers?: { name: string; title: string }[];
+  targetCohort?: string;
+  rsvpDeadline?: string;
 }
 
 export type ConnectionStatus = 'none' | 'pending' | 'accepted' | 'declined' | 'blocked';
@@ -134,6 +157,7 @@ export interface AlumniDirectoryEntry {
   id: string;
   fullName: string;
   graduationYear?: number | null;
+  department?: string | null;
   bio?: string | null;
   industry?: string | null;
   company?: string | null;
@@ -201,6 +225,7 @@ export type MentorshipStatus = 'pending' | 'active' | 'completed' | 'declined';
 export interface Mentorship {
   id: string;
   studentId: string;
+  studentName?: string | null;
   mentorId: string;
   mentorName: string;
   status: MentorshipStatus;
@@ -245,7 +270,7 @@ export interface AuditLogEntry {
   action: AuditLogAction;
   /** One-line human-readable description, e.g. "Resolved report on a marketplace listing". */
   summary: string;
-  targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow';
+  targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'resource';
   targetId: string;
   /** Free-text reason, present when the action required one (impersonation, escrow release). */
   reason?: string;
@@ -315,7 +340,16 @@ export interface Resource {
   courseCode: string;
   fileSize: string;
   authorName: string;
+  authorId?: string;
+  authorRole?: UserRole;
   likesCount: number;
   downloadsCount: number;
   createdAt: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string | null;
+  fileUrl?: string | null;
+  fileType?: 'PDF' | 'DOCX' | 'ZIP' | 'EPUB';
+  semester?: 'Harmattan / First' | 'Rain / Second';
+  academicLevel?: '100L' | '200L' | '300L' | '400L' | '500L' | 'Postgraduate';
+  syllabusTopic?: string;
 }

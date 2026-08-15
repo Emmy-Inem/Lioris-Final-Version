@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,24 +20,16 @@ import { useViewScope } from '@/hooks/useViewScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
 
-// Matches PublishThreadModal's CHANNELS list — the categories a post
-// can actually be created under, so "Filter by category" only offers
-// values that exist in the data.
-const CATEGORY_OPTIONS = ['Tech Hub', 'Housing', 'Social', 'Lost & Found'] as const;
+const CHANNELS = [
+  { id: 'all', label: 'All Threads 💬', category: null },
+  { id: 'polls', label: 'Polls 📊', category: 'Polls' },
+  { id: 'tech', label: 'Tech Hub 💻', category: 'Tech Hub' },
+  { id: 'academic', label: 'Academic 📚', category: 'Academic' },
+  { id: 'housing', label: 'Housing 🏠', category: 'Housing' },
+  { id: 'social', label: 'Campus Life 🎉', category: 'Social' },
+  { id: 'lost', label: 'Lost & Found 🔍', category: 'Lost & Found' },
+];
 
-/**
- * "Forum" in the reference app's bottom nav — the community discussion
- * feed / "Network Hub". Shared across all four roles (only the
- * audience scope differs) rather than duplicated per role.
- *
- * Content scoping rule: a post can be published for "This University
- * Only" (visible solely to users from the author's own institution) or
- * "Global" (visible everywhere). Users can always see Global content
- * regardless of which university they belong to, but never see another
- * university's campus-only posts. The My Campus / Global toggle below
- * narrows the *view* within what's already visible under that rule —
- * it doesn't grant access to anything a user couldn't already see.
- */
 export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { colors, spacing, radius } = useTheme();
   const { user } = useAuth();
@@ -46,8 +38,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const debouncedQuery = useDebouncedValue(query);
   const [composerOpen, setComposerOpen] = useState(false);
   const [workspacesOpen, setWorkspacesOpen] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const { scope: viewScope, setScope: setViewScope } = useViewScope();
@@ -60,17 +51,24 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const viewerInstitutionCode = profile?.institutionCode;
 
   const { data: rawPosts, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, categoryFilter],
-    queryFn: () => listFeedPosts({ scope, q: debouncedQuery || undefined, viewScope, viewerInstitutionCode, category: categoryFilter ?? undefined }),
+    queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel],
+    queryFn: () =>
+      listFeedPosts({
+        scope,
+        q: debouncedQuery || undefined,
+        viewScope,
+        viewerInstitutionCode,
+        category: selectedChannel === 'Polls' ? undefined : selectedChannel ?? undefined,
+      }),
   });
 
-  // Sort is client-side since it's just reordering what the API
-  // already returned, not a separate fetch.
-  const posts = rawPosts
-    ? [...rawPosts].sort((a, b) =>
-        sortBy === 'popular' ? b.likesCount - a.likesCount : b.createdAt.localeCompare(a.createdAt),
-      )
-    : rawPosts;
+  let posts = rawPosts ?? [];
+  if (selectedChannel === 'Polls') {
+    posts = posts.filter((p) => !!p.poll);
+  }
+  posts = [...posts].sort((a, b) =>
+    sortBy === 'popular' ? b.likesCount - a.likesCount : b.createdAt.localeCompare(a.createdAt),
+  );
 
   async function handlePublish(payload: {
     title: string;
@@ -81,43 +79,79 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     sponsored: boolean;
     courseTags?: string;
     postFormat: 'Thread' | 'Rapid-Fire Conversation';
+    imageUrl?: string;
+    videoUrl?: string;
+    pollQuestion?: string;
+    pollOptions?: string[];
   }) {
-    await createPost({ ...payload, authorInstitutionCode: viewerInstitutionCode });
+    const { pollQuestion, pollOptions, ...rest } = payload;
+    const poll =
+      pollQuestion && pollOptions && pollOptions.length > 0
+        ? {
+            question: pollQuestion,
+            options: pollOptions.map((opt, i) => ({ id: `opt-${i + 1}`, label: opt, votes: 0, isVotedByMe: false })),
+            totalVotes: 0,
+            expiresIn: '7 days left',
+          }
+        : undefined;
+
+    await createPost({
+      ...rest,
+      poll: poll || undefined,
+      pollQuestion: pollQuestion || undefined,
+      authorInstitutionCode: viewerInstitutionCode,
+    });
     queryClient.invalidateQueries({ queryKey: ['feed'] });
   }
 
-  return (
-    <ScreenContainer glow={false}>
+  const renderHeader = () => (
+    <View style={{ marginBottom: spacing.sm }}>
       <AppHeader />
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg, marginBottom: spacing.md }}>
+      {/* Screen Title & Workspace Selector */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.md }}>
+        <View>
+          <AppText variant="h1" weight="bold">
+            Campus Forum 💬
+          </AppText>
+          <AppText tone="secondary" variant="bodySmall">
+            Trending discussions, polls, and academic threads
+          </AppText>
+        </View>
+
         <Pressable
           onPress={() => setWorkspacesOpen(true)}
           accessibilityRole="button"
           accessibilityLabel="Open discussion workspaces"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: colors.pastelPrimaryBg,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 8,
+          }}
         >
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: radius.md,
-              backgroundColor: colors.brandPrimary,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="menu" size={18} color="#FFFFFF" />
-          </View>
-        </Pressable>
-        <View>
-          <AppText variant="h2" weight="bold" style={{ color: colors.brandPrimary }}>
-            Network Hub 🌐
+          <Ionicons name="chatbubbles" size={16} color={colors.brandPrimary} />
+          <AppText weight="bold" tone="brand" variant="caption">
+            Channels
           </AppText>
-        </View>
+        </Pressable>
       </View>
 
-      {/* Global / My Campus toggle — the same shared state the header's workspace pill controls. */}
-      <View style={{ flexDirection: 'row', backgroundColor: colors.divider, borderRadius: radius.pill, padding: 4, marginBottom: spacing.md }}>
+      {/* Scope Switcher: My Campus vs. Global */}
+      <View
+        style={{
+          flexDirection: 'row',
+          backgroundColor: colors.surface,
+          borderRadius: radius.pill,
+          padding: 4,
+          marginBottom: spacing.md,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}
+      >
         {(['campus', 'global'] as const).map((s) => {
           const selected = viewScope === s;
           return (
@@ -126,26 +160,24 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               onPress={() => setViewScope(s)}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
-              accessibilityLabel={s === 'campus' ? 'My Campus' : 'Global'}
+              accessibilityLabel={s === 'campus' ? 'My Campus Feed' : 'Global Network Feed'}
               style={{
                 flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                paddingVertical: spacing.sm,
+                paddingVertical: 8,
                 borderRadius: radius.pill,
                 backgroundColor: selected ? colors.brandPrimary : 'transparent',
+                alignItems: 'center',
               }}
             >
               <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
-                {s === 'campus' ? '🏫 My Campus' : '🌍 Global'}
+                {s === 'campus' ? '🏫 My Campus' : '🌍 Global Network'}
               </AppText>
             </Pressable>
           );
         })}
       </View>
 
+      {/* Quick Search & Sort Bar */}
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
         <View
           style={{
@@ -154,21 +186,26 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             alignItems: 'center',
             gap: spacing.sm,
             backgroundColor: colors.surface,
-            borderRadius: radius.lg,
+            borderRadius: radius.pill,
             borderWidth: 1,
             borderColor: colors.border,
             paddingHorizontal: spacing.md,
-            height: 44,
+            height: 42,
           }}
         >
           <Ionicons name="search" size={16} color={colors.textSecondary} />
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search threads..."
+            placeholder="Search discussions, polls, courses..."
             placeholderTextColor={colors.textSecondary}
             style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
           />
+          {query ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+            </Pressable>
+          ) : null}
         </View>
         <Pressable
           onPress={() => setSortModalOpen(true)}
@@ -180,69 +217,138 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             gap: 4,
             borderWidth: 1,
             borderColor: colors.border,
-            borderRadius: radius.lg,
-            paddingHorizontal: spacing.sm,
-            height: 44,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            height: 42,
+            backgroundColor: colors.surface,
           }}
         >
           <Ionicons name="swap-vertical" size={16} color={colors.textSecondary} />
-        </Pressable>
-        <Pressable
-          onPress={() => setFilterModalOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={categoryFilter ? `Filters, ${categoryFilter} active` : 'Filters'}
-          style={{
-            backgroundColor: colors.brandPrimary,
-            borderRadius: radius.lg,
-            paddingHorizontal: spacing.md,
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'row',
-            gap: 4,
-            height: 44,
-          }}
-        >
-          <Ionicons name="options" size={16} color="#FFFFFF" />
-          {categoryFilter ? (
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFFFFF' }} />
-          ) : null}
+          <AppText variant="caption" weight="semiBold" tone="secondary">
+            {sortBy === 'latest' ? 'Latest' : 'Top'}
+          </AppText>
         </Pressable>
       </View>
 
-      <ActionSheetModal visible={filterModalOpen} onClose={() => setFilterModalOpen(false)}>
-        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
-          Filter by category
-        </AppText>
-        {[null, ...CATEGORY_OPTIONS].map((cat) => {
-          const selected = categoryFilter === cat;
+      {/* Horizontal Channel Filter Pills */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.sm }}
+        style={{ marginBottom: spacing.xs }}
+      >
+        {CHANNELS.map((ch) => {
+          const selected = selectedChannel === ch.category;
           return (
             <Pressable
-              key={cat ?? 'all'}
-              onPress={() => {
-                setCategoryFilter(cat);
-                setFilterModalOpen(false);
+              key={ch.id}
+              onPress={() => setSelectedChannel(ch.category)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              style={{
+                backgroundColor: selected ? colors.brandPrimary : colors.surface,
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 7,
+                borderWidth: 1,
+                borderColor: selected ? colors.brandPrimary : colors.border,
               }}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              accessibilityLabel={cat ?? 'All categories'}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
             >
-              <Ionicons
-                name={selected ? 'radio-button-on' : 'radio-button-off'}
-                size={18}
-                color={selected ? colors.brandPrimary : colors.textSecondary}
-              />
-              <AppText weight={selected ? 'bold' : 'regular'} tone={selected ? 'brand' : 'primary'}>
-                {cat ?? 'All categories'}
+              <AppText
+                variant="caption"
+                weight={selected ? 'bold' : 'medium'}
+                tone={selected ? 'inverse' : 'secondary'}
+              >
+                {ch.label}
               </AppText>
             </Pressable>
           );
         })}
-      </ActionSheetModal>
+      </ScrollView>
 
+      {/* Interactive Quick Thread Composer Bar */}
+      <Pressable
+        onPress={() => setComposerOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Start a new thread or create a poll"
+      >
+        <SolidCard backgroundColor={colors.surface} radius={18} style={{ marginBottom: spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <Avatar name={user?.fullName ?? 'You'} size={38} role={user?.role} />
+            <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 8 }}>
+              <AppText tone="secondary" variant="bodySmall">
+                Start a discussion or create a poll...
+              </AppText>
+            </View>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: colors.brandPrimary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+            </View>
+          </View>
+        </SolidCard>
+      </Pressable>
+    </View>
+  );
+
+  return (
+    <ScreenContainer glow={true}>
+      {/* Single Unified Threads FlatList for 100% smooth scrolling */}
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
+        contentContainerStyle={{ paddingBottom: 130 }}
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
+            <PostCard post={item} />
+          </Animated.View>
+        )}
+        showsVerticalScrollIndicator={false}
+        onRefresh={refetch}
+        refreshing={isRefetching}
+        ListEmptyComponent={
+          !isLoading ? (
+            <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: colors.pastelPrimaryBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+              </View>
+              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+                No Threads in this Channel Yet
+              </AppText>
+              <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+                Be the first to share an academic question or start a discussion for your cohort.
+              </AppText>
+            </View>
+          ) : null
+        }
+      />
+
+      {/* Sort Options Modal */}
       <ActionSheetModal visible={sortModalOpen} onClose={() => setSortModalOpen(false)}>
         <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
-          Sort by
+          Sort Threads By 📊
         </AppText>
         {(['latest', 'popular'] as const).map((option) => {
           const selected = sortBy === option;
@@ -255,7 +361,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               }}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
-              accessibilityLabel={option === 'latest' ? 'Latest' : 'Most Popular'}
+              accessibilityLabel={option === 'latest' ? 'Most Recent' : 'Most Upvoted'}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
             >
               <Ionicons
@@ -264,110 +370,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 color={selected ? colors.brandPrimary : colors.textSecondary}
               />
               <AppText weight={selected ? 'bold' : 'regular'} tone={selected ? 'brand' : 'primary'}>
-                {option === 'latest' ? 'Latest' : 'Most Popular'}
+                {option === 'latest' ? 'Most Recent (Latest First)' : 'Most Upvoted (Top Discussion)'}
               </AppText>
             </Pressable>
           );
         })}
       </ActionSheetModal>
-
-      <Pressable
-        onPress={() => setComposerOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Start a new thread"
-      >
-        <SolidCard backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.lg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <Avatar name={user?.fullName ?? 'You'} size={32} />
-            <AppText tone="secondary" style={{ flex: 1 }}>
-              What's on your mind? Start a new thread...
-            </AppText>
-            <Ionicons name="create-outline" size={18} color={colors.brandPrimary} />
-          </View>
-        </SolidCard>
-      </Pressable>
-
-      <FlatList
-        data={posts ?? []}
-        keyExtractor={(item) => item.id}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
-            <PostCard post={item} />
-          </Animated.View>
-        )}
-        showsVerticalScrollIndicator={false}
-        onRefresh={refetch}
-        refreshing={isRefetching}
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
-              <View style={{ flexDirection: 'row', marginBottom: spacing.lg }}>
-                <View
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: radius.md,
-                    backgroundColor: colors.brandPrimary,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transform: [{ rotate: '-8deg' }],
-                  }}
-                >
-                  <Ionicons name="chatbox" size={26} color="#FFFFFF" />
-                </View>
-                <View
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: radius.md,
-                    backgroundColor: colors.surface,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    marginLeft: -20,
-                    marginTop: 14,
-                    transform: [{ rotate: '8deg' }],
-                  }}
-                />
-              </View>
-              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
-                Forums channel is silent
-              </AppText>
-              <AppText tone="secondary" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
-                Be the first to ask questions or discuss local housing options matching your
-                search.
-              </AppText>
-            </View>
-          ) : null
-        }
-      />
-
-      <Pressable
-        onPress={() => setComposerOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel="New thread"
-        style={{
-          position: 'absolute',
-          bottom: spacing.xl,
-          right: spacing.lg,
-          width: 52,
-          height: 52,
-          borderRadius: 26,
-          backgroundColor: colors.brandPrimary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          elevation: 4,
-        }}
-      >
-        <Ionicons name="add" size={26} color="#FFFFFF" />
-      </Pressable>
 
       <PublishThreadModal visible={composerOpen} onClose={() => setComposerOpen(false)} onPublish={handlePublish} />
       <DiscussionWorkspacesModal visible={workspacesOpen} onClose={() => setWorkspacesOpen(false)} />

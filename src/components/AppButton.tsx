@@ -31,7 +31,7 @@ export function AppButton({
   disabled,
   ...rest
 }: AppButtonProps) {
-  const { colors, radius, spacing, minTouchTarget } = useTheme();
+  const { colors, radius, spacing, minTouchTarget, isDark } = useTheme();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -39,8 +39,8 @@ export function AppButton({
   }));
 
   const palette = {
-    primary: { bg: colors.brandPrimary, fg: colors.textInverse, border: 'transparent' },
-    accent: { bg: colors.brandAccent, fg: colors.textInverse, border: 'transparent' },
+    primary: { bg: colors.brandPrimary, fg: isDark ? '#0B1120' : '#FFFFFF', border: 'transparent' },
+    accent: { bg: colors.brandAccent, fg: isDark ? '#0B1120' : '#FFFFFF', border: 'transparent' },
     secondary: { bg: 'transparent', fg: colors.brandPrimary, border: colors.brandPrimary },
     ghost: { bg: 'transparent', fg: colors.textPrimary, border: 'transparent' },
   }[variant];

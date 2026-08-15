@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
@@ -9,7 +10,7 @@ import { StudyGroup } from '@/api/types';
 import { joinStudyGroup } from '@/api/studyGroups';
 
 export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoined?: () => void }) {
-  const { spacing } = useTheme();
+  const { colors, spacing, radius } = useTheme();
   const [joined, setJoined] = useState(group.isJoined);
   const [submitting, setSubmitting] = useState(false);
 
@@ -25,24 +26,48 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
   }
 
   return (
-    <SolidCard style={{ marginBottom: spacing.md }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radius.md,
+            backgroundColor: colors.pastelPrimaryBg,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="people-outline" size={22} color={colors.brandPrimary} />
+        </View>
         <View style={{ flex: 1 }}>
-          <AppText variant="h3" weight="bold">
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Badge label={group.isPublic ? 'Public Pod' : 'Private Pod'} tone={group.isPublic ? 'brand' : 'neutral'} />
+            <AppText tone="secondary" variant="caption">
+              {group.memberCount} members
+            </AppText>
+          </View>
+          <AppText variant="h3" weight="bold" style={{ marginTop: 2 }}>
             {group.name}
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
-            {group.courseCode} {'\u00b7'} {group.memberCount} members
+          <AppText tone="brand" variant="caption" weight="bold">
+            {group.courseCode}
           </AppText>
         </View>
-        <Badge label={group.isPublic ? 'Public' : 'Private'} tone={group.isPublic ? 'brand' : 'neutral'} />
       </View>
 
-      <AppText tone="secondary" style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
+      <AppText tone="secondary" variant="bodySmall" style={{ marginTop: spacing.sm, marginBottom: spacing.md, lineHeight: 18 }}>
         {group.description}
       </AppText>
 
-      <AppButton label={joined ? 'Open group' : 'Join group'} variant={joined ? 'secondary' : 'primary'} onPress={handleJoin} loading={submitting} />
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+        <AppButton
+          label={joined ? 'Member ✓' : 'Join Pod'}
+          variant={joined ? 'secondary' : 'primary'}
+          onPress={handleJoin}
+          loading={submitting}
+        />
+      </View>
     </SolidCard>
   );
 }

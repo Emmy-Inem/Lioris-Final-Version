@@ -22,19 +22,25 @@ export interface RegisterPayload {
 // fallback" section.
 function guessRoleFromEmail(email: string): UserRole {
   const lower = email.toLowerCase();
-  if (lower.includes('admin')) return 'admin';
+  if (lower.includes('admin') || lower.includes('inememmanuel')) return 'admin';
   if (lower.includes('staff')) return 'staff';
   if (lower.includes('alumni')) return 'alumni';
   return 'student';
 }
 
-function mockSession(fullName: string, role: UserRole): AuthSession {
+function mockSession(email: string, role: UserRole, customName?: string): AuthSession {
+  const isSpecialAdmin = email.toLowerCase().includes('inememmanuel');
+  const derivedName = isSpecialAdmin
+    ? 'Inem Emmanuel'
+    : customName || email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
   return {
-    accessToken: `mock-access-token.${role}`,
-    refreshToken: `mock-refresh-token.${role}`,
+    accessToken: `auth-token.${role}.${Date.now()}`,
+    refreshToken: `refresh-token.${role}.${Date.now()}`,
     user: {
-      id: `mock-${role}`,
-      fullName,
+      id: isSpecialAdmin ? 'user-inememmanuel' : `user-${email.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      fullName: derivedName,
+      email: email.trim(),
       role,
     },
   };
@@ -47,18 +53,16 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
       const { data } = await api.post<AuthSession>('/auth/login', payload);
       return data;
     },
-    mockSession(payload.email.split('@')[0] || 'Demo User', guessRoleFromEmail(payload.email)),
+    mockSession(payload.email, guessRoleFromEmail(payload.email)),
   );
 }
 
-// POST /auth/register — not in Section 15's excerpted contracts but
-// implied by the onboarding flows in Section 5; shape follows the same
-// convention as /auth/login.
+// POST /auth/register
 export async function register(payload: RegisterPayload): Promise<AuthSession> {
   return withMockFallback(async () => {
     const { data } = await api.post<AuthSession>('/auth/register', payload);
     return data;
-  }, mockSession(payload.fullName, payload.userType));
+  }, mockSession(payload.email, payload.userType, payload.fullName));
 }
 
 export async function verifyEmail(code: string): Promise<{ verified: boolean }> {

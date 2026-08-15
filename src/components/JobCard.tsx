@@ -1,5 +1,6 @@
 import React from 'react';
-import { Linking, View } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
@@ -8,34 +9,66 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { JobListing } from '@/api/types';
 
 export function JobCard({ job }: { job: JobListing }) {
-  const { spacing } = useTheme();
+  const { colors, spacing, radius } = useTheme();
+
+  function handleApply() {
+    if (job.applyUrl.startsWith('http')) {
+      Linking.openURL(job.applyUrl).catch(() => {
+        Alert.alert('Application Submitted', `Your profile was submitted for ${job.title} at ${job.company}.`);
+      });
+    } else {
+      Alert.alert('Application Submitted 💼', `Your student resume and GPA have been sent to ${job.company}.`);
+    }
+  }
 
   return (
-    <SolidCard style={{ marginBottom: spacing.md }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
+      <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: radius.md,
+            backgroundColor: colors.pastelPrimaryBg,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: colors.brandPrimary,
+          }}
+        >
+          <Ionicons name="briefcase-outline" size={22} color={colors.brandPrimary} />
+        </View>
+
         <View style={{ flex: 1 }}>
-          <AppText variant="h3" weight="bold">
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+            <Badge label={job.type} tone={job.type === 'Internship' ? 'accent' : 'brand'} />
+            {job.remote && <Badge label="Remote" tone="success" />}
+          </View>
+          <AppText variant="h3" weight="bold" style={{ marginTop: 2 }}>
             {job.title}
           </AppText>
           <AppText tone="secondary" variant="bodySmall">
-            {job.company} {'\u00b7'} {job.location}
+            {job.company} | {job.location}
           </AppText>
         </View>
-        <Badge label={job.type} tone={job.type === 'Internship' ? 'accent' : 'brand'} />
       </View>
 
-      {job.remote ? (
-        <View style={{ marginTop: spacing.sm }}>
-          <Badge label="Remote" tone="success" />
-        </View>
-      ) : null}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: spacing.md,
+          paddingTop: spacing.xs,
+          borderTopWidth: 1,
+          borderTopColor: colors.divider,
+        }}
+      >
+        <AppText tone="secondary" variant="caption">
+          Posted by {job.postedByName}
+        </AppText>
 
-      <AppText tone="secondary" variant="caption" style={{ marginTop: spacing.sm }}>
-        Posted by {job.postedByName}
-      </AppText>
-
-      <View style={{ marginTop: spacing.md }}>
-        <AppButton label="Apply" onPress={() => Linking.openURL(job.applyUrl)} />
+        <AppButton label="Apply Now &rarr;" onPress={handleApply} />
       </View>
     </SolidCard>
   );

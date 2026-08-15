@@ -1,7 +1,8 @@
-import React from 'react';
-import { ScrollView, View, Pressable, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, View, Pressable, Alert, Modal } from 'react-native';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
@@ -9,263 +10,462 @@ import { SolidCard } from '@/components/SolidCard';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Avatar } from '@/components/Avatar';
-import { AuthHeroBackground } from '@/components/AuthHeroBackground';
+import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
-import { getMyProfile } from '@/api/profile';
+import { getMyProfile, updateProfileImages } from '@/api/profile';
 import { listEvents } from '@/api/events';
 import { listDashboardShortcuts, DashboardShortcut } from '@/api/adminShortcuts';
+
+const COVER_PRESETS = [
+  { id: 'campus_students_photo', label: 'Campus Quad 🏛️', src: require('../../assets/images/campus_students_photo.jpg') },
+  { id: 'campus_library_study', label: 'University Library 📖', src: require('../../assets/images/campus_library_study.jpg') },
+  { id: 'student_rep_group', label: 'Student Senate 🤝', src: require('../../assets/images/student_rep_group.jpg') },
+  { id: 'event_tech_hackathon', label: 'Hackfest Arena 💻', src: require('../../assets/images/event_tech_hackathon.jpg') },
+  { id: 'hero_student_3d', label: 'Futuristic Studio 🚀', src: require('../../assets/images/hero_student_3d.jpg') },
+];
+
+const AVATAR_PRESETS = [
+  { id: 'avatar_male', label: 'Male Student 👨‍🎓', src: require('../../assets/images/avatar_male.jpg') },
+  { id: 'avatar_female', label: 'Female Student 👩‍🎓', src: require('../../assets/images/avatar_female.jpg') },
+  { id: 'avatar_male_2', label: 'Engineering Student 💻', src: require('../../assets/images/avatar_male_2.jpg') },
+  { id: 'avatar_female_2', label: 'Honor Scholar 📚', src: require('../../assets/images/avatar_female_2.jpg') },
+  { id: 'avatar_alumni_2', label: 'Alumni Founder 💼', src: require('../../assets/images/avatar_alumni_2.jpg') },
+  { id: 'avatar_mentor', label: 'Faculty Advisor 🧑‍🏫', src: require('../../assets/images/avatar_mentor.jpg') },
+];
 
 export default function StudentDashboard() {
   const { colors, spacing, radius } = useTheme();
   const { user } = useAuth();
-  const [alertDismissed, setAlertDismissed] = React.useState(false);
+  const queryClient = useQueryClient();
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
     queryFn: () => getMyProfile(user!),
     enabled: !!user,
   });
+
   const { data: events } = useQuery({ queryKey: ['events', 'student'], queryFn: () => listEvents({ scope: 'student' }) });
   const { data: shortcuts } = useQuery({
     queryKey: ['dashboard-shortcuts', 'student'],
     queryFn: () => listDashboardShortcuts('student'),
   });
 
-  const displayName = profile?.username ?? user?.fullName ?? 'there';
+  const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Diana';
+  const activeCover = COVER_PRESETS.find((c) => c.id === profile?.coverUrl)?.src ?? require('../../assets/images/campus_students_photo.jpg');
+
+  async function handleSelectAvatar(presetId: string) {
+    if (!user) return;
+    await updateProfileImages(user.id, { avatarUrl: presetId });
+    await queryClient.invalidateQueries({ queryKey: ['profile'] });
+    setPhotoPickerOpen(false);
+    Alert.alert('Avatar Updated 🌟', 'New profile avatar applied.');
+  }
+
+  async function handleSelectCover(presetId: string) {
+    if (!user) return;
+    await updateProfileImages(user.id, { coverUrl: presetId });
+    await queryClient.invalidateQueries({ queryKey: ['profile'] });
+    setPhotoPickerOpen(false);
+    Alert.alert('Campus Banner Updated 🏛️', 'New cover banner applied.');
+  }
 
   return (
-    <ScreenContainer glow={false}>
+    <ScreenContainer glow={true}>
       <AppHeader />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: spacing.lg }}>
-        {/* Welcome card — CAMPUS CORE / Student badge / greeting / avatar */}
-        <View style={{ marginBottom: spacing.xl, borderRadius: radius.glass, overflow: 'hidden' }}>
-          <AuthHeroBackground height={128} radius={radius.glass}>
-            <View style={{ flex: 1, padding: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
-                  <AppText variant="caption" weight="bold" tone="inverse" style={{ letterSpacing: 1, opacity: 0.85 }}>
-                    CAMPUS CORE 🏛️
-                  </AppText>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      borderRadius: radius.pill,
-                      paddingHorizontal: 10,
-                      paddingVertical: 3,
-                    }}
-                  >
-                    <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
-                    <AppText variant="caption" weight="bold" tone="inverse">
-                      Student
-                    </AppText>
-                  </View>
-                </View>
-                <AppText variant="h1" weight="bold" tone="inverse" numberOfLines={1}>
-                  Welcome, {displayName} 👋
-                </AppText>
-              </View>
-              <Avatar name={user?.fullName ?? 'You'} size={64} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: 140 }}
+      >
+        {/* Customizable Campus Cover Banner */}
+        <View
+          style={{
+            height: 140,
+            borderRadius: 20,
+            overflow: 'hidden',
+            marginTop: spacing.sm,
+            marginBottom: spacing.md,
+            position: 'relative',
+          }}
+        >
+          <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+
+          <View style={{ position: 'absolute', top: 12, left: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#48BB78' }} />
+              <AppText variant="caption" weight="bold" tone="inverse">
+                {profile?.institutionName ?? 'University of Ibadan'}
+              </AppText>
             </View>
-          </AuthHeroBackground>
-        </View>
-
-        {/* Action Center — Campus Alert */}
-        <AppText variant="bodySmall" weight="bold" style={{ color: colors.sectionLabel, letterSpacing: 1, marginBottom: spacing.md }}>
-          ACTION CENTER 🎯
-        </AppText>
-        {!alertDismissed ? (
-          <SolidCard backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="megaphone-outline" size={16} color={colors.sectionLabel} />
-                <AppText variant="caption" weight="bold" style={{ color: colors.sectionLabel, letterSpacing: 1 }}>
-                  CAMPUS ALERT
-                </AppText>
-              </View>
-              <Pressable
-                onPress={() => setAlertDismissed(true)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss campus alert"
-              >
-                <Ionicons name="close" size={16} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            <AppText variant="h3" weight="bold" style={{ color: colors.sectionLabel, marginBottom: 4 }}>
-              Lioris Beta Launch
-            </AppText>
-            <AppText tone="secondary" variant="bodySmall">
-              Welcome! Explore the unified student workspace and academic channels.
-            </AppText>
-          </SolidCard>
-        ) : null}        {/* Academic & Comfort Hub — Shortcuts grid */}
-        <AppText variant="h2" weight="bold" style={{ marginBottom: spacing.md }}>
-          My Shortcuts 🎓
-        </AppText>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.lg }}>
-          {(shortcuts ?? []).filter((s) => s.active).map((shortcut) => {
-            const colorKeys = SHORTCUT_COLOR_MAP[shortcut.iconColor];
-            return (
-              <ShortcutTile
-                key={shortcut.id}
-                icon={shortcut.icon as keyof typeof Ionicons.glyphMap}
-                bg={colors[colorKeys.bgKey]}
-                iconColor={colors[colorKeys.textKey]}
-                title={shortcut.title}
-                subtitle={shortcut.description}
-                subtitleColor={colors[colorKeys.textKey]}
-                onPress={() => {
-                  const route = resolveShortcutRoute(shortcut.internalAction);
-                  if (route) {
-                    router.push(route as any);
-                  } else {
-                    Alert.alert('Not available yet', `${shortcut.title} isn\u2019t built in this preview.`);
-                  }
-                }}
-              />
-            );
-          })}
-        </View>
-
-        {/* Up Next Today */}
-        <AppText variant="bodySmall" weight="bold" style={{ color: colors.sectionLabel, letterSpacing: 1, marginBottom: spacing.md }}>
-          UP NEXT TODAY 📅
-        </AppText>
-        <SolidCard style={{ marginBottom: spacing.lg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
-            <Ionicons name="calendar-outline" size={20} color={colors.brandPrimary} />
-            <AppText weight="bold">No Live Broadcasts Scheduled Today</AppText>
           </View>
-          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
-            There are no live broadcasts or cohort seminars mapped for today on your academic
-            line. Check out the Events tab to discover upcoming workshops, hackathons, and
-            webinars!
-          </AppText>
-          <AppButton label="Browse Campus Events 📅" onPress={() => router.push('/(student)/events-list')} />
-        </SolidCard>
 
-        {/* Trending Discussions */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-          <AppText variant="h2" weight="bold">
-            Trending Discussions 🔥
-          </AppText>
-          <AppText weight="bold" style={{ color: colors.brandPrimary }} onPress={() => router.push('/(student)/feed')}>
-            Top 3
-          </AppText>
+          {/* Change Photo Trigger */}
+          <Pressable
+            onPress={() => setPhotoPickerOpen(true)}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              borderRadius: radius.pill,
+              paddingHorizontal: spacing.sm,
+              paddingVertical: 5,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            <Ionicons name="camera" size={13} color="#FFFFFF" />
+            <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
+              Customize
+            </AppText>
+          </Pressable>
+
+          <View style={{ position: 'absolute', bottom: 12, left: 14 }}>
+            <AppText variant="h2" weight="bold" tone="inverse">
+              Hello {firstName}
+            </AppText>
+            <AppText tone="inverse" variant="caption" style={{ opacity: 0.9 }}>
+              {profile?.department ?? 'Computer Science & AI'} | Level {profile?.level ?? 4}
+            </AppText>
+          </View>
         </View>
-        <SolidCard backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.lg }}>
-          <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
-            <View
+
+        {/* Quick Search Bar Pill */}
+        <Pressable
+          onPress={() => router.push('/(student)/search')}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.surface,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 10,
+            borderWidth: 1,
+            borderColor: colors.border,
+            gap: spacing.sm,
+            marginBottom: spacing.md,
+          }}
+        >
+          <Ionicons name="search" size={18} color={colors.textSecondary} />
+          <AppText tone="secondary" variant="bodySmall">
+            Search threads, past questions, events, portals...
+          </AppText>
+        </Pressable>
+
+        {/* High-Utility Next Class Countdown Widget */}
+        <SolidCard radius={20} backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="time" size={16} color={colors.brandPrimary} />
+              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+                NEXT LECTURE TODAY &bull; IN 42 MINS
+              </AppText>
+            </View>
+            <Badge label="LT 2 Main" tone="brand" />
+          </View>
+
+          <AppText variant="h3" weight="bold" style={{ marginBottom: 2 }}>
+            CSC 301: Advanced Algorithms & Data Structures
+          </AppText>
+          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+            11:00 AM – 1:00 PM &bull; Prof. O. Adeyemi &bull; Topic: Dynamic Programming & Graphs
+          </AppText>
+
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <Pressable
+              onPress={() => router.push('/(student)/resources')}
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: colors.brandPrimary,
+                flex: 1,
+                backgroundColor: colors.surface,
+                borderRadius: radius.pill,
+                paddingVertical: 7,
                 alignItems: 'center',
-                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: colors.border,
               }}
             >
-              <Ionicons name="compass-outline" size={18} color="#FFFFFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <AppText weight="bold" style={{ color: colors.sectionLabel, marginBottom: 4 }}>
-                Welcome to Lioris Space 🚀
+              <AppText variant="caption" weight="bold" tone="brand">
+                📚 Course Notes & Solved PQs
               </AppText>
-              <AppText tone="secondary" variant="bodySmall">
-                Your consolidated campus workspace is currently quiet. Follow these tasks to
-                kickstart your academic lifecycle.
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/(student)/calendar')}
+              style={{
+                flex: 1,
+                backgroundColor: colors.brandPrimary,
+                borderRadius: radius.pill,
+                paddingVertical: 7,
+                alignItems: 'center',
+              }}
+            >
+              <AppText variant="caption" weight="bold" tone="inverse">
+                📅 Full Timetable &rarr;
               </AppText>
-            </View>
+            </Pressable>
           </View>
         </SolidCard>
 
-        {/* Getting Started Tasks */}
-        <AppText variant="bodySmall" weight="bold" style={{ color: colors.sectionLabel, letterSpacing: 1, marginBottom: spacing.md }}>
-          GETTING STARTED TASKS ✨
-        </AppText>
-        <SolidCard style={{ marginBottom: spacing.lg }}>
-          <GettingStartedRow
-            icon="person-outline"
-            bg={colors.mintBg}
-            iconColor={colors.mintText}
-            title="Complete your profile"
-            description="Configure your cohort, major and bios to match with campus peers."
-            onPress={() => router.push('/(student)/profile' as any)}
-          />
-          <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.md }} />
-          <GettingStartedRow
-            icon="chatbubbles-outline"
-            bg={colors.lavenderBg}
-            iconColor={colors.lavenderText}
-            title="Join a class forum"
-            description="Find your course rooms and introduce yourself to classmates."
-            onPress={() => router.push('/(student)/feed' as any)}
-          />
-        </SolidCard>
+        {/* Live Study Squads & Campus Hub Activity */}
+        <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+            <AppText variant="h3" weight="bold">
+              Live Study Squads & Hubs ⚡
+            </AppText>
+            <Badge label="2 Active Now" tone="success" />
+          </View>
 
-        <View style={{ height: spacing.xxl }} />
+          <View style={{ gap: spacing.sm }}>
+            <SolidCard radius={16}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Ionicons name="location" size={14} color={colors.brandPrimary} />
+                    <AppText weight="bold" variant="bodySmall">
+                      Senate E-Library (2nd Floor Quiet Zone)
+                    </AppText>
+                  </View>
+                  <AppText tone="secondary" variant="caption">
+                    28 students &bull; CSC 301 & MEE 305 peer revision sprint
+                  </AppText>
+                </View>
+                <Pressable
+                  onPress={() => router.push('/(student)/feed')}
+                  style={{
+                    backgroundColor: colors.pastelPrimaryBg,
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: 4,
+                    borderRadius: radius.pill,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="brand">
+                    Join Squad 💬
+                  </AppText>
+                </Pressable>
+              </View>
+            </SolidCard>
+
+            <SolidCard radius={16}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Ionicons name="code-slash" size={14} color={colors.brandPrimary} />
+                    <AppText weight="bold" variant="bodySmall">
+                      Tech Hub / Hackfest Arena (Faculty Hall)
+                    </AppText>
+                  </View>
+                  <AppText tone="secondary" variant="caption">
+                    14 students &bull; Team Aqua demo rehearsal & mobile UI testing
+                  </AppText>
+                </View>
+                <Pressable
+                  onPress={() => router.push('/(student)/feed')}
+                  style={{
+                    backgroundColor: colors.pastelPrimaryBg,
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: 4,
+                    borderRadius: radius.pill,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="brand">
+                    View Demo 🚀
+                  </AppText>
+                </Pressable>
+              </View>
+            </SolidCard>
+          </View>
+        </View>
+
+        {/* Dynamic Campus Utilities & Portal Grid */}
+        <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+            <AppText variant="h3" weight="bold">
+              Campus Utilities & Portals 🏛️
+            </AppText>
+            <Pressable onPress={() => router.push('/(student)/resources')}>
+              <AppText tone="brand" variant="bodySmall" weight="bold">
+                View All &rarr;
+              </AppText>
+            </Pressable>
+          </View>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {shortcuts?.map((item) => {
+              const colorInfo = SHORTCUT_COLOR_MAP[item.iconColor] ?? SHORTCUT_COLOR_MAP.sage;
+              const route = resolveShortcutRoute(item.internalAction);
+              return (
+                <ShortcutTile
+                  key={item.id}
+                  icon={item.icon as any}
+                  bg={colors[colorInfo.bgKey]}
+                  iconColor={colors[colorInfo.textKey]}
+                  title={item.title}
+                  subtitle={item.description}
+                  subtitleColor={colors[colorInfo.textKey]}
+                  onPress={() => {
+                    if (route) {
+                      router.push(route as any);
+                    } else {
+                      Alert.alert(item.title, item.description);
+                    }
+                  }}
+                />
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Featured Campus Events Preview */}
+        <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+            <AppText variant="h3" weight="bold">
+              Featured Campus Events 📅
+            </AppText>
+            <Pressable onPress={() => router.push('/(student)/events-list')}>
+              <AppText tone="brand" variant="bodySmall" weight="bold">
+                See All ({events?.length ?? 0}) &rarr;
+              </AppText>
+            </Pressable>
+          </View>
+
+          {events?.slice(0, 2).map((evt) => (
+            <SolidCard key={evt.id} radius={18} style={{ marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+                <View
+                  style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: radius.md,
+                    backgroundColor: colors.pastelPrimaryBg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.brandPrimary,
+                  }}
+                >
+                  <Ionicons name="calendar" size={22} color={colors.brandPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText weight="bold" variant="bodySmall">
+                    {evt.title}
+                  </AppText>
+                  <AppText tone="secondary" variant="caption">
+                    📍 {evt.location} &bull; {evt.rsvpCount} RSVPs
+                  </AppText>
+                </View>
+                <Pressable
+                  onPress={() => router.push('/(student)/events-list')}
+                  style={{
+                    backgroundColor: colors.brandPrimary,
+                    borderRadius: radius.pill,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: 6,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="inverse">
+                    RSVP
+                  </AppText>
+                </Pressable>
+              </View>
+            </SolidCard>
+          ))}
+        </View>
       </ScrollView>
+
+      {/* Photo Picker Modal */}
+      <Modal visible={photoPickerOpen} transparent animationType="slide" onRequestClose={() => setPhotoPickerOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Ionicons name="images" size={20} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold">
+                  Customize App Photos 📷
+                </AppText>
+              </View>
+              <Pressable onPress={() => setPhotoPickerOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+                CHOOSE AVATAR PHOTO
+              </AppText>
+              <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
+                {AVATAR_PRESETS.map((preset) => {
+                  const isSelected = profile?.avatarUrl === preset.id;
+                  return (
+                    <Pressable
+                      key={preset.id}
+                      onPress={() => handleSelectAvatar(preset.id)}
+                      style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        padding: spacing.sm,
+                        borderRadius: radius.md,
+                        borderWidth: 2,
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                        backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.background,
+                      }}
+                    >
+                      <Image source={preset.src} style={{ width: 56, height: 56, borderRadius: 28, marginBottom: 4 }} />
+                      <AppText variant="caption" weight="bold" numberOfLines={1}>
+                        {preset.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+                CHOOSE CAMPUS BANNER
+              </AppText>
+              <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+                {COVER_PRESETS.map((preset) => {
+                  const isSelected = profile?.coverUrl === preset.id;
+                  return (
+                    <Pressable
+                      key={preset.id}
+                      onPress={() => handleSelectCover(preset.id)}
+                      style={{
+                        height: 75,
+                        borderRadius: radius.md,
+                        overflow: 'hidden',
+                        position: 'relative',
+                        borderWidth: 2,
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingLeft: spacing.md }}>
+                        <AppText variant="bodySmall" weight="bold" tone="inverse">
+                          {preset.label}
+                        </AppText>
+                        {isSelected ? (
+                          <AppText variant="caption" weight="bold" tone="brand" style={{ color: '#68D391' }}>
+                            ✓ Active Banner
+                          </AppText>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <AppButton label="Done" onPress={() => setPhotoPickerOpen(false)} />
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
 
-function GettingStartedRow({
-  icon,
-  bg,
-  iconColor,
-  title,
-  description,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  bg: string;
-  iconColor: string;
-  title: string;
-  description: string;
-  onPress: () => void;
-}) {
-  const { colors, spacing, radius } = useTheme();
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${description}`}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: radius.md,
-            backgroundColor: bg,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name={icon} size={18} color={iconColor} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <AppText weight="bold" variant="bodySmall">
-            {title}
-          </AppText>
-          <AppText tone="secondary" variant="caption">
-            {description}
-          </AppText>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={colors.brandPrimary} />
-      </View>
-    </Pressable>
-  );
-}
-
-// Maps admin's `internalAction` (src/api/adminShortcuts.ts) to a real
-// screen. Previously this whole connection didn't exist at all — the
-// dashboard rendered 4 hardcoded tiles regardless of anything an admin
-// configured in the Local Hub Control panel. Some of admin's seeded
-// actions ("Fees Portal", a course catalog) don't correspond to any
-// screen actually built in Lioris — those get honest "not available
-// yet" feedback rather than a silent dead tap.
 function resolveShortcutRoute(internalAction: string): string | null {
   switch (internalAction) {
     case 'library':
@@ -314,26 +514,26 @@ function ShortcutTile({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${title}, ${subtitle}`}
-      style={{ width: '47%' }}
+      style={{ width: '48%' }}
     >
       <SolidCard backgroundColor={bg} radius={18}>
         <View
           style={{
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             borderRadius: radius.sm,
-            backgroundColor: 'rgba(255,255,255,0.55)',
+            backgroundColor: 'rgba(255,255,255,0.65)',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: spacing.md,
+            marginBottom: spacing.sm,
           }}
         >
           <Ionicons name={icon} size={18} color={iconColor} />
         </View>
-        <AppText weight="bold" style={{ marginBottom: 2 }}>
+        <AppText weight="bold" variant="bodySmall" style={{ marginBottom: 2 }}>
           {title}
         </AppText>
-        <AppText variant="caption" weight="semiBold" style={{ color: subtitleColor }}>
+        <AppText variant="caption" weight="semiBold" style={{ color: subtitleColor }} numberOfLines={1}>
           {subtitle}
         </AppText>
       </SolidCard>

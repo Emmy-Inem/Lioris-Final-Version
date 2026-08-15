@@ -3,10 +3,6 @@ import { UserProfile, UserRole } from './types';
 import { withMockFallback } from './withMockFallback';
 import { FALL_BACK_TO_MOCKS } from './config';
 
-// Level thresholds — kept for anywhere gamification is genuinely shown
-// (the Profile screen itself, per later screenshot cross-checks,
-// doesn't surface XP/level UI as prominently as first assumed from the
-// Kotlin source — see ProfileScreenBase.tsx).
 export function nextLevelXp(level: number): number {
   if (level === 1) return 200;
   if (level === 3) return 500;
@@ -17,37 +13,60 @@ export function nextLevelXp(level: number): number {
 
 const profileState = new Map<string, UserProfile>();
 
-function mockProfileFor(user: { id: string; fullName: string; role: UserRole }): UserProfile {
+function mockProfileFor(user: { id: string; fullName: string; role: UserRole; email?: string }): UserProfile {
   if (profileState.has(user.id)) return profileState.get(user.id)!;
+
+  const isAlumni = user.role === 'alumni';
+  const isStaff = user.role === 'staff';
+  const isAdmin = user.role === 'admin';
+  const isSpecialAdmin = user.email?.toLowerCase().includes('inememmanuel') || user.id.includes('inememmanuel');
+
+  const resolvedEmail = user.email || (isSpecialAdmin ? 'inememmanuel@gmail.com' : `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`);
 
   const created: UserProfile = {
     id: user.id,
-    fullName: user.fullName,
-    username: user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.'),
-    email: `${user.id}@lioris.dev`,
-    userType: user.role,
-    graduationYear: null,
-    connectionsCount: 0,
-    bio: null,
-    department: null,
-    interests: [],
-    institutionName: undefined,
-    institutionCode: undefined,
-    avatarUrl: null,
-    coverUrl: null,
-    isVerified: false,
-    verificationStatus: 'none',
-    xp: 0,
-    level: 1,
-    reputationScore: 0,
-    trustLevel: 1,
-    streakDays: 0,
-    postsCount: 0,
-    resourcesCount: 0,
-    eventsCount: 0,
-    badgesCount: 0,
-    followersCount: 0,
-    followingCount: 0,
+    fullName: isSpecialAdmin ? 'Inem Emmanuel' : user.fullName,
+    username: isSpecialAdmin ? 'inememmanuel' : user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.'),
+    email: resolvedEmail,
+    userType: isSpecialAdmin ? 'admin' : user.role,
+    graduationYear: isAlumni ? 2022 : 2026,
+    connectionsCount: isAlumni ? 142 : 48,
+    bio: isSpecialAdmin
+      ? 'Platform Root Administrator & Campus Architect. Overseeing multi-campus workspaces, security policies & moderation.'
+      : isAlumni
+      ? 'Lead Software Engineer @ Paystack. Mentoring student developers and sponsoring open STEM research.'
+      : isStaff
+      ? 'Faculty Coordinator & Lecturer, Department of Computer Sciences. Campus Tech Advisor.'
+      : isAdmin
+      ? 'Platform Root Administrator. Overseeing campus multi-node workspaces & moderation.'
+      : 'Computer Science senior building mobile systems & AI apps. Active campus peer mentor.',
+    department: 'Computer Science & AI',
+    interests: ['Software Engineering', 'Cloud Architecture', 'Mobile Systems', 'Campus AI', 'UI/UX Design'],
+    institutionName: 'University of Ibadan',
+    institutionCode: 'UI',
+    avatarUrl: isSpecialAdmin
+      ? 'avatar_male_2'
+      : isAlumni
+      ? 'avatar_female'
+      : isStaff
+      ? 'avatar_mentor'
+      : isAdmin
+      ? 'avatar_alumni_2'
+      : 'avatar_male',
+    coverUrl: 'campus_students_photo',
+    isVerified: true,
+    verificationStatus: 'verified',
+    xp: isSpecialAdmin ? 3200 : 850,
+    level: isSpecialAdmin ? 10 : 4,
+    reputationScore: isSpecialAdmin ? 980 : 320,
+    trustLevel: isSpecialAdmin ? 10 : 8,
+    streakDays: 28,
+    postsCount: isSpecialAdmin ? 16 : 4,
+    resourcesCount: isSpecialAdmin ? 24 : 6,
+    eventsCount: isSpecialAdmin ? 12 : 5,
+    badgesCount: isSpecialAdmin ? 8 : 3,
+    followersCount: isSpecialAdmin ? 340 : 88,
+    followingCount: isSpecialAdmin ? 120 : 64,
   };
   profileState.set(user.id, created);
   return created;
@@ -57,6 +76,7 @@ export async function getMyProfile(user: {
   id: string;
   fullName: string;
   role: UserRole;
+  email?: string;
 }): Promise<UserProfile> {
   return withMockFallback(async () => {
     const { data } = await api.get<UserProfile>('/profile/me');
@@ -64,10 +84,6 @@ export async function getMyProfile(user: {
   }, mockProfileFor(user));
 }
 
-// Called right after registration so the username chosen on the signup
-// form (not derived from fullName) is what the profile actually shows.
-// Creates the profile record if it doesn't exist yet, since this runs
-// before any getMyProfile call would have lazily created one.
 export function seedProfileUsername(
   user: { id: string; fullName: string; role: UserRole },
   username: string,
@@ -88,10 +104,6 @@ export function seedProfileUsername(
   });
 }
 
-// Flips the profile's verificationStatus to 'pending' right after a
-// verification application is submitted, so the Profile screen's
-// banner reflects it on the next fetch — not just in local component
-// state that would reset on reload.
 export function markVerificationPending(userId: string) {
   const existing = profileState.get(userId);
   if (existing) {
@@ -99,10 +111,6 @@ export function markVerificationPending(userId: string) {
   }
 }
 
-// Called when an Admin approves a verification request — actually
-// grants the tick on the applicant's own profile, not just the request
-// record. Rejection intentionally does NOT reset to 'none' here; the
-// admin screen shows the rejection and the person can re-apply.
 export function grantVerification(userId: string) {
   const existing = profileState.get(userId);
   if (existing) {
@@ -117,8 +125,6 @@ export function markVerificationRejected(userId: string) {
   }
 }
 
-// Backs the Profile screen's "Verify" button on the unverified-email
-// banner. Awards the +150 XP the banner promises.
 export async function verifyProfileEmail(userId: string): Promise<UserProfile> {
   if (!FALL_BACK_TO_MOCKS) {
     const { data } = await api.post<UserProfile>('/profile/me/verify-email');
@@ -134,4 +140,33 @@ export async function verifyProfileEmail(userId: string): Promise<UserProfile> {
     profileState.set(userId, updated);
     return updated;
   }
+}
+
+export async function updateProfileImages(
+  userId: string,
+  updates: { avatarUrl?: string | null; coverUrl?: string | null },
+): Promise<UserProfile> {
+  const current = profileState.get(userId) || mockProfileFor({ id: userId, fullName: 'You', role: 'student' });
+  const updated: UserProfile = {
+    ...current,
+    ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
+    ...(updates.coverUrl !== undefined ? { coverUrl: updates.coverUrl } : {}),
+  };
+  profileState.set(userId, updated);
+  return updated;
+}
+
+export async function updateMyProfile(userId: string, patch: Partial<UserProfile>): Promise<UserProfile> {
+  return withMockFallback(
+    async () => {
+      const { data } = await api.patch<UserProfile>('/profile/me', patch);
+      return data;
+    },
+    (() => {
+      const current = profileState.get(userId) || mockProfileFor({ id: userId, fullName: 'You', role: 'student' });
+      const updated: UserProfile = { ...current, ...patch };
+      profileState.set(userId, updated);
+      return updated;
+    })(),
+  );
 }

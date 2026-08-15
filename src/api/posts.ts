@@ -60,6 +60,26 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
   }, filterMockPosts(query));
 }
 
+export async function listMyPosts(userId?: string): Promise<Post[]> {
+  return withMockFallback(
+    async () => {
+      const { data } = await api.get<{ items: Post[] }>('/profile/me/posts');
+      return data.items;
+    },
+    postsState.filter(
+      (p) =>
+        p.authorId === 'me' ||
+        p.authorId === 'student-me' ||
+        p.authorId === userId ||
+        p.authorName === 'You' ||
+        p.authorId === 'my-post-1' ||
+        p.authorId === 'my-post-2' ||
+        p.authorId === 'student-3' ||
+        p.authorId === 'student-4',
+    ),
+  );
+}
+
 export interface CreatePostPayload {
   title: string;
   content: string;
@@ -71,6 +91,10 @@ export interface CreatePostPayload {
   sponsored?: boolean;
   courseTags?: string;
   postFormat?: 'Thread' | 'Rapid-Fire Conversation';
+  imageUrl?: string;
+  videoUrl?: string;
+  poll?: any;
+  pollQuestion?: string;
 }
 
 // PRD Section 6.2 (Community Discussions): "Given I submit a discussion
@@ -115,6 +139,139 @@ export async function togglePostLike(postId: string, liked: boolean): Promise<vo
     // Expected in mock mode — see README's "Mock data fallback".
   });
   postsState = postsState.map((p) =>
-    p.id === postId ? { ...p, isLikedByMe: liked, likesCount: p.likesCount + (liked ? 1 : -1) } : p,
+    p.id === postId ? { ...p, isLikedByMe: liked, likesCount: Math.max(0, p.likesCount + (liked ? 1 : -1)) } : p,
   );
 }
+
+export interface PostComment {
+  id: string;
+  postId: string;
+  authorName: string;
+  authorRole: 'student' | 'staff' | 'alumni' | 'admin';
+  authorAvatarUrl?: string | null;
+  authorDepartment?: string;
+  content: string;
+  createdAt: string;
+  likesCount: number;
+  isLikedByMe?: boolean;
+  imageUrl?: string | null;
+}
+
+let commentsState: Record<string, PostComment[]> = {
+  'post-1': [
+    {
+      id: 'c1',
+      postId: 'post-1',
+      authorName: 'Amina Yusuf',
+      authorRole: 'student',
+      authorDepartment: '300L CS',
+      content: 'Thanks for sharing! Does anyone have the past question solutions for CSC 301?',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      likesCount: 3,
+      isLikedByMe: false,
+    },
+    {
+      id: 'c2',
+      postId: 'post-1',
+      authorName: 'Dr. Adeyemi',
+      authorRole: 'staff',
+      authorDepartment: 'Faculty of Science',
+      content: 'The review session will be held this Thursday at 2pm in LT2. Bring your laptops.',
+      createdAt: new Date(Date.now() - 1800000).toISOString(),
+      likesCount: 8,
+      isLikedByMe: true,
+    },
+  ],
+};
+
+export async function listPostComments(postId: string): Promise<PostComment[]> {
+  return withMockFallback(async () => {
+    const { data } = await api.get<{ items: PostComment[] }>(`/feed/${postId}/comments`);
+    return data.items;
+  }, commentsState[postId] ?? [
+    {
+      id: `c-default-${postId}`,
+      postId,
+      authorName: 'Tunde Bakare',
+      authorRole: 'student',
+      authorDepartment: '200L Elect Eng',
+      content: 'Great discussion thread. Following for updates!',
+      createdAt: new Date(Date.now() - 600000).toISOString(),
+      likesCount: 2,
+      isLikedByMe: false,
+    }
+  ]);
+}
+
+export async function createPostComment(
+  postId: string,
+  content: string,
+  authorName = 'You',
+  authorRole: 'student' | 'staff' | 'alumni' | 'admin' = 'student',
+  imageUrl?: string | null,
+): Promise<PostComment> {
+  const created: PostComment = {
+    id: `c-${Date.now()}`,
+    postId,
+    authorName,
+    authorRole,
+    authorDepartment: 'UI Verified',
+    content,
+    createdAt: new Date().toISOString(),
+    likesCount: 0,
+    isLikedByMe: false,
+    imageUrl: imageUrl || null,
+  };
+  commentsState[postId] = [...(commentsState[postId] ?? []), created];
+  postsState = postsState.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
+  return created;
+}
+
+export async function toggleCommentLike(postId: string, commentId: string, liked: boolean): Promise<void> {
+  const current = commentsState[postId] ?? [];
+  commentsState[postId] = current.map((c) =>
+    c.id === commentId
+      ? { ...c, isLikedByMe: liked, likesCount: Math.max(0, c.likesCount + (liked ? 1 : -1)) }
+      : c
+  );
+}
+
+export async function voteOnPoll(postId: string, optionId: string): Promise<void> {
+  postsState = postsState.map((p) => {
+    if (p.id !== postId || !p.poll) return p;
+    const hasVoted = p.poll.options.some((o) => o.isVotedByMe);
+    if (hasVoted) return p;
+    const nextOptions = p.poll.options.map((opt) =>
+      opt.id === optionId ? { ...opt, votes: opt.votes + 1, isVotedByMe: true } : opt,
+    );
+    return {
+      ...p,
+      poll: {
+        ...p.poll,
+        options: nextOptions,
+        totalVotes: p.poll.totalVotes + 1,
+      },
+    };
+  });
+}
+
+export async function deletePost(postId: string): Promise<boolean> {
+  postsState = postsState.filter((p) => p.id !== postId);
+  delete commentsState[postId];
+  return true;
+}
+
+export async function updatePost(postId: string, updates: Partial<Post>): Promise<Post> {
+  let updated: Post | undefined;
+  postsState = postsState.map((p) => {
+    if (p.id === postId) {
+      updated = { ...p, ...updates };
+      return updated;
+    }
+    return p;
+  });
+  if (!updated) throw new Error('Post not found');
+  return updated;
+}
+
+

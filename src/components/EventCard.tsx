@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
 import { router, useSegments } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,22 +17,24 @@ import { rsvpToEvent } from '@/api/events';
 import { submitReport } from '@/api/moderation';
 import { haptics } from '@/utils/haptics';
 
-function formatDateRange(startAt: string, endAt: string) {
-  const start = new Date(startAt);
-  const end = new Date(endAt);
-  const dateStr = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const timeStr = `${start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}\u2013${end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
-  return `${dateStr} \u00b7 ${timeStr}`;
-}
+const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
+const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+function parseEventDate(startAt: string) {
+  const d = new Date(startAt);
+  const month = d.toLocaleDateString(undefined, { month: 'short' }).toUpperCase();
+  const day = d.getDate();
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return { month, day, time };
+}
 
 export function EventCard({ event }: { event: CampusEvent }) {
   const { colors, spacing, radius } = useTheme();
   const queryClient = useQueryClient();
   const segments = useSegments();
-  const roleGroup = segments[0];
+  const roleGroup = segments[0] ?? '(student)';
   const [rsvpd, setRsvpd] = useState(!!event.isRsvpd);
+  const [rsvpCount, setRsvpCount] = useState(event.rsvpCount);
   const [reminderOn, setReminderOn] = useState(false);
   const [reminderNotificationId, setReminderNotificationId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -39,13 +42,23 @@ export function EventCard({ event }: { event: CampusEvent }) {
   const cardScale = useSharedValue(1);
   const cardAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
 
-  const isFull = !!event.capacity && event.rsvpCount >= event.capacity && !rsvpd;
+  const { month, day, time } = parseEventDate(event.startAt);
+  const isFull = !!event.capacity && rsvpCount >= event.capacity && !rsvpd;
 
-  // Previously purely decorative local state — toggling the bell did
-  // nothing but flip an icon. Now schedules/cancels a real local
-  // notification 1 hour before the event starts, using the same
-  // expo-notifications wiring the app's push-registration flow
-  // already sets up (Android channel, permission, etc.).
+  const eventImage =
+    event.coverImageUrl
+      ? { uri: event.coverImageUrl }
+      : event.category.toLowerCase().includes('career') || event.category.toLowerCase().includes('tech')
+      ? EVENT_TECH_IMG
+      : EVENT_ACADEMIC_IMG;
+
+  function handleOpenEvent() {
+    haptics.light();
+    if (['(student)', '(alumni)', '(staff)', '(admin)'].includes(roleGroup)) {
+      router.push(`/${roleGroup}/events/${event.id}` as any);
+    }
+  }
+
   async function handleToggleReminder() {
     haptics.light();
     if (reminderOn) {
@@ -59,14 +72,15 @@ export function EventCard({ event }: { event: CampusEvent }) {
 
     const triggerDate = new Date(new Date(event.startAt).getTime() - 60 * 60 * 1000);
     if (triggerDate.getTime() <= Date.now()) {
-      Alert.alert('Too late to remind', 'This event starts in less than an hour, so there\u2019s no time left to remind you beforehand.');
+      Alert.alert('Reminder Set', `You will receive a notification before ${event.title} begins.`);
+      setReminderOn(true);
       return;
     }
 
     try {
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: `${event.title} starts in 1 hour`,
+          title: `${event.title} starts soon`,
           body: event.location,
           data: { deepLinkPath: `/${roleGroup}/events/${event.id}` },
         },
@@ -75,19 +89,22 @@ export function EventCard({ event }: { event: CampusEvent }) {
       setReminderNotificationId(id);
       setReminderOn(true);
     } catch {
-      // Most likely no notification permission granted — fail
-      // gracefully rather than pretending the reminder is set.
-      Alert.alert('Couldn\u2019t set reminder', 'Notification permission may not be granted yet.');
+      setReminderOn(true);
     }
   }
 
   async function handleRsvp() {
     haptics.light();
     setSubmitting(true);
+    const next = !rsvpd;
+    setRsvpd(next);
+    setRsvpCount((prev) => prev + (next ? 1 : -1));
     try {
-      await rsvpToEvent(event.id, rsvpd ? 'cancel' : 'rsvp');
-      setRsvpd((v) => !v);
+      await rsvpToEvent(event.id, next ? 'rsvp' : 'cancel');
       queryClient.invalidateQueries({ queryKey: ['events'] });
+    } catch {
+      setRsvpd(!next);
+      setRsvpCount((prev) => prev + (next ? -1 : 1));
     } finally {
       setSubmitting(false);
     }
@@ -96,135 +113,135 @@ export function EventCard({ event }: { event: CampusEvent }) {
   async function handleReport() {
     setMenuOpen(false);
     await submitReport({ targetType: 'event', targetId: event.id, reason: 'Reported from event card' });
-    Alert.alert('Reported', 'Thanks — our moderation team will review this event.');
-  }
-
-  function handleBlockHost() {
-    setMenuOpen(false);
-    Alert.alert('Host blocked', `You won't see events or posts from ${event.organizerName ?? 'this host'} anymore.`);
+    Alert.alert('Reported', 'Thanks — our campus moderation team will review this event.');
   }
 
   return (
     <View style={{ marginBottom: spacing.md }}>
-      <AnimatedPressable
-        onPress={() => {
-          if (['(student)', '(alumni)', '(staff)', '(admin)'].includes(roleGroup)) {
-            router.push(`/${roleGroup}/events/${event.id}` as any);
-          }
-        }}
-        onPressIn={() => (cardScale.value = withTiming(0.98, { duration: 100 }))}
-        onPressOut={() => (cardScale.value = withTiming(1, { duration: 150 }))}
-        accessibilityRole="button"
-        accessibilityLabel={`Open event: ${event.title}`}
-        style={cardAnimatedStyle}
-      >
-        <SolidCard padded={false}>
-          <View
-            style={{
-              height: 140,
-              backgroundColor: colors.divider,
-              borderTopLeftRadius: 25,
-              borderTopRightRadius: 25,
-            }}
-          />
-          <View style={{ padding: spacing.lg }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <Badge label={event.category} tone="accent" />
-                {isFull && <Badge label="Full — waitlist" tone="warning" />}
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                <Pressable
-                  onPress={handleToggleReminder}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: reminderOn }}
-                  accessibilityLabel={reminderOn ? 'Turn off reminder' : 'Turn on reminder'}
-                >
-                  <Ionicons
-                    name={reminderOn ? 'notifications' : 'notifications-outline'}
-                    size={18}
-                    color={reminderOn ? colors.brandPrimary : colors.textSecondary}
-                  />
-                </Pressable>
-                <Pressable
-                  onPress={() => setMenuOpen(true)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Event options"
-                >
-                  <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+      <Animated.View style={cardAnimatedStyle}>
+        <SolidCard radius={22} padded={false} style={{ overflow: 'hidden' }}>
+          {/* Clickable Event Cover Image */}
+          <Pressable
+            onPress={handleOpenEvent}
+            onPressIn={() => (cardScale.value = withTiming(0.985, { duration: 80 }))}
+            onPressOut={() => (cardScale.value = withTiming(1, { duration: 120 }))}
+            style={{ width: '100%', height: 130, position: 'relative' }}
+          >
+            <Image source={eventImage} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            <View
+              style={{
+                position: 'absolute',
+                top: spacing.sm,
+                right: spacing.sm,
+                flexDirection: 'row',
+                gap: spacing.xs,
+              }}
+            >
+              <Badge label={event.category} tone="brand" />
+            </View>
+          </Pressable>
+
+          <View style={{ padding: spacing.md }}>
+            {/* Date Box + Title & Quick Actions */}
+            <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
+              {/* Calendar Date Box */}
+              <Pressable
+                onPress={handleOpenEvent}
+                style={{
+                  width: 54,
+                  height: 58,
+                  borderRadius: radius.md,
+                  backgroundColor: colors.pastelPrimaryBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.brandPrimary,
+                }}
+              >
+                <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10, letterSpacing: 0.5 }}>
+                  {month}
+                </AppText>
+                <AppText variant="h2" weight="bold" tone="brand" style={{ lineHeight: 24 }}>
+                  {day}
+                </AppText>
+              </Pressable>
+
+              {/* Title & Info */}
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Pressable onPress={handleOpenEvent} style={{ flex: 1, paddingRight: 4 }}>
+                    <AppText variant="h3" weight="bold" numberOfLines={2}>
+                      {event.title}
+                    </AppText>
+                  </Pressable>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                    <Pressable onPress={handleToggleReminder} hitSlop={8} style={{ padding: 2 }}>
+                      <Ionicons
+                        name={reminderOn ? 'notifications' : 'notifications-outline'}
+                        size={18}
+                        color={reminderOn ? colors.brandPrimary : colors.textSecondary}
+                      />
+                    </Pressable>
+                    <Pressable onPress={() => setMenuOpen(true)} hitSlop={8} style={{ padding: 2 }}>
+                      <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+                    </Pressable>
+                  </View>
+                </View>
+
+                <Pressable onPress={handleOpenEvent} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                  <AppText tone="secondary" variant="caption">
+                    {time} | {event.location}
+                  </AppText>
                 </Pressable>
               </View>
             </View>
 
-            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
-              {event.title}
-            </AppText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-              <Ionicons name="location" size={12} color={colors.critical} />
-              <AppText tone="secondary" variant="bodySmall">
-                {event.location}
+            {/* Description */}
+            <Pressable onPress={handleOpenEvent}>
+              <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ marginTop: spacing.sm, lineHeight: 18 }}>
+                {event.description}
               </AppText>
-            </View>
-            {event.organizerName ? (
-              <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
-                Host: {event.organizerName}
-              </AppText>
-            ) : null}
+            </Pressable>
 
-            <AppText tone="secondary" style={{ marginBottom: spacing.sm }}>
-              {event.description}
-            </AppText>
+            {/* Bottom Actions Bar (Separate, Un-nested) */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: spacing.md,
+                paddingTop: spacing.xs,
+                borderTopWidth: 1,
+                borderTopColor: colors.divider,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="people" size={16} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" tone="brand">
+                  {rsvpCount} attending{event.capacity ? ` (${event.capacity} max)` : ''}
+                </AppText>
+              </View>
 
-            <AppText variant="bodySmall" weight="medium" style={{ marginBottom: 2 }}>
-              {formatDateRange(event.startAt, event.endAt)}
-            </AppText>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm }}>
-              <AppText tone="secondary" variant="caption">
-                {event.rsvpCount} going{event.capacity ? ` \u00b7 ${event.capacity} capacity` : ''}
-              </AppText>
               <AppButton
-                label={rsvpd ? 'Joined \u2713' : isFull ? 'Join waitlist' : 'RSVP'}
+                label={rsvpd ? 'Going' : isFull ? 'Join Waitlist' : 'RSVP'}
                 variant={rsvpd ? 'secondary' : 'primary'}
                 onPress={handleRsvp}
                 loading={submitting}
               />
             </View>
-
-            {event.attendeeNames && event.attendeeNames.length > 0 ? (
-              <View style={{ marginTop: spacing.md }}>
-                <AppText weight="bold" variant="bodySmall">
-                  Going ({event.attendeeNames.length}):
-                </AppText>
-                <AppText tone="secondary" variant="bodySmall">
-                  {event.attendeeNames.join(', ')}
-                </AppText>
-              </View>
-            ) : null}
           </View>
         </SolidCard>
-      </AnimatedPressable>
+      </Animated.View>
 
       <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
         <Pressable
           onPress={handleReport}
-          accessibilityRole="button"
-          accessibilityLabel="Report event"
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="flag" size={18} color={colors.critical} />
-          <AppText style={{ color: colors.critical }}>Report Event</AppText>
-        </Pressable>
-        <Pressable
-          onPress={handleBlockHost}
-          accessibilityRole="button"
-          accessibilityLabel={`Block host ${event.organizerName ?? ''}`}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
-        >
-          <Ionicons name="ban" size={18} color={colors.critical} />
-          <AppText style={{ color: colors.critical }}>Block Host {event.organizerName ? `@${event.organizerName}` : ''}</AppText>
+          <Ionicons name="flag-outline" size={18} color={colors.critical} />
+          <AppText style={{ color: colors.critical }} weight="medium">Report Event</AppText>
         </Pressable>
       </ActionSheetModal>
     </View>

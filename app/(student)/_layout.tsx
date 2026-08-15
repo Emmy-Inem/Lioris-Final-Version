@@ -1,40 +1,76 @@
 import React from 'react';
+import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
 
-// Bottom nav matches the confirmed student screenshots exactly: Home,
-// Forum, Event, Library/Network. Messages removed for now per request.
 export default function StudentLayout() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
     <RoleGate allow="student">
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.tabActive,
+          tabBarActiveTintColor: colors.brandPrimary,
           tabBarInactiveTintColor: colors.tabInactive,
-          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-          tabBarItemStyle: { paddingVertical: 4 },
+          tabBarStyle: {
+            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.85)' : 'rgba(255, 255, 255, 0.88)',
+            borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            borderTopWidth: 1,
+            height: 68,
+            paddingBottom: 10,
+            paddingTop: 8,
+            ...(Platform.OS === 'web'
+              ? ({
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
+                  boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.06)',
+                } as any)
+              : {}),
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+          },
         }}
       >
         <Tabs.Screen
           name="dashboard"
-          options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} /> }}
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ focused, size }) => (
+              <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} size={size} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="feed"
-          options={{ title: 'Forum', tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" color={color} size={size} /> }}
+          options={{
+            title: 'Forum',
+            tabBarIcon: ({ focused, size }) => (
+              <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="events-list"
-          options={{ title: 'Event', tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} /> }}
+          options={{
+            title: 'Events',
+            tabBarIcon: ({ focused, size }) => (
+              <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} size={size} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="resources"
-          options={{ title: 'Library/Network', tabBarIcon: ({ color, size }) => <Ionicons name="book" color={color} size={size} /> }}
+          options={{
+            title: 'Resources',
+            tabBarIcon: ({ focused, size }) => (
+              <TabIcon name={focused ? 'folder' : 'folder-outline'} focused={focused} size={size} />
+            ),
+          }}
         />
 
         {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
@@ -48,9 +84,28 @@ export default function StudentLayout() {
         <Tabs.Screen name="study-groups" options={{ href: null }} />
         <Tabs.Screen name="calendar" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ href: null }} />
-        {/* Messages removed from nav for now, per request — routes kept so nothing 404s if linked elsewhere. */}
         <Tabs.Screen name="messages" options={{ href: null }} />
+        <Tabs.Screen name="post/[id]" options={{ href: null }} />
+        <Tabs.Screen name="post" options={{ href: null }} />
       </Tabs>
     </RoleGate>
+  );
+}
+
+function TabIcon({ name, focused, size }: { name: keyof typeof Ionicons.glyphMap; focused: boolean; size: number }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: focused ? colors.pastelPrimaryBg : 'transparent',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Ionicons name={name} size={size - 1} color={focused ? colors.brandPrimary : colors.tabInactive} />
+    </View>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, ViewProps } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View, ViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ScreenGlowBackground } from './ScreenGlowBackground';
@@ -7,24 +7,52 @@ import { ScreenGlowBackground } from './ScreenGlowBackground';
 interface ScreenContainerProps extends ViewProps {
   edges?: Array<'top' | 'bottom' | 'left' | 'right'>;
   noPadding?: boolean;
-  /** Set false to opt out of the glow-blob background (e.g. chat threads, where it competes with message bubbles). */
   glow?: boolean;
+  scrollable?: boolean;
+  contentContainerStyle?: any;
 }
 
 export function ScreenContainer({
   edges = ['top'],
   noPadding,
   glow = true,
+  scrollable = false,
+  contentContainerStyle,
   style,
   children,
   ...rest
 }: ScreenContainerProps) {
   const { colors, spacing } = useTheme();
 
-  const inner = (
-    <View style={[styles.flex, !noPadding && { paddingHorizontal: spacing.lg }, style]} {...rest}>
+  const content = (
+    <View
+      style={[
+        styles.flex,
+        !noPadding && { paddingHorizontal: spacing.lg },
+        Platform.OS === 'web' && { minHeight: '100%' },
+        style,
+      ]}
+      {...rest}
+    >
       {children}
     </View>
+  );
+
+  const inner = scrollable ? (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled
+      contentContainerStyle={[
+        { flexGrow: 1, paddingBottom: 130 },
+        contentContainerStyle,
+      ]}
+      style={styles.flex}
+    >
+      {content}
+    </ScrollView>
+  ) : (
+    content
   );
 
   return (
@@ -35,5 +63,9 @@ export function ScreenContainer({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
+  flex: {
+    flex: 1,
+    width: '100%',
+    ...(Platform.OS === 'web' ? { height: '100%' } : {}),
+  },
 });

@@ -40,3 +40,7 @@ yarn-error.*
 /ios
 /android
 scratch/
+scratch/
+
+.vercel
+.env*

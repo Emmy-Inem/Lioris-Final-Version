@@ -9,29 +9,20 @@ import { AppTextField } from './AppTextField';
 import { EmptyState } from './EmptyState';
 import { PostCard } from './PostCard';
 import { EventCard } from './EventCard';
+import { ResourceCard } from './ResourceCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
+import { listResources } from '@/api/resources';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
-type SearchTab = 'posts' | 'events';
+type SearchTab = 'posts' | 'events' | 'resources';
 
-/**
- * Backs the search icon in AppHeader — previously wired to
- * `onPress={() => {}}` on every single screen across every role, a
- * true no-op. Both `listFeedPosts` and `listEvents` already support a
- * real `q` text-search param (PRD Section 16); this screen is the
- * first thing that actually calls it from a dedicated search UI rather
- * than only the inline search bar already on the Forum tab.
- */
 export function SearchScreen() {
   const { colors, spacing, radius } = useTheme();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<SearchTab>('posts');
   const trimmed = query.trim();
-  // Debounced separately from `trimmed` so clearing the box still
-  // instantly reverts to the welcome placeholder below, while the
-  // actual network-triggering queries wait for typing to settle.
   const debouncedTrimmed = useDebouncedValue(trimmed);
 
   const { data: posts, isLoading: postsLoading } = useQuery({
@@ -46,7 +37,13 @@ export function SearchScreen() {
     enabled: tab === 'events' && debouncedTrimmed.length > 0,
   });
 
-  const isLoading = tab === 'posts' ? postsLoading : eventsLoading;
+  const { data: resources, isLoading: resourcesLoading } = useQuery({
+    queryKey: ['search', 'resources', debouncedTrimmed],
+    queryFn: () => listResources({ q: debouncedTrimmed }),
+    enabled: tab === 'resources' && debouncedTrimmed.length > 0,
+  });
+
+  const isLoading = tab === 'posts' ? postsLoading : tab === 'events' ? eventsLoading : resourcesLoading;
 
   return (
     <ScreenContainer glow={false}>
@@ -62,7 +59,7 @@ export function SearchScreen() {
         <View style={{ flex: 1 }}>
           <AppTextField
             label=""
-            placeholder="Search posts and events..."
+            placeholder="Search threads, events, study resources..."
             value={query}
             onChangeText={setQuery}
             autoFocus
@@ -71,24 +68,27 @@ export function SearchScreen() {
       </View>
 
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-        {(['posts', 'events'] as const).map((t) => {
+        {(['posts', 'events', 'resources'] as const).map((t) => {
           const selected = tab === t;
+          const label = t === 'posts' ? 'Threads 💬' : t === 'events' ? 'Events 📅' : 'Resources 📚';
           return (
             <Pressable
               key={t}
               onPress={() => setTab(t)}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
-              accessibilityLabel={t === 'posts' ? 'Posts' : 'Events'}
+              accessibilityLabel={label}
               style={{
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 borderRadius: radius.pill,
-                backgroundColor: selected ? colors.brandPrimary : colors.divider,
+                backgroundColor: selected ? colors.brandPrimary : colors.surface,
+                borderWidth: 1,
+                borderColor: selected ? colors.brandPrimary : colors.border,
               }}
             >
               <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'inverse' : 'secondary'}>
-                {t === 'posts' ? 'Posts' : 'Events'}
+                {label}
               </AppText>
             </Pressable>
           );
@@ -96,20 +96,30 @@ export function SearchScreen() {
       </View>
 
       {trimmed.length === 0 ? (
-        <EmptyState title="Search Lioris" description="Find posts and events by title, content, or category." />
+        <EmptyState title="Search Campus Knowledge" description="Find forum threads, campus events, and academic past questions." />
       ) : tab === 'posts' ? (
         <FlatList
           data={posts ?? []}
           keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: 130 }}
           renderItem={({ item }) => <PostCard post={item} />}
           ListEmptyComponent={!isLoading ? <EmptyState title="No posts found" description={`No results for "${debouncedTrimmed}".`} /> : null}
         />
-      ) : (
+      ) : tab === 'events' ? (
         <FlatList
           data={events ?? []}
           keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: 130 }}
           renderItem={({ item }) => <EventCard event={item} />}
           ListEmptyComponent={!isLoading ? <EmptyState title="No events found" description={`No results for "${debouncedTrimmed}".`} /> : null}
+        />
+      ) : (
+        <FlatList
+          data={resources ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: 130 }}
+          renderItem={({ item }) => <ResourceCard resource={item} />}
+          ListEmptyComponent={!isLoading ? <EmptyState title="No resources found" description={`No results for "${debouncedTrimmed}".`} /> : null}
         />
       )}
     </ScreenContainer>

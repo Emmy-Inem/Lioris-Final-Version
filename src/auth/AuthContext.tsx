@@ -16,6 +16,7 @@ import { registerForPushNotificationsAsync } from '@/notifications/push';
 interface SessionUser {
   id: string;
   fullName: string;
+  email?: string;
   role: UserRole;
   onboardingComplete: boolean;
   onboardingStep?: string;
@@ -35,6 +36,8 @@ interface AuthContextValue {
   completeOnboarding: () => Promise<void>;
   /** Called by the MFA challenge screen once the code checks out. No-op if the current role doesn't require MFA. */
   verifyMfa: (code: string) => Promise<void>;
+  /** Allows admins and testers to switch role view in settings. */
+  switchRole: (role: UserRole) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -43,6 +46,7 @@ async function persist(user: SessionUser) {
   const stored: StoredSessionUser = {
     id: user.id,
     fullName: user.fullName,
+    email: user.email,
     role: user.role,
     onboardingComplete: user.onboardingComplete,
     onboardingStep: user.onboardingStep,
@@ -149,6 +153,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser((prev) => {
           if (!prev) return prev;
           const next = { ...prev, mfaVerified: true };
+          persist(next);
+          return next;
+        });
+      },
+      async switchRole(newRole: UserRole) {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next: SessionUser = {
+            ...prev,
+            role: newRole,
+            onboardingComplete: true,
+            mfaVerified: true,
+          };
           persist(next);
           return next;
         });

@@ -72,15 +72,10 @@ export async function getRefreshToken() {
 export interface StoredSessionUser {
   id: string;
   fullName: string;
+  email?: string;
   role: string;
   onboardingComplete: boolean;
   onboardingStep?: string;
-  /**
-   * PRD Section 11: staff/admin accounts must clear an MFA challenge
-   * every sign-in. Absent/true for roles that don't require it (see
-   * src/auth/mfaPolicy.ts) so old cached sessions from before this field
-   * existed don't get incorrectly locked out.
-   */
   mfaVerified?: boolean;
 }
 

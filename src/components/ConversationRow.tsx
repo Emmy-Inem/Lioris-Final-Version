@@ -35,13 +35,14 @@ export function ConversationRow({ conversation, onArchive }: ConversationRowProp
         alignItems: 'center',
         gap: spacing.md,
         paddingVertical: spacing.md,
-        backgroundColor: colors.background,
+        paddingHorizontal: spacing.sm,
+        backgroundColor: colors.surface,
         borderBottomWidth: 1,
         borderBottomColor: colors.divider,
       }}
     >
       <View>
-        <Avatar name={conversation.participantName} uri={conversation.participantAvatarUrl} />
+        <Avatar name={conversation.participantName} uri={conversation.participantAvatarUrl} size={48} />
         {conversation.isOnline ? (
           <View style={{ position: 'absolute', bottom: -1, right: -1 }}>
             <PresenceHalo isOnline />
@@ -49,21 +50,23 @@ export function ConversationRow({ conversation, onArchive }: ConversationRowProp
         ) : null}
       </View>
       <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <AppText weight="semiBold">{conversation.participantName}</AppText>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <AppText weight="bold" variant="bodySmall">
+            {conversation.participantName}
+          </AppText>
           {conversation.unreadCount > 0 && (
             <View
               style={{
-                backgroundColor: colors.brandAccent,
+                backgroundColor: colors.brandPrimary,
                 borderRadius: 10,
                 minWidth: 20,
                 height: 20,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingHorizontal: 5,
+                paddingHorizontal: 6,
               }}
             >
-              <AppText variant="caption" weight="bold" tone="inverse">
+              <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
                 {conversation.unreadCount}
               </AppText>
             </View>

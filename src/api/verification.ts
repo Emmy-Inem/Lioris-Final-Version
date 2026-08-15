@@ -16,7 +16,30 @@ export interface VerificationRequest {
   documentPhotoUri?: string | null;
 }
 
-let verificationState: VerificationRequest[] = [];
+let verificationState: VerificationRequest[] = [
+  {
+    id: 'vr-101',
+    userId: 'user-adekunle',
+    applicantName: 'Adekunle Gold',
+    documentType: 'Student ID',
+    documentReference: 'UNILAG/ENG/2021/4892',
+    institutionClaimed: 'University of Lagos (UNILAG)',
+    submittedAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+    status: 'pending',
+    documentPhotoUri: null,
+  },
+  {
+    id: 'vr-102',
+    userId: 'user-folake',
+    applicantName: 'Folake Adeleke',
+    documentType: 'Alumni Certificate',
+    documentReference: 'UI/CERT/2022/8911',
+    institutionClaimed: 'University of Ibadan (UI)',
+    submittedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    status: 'pending',
+    documentPhotoUri: null,
+  },
+];
 
 export interface SubmitVerificationPayload {
   userId: string;

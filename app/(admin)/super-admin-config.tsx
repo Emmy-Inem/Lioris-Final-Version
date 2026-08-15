@@ -64,16 +64,21 @@ export default function SuperAdminConfigScreen() {
   }
 
   return (
-    <ScreenContainer glow={false}>
+    <ScreenContainer glow={true}>
       <AppHeader />
-      <AppText variant="h1" weight="bold" style={{ marginTop: spacing.lg, marginBottom: spacing.xs }}>
-        Super Admin Configuration
+      <AppText variant="h1" weight="bold" style={{ marginTop: spacing.md, marginBottom: spacing.xs }}>
+        Super Admin Configuration ⚙️
       </AppText>
-      <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+      <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
         Root-level platform parameters — changes here apply across every campus workspace.
       </AppText>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: 150 }}
+      >
         <Section number={1} title="Multi-Tenant & University Management" emoji="🏛️">
           <Row
             title="Add/Register New University"

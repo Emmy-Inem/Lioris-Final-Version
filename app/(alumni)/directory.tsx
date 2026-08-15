@@ -10,12 +10,16 @@ import { AppTextField } from '@/components/AppTextField';
 import { DirectoryCard } from '@/components/DirectoryCard';
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
 import { searchAlumniDirectory, listIncomingConnectionRequests } from '@/api/connections';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ManageDirectoryModal } from '@/components/admin/ManageDirectoryModal';
 
 export default function AlumniDirectoryScreen() {
-  const { colors, spacing } = useTheme();
+  const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
+  const [adminManageOpen, setAdminManageOpen] = useState(false);
   const debouncedQuery = useDebouncedValue(query);
 
   const { data: entries, isLoading, refetch, isRefetching } = useQuery({
@@ -36,34 +40,60 @@ export default function AlumniDirectoryScreen() {
         <AppText variant="h1" weight="bold">
           Alumni Directory
         </AppText>
-        <Pressable
-          onPress={() => router.push('/(alumni)/connection-requests')}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}
-          accessibilityRole="button"
-          accessibilityLabel="Connection requests"
-        >
-          <View>
-            <Ionicons name="person-add-outline" size={22} color={colors.brandPrimary} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+          {(user?.role === 'admin' || user?.role === 'staff') && (
+            <Pressable
+              onPress={() => setAdminManageOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Admin manage directory"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                backgroundColor: colors.pastelPrimaryBg,
+                borderColor: `${colors.brandPrimary}40`,
+                borderWidth: 1,
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: 7,
+              }}
+            >
+              <Ionicons name="settings-outline" size={15} color={colors.brandPrimary} />
+              <AppText weight="bold" tone="brand" variant="caption">
+                Manage
+              </AppText>
+            </Pressable>
+          )}
+
+          <Pressable
+            onPress={() => router.push('/(alumni)/connection-requests')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}
+            accessibilityRole="button"
+            accessibilityLabel="Connection requests"
+          >
+            <View>
+              <Ionicons name="person-add-outline" size={22} color={colors.brandPrimary} />
+              {pendingCount > 0 ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: -2,
+                    right: -2,
+                    width: 9,
+                    height: 9,
+                    borderRadius: 5,
+                    backgroundColor: colors.brandAccent,
+                  }}
+                />
+              ) : null}
+            </View>
             {pendingCount > 0 ? (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: -2,
-                  right: -2,
-                  width: 9,
-                  height: 9,
-                  borderRadius: 5,
-                  backgroundColor: colors.brandAccent,
-                }}
-              />
+              <AppText tone="brand" weight="semiBold" variant="bodySmall">
+                {pendingCount}
+              </AppText>
             ) : null}
-          </View>
-          {pendingCount > 0 ? (
-            <AppText tone="brand" weight="semiBold" variant="bodySmall">
-              {pendingCount}
-            </AppText>
-          ) : null}
-        </Pressable>
+          </Pressable>
+        </View>
       </View>
 
       <AppTextField
@@ -83,6 +113,8 @@ export default function AlumniDirectoryScreen() {
           !isLoading ? <EmptyState title="No alumni found" description="Try a different search term." /> : null
         }
       />
+
+      <ManageDirectoryModal visible={adminManageOpen} onClose={() => setAdminManageOpen(false)} />
     </ScreenContainer>
   );
 }

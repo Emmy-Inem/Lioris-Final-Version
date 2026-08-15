@@ -5,11 +5,11 @@ import { AppText } from './AppText';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const TRENDS = [
-  { tag: 'CONVOCATION_2026', title: 'Convocation 🎓', count: '2.4K' },
-  { tag: 'DEANS_CUP_FINALS', title: "Dean's Cup 🏆", count: '1.8K' },
-  { tag: 'HOSTEL_TOWNHALL', title: 'Hostel Townhall ✊', count: '3.2K' },
-  { tag: 'CAMPUS_TECH_FEST', title: 'Tech Fest 💻', count: '940' },
-  { tag: 'LIORIS_VIRAL', title: 'Lioris Viral 🚀', count: '4.1K' },
+  { tag: 'CONVOCATION_2026', title: 'Convocation', count: '2.4K' },
+  { tag: 'DEANS_CUP_FINALS', title: "Dean's Cup", count: '1.8K' },
+  { tag: 'HOSTEL_TOWNHALL', title: 'Hostel Townhall', count: '3.2K' },
+  { tag: 'CAMPUS_TECH_FEST', title: 'Tech Fest', count: '940' },
+  { tag: 'LIORIS_VIRAL', title: 'Lioris Viral', count: '4.1K' },
 ];
 
 interface HorizontalTrendsSliderProps {

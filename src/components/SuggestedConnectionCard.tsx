@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
 import { AppButton } from './AppButton';
+import { UserProfileModal } from './UserProfileModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { sendConnectionRequest } from '@/api/connections';
-
-const GRADIENTS: Array<[string, string]> = [
-  ['#8B5CF6', '#6D28D9'], // purple
-  ['#3B82F6', '#1D4ED8'], // blue
-];
+import { haptics } from '@/utils/haptics';
 
 export interface SuggestedPerson {
   id: string;
@@ -24,17 +20,19 @@ export interface SuggestedPerson {
 }
 
 export function SuggestedConnectionCard({ person, index }: { person: SuggestedPerson; index: number }) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<'none' | 'pending'>('none');
   const [submitting, setSubmitting] = useState(false);
-  const gradient = GRADIENTS[index % GRADIENTS.length];
+  const [inspectOpen, setInspectOpen] = useState(false);
 
   async function handleConnect() {
+    haptics.medium();
     setSubmitting(true);
     try {
       await sendConnectionRequest(person.id);
       setStatus('pending');
+      haptics.success();
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } finally {
       setSubmitting(false);
@@ -42,50 +40,66 @@ export function SuggestedConnectionCard({ person, index }: { person: SuggestedPe
   }
 
   return (
-    <View
-      style={{
-        width: '48%',
-        borderRadius: radius.lg,
-        backgroundColor: colors.surface,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 3 },
-        elevation: 2,
-        marginBottom: spacing.md,
-      }}
-    >
-      <LinearGradient colors={gradient} style={{ height: 44 }} />
-      <View style={{ alignItems: 'center', marginTop: -28, marginBottom: spacing.sm }}>
-        <View style={{ borderWidth: 3, borderColor: colors.surface, borderRadius: 32 }}>
-          <Avatar name={person.name} uri={person.avatarUrl} size={58} />
-        </View>
-      </View>
-      <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md, alignItems: 'center' }}>
-        <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
-          {person.name}
-        </AppText>
-        <AppText tone="secondary" variant="caption">
-          {person.roleLabel}
-        </AppText>
-        <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.xs }}>
-          {person.department}
-        </AppText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm }}>
-          <Ionicons name="star" size={12} color="#F5A623" />
-          <AppText variant="caption" weight="bold">
-            Level {person.level}
+    <>
+      <View
+        style={{
+          width: '48%',
+          borderRadius: radius.lg,
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.96)',
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+          overflow: 'hidden',
+          marginBottom: spacing.md,
+          paddingTop: spacing.md,
+          paddingHorizontal: spacing.sm,
+          paddingBottom: spacing.md,
+        }}
+      >
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setInspectOpen(true);
+          }}
+          style={{ alignItems: 'center' }}
+        >
+          <View style={{ marginBottom: spacing.sm }}>
+            <Avatar name={person.name} uri={person.avatarUrl} size={60} />
+          </View>
+
+          <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+            {person.name}
           </AppText>
-        </View>
+          <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 1 }}>
+            {person.roleLabel}
+          </AppText>
+          <AppText tone="secondary" variant="caption" style={{ fontSize: 10, marginBottom: spacing.xs }}>
+            {person.department}
+          </AppText>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm }}>
+            <Ionicons name="shield-checkmark" size={13} color={colors.brandPrimary} />
+            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+              Level {person.level} &bull; Verified
+            </AppText>
+          </View>
+        </Pressable>
+
         <AppButton
-          label={status === 'pending' ? 'Requested' : '+ Connect'}
+          label={status === 'pending' ? 'Requested' : 'Connect'}
           onPress={handleConnect}
           disabled={status === 'pending'}
           loading={submitting}
           fullWidth
         />
       </View>
-    </View>
+
+      <UserProfileModal
+        visible={inspectOpen}
+        onClose={() => setInspectOpen(false)}
+        userId={person.id}
+        userName={person.name}
+        department={person.department}
+      />
+    </>
   );
 }

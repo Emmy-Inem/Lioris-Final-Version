@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useSegments } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -13,34 +13,21 @@ import { listNotifications } from '@/api/notifications';
 import { getMyProfile } from '@/api/profile';
 import { getInstitutionByCode } from '@/api/institutions';
 import { useViewScope } from '@/hooks/useViewScope';
+import { haptics } from '@/utils/haptics';
 
-/**
- * The persistent top bar shown on every screen in the screenshot
- * reference (logo+wordmark, search, bell+badge, avatar) — not just on
- * the dashboard. Previously only the dashboard had a header; Forum,
- * Event, and Library screens had a plain text title instead.
- *
- * The workspace-scope pill (e.g. "UI ▾") controls the shared
- * Global/Campus content toggle (`useViewScope`) — shown for every
- * role, since content scoping applies to all of them, not just
- * alumni/staff/admin.
- */
 export function AppHeader() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const segments = useSegments();
-  const roleGroup = segments[0];
+  const roleGroup = segments[0] || '(student)';
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
-  const { scope, setScope } = useViewScope();
+  const { scope, setScope, activeCampusCode } = useViewScope();
 
   const { data: notifications } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => listNotifications({ status: 'unread' }),
   });
   const unreadCount = notifications?.length ?? 0;
-  // Previously hidden for students on the assumption only non-students
-  // needed a workspace switcher — but the Global/Campus content toggle
-  // this pill controls needs to work for every role, students included.
   const showWorkspaceSwitcher = true;
 
   const { data: profile } = useQuery({
@@ -48,7 +35,7 @@ export function AppHeader() {
     queryFn: () => getMyProfile(user!),
     enabled: !!user && showWorkspaceSwitcher,
   });
-  const homeInstitutionCode = profile?.institutionCode ?? 'UI';
+  const homeInstitutionCode = activeCampusCode || profile?.institutionCode || 'UI';
   const homeInstitutionName = getInstitutionByCode(homeInstitutionCode)?.name ?? profile?.institutionName ?? 'Your Campus';
 
   return (
@@ -57,57 +44,114 @@ export function AppHeader() {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: spacing.sm,
-        paddingBottom: spacing.md,
+        paddingTop: spacing.xs,
+        paddingBottom: spacing.sm,
+        zIndex: 10,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 }}>
-        <LiorisLogo size={26} />
-        <AppText variant="h3" weight="bold" tone="brand" style={{ letterSpacing: 0.5 }}>
+        <LiorisLogo size={28} />
+        <AppText variant="h3" weight="bold" tone="brand" style={{ letterSpacing: 0.8 }}>
           LIORIS
         </AppText>
         {showWorkspaceSwitcher ? (
           <Pressable
-            onPress={() => setScopeModalOpen(true)}
+            onPress={() => {
+              haptics.light();
+              setScopeModalOpen(true);
+            }}
             accessibilityRole="button"
             accessibilityLabel={`Workspace scope: ${scope === 'campus' ? homeInstitutionCode : 'Global'}`}
             accessibilityHint="Opens the workspace scope switcher"
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 2,
+              gap: 4,
               backgroundColor: colors.pastelPrimaryBg,
               borderRadius: radius.pill,
               paddingHorizontal: spacing.sm,
-              paddingVertical: 4,
+              paddingVertical: 5,
               marginLeft: spacing.xs,
+              borderWidth: 1,
+              borderColor: `${colors.brandPrimary}25`,
             }}
           >
-            <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary }}>
-              {scope === 'campus' ? homeInstitutionCode : 'Global'} {scope === 'campus' ? '🎓' : '🌍'}
+            <Ionicons
+              name={scope === 'campus' ? 'school-outline' : 'globe-outline'}
+              size={12}
+              color={colors.brandPrimary}
+            />
+            <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
+              {scope === 'campus' ? homeInstitutionCode : 'Global'}
             </AppText>
             <Ionicons name="chevron-down" size={11} color={colors.brandPrimary} />
           </Pressable>
         ) : null}
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+        {/* Theme Toggle Button */}
+        <Pressable
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          onPress={() => {
+            haptics.light();
+            toggleTheme();
+          }}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={18} color={colors.textPrimary} />
+        </Pressable>
+
+        {/* Global Search Button */}
         <Pressable
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Search"
-          onPress={() => router.push(`/${roleGroup}/search` as any)}
+          onPress={() => {
+            haptics.light();
+            router.push(`/${roleGroup}/search` as any);
+          }}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <Ionicons name="search" size={20} color={colors.textPrimary} />
+          <Ionicons name="search" size={18} color={colors.textPrimary} />
         </Pressable>
+
+        {/* Notifications Bell Button */}
         <Pressable
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-          onPress={() => router.push(`/${roleGroup}/notifications` as any)}
+          onPress={() => {
+            haptics.light();
+            router.push(`/${roleGroup}/notifications` as any);
+          }}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
           <View>
-            <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
+            <Ionicons name="notifications-outline" size={18} color={colors.textPrimary} />
             {unreadCount > 0 ? (
               <View
                 style={{
@@ -130,10 +174,16 @@ export function AppHeader() {
             ) : null}
           </View>
         </Pressable>
+
+        {/* Profile Avatar Pill */}
         <Pressable
-          onPress={() => router.push(`/${roleGroup}/profile` as any)}
+          onPress={() => {
+            haptics.light();
+            router.push(`/${roleGroup}/profile` as any);
+          }}
           accessibilityRole="button"
           accessibilityLabel="Open profile"
+          style={{ marginLeft: 2 }}
         >
           <Avatar name={user?.fullName ?? 'You'} size={32} />
         </Pressable>

@@ -6,21 +6,75 @@ import { FALL_BACK_TO_MOCKS } from './config';
 import { recordAuditLogEntry } from './auditLog';
 import { getSessionUser } from '@/auth/tokenStorage';
 
-// Mutable in-memory copy so newly created events persist for the session.
-let eventsState = [...mockEvents];
+const INITIAL_EVENTS: CampusEvent[] = [
+  ...mockEvents.map((e) => ({ ...e, approvalStatus: 'approved' as const })),
+  {
+    id: 'event-sub-1',
+    organizerId: 'user-chioma',
+    organizerName: 'Google Developer Student Club (GDSC UI)',
+    title: 'Google Cloud & AI Campus Study Jam: Gemini Pro Deep Dive',
+    description: 'Hands-on practical workshop exploring Gemini API multimodal integration, Cloud Run container deployments, and fine-tuning models.',
+    category: 'workshop',
+    location: 'Faculty of Science Computer Laboratory 3',
+    venueType: 'Physical Auditorium',
+    visibilityScope: 'global',
+    startAt: new Date(Date.now() + 86400000 * 2).toISOString(),
+    endAt: new Date(Date.now() + 86400000 * 2 + 10800000).toISOString(),
+    capacity: 120,
+    rsvpCount: 45,
+    isRsvpd: false,
+    approvalStatus: 'pending',
+    sponsored: true,
+    isSpotlight: true,
+    coverImageUrl: 'event_tech_hackathon',
+    ticketPrice: 'Free',
+    targetCohort: 'All Levels (100L - 500L)',
+    attendeeNames: ['Adekunle Gold', 'Chioma Okonkwo', 'Tunde Bakare'],
+  },
+  {
+    id: 'event-sub-2',
+    organizerId: 'user-adekunle',
+    organizerName: 'Engineering Students Association (ESA)',
+    title: 'Annual Faculty Career Dinner & Alumni Mentorship Connect',
+    description: 'Exclusive networking dinner with alumni working at Chevron, Paystack, and Flutterwave. CV reviews and open internship referrals.',
+    category: 'career',
+    location: 'Faculty of Technology Conference Center & Banquet Hall',
+    venueType: 'Hybrid Room',
+    visibilityScope: 'global',
+    startAt: new Date(Date.now() + 86400000 * 5).toISOString(),
+    endAt: new Date(Date.now() + 86400000 * 5 + 14400000).toISOString(),
+    capacity: 250,
+    rsvpCount: 88,
+    isRsvpd: false,
+    approvalStatus: 'pending',
+    sponsored: true,
+    isSpotlight: false,
+    coverImageUrl: 'campus_students_photo',
+    ticketPrice: 'Free',
+    targetCohort: 'Penultimate & Final Year Students',
+    attendeeNames: ['Folake Adeleke', 'Dr. Babatunde Lawal', 'Amina Yusuf'],
+  },
+];
+
+let eventsState: CampusEvent[] = [...INITIAL_EVENTS];
 
 export interface EventsQuery {
   scope?: 'student' | 'alumni' | 'global';
   category?: string;
   q?: string;
-  /** Backs the Events screen's "Sponsored & Featured" section. */
   sponsored?: boolean;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
 }
 
-// Client-side stand-in for PRD Section 16's search spec — used only
-// while there's no real backend to search/filter against.
 function filterMockEvents(query: EventsQuery): CampusEvent[] {
   let results = [...eventsState];
+
+  if (query.approvalStatus && query.approvalStatus !== 'all') {
+    results = results.filter((e) => e.approvalStatus === query.approvalStatus);
+  } else if (!query.approvalStatus) {
+    // Default to approved for public feed
+    results = results.filter((e) => e.approvalStatus !== 'rejected');
+  }
 
   if (query.scope) {
     results = results.filter((e) => e.visibilityScope === query.scope || e.visibilityScope === 'global');
@@ -62,11 +116,12 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
   }, filterMockEvents(query));
 }
 
-export async function getEvent(id: string): Promise<CampusEvent | undefined> {
+export async function getEvent(id?: string | null): Promise<CampusEvent | null> {
+  if (!id) return null;
   return withMockFallback(async () => {
     const { data } = await api.get<CampusEvent>(`/events/${id}`);
     return data;
-  }, eventsState.find((e) => e.id === id));
+  }, eventsState.find((e) => e.id === id) ?? null);
 }
 
 export interface CreateEventPayload {
@@ -149,6 +204,46 @@ export async function rsvpToEvent(
     });
     return result;
   }
+}
+
+export async function updateEvent(id: string, updates: Partial<CampusEvent>): Promise<CampusEvent | null> {
+  if (!FALL_BACK_TO_MOCKS) {
+    const { data } = await api.patch<CampusEvent>(`/events/${id}`, updates);
+    return data;
+  }
+  try {
+    const { data } = await api.patch<CampusEvent>(`/events/${id}`, updates);
+    return data;
+  } catch {
+    let updated: CampusEvent | null = null;
+    eventsState = eventsState.map((e) => {
+      if (e.id === id) {
+        updated = { ...e, ...updates };
+        return updated;
+      }
+      return e;
+    });
+    return updated;
+  }
+}
+
+export async function approveEvent(id: string) {
+  const target = eventsState.find((e) => e.id === id);
+  if (!FALL_BACK_TO_MOCKS) {
+    await api.patch(`/events/${id}`, { approvalStatus: 'approved' });
+  } else {
+    try {
+      await api.patch(`/events/${id}`, { approvalStatus: 'approved' });
+    } catch {
+      eventsState = eventsState.map((e) => (e.id === id ? { ...e, approvalStatus: 'approved' } : e));
+    }
+  }
+  await recordAuditLogEntry({
+    action: 'event_approval_revoked',
+    summary: `Approved and published event listing: "${target?.title ?? id}"`,
+    targetType: 'event',
+    targetId: id,
+  });
 }
 
 // Admin moderation actions — backs the Events tab in the Admin Workdesk.

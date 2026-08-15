@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -38,40 +38,63 @@ export default function MarketplaceScreen() {
   }
 
   return (
-    <ScreenContainer noPadding glow={false}>
-      <View style={{ paddingHorizontal: spacing.lg }}>
-        <AppHeader />
-      </View>
+    <ScreenContainer glow={false}>
+      <AppHeader />
 
-      <AuthHeroBackground height={84}>
-        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg }}>
-          <AppText variant="h2" weight="bold" tone="inverse">
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
+        <View>
+          <AppText variant="h1" weight="bold">
             Campus Marketplace 🛍️
           </AppText>
-          <Pressable
-            onPress={() => setSellModalOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Sell an item"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              borderRadius: radius.pill,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-            }}
-          >
-            <Ionicons name="add-circle" size={16} color="#FFFFFF" />
-            <AppText weight="bold" tone="inverse" variant="bodySmall">
-              Sell
-            </AppText>
-          </Pressable>
+          <AppText tone="secondary" variant="bodySmall">
+            Buy & sell books, gadgets, and campus gear with escrow
+          </AppText>
         </View>
-      </AuthHeroBackground>
+        <Pressable
+          onPress={() => setSellModalOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Sell an item"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: colors.brandPrimary,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 8,
+          }}
+        >
+          <Ionicons name="add" size={18} color="#FFFFFF" />
+          <AppText weight="bold" tone="inverse" variant="caption">
+            List Item
+          </AppText>
+        </Pressable>
+      </View>
 
-      <View style={{ flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
-        <AppTextField label="" placeholder="Search products, books, gear..." value={query} onChangeText={setQuery} />
+      <View style={{ flex: 1 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            backgroundColor: colors.surface,
+            borderRadius: radius.pill,
+            borderWidth: 1,
+            borderColor: colors.border,
+            paddingHorizontal: spacing.md,
+            height: 42,
+            marginBottom: spacing.sm,
+          }}
+        >
+          <Ionicons name="search" size={16} color={colors.textSecondary} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search textbooks, tech, appliances..."
+            placeholderTextColor={colors.textSecondary}
+            style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
+          />
+        </View>
         <View style={{ marginBottom: spacing.sm }}>
           <ChipSelect options={CATEGORIES} selected={[category]} onToggle={setCategory} />
         </View>
@@ -84,7 +107,7 @@ export default function MarketplaceScreen() {
           keyExtractor={(item) => item.id}
           numColumns={2}
           columnWrapperStyle={{ gap: spacing.md }}
-          contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xxl }}
+          contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
           renderItem={({ item }) => <MarketplaceItemCard item={item} />}
           showsVerticalScrollIndicator={false}
           initialNumToRender={10}
@@ -101,7 +124,7 @@ export default function MarketplaceScreen() {
         accessibilityLabel="Sell an item"
         style={{
           position: 'absolute',
-          bottom: spacing.xl,
+          bottom: 90,
           right: spacing.lg,
           width: 52,
           height: 52,
