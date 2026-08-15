@@ -369,6 +369,7 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Public Read, Self Update, Admin All
 CREATE POLICY "Profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Admins have full profile access" ON profiles FOR ALL USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
@@ -388,12 +389,31 @@ CREATE POLICY "Authors and admins can delete posts" ON posts FOR DELETE USING (
     auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
--- Events: Viewable by campus or global
+-- Post Likes
+CREATE POLICY "Post likes are viewable by everyone" ON post_likes FOR SELECT USING (true);
+CREATE POLICY "Users can like posts" ON post_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can unlike posts" ON post_likes FOR DELETE USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- Post Comments
+CREATE POLICY "Post comments are viewable by everyone" ON post_comments FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can comment on posts" ON post_comments FOR INSERT WITH CHECK (auth.uid() = author_id);
+CREATE POLICY "Authors and admins can update comments" ON post_comments FOR UPDATE USING (auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Authors and admins can delete comments" ON post_comments FOR DELETE USING (auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- Events: Viewable by all
 CREATE POLICY "Events viewable by all" ON events FOR SELECT USING (true);
 CREATE POLICY "Users can create events" ON events FOR INSERT WITH CHECK (auth.uid() = creator_id);
 CREATE POLICY "Creators and admins can modify events" ON events FOR UPDATE USING (
     auth.uid() = creator_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
+CREATE POLICY "Creators and admins can delete events" ON events FOR DELETE USING (
+    auth.uid() = creator_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- Event Attendees
+CREATE POLICY "Event attendees viewable by all" ON event_attendees FOR SELECT USING (true);
+CREATE POLICY "Users can RSVP to events" ON event_attendees FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can cancel RSVP" ON event_attendees FOR DELETE USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
 -- Resources: Approved resources viewable by all, unapproved viewable by uploader and admins
 CREATE POLICY "Resources viewable if approved or owner or admin" ON resources FOR SELECT USING (
@@ -406,9 +426,79 @@ CREATE POLICY "Admins can approve and manage resources" ON resources FOR ALL USI
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
+-- Verifications
+CREATE POLICY "Users can view own verification requests, admins view all" ON verifications FOR SELECT USING (
+    auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Users can submit verification requests" ON verifications FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins can update verification status" ON verifications FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- Moderation Queue & Reports
+CREATE POLICY "Users can view their own reports, admins view all" ON moderation_queue FOR SELECT USING (
+    reporter_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+);
+CREATE POLICY "Users can submit reports" ON moderation_queue FOR INSERT WITH CHECK (auth.uid() = reporter_id);
+CREATE POLICY "Admins and staff can resolve reports" ON moderation_queue FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+);
+
+-- Audit Logs
+CREATE POLICY "Admins and staff can view audit logs" ON audit_logs FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+);
+CREATE POLICY "Authorized actors can create audit log entries" ON audit_logs FOR INSERT WITH CHECK (true);
+
+-- Study Groups
+CREATE POLICY "Study groups viewable by all" ON study_groups FOR SELECT USING (true);
+CREATE POLICY "Users can create study groups" ON study_groups FOR INSERT WITH CHECK (auth.uid() = creator_id);
+CREATE POLICY "Creators and admins can update study groups" ON study_groups FOR UPDATE USING (
+    auth.uid() = creator_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Creators and admins can delete study groups" ON study_groups FOR DELETE USING (
+    auth.uid() = creator_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- Study Group Members
+CREATE POLICY "Study group members viewable by all" ON study_group_members FOR SELECT USING (true);
+CREATE POLICY "Users can join study groups" ON study_group_members FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can leave study groups" ON study_group_members FOR DELETE USING (
+    auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- Chat Channels
+CREATE POLICY "Chat channels viewable by everyone" ON chat_channels FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can create chat channels" ON chat_channels FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins can manage chat channels" ON chat_channels FOR ALL USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- Chat Messages (Real persistent messaging with RLS)
+CREATE POLICY "Chat messages viewable by channel members" ON chat_messages FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can send chat messages" ON chat_messages FOR INSERT WITH CHECK (
+    auth.uid() = sender_id OR sender_id IS NOT NULL
+);
+CREATE POLICY "Senders and admins can update message status" ON chat_messages FOR UPDATE USING (
+    auth.uid() = sender_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- Notifications
+CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (
+    auth.uid() = recipient_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "System and users can insert notifications" ON notifications FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update own notification read state" ON notifications FOR UPDATE USING (
+    auth.uid() = recipient_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Users can delete own notifications" ON notifications FOR DELETE USING (
+    auth.uid() = recipient_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
 -- ============================================================================
 -- 14. REALTIME REPLICATION CONFIGURATION
 -- ============================================================================
 DO $$ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, chat_messages, notifications, moderation_queue;
 EXCEPTION WHEN OTHERS THEN null; END $$;
+

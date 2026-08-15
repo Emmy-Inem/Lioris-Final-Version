@@ -9,7 +9,7 @@ const APP_ENV = process.env.APP_ENV ?? 'production';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: APP_ENV === 'production' ? 'Lioris' : `Lioris (${APP_ENV})`,
+  name: 'Lioris',
   slug: 'lioris',
   scheme: 'lioris',
   version: '1.0.0',
@@ -86,7 +86,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     wsBaseUrl: WS_BASE_URL,
     appEnv: APP_ENV,
     eas: {
-      projectId: 'REPLACE_WITH_EAS_PROJECT_ID',
+      projectId: process.env.EAS_PROJECT_ID ?? '4df0ca1b-85d1-4475-a6e5-4752b07e7cc4',
     },
   },
   experiments: {

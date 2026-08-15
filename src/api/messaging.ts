@@ -6,15 +6,6 @@ import { mockConversations, mockMessages } from './mockData';
 let conversationsState: Conversation[] = [...mockConversations];
 const messagesState: Record<string, Message[]> = { ...mockMessages };
 
-// Automated peer responses for dynamic conversational simulation
-const PEER_REPLIES = [
-  'Hey! Got your message. I am currently in the library, let me check the notes for you.',
-  'Thanks for reaching out! Yes, that study guide is available.',
-  'Sounds great! Let us meet at the Student Union Building.',
-  'Noted! I have updated the timetable details for our pod.',
-  'Perfect, thanks for confirming! See you at the session.',
-];
-
 export async function listConversations(): Promise<Conversation[]> {
   try {
     const { data, error } = await supabase
@@ -178,7 +169,7 @@ export async function sendMessage(
     sentAt: now,
   };
 
-  // 1. Immediately store in local memory state
+  // 1. Immediately store in local memory state for responsive UI
   if (!messagesState[conversationId]) {
     messagesState[conversationId] = [];
   }
@@ -193,50 +184,19 @@ export async function sendMessage(
 
   // 3. Persist into Supabase chat_messages table
   try {
-    await supabase.from('chat_messages').insert({
+    const { error } = await supabase.from('chat_messages').insert({
       id: msgId,
       channel_id: conversationId,
       content,
       message_type: 'text',
     });
-  } catch {
-    // Session fallback
-  }
-
-  // 4. Trigger simulated peer response after 1.4 seconds if with another user
-  const conv = conversationsState.find((c) => c.id === conversationId);
-  if (conv && conv.participantId !== 'me') {
-    setTimeout(async () => {
-      const peerMsgId = `peer-reply-${Date.now()}`;
-      const randomReply = PEER_REPLIES[Math.floor(Math.random() * PEER_REPLIES.length)];
-      const peerMsg: Message = {
-        id: peerMsgId,
-        conversationId,
-        senderId: conv.participantId,
-        content: randomReply,
-        messageType: 'text',
-        status: 'sent',
-        sentAt: new Date().toISOString(),
-      };
-      messagesState[conversationId].push(peerMsg);
-      conversationsState = conversationsState.map((c) =>
-        c.id === conversationId
-          ? { ...c, lastMessagePreview: randomReply, lastMessageAt: new Date().toISOString() }
-          : c,
-      );
-      try {
-        await supabase.from('chat_messages').insert({
-          id: peerMsgId,
-          channel_id: conversationId,
-          sender_id: conv.participantId,
-          content: randomReply,
-          message_type: 'text',
-        });
-      } catch {
-        // Fallback
-      }
-    }, 1400);
+    if (error) {
+      console.warn('[Messaging] Supabase persistence error:', error.message);
+    }
+  } catch (err) {
+    console.warn('[Messaging] Failed to reach Supabase backend:', err);
   }
 
   return newMessage;
 }
+
