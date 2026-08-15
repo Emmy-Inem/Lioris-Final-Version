@@ -51,7 +51,7 @@ export default function AuditLogsScreen() {
     return true;
   });
 
-  function handleExportCsv() {
+  async function handleExportCsv() {
     haptics.medium();
     const csvHeader = 'ID,Timestamp,Actor,Role,Action,Summary,TargetType,Institution,Reason\n';
     const csvRows = (entries ?? [])
@@ -69,8 +69,18 @@ export default function AuditLogsScreen() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      Alert.alert('Audit Ledger Exported 📥', 'Compliance CSV download has been initiated.');
+    } else {
+      try {
+        const { Share } = await import('react-native');
+        await Share.share({
+          title: 'Campus Audit Ledger CSV',
+          message: csvContent,
+        });
+      } catch (err) {
+        Alert.alert('Export Error', 'Unable to initiate export share sheet.');
+      }
     }
-    Alert.alert('Audit Ledger Exported 📥', 'Compliance CSV download has been initiated.');
   }
 
   return (

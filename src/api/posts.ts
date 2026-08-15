@@ -118,16 +118,39 @@ export interface CreatePostPayload {
   pollQuestion?: string;
 }
 
+import { getSessionUser } from '../auth/tokenStorage';
+
 export async function createPost(payload: CreatePostPayload): Promise<Post> {
   const { authorInstitutionCode, scopeVisibility, ...rest } = payload;
   const postId = `post-${Date.now()}`;
   const now = new Date().toISOString();
 
+  let authorId = 'me';
+  let authorName = 'You';
+  let authorRole = 'student';
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      authorId = authData.user.id;
+      authorName = authData.user.user_metadata?.full_name || 'Campus Student';
+      authorRole = authData.user.user_metadata?.role || 'student';
+    } else {
+      const stored = await getSessionUser();
+      if (stored?.id) {
+        authorId = stored.id;
+        authorName = stored.fullName || 'You';
+        authorRole = stored.role || 'student';
+      }
+    }
+  } catch {
+    // fallback
+  }
+
   const created: Post = {
     id: postId,
-    authorId: 'me',
-    authorName: 'You',
-    authorRole: 'student',
+    authorId,
+    authorName,
+    authorRole: authorRole as any,
     likesCount: 0,
     commentsCount: 0,
     isLikedByMe: false,
@@ -140,16 +163,23 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
   postsState = [created, ...postsState];
 
   try {
-    await supabase.from('posts').insert({
-      id: postId,
-      title: payload.title,
-      content: payload.content,
-      category: payload.category,
-      visibility_scope: payload.visibilityScope || 'campus',
-      image_url: payload.imageUrl,
-    });
-  } catch {
-    // Local session fallback
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      const { error } = await supabase.from('posts').insert({
+        id: postId,
+        author_id: authData.user.id,
+        title: payload.title,
+        content: payload.content,
+        category: payload.category,
+        visibility_scope: payload.visibilityScope || 'campus',
+        image_url: payload.imageUrl,
+      });
+      if (error) {
+        console.warn('[Posts] Supabase create post error:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Posts] Backend create post error:', err);
   }
 
   return created;
@@ -161,13 +191,19 @@ export async function togglePostLike(postId: string, liked: boolean): Promise<vo
   );
 
   try {
-    if (liked) {
-      await supabase.from('post_likes').insert({ post_id: postId, user_id: 'me' });
-    } else {
-      await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', 'me');
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (userId) {
+      if (liked) {
+        const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId });
+        if (error) console.warn('[Posts] Like persistence error:', error.message);
+      } else {
+        const { error } = await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', userId);
+        if (error) console.warn('[Posts] Unlike error:', error.message);
+      }
     }
-  } catch {
-    // Local session fallback
+  } catch (err) {
+    console.warn('[Posts] Like error:', err);
   }
 }
 

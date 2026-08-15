@@ -4,6 +4,7 @@ import { mockDirectory, mockIncomingConnectionRequests } from'./mockData';
 import { withMockFallback } from'./withMockFallback';
 import { FALL_BACK_TO_MOCKS } from'./config';
 import { createNotification } from'./notifications';
+import { supabase } from './supabase';
 
 // Mutable in-memory copy so accept/decline visibly removes a request
 // from the inbox within a session, without needing a real backend.
@@ -175,10 +176,30 @@ export async function listSuggestedConnections(): Promise<SuggestedConnection[]>
   }, MOCK_SUGGESTIONS);
 }
 
-// User Safety & Content Filtering — Persists user blocking within the active session
+// User Safety & Content Filtering — Persists user blocking to Supabase & active session
 const blockedUserIdsState = new Set<string>();
 
 export function getBlockedUserIds(): string[] {
+  return Array.from(blockedUserIdsState);
+}
+
+export async function loadBlockedUserIds(): Promise<string[]> {
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      const { data, error } = await supabase
+        .from('user_blocks')
+        .select('blocked_id')
+        .eq('blocker_id', authData.user.id);
+      if (!error && data) {
+        for (const row of data) {
+          blockedUserIdsState.add(row.blocked_id);
+        }
+      }
+    }
+  } catch {
+    // fallback
+  }
   return Array.from(blockedUserIdsState);
 }
 
@@ -190,6 +211,13 @@ export function isUserBlocked(userId?: string | null): boolean {
 export async function blockUser(userId: string, userName?: string): Promise<void> {
   blockedUserIdsState.add(userId);
   try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      await supabase.from('user_blocks').upsert({
+        blocker_id: authData.user.id,
+        blocked_id: userId,
+      });
+    }
     const { recordAuditLogEntry } = await import('./auditLog');
     await recordAuditLogEntry({
       action: 'user_blocked',
@@ -197,12 +225,25 @@ export async function blockUser(userId: string, userName?: string): Promise<void
       targetType: 'user',
       targetId: userId,
     });
-  } catch {
-    // Session fallback
+  } catch (err) {
+    console.warn('[Connections] Block user backend error:', err);
   }
 }
 
 export async function unblockUser(userId: string): Promise<void> {
   blockedUserIdsState.delete(userId);
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      await supabase
+        .from('user_blocks')
+        .delete()
+        .eq('blocker_id', authData.user.id)
+        .eq('blocked_id', userId);
+    }
+  } catch (err) {
+    console.warn('[Connections] Unblock user backend error:', err);
+  }
 }
+
 

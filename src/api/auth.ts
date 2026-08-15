@@ -1,6 +1,7 @@
-import { api } from'./client';
-import { AuthSession, UserRole } from'./types';
-import { withMockFallback } from'./withMockFallback';
+import { api } from './client';
+import { supabase } from './supabase';
+import { AuthSession, UserRole } from './types';
+import { withMockFallback } from './withMockFallback';
 
 export interface LoginPayload {
   email: string;
@@ -15,30 +16,23 @@ export interface RegisterPayload {
   userType: UserRole;
 }
 
-// Until a real backend exists, mock logins/registrations infer a role
-// from the email address (containing"admin", "staff", or"alumni"),
-// defaulting to"student" — so every one of the four dashboards built
-// in this app is reachable without a server. See README's"Mock data
-// fallback"section.
 function guessRoleFromEmail(email: string): UserRole {
   const lower = email.toLowerCase();
-  if (lower.includes('admin') || lower.includes('inememmanuel')) return'admin';
-  if (lower.includes('staff')) return'staff';
-  if (lower.includes('alumni')) return'alumni';
-  return'student';
+  if (lower.includes('admin')) return 'admin';
+  if (lower.includes('staff')) return 'staff';
+  if (lower.includes('alumni')) return 'alumni';
+  return 'student';
 }
 
 function mockSession(email: string, role: UserRole, customName?: string): AuthSession {
-  const isSpecialAdmin = email.toLowerCase().includes('inememmanuel');
-  const derivedName = isSpecialAdmin
-    ? 'Inem Emmanuel'
-    : customName || email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const derivedName =
+    customName || email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   return {
     accessToken: `auth-token.${role}.${Date.now()}`,
     refreshToken: `refresh-token.${role}.${Date.now()}`,
     user: {
-      id: isSpecialAdmin ? 'user-inememmanuel' : `user-${email.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      id: `user-${email.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
       fullName: derivedName,
       email: email.trim(),
       role,
@@ -46,8 +40,41 @@ function mockSession(email: string, role: UserRole, customName?: string): AuthSe
   };
 }
 
-// POST /auth/login — PRD Section 15.1
+// POST /auth/login — Real Supabase Auth with Mock Fallback
 export async function login(payload: LoginPayload): Promise<AuthSession> {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: payload.email.trim(),
+      password: payload.password,
+    });
+
+    if (!error && data?.session && data?.user) {
+      // Fetch user profile from Supabase
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      const userRole = (profile?.role || data.user.user_metadata?.role || guessRoleFromEmail(payload.email)) as UserRole;
+      const fullName = profile?.full_name || data.user.user_metadata?.full_name || payload.email.split('@')[0];
+
+      return {
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        user: {
+          id: data.user.id,
+          fullName,
+          email: data.user.email || payload.email,
+          role: userRole,
+        },
+      };
+    }
+  } catch (err) {
+    console.warn('[Auth] Supabase login error:', err);
+  }
+
+  // Fallback to API/mock path
   return withMockFallback(
     async () => {
       const { data } = await api.post<AuthSession>('/auth/login', payload);
@@ -57,8 +84,49 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   );
 }
 
-// POST /auth/register
+// POST /auth/register — Real Supabase Auth with Profile Provisioning
 export async function register(payload: RegisterPayload): Promise<AuthSession> {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: payload.email.trim(),
+      password: payload.password,
+      options: {
+        data: {
+          full_name: payload.fullName,
+          username: payload.username,
+          role: payload.userType,
+        },
+      },
+    });
+
+    if (!error && data?.user) {
+      // Upsert profile in Supabase
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email: payload.email.trim(),
+        full_name: payload.fullName,
+        username: payload.username,
+        role: payload.userType,
+      });
+
+      const accessToken = data.session?.access_token || `auth-token.${payload.userType}.${Date.now()}`;
+      const refreshToken = data.session?.refresh_token || `refresh-token.${payload.userType}.${Date.now()}`;
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: data.user.id,
+          fullName: payload.fullName,
+          email: payload.email.trim(),
+          role: payload.userType,
+        },
+      };
+    }
+  } catch (err) {
+    console.warn('[Auth] Supabase register error:', err);
+  }
+
   return withMockFallback(async () => {
     const { data } = await api.post<AuthSession>('/auth/register', payload);
     return data;

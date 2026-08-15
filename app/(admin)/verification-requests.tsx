@@ -54,6 +54,7 @@ export default function VerificationRequestsScreen() {
       });
 
       createNotification({
+        recipientId: req.userId,
         type: 'system',
         title: 'Campus Verification Approved!',
         body: 'Congratulations! Your identity has been verified. The official verified badge is now active on your profile.',
@@ -90,6 +91,7 @@ export default function VerificationRequestsScreen() {
       });
 
       createNotification({
+        recipientId: req.userId,
         type: 'system',
         title: 'Verification Request Update',
         body: `Your verification submission was not approved: ${finalReason}. You may re-apply with clear documentation.`,

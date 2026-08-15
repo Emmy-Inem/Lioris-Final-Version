@@ -1,11 +1,13 @@
-import { api } from'./client';
-import { Resource } from'./types';
-import { mockResources } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
+import { api } from './client';
+import { Resource } from './types';
+import { mockResources } from './mockData';
+import { withMockFallback } from './withMockFallback';
+import { FALL_BACK_TO_MOCKS } from './config';
+import { supabase } from './supabase';
+import { getSessionUser } from '../auth/tokenStorage';
 
 const INITIAL_RESOURCES: Resource[] = [
-  ...mockResources.map((r) => ({ ...r, approvalStatus: 'approved'as const })),
+  ...mockResources.map((r) => ({ ...r, approvalStatus: 'approved' as const })),
   {
     id: 'res-sub-1',
     title: 'CSC 415 Distributed Systems Midterm Review & Solutions (2024)',
@@ -48,8 +50,6 @@ const INITIAL_RESOURCES: Resource[] = [
   },
 ];
 
-import { supabase } from './supabase';
-
 let resourcesState: Resource[] = [...INITIAL_RESOURCES];
 
 export interface ResourcesQuery {
@@ -81,6 +81,18 @@ function filterMockResources(query: ResourcesQuery): Resource[] {
   return results;
 }
 
+function mapResourceTypeToCategory(type?: string): Resource['category'] {
+  if (type === 'past_question') return 'Past Questions';
+  if (type === 'project' || type === 'summary') return 'Projects';
+  return 'Notes';
+}
+
+function mapCategoryToResourceType(category?: Resource['category']): string {
+  if (category === 'Past Questions') return 'past_question';
+  if (category === 'Projects') return 'summary';
+  return 'lecture_note';
+}
+
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
   try {
     const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
@@ -89,18 +101,18 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         id: row.id,
         title: row.title,
         courseCode: row.course_code || 'GEN 101',
-        department: row.department || 'General',
-        category: (row.category as any) || 'Notes',
+        department: row.course_title || 'Academic Repository',
+        category: mapResourceTypeToCategory(row.resource_type),
         description: row.description || '',
-        fileSize: row.file_size || '2.5 MB',
-        authorName: row.author_name || 'Campus Student',
-        authorId: row.author_id,
+        fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : '2.5 MB',
+        authorName: 'Verified Student',
+        authorId: row.uploader_id,
         authorRole: 'student',
-        likesCount: row.likes_count || 0,
+        likesCount: row.upvotes_count || 0,
         downloadsCount: row.downloads_count || 0,
         createdAt: row.created_at,
-        approvalStatus: (row.approval_status as any) || 'approved',
-        fileType: (row.file_type as any) || 'PDF',
+        approvalStatus: row.is_approved ? 'approved' : 'pending',
+        fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
       }));
       // Merge unique
       const merged = [...dbResources];
@@ -124,18 +136,18 @@ export async function listPendingResources(): Promise<Resource[]> {
 
 export async function approveResource(id: string): Promise<Resource> {
   try {
-    await supabase.from('resources').update({ approval_status: 'approved' }).eq('id', id);
-  } catch {
-    // Fallback
+    await supabase.from('resources').update({ is_approved: true, approved_at: new Date().toISOString() }).eq('id', id);
+  } catch (err) {
+    console.warn('[Resources] Approve error:', err);
   }
   return updateResource(id, { approvalStatus: 'approved', rejectionReason: null });
 }
 
 export async function rejectResource(id: string, reason?: string): Promise<Resource> {
   try {
-    await supabase.from('resources').update({ approval_status: 'rejected' }).eq('id', id);
-  } catch {
-    // Fallback
+    await supabase.from('resources').update({ is_approved: false }).eq('id', id);
+  } catch (err) {
+    console.warn('[Resources] Reject error:', err);
   }
   return updateResource(id, { approvalStatus: 'rejected', rejectionReason: reason || 'File did not meet quality or syllabus standards.' });
 }
@@ -172,19 +184,34 @@ export async function createResource(payload: CreateResourcePayload): Promise<Re
   resourcesState = [created, ...resourcesState];
 
   try {
-    await supabase.from('resources').insert({
-      id: resourceId,
-      title: payload.title,
-      description: payload.description,
-      category: payload.category,
-      department: payload.department,
-      course_code: payload.courseCode,
-      file_size: payload.fileSize,
-      file_type: payload.fileType,
-      approval_status: 'approved',
-    });
-  } catch {
-    // Fallback
+    const { data: authData } = await supabase.auth.getUser();
+    let uploaderId: string | null = authData?.user?.id || null;
+    if (!uploaderId) {
+      const stored = await getSessionUser();
+      if (stored?.id) uploaderId = stored.id;
+    }
+
+    if (uploaderId) {
+      const { error } = await supabase.from('resources').insert({
+        id: resourceId,
+        uploader_id: uploaderId,
+        campus_code: 'UNILAG',
+        course_code: payload.courseCode,
+        course_title: payload.department || payload.title,
+        title: payload.title,
+        description: payload.description || '',
+        resource_type: mapCategoryToResourceType(payload.category),
+        file_url: `https://storage.lioris.app/resources/${resourceId}.pdf`,
+        file_size_bytes: 3565158,
+        file_mime_type: payload.fileType === 'ZIP' ? 'application/zip' : 'application/pdf',
+        is_approved: true,
+      });
+      if (error) {
+        console.warn('[Resources] Create resource Supabase error:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Resources] Create resource error:', err);
   }
 
   return created;
@@ -205,5 +232,11 @@ export async function updateResource(id: string, payload: Partial<Resource>): Pr
 
 export async function deleteResource(id: string): Promise<boolean> {
   resourcesState = resourcesState.filter((r) => r.id !== id);
+  try {
+    await supabase.from('resources').delete().eq('id', id);
+  } catch {
+    // Fallback
+  }
   return true;
 }
+

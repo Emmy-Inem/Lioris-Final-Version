@@ -77,7 +77,7 @@ export default function UserDirectoryScreen() {
     return matchesRole && matchesCampus && matchesQuery;
   });
 
-  function handleCreateUser() {
+  async function handleCreateUser() {
     if (!newFullName.trim() || !newEmail.trim()) {
       Alert.alert('Validation Error', 'Full Name and University Email are required.');
       return;
@@ -85,8 +85,9 @@ export default function UserDirectoryScreen() {
     haptics.medium();
 
     const username = newEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    const userId = `u-${Date.now()}`;
     const newUser: DirectoryUser = {
-      id: `u-${Date.now()}`,
+      id: userId,
       fullName: newFullName.trim(),
       username,
       email: newEmail.trim(),
@@ -102,6 +103,24 @@ export default function UserDirectoryScreen() {
 
     setUsers((prev) => [newUser, ...prev]);
 
+    try {
+      const { supabase } = await import('@/api/supabase');
+      await supabase.from('profiles').upsert({
+        id: userId,
+        email: newUser.email,
+        full_name: newUser.fullName,
+        username: newUser.username,
+        role: newUser.role,
+        campus_code: newUser.campus,
+        department: newUser.department,
+        student_id_number: newUser.matricNo,
+        verification_status: 'verified',
+        is_suspended: false,
+      });
+    } catch (err) {
+      console.warn('[UserDirectory] Supabase profile provision error:', err);
+    }
+
     recordAuditLogEntry({
       action: 'verification_approved',
       summary: `Created new ${newRole} account for ${newUser.fullName} (${newUser.matricNo}) on ${newCampus}`,
@@ -115,13 +134,20 @@ export default function UserDirectoryScreen() {
     setNewFullName('');
     setNewEmail('');
     setNewMatric('');
-    Alert.alert('User Provisioned', `${newUser.fullName} has been registered as a verified ${newRole}. An activation link was dispatched to ${newUser.email}.`);
+    Alert.alert('User Provisioned', `${newUser.fullName} has been registered as a verified ${newRole}.`);
   }
 
-  function handleToggleSuspend(target: DirectoryUser) {
+  async function handleToggleSuspend(target: DirectoryUser) {
     haptics.medium();
     const nextSuspended = !target.suspended;
     setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, suspended: nextSuspended } : u)));
+
+    try {
+      const { supabase } = await import('@/api/supabase');
+      await supabase.from('profiles').update({ is_suspended: nextSuspended }).eq('id', target.id);
+    } catch (err) {
+      console.warn('[UserDirectory] Supabase suspend error:', err);
+    }
 
     recordAuditLogEntry({
       action: 'escrow_funds_released',
@@ -134,7 +160,7 @@ export default function UserDirectoryScreen() {
 
     setSelectedUser(null);
     Alert.alert(
-      nextSuspended ? 'Account Suspended 🚫' : 'Account Restored',
+      nextSuspended ? 'Account Suspended' : 'Account Restored',
       `${target.fullName}'s login privileges have been ${nextSuspended ? 'revoked' : 'reactivated'}.`,
     );
   }

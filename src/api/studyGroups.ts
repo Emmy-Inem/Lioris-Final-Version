@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { StudyGroup } from './types';
 import { mockStudyGroups } from './mockData';
+import { getSessionUser } from '../auth/tokenStorage';
 
 let studyGroupsState: StudyGroup[] = [...mockStudyGroups];
 
@@ -24,16 +25,35 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
   studyGroupsState = [created, ...studyGroupsState];
 
   try {
-    await supabase.from('study_groups').insert({
-      id: groupId,
-      name: payload.name,
-      course_code: payload.courseCode,
-      description: payload.description,
-      is_public: payload.isPublic,
-      member_count: 1,
-    });
-  } catch {
-    // Session fallback
+    const { data: authData } = await supabase.auth.getUser();
+    let creatorId: string | null = authData?.user?.id || null;
+    if (!creatorId) {
+      const stored = await getSessionUser();
+      if (stored?.id) creatorId = stored.id;
+    }
+
+    if (creatorId) {
+      const { error } = await supabase.from('study_groups').insert({
+        id: groupId,
+        creator_id: creatorId,
+        name: payload.name,
+        course_code: payload.courseCode,
+        description: payload.description,
+        is_public: payload.isPublic,
+        member_count: 1,
+      });
+      if (error) {
+        console.warn('[StudyGroups] Create group error:', error.message);
+      } else {
+        await supabase.from('study_group_members').insert({
+          group_id: groupId,
+          user_id: creatorId,
+          role: 'admin',
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[StudyGroups] Backend create error:', err);
   }
 
   return created;
@@ -82,14 +102,52 @@ export async function joinStudyGroup(id: string): Promise<StudyGroup> {
   });
 
   try {
-    await supabase.from('study_group_members').insert({
-      group_id: id,
-      user_id: 'me',
-      role: 'member',
-    });
-  } catch {
-    // Fallback
+    const { data: authData } = await supabase.auth.getUser();
+    let userId = authData?.user?.id;
+    if (!userId) {
+      const stored = await getSessionUser();
+      if (stored?.id) userId = stored.id;
+    }
+
+    if (userId) {
+      const { error } = await supabase.from('study_group_members').insert({
+        group_id: id,
+        user_id: userId,
+        role: 'member',
+      });
+      if (error) console.warn('[StudyGroups] Join error:', error.message);
+    }
+  } catch (err) {
+    console.warn('[StudyGroups] Join failure:', err);
   }
 
   return updated || studyGroupsState[0];
 }
+
+export async function leaveStudyGroup(id: string): Promise<void> {
+  studyGroupsState = studyGroupsState.map((g) => {
+    if (g.id !== id) return g;
+    return { ...g, isJoined: false, memberCount: Math.max(1, g.memberCount - 1) };
+  });
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let userId = authData?.user?.id;
+    if (!userId) {
+      const stored = await getSessionUser();
+      if (stored?.id) userId = stored.id;
+    }
+
+    if (userId) {
+      const { error } = await supabase
+        .from('study_group_members')
+        .delete()
+        .eq('group_id', id)
+        .eq('user_id', userId);
+      if (error) console.warn('[StudyGroups] Leave error:', error.message);
+    }
+  } catch (err) {
+    console.warn('[StudyGroups] Leave failure:', err);
+  }
+}
+

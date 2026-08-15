@@ -54,6 +54,7 @@ export async function resolveReport(
       institutionCode: target.institutionCode,
     });
     createNotification({
+      recipientId: target.reporterId,
       type: 'moderation',
       title: action === 'resolved' ? 'Your report was actioned' : 'Your report was reviewed',
       body:

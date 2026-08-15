@@ -95,6 +95,20 @@ CREATE INDEX IF NOT EXISTS idx_profiles_campus ON profiles(campus_code);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
 
+-- ============================================================================
+-- 4B. USER BLOCKS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS user_blocks (
+    blocker_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    blocked_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (blocker_id, blocked_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_blocks_blocker ON user_blocks(blocker_id);
+CREATE INDEX IF NOT EXISTS idx_user_blocks_blocked ON user_blocks(blocked_id);
+
+
 -- Ensure Root Admin Account Exists with Admin Privileges
 -- (inememmanuel@gmail.com is configured as Platform Root Admin)
 CREATE OR REPLACE FUNCTION handle_new_user_profile()
@@ -383,10 +397,9 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id);
 
--- ============================================================================
--- 13. ROW LEVEL SECURITY (RLS) POLICIES
--- ============================================================================
+ALTER TABLE campuses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_blocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
@@ -402,6 +415,17 @@ ALTER TABLE chat_channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_channel_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- Campuses: Public Read, Admin Full Management
+CREATE POLICY "Campuses are viewable by everyone" ON campuses FOR SELECT USING (true);
+CREATE POLICY "Admins have full campus management access" ON campuses FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- User Blocks: Self Read/Insert/Delete
+CREATE POLICY "Users can view their own block list" ON user_blocks FOR SELECT TO authenticated USING (auth.uid() = blocker_id);
+CREATE POLICY "Users can block other users" ON user_blocks FOR INSERT TO authenticated WITH CHECK (auth.uid() = blocker_id);
+CREATE POLICY "Users can unblock users" ON user_blocks FOR DELETE TO authenticated USING (auth.uid() = blocker_id);
 
 -- Profiles: Public Read, Self Insert/Update, Admin Full Access
 CREATE POLICY "Profiles are viewable by authenticated users" ON profiles FOR SELECT TO authenticated USING (true);

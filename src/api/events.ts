@@ -195,9 +195,23 @@ export interface CreateEventPayload {
 
 export async function createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
   const eventId = `event-${Date.now()}`;
+
+  let organizerId = 'me';
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      organizerId = authData.user.id;
+    } else {
+      const stored = await getSessionUser();
+      if (stored?.id) organizerId = stored.id;
+    }
+  } catch {
+    // fallback
+  }
+
   const created: CampusEvent = {
     id: eventId,
-    organizerId: 'me',
+    organizerId,
     rsvpCount: 0,
     capacity: null,
     isRsvpd: false,
@@ -207,19 +221,26 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
   eventsState = [created, ...eventsState];
 
   try {
-    await supabase.from('events').insert({
-      id: eventId,
-      title: payload.title,
-      description: payload.description,
-      category: payload.category,
-      location: payload.location,
-      visibility_scope: payload.visibilityScope,
-      start_at: payload.startAt,
-      end_at: payload.endAt,
-      image_url: payload.imageUrl,
-    });
-  } catch {
-    // Fallback
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      const { error } = await supabase.from('events').insert({
+        id: eventId,
+        creator_id: authData.user.id,
+        title: payload.title,
+        description: payload.description,
+        category: payload.category,
+        location: payload.location,
+        visibility_scope: payload.visibilityScope || 'global',
+        start_at: payload.startAt,
+        end_at: payload.endAt,
+        image_url: payload.imageUrl,
+      });
+      if (error) {
+        console.warn('[Events] Supabase create event error:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Events] Backend create event error:', err);
   }
 
   return created;
@@ -239,13 +260,20 @@ export async function rsvpToEvent(
   });
 
   try {
-    if (action === 'rsvp') {
-      await supabase.from('event_attendees').insert({ event_id: id, user_id: 'me', status: 'confirmed' });
-    } else {
-      await supabase.from('event_attendees').delete().eq('event_id', id).eq('user_id', 'me');
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+
+    if (userId) {
+      if (action === 'rsvp') {
+        const { error } = await supabase.from('event_attendees').insert({ event_id: id, user_id: userId, status: 'confirmed' });
+        if (error) console.warn('[Events] RSVP error:', error.message);
+      } else {
+        const { error } = await supabase.from('event_attendees').delete().eq('event_id', id).eq('user_id', userId);
+        if (error) console.warn('[Events] Cancel RSVP error:', error.message);
+      }
     }
-  } catch {
-    // Fallback
+  } catch (err) {
+    console.warn('[Events] RSVP failure:', err);
   }
 
   return result;

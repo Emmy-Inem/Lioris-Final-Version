@@ -147,8 +147,17 @@ export async function deleteNotification(id: string) {
 
 export async function registerDevicePushToken(token: string): Promise<void> {
   try {
-    await supabase.from('profiles').update({ push_token: token }).eq('id', 'me');
-  } catch {
-    // Session fallback
+    const { data: authData } = await supabase.auth.getUser();
+    let userId = authData?.user?.id;
+    if (!userId) {
+      const stored = await getSessionUser();
+      if (stored?.id) userId = stored.id;
+    }
+    if (userId) {
+      const { error } = await supabase.from('profiles').update({ push_token: token }).eq('id', userId);
+      if (error) console.warn('[Notifications] Register push token error:', error.message);
+    }
+  } catch (err) {
+    console.warn('[Notifications] Push token error:', err);
   }
 }

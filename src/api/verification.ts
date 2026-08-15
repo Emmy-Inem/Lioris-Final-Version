@@ -105,6 +105,7 @@ export async function respondToVerificationRequest(id: string, status: 'approved
     // The applicant themselves was previously never told either way —
     // no notification was ever created anywhere in the app before this.
     createNotification({
+      recipientId: updated.userId,
       type: 'system',
       title: status === 'approved' ? 'Verification approved' : 'Verification not approved',
       body:

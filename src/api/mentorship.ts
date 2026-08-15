@@ -100,6 +100,7 @@ export async function respondToMentorshipRequest(
       return updated;
     });
     createNotification({
+      recipientId: updated?.studentId,
       type: 'system',
       title: action === 'accept' ? 'Mentorship request accepted' : 'Mentorship request declined',
       body:
