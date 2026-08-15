@@ -11,11 +11,12 @@ import { AppText } from'@/components/AppText';
 import { AppButton } from'@/components/AppButton';
 import { Avatar } from'@/components/Avatar';
 import { Badge } from'@/components/Badge';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { getMyProfile, updateProfileImages } from'@/api/profile';
-import { listEvents } from'@/api/events';
-import { listDashboardShortcuts, DashboardShortcut } from'@/api/adminShortcuts';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { getMyProfile, updateProfileImages } from '@/api/profile';
+import { listEvents } from '@/api/events';
+import { listDashboardShortcuts, DashboardShortcut } from '@/api/adminShortcuts';
 
 const COVER_PRESETS = [
   { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
@@ -70,6 +71,8 @@ export default function StudentDashboard() {
     setPhotoPickerOpen(false);
     Alert.alert('Campus Banner Updated', 'New cover banner applied.');
   }
+
+  const { isFeatureEnabled } = useFeatureFlags();
 
   return (
     <ScreenContainer glow={true}>
@@ -157,222 +160,230 @@ export default function StudentDashboard() {
         </Pressable>
 
         {/* High-Utility Next Class Countdown Widget */}
-        <SolidCard radius={20} backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="time"size={16} color={colors.brandPrimary} />
-              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
-                NEXT LECTURE TODAY • IN 42 MINS
-              </AppText>
+        {isFeatureEnabled('utility_cards') && (
+          <SolidCard radius={20} backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="time"size={16} color={colors.brandPrimary} />
+                <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
+                  NEXT LECTURE TODAY • IN 42 MINS
+                </AppText>
+              </View>
+              <Badge label="LT 2 Main"tone="brand" />
             </View>
-            <Badge label="LT 2 Main"tone="brand" />
-          </View>
 
-          <AppText variant="h3"weight="bold"style={{ marginBottom: 2 }}>
-            CSC 301: Advanced Algorithms & Data Structures
-          </AppText>
-          <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
-            11:00 AM – 1:00 PM • Prof. O. Adeyemi • Topic: Dynamic Programming & Graphs
-          </AppText>
+            <AppText variant="h3"weight="bold"style={{ marginBottom: 2 }}>
+              CSC 301: Advanced Algorithms & Data Structures
+            </AppText>
+            <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
+              11:00 AM – 1:00 PM • Prof. O. Adeyemi • Topic: Dynamic Programming & Graphs
+            </AppText>
 
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <Pressable
-              onPress={() => router.push('/(student)/resources')}
-              style={{
-                flex: 1,
-                backgroundColor: colors.surface,
-                borderRadius: radius.pill,
-                paddingVertical: 7,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <AppText variant="caption"weight="bold"tone="brand">
-                 Course Notes & Solved PQs
-              </AppText>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/(student)/calendar')}
-              style={{
-                flex: 1,
-                backgroundColor: colors.brandPrimary,
-                borderRadius: radius.pill,
-                paddingVertical: 7,
-                alignItems: 'center',
-              }}
-            >
-              <AppText variant="caption"weight="bold"tone="inverse">
-                 Full Timetable →
-              </AppText>
-            </Pressable>
-          </View>
-        </SolidCard>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Pressable
+                onPress={() => router.push('/(student)/resources')}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: radius.pill,
+                  paddingVertical: 7,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <AppText variant="caption"weight="bold"tone="brand">
+                   Course Notes & Solved PQs
+                </AppText>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push('/(student)/calendar')}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingVertical: 7,
+                  alignItems: 'center',
+                }}
+              >
+                <AppText variant="caption"weight="bold"tone="inverse">
+                   Full Timetable →
+                </AppText>
+              </Pressable>
+            </View>
+          </SolidCard>
+        )}
 
         {/* Live Study Squads & Campus Hub Activity */}
-        <View style={{ marginBottom: spacing.lg }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText variant="h3"weight="bold">
-              Live Study Squads & Hubs 
-            </AppText>
-            <Badge label="2 Active Now"tone="success" />
-          </View>
+        {isFeatureEnabled('study_groups') && (
+          <View style={{ marginBottom: spacing.lg }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <AppText variant="h3"weight="bold">
+                Live Study Squads & Hubs 
+              </AppText>
+              <Badge label="2 Active Now"tone="success" />
+            </View>
 
-          <View style={{ gap: spacing.sm }}>
-            <SolidCard radius={16}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <Ionicons name="location"size={14} color={colors.brandPrimary} />
-                    <AppText weight="bold"variant="bodySmall">
-                      Senate E-Library (2nd Floor Quiet Zone)
+            <View style={{ gap: spacing.sm }}>
+              <SolidCard radius={16}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <Ionicons name="location"size={14} color={colors.brandPrimary} />
+                      <AppText weight="bold"variant="bodySmall">
+                        Senate E-Library (2nd Floor Quiet Zone)
+                      </AppText>
+                    </View>
+                    <AppText tone="secondary"variant="caption">
+                      28 students • CSC 301 & MEE 305 peer revision sprint
                     </AppText>
                   </View>
-                  <AppText tone="secondary"variant="caption">
-                    28 students • CSC 301 & MEE 305 peer revision sprint
-                  </AppText>
+                  <Pressable
+                    onPress={() => router.push('/(student)/feed')}
+                    style={{
+                      backgroundColor: colors.pastelPrimaryBg,
+                      paddingHorizontal: spacing.sm,
+                      paddingVertical: 4,
+                      borderRadius: radius.pill,
+                    }}
+                  >
+                    <AppText variant="caption"weight="bold"tone="brand">
+                      Join Squad 
+                    </AppText>
+                  </Pressable>
                 </View>
-                <Pressable
-                  onPress={() => router.push('/(student)/feed')}
-                  style={{
-                    backgroundColor: colors.pastelPrimaryBg,
-                    paddingHorizontal: spacing.sm,
-                    paddingVertical: 4,
-                    borderRadius: radius.pill,
-                  }}
-                >
-                  <AppText variant="caption"weight="bold"tone="brand">
-                    Join Squad 
-                  </AppText>
-                </Pressable>
-              </View>
-            </SolidCard>
+              </SolidCard>
 
-            <SolidCard radius={16}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <Ionicons name="code-slash"size={14} color={colors.brandPrimary} />
-                    <AppText weight="bold"variant="bodySmall">
-                      Tech Hub / Hackfest Arena (Faculty Hall)
+              <SolidCard radius={16}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <Ionicons name="code-slash"size={14} color={colors.brandPrimary} />
+                      <AppText weight="bold"variant="bodySmall">
+                        Tech Hub / Hackfest Arena (Faculty Hall)
+                      </AppText>
+                    </View>
+                    <AppText tone="secondary"variant="caption">
+                      14 students • Team Aqua demo rehearsal & mobile UI testing
                     </AppText>
                   </View>
-                  <AppText tone="secondary"variant="caption">
-                    14 students • Team Aqua demo rehearsal & mobile UI testing
-                  </AppText>
+                  <Pressable
+                    onPress={() => router.push('/(student)/feed')}
+                    style={{
+                      backgroundColor: colors.pastelPrimaryBg,
+                      paddingHorizontal: spacing.sm,
+                      paddingVertical: 4,
+                      borderRadius: radius.pill,
+                    }}
+                  >
+                    <AppText variant="caption"weight="bold"tone="brand">
+                      View Demo 
+                    </AppText>
+                  </Pressable>
                 </View>
-                <Pressable
-                  onPress={() => router.push('/(student)/feed')}
-                  style={{
-                    backgroundColor: colors.pastelPrimaryBg,
-                    paddingHorizontal: spacing.sm,
-                    paddingVertical: 4,
-                    borderRadius: radius.pill,
-                  }}
-                >
-                  <AppText variant="caption"weight="bold"tone="brand">
-                    View Demo 
-                  </AppText>
-                </Pressable>
-              </View>
-            </SolidCard>
+              </SolidCard>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Dynamic Campus Utilities & Portal Grid */}
-        <View style={{ marginBottom: spacing.lg }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText variant="h3"weight="bold">
-              Campus Utilities & Portals 
-            </AppText>
-            <Pressable onPress={() => router.push('/(student)/resources')}>
-              <AppText tone="brand"variant="bodySmall"weight="bold">
-                View All →
+        {isFeatureEnabled('utility_cards') && (
+          <View style={{ marginBottom: spacing.lg }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <AppText variant="h3"weight="bold">
+                Campus Utilities & Portals 
               </AppText>
-            </Pressable>
-          </View>
+              <Pressable onPress={() => router.push('/(student)/resources')}>
+                <AppText tone="brand"variant="bodySmall"weight="bold">
+                  View All →
+                </AppText>
+              </Pressable>
+            </View>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            {shortcuts?.map((item) => {
-              const colorInfo = SHORTCUT_COLOR_MAP[item.iconColor] ?? SHORTCUT_COLOR_MAP.sage;
-              const route = resolveShortcutRoute(item.internalAction);
-              return (
-                <ShortcutTile
-                  key={item.id}
-                  icon={item.icon as any}
-                  bg={colors[colorInfo.bgKey]}
-                  iconColor={colors[colorInfo.textKey]}
-                  title={item.title}
-                  subtitle={item.description}
-                  subtitleColor={colors[colorInfo.textKey]}
-                  onPress={() => {
-                    if (route) {
-                      router.push(route as any);
-                    } else {
-                      Alert.alert(item.title, item.description);
-                    }
-                  }}
-                />
-              );
-            })}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+              {shortcuts?.map((item) => {
+                const colorInfo = SHORTCUT_COLOR_MAP[item.iconColor] ?? SHORTCUT_COLOR_MAP.sage;
+                const route = resolveShortcutRoute(item.internalAction);
+                return (
+                  <ShortcutTile
+                    key={item.id}
+                    icon={item.icon as any}
+                    bg={colors[colorInfo.bgKey]}
+                    iconColor={colors[colorInfo.textKey]}
+                    title={item.title}
+                    subtitle={item.description}
+                    subtitleColor={colors[colorInfo.textKey]}
+                    onPress={() => {
+                      if (route) {
+                        router.push(route as any);
+                      } else {
+                        Alert.alert(item.title, item.description);
+                      }
+                    }}
+                  />
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Featured Campus Events Preview */}
-        <View style={{ marginBottom: spacing.lg }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText variant="h3"weight="bold">
-              Featured Campus Events 
-            </AppText>
-            <Pressable onPress={() => router.push('/(student)/events-list')}>
-              <AppText tone="brand"variant="bodySmall"weight="bold">
-                See All ({events?.length ?? 0}) →
+        {isFeatureEnabled('campus_events') && (
+          <View style={{ marginBottom: spacing.lg }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <AppText variant="h3"weight="bold">
+                Featured Campus Events 
               </AppText>
-            </Pressable>
-          </View>
+              <Pressable onPress={() => router.push('/(student)/events-list')}>
+                <AppText tone="brand"variant="bodySmall"weight="bold">
+                  See All ({events?.length ?? 0}) →
+                </AppText>
+              </Pressable>
+            </View>
 
-          {events?.slice(0, 2).map((evt) => (
-            <SolidCard key={evt.id} radius={18} style={{ marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
-                <View
-                  style={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: radius.md,
-                    backgroundColor: colors.pastelPrimaryBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 1,
-                    borderColor: colors.brandPrimary,
-                  }}
-                >
-                  <Ionicons name="calendar"size={22} color={colors.brandPrimary} />
+            {events?.slice(0, 2).map((evt) => (
+              <SolidCard key={evt.id} radius={18} style={{ marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+                  <View
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.pastelPrimaryBg,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: colors.brandPrimary,
+                    }}
+                  >
+                    <Ionicons name="calendar"size={22} color={colors.brandPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText weight="bold"variant="bodySmall">
+                      {evt.title}
+                    </AppText>
+                    <AppText tone="secondary"variant="caption">
+                       {evt.location} • {evt.rsvpCount} RSVPs
+                    </AppText>
+                  </View>
+                  <Pressable
+                    onPress={() => router.push('/(student)/events-list')}
+                    style={{
+                      backgroundColor: colors.brandPrimary,
+                      borderRadius: radius.pill,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: 6,
+                    }}
+                  >
+                    <AppText variant="caption"weight="bold"tone="inverse">
+                      RSVP
+                    </AppText>
+                  </Pressable>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText weight="bold"variant="bodySmall">
-                    {evt.title}
-                  </AppText>
-                  <AppText tone="secondary"variant="caption">
-                     {evt.location} • {evt.rsvpCount} RSVPs
-                  </AppText>
-                </View>
-                <Pressable
-                  onPress={() => router.push('/(student)/events-list')}
-                  style={{
-                    backgroundColor: colors.brandPrimary,
-                    borderRadius: radius.pill,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: 6,
-                  }}
-                >
-                  <AppText variant="caption"weight="bold"tone="inverse">
-                    RSVP
-                  </AppText>
-                </Pressable>
-              </View>
-            </SolidCard>
-          ))}
-        </View>
+              </SolidCard>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* Photo Picker Modal */}

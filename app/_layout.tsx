@@ -17,6 +17,8 @@ import { addNotificationResponseListener } from'@/notifications/push';
 
 import { loadBlockedUserIds } from '@/api/connections';
 
+import { FeatureFlagsProvider } from '@/context/FeatureFlagsContext';
+
 SplashScreen.preventAutoHideAsync().catch(() => {
   // No-op: harmless if called more than once (e.g. fast refresh in dev).
 });
@@ -60,11 +62,13 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <ThemeProvider>
-              <StatusBarForTheme />
-              <OfflineBanner />
-              <ErrorBoundary>
-                <Slot />
-              </ErrorBoundary>
+              <FeatureFlagsProvider>
+                <StatusBarForTheme />
+                <OfflineBanner />
+                <ErrorBoundary>
+                  <Slot />
+                </ErrorBoundary>
+              </FeatureFlagsProvider>
             </ThemeProvider>
           </AuthProvider>
         </QueryClientProvider>

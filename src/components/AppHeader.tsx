@@ -51,18 +51,9 @@ export function AppHeader() {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 }}>
         <LiorisLogo size={26} variant="symbol" />
-        <AppText
-          variant="h3"
-          weight="bold"
-          style={{
-            letterSpacing: 0.6,
-            color: colors.textPrimary,
-            marginLeft: 3,
-            fontSize: 20,
-          }}
-        >
-          LIORIS
-        </AppText>
+        <View style={{ marginLeft: 4 }}>
+          <LiorisLogo size={24} variant="wordmark" />
+        </View>
         {showWorkspaceSwitcher ? (
           <Pressable
             onPress={() => {

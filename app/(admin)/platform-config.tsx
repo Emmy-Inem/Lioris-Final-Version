@@ -185,6 +185,53 @@ export default function PlatformConfigScreen() {
           />
         </View>
 
+        {/* Feature Controls & Kill Switches Banner */}
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            router.push('/(admin)/feature-controls');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Open Feature Controls and Kill Switches"
+        >
+          <SolidCard
+            radius={18}
+            style={{
+              marginBottom: spacing.md,
+              backgroundColor: colors.pastelPrimaryBg,
+              borderWidth: 1,
+              borderColor: colors.brandPrimary,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: `${colors.brandPrimary}40`,
+                }}
+              >
+                <Ionicons name="options-outline" size={22} color={colors.brandPrimary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches 🎛️</AppText>
+                  <Badge label="Runtime Modular" tone="brand" />
+                </View>
+                <AppText tone="secondary" variant="caption">
+                  Temporarily toggle XP gamification, career page, marketplace, utility cards & more
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.brandPrimary} />
+            </View>
+          </SolidCard>
+        </Pressable>
+
         {/* Super Admin Config Banner */}
         <Pressable
           onPress={() => {

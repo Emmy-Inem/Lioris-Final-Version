@@ -5,11 +5,18 @@ import { AppText } from'./AppText';
 import { Avatar } from'./Avatar';
 import { useTheme } from'@/theme/ThemeProvider';
 
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+
 const MOCK_STORIES = ['Tunde', 'Chioma', 'Sade', 'Adebayo', 'Sithole'];
 
-/** Ported from StoriesBar (DashboardAndProfile.kt): "My Story"add bubble + friends'story avatars in a ring border. */
+/** Ported from StoriesBar (DashboardAndProfile.kt): "My Story" add bubble + friends' story avatars in a ring border. */
 export function StoriesBar() {
   const { colors, spacing } = useTheme();
+  const { isFeatureEnabled } = useFeatureFlags();
+
+  if (!isFeatureEnabled('stories_bar')) {
+    return null;
+  }
 
   return (
     <ScrollView

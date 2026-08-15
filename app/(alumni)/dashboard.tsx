@@ -13,13 +13,14 @@ import { Avatar } from'@/components/Avatar';
 import { PostCard } from'@/components/PostCard';
 import { EventCard } from'@/components/EventCard';
 import { Ionicons } from'@expo/vector-icons';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { useRealtimeChannel } from'@/realtime/useRealtimeChannel';
-import { listEvents } from'@/api/events';
-import { listFeedPosts } from'@/api/posts';
-import { listMentorships } from'@/api/mentorship';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
+import { listEvents } from '@/api/events';
+import { listFeedPosts } from '@/api/posts';
+import { listMentorships } from '@/api/mentorship';
+import { haptics } from '@/utils/haptics';
 
 export default function AlumniDashboard() {
   const { colors, spacing, radius } = useTheme();
@@ -32,6 +33,8 @@ export default function AlumniDashboard() {
 
   const activeMenteesCount = mentorships?.filter((m) => m.status === 'active').length ?? 2;
   const pendingRequestsCount = mentorships?.filter((m) => m.status === 'pending').length ?? 1;
+
+  const { isFeatureEnabled } = useFeatureFlags();
 
   return (
     <ScreenContainer glow={true}>
@@ -76,27 +79,29 @@ export default function AlumniDashboard() {
 
         {/* Quick Alumni Action Grid */}
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-          <Pressable
-            onPress={() => router.push('/(alumni)/mentorship')}
-            style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16, borderWidth: 1, borderColor: colors.brandPrimary }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <Ionicons name="school"size={22} color={colors.brandPrimary} />
-              {pendingRequestsCount > 0 && (
-                <View style={{ backgroundColor: colors.critical, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                  <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
-                    {pendingRequestsCount} new
-                  </AppText>
-                </View>
-              )}
-            </View>
-            <AppText weight="bold"variant="bodySmall"tone="brand">
-              Mentorship Hub
-            </AppText>
-            <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
-              {activeMenteesCount} active students
-            </AppText>
-          </Pressable>
+          {isFeatureEnabled('alumni_mentorship') && (
+            <Pressable
+              onPress={() => router.push('/(alumni)/mentorship')}
+              style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16, borderWidth: 1, borderColor: colors.brandPrimary }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <Ionicons name="school"size={22} color={colors.brandPrimary} />
+                {pendingRequestsCount > 0 && (
+                  <View style={{ backgroundColor: colors.critical, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
+                    <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
+                      {pendingRequestsCount} new
+                    </AppText>
+                  </View>
+                )}
+              </View>
+              <AppText weight="bold"variant="bodySmall"tone="brand">
+                Mentorship Hub
+              </AppText>
+              <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
+                {activeMenteesCount} active students
+              </AppText>
+            </Pressable>
+          )}
 
           <Pressable
             onPress={() => router.push('/(alumni)/alumni-hub')}
@@ -118,63 +123,67 @@ export default function AlumniDashboard() {
         {/* Secondary Executive Actions */}
         <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
           {[
-            { icon: 'briefcase-outline'as const, label: 'Post Job', route: '/(alumni)/jobs' },
-            { icon: 'people-outline'as const, label: 'Directory', route: '/(alumni)/directory' },
-            { icon: 'cart-outline'as const, label: 'Marketplace', route: '/(alumni)/marketplace' },
-            { icon: 'calendar-outline'as const, label: 'Reunions', route: '/(alumni)/events' },
-          ].map((item) => (
-            <Pressable
-              key={item.label}
-              onPress={() => router.push(item.route as any)}
-              style={{
-                flex: 1,
-                backgroundColor: colors.surface,
-                paddingVertical: 10,
-                borderRadius: 12,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name={item.icon} size={18} color={colors.textPrimary} style={{ marginBottom: 2 }} />
-              <AppText variant="caption"weight="bold"style={{ fontSize: 11 }}>
-                {item.label}
-              </AppText>
-            </Pressable>
-          ))}
+            { key: 'career_page', icon: 'briefcase-outline' as const, label: 'Post Job', route: '/(alumni)/jobs' },
+            { key: 'directory', icon: 'people-outline' as const, label: 'Directory', route: '/(alumni)/directory' },
+            { key: 'marketplace', icon: 'cart-outline' as const, label: 'Marketplace', route: '/(alumni)/marketplace' },
+            { key: 'campus_events', icon: 'calendar-outline' as const, label: 'Reunions', route: '/(alumni)/events' },
+          ]
+            .filter((item) => item.key === 'directory' || isFeatureEnabled(item.key as any))
+            .map((item) => (
+              <Pressable
+                key={item.label}
+                onPress={() => router.push(item.route as any)}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name={item.icon} size={18} color={colors.textPrimary} style={{ marginBottom: 2 }} />
+                <AppText variant="caption"weight="bold"style={{ fontSize: 11 }}>
+                  {item.label}
+                </AppText>
+              </Pressable>
+            ))}
         </View>
 
         {/* Live Mentee Pulse Card */}
-        <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="videocam"size={18} color={colors.brandPrimary} />
-              <AppText weight="bold"variant="bodySmall">
-                Upcoming 1-on-1 Student Calls
-              </AppText>
-            </View>
-            <Badge label="Google Meet"tone="brand" />
-          </View>
-
-          <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: 12, marginBottom: spacing.xs }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Avatar name="Diana Prince"size={32} role="student" />
-                <View>
-                  <AppText weight="bold"variant="bodySmall">
-                    Diana Prince (300L CS)
-                  </AppText>
-                  <AppText tone="secondary"variant="caption">
-                    Topic: Mobile Architecture & Resume Review
-                  </AppText>
-                </View>
+        {isFeatureEnabled('alumni_mentorship') && (
+          <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="videocam"size={18} color={colors.brandPrimary} />
+                <AppText weight="bold"variant="bodySmall">
+                  Upcoming 1-on-1 Student Calls
+                </AppText>
               </View>
-              <AppButton
-                label="Join"onPress={() => Alert.alert('Launching Meeting', 'Opening Google Meet session: https://meet.google.com/lio-csc-demo')}
-              />
+              <Badge label="Google Meet"tone="brand" />
             </View>
-          </View>
-        </SolidCard>
+
+            <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: 12, marginBottom: spacing.xs }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <Avatar name="Diana Prince"size={32} role="student" />
+                  <View>
+                    <AppText weight="bold"variant="bodySmall">
+                      Diana Prince (300L CS)
+                    </AppText>
+                    <AppText tone="secondary"variant="caption">
+                      Topic: Mobile Architecture & Resume Review
+                    </AppText>
+                  </View>
+                </View>
+                <AppButton
+                  label="Join"onPress={() => Alert.alert('Launching Meeting', 'Opening Google Meet session: https://meet.google.com/lio-csc-demo')}
+                />
+              </View>
+            </View>
+          </SolidCard>
+        )}
 
         {/* Recent Global Updates */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>

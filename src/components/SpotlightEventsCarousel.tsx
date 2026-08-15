@@ -5,9 +5,10 @@ import { router } from'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { AppText } from'./AppText';
 import { Badge } from'./Badge';
-import { useTheme } from'@/theme/ThemeProvider';
-import { CampusEvent } from'@/api/types';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { CampusEvent } from '@/api/types';
+import { haptics } from '@/utils/haptics';
 
 const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
 const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
@@ -19,7 +20,12 @@ interface SpotlightEventsCarouselProps {
 
 export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCarouselProps) {
   const { colors, spacing, radius, isDark } = useTheme();
+  const { isFeatureEnabled } = useFeatureFlags();
   const [activeIndex, setActiveIndex] = useState(0);
+
+  if (!isFeatureEnabled('campus_events')) {
+    return null;
+  }
   const scrollRef = useRef<ScrollView>(null);
   const isInteracting = useRef(false);
   const resumeTimeout = useRef<any>(null);

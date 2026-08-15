@@ -5,15 +5,22 @@ import { SolidCard } from'./SolidCard';
 import { AppText } from'./AppText';
 import { useTheme } from'@/theme/ThemeProvider';
 
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+
 export interface ShortcutLink {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
 }
 
-/** Ported from"My Shortcuts & Comfort Board" — quick links to portal-style destinations (fees, hostel, timetable, library). */
+/** Ported from "My Shortcuts & Comfort Board" — quick links to portal-style destinations (fees, hostel, timetable, library). */
 export function ShortcutsBoard({ links }: { links: ShortcutLink[] }) {
   const { spacing, colors } = useTheme();
+  const { isFeatureEnabled } = useFeatureFlags();
+
+  if (!isFeatureEnabled('utility_cards')) {
+    return null;
+  }
 
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>

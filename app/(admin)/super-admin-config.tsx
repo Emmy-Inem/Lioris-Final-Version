@@ -174,10 +174,19 @@ export default function SuperAdminConfigScreen() {
           />
         </Section>
 
-        <Section number={8} title="Developer, QA, & Maintenance"emoji="🔧">
+        <Section number={8} title="Developer, QA, & Maintenance" emoji="🔧">
           <Row
-            title="Universal'Preview As'Tool"description="Inject session to view app as specific Student/Admin."actionLabel="Preview"onPress={() =>
-              Alert.alert('Preview As', 'Use the"Preview As"selector on the main Workdesk screen to switch the active role label.')
+            title="Feature Controls & Kill Switches"
+            description="Toggle runtime modules (XP, careers, marketplace, utilities, events, mentorship)."
+            actionLabel="Toggles"
+            onPress={() => router.push('/(admin)/feature-controls')}
+          />
+          <Row
+            title="Universal 'Preview As' Tool"
+            description="Inject session to view app as specific Student/Admin."
+            actionLabel="Preview"
+            onPress={() =>
+              Alert.alert('Preview As', 'Use the "Preview As" selector on the main Workdesk screen to switch the active role label.')
             }
           />
           <Row
