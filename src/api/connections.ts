@@ -95,6 +95,7 @@ export async function sendConnectionRequest(recipientId: string): Promise<Connec
     // that's the whole point of a connection request existing at all —
     // previously nothing anywhere created a notification for this.
     createNotification({
+      recipientId,
       type: 'system',
       title: 'New connection request',
       body: 'Someone on your campus wants to connect with you.',

@@ -88,7 +88,9 @@ export async function getOrCreateConversationWithUser(
     if (userId && userId !== currentUserId) memberRows.push({ channel_id: convId, user_id: userId });
 
     if (memberRows.length > 0) {
-      const { error: memberError } = await supabase.from('chat_channel_members').insert(memberRows);
+      const { error: memberError } = await supabase
+        .from('chat_channel_members')
+        .upsert(memberRows, { onConflict: 'channel_id,user_id', ignoreDuplicates: true });
       if (memberError) {
         console.warn('[Messaging] Channel member enrollment warning:', memberError.message);
       }
@@ -223,7 +225,10 @@ export async function sendMessage(
       // Ensure sender is registered in chat_channel_members so RLS permits insert
       await supabase
         .from('chat_channel_members')
-        .insert({ channel_id: conversationId, user_id: authUid });
+        .upsert(
+          { channel_id: conversationId, user_id: authUid },
+          { onConflict: 'channel_id,user_id', ignoreDuplicates: true },
+        );
 
       const { error } = await supabase.from('chat_messages').insert({
         id: msgId,

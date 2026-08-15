@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { AppNotification } from './types';
 import { mockNotifications } from './mockData';
+import { getSessionUser } from '../auth/tokenStorage';
 
 let notificationsState = [...mockNotifications];
 
@@ -9,31 +10,60 @@ export interface CreateNotificationPayload {
   title: string;
   body: string;
   deepLinkPath?: string;
+  recipientId?: string;
+  senderId?: string;
 }
 
-export function createNotification(payload: CreateNotificationPayload): AppNotification {
+export async function createNotification(payload: CreateNotificationPayload): Promise<AppNotification> {
   const notifId = `notif-${Date.now()}-${Math.round(Math.random() * 10000)}`;
   const now = new Date().toISOString();
+
+  // Resolve authentic sender and recipient identities
+  let currentUserId: string | null = null;
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      currentUserId = authData.user.id;
+    } else {
+      const stored = await getSessionUser();
+      if (stored?.id) currentUserId = stored.id;
+    }
+  } catch {
+    // fallback
+  }
+
+  const targetRecipientId = payload.recipientId || currentUserId || 'me';
+  const notificationSenderId = payload.senderId || currentUserId || null;
+
   const notification: AppNotification = {
     id: notifId,
     channel: 'in_app',
     deliveryStatus: 'delivered',
     openedAt: null,
     createdAt: now,
-    ...payload,
+    type: payload.type,
+    title: payload.title,
+    body: payload.body,
+    deepLinkPath: payload.deepLinkPath,
   };
   notificationsState = [notification, ...notificationsState];
 
   try {
-    supabase.from('notifications').insert({
+    const { error } = await supabase.from('notifications').insert({
       id: notifId,
+      recipient_id: targetRecipientId,
+      sender_id: notificationSenderId,
       title: payload.title,
       body: payload.body,
       type: payload.type,
-      deep_link: payload.deepLinkPath,
+      action_url: payload.deepLinkPath,
+      is_read: false,
     });
-  } catch {
-    // Session fallback
+    if (error) {
+      console.warn('[Notifications] Supabase persistence error:', error.message);
+    }
+  } catch (err) {
+    console.warn('[Notifications] Failed to reach backend:', err);
   }
 
   return notification;
@@ -60,9 +90,9 @@ export async function listNotifications(
         type: row.type || 'system_announcement',
         title: row.title,
         body: row.body,
-        deepLinkPath: row.deep_link,
+        deepLinkPath: row.action_url,
         deliveryStatus: 'delivered',
-        openedAt: row.read_at,
+        openedAt: row.is_read ? row.created_at : null,
         createdAt: row.created_at,
       }));
       // Merge unique
@@ -89,7 +119,7 @@ export async function markNotificationRead(id: string) {
   const openedAt = new Date().toISOString();
   notificationsState = notificationsState.map((n) => (n.id === id ? { ...n, openedAt } : n));
   try {
-    await supabase.from('notifications').update({ read_at: openedAt }).eq('id', id);
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
   } catch {
     // Fallback
   }
@@ -98,12 +128,13 @@ export async function markNotificationRead(id: string) {
 
 export async function markAllNotificationsRead() {
   const openedAt = new Date().toISOString();
-  notificationsState = notificationsState.map((n) => ({ ...n, openedAt: n.openedAt ?? openedAt }));
+  notificationsState = notificationsState.map((n) => ({ ...n, openedAt }));
   try {
-    await supabase.from('notifications').update({ read_at: openedAt });
+    await supabase.from('notifications').update({ is_read: true }).eq('is_read', false);
   } catch {
     // Fallback
   }
+  return { success: true, count: notificationsState.length };
 }
 
 export async function clearAllNotifications() {
