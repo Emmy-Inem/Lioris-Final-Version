@@ -56,6 +56,8 @@ const INITIAL_EVENTS: CampusEvent[] = [
   },
 ];
 
+import { supabase } from './supabase';
+
 let eventsState: CampusEvent[] = [...INITIAL_EVENTS];
 
 export interface EventsQuery {
@@ -72,7 +74,6 @@ function filterMockEvents(query: EventsQuery): CampusEvent[] {
   if (query.approvalStatus && query.approvalStatus !== 'all') {
     results = results.filter((e) => e.approvalStatus === query.approvalStatus);
   } else if (!query.approvalStatus) {
-    // Default to approved for public feed
     results = results.filter((e) => e.approvalStatus !== 'rejected');
   }
 
@@ -97,8 +98,6 @@ function filterMockEvents(query: EventsQuery): CampusEvent[] {
           e.category.toLowerCase().includes(q),
       )
       .sort((a, b) => {
-        // Exact title match ranks first, then partial — PRD Section
-        // 16.3's ranking order (exact > partial > ...).
         const aExact = a.title.toLowerCase() === q ? 0 : 1;
         const bExact = b.title.toLowerCase() === q ? 0 : 1;
         return aExact - bExact;
@@ -108,20 +107,76 @@ function filterMockEvents(query: EventsQuery): CampusEvent[] {
   return results;
 }
 
-// GET /events?scope=&category=&q= — PRD Section 15.2
 export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: CampusEvent[] }>('/events', { params: query });
-    return data.items;
-  }, filterMockEvents(query));
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('start_at', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      const dbEvents: CampusEvent[] = data.map((row: any) => ({
+        id: row.id,
+        organizerId: row.organizer_id || 'organizer',
+        organizerName: row.organizer_name || 'Campus Event Organizer',
+        title: row.title,
+        description: row.description,
+        category: row.category as any,
+        location: row.location,
+        startAt: row.start_at,
+        endAt: row.end_at,
+        capacity: row.capacity,
+        rsvpCount: row.rsvp_count || 0,
+        isRsvpd: false,
+        approvalStatus: (row.approval_status as any) || 'approved',
+        visibilityScope: (row.visibility_scope as any) || 'global',
+        coverImageUrl: row.image_url,
+      }));
+      // Merge unique
+      const merged = [...dbEvents];
+      for (const e of eventsState) {
+        if (!merged.some((m) => m.id === e.id)) {
+          merged.push(e);
+        }
+      }
+      eventsState = merged;
+      return filterMockEvents(query);
+    }
+  } catch {
+    // Fallback to local session
+  }
+  return filterMockEvents(query);
 }
 
 export async function getEvent(id?: string | null): Promise<CampusEvent | null> {
   if (!id) return null;
-  return withMockFallback(async () => {
-    const { data } = await api.get<CampusEvent>(`/events/${id}`);
-    return data;
-  }, eventsState.find((e) => e.id === id) ?? null);
+  const found = eventsState.find((e) => e.id === id);
+  if (found) return found;
+  try {
+    const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+    if (!error && data) {
+      return {
+        id: data.id,
+        organizerId: data.organizer_id,
+        organizerName: data.organizer_name || 'Campus Event Organizer',
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        location: data.location,
+        startAt: data.start_at,
+        endAt: data.end_at,
+        capacity: data.capacity,
+        rsvpCount: data.rsvp_count || 0,
+        isRsvpd: false,
+        approvalStatus: data.approval_status || 'approved',
+        visibilityScope: data.visibility_scope || 'global',
+        coverImageUrl: data.image_url,
+      };
+    }
+  } catch {
+    // Fallback
+  }
+  return null;
 }
 
 export interface CreateEventPayload {
@@ -136,74 +191,62 @@ export interface CreateEventPayload {
   sponsored?: boolean;
 }
 
-// Backs the"Publish Event"flow (PublishEventModal). No direct PRD
-// Section 15.2 contract for creation was specified, so this follows the
-// same convention as the read endpoints.
 export async function createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<CampusEvent>('/events', payload);
-    return data;
-  }
+  const eventId = `event-${Date.now()}`;
+  const created: CampusEvent = {
+    id: eventId,
+    organizerId: 'me',
+    rsvpCount: 0,
+    capacity: null,
+    isRsvpd: false,
+    approvalStatus: 'pending',
+    ...payload,
+  };
+  eventsState = [created, ...eventsState];
+
   try {
-    const { data } = await api.post<CampusEvent>('/events', payload);
-    return data;
+    await supabase.from('events').insert({
+      id: eventId,
+      title: payload.title,
+      description: payload.description,
+      category: payload.category,
+      location: payload.location,
+      visibility_scope: payload.visibilityScope,
+      start_at: payload.startAt,
+      end_at: payload.endAt,
+      image_url: payload.imageUrl,
+    });
   } catch {
-    const created: CampusEvent = {
-      id: `mock-event-${Date.now()}`,
-      organizerId: 'me',
-      rsvpCount: 0,
-      capacity: null,
-      isRsvpd: false,
-      ...payload,
-    };
-    eventsState = [created, ...eventsState];
-    return created;
+    // Fallback
   }
+
+  return created;
 }
 
-// POST /events/{id}/rsvp — PRD Section 15.2
-// PRD Section 15.2. Previously used withMockFallback's plain-value
-// form, which never touched `eventsState` at all — meaning
-// `rsvpCount`/`attendeeNames` (both displayed in EventCard and
-// EventDetailScreen) never actually reflected a real RSVP, and a
-// refetch would silently look like nobody had RSVP'd. Same bug class
-// as the earlier listConversations/createListing fixes.
 export async function rsvpToEvent(
   id: string,
   action: 'rsvp' | 'cancel' = 'rsvp',
 ): Promise<{ eventId: string; status: string }> {
   const result = { eventId: id, status: action === 'rsvp' ? 'confirmed' : 'cancelled' };
 
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post(`/events/${id}/rsvp`, { action });
-    return data;
-  }
+  eventsState = eventsState.map((e) => {
+    if (e.id !== id) return e;
+    const nextRsvpd = action === 'rsvp';
+    const nextCount = Math.max(0, e.rsvpCount + (nextRsvpd ? 1 : -1));
+    return { ...e, isRsvpd: nextRsvpd, rsvpCount: nextCount };
+  });
+
   try {
-    const { data } = await api.post(`/events/${id}/rsvp`, { action });
-    return data;
+    if (action === 'rsvp') {
+      await supabase.from('event_attendees').insert({ event_id: id, user_id: 'me', status: 'confirmed' });
+    } else {
+      await supabase.from('event_attendees').delete().eq('event_id', id).eq('user_id', 'me');
+    }
   } catch {
-    const me = await getSessionUser();
-    const myName = me?.fullName ?? 'You';
-    eventsState = eventsState.map((e) => {
-      if (e.id !== id) return e;
-      const attendeeNames = e.attendeeNames ?? [];
-      if (action === 'rsvp') {
-        return {
-          ...e,
-          isRsvpd: true,
-          rsvpCount: e.rsvpCount + (e.isRsvpd ? 0 : 1),
-          attendeeNames: attendeeNames.includes(myName) ? attendeeNames : [...attendeeNames, myName],
-        };
-      }
-      return {
-        ...e,
-        isRsvpd: false,
-        rsvpCount: Math.max(0, e.rsvpCount - (e.isRsvpd ? 1 : 0)),
-        attendeeNames: attendeeNames.filter((n) => n !== myName),
-      };
-    });
-    return result;
+    // Fallback
   }
+
+  return result;
 }
 
 export async function updateEvent(id: string, updates: Partial<CampusEvent>): Promise<CampusEvent | null> {

@@ -8,6 +8,8 @@ import { FALL_BACK_TO_MOCKS } from'./config';
 // show up on the next fetch — the previous version fabricated a
 // success response without ever adding it to the list `listFeedPosts`
 // reads from, so a published thread would silently vanish.
+import { supabase } from './supabase';
+
 let postsState = [...mockPosts];
 
 export interface FeedQuery {
@@ -23,14 +25,8 @@ export interface FeedQuery {
 function filterMockPosts(query: FeedQuery): Post[] {
   let results = [...postsState];
 
-  // Hard rule, independent of the toggle: a campus-scoped post is only
-  // ever visible to users from that same university. Posts with no
-  // institutionCode are global and visible to everyone.
   results = results.filter((p) => !p.institutionCode || p.institutionCode === query.viewerInstitutionCode);
 
-  // The Global/Campus toggle further narrows within what's already
-  // visible above — it never widens access to another university's
-  // campus-only content.
   if (query.viewScope === 'global') {
     results = results.filter((p) => !p.institutionCode);
   }
@@ -54,29 +50,53 @@ function filterMockPosts(query: FeedQuery): Post[] {
 }
 
 export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: Post[] }>('/feed', { params: query });
-    return data.items;
-  }, filterMockPosts(query));
+  try {
+    let dbQuery = supabase.from('posts').select('*').order('created_at', { ascending: false });
+    if (query.category) {
+      dbQuery = dbQuery.ilike('category', `%${query.category}%`);
+    }
+    const { data, error } = await dbQuery;
+    if (!error && data && data.length > 0) {
+      const dbPosts: Post[] = data.map((row: any) => ({
+        id: row.id,
+        authorId: row.author_id,
+        authorName: row.author_name || 'Campus Student',
+        authorRole: (row.author_role as any) || 'student',
+        title: row.title,
+        content: row.content,
+        category: row.category || 'General',
+        visibilityScope: (row.visibility_scope as any) || 'campus',
+        likesCount: row.likes_count || 0,
+        commentsCount: row.comments_count || 0,
+        isLikedByMe: false,
+        createdAt: row.created_at,
+        imageUrl: row.image_url,
+      }));
+      // Merge unique with local posts
+      const merged = [...dbPosts];
+      for (const p of postsState) {
+        if (!merged.some((m) => m.id === p.id)) {
+          merged.push(p);
+        }
+      }
+      postsState = merged;
+      return filterMockPosts(query);
+    }
+  } catch {
+    // Fallback to local session
+  }
+  return filterMockPosts(query);
 }
 
 export async function listMyPosts(userId?: string): Promise<Post[]> {
-  return withMockFallback(
-    async () => {
-      const { data } = await api.get<{ items: Post[] }>('/profile/me/posts');
-      return data.items;
-    },
-    postsState.filter(
-      (p) =>
-        p.authorId === 'me' ||
-        p.authorId === 'student-me' ||
-        p.authorId === userId ||
-        p.authorName === 'You' ||
-        p.authorId === 'my-post-1' ||
-        p.authorId === 'my-post-2' ||
-        p.authorId === 'student-3' ||
-        p.authorId === 'student-4',
-    ),
+  return postsState.filter(
+    (p) =>
+      p.authorId === 'me' ||
+      p.authorId === 'student-me' ||
+      p.authorId === userId ||
+      p.authorName === 'You' ||
+      p.authorId === 'my-post-1' ||
+      p.authorId === 'my-post-2',
   );
 }
 
@@ -85,7 +105,6 @@ export interface CreatePostPayload {
   content: string;
   category: string;
   visibilityScope: PostVisibilityScope;
-  /** 'campus'stamps the post with the author's own institutionCode; 'global'omits it, making the post visible everywhere. */
   scopeVisibility?: 'campus' | 'global';
   authorInstitutionCode?: string;
   sponsored?: boolean;
@@ -97,50 +116,57 @@ export interface CreatePostPayload {
   pollQuestion?: string;
 }
 
-// PRD Section 6.2 (Community Discussions): "Given I submit a discussion
-// post, then the post appears in the selected visibility scope."
 export async function createPost(payload: CreatePostPayload): Promise<Post> {
   const { authorInstitutionCode, scopeVisibility, ...rest } = payload;
+  const postId = `post-${Date.now()}`;
+  const now = new Date().toISOString();
 
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<Post>('/feed', payload);
-    return data;
-  }
+  const created: Post = {
+    id: postId,
+    authorId: 'me',
+    authorName: 'You',
+    authorRole: 'student',
+    likesCount: 0,
+    commentsCount: 0,
+    isLikedByMe: false,
+    createdAt: now,
+    scopeVisibility: scopeVisibility ?? 'campus',
+    institutionCode: scopeVisibility === 'global' ? undefined : authorInstitutionCode,
+    ...rest,
+  };
+
+  postsState = [created, ...postsState];
+
   try {
-    const { data } = await api.post<Post>('/feed', payload);
-    return data;
+    await supabase.from('posts').insert({
+      id: postId,
+      title: payload.title,
+      content: payload.content,
+      category: payload.category,
+      visibility_scope: payload.visibilityScope || 'campus',
+      image_url: payload.imageUrl,
+    });
   } catch {
-    const created: Post = {
-      id: `mock-post-${Date.now()}`,
-      authorId: 'me',
-      authorName: 'You',
-      authorRole: 'student',
-      likesCount: 0,
-      commentsCount: 0,
-      isLikedByMe: false,
-      createdAt: new Date().toISOString(),
-      scopeVisibility: scopeVisibility ?? 'campus',
-      institutionCode: scopeVisibility === 'global' ? undefined : authorInstitutionCode,
-      ...rest,
-    };
-    postsState = [created, ...postsState];
-    return created;
+    // Local session fallback
   }
+
+  return created;
 }
 
-// POST /feed/{id}/like or /unlike — previously fired the request and
-// did nothing else; the comment claimed"optimistic UI already
-// reflects the change"but nothing actually called this function from
-// PostCard, and even if it had been called, this didn't touch
-// `postsState`, so a like would silently vanish the moment the feed
-// refetched. Now actually persists the change.
 export async function togglePostLike(postId: string, liked: boolean): Promise<void> {
-  await api.post(`/feed/${postId}/${liked ? 'like' : 'unlike'}`).catch(() => {
-    // Expected in mock mode — see README's"Mock data fallback".
-  });
   postsState = postsState.map((p) =>
     p.id === postId ? { ...p, isLikedByMe: liked, likesCount: Math.max(0, p.likesCount + (liked ? 1 : -1)) } : p,
   );
+
+  try {
+    if (liked) {
+      await supabase.from('post_likes').insert({ post_id: postId, user_id: 'me' });
+    } else {
+      await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', 'me');
+    }
+  } catch {
+    // Local session fallback
+  }
 }
 
 export interface PostComment {

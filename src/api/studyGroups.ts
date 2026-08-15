@@ -1,10 +1,8 @@
-import { api } from'./client';
-import { StudyGroup } from'./types';
-import { mockStudyGroups } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
+import { supabase } from './supabase';
+import { StudyGroup } from './types';
+import { mockStudyGroups } from './mockData';
 
-let studyGroupsState = [...mockStudyGroups];
+let studyGroupsState: StudyGroup[] = [...mockStudyGroups];
 
 export interface CreateStudyGroupPayload {
   name: string;
@@ -13,54 +11,85 @@ export interface CreateStudyGroupPayload {
   isPublic: boolean;
 }
 
-// `StudyGroup.isPublic` implies these are student-created (like a
-// public/private server), but there was no way to create one at all —
-// same gap shape as Marketplace's missing"Sell an item"flow.
 export async function createStudyGroup(payload: CreateStudyGroupPayload): Promise<StudyGroup> {
+  const groupId = `group-${Date.now()}`;
   const created: StudyGroup = {
-    id: `mock-group-${Date.now()}`,
+    id: groupId,
     memberCount: 1,
     isJoined: true,
-    lastMessageAt: null,
+    lastMessageAt: new Date().toISOString(),
     ...payload,
   };
 
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<StudyGroup>('/study-groups', payload);
-    return data;
-  }
+  studyGroupsState = [created, ...studyGroupsState];
+
   try {
-    const { data } = await api.post<StudyGroup>('/study-groups', payload);
-    studyGroupsState = [data, ...studyGroupsState];
-    return data;
+    await supabase.from('study_groups').insert({
+      id: groupId,
+      name: payload.name,
+      course_code: payload.courseCode,
+      description: payload.description,
+      is_public: payload.isPublic,
+      member_count: 1,
+    });
   } catch {
-    studyGroupsState = [created, ...studyGroupsState];
-    return created;
+    // Session fallback
   }
+
+  return created;
 }
 
 export async function listStudyGroups(): Promise<StudyGroup[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: StudyGroup[] }>('/study-groups');
-    return data.items;
-  }, studyGroupsState);
+  try {
+    const { data, error } = await supabase
+      .from('study_groups')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const dbGroups: StudyGroup[] = data.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        courseCode: row.course_code || 'CSC 201',
+        description: row.description || '',
+        isPublic: row.is_public !== false,
+        memberCount: row.member_count || 1,
+        isJoined: false,
+        lastMessageAt: row.updated_at,
+      }));
+      // Merge unique
+      const merged = [...dbGroups];
+      for (const g of studyGroupsState) {
+        if (!merged.some((m) => m.id === g.id)) {
+          merged.push(g);
+        }
+      }
+      studyGroupsState = merged;
+      return merged;
+    }
+  } catch {
+    // Session fallback
+  }
+  return studyGroupsState;
 }
 
 export async function joinStudyGroup(id: string): Promise<StudyGroup> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<StudyGroup>(`/study-groups/${id}/join`);
-    return data;
-  }
+  let updated: StudyGroup | undefined;
+  studyGroupsState = studyGroupsState.map((g) => {
+    if (g.id !== id) return g;
+    updated = { ...g, isJoined: true, memberCount: g.memberCount + 1 };
+    return updated;
+  });
+
   try {
-    const { data } = await api.post<StudyGroup>(`/study-groups/${id}/join`);
-    return data;
-  } catch {
-    let updated: StudyGroup | undefined;
-    studyGroupsState = studyGroupsState.map((g) => {
-      if (g.id !== id) return g;
-      updated = { ...g, isJoined: true, memberCount: g.memberCount + 1 };
-      return updated;
+    await supabase.from('study_group_members').insert({
+      group_id: id,
+      user_id: 'me',
+      role: 'member',
     });
-    return updated!;
+  } catch {
+    // Fallback
   }
+
+  return updated || studyGroupsState[0];
 }

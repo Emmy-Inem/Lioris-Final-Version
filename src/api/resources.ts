@@ -48,6 +48,8 @@ const INITIAL_RESOURCES: Resource[] = [
   },
 ];
 
+import { supabase } from './supabase';
+
 let resourcesState: Resource[] = [...INITIAL_RESOURCES];
 
 export interface ResourcesQuery {
@@ -62,7 +64,6 @@ function filterMockResources(query: ResourcesQuery): Resource[] {
   if (query.approvalStatus && query.approvalStatus !== 'all') {
     results = results.filter((r) => r.approvalStatus === query.approvalStatus);
   } else if (!query.approvalStatus) {
-    // Default to approved for public library lists
     results = results.filter((r) => r.approvalStatus !== 'rejected');
   }
   if (query.category) results = results.filter((r) => r.category === query.category);
@@ -81,10 +82,40 @@ function filterMockResources(query: ResourcesQuery): Resource[] {
 }
 
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: Resource[] }>('/resources', { params: query });
-    return data.items;
-  }, filterMockResources(query));
+  try {
+    const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
+    if (!error && data && data.length > 0) {
+      const dbResources: Resource[] = data.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        courseCode: row.course_code || 'GEN 101',
+        department: row.department || 'General',
+        category: (row.category as any) || 'Notes',
+        description: row.description || '',
+        fileSize: row.file_size || '2.5 MB',
+        authorName: row.author_name || 'Campus Student',
+        authorId: row.author_id,
+        authorRole: 'student',
+        likesCount: row.likes_count || 0,
+        downloadsCount: row.downloads_count || 0,
+        createdAt: row.created_at,
+        approvalStatus: (row.approval_status as any) || 'approved',
+        fileType: (row.file_type as any) || 'PDF',
+      }));
+      // Merge unique
+      const merged = [...dbResources];
+      for (const r of resourcesState) {
+        if (!merged.some((m) => m.id === r.id)) {
+          merged.push(r);
+        }
+      }
+      resourcesState = merged;
+      return filterMockResources(query);
+    }
+  } catch {
+    // Fallback
+  }
+  return filterMockResources(query);
 }
 
 export async function listPendingResources(): Promise<Resource[]> {
@@ -92,10 +123,20 @@ export async function listPendingResources(): Promise<Resource[]> {
 }
 
 export async function approveResource(id: string): Promise<Resource> {
+  try {
+    await supabase.from('resources').update({ approval_status: 'approved' }).eq('id', id);
+  } catch {
+    // Fallback
+  }
   return updateResource(id, { approvalStatus: 'approved', rejectionReason: null });
 }
 
 export async function rejectResource(id: string, reason?: string): Promise<Resource> {
+  try {
+    await supabase.from('resources').update({ approval_status: 'rejected' }).eq('id', id);
+  } catch {
+    // Fallback
+  }
   return updateResource(id, { approvalStatus: 'rejected', rejectionReason: reason || 'File did not meet quality or syllabus standards.' });
 }
 
@@ -110,35 +151,43 @@ export interface CreateResourcePayload {
   academicLevel?: Resource['academicLevel'];
 }
 
-// Backs the"Share Academic File"upload flow (ShareAcademicFileModal).
 export async function createResource(payload: CreateResourcePayload): Promise<Resource> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<Resource>('/resources', payload);
-    return data;
-  }
+  const resourceId = `res-${Date.now()}`;
+  const created: Resource = {
+    id: resourceId,
+    title: payload.title,
+    description: payload.description || 'No description provided.',
+    category: payload.category,
+    department: payload.department || 'General',
+    courseCode: payload.courseCode,
+    fileSize: payload.fileSize || '3.4 MB',
+    fileType: payload.fileType || 'PDF',
+    academicLevel: payload.academicLevel || '300L',
+    authorName: 'You',
+    likesCount: 0,
+    downloadsCount: 0,
+    createdAt: new Date().toISOString(),
+    approvalStatus: 'approved',
+  };
+  resourcesState = [created, ...resourcesState];
+
   try {
-    const { data } = await api.post<Resource>('/resources', payload);
-    return data;
-  } catch {
-    const created: Resource = {
-      id: `mock-resource-${Date.now()}`,
+    await supabase.from('resources').insert({
+      id: resourceId,
       title: payload.title,
-      description: payload.description || 'No description provided.',
+      description: payload.description,
       category: payload.category,
-      department: payload.department || 'General',
-      courseCode: payload.courseCode,
-      fileSize: payload.fileSize || '3.4 MB',
-      fileType: payload.fileType || 'PDF',
-      academicLevel: payload.academicLevel || '300L',
-      authorName: 'You',
-      likesCount: 0,
-      downloadsCount: 0,
-      createdAt: new Date().toISOString(),
-      approvalStatus: 'approved',
-    };
-    resourcesState = [created, ...resourcesState];
-    return created;
+      department: payload.department,
+      course_code: payload.courseCode,
+      file_size: payload.fileSize,
+      file_type: payload.fileType,
+      approval_status: 'approved',
+    });
+  } catch {
+    // Fallback
   }
+
+  return created;
 }
 
 export async function updateResource(id: string, payload: Partial<Resource>): Promise<Resource> {

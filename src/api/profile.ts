@@ -72,16 +72,34 @@ function mockProfileFor(user: { id: string; fullName: string; role: UserRole; em
   return created;
 }
 
+import { supabase } from './supabase';
+
 export async function getMyProfile(user: {
   id: string;
   fullName: string;
   role: UserRole;
   email?: string;
 }): Promise<UserProfile> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<UserProfile>('/profile/me');
-    return data;
-  }, mockProfileFor(user));
+  const fallback = mockProfileFor(user);
+  try {
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    if (!error && data) {
+      const merged: UserProfile = {
+        ...fallback,
+        fullName: data.full_name || fallback.fullName,
+        bio: data.bio || fallback.bio,
+        department: data.department || fallback.department,
+        institutionName: data.institution_name || fallback.institutionName,
+        institutionCode: data.institution_code || fallback.institutionCode,
+        isVerified: data.is_verified ?? fallback.isVerified,
+      };
+      profileState.set(user.id, merged);
+      return merged;
+    }
+  } catch {
+    // Session fallback
+  }
+  return fallback;
 }
 
 export function seedProfileUsername(
@@ -157,16 +175,23 @@ export async function updateProfileImages(
 }
 
 export async function updateMyProfile(userId: string, patch: Partial<UserProfile>): Promise<UserProfile> {
-  return withMockFallback(
-    async () => {
-      const { data } = await api.patch<UserProfile>('/profile/me', patch);
-      return data;
-    },
-    (() => {
-      const current = profileState.get(userId) || mockProfileFor({ id: userId, fullName: 'You', role: 'student' });
-      const updated: UserProfile = { ...current, ...patch };
-      profileState.set(userId, updated);
-      return updated;
-    })(),
-  );
+  const current = profileState.get(userId) || mockProfileFor({ id: userId, fullName: 'You', role: 'student' });
+  const updated: UserProfile = { ...current, ...patch };
+  profileState.set(userId, updated);
+
+  try {
+    await supabase.from('profiles').upsert({
+      id: userId,
+      full_name: updated.fullName,
+      bio: updated.bio,
+      department: updated.department,
+      institution_name: updated.institutionName,
+      institution_code: updated.institutionCode,
+      updated_at: new Date().toISOString(),
+    });
+  } catch {
+    // Session fallback
+  }
+
+  return updated;
 }

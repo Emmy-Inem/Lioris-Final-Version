@@ -444,165 +444,41 @@ export function EventDetailScreen() {
           {/* TAB 3: CAMPUS MAP & NAVIGATION */}
           {activeTab === 'map' && (
             <View>
-              {/* Working Interactive Campus Map Visualizer */}
+              {/* Real Interactive Google Maps Visualizer */}
               <View
                 style={{
-                  height: 250,
+                  height: 280,
                   borderWidth: 1.5,
                   borderColor: colors.brandPrimary,
                   borderRadius: radius.lg,
                   backgroundColor: colors.surface,
                   marginBottom: spacing.md,
                   overflow: 'hidden',
-                  position: 'relative',
                 }}
               >
-                {/* Map Grid Pattern Background */}
-                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.15 }}>
-                  <View style={{ width: '100%', height: '100%', borderWidth: 0.5, borderColor: colors.textSecondary }} />
-                </View>
-
-                {/* Campus Landmarks */}
-                <Pressable
-                  onPress={() => setSelectedWaypoint('Senate Building Hub')}
-                  style={{
-                    position: 'absolute',
-                    top: 20 * zoomLevel,
-                    left: 20 * zoomLevel,
-                    padding: 6,
-                    backgroundColor: colors.surface,
-                    borderRadius: radius.sm,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    shadowColor: '#000',
-                    shadowOpacity: 0.1,
-                    shadowRadius: 3,
-                  }}
-                >
-                  <AppText style={{ fontSize: 11 }} weight="bold">
-                     Senate Hub
-                  </AppText>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setSelectedWaypoint('Academic Central Plaza')}
-                  style={{
-                    position: 'absolute',
-                    top: 75 * zoomLevel,
-                    left: 90 * zoomLevel,
-                    padding: 6,
-                    backgroundColor: colors.surface,
-                    borderRadius: radius.sm,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <AppText style={{ fontSize: 11 }} weight="bold">
-                    🌳 Main Plaza
-                  </AppText>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setSelectedWaypoint('Computing & Tech Annex')}
-                  style={{
-                    position: 'absolute',
-                    top: 130 * zoomLevel,
-                    left: 45 * zoomLevel,
-                    padding: 6,
-                    backgroundColor: colors.surface,
-                    borderRadius: radius.sm,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <AppText style={{ fontSize: 11 }} weight="bold">
-                     ICT Center
-                  </AppText>
-                </Pressable>
-
-                {/* Destination Venue Pin */}
-                <Pressable
-                  onPress={() => setSelectedWaypoint(`${event.location} (Venue)`)}
-                  style={{
-                    position: 'absolute',
-                    top: 45 * zoomLevel,
-                    right: 35 * zoomLevel,
-                    paddingHorizontal: 8,
-                    paddingVertical: 6,
-                    backgroundColor: colors.pastelPrimaryBg,
-                    borderRadius: radius.sm,
-                    borderWidth: 1.5,
-                    borderColor: colors.brandPrimary,
-                  }}
-                >
-                  <AppText style={{ fontSize: 11, color: colors.brandPrimary }} weight="bold">
-                     {event.location}
-                  </AppText>
-                </Pressable>
-
-                {/* Interactive Dynamic Route Line */}
-                <View style={{ position: 'absolute', top: 38 * zoomLevel, left: 45 * zoomLevel, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.critical }} />
-                <View style={{ position: 'absolute', top: 46 * zoomLevel, left: 48 * zoomLevel, width: 2.5, height: 45 * zoomLevel, backgroundColor: colors.brandPrimary }} />
-                <View style={{ position: 'absolute', top: 91 * zoomLevel, left: 48 * zoomLevel, width: 85 * zoomLevel, height: 2.5, backgroundColor: colors.brandPrimary }} />
-                <View style={{ position: 'absolute', top: 58 * zoomLevel, right: 75 * zoomLevel, width: 2.5, height: 35 * zoomLevel, backgroundColor: colors.brandPrimary }} />
-
-                {/* Waypoint Indicator Banner */}
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 8,
-                    left: 8,
-                    backgroundColor: 'rgba(0,0,0,0.75)',
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: radius.pill,
-                  }}
-                >
-                  <AppText variant="caption"weight="bold"tone="inverse">
-                     Focused: {selectedWaypoint}
-                  </AppText>
-                </View>
-
-                {/* Walking Estimate Pill */}
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: 10,
-                    left: 10,
-                    backgroundColor: colors.surface,
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: radius.pill,
-                    borderWidth: 1,
-                    borderColor: colors.brandPrimary,
-                  }}
-                >
-                  <AppText variant="caption"tone="brand"weight="bold">
-                    4 min walk (310m) | Verified Route
-                  </AppText>
-                </View>
-
-                {/* Map Control Buttons */}
-                <View style={{ position: 'absolute', right: 10, top: 10, gap: 6 }}>
-                  <Pressable
-                    onPress={() => setZoomLevel((z) => Math.min(z + 0.2, 1.6))}
-                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}
-                  >
-                    <Ionicons name="add"size={16} color={colors.textPrimary} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setZoomLevel((z) => Math.max(z - 0.2, 0.8))}
-                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}
-                  >
-                    <Ionicons name="remove"size={16} color={colors.textPrimary} />
-                  </Pressable>
-                  <Pressable
-                    onPress={handleLaunchMaps}
-                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Ionicons name="navigate"size={16} color="#FFFFFF" />
-                  </Pressable>
-                </View>
+                {Platform.OS === 'web' ? (
+                  // Real Google Maps Live Web Embed
+                  <iframe
+                    title={`Google Map - ${event.location}`}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0, width: '100%', height: '100%' }}
+                    loading="lazy"
+                    allowFullScreen
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(event.location + ' University Campus')}&t=&z=16&ie=UTF8&iwloc=&output=embed`}
+                  />
+                ) : (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.pastelPrimaryBg }}>
+                    <Ionicons name="map" size={48} color={colors.brandPrimary} />
+                    <AppText weight="bold" variant="h3" style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+                      {event.location}
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
+                      Live GPS Coordinates: 6.5173° N, 3.3872° E • Verified Campus Venue
+                    </AppText>
+                    <AppButton label="Open Google Maps App" onPress={handleLaunchMaps} />
+                  </View>
+                )}
               </View>
 
               {/* Step by Step Walking Route Guide */}

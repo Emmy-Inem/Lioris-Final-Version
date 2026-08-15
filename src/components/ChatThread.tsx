@@ -26,11 +26,13 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const { data } = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: () => listMessages(conversationId),
+    refetchInterval: 1500,
   });
 
   const { data: conversations } = useQuery({
     queryKey: ['conversations'],
     queryFn: listConversations,
+    refetchInterval: 3000,
   });
 
   const currentConversation = conversations?.find((c) => c.id === conversationId);
