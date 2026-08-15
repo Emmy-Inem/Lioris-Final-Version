@@ -48,6 +48,20 @@ export default function SuperAdminConfigScreen() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [mockDataVisible, setMockDataVisible] = useState(true);
 
+  // Lifted form states for configuration modals
+  const [domainAuthorityInput, setDomainAuthorityInput] = useState('@ui.edu.ng, @student.ui.edu.ng, @unilag.edu.ng, @oau.edu.ng, @funaab.edu.ng');
+  const [xpMultiplierVal, setXpMultiplierVal] = useState(1.5);
+  const [seasonNameVal, setSeasonNameVal] = useState('Semester 1 2025/2026');
+  const [seasonAutoReset, setSeasonAutoReset] = useState(true);
+  const [escrowHoldHours, setEscrowHoldHours] = useState('48');
+  const [escrowFeePercent, setEscrowFeePercent] = useState('1.5');
+  const [escrowAutoRefund, setEscrowAutoRefund] = useState(true);
+  const [toxicityScoreLimit, setToxicityScoreLimit] = useState(80);
+  const [cloudStorageImgMb, setCloudStorageImgMb] = useState('5');
+  const [cloudStoragePdfMb, setCloudStoragePdfMb] = useState('25');
+  const [pushTitle, setPushTitle] = useState('');
+  const [pushBody, setPushBody] = useState('');
+
   function confirmMaintenanceMode(next: boolean) {
     if (!next) {
       setMaintenanceMode(false);
@@ -192,7 +206,26 @@ export default function SuperAdminConfigScreen() {
       </ScrollView>
 
       <AdminConfigModal visible={activeModal === 'addUniversity'} onClose={() => setActiveModal(null)} title="Add University">
-        <AddUniversityWizardContent onComplete={() => setActiveModal(null)} />
+        <AddUniversityWizardContent
+          onComplete={async (data) => {
+            try {
+              const { supabase } = await import('@/api/supabase');
+              await supabase.from('platform_settings').upsert({
+                key: `university_${data.abbrev.toLowerCase()}`,
+                value: { name: data.name, abbrev: data.abbrev, region: data.region, created_at: new Date().toISOString() },
+                updated_at: new Date().toISOString(),
+              });
+            } catch {}
+            await recordAuditLogEntry({
+              action: 'platform_config_updated' as any,
+              summary: `Provisioned new university tenant partition for ${data.name} (${data.abbrev}) in ${data.region}`,
+              targetType: 'platform_config',
+              targetId: `univ-${data.abbrev.toLowerCase()}`,
+            });
+            setActiveModal(null);
+            Alert.alert('University Added', `New institutional node partition created for ${data.name}.`);
+          }}
+        />
       </AdminConfigModal>
       <AdminConfigModal
         visible={activeModal === 'domainAuthority'}
@@ -201,24 +234,31 @@ export default function SuperAdminConfigScreen() {
         description="Whitelist official email domains controlling automated verification."
         confirmLabel="Synchronize"
         onConfirm={async () => {
+          const domainList = domainAuthorityInput
+            .split(',')
+            .map((d) => d.trim())
+            .filter(Boolean);
           try {
             const { supabase } = await import('@/api/supabase');
             await supabase.from('platform_settings').upsert({
               key: 'domain_authority',
-              value: { domains: ['@ui.edu.ng', '@student.ui.edu.ng', '@unilag.edu.ng', '@oau.edu.ng', '@funaab.edu.ng'] },
+              value: { domains: domainList },
               updated_at: new Date().toISOString(),
             });
           } catch {}
           await recordAuditLogEntry({
             action: 'domain_authority_updated',
-            summary: 'Synchronized campus email domain authority rules',
+            summary: `Synchronized ${domainList.length} authoritative campus email domains: ${domainList.join(', ')}`,
             targetType: 'platform_config',
             targetId: 'domain-authority',
           });
-          Alert.alert('Domain Authority Updated', 'Whitelisted university domains synchronized and logged.');
+          Alert.alert('Domain Authority Updated', `Whitelisted ${domainList.length} domains synchronized and logged.`);
         }}
       >
-        <DomainAuthorityModalContent />
+        <DomainAuthorityModalContent
+          domains={domainAuthorityInput}
+          onChangeDomains={setDomainAuthorityInput}
+        />
       </AdminConfigModal>
       <AdminConfigModal
         visible={activeModal === 'tenantToggles'}
@@ -258,20 +298,23 @@ export default function SuperAdminConfigScreen() {
             const { supabase } = await import('@/api/supabase');
             await supabase.from('platform_settings').upsert({
               key: 'xp_multiplier',
-              value: { multiplier: 2.0 },
+              value: { multiplier: xpMultiplierVal },
               updated_at: new Date().toISOString(),
             });
           } catch {}
           await recordAuditLogEntry({
             action: 'xp_multiplier_updated',
-            summary: 'Updated global XP engagement multipliers to 2.0x',
+            summary: `Updated global XP engagement multiplier to ${xpMultiplierVal.toFixed(1)}x`,
             targetType: 'platform_config',
             targetId: 'gamification-xp',
           });
-          Alert.alert('XP Multiplier Applied', 'Global engagement multipliers updated.');
+          Alert.alert('XP Multiplier Applied', `Global engagement multiplier updated to ${xpMultiplierVal.toFixed(1)}x.`);
         }}
       >
-        <XpMultiplierModalContent />
+        <XpMultiplierModalContent
+          multiplier={xpMultiplierVal}
+          onChangeMultiplier={setXpMultiplierVal}
+        />
       </AdminConfigModal>
       <AdminConfigModal
         visible={activeModal === 'levelBadges'}
@@ -283,13 +326,13 @@ export default function SuperAdminConfigScreen() {
             const { supabase } = await import('@/api/supabase');
             await supabase.from('platform_settings').upsert({
               key: 'level_badges',
-              value: { tiers: ['Scholar', 'Dean List', 'Campus Leader', 'Valedictorian'] },
+              value: { tiers: ['Scholar (200 XP)', 'Dean List (500 XP)', 'Campus Leader (1000 XP)', 'Valedictorian (2000 XP)'] },
               updated_at: new Date().toISOString(),
             });
           } catch {}
           await recordAuditLogEntry({
             action: 'level_badges_updated',
-            summary: 'Configured level badge tiers and visual assets',
+            summary: 'Configured level badge tiers and visual assets for all 4 rank tiers',
             targetType: 'platform_config',
             targetId: 'level-badges',
           });
@@ -308,20 +351,25 @@ export default function SuperAdminConfigScreen() {
             const { supabase } = await import('@/api/supabase');
             await supabase.from('platform_settings').upsert({
               key: 'seasonal_leaderboards',
-              value: { current_season: 'Semester 1 2025/2026', is_active: true },
+              value: { current_season: seasonNameVal, auto_reset: seasonAutoReset, is_active: true },
               updated_at: new Date().toISOString(),
             });
           } catch {}
           await recordAuditLogEntry({
             action: 'seasonal_leaderboard_deployed',
-            summary: 'Deployed new seasonal leaderboard cohort across active campuses',
+            summary: `Deployed seasonal leaderboard cohort "${seasonNameVal}" across active campuses (auto-reset: ${seasonAutoReset ? 'enabled' : 'disabled'})`,
             targetType: 'platform_config',
             targetId: 'seasonal-leaderboards',
           });
-          Alert.alert('Season Deployed', 'New leaderboard season is now live for all universities.');
+          Alert.alert('Season Deployed', `Season "${seasonNameVal}" is now live for all universities.`);
         }}
       >
-        <SeasonalLeaderboardsModalContent />
+        <SeasonalLeaderboardsModalContent
+          seasonName={seasonNameVal}
+          onChangeSeasonName={setSeasonNameVal}
+          autoReset={seasonAutoReset}
+          onChangeAutoReset={setSeasonAutoReset}
+        />
       </AdminConfigModal>
       <AdminConfigModal visible={activeModal === 'paymentGateway'} onClose={() => setActiveModal(null)} title="Payment Gateway">
         <PaymentGatewayModalContent />
@@ -332,24 +380,33 @@ export default function SuperAdminConfigScreen() {
         title="Marketplace Escrow Configuration"
         confirmLabel="Save escrow logic"
         onConfirm={async () => {
+          const holdHours = Number(escrowHoldHours) || 48;
+          const fee = Number(escrowFeePercent) || 1.5;
           try {
             const { supabase } = await import('@/api/supabase');
             await supabase.from('platform_settings').upsert({
               key: 'escrow_config',
-              value: { hold_duration_hours: 48, fee_percent: 1.5 },
+              value: { hold_duration_hours: holdHours, fee_percent: fee, auto_refund: escrowAutoRefund },
               updated_at: new Date().toISOString(),
             });
           } catch {}
           await recordAuditLogEntry({
             action: 'escrow_config_updated',
-            summary: 'Updated marketplace escrow hold durations and fee rules',
+            summary: `Updated marketplace escrow: ${holdHours}h hold duration, ${fee}% platform fee, autoRefund=${escrowAutoRefund}`,
             targetType: 'platform_config',
             targetId: 'marketplace-escrow',
           });
-          Alert.alert('Escrow Saved', 'Marketplace escrow parameters saved — logged to audit trail.');
+          Alert.alert('Escrow Saved', `Marketplace escrow parameters saved (${holdHours}h hold, ${fee}% fee) — logged to audit trail.`);
         }}
       >
-        <EscrowConfigModalContent />
+        <EscrowConfigModalContent
+          holdPeriod={escrowHoldHours}
+          onChangeHoldPeriod={setEscrowHoldHours}
+          feePercent={escrowFeePercent}
+          onChangeFeePercent={setEscrowFeePercent}
+          autoRefund={escrowAutoRefund}
+          onChangeAutoRefund={setEscrowAutoRefund}
+        />
       </AdminConfigModal>
       <AdminConfigModal visible={activeModal === 'legacyVault'} onClose={() => setActiveModal(null)} title="Legacy Giving Vault">
         <LegacyVaultModalContent
@@ -377,24 +434,29 @@ export default function SuperAdminConfigScreen() {
         title="Automated Toxicity Thresholds"
         confirmLabel="Deploy"
         onConfirm={async () => {
+          const toxLimit = toxicityScoreLimit / 100;
+          const severeToxLimit = Math.min(1.0, (toxicityScoreLimit + 15) / 100);
           try {
             const { supabase } = await import('@/api/supabase');
             await supabase.from('platform_settings').upsert({
               key: 'toxicity_thresholds',
-              value: { toxicity_limit: 0.85, severe_toxicity_limit: 0.95 },
+              value: { toxicity_limit: toxLimit, severe_toxicity_limit: severeToxLimit, limit_score: toxicityScoreLimit },
               updated_at: new Date().toISOString(),
             });
           } catch {}
           await recordAuditLogEntry({
             action: 'toxicity_thresholds_deployed',
-            summary: 'Deployed updated automated toxicity & profanity moderation thresholds',
+            summary: `Deployed automated AI toxicity filter threshold at ${toxicityScoreLimit}/100 index`,
             targetType: 'platform_config',
             targetId: 'moderation-ai',
           });
-          Alert.alert('Thresholds Deployed', 'AI content moderation filter thresholds deployed.');
+          Alert.alert('Thresholds Deployed', `AI content moderation filter threshold set to ${toxicityScoreLimit}/100.`);
         }}
       >
-        <ToxicityThresholdsModalContent />
+        <ToxicityThresholdsModalContent
+          score={toxicityScoreLimit}
+          onChangeScore={setToxicityScoreLimit}
+        />
       </AdminConfigModal>
       <AdminConfigModal
         visible={activeModal === 'cloudStorage'}
@@ -402,24 +464,31 @@ export default function SuperAdminConfigScreen() {
         title="Cloud Storage Limits"
         confirmLabel="Enforce limits"
         onConfirm={async () => {
+          const maxImgMb = Number(cloudStorageImgMb) || 5;
+          const maxPdfMb = Number(cloudStoragePdfMb) || 25;
           try {
             const { supabase } = await import('@/api/supabase');
             await supabase.from('platform_settings').upsert({
               key: 'cloud_storage_limits',
-              value: { max_resource_mb: 25, student_quota_mb: 500 },
+              value: { max_image_mb: maxImgMb, max_pdf_mb: maxPdfMb, max_resource_mb: maxPdfMb },
               updated_at: new Date().toISOString(),
             });
           } catch {}
           await recordAuditLogEntry({
             action: 'storage_quotas_enforced',
-            summary: 'Enforced file size and cloud storage quotas per student tier',
+            summary: `Enforced file size caps: ${maxImgMb}MB images, ${maxPdfMb}MB PDFs & resources`,
             targetType: 'platform_config',
             targetId: 'cloud-storage',
           });
-          Alert.alert('Limits Enforced', 'Cloud storage quotas and bandwidth limits enforced.');
+          Alert.alert('Limits Enforced', `Cloud storage quotas enforced: ${maxImgMb}MB image, ${maxPdfMb}MB PDF.`);
         }}
       >
-        <CloudStorageModalContent />
+        <CloudStorageModalContent
+          imgSize={cloudStorageImgMb}
+          onChangeImgSize={setCloudStorageImgMb}
+          pdfSize={cloudStoragePdfMb}
+          onChangePdfSize={setCloudStoragePdfMb}
+        />
       </AdminConfigModal>
       <AdminConfigModal
         visible={activeModal === 'globalPush'}
@@ -427,22 +496,29 @@ export default function SuperAdminConfigScreen() {
         title="Global Push Notification Composer"
         confirmLabel="Dispatch"
         onConfirm={async () => {
+          const finalTitle = pushTitle.trim() || 'Campus Institutional Announcement';
+          const finalBody = pushBody.trim() || 'A global institutional update has been broadcasted by Platform Administration.';
           await recordAuditLogEntry({
             action: 'global_push_broadcast',
-            summary: 'Dispatched emergency global push notification broadcast to all registered devices',
+            summary: `Dispatched push notification broadcast "${finalTitle}": ${finalBody.slice(0, 80)}`,
             targetType: 'notifications',
             targetId: 'global-broadcast',
           });
           const { createNotification } = await import('@/api/notifications');
           await createNotification({
             type: 'system_announcement',
-            title: 'Campus Announcement',
-            body: 'A global institutional update has been broadcasted by Platform Administration.',
+            title: finalTitle,
+            body: finalBody,
           });
-          Alert.alert('Push Broadcast Dispatched', 'Push notification dispatched and logged to audit trail.');
+          Alert.alert('Push Broadcast Dispatched', `Broadcast "${finalTitle}" dispatched and logged to audit trail.`);
         }}
       >
-        <GlobalPushNotificationModalContent />
+        <GlobalPushNotificationModalContent
+          title={pushTitle}
+          onChangeTitle={setPushTitle}
+          body={pushBody}
+          onChangeBody={setPushBody}
+        />
       </AdminConfigModal>
       <AdminConfigModal visible={activeModal === 'impersonator'} onClose={() => setActiveModal(null)} title="Role Impersonator">
         <ImpersonatorModalContent

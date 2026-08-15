@@ -428,15 +428,20 @@ CREATE POLICY "Users can view their own block list" ON user_blocks FOR SELECT TO
 CREATE POLICY "Users can block other users" ON user_blocks FOR INSERT TO authenticated WITH CHECK (auth.uid() = blocker_id);
 CREATE POLICY "Users can unblock users" ON user_blocks FOR DELETE TO authenticated USING (auth.uid() = blocker_id);
 
--- Profiles: Public Read, Self Insert/Update (Protected against role/verification escalation), Admin Full Access
+-- Profiles: Public Read, Self Insert/Update (Protected against role/verification/suspension escalation), Admin Full Access
 CREATE OR REPLACE FUNCTION prevent_profile_role_escalation()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- If role, is_verified, or verification_status is modified by non-admin
-    IF (NEW.role IS DISTINCT FROM OLD.role) OR (NEW.verification_status IS DISTINCT FROM OLD.verification_status) THEN
+    -- If role, verification_status, is_suspended, or trust_score is modified by non-admin
+    IF (NEW.role IS DISTINCT FROM OLD.role)
+       OR (NEW.verification_status IS DISTINCT FROM OLD.verification_status)
+       OR (NEW.is_suspended IS DISTINCT FROM OLD.is_suspended)
+       OR (NEW.trust_score IS DISTINCT FROM OLD.trust_score) THEN
         IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
             NEW.role := OLD.role;
             NEW.verification_status := OLD.verification_status;
+            NEW.is_suspended := OLD.is_suspended;
+            NEW.trust_score := OLD.trust_score;
         END IF;
     END IF;
     RETURN NEW;
@@ -455,7 +460,12 @@ CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO authentic
 USING (auth.uid() = id)
 WITH CHECK (
     auth.uid() = id AND (
-        role = (SELECT role FROM profiles WHERE id = auth.uid()) OR
+        (
+            role = (SELECT role FROM profiles WHERE id = auth.uid()) AND
+            is_suspended = (SELECT is_suspended FROM profiles WHERE id = auth.uid()) AND
+            trust_score = (SELECT trust_score FROM profiles WHERE id = auth.uid()) AND
+            verification_status = (SELECT verification_status FROM profiles WHERE id = auth.uid())
+        ) OR
         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
     )
 );
