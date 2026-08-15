@@ -1,43 +1,38 @@
-import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
-import { Image } from'expo-image';
-import { Link, router } from'expo-router';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'@/components/ScreenContainer';
-import { AppText } from'@/components/AppText';
-import { AppTextField } from'@/components/AppTextField';
-import { AppButton } from'@/components/AppButton';
-import { SolidCard } from'@/components/SolidCard';
-import { LiorisLogo } from'@/components/LiorisLogo';
-import { AuthHeroBackground } from'@/components/AuthHeroBackground';
-import { WaveCard } from'@/components/WaveCard';
-import { useAuth } from'@/auth/AuthContext';
-import { useTheme } from'@/theme/ThemeProvider';
-import { joinWaitlist } from'@/api/institutions';
+import React, { useState } from 'react';
+import { Alert, Linking, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Link, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '@/components/ScreenContainer';
+import { AppText } from '@/components/AppText';
+import { AppTextField } from '@/components/AppTextField';
+import { AppButton } from '@/components/AppButton';
+import { SolidCard } from '@/components/SolidCard';
+import { LiorisLogo } from '@/components/LiorisLogo';
+import { AuthHeroBackground } from '@/components/AuthHeroBackground';
+import { WaveCard } from '@/components/WaveCard';
+import { useAuth } from '@/auth/AuthContext';
+import { useTheme } from '@/theme/ThemeProvider';
+import { joinWaitlist } from '@/api/institutions';
+import { supabase } from '@/api/supabase';
+import { haptics } from '@/utils/haptics';
 
 const SLIDES = [
   {
-    icon: 'school'as const,
+    icon: 'school' as const,
     title: 'Verified Campus Spaces',
     description: 'Securely access school-verified events, schedules, forums, and academic directories with colleagues.',
   },
   {
-    icon: 'people'as const,
+    icon: 'people' as const,
     title: 'Connect With Your Cohort',
     description: 'Find classmates, join study groups, and build your campus network from day one.',
   },
   {
-    icon: 'shield-checkmark'as const,
+    icon: 'shield-checkmark' as const,
     title: 'Privacy by Design',
     description: 'Your academic identity stays verified and private — visible only within your campus community.',
   },
-];
-
-const PRESET_SSO_ACCOUNTS = [
-  { name: 'Inem Emmanuel', email: 'inememmanuel@gmail.com', school: 'Lioris Root Operations (Admin)', role: 'admin' },
-  { name: 'Chioma Okonkwo', email: 'c.okonkwo@ui.edu.ng', school: 'University of Ibadan (UI)', role: 'student' },
-  { name: 'Adekunle Gold', email: 'a.gold@student.unilag.edu.ng', school: 'University of Lagos (UNILAG)', role: 'student' },
-  { name: 'Dr. Babatunde Lawal', email: 'b.lawal@funaab.edu.ng', school: 'Federal Univ. of Agric. (FUNAAB)', role: 'staff' },
 ];
 
 export default function LoginScreen() {
@@ -47,17 +42,12 @@ export default function LoginScreen() {
   const [slide, setSlide] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistSchool, setWaitlistSchool] = useState('');
   const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
-
-  // SSO Modal state
-  const [ssoModalOpen, setSsoModalOpen] = useState(false);
-  const [ssoProvider, setSsoProvider] = useState<'Google Workspace' | 'Microsoft 365'>('Google Workspace');
-  const [customSsoEmail, setCustomSsoEmail] = useState('');
 
   // Forgot password modal state
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
@@ -75,6 +65,7 @@ export default function LoginScreen() {
   }
 
   async function handleLogin() {
+    haptics.medium();
     setSubmitting(true);
     try {
       await login(email.trim(), password);
@@ -86,22 +77,42 @@ export default function LoginScreen() {
     }
   }
 
-  async function handleSsoLogin(selectedEmail: string) {
-    setSubmitting(true);
-    setSsoModalOpen(false);
+  async function handleGoogleSignIn() {
+    haptics.medium();
+    setGoogleSubmitting(true);
     try {
-      await login(selectedEmail, 'sso-authenticated-pass');
-      router.replace('/');
-    } catch {
-      // fallback
-    } finally {
-      setSubmitting(false);
-    }
-  }
+      const redirectUrl =
+        Platform.OS === 'web'
+          ? typeof window !== 'undefined'
+            ? `${window.location.origin}/`
+            : 'https://lioris-final-version.vercel.app/'
+          : 'lioris://auth/callback';
 
-  function handleOpenSso(provider: 'Google Workspace' | 'Microsoft 365') {
-    setSsoProvider(provider);
-    setSsoModalOpen(true);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        Alert.alert('Google Sign-In', error.message);
+      } else if (data?.url) {
+        if (Platform.OS === 'web') {
+          window.location.href = data.url;
+        } else {
+          Linking.openURL(data.url);
+        }
+      }
+    } catch (err: any) {
+      Alert.alert('Google Sign-In', err?.message || 'Unable to connect to Google Auth');
+    } finally {
+      setGoogleSubmitting(false);
+    }
   }
 
   return (
@@ -203,35 +214,28 @@ export default function LoginScreen() {
             Preview build: include"admin", "staff", or"alumni"anywhere in your email to see
             that role's experience — otherwise you'll see the student view.
           </AppText>
-          <View>
-            <AppTextField
-              label=""placeholder="Password (Min 6 Characters)"secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <Pressable
-              onPress={() => setShowPassword((v) => !v)}
-              accessibilityRole="button"accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-              style={{ position: 'absolute', right: spacing.md, top: 16 }}
-              hitSlop={8}
-            >
-              <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={18} color={colors.textSecondary} />
-            </Pressable>
-          </View>
+          <AppTextField
+            label=""
+            placeholder="Password (Min 6 Characters)"
+            secureTextEntry
+            showPasswordToggle
+            value={password}
+            onChangeText={setPassword}
+          />
 
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md, marginTop: -spacing.xs }}>
             <Pressable onPress={() => { setForgotStep('request'); setForgotModalOpen(true); }}>
-              <AppText variant="caption"tone="brand"weight="semiBold">
+              <AppText variant="caption" tone="brand" weight="semiBold">
                 Forgot Password?
               </AppText>
             </Pressable>
           </View>
 
-          <AppButton label="Secure Login"onPress={handleLogin} loading={submitting} disabled={!email || !password} fullWidth />
+          <AppButton label="Secure Login" onPress={handleLogin} loading={submitting} disabled={!email || !password} fullWidth />
 
           <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
             <Link href="/(auth)/register">
-              <AppText tone="brand"weight="semiBold">
+              <AppText tone="brand" weight="semiBold">
                 Don't see your account? Sign Up
               </AppText>
             </Link>
@@ -239,55 +243,34 @@ export default function LoginScreen() {
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.lg }}>
             <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
-            <AppText variant="caption"tone="secondary"weight="semiBold">
-              OR SIGN IN WITH SSO
+            <AppText variant="caption" tone="secondary" weight="semiBold">
+              OR CONTINUE WITH
             </AppText>
             <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
           </View>
 
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <Pressable
-              onPress={() => handleOpenSso('Google Workspace')}
-              accessibilityRole="button"style={{
-                flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: radius.md,
-                paddingVertical: spacing.md,
-                backgroundColor: colors.surface,
-              }}
-            >
-              <Ionicons name="logo-google"size={16} color={colors.textPrimary} />
-              <AppText variant="bodySmall"weight="semiBold">
-                Google Workspace
-              </AppText>
-            </Pressable>
-
-            <Pressable
-              onPress={() => handleOpenSso('Microsoft 365')}
-              accessibilityRole="button"style={{
-                flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: radius.md,
-                paddingVertical: spacing.md,
-                backgroundColor: colors.surface,
-              }}
-            >
-              <Ionicons name="logo-windows"size={16} color={colors.textPrimary} />
-              <AppText variant="bodySmall"weight="semiBold">
-                Microsoft 365
-              </AppText>
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={handleGoogleSignIn}
+            disabled={googleSubmitting}
+            accessibilityRole="button"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: radius.md,
+              paddingVertical: spacing.md,
+              backgroundColor: colors.surface,
+              opacity: googleSubmitting ? 0.7 : 1,
+            }}
+          >
+            <Ionicons name="logo-google" size={18} color="#EA4335" />
+            <AppText variant="bodySmall" weight="bold">
+              {googleSubmitting ? 'Connecting Google...' : 'Continue with Google'}
+            </AppText>
+          </Pressable>
         </WaveCard>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
@@ -305,10 +288,10 @@ export default function LoginScreen() {
             >
               <Ionicons name={SLIDES[slide].icon} size={24} color={colors.textSecondary} />
             </View>
-            <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.xs }}>
+            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
               {SLIDES[slide].title}
             </AppText>
-            <AppText tone="secondary"style={{ textAlign: 'center', marginBottom: spacing.md }}>
+            <AppText tone="secondary" style={{ textAlign: 'center', marginBottom: spacing.md }}>
               {SLIDES[slide].description}
             </AppText>
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.sm }}>
@@ -324,32 +307,33 @@ export default function LoginScreen() {
                 />
               ))}
             </View>
-            <AppText weight="semiBold"tone="brand"onPress={() => setSlide((s) => (s + 1) % SLIDES.length)}>
+            <AppText weight="semiBold" tone="brand" onPress={() => setSlide((s) => (s + 1) % SLIDES.length)}>
               Next Slide
             </AppText>
           </SolidCard>
 
           <SolidCard style={{ marginTop: spacing.lg }}>
-            <AppText weight="bold"style={{ marginBottom: spacing.xs }}>
-              Don't see your school yet? 🌍
+            <AppText weight="bold" style={{ marginBottom: spacing.xs }}>
+              Don't see your school yet?
             </AppText>
-            <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
-              We're live at UNILAG, UI, and FUNAAB at launch. Join the waitlist to fast-track your
-              campus!
+            <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+              We're live at UNILAG, UI, and FUNAAB at launch. Join the waitlist to fast-track your campus!
             </AppText>
             {waitlistSubmitted ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name="checkmark-circle"size={18} color={colors.success} />
-                <AppText weight="semiBold"style={{ color: colors.success }}>
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <AppText weight="semiBold" style={{ color: colors.success }}>
                   You're on the list — we'll email you when your campus goes live.
                 </AppText>
               </View>
             ) : (
               <>
-                <AppTextField label=""placeholder="Email Address"value={waitlistEmail} onChangeText={setWaitlistEmail} autoCapitalize="none"keyboardType="email-address" />
-                <AppTextField label=""placeholder="University Name"value={waitlistSchool} onChangeText={setWaitlistSchool} />
+                <AppTextField label="" placeholder="Email Address" value={waitlistEmail} onChangeText={setWaitlistEmail} autoCapitalize="none" keyboardType="email-address" />
+                <AppTextField label="" placeholder="University Name" value={waitlistSchool} onChangeText={setWaitlistSchool} />
                 <AppButton
-                  label="Join Waitlist"variant="accent"onPress={handleJoinWaitlist}
+                  label="Join Waitlist"
+                  variant="accent"
+                  onPress={handleJoinWaitlist}
                   loading={submittingWaitlist}
                   disabled={!waitlistEmail.trim() || !waitlistSchool.trim()}
                   fullWidth
@@ -360,102 +344,37 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
 
-      {/* Institutional SSO Modal */}
-      <Modal visible={ssoModalOpen} transparent animationType="fade"onRequestClose={() => setSsoModalOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
-          <SolidCard style={{ width: '100%', maxWidth: 420 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name={ssoProvider === 'Google Workspace' ? 'logo-google' : 'logo-windows'} size={22} color={colors.brandPrimary} />
-                <AppText variant="h3"weight="bold">
-                  {ssoProvider} SSO
-                </AppText>
-              </View>
-              <Pressable onPress={() => setSsoModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close"size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
-              Select a verified institutional account to sign in securely:
-            </AppText>
-
-            {PRESET_SSO_ACCOUNTS.map((acc) => (
-              <Pressable
-                key={acc.email}
-                onPress={() => handleSsoLogin(acc.email)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  padding: spacing.sm,
-                  borderRadius: radius.md,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  backgroundColor: colors.surface,
-                  marginBottom: spacing.xs,
-                }}
-              >
-                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="school"size={16} color={colors.brandPrimary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppText weight="bold"variant="bodySmall">
-                    {acc.name}
-                  </AppText>
-                  <AppText tone="secondary"variant="caption">
-                    {acc.email}
-                  </AppText>
-                </View>
-                <Ionicons name="chevron-forward"size={16} color={colors.textSecondary} />
-              </Pressable>
-            ))}
-
-            <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.sm }} />
-
-            <AppText variant="caption"tone="secondary"style={{ marginBottom: spacing.xs }}>
-              Or sign in with another campus email:
-            </AppText>
-            <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-              <View style={{ flex: 1 }}>
-                <AppTextField label=""placeholder="e.g. matric@school.edu.ng"value={customSsoEmail} onChangeText={setCustomSsoEmail} autoCapitalize="none" />
-              </View>
-              <AppButton
-                label="Sign In"variant="primary"disabled={!customSsoEmail.trim()}
-                onPress={() => handleSsoLogin(customSsoEmail.trim())}
-              />
-            </View>
-          </SolidCard>
-        </View>
-      </Modal>
-
       {/* Forgot Password Modal */}
-      <Modal visible={forgotModalOpen} transparent animationType="fade"onRequestClose={() => setForgotModalOpen(false)}>
+      <Modal visible={forgotModalOpen} transparent animationType="fade" onRequestClose={() => setForgotModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
           <SolidCard style={{ width: '100%', maxWidth: 420 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <AppText variant="h3"weight="bold">
-                Reset Password 
+              <AppText variant="h3" weight="bold">
+                Reset Password
               </AppText>
               <Pressable onPress={() => setForgotModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close"size={20} color={colors.textSecondary} />
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
 
             {forgotStep === 'request' ? (
               <>
-                <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
+                <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
                   Enter your registered campus email address and we'll send you a password recovery code.
                 </AppText>
                 <AppTextField
-                  label=""placeholder="name@student.unilag.edu.ng"value={forgotEmail}
+                  label=""
+                  placeholder="name@student.unilag.edu.ng"
+                  value={forgotEmail}
                   onChangeText={setForgotEmail}
-                  autoCapitalize="none"keyboardType="email-address"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
                 />
                 <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
-                  <AppButton label="Cancel"variant="ghost"onPress={() => setForgotModalOpen(false)} />
+                  <AppButton label="Cancel" variant="ghost" onPress={() => setForgotModalOpen(false)} />
                   <AppButton
-                    label="Send Code"disabled={!forgotEmail.trim()}
+                    label="Send Code"
+                    disabled={!forgotEmail.trim()}
                     onPress={() => setForgotStep('sent')}
                   />
                 </View>
@@ -463,15 +382,15 @@ export default function LoginScreen() {
             ) : (
               <>
                 <View style={{ alignItems: 'center', marginVertical: spacing.md }}>
-                  <Ionicons name="mail-unread"size={44} color={colors.brandPrimary} />
-                  <AppText weight="bold"variant="h3"style={{ marginTop: spacing.sm }}>
+                  <Ionicons name="mail-unread" size={44} color={colors.brandPrimary} />
+                  <AppText weight="bold" variant="h3" style={{ marginTop: spacing.sm }}>
                     Code Dispatched!
                   </AppText>
-                  <AppText tone="secondary"variant="bodySmall"style={{ textAlign: 'center', marginTop: 4 }}>
+                  <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginTop: 4 }}>
                     We sent a 6-digit recovery code to {forgotEmail}. Check your inbox.
                   </AppText>
                 </View>
-                <AppButton label="Back to Login"fullWidth onPress={() => setForgotModalOpen(false)} />
+                <AppButton label="Back to Login" fullWidth onPress={() => setForgotModalOpen(false)} />
               </>
             )}
           </SolidCard>

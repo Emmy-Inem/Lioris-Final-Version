@@ -13,6 +13,8 @@ import { firstOnboardingStep } from'./onboardingSteps';
 import { roleRequiresMfa } from'./mfaPolicy';
 import { registerForPushNotificationsAsync } from'@/notifications/push';
 
+import { supabase } from '@/api/supabase';
+
 interface SessionUser {
   id: string;
   fullName: string;
@@ -55,30 +57,86 @@ async function persist(user: SessionUser) {
   await setSessionUser(stored);
 }
 
+function deriveRoleFromEmail(email?: string): UserRole {
+  if (!email) return 'student';
+  const lower = email.toLowerCase();
+  if (lower.includes('admin') || lower === 'inememmanuel@gmail.com') return 'admin';
+  if (lower.includes('staff') || lower.includes('prof') || lower.includes('dr.')) return 'staff';
+  if (lower.includes('alumni') || lower.includes('grad')) return 'alumni';
+  return 'student';
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On cold start, restore both the token and the locally-cached user
-  // shape (id/fullName/role/onboarding progress) so a reload neither
-  // drops you back to login nor skips ahead of an unfinished onboarding
-  // chain. Once a real backend exists, prefer decoding the JWT or
-  // calling a /me endpoint instead of trusting this local copy.
   useEffect(() => {
-    (async () => {
+    let mounted = true;
+
+    async function initAuth() {
+      // 1. Check local session tokens
       const token = await getAccessToken();
       if (token) {
         const stored = await getSessionUser();
-        // stored.mfaVerified may be undefined for sessions cached before
-        // this field existed — default to false rather than trusting an
-        // absence, so those sessions re-challenge instead of silently
-        // skipping MFA.
-        setUser(stored ? ({ ...stored, mfaVerified: stored.mfaVerified ?? false } as SessionUser) : null);
-      } else {
-        setUser(null);
+        if (mounted && stored) {
+          setUser({ ...stored, mfaVerified: stored.mfaVerified ?? false } as SessionUser);
+        }
       }
-      setIsLoading(false);
-    })();
+
+      // 2. Check active Supabase OAuth session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && mounted) {
+          const userEmail = session.user.email ?? '';
+          const role = deriveRoleFromEmail(userEmail);
+          const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus User';
+          
+          const nextUser: SessionUser = {
+            id: session.user.id,
+            fullName,
+            email: userEmail,
+            role,
+            onboardingComplete: true,
+            mfaVerified: true,
+          };
+          await persist(nextUser);
+          await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+          setUser(nextUser);
+        }
+      } catch {
+        // OAuth check fallback
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+
+    initAuth();
+
+    // 3. Supabase Auth State Change Listener for Google OAuth callbacks
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user && mounted) {
+        const userEmail = session.user.email ?? '';
+        const role = deriveRoleFromEmail(userEmail);
+        const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus User';
+        
+        const nextUser: SessionUser = {
+          id: session.user.id,
+          fullName,
+          email: userEmail,
+          role,
+          onboardingComplete: true,
+          mfaVerified: true,
+        };
+        await persist(nextUser);
+        await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+        setUser(nextUser);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(

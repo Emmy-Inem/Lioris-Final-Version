@@ -13,8 +13,9 @@ import {
   deleteDashboardShortcut,
   DashboardShortcut,
 } from'@/api/adminShortcuts';
-import { EditShortcutModal } from'./EditShortcutModal';
-import { ThemeColors } from'@/theme/colors';
+import { EditShortcutModal } from './EditShortcutModal';
+import { ManagePortalLinksModal } from './ManagePortalLinksModal';
+import { ThemeColors } from '@/theme/colors';
 
 function colorPairFor(colors: ThemeColors, tone: DashboardShortcut['iconColor']): { bg: string; fg: string } {
   const map: Record<DashboardShortcut['iconColor'], { bg: string; fg: string }> = {
@@ -26,24 +27,12 @@ function colorPairFor(colors: ThemeColors, tone: DashboardShortcut['iconColor'])
   return map[tone];
 }
 
-/**
- * Ported from"Local Hub Options & Utilities Control Desk" — this is
- * what the reference app's"Utility Hub"tab actually shows (a CMS for
- * the dashboard shortcut tiles), not the 14-item config-modal list an
- * earlier pass wrongly placed here. That list now lives in its own
- * Super Admin Configuration screen.
- *
- * Note: this manages the *listing data* for shortcut tiles with full
- * CRUD. Wiring it so edits here immediately change what a live student
- * session sees on their Home screen would need a shared backend/cache
- * layer — out of scope for this mock-data build, flagged here rather
- * than silently implied.
- */
 export function LocalHubControlTab() {
   const { colors, spacing, radius } = useTheme();
   const queryClient = useQueryClient();
   const [hubType, setHubType] = useState<'student' | 'alumni'>('student');
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [portalModalOpen, setPortalModalOpen] = useState(false);
   const [editing, setEditing] = useState<DashboardShortcut | undefined>(undefined);
 
   const { data: shortcuts } = useQuery({
@@ -127,12 +116,12 @@ export function LocalHubControlTab() {
       </View>
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-        <AppText variant="h3"weight="bold">
+        <AppText variant="h3" weight="bold">
           Active Listings ({shortcuts?.length ?? 0})
         </AppText>
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <AppButton label="+ Quick Portal"variant="secondary"onPress={() => openAdd()} />
-          <AppButton label="+ Add Option"onPress={openAdd} />
+          <AppButton label="🔗 Manage Portals" variant="secondary" onPress={() => setPortalModalOpen(true)} />
+          <AppButton label="+ Add Option" onPress={openAdd} />
         </View>
       </View>
 
@@ -155,33 +144,35 @@ export function LocalHubControlTab() {
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <AppText weight="bold"style={{ flex: 1 }}>
+                  <AppText weight="bold" style={{ flex: 1 }}>
                     {shortcut.title}
                   </AppText>
                   <View style={{ flexDirection: 'row', gap: spacing.md }}>
                     <Pressable
                       onPress={() => openEdit(shortcut)}
                       hitSlop={8}
-                      accessibilityRole="button"accessibilityLabel={`Edit ${shortcut.title}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${shortcut.title}`}
                     >
-                      <Ionicons name="pencil"size={16} color={colors.brandPrimary} />
+                      <Ionicons name="pencil" size={16} color={colors.brandPrimary} />
                     </Pressable>
                     <Pressable
                       onPress={() => confirmDelete(shortcut)}
                       hitSlop={8}
-                      accessibilityRole="button"accessibilityLabel={`Delete ${shortcut.title}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${shortcut.title}`}
                     >
-                      <Ionicons name="trash"size={16} color={colors.critical} />
+                      <Ionicons name="trash" size={16} color={colors.critical} />
                     </Pressable>
                   </View>
                 </View>
-                <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: 4 }}>
+                <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: 4 }}>
                   {shortcut.description}
                 </AppText>
-                <AppText variant="caption"weight="semiBold"tone="brand"style={{ marginBottom: 2 }}>
+                <AppText variant="caption" weight="semiBold" tone="brand" style={{ marginBottom: 2 }}>
                   Internal Action: {shortcut.internalAction}
                 </AppText>
-                <AppText variant="caption"tone="secondary">
+                <AppText variant="caption" tone="secondary">
                   Campus: {shortcut.campusScope} {'\u00b7'} Min Lvl: {shortcut.minLevel} {'\u00b7'} Dept: {shortcut.department}
                 </AppText>
               </View>
@@ -196,6 +187,11 @@ export function LocalHubControlTab() {
         hubType={hubType}
         initial={editing}
         onSave={handleSave}
+      />
+
+      <ManagePortalLinksModal
+        visible={portalModalOpen}
+        onClose={() => setPortalModalOpen(false)}
       />
     </View>
   );

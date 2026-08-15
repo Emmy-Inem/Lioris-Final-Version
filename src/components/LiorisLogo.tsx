@@ -1,68 +1,71 @@
-import React from'react';
-import Svg, { Circle, Path, Rect } from'react-native-svg';
-import { useTheme } from'@/theme/ThemeProvider';
-import { palette } from'@/theme/colors';
+import React from 'react';
+import { View } from 'react-native';
+import Svg, { Circle, Path, G } from 'react-native-svg';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface LiorisLogoProps {
   size?: number;
-  slitColor?: string;
+  tintColor?: string;
+  variant?: 'symbol' | 'wordmark';
 }
 
 /**
- * Ported 1:1 from `LiorisLogo` (Common.kt), which draws the shield mark
- * with Canvas path/arc calls. Arc endpoints below were computed with
- * real trigonometry against the same bounding boxes/angles as the
- * Kotlin source (see the conversion script used to generate them),
- * not eyeballed — this should render as the same shield, not a
- * lookalike.
+ * Official LIORIS Brand Logo & Mark.
+ * Dynamically styled with the active profile accent theme color.
  */
-export function LiorisLogo({ size = 48, slitColor }: LiorisLogoProps) {
-  const { colors, isDark } = useTheme();
-  const finalSlitColor = slitColor ?? (isDark ? '#0F172A' : '#F0F7FF');
+export function LiorisLogo({ size = 48, tintColor, variant = 'symbol' }: LiorisLogoProps) {
+  const { colors } = useTheme();
+  const primaryColor = tintColor || colors.brandPrimary;
+
+  if (variant === 'symbol') {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        {/* Outer Circular Disk with Dynamic Theme Fill */}
+        <Circle cx={50} cy={50} r={46} fill={primaryColor} />
+
+        {/* Inner Distinctive Lioris Crescent Core */}
+        <Path
+          d="M 50 18 C 32.33 18 18 32.33 18 50 C 18 67.67 32.33 82 50 82 C 60.5 82 69.8 76.9 75.6 69 C 64.5 73.5 52 68 47.5 56.9 C 43.5 47 48.2 35.8 58 31.8 C 64.2 29.2 71.2 30.5 76 34.5 C 70 24.5 60.7 18 50 18 Z"
+          fill="#FFFFFF"
+        />
+
+        {/* Center Radiant Focal Dot */}
+        <Circle cx={62} cy={50} r={9} fill={primaryColor} />
+      </Svg>
+    );
+  }
+
+  // Full Wordmark variant: "LIORIS"
+  const width = size * 2.8;
+  const height = size;
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 100 100">
-      {/* 1. Top signal arc (sky blue) */}
-      <Path
-        d="M 27.064 16.94 A 28 28 0 0 1 72.936 16.94"stroke={palette.liorisSky}
-        strokeWidth={11}
-        strokeLinecap="round"fill="none"
-      />
+    <Svg width={width} height={height} viewBox="0 0 280 100" fill="none">
+      <G fill={primaryColor}>
+        {/* L */}
+        <Path d="M 12 20 L 32 20 L 32 64 L 56 64 L 56 80 L 12 80 Z" />
 
-      {/* 2. Left & right coral ear wings */}
-      <Path d="M 12,22 Q 28,22 38,36 L 38,49 L 12,49 Z"fill={palette.liorisCoral} />
-      <Path d="M 88,22 Q 72,22 62,36 L 62,49 L 88,49 Z"fill={palette.liorisCoral} />
+        {/* I */}
+        <Path d="M 66 20 L 84 20 L 84 80 L 66 80 Z" />
 
-      {/* Inner concentric coral wing arcs */}
-      <Path
-        d="M 18,41 A 17 17 0 0 1 35,24"stroke={palette.liorisCoral}
-        strokeOpacity={0.6}
-        strokeWidth={6}
-        fill="none"
-      />
-      <Path
-        d="M 65,24 A 17 17 0 0 1 82,41"stroke={palette.liorisCoral}
-        strokeOpacity={0.6}
-        strokeWidth={6}
-        fill="none"
-      />
+        {/* O (Stylized Lioris Circular Core) */}
+        <Path
+          d="M 126 20 C 109.43 20 96 33.43 96 50 C 96 66.57 109.43 80 126 80 C 142.57 80 156 66.57 156 50 C 156 33.43 142.57 20 126 20 Z M 126 36 C 133.73 36 140 42.27 140 50 C 140 57.73 133.73 64 126 64 C 118.27 64 112 57.73 112 50 C 112 42.27 118.27 36 126 36 Z"
+        />
 
-      {/* 3. Bottom curved wing lobes (blue left, sky right) */}
-      <Path d="M 12,49 L 46,49 L 46,91 Q 24,80 12,49 Z"fill={palette.liorisBlue} />
-      <Path d="M 88,49 L 54,49 L 54,91 Q 76,80 88,49 Z"fill={palette.liorisSky} />
+        {/* R */}
+        <Path
+          d="M 168 20 L 198 20 C 209 20 216 26.5 216 36 C 216 43.5 211 48.5 204 51 L 218 80 L 198 80 L 186 54 L 186 80 L 168 80 Z M 186 35 L 186 44 L 196 44 C 200 44 203 41.5 203 39.5 C 203 37 200 35 196 35 Z"
+        />
 
-      {/* 4. Magenta swoosh petals */}
-      <Path d="M 14,70 Q 26,66 46,88 Q 30,91 14,70 Z"fill={palette.liorisMagenta} />
-      <Path d="M 86,70 Q 74,66 54,88 Q 70,91 86,70 Z"fill={palette.liorisMagenta} />
+        {/* I */}
+        <Path d="M 226 20 L 244 20 L 244 80 L 226 80 Z" />
 
-      {/* 5. Central concentric radiating rings + core */}
-      <Circle cx={50} cy={47} r={24} stroke={palette.liorisSky} strokeWidth={5} fill="none" />
-      <Circle cx={50} cy={47} r={16} stroke={palette.liorisBlue} strokeWidth={5} fill="none" />
-      <Circle cx={50} cy={47} r={12} fill={palette.liorisBlue} />
-      <Circle cx={50} cy={47} r={4} fill={palette.liorisSky} />
-
-      {/* 6. Vertical clear slot cut down the shield center */}
-      <Rect x={46.5} y={58} width={7} height={33} fill={finalSlitColor} />
+        {/* S */}
+        <Path
+          d="M 254 70 C 257 76 263 80 270 80 C 277 80 282 76 282 71 C 282 66 277 63 268 60 C 256 56 250 50 250 40 C 250 28 260 20 272 20 C 282 20 290 25 293 33 L 278 39 C 276 35 273 33 270 33 C 266 33 263 35 263 38 C 263 42 267 44 274 47 C 286 51 294 57 294 68 C 294 80 284 88 270 88 C 259 88 250 82 246 72 Z"
+        />
+      </G>
     </Svg>
   );
 }
