@@ -100,6 +100,7 @@ export async function getMyProfile(user: {
         fullName: data.full_name || fallback.fullName,
         bio: data.bio || fallback.bio,
         department: data.department || fallback.department,
+        interests: data.interests || fallback.interests,
         institutionName: inst.name,
         institutionCode: inst.code,
         avatarUrl: data.avatar_url || fallback.avatarUrl,
@@ -252,6 +253,7 @@ export async function updateMyProfile(
     if (patch.fullName !== undefined) dbPatch.full_name = patch.fullName;
     if (patch.bio !== undefined) dbPatch.bio = patch.bio;
     if (patch.department !== undefined) dbPatch.department = patch.department;
+    if (patch.interests !== undefined) dbPatch.interests = patch.interests;
     if (patch.institutionCode !== undefined) dbPatch.campus_code = patch.institutionCode;
     if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
     if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;

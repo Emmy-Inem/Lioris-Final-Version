@@ -17,7 +17,7 @@ import { haptics } from '@/utils/haptics';
 
 export default function VerifyEmailScreen() {
   const { spacing, colors } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, completeOnboarding } = useAuth();
   const advance = useAdvanceOnboarding('/(auth)/verify-email');
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -111,7 +111,6 @@ export default function VerifyEmailScreen() {
               label="Enter Workspace Directly →"
               variant="secondary"
               onPress={async () => {
-                const { completeOnboarding } = useAuth();
                 try {
                   await completeOnboarding();
                 } catch {}

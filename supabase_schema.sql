@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     faculty TEXT,
     level TEXT,
     bio TEXT,
+    interests TEXT[] DEFAULT '{}',
     avatar_url TEXT,
     banner_url TEXT,
     student_id_number TEXT,
