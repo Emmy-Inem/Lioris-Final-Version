@@ -173,3 +173,35 @@ export async function listSuggestedConnections(): Promise<SuggestedConnection[]>
     return data.items;
   }, MOCK_SUGGESTIONS);
 }
+
+// User Safety & Content Filtering — Persists user blocking within the active session
+const blockedUserIdsState = new Set<string>();
+
+export function getBlockedUserIds(): string[] {
+  return Array.from(blockedUserIdsState);
+}
+
+export function isUserBlocked(userId?: string | null): boolean {
+  if (!userId) return false;
+  return blockedUserIdsState.has(userId);
+}
+
+export async function blockUser(userId: string, userName?: string): Promise<void> {
+  blockedUserIdsState.add(userId);
+  try {
+    const { recordAuditLogEntry } = await import('./auditLog');
+    await recordAuditLogEntry({
+      action: 'user_blocked',
+      summary: `Blocked user ${userName || userId}. Content from this user is hidden from your feed and events.`,
+      targetType: 'user',
+      targetId: userId,
+    });
+  } catch {
+    // Session fallback
+  }
+}
+
+export async function unblockUser(userId: string): Promise<void> {
+  blockedUserIdsState.delete(userId);
+}
+

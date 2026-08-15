@@ -468,8 +468,36 @@ export function PostCard({ post }: { post: Post }) {
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="flag-outline"size={18} color={colors.critical} />
+          <Ionicons name="flag-outline" size={18} color={colors.critical} />
           <AppText style={{ color: colors.critical }} weight="medium">Report Thread to Moderation</AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            setMenuOpen(false);
+            Alert.alert(
+              `Block ${post.authorName}?`,
+              `You will no longer see posts, comments, or events from ${post.authorName}. This decision is saved for your session.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block User',
+                  style: 'destructive',
+                  onPress: async () => {
+                    const { blockUser } = await import('@/api/connections');
+                    await blockUser(post.authorId, post.authorName);
+                    await queryClient.invalidateQueries({ queryKey: ['feed'] });
+                    haptics.medium();
+                    Alert.alert('User Blocked', `Content from ${post.authorName} has been hidden from your feed.`);
+                  },
+                },
+              ]
+            );
+          }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+        >
+          <Ionicons name="ban-outline" size={18} color={colors.critical} />
+          <AppText style={{ color: colors.critical }} weight="medium">Block {post.authorName}</AppText>
         </Pressable>
       </ActionSheetModal>
 

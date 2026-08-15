@@ -26,6 +26,7 @@ const NOTIFICATION_ICONS: Record<
   { icon: keyof typeof Ionicons.glyphMap; bg: string; color: string }
 > = {
   announcement: { icon: 'megaphone-outline', bg: '#E0F5F2', color: '#0B7A75' },
+  system_announcement: { icon: 'notifications-outline', bg: '#FEE2E2', color: '#DC2626' },
   event: { icon: 'calendar-outline', bg: '#E6F4EA', color: '#137333' },
   message: { icon: 'chatbubble-outline', bg: '#E8F0FE', color: '#1A73E8' },
   moderation: { icon: 'shield-checkmark-outline', bg: '#FCE8E6', color: '#C5221F' },

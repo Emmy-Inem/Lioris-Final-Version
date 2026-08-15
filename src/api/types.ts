@@ -192,6 +192,7 @@ export interface Conversation {
 
 export type NotificationType =
   | 'announcement'
+  | 'system_announcement'
   | 'event'
   | 'message'
   | 'moderation'
@@ -247,11 +248,6 @@ export interface Report {
   institutionCode?: string;
 }
 
-// PRD Section 14 (AuditLog model) / Section 6.2's acceptance criteria
-// ("moderation decisions must be audit-logged"). Deliberately narrow to
-// actions that change something real for another user or the platform
-// (report decisions, event takedowns, verification decisions, the two
-// high-risk Super Admin actions) rather than every button tap.
 export type AuditLogAction =
   | 'report_resolved'
   | 'report_dismissed'
@@ -260,7 +256,17 @@ export type AuditLogAction =
   | 'verification_approved'
   | 'verification_rejected'
   | 'escrow_funds_released'
-  | 'impersonation_started';
+  | 'impersonation_started'
+  | 'user_blocked'
+  | 'domain_authority_updated'
+  | 'tenant_toggles_updated'
+  | 'xp_multiplier_updated'
+  | 'level_badges_updated'
+  | 'seasonal_leaderboard_deployed'
+  | 'escrow_config_updated'
+  | 'toxicity_thresholds_deployed'
+  | 'storage_quotas_enforced'
+  | 'global_push_broadcast';
 
 export interface AuditLogEntry {
   id: string;
@@ -268,13 +274,10 @@ export interface AuditLogEntry {
   actorName: string;
   actorRole: UserRole;
   action: AuditLogAction;
-  /** One-line human-readable description, e.g. "Resolved report on a marketplace listing". */
   summary: string;
-  targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'resource';
+  targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'resource' | 'platform_config' | 'notifications';
   targetId: string;
-  /** Free-text reason, present when the action required one (impersonation, escrow release). */
   reason?: string;
-  /** Scopes the entry to a launch institution, mirroring Report's scoping — omitted for global actions. */
   institutionCode?: string;
   createdAt: string;
 }

@@ -68,8 +68,10 @@ export interface EventsQuery {
   approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
 }
 
+import { isUserBlocked } from './connections';
+
 function filterMockEvents(query: EventsQuery): CampusEvent[] {
-  let results = [...eventsState];
+  let results = [...eventsState].filter((e) => !isUserBlocked(e.organizerId));
 
   if (query.approvalStatus && query.approvalStatus !== 'all') {
     results = results.filter((e) => e.approvalStatus === query.approvalStatus);

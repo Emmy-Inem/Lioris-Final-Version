@@ -40,6 +40,16 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
   verification_rejected: 'neutral',
   escrow_funds_released: 'critical',
   impersonation_started: 'critical',
+  user_blocked: 'warning',
+  domain_authority_updated: 'brand',
+  tenant_toggles_updated: 'brand',
+  xp_multiplier_updated: 'brand',
+  level_badges_updated: 'brand',
+  seasonal_leaderboard_deployed: 'success',
+  escrow_config_updated: 'brand',
+  toxicity_thresholds_deployed: 'warning',
+  storage_quotas_enforced: 'warning',
+  global_push_broadcast: 'critical',
 };
 
 const ACTION_LABEL: Record<AuditLogAction, string> = {
@@ -51,6 +61,16 @@ const ACTION_LABEL: Record<AuditLogAction, string> = {
   verification_rejected: 'Verification rejected',
   escrow_funds_released: 'Escrow funds released',
   impersonation_started: 'Impersonation started',
+  user_blocked: 'User blocked',
+  domain_authority_updated: 'Domain authority updated',
+  tenant_toggles_updated: 'Tenant modules updated',
+  xp_multiplier_updated: 'XP multiplier updated',
+  level_badges_updated: 'Level badges updated',
+  seasonal_leaderboard_deployed: 'Leaderboard season deployed',
+  escrow_config_updated: 'Escrow parameters updated',
+  toxicity_thresholds_deployed: 'Toxicity thresholds deployed',
+  storage_quotas_enforced: 'Storage limits enforced',
+  global_push_broadcast: 'Global push notification broadcast',
 };
 
 function formatTimestamp(iso: string) {

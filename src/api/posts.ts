@@ -22,8 +22,10 @@ export interface FeedQuery {
   viewScope?: 'campus' | 'global';
 }
 
+import { isUserBlocked } from './connections';
+
 function filterMockPosts(query: FeedQuery): Post[] {
-  let results = [...postsState];
+  let results = [...postsState].filter((p) => !isUserBlocked(p.authorId));
 
   results = results.filter((p) => !p.institutionCode || p.institutionCode === query.viewerInstitutionCode);
 

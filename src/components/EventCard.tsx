@@ -240,8 +240,36 @@ export function EventCard({ event }: { event: CampusEvent }) {
           onPress={handleReport}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="flag-outline"size={18} color={colors.critical} />
+          <Ionicons name="flag-outline" size={18} color={colors.critical} />
           <AppText style={{ color: colors.critical }} weight="medium">Report Event</AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            setMenuOpen(false);
+            Alert.alert(
+              `Block ${event.organizerName || 'Organizer'}?`,
+              `You will no longer see events or posts from this organizer for this session.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block Organizer',
+                  style: 'destructive',
+                  onPress: async () => {
+                    const { blockUser } = await import('@/api/connections');
+                    await blockUser(event.organizerId, event.organizerName);
+                    await queryClient.invalidateQueries({ queryKey: ['events'] });
+                    haptics.medium();
+                    Alert.alert('Organizer Blocked', `Events from ${event.organizerName || 'this organizer'} have been filtered.`);
+                  },
+                },
+              ]
+            );
+          }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+        >
+          <Ionicons name="ban-outline" size={18} color={colors.critical} />
+          <AppText style={{ color: colors.critical }} weight="medium">Block Organizer</AppText>
         </Pressable>
       </ActionSheetModal>
     </View>

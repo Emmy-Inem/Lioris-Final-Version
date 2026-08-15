@@ -50,7 +50,6 @@ export function useRealtimeChannel(
       clearInterval(pollCheckInterval);
       realtimeSocket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { status, isPolling };

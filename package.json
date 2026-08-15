@@ -11,7 +11,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -50,7 +50,10 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
     "babel-preset-expo": "^57.0.3",
+    "eslint": "^10.8.1",
     "typescript": "~6.0.3"
   },
   "private": true

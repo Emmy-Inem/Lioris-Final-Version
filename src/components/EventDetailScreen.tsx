@@ -91,9 +91,18 @@ export function EventDetailScreen() {
     if (!event) return;
     haptics.light();
     const query = encodeURIComponent(`${event.location} University Campus`);
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-    Linking.openURL(mapsUrl).catch(() => {
-      Alert.alert('Navigation', `Opening external campus navigation to ${event.location}`);
+    const mapsUrl = Platform.OS === 'ios'
+      ? `maps://?q=${query}`
+      : `https://www.google.com/maps/search/?api=1&query=${query}`;
+
+    Linking.canOpenURL(mapsUrl).then((supported) => {
+      if (supported) {
+        Linking.openURL(mapsUrl);
+      } else {
+        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
+      }
+    }).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
     });
   }
 
