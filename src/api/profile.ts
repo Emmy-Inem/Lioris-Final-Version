@@ -1,7 +1,7 @@
-import { api } from './client';
-import { UserProfile, UserRole } from './types';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
+import { api } from'./client';
+import { UserProfile, UserRole } from'./types';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 export function nextLevelXp(level: number): number {
   if (level === 1) return 200;
@@ -98,7 +98,7 @@ export function seedProfileUsername(
           institutionCode: institution.code,
           institutionName: institution.name,
           isVerified: true,
-          verificationStatus: 'verified' as const,
+          verificationStatus: 'verified'as const,
         }
       : {}),
   });

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
-import { router } from 'expo-router';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
-import { AppButton } from '@/components/AppButton';
-import { AdminConfigModal } from '@/components/AdminConfigModal';
+import React, { useState } from'react';
+import { Alert, Pressable, ScrollView, Switch, View } from'react-native';
+import { router } from'expo-router';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { SolidCard } from'@/components/SolidCard';
+import { AppButton } from'@/components/AppButton';
+import { AdminConfigModal } from'@/components/AdminConfigModal';
 import {
   AddUniversityWizardContent,
   DomainAuthorityModalContent,
@@ -17,11 +17,11 @@ import {
   CloudStorageModalContent,
   ToxicityThresholdsModalContent,
   GlobalPushNotificationModalContent,
-} from '@/components/admin/ConfigModals';
-import { PaymentGatewayModalContent, WebrtcKeysModalContent, AiKeysModalContent } from '@/components/admin/SecureConfigModals';
-import { LegacyVaultModalContent, ImpersonatorModalContent } from '@/components/admin/HighRiskModals';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { useTheme } from '@/theme/ThemeProvider';
+} from'@/components/admin/ConfigModals';
+import { PaymentGatewayModalContent, WebrtcKeysModalContent, AiKeysModalContent } from'@/components/admin/SecureConfigModals';
+import { LegacyVaultModalContent, ImpersonatorModalContent } from'@/components/admin/HighRiskModals';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { useTheme } from'@/theme/ThemeProvider';
 
 type ModalKey =
   | 'addUniversity'
@@ -66,192 +66,124 @@ export default function SuperAdminConfigScreen() {
   return (
     <ScreenContainer glow={true}>
       <AppHeader />
-      <AppText variant="h1" weight="bold" style={{ marginTop: spacing.md, marginBottom: spacing.xs }}>
-        Super Admin Configuration ⚙️
+      <AppText variant="h1"weight="bold"style={{ marginTop: spacing.md, marginBottom: spacing.xs }}>
+        Super Admin Configuration 
       </AppText>
-      <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
+      <AppText tone="secondary"style={{ marginBottom: spacing.md }}>
         Root-level platform parameters — changes here apply across every campus workspace.
       </AppText>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: 150 }}
       >
-        <Section number={1} title="Multi-Tenant & University Management" emoji="🏛️">
+        <Section number={1} title="Multi-Tenant & University Management"emoji="">
           <Row
-            title="Add/Register New University"
-            description="Setup wizard to create new campus instances."
-            actionLabel="New Node"
-            onPress={() => setActiveModal('addUniversity')}
+            title="Add/Register New University"description="Setup wizard to create new campus instances."actionLabel="New Node"onPress={() => setActiveModal('addUniversity')}
           />
           <Row
-            title="Domain Authority Binding"
-            description="Whitelist official email domains (e.g. @ui.edu.ng) for verification."
-            actionLabel="Manage"
-            onPress={() => setActiveModal('domainAuthority')}
+            title="Domain Authority Binding"description="Whitelist official email domains (e.g. @ui.edu.ng) for verification."actionLabel="Manage"onPress={() => setActiveModal('domainAuthority')}
           />
           <Row
-            title="Tenant Feature Toggles"
-            description="Enable/disable modules per university."
-            actionLabel="Configure"
-            onPress={() => setActiveModal('tenantToggles')}
+            title="Tenant Feature Toggles"description="Enable/disable modules per university."actionLabel="Configure"onPress={() => setActiveModal('tenantToggles')}
             last
           />
         </Section>
 
-        <Section number={2} title="Global Identity & Role Access" emoji="👥">
+        <Section number={2} title="Global Identity & Role Access"emoji="">
           <Row
-            title="Global User Directory"
-            description="Master database of all users across nodes."
-            actionLabel="View"
-            onPress={() => router.push('/(admin)/user-directory')}
+            title="Global User Directory"description="Master database of all users across nodes."actionLabel="View"onPress={() => router.push('/(admin)/user-directory')}
             last
           />
         </Section>
 
-        <Section number={3} title="Gamification & XP Rules" emoji="🎮">
+        <Section number={3} title="Gamification & XP Rules"emoji="">
           <ToggleRow
-            title="Enable Gamification System"
-            description="Hides/shows the XP levels, active streaks, login score metrics & reward leaderboards across the workspace."
-            value={gamificationEnabled}
+            title="Enable Gamification System"description="Hides/shows the XP levels, active streaks, login score metrics & reward leaderboards across the workspace."value={gamificationEnabled}
             onValueChange={setGamificationEnabled}
           />
           <Row
-            title="Global XP Multiplier"
-            description="Set system-wide XP multipliers for active engagement."
-            actionLabel="Configure"
-            onPress={() => setActiveModal('xpMultiplier')}
+            title="Global XP Multiplier"description="Set system-wide XP multipliers for active engagement."actionLabel="Configure"onPress={() => setActiveModal('xpMultiplier')}
             disabled={!gamificationEnabled}
           />
           <Row
-            title="Manage Level Badges"
-            description="Upload or configure level-up badge designs."
-            actionLabel="Manage"
-            onPress={() => setActiveModal('levelBadges')}
+            title="Manage Level Badges"description="Upload or configure level-up badge designs."actionLabel="Manage"onPress={() => setActiveModal('levelBadges')}
             disabled={!gamificationEnabled}
             last
           />
         </Section>
 
-        <Section number={4} title="Financial Infrastructure & Escrow" emoji="💸">
+        <Section number={4} title="Financial Infrastructure & Escrow"emoji="">
           <Row
-            title="Payment Gateway API Manager"
-            description="Secure Live/Test keys for Paystack/Flutterwave."
-            actionLabel="Keys"
-            onPress={() => setActiveModal('paymentGateway')}
+            title="Payment Gateway API Manager"description="Secure Live/Test keys for Paystack/Flutterwave."actionLabel="Keys"onPress={() => setActiveModal('paymentGateway')}
           />
           <Row
-            title="Marketplace Escrow Configurations"
-            description="Holding periods and refund processors."
-            actionLabel="Escrow"
-            onPress={() => setActiveModal('escrowConfig')}
+            title="Marketplace Escrow Configurations"description="Holding periods and refund processors."actionLabel="Escrow"onPress={() => setActiveModal('escrowConfig')}
           />
           <Row
-            title="Legacy Giving Vault"
-            description="Monitor alumni donations & authorize disbursements."
-            actionLabel="Vault"
-            tone="critical"
-            onPress={() => setActiveModal('legacyVault')}
+            title="Legacy Giving Vault"description="Monitor alumni donations & authorize disbursements."actionLabel="Vault"tone="critical"onPress={() => setActiveModal('legacyVault')}
             last
           />
         </Section>
 
-        <Section number={5} title="Third-Party API & Integration" emoji="🔌">
+        <Section number={5} title="Third-Party API & Integration"emoji="🔌">
           <Row
-            title="WebRTC/Video SDK Keys"
-            description="ZegoCloud/Agora Audio/Video Call provider keys."
-            actionLabel="Manage"
-            onPress={() => setActiveModal('webrtcKeys')}
+            title="WebRTC/Video SDK Keys"description="ZegoCloud/Agora Audio/Video Call provider keys."actionLabel="Manage"onPress={() => setActiveModal('webrtcKeys')}
           />
           <Row
-            title="AI Service Keys"
-            description="OpenAI / Gemini integration keys."
-            actionLabel="Manage"
-            onPress={() => setActiveModal('aiKeys')}
+            title="AI Service Keys"description="OpenAI / Gemini integration keys."actionLabel="Manage"onPress={() => setActiveModal('aiKeys')}
             last
           />
         </Section>
 
-        <Section number={6} title="Cybersecurity & Ecosystem Safety" emoji="🛡️">
+        <Section number={6} title="Cybersecurity & Ecosystem Safety"emoji="">
           <Row
-            title="Moderation & Admin Action Log"
-            description="Every resolved report, event takedown, verification decision, and high-risk action — who, when, and why."
-            actionLabel="View Log"
-            onPress={() => router.push('/(admin)/moderation-audit-log')}
+            title="Moderation & Admin Action Log"description="Every resolved report, event takedown, verification decision, and high-risk action — who, when, and why."actionLabel="View Log"onPress={() => router.push('/(admin)/moderation-audit-log')}
           />
           <Row
-            title="E2EE Cryptography Audit Logs"
-            description="Track Web Crypto API key rotation and flag handshake failures."
-            actionLabel="Audits"
-            onPress={() => router.push('/(admin)/audit-logs')}
+            title="E2EE Cryptography Audit Logs"description="Track Web Crypto API key rotation and flag handshake failures."actionLabel="Audits"onPress={() => router.push('/(admin)/audit-logs')}
           />
           <Row
-            title="Automated Toxicity Thresholds"
-            description="AI moderation sensitivity scoring metrics."
-            actionLabel="Metrics"
-            onPress={() => setActiveModal('toxicityThresholds')}
+            title="Automated Toxicity Thresholds"description="AI moderation sensitivity scoring metrics."actionLabel="Metrics"onPress={() => setActiveModal('toxicityThresholds')}
             last
           />
         </Section>
 
-        <Section number={7} title="Storage, Media, & Data Analytics" emoji="📊">
+        <Section number={7} title="Storage, Media, & Data Analytics"emoji="">
           <Row
-            title="Cloud Storage Limits"
-            description="Limits for AWS/GCP to prevent ballooning server costs."
-            actionLabel="Storage"
-            onPress={() => setActiveModal('cloudStorage')}
+            title="Cloud Storage Limits"description="Limits for AWS/GCP to prevent ballooning server costs."actionLabel="Storage"onPress={() => setActiveModal('cloudStorage')}
           />
           <Row
-            title="University Pulse Analytics"
-            description="Global DAU/MAU and Marketplace volume."
-            actionLabel="Pulse"
-            tone="critical"
-            onPress={() => router.push('/(admin)/pulse-analytics')}
+            title="University Pulse Analytics"description="Global DAU/MAU and Marketplace volume."actionLabel="Pulse"tone="critical"onPress={() => router.push('/(admin)/pulse-analytics')}
             last
           />
         </Section>
 
-        <Section number={8} title="Developer, QA, & Maintenance" emoji="🔧">
+        <Section number={8} title="Developer, QA, & Maintenance"emoji="🔧">
           <Row
-            title="Universal 'Preview As' Tool"
-            description="Inject session to view app as specific Student/Admin."
-            actionLabel="Preview"
-            onPress={() =>
-              Alert.alert('Preview As', 'Use the "Preview As" selector on the main Workdesk screen to switch the active role label.')
+            title="Universal'Preview As'Tool"description="Inject session to view app as specific Student/Admin."actionLabel="Preview"onPress={() =>
+              Alert.alert('Preview As', 'Use the"Preview As"selector on the main Workdesk screen to switch the active role label.')
             }
           />
           <Row
-            title="Role Impersonator"
-            description="Support shadow-login into a real user session, time-boxed and audit-logged."
-            actionLabel="Impersonate"
-            tone="critical"
-            onPress={() => setActiveModal('impersonator')}
+            title="Role Impersonator"description="Support shadow-login into a real user session, time-boxed and audit-logged."actionLabel="Impersonate"tone="critical"onPress={() => setActiveModal('impersonator')}
           />
           <ToggleRow
-            title="Maintenance Mode Kill Switch"
-            description="Force offline mode & disable DB writes."
-            value={maintenanceMode}
+            title="Maintenance Mode Kill Switch"description="Force offline mode & disable DB writes."value={maintenanceMode}
             onValueChange={confirmMaintenanceMode}
             titleTone="critical"
           />
           <ToggleRow
-            title="Mock Data Visibility & Setup"
-            description="Toggle the visibility of seed datasets across the platform for testing."
-            value={mockDataVisible}
+            title="Mock Data Visibility & Setup"description="Toggle the visibility of seed datasets across the platform for testing."value={mockDataVisible}
             onValueChange={setMockDataVisible}
             last
           />
         </Section>
 
-        <Section number={9} title="Global Communications" emoji="🎙️">
+        <Section number={9} title="Global Communications"emoji="🎙️">
           <Row
-            title="Global Push Notifications"
-            description="Send mandatory, un-dismissible full-screen alerts to ALL users."
-            actionLabel="Broadcast"
-            tone="critical"
-            onPress={() => setActiveModal('globalPush')}
+            title="Global Push Notifications"description="Send mandatory, un-dismissible full-screen alerts to ALL users."actionLabel="Broadcast"tone="critical"onPress={() => setActiveModal('globalPush')}
             last
           />
         </Section>
@@ -265,38 +197,30 @@ export default function SuperAdminConfigScreen() {
       <AdminConfigModal
         visible={activeModal === 'domainAuthority'}
         onClose={() => setActiveModal(null)}
-        title="Domain Authority Binding"
-        description="Whitelist official email domains controlling automated verification."
-        confirmLabel="Synchronize"
-        onConfirm={() => {}}
+        title="Domain Authority Binding"description="Whitelist official email domains controlling automated verification."confirmLabel="Synchronize"onConfirm={() => {}}
       >
         <DomainAuthorityModalContent />
       </AdminConfigModal>
       <AdminConfigModal
         visible={activeModal === 'tenantToggles'}
         onClose={() => setActiveModal(null)}
-        title="Tenant Feature Toggles"
-        description="Enable or disable individual modules per university tenant."
-        confirmLabel="Save"
-        onConfirm={() => {}}
+        title="Tenant Feature Toggles"description="Enable or disable individual modules per university tenant."confirmLabel="Save"onConfirm={() => {}}
       >
-        <AppText tone="secondary" variant="bodySmall">
+        <AppText tone="secondary"variant="bodySmall">
           Per-tenant module toggles (Marketplace, Study Groups, Mentorship, etc.) would list here
           once a specific university is selected in the Workspace Scope card above.
         </AppText>
       </AdminConfigModal>
-      <AdminConfigModal visible={activeModal === 'xpMultiplier'} onClose={() => setActiveModal(null)} title="XP Multiplier" confirmLabel="Apply" onConfirm={() => {}}>
+      <AdminConfigModal visible={activeModal === 'xpMultiplier'} onClose={() => setActiveModal(null)} title="XP Multiplier"confirmLabel="Apply"onConfirm={() => {}}>
         <XpMultiplierModalContent />
       </AdminConfigModal>
-      <AdminConfigModal visible={activeModal === 'levelBadges'} onClose={() => setActiveModal(null)} title="Levels & Badges" confirmLabel="Save" onConfirm={() => {}}>
+      <AdminConfigModal visible={activeModal === 'levelBadges'} onClose={() => setActiveModal(null)} title="Levels & Badges"confirmLabel="Save"onConfirm={() => {}}>
         <LevelBadgesModalContent />
       </AdminConfigModal>
       <AdminConfigModal
         visible={activeModal === 'seasonalLeaderboards'}
         onClose={() => setActiveModal(null)}
-        title="Seasonal Leaderboards"
-        confirmLabel="Deploy season"
-        onConfirm={() => {}}
+        title="Seasonal Leaderboards"confirmLabel="Deploy season"onConfirm={() => {}}
       >
         <SeasonalLeaderboardsModalContent />
       </AdminConfigModal>
@@ -306,9 +230,7 @@ export default function SuperAdminConfigScreen() {
       <AdminConfigModal
         visible={activeModal === 'escrowConfig'}
         onClose={() => setActiveModal(null)}
-        title="Marketplace Escrow Configuration"
-        confirmLabel="Save escrow logic"
-        onConfirm={() => {}}
+        title="Marketplace Escrow Configuration"confirmLabel="Save escrow logic"onConfirm={() => {}}
       >
         <EscrowConfigModalContent />
       </AdminConfigModal>
@@ -338,21 +260,17 @@ export default function SuperAdminConfigScreen() {
       <AdminConfigModal
         visible={activeModal === 'toxicityThresholds'}
         onClose={() => setActiveModal(null)}
-        title="Automated Toxicity Thresholds"
-        confirmLabel="Deploy"
-        onConfirm={() => {}}
+        title="Automated Toxicity Thresholds"confirmLabel="Deploy"onConfirm={() => {}}
       >
         <ToxicityThresholdsModalContent />
       </AdminConfigModal>
-      <AdminConfigModal visible={activeModal === 'cloudStorage'} onClose={() => setActiveModal(null)} title="Cloud Storage Limits" confirmLabel="Enforce limits" onConfirm={() => {}}>
+      <AdminConfigModal visible={activeModal === 'cloudStorage'} onClose={() => setActiveModal(null)} title="Cloud Storage Limits"confirmLabel="Enforce limits"onConfirm={() => {}}>
         <CloudStorageModalContent />
       </AdminConfigModal>
       <AdminConfigModal
         visible={activeModal === 'globalPush'}
         onClose={() => setActiveModal(null)}
-        title="Global Push Notification Composer"
-        confirmLabel="Dispatch"
-        onConfirm={() => Alert.alert('Dispatched', 'Push notification queued for all campuses.')}
+        title="Global Push Notification Composer"confirmLabel="Dispatch"onConfirm={() => Alert.alert('Dispatched', 'Push notification queued for all campuses.')}
       >
         <GlobalPushNotificationModalContent />
       </AdminConfigModal>
@@ -378,7 +296,7 @@ function Section({ number, title, emoji, children }: { number: number; title: st
   const { spacing } = useTheme();
   return (
     <View style={{ marginBottom: spacing.lg }}>
-      <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
+      <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }}>
         {number}. {title} {emoji}
       </AppText>
       <SolidCard>{children}</SolidCard>
@@ -417,10 +335,10 @@ function Row({
       }}
     >
       <View style={{ flex: 1, marginRight: spacing.md }}>
-        <AppText weight="bold" variant="bodySmall">
+        <AppText weight="bold"variant="bodySmall">
           {title}
         </AppText>
-        <AppText tone="secondary" variant="caption">
+        <AppText tone="secondary"variant="caption">
           {description}
         </AppText>
       </View>
@@ -457,10 +375,10 @@ function ToggleRow({
       }}
     >
       <View style={{ flex: 1, marginRight: spacing.md }}>
-        <AppText weight="bold" variant="bodySmall" style={titleTone === 'critical' ? { color: colors.critical } : undefined}>
+        <AppText weight="bold"variant="bodySmall"style={titleTone === 'critical' ? { color: colors.critical } : undefined}>
           {title}
         </AppText>
-        <AppText tone="secondary" variant="caption">
+        <AppText tone="secondary"variant="caption">
           {description}
         </AppText>
       </View>

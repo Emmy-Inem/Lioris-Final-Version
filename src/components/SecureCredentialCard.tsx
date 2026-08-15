@@ -1,11 +1,11 @@
-import React from 'react';
-import { Linking, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SolidCard } from './SolidCard';
-import { AppText } from './AppText';
-import { Badge } from './Badge';
-import { AppButton } from './AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Linking, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { SolidCard } from'./SolidCard';
+import { AppText } from'./AppText';
+import { Badge } from'./Badge';
+import { AppButton } from'./AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface SecureCredentialCardProps {
   label: string;
@@ -32,7 +32,7 @@ export function SecureCredentialCard({ label, description, configured, lastRotat
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
           <AppText weight="bold">{label}</AppText>
-          <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+          <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
             {description}
           </AppText>
         </View>
@@ -40,17 +40,15 @@ export function SecureCredentialCard({ label, description, configured, lastRotat
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md }}>
-        <Ionicons name="lock-closed" size={13} color={colors.textSecondary} />
-        <AppText variant="caption" tone="secondary">
+        <Ionicons name="lock-closed"size={13} color={colors.textSecondary} />
+        <AppText variant="caption"tone="secondary">
           {configured ? `Key value hidden \u00b7 last rotated ${lastRotated ?? 'unknown'}` : 'No key on file'}
         </AppText>
       </View>
 
       <View style={{ marginTop: spacing.md }}>
         <AppButton
-          label="Manage in secure web console"
-          variant="secondary"
-          onPress={() =>
+          label="Manage in secure web console"variant="secondary"onPress={() =>
             Linking.openURL('https://admin.lioris.app/settings/credentials').catch(() => {
               // No-op placeholder domain in this build.
             })
@@ -58,7 +56,7 @@ export function SecureCredentialCard({ label, description, configured, lastRotat
           fullWidth
         />
       </View>
-      <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs, textAlign: 'center' }}>
+      <AppText variant="caption"tone="secondary"style={{ marginTop: spacing.xs, textAlign: 'center' }}>
         Secrets are managed and rotated outside the mobile app for security.
       </AppText>
     </SolidCard>

@@ -1,8 +1,8 @@
-import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Pressable, ScrollView, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
 
 export interface QuickAction {
   icon: keyof typeof Ionicons.glyphMap;
@@ -10,7 +10,7 @@ export interface QuickAction {
   onPress: () => void;
 }
 
-/** Ported structurally from the "ACTION CENTER 🎯" section of DashboardScreen. */
+/** Ported structurally from the"ACTION CENTER"section of DashboardScreen. */
 export function ActionCenterRow({ actions }: { actions: QuickAction[] }) {
   const { colors, spacing, radius } = useTheme();
 
@@ -20,8 +20,7 @@ export function ActionCenterRow({ actions }: { actions: QuickAction[] }) {
         <Pressable
           key={action.label}
           onPress={action.onPress}
-          accessibilityRole="button"
-          accessibilityLabel={action.label}
+          accessibilityRole="button"accessibilityLabel={action.label}
           style={{
             alignItems: 'center',
             width: 78,
@@ -41,7 +40,7 @@ export function ActionCenterRow({ actions }: { actions: QuickAction[] }) {
           >
             <Ionicons name={action.icon} size={22} color={colors.brandPrimary} />
           </View>
-          <AppText variant="caption" weight="semiBold" style={{ textAlign: 'center' }} numberOfLines={2}>
+          <AppText variant="caption"weight="semiBold"style={{ textAlign: 'center' }} numberOfLines={2}>
             {action.label}
           </AppText>
         </Pressable>

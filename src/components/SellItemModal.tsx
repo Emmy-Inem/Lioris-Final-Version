@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { AppTextField } from './AppTextField';
-import { AppButton } from './AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
-import { MarketplaceListing } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Modal, Pressable, ScrollView, View } from'react-native';
+import { Image } from'expo-image';
+import * as ImagePicker from'expo-image-picker';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { AppTextField } from'./AppTextField';
+import { AppButton } from'./AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
+import { MarketplaceListing } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
 const CATEGORIES: MarketplaceListing['category'][] = ['Electronics', 'Books/Academic', 'Furniture/Room Accessories'];
 const CONDITIONS: MarketplaceListing['condition'][] = ['New', 'Like New', 'Fair'];
@@ -84,22 +84,21 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
   const canSubmit = title.trim().length > 0 && price.trim().length > 0;
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 56, paddingHorizontal: spacing.lg }}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
-            <AppText variant="h1" weight="bold">
+            <AppText variant="h1"weight="bold">
               Sell an Item
             </AppText>
-            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button"accessibilityLabel="Close">
+              <Ionicons name="close"size={24} color={colors.textPrimary} />
             </Pressable>
           </View>
 
           <Pressable
             onPress={pickPhoto}
-            accessibilityRole="button"
-            accessibilityLabel={photoUri ? 'Change item photo' : 'Add item photo'}
+            accessibilityRole="button"accessibilityLabel={photoUri ? 'Change item photo' : 'Add item photo'}
             style={{
               borderWidth: 1,
               borderColor: colors.border,
@@ -112,28 +111,26 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
             }}
           >
             {photoUri ? (
-              <Image source={{ uri: photoUri }} style={{ width: '100%', height: 180 }} contentFit="cover" transition={200} />
+              <Image source={{ uri: photoUri }} style={{ width: '100%', height: 180 }} contentFit="cover"transition={200} />
             ) : (
               <>
-                <Ionicons name="camera" size={22} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
-                <AppText tone="secondary" variant="bodySmall">
+                <Ionicons name="camera"size={22} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+                <AppText tone="secondary"variant="bodySmall">
                   Add a photo
                 </AppText>
               </>
             )}
           </Pressable>
 
-          <AppTextField label="What are you selling?" placeholder="e.g. TI-84 Graphing Calculator" value={title} onChangeText={setTitle} />
-          <AppTextField label="Price" placeholder="e.g. $45" value={price} onChangeText={setPrice} keyboardType="numbers-and-punctuation" />
+          <AppTextField label="What are you selling?"placeholder="e.g. TI-84 Graphing Calculator"value={title} onChangeText={setTitle} />
+          <AppTextField label="Price"placeholder="e.g. $45"value={price} onChangeText={setPrice} keyboardType="numbers-and-punctuation" />
           <AppTextField
-            label="Description"
-            placeholder="Condition details, why you're selling, pickup info..."
-            value={description}
+            label="Description"placeholder="Condition details, why you're selling, pickup info..."value={description}
             onChangeText={setDescription}
             multiline
           />
 
-          <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+          <AppText weight="bold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
             Category
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md }}>
@@ -143,8 +140,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
                 <Pressable
                   key={cat}
                   onPress={() => setCategory(cat)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
+                  accessibilityRole="radio"accessibilityState={{ checked: selected }}
                   accessibilityLabel={cat}
                   style={{
                     paddingHorizontal: spacing.md,
@@ -155,7 +151,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
                     borderColor: colors.border,
                   }}
                 >
-                  <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
+                  <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'brand' : 'secondary'}>
                     {cat}
                   </AppText>
                 </Pressable>
@@ -163,7 +159,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
             })}
           </View>
 
-          <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+          <AppText weight="bold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
             Condition
           </AppText>
           <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl }}>
@@ -173,8 +169,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
                 <Pressable
                   key={cond}
                   onPress={() => setCondition(cond)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
+                  accessibilityRole="radio"accessibilityState={{ checked: selected }}
                   accessibilityLabel={cond}
                   style={{
                     paddingHorizontal: spacing.md,
@@ -185,7 +180,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
                     borderColor: colors.border,
                   }}
                 >
-                  <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
+                  <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'brand' : 'secondary'}>
                     {cond}
                   </AppText>
                 </Pressable>
@@ -193,7 +188,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
             })}
           </View>
 
-          <AppButton label="Publish Listing" onPress={handlePublish} loading={submitting} disabled={!canSubmit} fullWidth />
+          <AppButton label="Publish Listing"onPress={handlePublish} loading={submitting} disabled={!canSubmit} fullWidth />
         </ScrollView>
       </View>
     </Modal>

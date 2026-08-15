@@ -1,4 +1,4 @@
-import { FALL_BACK_TO_MOCKS } from './config';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 /**
  * Wraps a real API call. If it fails (network error, 404 because the

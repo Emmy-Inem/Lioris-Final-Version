@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { OnboardingShell } from '@/components/OnboardingShell';
-import { ChipSelect } from '@/components/ChipSelect';
-import { AppButton } from '@/components/AppButton';
-import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import React, { useState } from'react';
+import { OnboardingShell } from'@/components/OnboardingShell';
+import { ChipSelect } from'@/components/ChipSelect';
+import { AppButton } from'@/components/AppButton';
+import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
 
 const INTERESTS = [
   'Career & Networking',
@@ -36,13 +36,9 @@ export default function SelectInterestsScreen() {
 
   return (
     <OnboardingShell
-      currentPath="/(auth)/onboarding/select-interests"
-      title="Pick a few interests"
-      subtitle="Choose at least 3 — we'll use these to recommend communities and events."
-      footer={
+      currentPath="/(auth)/onboarding/select-interests"title="Pick a few interests"subtitle="Choose at least 3 — we'll use these to recommend communities and events."footer={
         <AppButton
-          label="Continue"
-          onPress={handleContinue}
+          label="Continue"onPress={handleContinue}
           loading={submitting}
           disabled={interests.length < 3}
           fullWidth

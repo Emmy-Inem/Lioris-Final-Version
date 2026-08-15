@@ -1,12 +1,12 @@
-import React from 'react';
-import { ScrollView, View } from 'react-native';
-import { ScreenContainer } from './ScreenContainer';
-import { AppText } from './AppText';
-import { AuthHeroBackground } from './AuthHeroBackground';
-import { WaveCard } from './WaveCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { onboardingProgress } from '@/auth/onboardingSteps';
+import React from'react';
+import { ScrollView, View } from'react-native';
+import { ScreenContainer } from'./ScreenContainer';
+import { AppText } from'./AppText';
+import { AuthHeroBackground } from'./AuthHeroBackground';
+import { WaveCard } from'./WaveCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { onboardingProgress } from'@/auth/onboardingSteps';
 
 interface OnboardingShellProps {
   currentPath: string;
@@ -26,7 +26,7 @@ export function OnboardingShell({ currentPath, title, subtitle, children, footer
 
   return (
     <ScreenContainer noPadding glow={false}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xl }}>
+      <ScrollView keyboardShouldPersistTaps="handled"contentContainerStyle={{ paddingBottom: spacing.xl }}>
         <AuthHeroBackground height={110}>
           <View style={{ flex: 1, justifyContent: 'flex-end', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg }}>
             <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
@@ -42,18 +42,18 @@ export function OnboardingShell({ currentPath, title, subtitle, children, footer
                 />
               ))}
             </View>
-            <AppText tone="inverse" variant="caption" weight="semiBold" style={{ opacity: 0.85 }}>
+            <AppText tone="inverse"variant="caption"weight="semiBold"style={{ opacity: 0.85 }}>
               Step {step} of {total}
             </AppText>
           </View>
         </AuthHeroBackground>
 
         <WaveCard>
-          <AppText variant="h1" weight="bold" style={{ marginBottom: spacing.xs }}>
+          <AppText variant="h1"weight="bold"style={{ marginBottom: spacing.xs }}>
             {title}
           </AppText>
           {subtitle ? (
-            <AppText tone="secondary" style={{ marginBottom: spacing.xl }}>
+            <AppText tone="secondary"style={{ marginBottom: spacing.xl }}>
               {subtitle}
             </AppText>
           ) : (

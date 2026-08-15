@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
-import { AppText } from './AppText';
-import { AppButton } from './AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
+import React, { useState } from'react';
+import { Modal, Pressable, ScrollView, View } from'react-native';
+import { AppText } from'./AppText';
+import { AppButton } from'./AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
 
 export interface LibraryFilters {
   resourceType: string;
@@ -33,7 +33,7 @@ interface LibraryFilterModalProps {
   onApply: (filters: LibraryFilters) => void;
 }
 
-/** Ported from "Library Filter Options" modal, wired to the Library screen's filter icon. */
+/** Ported from"Library Filter Options"modal, wired to the Library screen's filter icon. */
 export function LibraryFilterModal({ visible, onClose, filters, onApply }: LibraryFilterModalProps) {
   const { colors, spacing } = useTheme();
   const [draft, setDraft] = useState<LibraryFilters>(filters);
@@ -48,47 +48,42 @@ export function LibraryFilterModal({ visible, onClose, filters, onApply }: Libra
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} accessible={false} />
         <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
-            <AppText variant="h2" weight="bold">
-              Library Filter Options 📚
+            <AppText variant="h2"weight="bold">
+              Library Filter Options 
             </AppText>
-            <AppText weight="bold" tone="brand" onPress={handleReset}>
+            <AppText weight="bold"tone="brand"onPress={handleReset}>
               Reset All
             </AppText>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <FilterSection
-              label="Resource Type"
-              options={RESOURCE_TYPES}
+              label="Resource Type"options={RESOURCE_TYPES}
               selected={draft.resourceType}
               onSelect={(v) => setDraft((prev) => ({ ...prev, resourceType: v }))}
             />
             <FilterSection
-              label="Department"
-              options={DEPARTMENTS}
+              label="Department"options={DEPARTMENTS}
               selected={draft.department}
               onSelect={(v) => setDraft((prev) => ({ ...prev, department: v }))}
             />
             <FilterSection
-              label="Study Level"
-              options={STUDY_LEVELS}
+              label="Study Level"options={STUDY_LEVELS}
               selected={draft.studyLevel}
               onSelect={(v) => setDraft((prev) => ({ ...prev, studyLevel: v }))}
             />
             <FilterSection
-              label="Minimum Rating Quality"
-              options={RATINGS}
+              label="Minimum Rating Quality"options={RATINGS}
               selected={draft.minRating}
               onSelect={(v) => setDraft((prev) => ({ ...prev, minRating: v }))}
             />
             <FilterSection
-              label="Sort Documents By"
-              options={SORT_OPTIONS}
+              label="Sort Documents By"options={SORT_OPTIONS}
               selected={draft.sortBy}
               onSelect={(v) => setDraft((prev) => ({ ...prev, sortBy: v }))}
               last
@@ -96,7 +91,7 @@ export function LibraryFilterModal({ visible, onClose, filters, onApply }: Libra
           </ScrollView>
 
           <View style={{ marginTop: spacing.lg }}>
-            <AppButton label="Apply Filters" onPress={handleApply} fullWidth />
+            <AppButton label="Apply Filters"onPress={handleApply} fullWidth />
           </View>
         </View>
       </View>
@@ -120,7 +115,7 @@ function FilterSection({
   const { colors, spacing, radius } = useTheme();
   return (
     <View style={{ marginBottom: last ? 0 : spacing.lg }}>
-      <AppText weight="semiBold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+      <AppText weight="semiBold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
         {label}
       </AppText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
@@ -130,8 +125,7 @@ function FilterSection({
             <Pressable
               key={opt}
               onPress={() => onSelect(opt)}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: isSelected }}
+              accessibilityRole="radio"accessibilityState={{ checked: isSelected }}
               accessibilityLabel={opt}
               style={{
                 paddingHorizontal: spacing.md,
@@ -142,7 +136,7 @@ function FilterSection({
                 borderColor: colors.border,
               }}
             >
-              <AppText variant="bodySmall" weight="semiBold" tone={isSelected ? 'brand' : 'secondary'}>
+              <AppText variant="bodySmall"weight="semiBold"tone={isSelected ? 'brand' : 'secondary'}>
                 {opt}
               </AppText>
             </Pressable>

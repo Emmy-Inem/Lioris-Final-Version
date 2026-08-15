@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import React, { useEffect } from'react';
+import { View } from'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from'react-native-reanimated';
 
 /** Ported from PresenceHalo (CommunicationAndStudy.kt): a pulsing green online-status dot. */
 export function PresenceHalo({ isOnline }: { isOnline: boolean }) {

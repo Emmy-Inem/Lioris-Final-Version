@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { Alert, Linking, Modal, Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from '../AppText';
-import { AppTextField } from '../AppTextField';
-import { AppButton } from '../AppButton';
-import { SolidCard } from '../SolidCard';
-import { useTheme } from '@/theme/ThemeProvider';
+import React, { useState } from'react';
+import { Alert, Linking, Modal, Pressable, ScrollView, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'../AppText';
+import { AppTextField } from'../AppTextField';
+import { AppButton } from'../AppButton';
+import { SolidCard } from'../SolidCard';
+import { useTheme } from'@/theme/ThemeProvider';
 
 export interface PortalLink {
   id: string;
@@ -48,7 +48,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
     setAdding(false);
     setNewTitle('');
     setNewUrl('');
-    Alert.alert('Link Published', `"${created.title}" is now available in the student Utility Hub.`);
+    Alert.alert('Link Published', `"${created.title}"is now available in the student Utility Hub.`);
   }
 
   function handleOpenLink(url: string) {
@@ -58,7 +58,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} accessible={false} />
         <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
@@ -68,17 +68,17 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Ionicons name="link" size={20} color={colors.brandPrimary} />
-              <AppText variant="h2" weight="bold">
+              <Ionicons name="link"size={20} color={colors.brandPrimary} />
+              <AppText variant="h2"weight="bold">
                 Manage Campus Portal Links 🔗
               </AppText>
             </View>
             <Pressable onPress={onClose} hitSlop={8}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
+              <Ionicons name="close"size={22} color={colors.textSecondary} />
             </Pressable>
           </View>
 
-          <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
+          <AppText tone="secondary"style={{ marginBottom: spacing.md }}>
             Publish, edit, and organize verified institutional bookmarks displayed to students and staff.
           </AppText>
 
@@ -102,11 +102,11 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
                   <Ionicons name={link.icon} size={18} color={colors.brandPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText weight="bold" variant="bodySmall">
+                  <AppText weight="bold"variant="bodySmall">
                     {link.title}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                    {link.url} &bull; {link.category}
+                  <AppText tone="secondary"variant="caption"numberOfLines={1}>
+                    {link.url} • {link.category}
                   </AppText>
                 </View>
                 <Pressable
@@ -114,29 +114,29 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
                   hitSlop={8}
                   style={{ padding: 4 }}
                 >
-                  <Ionicons name="open-outline" size={18} color={colors.brandPrimary} />
+                  <Ionicons name="open-outline"size={18} color={colors.brandPrimary} />
                 </Pressable>
                 <Pressable
                   onPress={() => handleDeleteLink(link.id)}
                   hitSlop={8}
                   style={{ padding: 4 }}
                 >
-                  <Ionicons name="trash-outline" size={18} color={colors.critical} />
+                  <Ionicons name="trash-outline"size={18} color={colors.critical} />
                 </Pressable>
               </View>
             ))}
 
             {adding ? (
               <SolidCard style={{ marginTop: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
-                <AppText weight="bold" variant="bodySmall" tone="brand" style={{ marginBottom: spacing.xs }}>
+                <AppText weight="bold"variant="bodySmall"tone="brand"style={{ marginBottom: spacing.xs }}>
                   Add New Portal Bookmark
                 </AppText>
-                <AppTextField label="Link Title" placeholder="e.g. Hostels & Accommodation Portal" value={newTitle} onChangeText={setNewTitle} />
-                <AppTextField label="URL Destination" placeholder="https://hostels.campus.edu.ng" value={newUrl} onChangeText={setNewUrl} autoCapitalize="none" keyboardType="url" />
-                <AppTextField label="Category" placeholder="e.g. Housing, Exams, Library" value={newCategory} onChangeText={setNewCategory} />
+                <AppTextField label="Link Title"placeholder="e.g. Hostels & Accommodation Portal"value={newTitle} onChangeText={setNewTitle} />
+                <AppTextField label="URL Destination"placeholder="https://hostels.campus.edu.ng"value={newUrl} onChangeText={setNewUrl} autoCapitalize="none"keyboardType="url" />
+                <AppTextField label="Category"placeholder="e.g. Housing, Exams, Library"value={newCategory} onChangeText={setNewCategory} />
                 <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
-                  <AppButton label="Cancel" variant="ghost" onPress={() => setAdding(false)} />
-                  <AppButton label="Save Bookmark" disabled={!newTitle.trim() || !newUrl.trim()} onPress={handleCreateLink} />
+                  <AppButton label="Cancel"variant="ghost"onPress={() => setAdding(false)} />
+                  <AppButton label="Save Bookmark"disabled={!newTitle.trim() || !newUrl.trim()} onPress={handleCreateLink} />
                 </View>
               </SolidCard>
             ) : null}
@@ -144,9 +144,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
 
           {!adding ? (
             <AppButton
-              label="+ Add Portal Link"
-              variant="secondary"
-              onPress={() => setAdding(true)}
+              label="+ Add Portal Link"variant="secondary"onPress={() => setAdding(true)}
               fullWidth
             />
           ) : null}

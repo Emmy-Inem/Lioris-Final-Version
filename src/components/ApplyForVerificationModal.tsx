@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, View } from 'react-native';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { AppText } from './AppText';
-import { AppTextField } from './AppTextField';
-import { AppButton } from './AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
-import { haptics } from '@/utils/haptics';
+import React, { useEffect, useState } from'react';
+import { Modal, Pressable, View } from'react-native';
+import { Image } from'expo-image';
+import * as ImagePicker from'expo-image-picker';
+import { Ionicons } from'@expo/vector-icons';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
+import { AppText } from'./AppText';
+import { AppTextField } from'./AppTextField';
+import { AppButton } from'./AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
+import { haptics } from'@/utils/haptics';
 
 const DOCUMENT_TYPES = ['Student ID', 'Admission Letter', 'Staff ID', 'Alumni Certificate'] as const;
 
@@ -24,7 +24,7 @@ interface ApplyForVerificationModalProps {
 }
 
 /**
- * Backs the Profile screen's "Apply for Verification" banner for
+ * Backs the Profile screen's"Apply for Verification"banner for
  * accounts that didn't auto-verify at registration. PRD Section 8 —
  * real scale+fade entrance for the dialog (same treatment as
  * AdminConfigModal / DiscussionWorkspacesModal).
@@ -80,23 +80,23 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
         <Animated.View style={[{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%' }, animatedStyle]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-            <Ionicons name="shield-checkmark" size={20} color={colors.brandPrimary} />
-            <AppText variant="h3" weight="bold">
+            <Ionicons name="shield-checkmark"size={20} color={colors.brandPrimary} />
+            <AppText variant="h3"weight="bold">
               Apply for Verification
             </AppText>
           </View>
-          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.lg }}>
+          <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.lg }}>
             Submit your school and a supporting document reference. A reviewer approves or
             rejects this manually — it isn't granted automatically.
           </AppText>
 
-          <AppTextField label="Your school" value={institutionClaimed} onChangeText={setInstitutionClaimed} placeholder="e.g. Obafemi Awolowo University" />
+          <AppTextField label="Your school"value={institutionClaimed} onChangeText={setInstitutionClaimed} placeholder="e.g. Obafemi Awolowo University" />
 
-          <AppText weight="semiBold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+          <AppText weight="semiBold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
             Document type
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md }}>
@@ -106,8 +106,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
                 <Pressable
                   key={type}
                   onPress={() => setDocumentType(type)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
+                  accessibilityRole="radio"accessibilityState={{ checked: selected }}
                   accessibilityLabel={type}
                   style={{
                     paddingHorizontal: spacing.md,
@@ -118,7 +117,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
                     borderColor: colors.border,
                   }}
                 >
-                  <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
+                  <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'brand' : 'secondary'}>
                     {type}
                   </AppText>
                 </Pressable>
@@ -127,16 +126,14 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
           </View>
 
           <AppTextField
-            label="Document reference / ID number"
-            value={documentReference}
+            label="Document reference / ID number"value={documentReference}
             onChangeText={setDocumentReference}
             placeholder="e.g. Matric No. OAU/2021/04521"
           />
 
           <Pressable
             onPress={pickDocumentPhoto}
-            accessibilityRole="button"
-            accessibilityLabel={documentPhotoUri ? 'Change uploaded document photo' : 'Upload supporting document'}
+            accessibilityRole="button"accessibilityLabel={documentPhotoUri ? 'Change uploaded document photo' : 'Upload supporting document'}
             style={{
               borderWidth: 1,
               borderColor: colors.border,
@@ -149,11 +146,11 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
             }}
           >
             {documentPhotoUri ? (
-              <Image source={{ uri: documentPhotoUri }} style={{ width: '100%', height: 120 }} contentFit="cover" transition={200} />
+              <Image source={{ uri: documentPhotoUri }} style={{ width: '100%', height: 120 }} contentFit="cover"transition={200} />
             ) : (
               <>
-                <Ionicons name="cloud-upload-outline" size={20} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
-                <AppText tone="secondary" variant="bodySmall">
+                <Ionicons name="cloud-upload-outline"size={20} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+                <AppText tone="secondary"variant="bodySmall">
                   Upload supporting document (photo)
                 </AppText>
               </>
@@ -161,8 +158,8 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
           </Pressable>
 
           <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
-            <AppButton label="Cancel" variant="ghost" onPress={onClose} />
-            <AppButton label="Submit for review" onPress={handleSubmit} disabled={!canSubmit} />
+            <AppButton label="Cancel"variant="ghost"onPress={onClose} />
+            <AppButton label="Submit for review"onPress={handleSubmit} disabled={!canSubmit} />
           </View>
         </Animated.View>
       </View>

@@ -1,3 +1,3 @@
-import { EventDetailScreen } from '@/components/EventDetailScreen';
+import { EventDetailScreen } from'@/components/EventDetailScreen';
 
 export default EventDetailScreen;

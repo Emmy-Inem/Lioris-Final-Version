@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import Svg, { Circle, Line, Polyline } from 'react-native-svg';
-import { SolidCard } from '@/components/SolidCard';
-import { AppText } from '@/components/AppText';
-import { Badge } from '@/components/Badge';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listReports } from '@/api/moderation';
-import { listResources } from '@/api/resources';
-import { listEvents } from '@/api/events';
-import { listFeedPosts } from '@/api/posts';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Pressable, ScrollView, View } from'react-native';
+import { useQuery } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import Svg, { Circle, Line, Polyline } from'react-native-svg';
+import { SolidCard } from'@/components/SolidCard';
+import { AppText } from'@/components/AppText';
+import { Badge } from'@/components/Badge';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listReports } from'@/api/moderation';
+import { listResources } from'@/api/resources';
+import { listEvents } from'@/api/events';
+import { listFeedPosts } from'@/api/posts';
+import { haptics } from'@/utils/haptics';
 
 const DEPARTMENTS = [
   { name: 'Computer Science & AI', files: 18, rating: 4.9, activeStudents: 420 },
@@ -66,35 +66,27 @@ export function AnalyticsTab() {
       {/* Top 4 KPI Metrics */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
         <MetricCard
-          label="Active Community Posts"
-          value={String(posts.length)}
-          growth="+18% this week"
-          icon="chatbubbles-outline"
+          label="Active Community Posts"value={String(posts.length)}
+          growth="+18% this week"icon="chatbubbles-outline"
         />
         <MetricCard
-          label="Library Resources"
-          value={String(resources.length)}
-          growth="+6 newly indexed"
-          icon="document-text-outline"
+          label="Library Resources"value={String(resources.length)}
+          growth="+6 newly indexed"icon="document-text-outline"
         />
         <MetricCard
-          label="Campus Events"
-          value={String(events.length)}
-          growth="5 upcoming"
-          icon="calendar-outline"
+          label="Campus Events"value={String(events.length)}
+          growth="5 upcoming"icon="calendar-outline"
         />
         <MetricCard
-          label="Moderation Queue"
-          value={String(openReports.length)}
+          label="Moderation Queue"value={String(openReports.length)}
           growth={openReports.length === 0 ? 'Queue clean' : `${openReports.length} pending`}
-          icon="shield-outline"
-          tone={openReports.length > 0 ? 'warning' : 'brand'}
+          icon="shield-outline"tone={openReports.length > 0 ? 'warning' : 'brand'}
         />
       </View>
 
       {/* Analytics Timeframe Header */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-        <AppText variant="h3" weight="bold">
+        <AppText variant="h3"weight="bold">
           University Pulse Analytics
         </AppText>
         <View style={{ flexDirection: 'row', gap: spacing.xs }}>
@@ -111,8 +103,8 @@ export function AnalyticsTab() {
               paddingVertical: 5,
             }}
           >
-            <Ionicons name="download-outline" size={13} color={colors.textSecondary} />
-            <AppText variant="caption" weight="bold" tone="secondary">
+            <Ionicons name="download-outline"size={13} color={colors.textSecondary} />
+            <AppText variant="caption"weight="bold"tone="secondary">
               Export CSV
             </AppText>
           </Pressable>
@@ -141,7 +133,7 @@ export function AnalyticsTab() {
                 backgroundColor: selected ? colors.brandPrimary : colors.divider,
               }}
             >
-              <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                 {t}
               </AppText>
             </Pressable>
@@ -163,33 +155,33 @@ export function AnalyticsTab() {
       {/* Department Breakdown */}
       <SolidCard frosted>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-          <Ionicons name="school-outline" size={16} color={colors.brandPrimary} />
-          <AppText weight="bold" style={{ flex: 1 }}>
+          <Ionicons name="school-outline"size={16} color={colors.brandPrimary} />
+          <AppText weight="bold"style={{ flex: 1 }}>
             Department Engagement & Resources
           </AppText>
         </View>
-        <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
+        <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.md }}>
           Evaluation of academic resource uploads, active student cohort density, and faculty engagement.
         </AppText>
 
         {DEPARTMENTS.map((dept) => (
           <View key={dept.name} style={{ marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-              <AppText weight="semiBold" variant="bodySmall">
+              <AppText weight="semiBold"variant="bodySmall">
                 {dept.name}
               </AppText>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="star" size={12} color="#F5A623" />
-                <AppText weight="bold" variant="caption">
+                <Ionicons name="star"size={12} color="#F5A623" />
+                <AppText weight="bold"variant="caption">
                   {dept.rating.toFixed(1)}
                 </AppText>
               </View>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-              <AppText tone="secondary" variant="caption">
-                {dept.files} files indexed &bull; {dept.activeStudents} students
+              <AppText tone="secondary"variant="caption">
+                {dept.files} files indexed • {dept.activeStudents} students
               </AppText>
-              <AppText tone="brand" variant="caption" weight="bold">
+              <AppText tone="brand"variant="caption"weight="bold">
                 {Math.round((dept.activeStudents / 500) * 100)}% active
               </AppText>
             </View>
@@ -227,16 +219,16 @@ function MetricCard({
   return (
     <SolidCard radius={18} frosted style={{ width: '48%', minHeight: 90, justifyContent: 'space-between' }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ flex: 1, marginRight: 4 }}>
+        <AppText tone="secondary"variant="caption"numberOfLines={1} style={{ flex: 1, marginRight: 4 }}>
           {label}
         </AppText>
         <Ionicons name={icon} size={16} color={colors.brandPrimary} />
       </View>
       <View>
-        <AppText variant="h2" weight="bold">
+        <AppText variant="h2"weight="bold">
           {value}
         </AppText>
-        <AppText tone={tone === 'critical' ? 'critical' : 'brand'} variant="caption" weight="bold" style={{ fontSize: 11 }}>
+        <AppText tone={tone === 'critical' ? 'critical' : 'brand'} variant="caption"weight="bold"style={{ fontSize: 11 }}>
           {growth}
         </AppText>
       </View>
@@ -248,7 +240,7 @@ function Legend({ color, label }: { color: string; label: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-      <AppText variant="caption" tone="secondary">
+      <AppText variant="caption"tone="secondary">
         {label}
       </AppText>
     </View>
@@ -285,19 +277,19 @@ function LineChart({ students, alumni }: { students: number[]; alumni: number[] 
 
   return (
     <View>
-      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+      <Svg width="100%"height={height} viewBox={`0 0 ${width} ${height}`}>
         {[0, 25, 50, 75, 100].map((pct) => {
           const y = padding + (height - padding * 2) * (1 - pct / 100);
           return <Line key={pct} x1={padding} y1={y} x2={width - padding} y2={y} stroke={colors.divider} strokeWidth={1} />;
         })}
-        <Polyline points={toPoints(students)} fill="none" stroke={colors.brandPrimary} strokeWidth={2.5} />
-        <Polyline points={toPoints(alumni)} fill="none" stroke={colors.brandMagenta} strokeWidth={2.5} />
+        <Polyline points={toPoints(students)} fill="none"stroke={colors.brandPrimary} strokeWidth={2.5} />
+        <Polyline points={toPoints(alumni)} fill="none"stroke={colors.brandMagenta} strokeWidth={2.5} />
         {dots(students, colors.brandPrimary)}
         {dots(alumni, colors.brandMagenta)}
       </Svg>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, paddingHorizontal: 4 }}>
         {CHART_DAYS.map((d) => (
-          <AppText key={d} tone="secondary" variant="caption">
+          <AppText key={d} tone="secondary"variant="caption">
             {d}
           </AppText>
         ))}

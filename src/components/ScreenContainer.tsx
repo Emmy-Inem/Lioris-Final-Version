@@ -1,8 +1,8 @@
-import React from 'react';
-import { Platform, ScrollView, StyleSheet, View, ViewProps } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '@/theme/ThemeProvider';
-import { ScreenGlowBackground } from './ScreenGlowBackground';
+import React from'react';
+import { Platform, ScrollView, StyleSheet, View, ViewProps } from'react-native';
+import { SafeAreaView } from'react-native-safe-area-context';
+import { useTheme } from'@/theme/ThemeProvider';
+import { ScreenGlowBackground } from'./ScreenGlowBackground';
 
 interface ScreenContainerProps extends ViewProps {
   edges?: Array<'top' | 'bottom' | 'left' | 'right'>;

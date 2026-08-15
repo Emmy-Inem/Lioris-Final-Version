@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, Switch, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { SolidCard } from '@/components/SolidCard';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { Badge } from '@/components/Badge';
-import { AppButton } from '@/components/AppButton';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listFeedPosts, deletePost, updatePost } from '@/api/posts';
-import { Post } from '@/api/types';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, Switch, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { SolidCard } from'@/components/SolidCard';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { Badge } from'@/components/Badge';
+import { AppButton } from'@/components/AppButton';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listFeedPosts, deletePost, updatePost } from'@/api/posts';
+import { Post } from'@/api/types';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { haptics } from'@/utils/haptics';
 
 const WORKSPACES = ['All Forums', 'Tech Hub', 'Housing', 'Social', 'Academics'];
 
@@ -84,7 +84,7 @@ export function ForumsModerationTab() {
       });
       await queryClient.invalidateQueries({ queryKey: ['feed'] });
       await refetch();
-      Alert.alert(newPinned ? 'Thread Pinned' : 'Thread Unpinned', `"${post.title}" has been updated.`);
+      Alert.alert(newPinned ? 'Thread Pinned' : 'Thread Unpinned', `"${post.title}"has been updated.`);
     } finally {
       setActingId(null);
     }
@@ -94,7 +94,7 @@ export function ForumsModerationTab() {
     haptics.error();
     Alert.alert(
       'Takedown Community Post?',
-      `Permanently purge "${post.title}" and remove all comments?`,
+      `Permanently purge"${post.title}"and remove all comments?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -106,7 +106,7 @@ export function ForumsModerationTab() {
               await deletePost(post.id);
               recordAuditLogEntry({
                 action: 'event_purged',
-                summary: `Purged violating community post: "${post.title}" by ${post.authorName}`,
+                summary: `Purged violating community post: "${post.title}"by ${post.authorName}`,
                 targetType: 'post',
                 targetId: post.id,
                 reason: 'Community guidelines violation purge',
@@ -142,7 +142,7 @@ export function ForumsModerationTab() {
             backgroundColor: section === 'threads' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={section === 'threads' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption"weight="bold"tone={section === 'threads' ? 'inverse' : 'secondary'}>
             Live Forum Threads ({posts.length})
           </AppText>
         </Pressable>
@@ -160,7 +160,7 @@ export function ForumsModerationTab() {
             backgroundColor: section === 'matrix' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={section === 'matrix' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption"weight="bold"tone={section === 'matrix' ? 'inverse' : 'secondary'}>
             Moderator Matrix ({activeMods} Active)
           </AppText>
         </Pressable>
@@ -171,9 +171,7 @@ export function ForumsModerationTab() {
           {/* Search bar */}
           <View style={{ marginBottom: spacing.sm }}>
             <AppTextField
-              label=""
-              placeholder="Search forum posts by title, content, author..."
-              value={searchQuery}
+              label=""placeholder="Search forum posts by title, content, author..."value={searchQuery}
               onChangeText={setSearchQuery}
             />
           </View>
@@ -200,7 +198,7 @@ export function ForumsModerationTab() {
                     backgroundColor: selected ? colors.brandPrimary : colors.divider,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                  <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                     {w}
                   </AppText>
                 </Pressable>
@@ -215,20 +213,20 @@ export function ForumsModerationTab() {
                 <View style={{ flex: 1, marginRight: spacing.sm }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     {post.isPinned ? (
-                      <Ionicons name="pin" size={14} color={colors.brandPrimary} />
+                      <Ionicons name="pin"size={14} color={colors.brandPrimary} />
                     ) : null}
-                    <AppText weight="bold" variant="body">
+                    <AppText weight="bold"variant="body">
                       {post.title}
                     </AppText>
                   </View>
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    Author: {post.authorName} ({post.authorRole.toUpperCase()}) &bull; {post.category} &bull; {post.likesCount} Likes &bull; {post.commentsCount} Comments
+                  <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
+                    Author: {post.authorName} ({post.authorRole.toUpperCase()}) • {post.category} • {post.likesCount} Likes • {post.commentsCount} Comments
                   </AppText>
                 </View>
-                {post.isPinned ? <Badge label="Pinned" tone="brand" /> : null}
+                {post.isPinned ? <Badge label="Pinned"tone="brand" /> : null}
               </View>
 
-              <AppText tone="secondary" variant="bodySmall" numberOfLines={3} style={{ marginBottom: spacing.md }}>
+              <AppText tone="secondary"variant="bodySmall"numberOfLines={3} style={{ marginBottom: spacing.md }}>
                 {post.content}
               </AppText>
 
@@ -236,8 +234,7 @@ export function ForumsModerationTab() {
                 <View style={{ flex: 1 }}>
                   <AppButton
                     label={post.isPinned ? 'Unpin' : 'Pin Announcement'}
-                    variant="secondary"
-                    loading={actingId === post.id}
+                    variant="secondary"loading={actingId === post.id}
                     onPress={() => handleTogglePin(post)}
                   />
                 </View>
@@ -253,14 +250,14 @@ export function ForumsModerationTab() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="trash-outline" size={18} color={colors.critical} />
+                  <Ionicons name="trash-outline"size={18} color={colors.critical} />
                 </Pressable>
               </View>
             </SolidCard>
           ))}
 
           {!isLoading && filteredPosts.length === 0 ? (
-            <EmptyState title="No forum discussions found" description="Try selecting a different workspace channel or search term." />
+            <EmptyState title="No forum discussions found"description="Try selecting a different workspace channel or search term." />
           ) : null}
         </View>
       ) : (
@@ -268,18 +265,16 @@ export function ForumsModerationTab() {
           {/* Moderator Matrix */}
           <SolidCard frosted style={{ marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-              <Ionicons name="shield-checkmark-outline" size={18} color={colors.brandPrimary} />
-              <AppText weight="bold" variant="bodySmall">
+              <Ionicons name="shield-checkmark-outline"size={18} color={colors.brandPrimary} />
+              <AppText weight="bold"variant="bodySmall">
                 Channel Moderator Directory
               </AppText>
             </View>
-            <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+            <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
               Toggle real-time moderator permissions for student and faculty volunteers across discussion channels.
             </AppText>
             <AppTextField
-              label=""
-              placeholder="Filter moderators by name or handle..."
-              value={modQuery}
+              label=""placeholder="Filter moderators by name or handle..."value={modQuery}
               onChangeText={setModQuery}
             />
           </SolidCard>
@@ -289,7 +284,7 @@ export function ForumsModerationTab() {
             if (matches.length === 0) return null;
             return (
               <SolidCard key={channel} radius={18} frosted style={{ marginBottom: spacing.md }}>
-                <AppText weight="bold" tone="brand" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+                <AppText weight="bold"tone="brand"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
                   {channel.toUpperCase()} CHANNEL
                 </AppText>
                 {matches.map((m) => (
@@ -305,11 +300,11 @@ export function ForumsModerationTab() {
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <AppText weight="bold" variant="bodySmall">
+                      <AppText weight="bold"variant="bodySmall">
                         {m.name}
                       </AppText>
-                      <AppText tone="secondary" variant="caption">
-                        {m.username} &bull; {m.role}
+                      <AppText tone="secondary"variant="caption">
+                        {m.username} • {m.role}
                       </AppText>
                     </View>
                     <Switch

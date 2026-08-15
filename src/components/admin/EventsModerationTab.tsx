@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { SolidCard } from '@/components/SolidCard';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { Badge } from '@/components/Badge';
-import { AppButton } from '@/components/AppButton';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listEvents, createEvent, updateEvent, revokeEventApproval, approveEvent, purgeEvent } from '@/api/events';
-import { CampusEvent, EventCategory } from '@/api/types';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Image } from'expo-image';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { SolidCard } from'@/components/SolidCard';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { Badge } from'@/components/Badge';
+import { AppButton } from'@/components/AppButton';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listEvents, createEvent, updateEvent, revokeEventApproval, approveEvent, purgeEvent } from'@/api/events';
+import { CampusEvent, EventCategory } from'@/api/types';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { haptics } from'@/utils/haptics';
 
 const EVENT_COVER_PRESETS = [
   { id: 'event_tech_hackathon', label: 'Hackathon & Tech', src: require('../../../assets/images/event_tech_hackathon.jpg') },
@@ -146,7 +146,7 @@ export function EventsModerationTab() {
           targetId: editingEvent.id,
           reason: 'Administrative event parameter revision',
         });
-        Alert.alert('Event Updated', `Changes to "${formTitle.trim()}" have been saved.`);
+        Alert.alert('Event Updated', `Changes to"${formTitle.trim()}"have been saved.`);
       } else {
         await createEvent({
           title: formTitle.trim(),
@@ -159,7 +159,7 @@ export function EventsModerationTab() {
           imageUrl: formCover,
           sponsored: formSponsored,
         });
-        Alert.alert('Event Published', `"${formTitle.trim()}" is now live on the campus calendar.`);
+        Alert.alert('Event Published', `"${formTitle.trim()}"is now live on the campus calendar.`);
       }
 
       await queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -179,7 +179,7 @@ export function EventsModerationTab() {
     await updateEvent(event.id, { isSpotlight: next });
     await queryClient.invalidateQueries({ queryKey: ['events'] });
     await refetch();
-    Alert.alert(next ? 'Pinned to Spotlight' : 'Unpinned from Spotlight', `"${event.title}" banner preference updated.`);
+    Alert.alert(next ? 'Pinned to Spotlight' : 'Unpinned from Spotlight', `"${event.title}"banner preference updated.`);
   }
 
   async function handleToggleApproval(event: CampusEvent) {
@@ -189,10 +189,10 @@ export function EventsModerationTab() {
     try {
       if (isApproved) {
         await revokeEventApproval(event.id);
-        Alert.alert('Approval Revoked', `"${event.title}" has been taken down from public event listings.`);
+        Alert.alert('Approval Revoked', `"${event.title}"has been taken down from public event listings.`);
       } else {
         await approveEvent(event.id);
-        Alert.alert('Event Approved & Live', `"${event.title}" is now published to all student feeds.`);
+        Alert.alert('Event Approved & Live', `"${event.title}"is now published to all student feeds.`);
       }
       queryClient.invalidateQueries({ queryKey: ['events'] });
       await refetch();
@@ -205,7 +205,7 @@ export function EventsModerationTab() {
     haptics.error();
     Alert.alert(
       'Purge Campus Event?',
-      `Permanently delete "${title}" and purge all RSVPs? This action is irreversible.`,
+      `Permanently delete"${title}"and purge all RSVPs? This action is irreversible.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -244,7 +244,7 @@ export function EventsModerationTab() {
             backgroundColor: section === 'approved' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={section === 'approved' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption"weight="bold"tone={section === 'approved' ? 'inverse' : 'secondary'}>
             Live Events Catalog ({approvedEvents.length})
           </AppText>
         </Pressable>
@@ -262,7 +262,7 @@ export function EventsModerationTab() {
             backgroundColor: section === 'pending' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={section === 'pending' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption"weight="bold"tone={section === 'pending' ? 'inverse' : 'secondary'}>
             Pending Review ({pendingEvents.length})
           </AppText>
         </Pressable>
@@ -272,13 +272,11 @@ export function EventsModerationTab() {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
         <View style={{ flex: 1, marginRight: spacing.sm }}>
           <AppTextField
-            label=""
-            placeholder="Search events by title, organizer, location..."
-            value={searchQuery}
+            label=""placeholder="Search events by title, organizer, location..."value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
-        <AppButton label="+ Add Event" onPress={handleOpenCreate} variant="primary" />
+        <AppButton label="+ Add Event"onPress={handleOpenCreate} variant="primary" />
       </View>
 
       {/* Category Pills */}
@@ -299,7 +297,7 @@ export function EventsModerationTab() {
             backgroundColor: selectedCategory === 'all' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={selectedCategory === 'all' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption"weight="bold"tone={selectedCategory === 'all' ? 'inverse' : 'secondary'}>
             All ({section === 'approved' ? approvedEvents.length : pendingEvents.length})
           </AppText>
         </Pressable>
@@ -320,7 +318,7 @@ export function EventsModerationTab() {
                 backgroundColor: selected ? colors.brandPrimary : colors.divider,
               }}
             >
-              <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                 {cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})
               </AppText>
             </Pressable>
@@ -353,7 +351,7 @@ export function EventsModerationTab() {
               />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <AppText variant="body" weight="bold" style={{ flex: 1, marginRight: 6 }}>
+                  <AppText variant="body"weight="bold"style={{ flex: 1, marginRight: 6 }}>
                     {event.title}
                   </AppText>
                   <Badge
@@ -362,26 +360,26 @@ export function EventsModerationTab() {
                   />
                 </View>
 
-                <AppText tone="brand" variant="caption" weight="bold" style={{ marginTop: 2 }}>
-                  {event.category.toUpperCase()} &bull; {event.venueType || 'Physical'} &bull; {event.rsvpCount} RSVPs {event.capacity ? `/ ${event.capacity} seats` : ''}
+                <AppText tone="brand"variant="caption"weight="bold"style={{ marginTop: 2 }}>
+                  {event.category.toUpperCase()} • {event.venueType || 'Physical'} • {event.rsvpCount} RSVPs {event.capacity ? `/ ${event.capacity} seats` : ''}
                 </AppText>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                  <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ flex: 1 }}>
+                  <Ionicons name="location-outline"size={13} color={colors.textSecondary} />
+                  <AppText tone="secondary"variant="caption"numberOfLines={1} style={{ flex: 1 }}>
                     {event.location}
                   </AppText>
                 </View>
 
                 {event.organizerName ? (
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                  <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
                     Organizer: <AppText weight="bold">{event.organizerName}</AppText>
                   </AppText>
                 ) : null}
               </View>
             </View>
 
-            <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="bodySmall"numberOfLines={2} style={{ marginBottom: spacing.md }}>
               {event.description}
             </AppText>
 
@@ -399,14 +397,14 @@ export function EventsModerationTab() {
                   borderRadius: radius.pill,
                 }}
               >
-                <Ionicons name="star" size={12} color={event.isSpotlight ? colors.brandPrimary : colors.textSecondary} />
-                <AppText variant="caption" weight="bold" tone={event.isSpotlight ? 'brand' : 'secondary'}>
+                <Ionicons name="star"size={12} color={event.isSpotlight ? colors.brandPrimary : colors.textSecondary} />
+                <AppText variant="caption"weight="bold"tone={event.isSpotlight ? 'brand' : 'secondary'}>
                   {event.isSpotlight ? 'Spotlight Carousel Active' : 'Enable Spotlight'}
                 </AppText>
               </Pressable>
 
               <View style={{ backgroundColor: colors.divider, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill }}>
-                <AppText variant="caption" weight="bold">
+                <AppText variant="caption"weight="bold">
                   {event.ticketPrice || 'Free'}
                 </AppText>
               </View>
@@ -420,8 +418,8 @@ export function EventsModerationTab() {
                   marginLeft: 'auto',
                 }}
               >
-                <Ionicons name="people-outline" size={14} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" tone="brand">
+                <Ionicons name="people-outline"size={14} color={colors.brandPrimary} />
+                <AppText variant="caption"weight="bold"tone="brand">
                   View Roster ({event.rsvpCount})
                 </AppText>
               </Pressable>
@@ -431,9 +429,7 @@ export function EventsModerationTab() {
             <View style={{ flexDirection: 'row', gap: spacing.xs }}>
               <View style={{ flex: 1 }}>
                 <AppButton
-                  label="Edit Details"
-                  variant="secondary"
-                  onPress={() => handleOpenEdit(event)}
+                  label="Edit Details"variant="secondary"onPress={() => handleOpenEdit(event)}
                 />
               </View>
               <View style={{ flex: 1 }}>
@@ -456,7 +452,7 @@ export function EventsModerationTab() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="trash-outline" size={18} color={colors.critical} />
+                <Ionicons name="trash-outline"size={18} color={colors.critical} />
               </Pressable>
             </View>
           </SolidCard>
@@ -471,7 +467,7 @@ export function EventsModerationTab() {
       ) : null}
 
       {/* Create / Edit Event Modal */}
-      <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
+      <Modal visible={editModalOpen} transparent animationType="slide"onRequestClose={() => setEditModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setEditModalOpen(false)} />
           <View
@@ -485,26 +481,24 @@ export function EventsModerationTab() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="calendar-outline" size={20} color={colors.brandPrimary} />
-                <AppText variant="h2" weight="bold">
+                <Ionicons name="calendar-outline"size={20} color={colors.brandPrimary} />
+                <AppText variant="h2"weight="bold">
                   {editingEvent ? 'Edit Campus Event' : 'Publish Campus Event'}
                 </AppText>
               </View>
               <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <AppTextField
-                label="Event Title"
-                placeholder="e.g. Annual Faculty Hackathon & Symposium"
-                value={formTitle}
+                label="Event Title"placeholder="e.g. Annual Faculty Hackathon & Symposium"value={formTitle}
                 onChangeText={setFormTitle}
               />
 
               {/* Venue Type Picker */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
                 VENUE TYPE
               </AppText>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -522,7 +516,7 @@ export function EventsModerationTab() {
                       backgroundColor: formVenueType === v ? colors.pastelPrimaryBg : colors.surface,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={formVenueType === v ? 'brand' : 'secondary'} numberOfLines={1}>
+                    <AppText variant="caption"weight="bold"tone={formVenueType === v ? 'brand' : 'secondary'} numberOfLines={1}>
                       {v.split(' ')[0]}
                     </AppText>
                   </Pressable>
@@ -530,21 +524,17 @@ export function EventsModerationTab() {
               </View>
 
               <AppTextField
-                label="Venue / Hall Location"
-                placeholder="e.g. University Main Auditorium, Faculty of Technology"
-                value={formLocation}
+                label="Venue / Hall Location"placeholder="e.g. University Main Auditorium, Faculty of Technology"value={formLocation}
                 onChangeText={setFormLocation}
               />
 
               <AppTextField
-                label="Virtual Meeting Link (Optional)"
-                placeholder="https://meet.google.com/xyz or Zoom link"
-                value={formVirtualLink}
+                label="Virtual Meeting Link (Optional)"placeholder="https://meet.google.com/xyz or Zoom link"value={formVirtualLink}
                 onChangeText={setFormVirtualLink}
               />
 
               {/* Category Selector */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
                 EVENT CATEGORY
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -561,7 +551,7 @@ export function EventsModerationTab() {
                       backgroundColor: formCategory === cat ? colors.pastelPrimaryBg : colors.surface,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={formCategory === cat ? 'brand' : 'secondary'}>
+                    <AppText variant="caption"weight="bold"tone={formCategory === cat ? 'brand' : 'secondary'}>
                       {cat.charAt(0).toUpperCase() + cat.slice(1)}
                     </AppText>
                   </Pressable>
@@ -571,32 +561,26 @@ export function EventsModerationTab() {
               <View style={{ flexDirection: 'row', gap: spacing.md }}>
                 <View style={{ flex: 1 }}>
                   <AppTextField
-                    label="Seat Capacity"
-                    placeholder="e.g. 200"
-                    value={formCapacity}
+                    label="Seat Capacity"placeholder="e.g. 200"value={formCapacity}
                     onChangeText={setFormCapacity}
                     keyboardType="numeric"
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <AppTextField
-                    label="Ticket Price"
-                    placeholder="Free or NGN 1,500"
-                    value={formTicketPrice}
+                    label="Ticket Price"placeholder="Free or NGN 1,500"value={formTicketPrice}
                     onChangeText={setFormTicketPrice}
                   />
                 </View>
               </View>
 
               <AppTextField
-                label="Target Cohort"
-                placeholder="e.g. 300L - 500L or Open to All"
-                value={formTargetCohort}
+                label="Target Cohort"placeholder="e.g. 300L - 500L or Open to All"value={formTargetCohort}
                 onChangeText={setFormTargetCohort}
               />
 
               {/* Cover Photo Preset Selector */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
                 EVENT BANNER PHOTO
               </AppText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.md }}>
@@ -616,7 +600,7 @@ export function EventsModerationTab() {
                     >
                       <Image source={preset.src} style={{ width: '100%', height: 60 }} contentFit="cover" />
                       <View style={{ padding: 4, backgroundColor: colors.surface }}>
-                        <AppText variant="caption" weight={isSelected ? 'bold' : 'regular'} numberOfLines={1}>
+                        <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} numberOfLines={1}>
                           {preset.label}
                         </AppText>
                       </View>
@@ -626,9 +610,7 @@ export function EventsModerationTab() {
               </ScrollView>
 
               <AppTextField
-                label="Event Description & Agenda"
-                placeholder="Detail keynotes, panel discussions, prerequisites..."
-                value={formDesc}
+                label="Event Description & Agenda"placeholder="Detail keynotes, panel discussions, prerequisites..."value={formDesc}
                 onChangeText={setFormDesc}
                 multiline
                 numberOfLines={4}
@@ -636,7 +618,7 @@ export function EventsModerationTab() {
             </ScrollView>
 
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setEditModalOpen(false)} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setEditModalOpen(false)} />
               <AppButton
                 label={editingEvent ? 'Save Changes' : 'Publish Live'}
                 loading={saving}
@@ -649,29 +631,29 @@ export function EventsModerationTab() {
       </Modal>
 
       {/* Attendee Roster Modal */}
-      <Modal visible={!!rosterEvent} transparent animationType="fade" onRequestClose={() => setRosterEvent(null)}>
+      <Modal visible={!!rosterEvent} transparent animationType="fade"onRequestClose={() => setRosterEvent(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg }}>
           <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <AppText variant="h3" weight="bold">
+              <AppText variant="h3"weight="bold">
                 Registered Attendees
               </AppText>
               <Pressable onPress={() => setRosterEvent(null)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
             {rosterEvent ? (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <AppText variant="body" weight="bold" style={{ marginBottom: 2 }}>
+                <AppText variant="body"weight="bold"style={{ marginBottom: 2 }}>
                   {rosterEvent.title}
                 </AppText>
-                <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
-                  {rosterEvent.rsvpCount} students registered &bull; Capacity: {rosterEvent.capacity || 'Unlimited'}
+                <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.md }}>
+                  {rosterEvent.rsvpCount} students registered • Capacity: {rosterEvent.capacity || 'Unlimited'}
                 </AppText>
 
                 <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md }}>
-                  <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                  <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
                     CHECKED-IN ROSTER:
                   </AppText>
                   {(rosterEvent.attendeeNames && rosterEvent.attendeeNames.length > 0
@@ -679,10 +661,10 @@ export function EventsModerationTab() {
                     : ['Inem Emmanuel', 'Chioma Okonkwo', 'Adekunle Gold', 'Folake Adeleke', 'Amina Yusuf']
                   ).map((name, i) => (
                     <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
-                      <AppText variant="bodySmall" weight="semiBold">
+                      <AppText variant="bodySmall"weight="semiBold">
                         {i + 1}. {name}
                       </AppText>
-                      <Badge label="Confirmed" tone="success" />
+                      <Badge label="Confirmed"tone="success" />
                     </View>
                   ))}
                 </View>
@@ -690,7 +672,7 @@ export function EventsModerationTab() {
             ) : null}
 
             <View style={{ marginTop: spacing.md }}>
-              <AppButton label="Done" onPress={() => setRosterEvent(null)} />
+              <AppButton label="Done"onPress={() => setRosterEvent(null)} />
             </View>
           </View>
         </View>

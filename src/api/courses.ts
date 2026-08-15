@@ -1,6 +1,6 @@
-import { api } from './client';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
+import { api } from'./client';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 export interface Course {
   id: string;

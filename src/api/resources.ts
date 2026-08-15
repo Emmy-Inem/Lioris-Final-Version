@@ -1,11 +1,11 @@
-import { api } from './client';
-import { Resource } from './types';
-import { mockResources } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
+import { api } from'./client';
+import { Resource } from'./types';
+import { mockResources } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 const INITIAL_RESOURCES: Resource[] = [
-  ...mockResources.map((r) => ({ ...r, approvalStatus: 'approved' as const })),
+  ...mockResources.map((r) => ({ ...r, approvalStatus: 'approved'as const })),
   {
     id: 'res-sub-1',
     title: 'CSC 415 Distributed Systems Midterm Review & Solutions (2024)',
@@ -110,7 +110,7 @@ export interface CreateResourcePayload {
   academicLevel?: Resource['academicLevel'];
 }
 
-// Backs the "Share Academic File" upload flow (ShareAcademicFileModal).
+// Backs the"Share Academic File"upload flow (ShareAcademicFileModal).
 export async function createResource(payload: CreateResourcePayload): Promise<Resource> {
   if (!FALL_BACK_TO_MOCKS) {
     const { data } = await api.post<Resource>('/resources', payload);

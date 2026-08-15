@@ -1,8 +1,8 @@
-import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import { registerDevicePushToken } from '@/api/notifications';
+import { Platform } from'react-native';
+import * as Notifications from'expo-notifications';
+import * as Device from'expo-device';
+import Constants from'expo-constants';
+import { registerDevicePushToken } from'@/api/notifications';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -17,7 +17,7 @@ Notifications.setNotificationHandler({
 /**
  * Requests permission and registers the device's Expo push token with
  * the backend Notification Service (PRD Section 12.3). Call this after
- * login rather than on cold start — PRD's "Useful over noisy" principle
+ * login rather than on cold start — PRD's"Useful over noisy"principle
  * favors asking for permission at a moment tied to clear user benefit
  * (e.g. right after enabling notifications in onboarding) over an
  * immediate app-launch prompt.
@@ -41,7 +41,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
 
   if (Platform.OS === 'android') {
-    // Separate channels so "critical" emergency broadcasts (PRD Section 17)
+    // Separate channels so"critical"emergency broadcasts (PRD Section 17)
     // can use max importance/bypass-DND, distinct from routine notifications.
     await Notifications.setNotificationChannelAsync('default', {
       name: 'General',

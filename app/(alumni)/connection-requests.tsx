@@ -1,13 +1,13 @@
-import React from 'react';
-import { FlatList } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { ConnectionRequestCard } from '@/components/ConnectionRequestCard';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listIncomingConnectionRequests } from '@/api/connections';
+import React from'react';
+import { FlatList } from'react-native';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { ConnectionRequestCard } from'@/components/ConnectionRequestCard';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listIncomingConnectionRequests } from'@/api/connections';
 
 export default function ConnectionRequestsScreen() {
   const { spacing } = useTheme();
@@ -21,7 +21,7 @@ export default function ConnectionRequestsScreen() {
   return (
     <ScreenContainer glow={false}>
       <AppHeader />
-      <AppText variant="h1" weight="bold" style={{ paddingVertical: spacing.lg }}>
+      <AppText variant="h1"weight="bold"style={{ paddingVertical: spacing.lg }}>
         Connection Requests
       </AppText>
       <FlatList
@@ -38,7 +38,7 @@ export default function ConnectionRequestsScreen() {
         )}
         ListEmptyComponent={
           !isLoading ? (
-            <EmptyState title="No pending requests" description="New connection requests will show up here." />
+            <EmptyState title="No pending requests"description="New connection requests will show up here." />
           ) : null
         }
       />

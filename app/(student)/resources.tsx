@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
-import { Badge } from '@/components/Badge';
-import { ResourceCard } from '@/components/ResourceCard';
-import { ShareAcademicFileModal } from '@/components/ShareAcademicFileModal';
-import { LibraryFilterModal, LibraryFilters, DEFAULT_LIBRARY_FILTERS } from '@/components/LibraryFilterModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { listResources, createResource } from '@/api/resources';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
+import React, { useState } from'react';
+import { Alert, FlatList, Linking, Pressable, ScrollView, TextInput, View } from'react-native';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { SolidCard } from'@/components/SolidCard';
+import { Badge } from'@/components/Badge';
+import { ResourceCard } from'@/components/ResourceCard';
+import { ShareAcademicFileModal } from'@/components/ShareAcademicFileModal';
+import { LibraryFilterModal, LibraryFilters, DEFAULT_LIBRARY_FILTERS } from'@/components/LibraryFilterModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { listResources, createResource } from'@/api/resources';
+import { useDebouncedValue } from'@/hooks/useDebouncedValue';
+import { ManageResourcesModal } from'@/components/admin/ManageResourcesModal';
 
 const CAMPUS_PORTAL_DIRECTORIES = [
   {
     id: 'portal-1',
     name: 'Student Academic Portal',
     badge: 'Official',
-    icon: 'school-outline' as const,
+    icon: 'school-outline'as const,
     url: 'https://portal.university.edu/student',
     desc: 'Check course registration, semester GPA, and tuition receipt records.',
   },
@@ -29,7 +29,7 @@ const CAMPUS_PORTAL_DIRECTORIES = [
     id: 'portal-2',
     name: '2026 Academic Calendar',
     badge: 'Senate',
-    icon: 'calendar-outline' as const,
+    icon: 'calendar-outline'as const,
     url: 'https://portal.university.edu/calendar-2026',
     desc: 'Official semester lecture routines, matriculation & Senate exam dates.',
   },
@@ -37,7 +37,7 @@ const CAMPUS_PORTAL_DIRECTORIES = [
     id: 'portal-3',
     name: 'E-Library & JSTOR Hub',
     badge: 'Research',
-    icon: 'library-outline' as const,
+    icon: 'library-outline'as const,
     url: 'https://elibrary.university.edu/jstor',
     desc: 'Access verified peer-reviewed academic journals, e-books & past theses.',
   },
@@ -45,7 +45,7 @@ const CAMPUS_PORTAL_DIRECTORIES = [
     id: 'portal-4',
     name: 'Campus LMS & E-Classroom',
     badge: 'Lectures',
-    icon: 'laptop-outline' as const,
+    icon: 'laptop-outline'as const,
     url: 'https://lms.university.edu/courses',
     desc: 'Submit weekly assignments, view faculty slides & join live lecture rooms.',
   },
@@ -53,7 +53,7 @@ const CAMPUS_PORTAL_DIRECTORIES = [
     id: 'portal-5',
     name: 'Hostel Allocation & Bedspace',
     badge: 'Housing',
-    icon: 'home-outline' as const,
+    icon: 'home-outline'as const,
     url: 'https://hostels.university.edu/apply',
     desc: 'Apply for on-campus student halls, bedspace ballot & room clearances.',
   },
@@ -61,7 +61,7 @@ const CAMPUS_PORTAL_DIRECTORIES = [
     id: 'portal-6',
     name: 'University Health Center',
     badge: 'Clinic',
-    icon: 'medkit-outline' as const,
+    icon: 'medkit-outline'as const,
     url: 'https://health.university.edu/appointments',
     desc: 'Book campus doctor appointments, medical clearance & clinic passes.',
   },
@@ -107,7 +107,7 @@ export default function ResourcesScreen() {
 
   function handleLaunchPortal(portal: (typeof CAMPUS_PORTAL_DIRECTORIES)[0]) {
     Alert.alert(
-      'Launch Campus Portal 🌐',
+      'Launch Campus Portal',
       `Opening ${portal.name} (${portal.url}). Continue in browser?`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -130,10 +130,10 @@ export default function ResourcesScreen() {
       {/* Screen Title */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.md }}>
         <View>
-          <AppText variant="h1" weight="bold">
+          <AppText variant="h1"weight="bold">
             Campus Resources
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary"variant="bodySmall">
             University portal directories, past questions & study notes
           </AppText>
         </View>
@@ -142,9 +142,7 @@ export default function ResourcesScreen() {
           {(user?.role === 'admin' || user?.role === 'staff') && (
             <Pressable
               onPress={() => setAdminManageOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Admin manage library"
-              style={{
+              accessibilityRole="button"accessibilityLabel="Admin manage library"style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 4,
@@ -156,8 +154,8 @@ export default function ResourcesScreen() {
                 paddingVertical: 7,
               }}
             >
-              <Ionicons name="settings-outline" size={15} color={colors.brandPrimary} />
-              <AppText weight="bold" tone="brand" variant="caption">
+              <Ionicons name="settings-outline"size={15} color={colors.brandPrimary} />
+              <AppText weight="bold"tone="brand"variant="caption">
                 Manage
               </AppText>
             </Pressable>
@@ -165,9 +163,7 @@ export default function ResourcesScreen() {
 
           <Pressable
             onPress={() => setUploadModalOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Upload resource"
-            style={{
+            accessibilityRole="button"accessibilityLabel="Upload resource"style={{
               flexDirection: 'row',
               alignItems: 'center',
               gap: 4,
@@ -177,8 +173,8 @@ export default function ResourcesScreen() {
               paddingVertical: 8,
             }}
           >
-            <Ionicons name="cloud-upload-outline" size={16} color="#FFFFFF" />
-            <AppText weight="bold" tone="inverse" variant="caption">
+            <Ionicons name="cloud-upload-outline"size={16} color="#FFFFFF" />
+            <AppText weight="bold"tone="inverse"variant="caption">
               Upload
             </AppText>
           </Pressable>
@@ -188,10 +184,10 @@ export default function ResourcesScreen() {
       {/* Section 1: University Portal Directories */}
       <View style={{ marginBottom: spacing.lg }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
-            DIRECTORIES & PORTAL SHORTCUTS 🌐
+          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
+            DIRECTORIES & PORTAL SHORTCUTS 
           </AppText>
-          <AppText tone="secondary" variant="caption">
+          <AppText tone="secondary"variant="caption">
             {CAMPUS_PORTAL_DIRECTORIES.length} active links
           </AppText>
         </View>
@@ -205,8 +201,7 @@ export default function ResourcesScreen() {
             <Pressable
               key={portal.id}
               onPress={() => handleLaunchPortal(portal)}
-              accessibilityRole="button"
-              accessibilityLabel={`Launch ${portal.name}`}
+              accessibilityRole="button"accessibilityLabel={`Launch ${portal.name}`}
             >
               <SolidCard
                 radius={20}
@@ -236,19 +231,19 @@ export default function ResourcesScreen() {
                 </View>
 
                 <View>
-                  <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                  <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
                     {portal.name}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ marginTop: 2, fontSize: 11, lineHeight: 14 }}>
+                  <AppText tone="secondary"variant="caption"numberOfLines={2} style={{ marginTop: 2, fontSize: 11, lineHeight: 14 }}>
                     {portal.desc}
                   </AppText>
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <AppText weight="bold" variant="caption" tone="brand" style={{ fontSize: 11 }}>
+                  <AppText weight="bold"variant="caption"tone="brand"style={{ fontSize: 11 }}>
                     Launch Portal
                   </AppText>
-                  <Ionicons name="open-outline" size={12} color={colors.brandPrimary} />
+                  <Ionicons name="open-outline"size={12} color={colors.brandPrimary} />
                 </View>
               </SolidCard>
             </Pressable>
@@ -258,8 +253,8 @@ export default function ResourcesScreen() {
 
       {/* Section 2: Academic Repository Header & Filters */}
       <View style={{ marginBottom: spacing.xs }}>
-        <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
-          ACADEMIC REPOSITORY & STUDY FILES 📖
+        <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+          ACADEMIC REPOSITORY & STUDY FILES 
         </AppText>
 
         {/* Search Bar Pill & Department Filter Button */}
@@ -278,26 +273,23 @@ export default function ResourcesScreen() {
               height: 42,
             }}
           >
-            <Ionicons name="search" size={16} color={colors.textSecondary} />
+            <Ionicons name="search"size={16} color={colors.textSecondary} />
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Search course code, notes, topics..."
-              placeholderTextColor={colors.textSecondary}
+              placeholder="Search course code, notes, topics..."placeholderTextColor={colors.textSecondary}
               style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
             />
             {query ? (
               <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
               </Pressable>
             ) : null}
           </View>
 
           <Pressable
             onPress={() => setFilterModalOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Filter resources"
-            style={{
+            accessibilityRole="button"accessibilityLabel="Filter resources"style={{
               width: 42,
               height: 42,
               borderRadius: 21,
@@ -308,7 +300,7 @@ export default function ResourcesScreen() {
               borderColor: colors.brandPrimary,
             }}
           >
-            <Ionicons name="options" size={18} color={colors.brandPrimary} />
+            <Ionicons name="options"size={18} color={colors.brandPrimary} />
           </Pressable>
         </View>
 
@@ -334,8 +326,7 @@ export default function ResourcesScreen() {
                 }}
               >
                 <AppText
-                  variant="caption"
-                  weight={selected ? 'bold' : 'medium'}
+                  variant="caption"weight={selected ? 'bold' : 'medium'}
                   tone={selected ? 'inverse' : 'secondary'}
                 >
                   {c.label}
@@ -376,12 +367,12 @@ export default function ResourcesScreen() {
                   marginBottom: spacing.md,
                 }}
               >
-                <Ionicons name="book-outline" size={32} color={colors.brandPrimary} />
+                <Ionicons name="book-outline"size={32} color={colors.brandPrimary} />
               </View>
-              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+              <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.xs }}>
                 No Academic Resources Found
               </AppText>
-              <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+              <AppText tone="secondary"variant="bodySmall"style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
                 Try searching for another course code or upload study materials for your peers.
               </AppText>
             </View>

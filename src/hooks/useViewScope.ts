@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
 
 export type ViewScope = 'campus' | 'global';
 
@@ -10,8 +10,8 @@ export function useViewScope() {
   
   const { data: scope } = useQuery({
     queryKey: VIEW_SCOPE_KEY,
-    queryFn: () => 'campus' as ViewScope,
-    initialData: 'campus' as ViewScope,
+    queryFn: () => 'campus'as ViewScope,
+    initialData: 'campus'as ViewScope,
     staleTime: Infinity,
   });
 
@@ -28,7 +28,7 @@ export function useViewScope() {
 
   function setActiveCampusCode(campusCode: string) {
     queryClient.setQueryData(ACTIVE_CAMPUS_KEY, campusCode);
-    queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
+    queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus'as ViewScope);
   }
 
   return {

@@ -1,8 +1,8 @@
-import { api } from './client';
-import { AuditLogAction, AuditLogEntry, UserRole } from './types';
-import { FALL_BACK_TO_MOCKS } from './config';
-import { withMockFallback } from './withMockFallback';
-import { getSessionUser } from '@/auth/tokenStorage';
+import { api } from'./client';
+import { AuditLogAction, AuditLogEntry, UserRole } from'./types';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { withMockFallback } from'./withMockFallback';
+import { getSessionUser } from'@/auth/tokenStorage';
 
 // PRD Section 14 / Section 6.2's acceptance criteria. Seeded with a
 // small believable history so the screen isn't empty before you've
@@ -59,7 +59,7 @@ export interface RecordAuditLogEntryPayload {
  * (resolveReport, revokeEventApproval, purgeEvent,
  * respondToVerificationRequest, and the two HighRiskModals actions) so
  * the audit trail is backed by something real instead of UI copy that
- * merely claims an action "goes to the audit log". Reads the current
+ * merely claims an action"goes to the audit log". Reads the current
  * actor from the local session cache directly since this lives in the
  * API layer, outside React context (same pattern client.ts already
  * uses for tokens).
@@ -82,7 +82,7 @@ export async function recordAuditLogEntry(payload: RecordAuditLogEntryPayload): 
   try {
     await api.post('/audit-log', entry);
   } catch {
-    // Expected in mock mode — see README's "Mock data fallback".
+    // Expected in mock mode — see README's"Mock data fallback".
   }
   auditLogState = [entry, ...auditLogState];
   return entry;

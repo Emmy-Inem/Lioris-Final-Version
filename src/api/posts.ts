@@ -1,8 +1,8 @@
-import { api } from './client';
-import { Post, PostVisibilityScope } from './types';
-import { mockPosts } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
+import { api } from'./client';
+import { Post, PostVisibilityScope } from'./types';
+import { mockPosts } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 // Mutable in-memory copy so newly published posts actually persist and
 // show up on the next fetch — the previous version fabricated a
@@ -16,7 +16,7 @@ export interface FeedQuery {
   q?: string;
   /** The viewing user's own institution — enforces the hard rule that campus-scoped posts from OTHER universities are never shown, regardless of viewScope. */
   viewerInstitutionCode?: string;
-  /** The Global/My Campus toggle. 'global' narrows to cross-university posts only; 'campus' (default) shows the viewer's own campus posts mixed with global ones. */
+  /** The Global/My Campus toggle. 'global'narrows to cross-university posts only; 'campus' (default) shows the viewer's own campus posts mixed with global ones. */
   viewScope?: 'campus' | 'global';
 }
 
@@ -85,7 +85,7 @@ export interface CreatePostPayload {
   content: string;
   category: string;
   visibilityScope: PostVisibilityScope;
-  /** 'campus' stamps the post with the author's own institutionCode; 'global' omits it, making the post visible everywhere. */
+  /** 'campus'stamps the post with the author's own institutionCode; 'global'omits it, making the post visible everywhere. */
   scopeVisibility?: 'campus' | 'global';
   authorInstitutionCode?: string;
   sponsored?: boolean;
@@ -129,14 +129,14 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
 }
 
 // POST /feed/{id}/like or /unlike — previously fired the request and
-// did nothing else; the comment claimed "optimistic UI already
-// reflects the change" but nothing actually called this function from
+// did nothing else; the comment claimed"optimistic UI already
+// reflects the change"but nothing actually called this function from
 // PostCard, and even if it had been called, this didn't touch
 // `postsState`, so a like would silently vanish the moment the feed
 // refetched. Now actually persists the change.
 export async function togglePostLike(postId: string, liked: boolean): Promise<void> {
   await api.post(`/feed/${postId}/${liked ? 'like' : 'unlike'}`).catch(() => {
-    // Expected in mock mode — see README's "Mock data fallback".
+    // Expected in mock mode — see README's"Mock data fallback".
   });
   postsState = postsState.map((p) =>
     p.id === postId ? { ...p, isLikedByMe: liked, likesCount: Math.max(0, p.likesCount + (liked ? 1 : -1)) } : p,

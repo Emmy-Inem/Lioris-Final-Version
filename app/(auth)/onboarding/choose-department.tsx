@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { OnboardingShell } from '@/components/OnboardingShell';
-import { ChipSelect } from '@/components/ChipSelect';
-import { AppButton } from '@/components/AppButton';
-import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import React, { useState } from'react';
+import { OnboardingShell } from'@/components/OnboardingShell';
+import { ChipSelect } from'@/components/ChipSelect';
+import { AppButton } from'@/components/AppButton';
+import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
 
 const DEPARTMENTS = [
   'Computer Science',
@@ -31,11 +31,8 @@ export default function ChooseDepartmentScreen() {
 
   return (
     <OnboardingShell
-      currentPath="/(auth)/onboarding/choose-department"
-      title="What's your department?"
-      subtitle="This helps us tailor your feed and event recommendations."
-      footer={
-        <AppButton label="Continue" onPress={handleContinue} loading={submitting} disabled={!department} fullWidth />
+      currentPath="/(auth)/onboarding/choose-department"title="What's your department?"subtitle="This helps us tailor your feed and event recommendations."footer={
+        <AppButton label="Continue"onPress={handleContinue} loading={submitting} disabled={!department} fullWidth />
       }
     >
       <ChipSelect

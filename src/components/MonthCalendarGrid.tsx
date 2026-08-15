@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { SolidCard } from './SolidCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { CampusEvent } from '@/api/types';
+import React, { useMemo, useState } from'react';
+import { Pressable, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { SolidCard } from'./SolidCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { CampusEvent } from'@/api/types';
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -47,25 +47,23 @@ export function MonthCalendarGrid({ events }: { events: CampusEvent[] }) {
         <Pressable
           onPress={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
           hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Previous month"
+          accessibilityRole="button"accessibilityLabel="Previous month"
         >
-          <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+          <Ionicons name="chevron-back"size={20} color={colors.textPrimary} />
         </Pressable>
         <AppText weight="bold">{monthLabel}</AppText>
         <Pressable
           onPress={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
           hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Next month"
+          accessibilityRole="button"accessibilityLabel="Next month"
         >
-          <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
+          <Ionicons name="chevron-forward"size={20} color={colors.textPrimary} />
         </Pressable>
       </View>
 
       <View style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
         {WEEKDAY_LABELS.map((d) => (
-          <AppText key={d} variant="caption" weight="bold" style={{ flex: 1, textAlign: 'center' }}>
+          <AppText key={d} variant="caption"weight="bold"style={{ flex: 1, textAlign: 'center' }}>
             {d}
           </AppText>
         ))}
@@ -82,8 +80,7 @@ export function MonthCalendarGrid({ events }: { events: CampusEvent[] }) {
             <Pressable
               key={i}
               onPress={() => setSelectedDay(cell.date)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
+              accessibilityRole="button"accessibilityState={{ selected: isSelected }}
               accessibilityLabel={`${cell.date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${
                 dayEvents.length > 0 ? `, ${dayEvents.length} event${dayEvents.length > 1 ? 's' : ''}` : ''
               }${isToday ? ', today' : ''}`}
@@ -104,7 +101,7 @@ export function MonthCalendarGrid({ events }: { events: CampusEvent[] }) {
                   borderColor: colors.brandPrimary,
                 }}
               >
-                <AppText variant="bodySmall" weight="bold" tone={isSelected ? 'inverse' : 'primary'}>
+                <AppText variant="bodySmall"weight="bold"tone={isSelected ? 'inverse' : 'primary'}>
                   {cell.date.getDate()}
                 </AppText>
                 {dayEvents.length > 0 ? (
@@ -124,21 +121,21 @@ export function MonthCalendarGrid({ events }: { events: CampusEvent[] }) {
         })}
       </View>
 
-      <AppText weight="bold" variant="bodySmall" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
+      <AppText weight="bold"variant="bodySmall"style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
         Scheduled on {selectedDay.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
       </AppText>
       {selectedEvents.length === 0 ? (
-        <AppText tone="secondary" variant="bodySmall">
+        <AppText tone="secondary"variant="bodySmall">
           No events scheduled for this date.
         </AppText>
       ) : (
         selectedEvents.map((e) => (
           <SolidCard key={e.id} radius={12} style={{ marginBottom: spacing.sm }}>
-            <AppText weight="bold" variant="bodySmall">
+            <AppText weight="bold"variant="bodySmall">
               {e.title}
             </AppText>
-            <AppText tone="secondary" variant="caption">
-              📍 {e.location}
+            <AppText tone="secondary"variant="caption">
+               {e.location}
             </AppText>
           </SolidCard>
         ))

@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform } from'react-native';
 
 /**
  * PRD Section 8 (Typography): SF Pro Display on iOS, Inter on Android/Web.

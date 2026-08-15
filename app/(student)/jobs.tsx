@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { JobCard } from '@/components/JobCard';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listJobs } from '@/api/jobs';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import React, { useState } from'react';
+import { FlatList, Pressable, ScrollView, TextInput, View } from'react-native';
+import { useQuery } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { JobCard } from'@/components/JobCard';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listJobs } from'@/api/jobs';
+import { useDebouncedValue } from'@/hooks/useDebouncedValue';
 
 const JOB_FILTERS = [
-  { id: 'all', label: 'All Openings 💼' },
-  { id: 'internship', label: 'Internships 🎓' },
-  { id: 'remote', label: 'Remote 🌐' },
-  { id: 'full-time', label: 'Graduate Roles 🚀' },
+  { id: 'all', label: 'All Openings' },
+  { id: 'internship', label: 'Internships' },
+  { id: 'remote', label: 'Remote' },
+  { id: 'full-time', label: 'Graduate Roles' },
 ];
 
 export default function JobsScreen() {
@@ -40,10 +40,10 @@ export default function JobsScreen() {
     <ScreenContainer glow={false}>
       <AppHeader />
       <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
-        <AppText variant="h1" weight="bold">
-          Career & Internships 💼
+        <AppText variant="h1"weight="bold">
+          Career & Internships 
         </AppText>
-        <AppText tone="secondary" variant="bodySmall">
+        <AppText tone="secondary"variant="bodySmall">
           Verified student roles, alumni referrals & industry gigs
         </AppText>
       </View>
@@ -63,17 +63,16 @@ export default function JobsScreen() {
           marginBottom: spacing.sm,
         }}
       >
-        <Ionicons name="search" size={16} color={colors.textSecondary} />
+        <Ionicons name="search"size={16} color={colors.textSecondary} />
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search jobs, company, keywords..."
-          placeholderTextColor={colors.textSecondary}
+          placeholder="Search jobs, company, keywords..."placeholderTextColor={colors.textSecondary}
           style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
         />
         {query ? (
           <Pressable onPress={() => setQuery('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+            <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>
@@ -101,8 +100,7 @@ export default function JobsScreen() {
               }}
             >
               <AppText
-                variant="caption"
-                weight={selected ? 'bold' : 'medium'}
+                variant="caption"weight={selected ? 'bold' : 'medium'}
                 tone={selected ? 'inverse' : 'secondary'}
               >
                 {f.label}
@@ -118,7 +116,7 @@ export default function JobsScreen() {
         contentContainerStyle={{ paddingBottom: 130 }}
         renderItem={({ item }) => <JobCard job={item} />}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found" description="Try clearing search or check back soon." /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found"description="Try clearing search or check back soon." /> : null}
       />
     </ScreenContainer>
   );

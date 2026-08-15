@@ -1,5 +1,5 @@
-import { api } from './client';
-import { withMockFallback } from './withMockFallback';
+import { api } from'./client';
+import { withMockFallback } from'./withMockFallback';
 
 export interface PlatformHealthSummary {
   studentMauPct: number;

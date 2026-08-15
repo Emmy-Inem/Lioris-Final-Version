@@ -1,13 +1,13 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
-import { router, useSegments } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { Avatar } from './Avatar';
-import { AppText } from './AppText';
-import { PresenceHalo } from './PresenceHalo';
-import { useTheme } from '@/theme/ThemeProvider';
-import { Conversation } from '@/api/types';
+import React from'react';
+import { Pressable, View } from'react-native';
+import { router, useSegments } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import Swipeable from'react-native-gesture-handler/ReanimatedSwipeable';
+import { Avatar } from'./Avatar';
+import { AppText } from'./AppText';
+import { PresenceHalo } from'./PresenceHalo';
+import { useTheme } from'@/theme/ThemeProvider';
+import { Conversation } from'@/api/types';
 
 interface ConversationRowProps {
   conversation: Conversation;
@@ -25,8 +25,7 @@ export function ConversationRow({ conversation, onArchive }: ConversationRowProp
   const row = (
     <Pressable
       onPress={() => router.push(`/${roleGroup}/messages/${conversation.id}` as any)}
-      accessibilityRole="button"
-      accessibilityLabel={`Conversation with ${conversation.participantName}${
+      accessibilityRole="button"accessibilityLabel={`Conversation with ${conversation.participantName}${
         conversation.unreadCount > 0 ? `, ${conversation.unreadCount} unread` : ''
       }${conversation.isOnline ? ', online' : ''}`}
       accessibilityHint={conversation.lastMessagePreview ?? undefined}
@@ -51,7 +50,7 @@ export function ConversationRow({ conversation, onArchive }: ConversationRowProp
       </View>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <AppText weight="bold" variant="bodySmall">
+          <AppText weight="bold"variant="bodySmall">
             {conversation.participantName}
           </AppText>
           {conversation.unreadCount > 0 && (
@@ -66,13 +65,13 @@ export function ConversationRow({ conversation, onArchive }: ConversationRowProp
                 paddingHorizontal: 6,
               }}
             >
-              <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
+              <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
                 {conversation.unreadCount}
               </AppText>
             </View>
           )}
         </View>
-        <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+        <AppText tone="secondary"variant="bodySmall"numberOfLines={1}>
           {conversation.lastMessagePreview ?? 'Say hello \ud83d\udc4b'}
         </AppText>
       </View>
@@ -86,8 +85,7 @@ export function ConversationRow({ conversation, onArchive }: ConversationRowProp
       renderRightActions={() => (
         <Pressable
           onPress={onArchive}
-          accessibilityRole="button"
-          accessibilityLabel={`Archive conversation with ${conversation.participantName}`}
+          accessibilityRole="button"accessibilityLabel={`Archive conversation with ${conversation.participantName}`}
           style={{
             width: 88,
             backgroundColor: colors.critical,
@@ -95,7 +93,7 @@ export function ConversationRow({ conversation, onArchive }: ConversationRowProp
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="archive-outline" size={20} color="#FFFFFF" />
+          <Ionicons name="archive-outline"size={20} color="#FFFFFF" />
         </Pressable>
       )}
     >

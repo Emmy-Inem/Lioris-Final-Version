@@ -1,7 +1,7 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { StyleSheet, View } from'react-native';
+import { Image } from'expo-image';
+import { useTheme } from'@/theme/ThemeProvider';
 
 const AVATAR_FEMALE = require('../../assets/images/avatar_female.jpg');
 const AVATAR_FEMALE_2 = require('../../assets/images/avatar_female_2.jpg');
@@ -72,8 +72,7 @@ export function Avatar({ name, uri, size = 44, role }: AvatarProps) {
       <Image
         source={imageSource}
         style={{ width: '100%', height: '100%' }}
-        contentFit="cover"
-        transition={200}
+        contentFit="cover"transition={200}
         cachePolicy="memory-disk"
       />
     </View>

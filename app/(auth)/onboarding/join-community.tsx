@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { OnboardingShell } from '@/components/OnboardingShell';
-import { ChipSelect } from '@/components/ChipSelect';
-import { AppButton } from '@/components/AppButton';
-import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import React, { useState } from'react';
+import { OnboardingShell } from'@/components/OnboardingShell';
+import { ChipSelect } from'@/components/ChipSelect';
+import { AppButton } from'@/components/AppButton';
+import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
 
 const COMMUNITIES = [
   'Class of 2027',
@@ -33,11 +33,8 @@ export default function JoinCommunityScreen() {
 
   return (
     <OnboardingShell
-      currentPath="/(auth)/onboarding/join-community"
-      title="Join your first community"
-      subtitle="Pick at least one to get relevant posts and events in your feed."
-      footer={
-        <AppButton label="Go to my dashboard" onPress={handleFinish} loading={submitting} disabled={joined.length < 1} fullWidth />
+      currentPath="/(auth)/onboarding/join-community"title="Join your first community"subtitle="Pick at least one to get relevant posts and events in your feed."footer={
+        <AppButton label="Go to my dashboard"onPress={handleFinish} loading={submitting} disabled={joined.length < 1} fullWidth />
       }
     >
       <ChipSelect options={COMMUNITIES} selected={joined} onToggle={toggle} />

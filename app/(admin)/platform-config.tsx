@@ -1,32 +1,32 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
-import { router } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { AppButton } from '@/components/AppButton';
-import { SolidCard } from '@/components/SolidCard';
-import { GlassCard } from '@/components/GlassCard';
-import { Badge } from '@/components/Badge';
-import { ModerationQueue } from '@/components/ModerationQueue';
-import { AnalyticsTab } from '@/components/admin/AnalyticsTab';
-import { ForumsModerationTab } from '@/components/admin/ForumsModerationTab';
-import { EventsModerationTab } from '@/components/admin/EventsModerationTab';
-import { LocalHubControlTab } from '@/components/admin/LocalHubControlTab';
-import { UserProfilesTab } from '@/components/admin/UserProfilesTab';
-import { ResourcesModerationTab } from '@/components/admin/ResourcesModerationTab';
-import { ApprovalsModerationTab } from '@/components/admin/ApprovalsModerationTab';
-import { ManagePortalLinksModal } from '@/components/admin/ManagePortalLinksModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
-import { listReports } from '@/api/moderation';
-import { listVerificationRequests } from '@/api/verification';
-import { createNotification } from '@/api/notifications';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { router } from'expo-router';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { AppButton } from'@/components/AppButton';
+import { SolidCard } from'@/components/SolidCard';
+import { GlassCard } from'@/components/GlassCard';
+import { Badge } from'@/components/Badge';
+import { ModerationQueue } from'@/components/ModerationQueue';
+import { AnalyticsTab } from'@/components/admin/AnalyticsTab';
+import { ForumsModerationTab } from'@/components/admin/ForumsModerationTab';
+import { EventsModerationTab } from'@/components/admin/EventsModerationTab';
+import { LocalHubControlTab } from'@/components/admin/LocalHubControlTab';
+import { UserProfilesTab } from'@/components/admin/UserProfilesTab';
+import { ResourcesModerationTab } from'@/components/admin/ResourcesModerationTab';
+import { ApprovalsModerationTab } from'@/components/admin/ApprovalsModerationTab';
+import { ManagePortalLinksModal } from'@/components/admin/ManagePortalLinksModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { LAUNCH_INSTITUTIONS } from'@/api/institutions';
+import { listReports } from'@/api/moderation';
+import { listVerificationRequests } from'@/api/verification';
+import { createNotification } from'@/api/notifications';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { haptics } from'@/utils/haptics';
 
 const WORKDESK_TABS = ['Analytics', 'Flags', 'User Profiles', 'Utility Hub', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
 const PREVIEW_ROLES = ['Default (Admin)', 'Student', 'Staff', 'Alumni', 'Admin'];
@@ -56,14 +56,14 @@ export default function PlatformConfigScreen() {
 
     createNotification({
       type: 'announcement',
-      title: `🚨 ${broadcastTitle.trim()}`,
+      title: ` ${broadcastTitle.trim()}`,
       body: broadcastBody.trim(),
       deepLinkPath: '/(student)/dashboard',
     });
 
     recordAuditLogEntry({
       action: 'escrow_funds_released',
-      summary: `Broadcast Flash Alert sent: "${broadcastTitle}" to ${broadcastTarget.toUpperCase()}`,
+      summary: `Broadcast Flash Alert sent: "${broadcastTitle}"to ${broadcastTarget.toUpperCase()}`,
       targetType: 'user',
       targetId: 'broadcast-flash',
       reason: `Audience: ${broadcastTarget}, Priority: ${broadcastPriority}`,
@@ -73,7 +73,7 @@ export default function PlatformConfigScreen() {
     setBroadcastModalOpen(false);
     setBroadcastTitle('');
     setBroadcastBody('');
-    Alert.alert('Broadcast Dispatched 🚀', 'Push notification and in-app flash banner delivered to campus network.');
+    Alert.alert('Broadcast Dispatched', 'Push notification and in-app flash banner delivered to campus network.');
   }
 
   return (
@@ -83,19 +83,18 @@ export default function PlatformConfigScreen() {
       {/* Unified Main ScrollView for entire Admin Desk */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: 150 }}
       >
         {/* Page Title & Badges */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: spacing.md, marginBottom: spacing.md }}>
           <View style={{ flex: 1 }}>
-            <AppText variant="h1" weight="bold">
+            <AppText variant="h1"weight="bold">
               Staff & Admin Workdesk
             </AppText>
             <AppText tone="secondary">Centralized university moderation, live nodes & control tower</AppText>
           </View>
-          <Badge label="Lioris Root Admin" tone="critical" />
+          <Badge label="Lioris Root Admin"tone="critical" />
         </View>
 
         {/* Active Workspace Scope Frosted Card */}
@@ -108,18 +107,17 @@ export default function PlatformConfigScreen() {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-            <Ionicons name="school-outline" size={16} color={colors.brandPrimary} />
-            <AppText weight="bold" tone="brand">
+            <Ionicons name="school-outline"size={16} color={colors.brandPrimary} />
+            <AppText weight="bold"tone="brand">
               Active Campus Workspace Scope
             </AppText>
           </View>
-          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+          <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
             Configures which university network data you view, edit, and moderate globally.
           </AppText>
           <Pressable
             onPress={() => setInstitutionPickerOpen((v) => !v)}
-            accessibilityRole="button"
-            accessibilityLabel={`Campus workspace scope: ${institution}`}
+            accessibilityRole="button"accessibilityLabel={`Campus workspace scope: ${institution}`}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -136,7 +134,7 @@ export default function PlatformConfigScreen() {
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brandPrimary }} />
               <AppText weight="semiBold">{institution}</AppText>
             </View>
-            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+            <Ionicons name="chevron-down"size={16} color={colors.textSecondary} />
           </Pressable>
           {institutionPickerOpen ? (
             <View style={{ marginTop: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
@@ -148,8 +146,7 @@ export default function PlatformConfigScreen() {
                     setInstitutionPickerOpen(false);
                     haptics.light();
                   }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: inst === institution }}
+                  accessibilityRole="radio"accessibilityState={{ checked: inst === institution }}
                   accessibilityLabel={inst}
                   style={{
                     paddingVertical: spacing.sm,
@@ -170,37 +167,20 @@ export default function PlatformConfigScreen() {
         {/* Quick Ecosystem Action Tiles */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
           <EcosystemTile
-            icon="megaphone-outline"
-            label="Broadcast Flash Alert"
-            description="Push alert to students"
-            badge="Live Push"
-            onPress={() => setBroadcastModalOpen(true)}
+            icon="megaphone-outline"label="Broadcast Flash Alert"description="Push alert to students"badge="Live Push"onPress={() => setBroadcastModalOpen(true)}
           />
           <EcosystemTile
-            icon="link-outline"
-            label="Manage Portal Links"
-            description="Configure UI & bookmarks"
-            onPress={() => setPortalLinksModalOpen(true)}
+            icon="link-outline"label="Manage Portal Links"description="Configure UI & bookmarks"onPress={() => setPortalLinksModalOpen(true)}
           />
           <EcosystemTile
-            icon="people-outline"
-            label="Ecosystem Nodes"
-            description="Registered accounts"
-            badge="7"
-            onPress={() => router.push('/(admin)/user-directory')}
+            icon="people-outline"label="Ecosystem Nodes"description="Registered accounts"badge="7"onPress={() => router.push('/(admin)/user-directory')}
           />
           <EcosystemTile
-            icon="shield-outline"
-            label="Ecosystem Safety"
-            description="Moderation & Reports"
-            badge={`${openReports?.length ?? 0} Pending`}
+            icon="shield-outline"label="Ecosystem Safety"description="Moderation & Reports"badge={`${openReports?.length ?? 0} Pending`}
             onPress={() => router.push('/(admin)/moderation-queue')}
           />
           <EcosystemTile
-            icon="checkmark-circle-outline"
-            label="Verify Credentials"
-            description="Review uploaded files"
-            badge={String(pendingVerifications?.length ?? 0)}
+            icon="checkmark-circle-outline"label="Verify Credentials"description="Review uploaded files"badge={String(pendingVerifications?.length ?? 0)}
             onPress={() => router.push('/(admin)/verification-requests')}
           />
         </View>
@@ -211,8 +191,7 @@ export default function PlatformConfigScreen() {
             haptics.light();
             router.push('/(admin)/super-admin-config');
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Open Super Admin Configuration"
+          accessibilityRole="button"accessibilityLabel="Open Super Admin Configuration"
         >
           <GlassCard
             style={{ marginBottom: spacing.lg }}
@@ -228,15 +207,15 @@ export default function PlatformConfigScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="construct" size={22} color={colors.brandPrimary} />
+                <Ionicons name="construct"size={22} color={colors.brandPrimary} />
               </View>
               <View style={{ flex: 1 }}>
-                <AppText weight="bold" variant="bodySmall">Super Admin Configuration</AppText>
-                <AppText tone="secondary" variant="caption">
+                <AppText weight="bold"variant="bodySmall">Super Admin Configuration</AppText>
+                <AppText tone="secondary"variant="caption">
                   Multi-tenant federation, escrow payouts, biometrics & root settings
                 </AppText>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+              <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
             </View>
           </GlassCard>
         </Pressable>
@@ -257,8 +236,7 @@ export default function PlatformConfigScreen() {
                   haptics.light();
                   setTab(t);
                 }}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
+                accessibilityRole="tab"accessibilityState={{ selected }}
                 accessibilityLabel={t}
                 style={{
                   paddingVertical: 8,
@@ -269,7 +247,7 @@ export default function PlatformConfigScreen() {
                   borderColor: selected ? colors.brandPrimary : colors.border,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'brand'}>
+                <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'brand'}>
                   {t}
                 </AppText>
               </Pressable>
@@ -302,28 +280,28 @@ export default function PlatformConfigScreen() {
       />
 
       {/* Broadcast Flash Alert Modal */}
-      <Modal visible={broadcastModalOpen} transparent animationType="slide" onRequestClose={() => setBroadcastModalOpen(false)}>
+      <Modal visible={broadcastModalOpen} transparent animationType="slide"onRequestClose={() => setBroadcastModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setBroadcastModalOpen(false)} />
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name="megaphone-outline" size={20} color={colors.critical} />
-                <AppText variant="h3" weight="bold">
+                <Ionicons name="megaphone-outline"size={20} color={colors.critical} />
+                <AppText variant="h3"weight="bold">
                   Broadcast Flash Alert
                 </AppText>
               </View>
               <Pressable onPress={() => setBroadcastModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
-            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
               Immediately delivers a high-priority push notification and sticky banner across the selected student network.
             </AppText>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
                 TARGET AUDIENCE
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -345,7 +323,7 @@ export default function PlatformConfigScreen() {
                       backgroundColor: broadcastTarget === item.key ? colors.pastelPrimaryBg : colors.surface,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={broadcastTarget === item.key ? 'brand' : 'secondary'}>
+                    <AppText variant="caption"weight="bold"tone={broadcastTarget === item.key ? 'brand' : 'secondary'}>
                       {item.label}
                     </AppText>
                   </Pressable>
@@ -353,16 +331,12 @@ export default function PlatformConfigScreen() {
               </View>
 
               <AppTextField
-                label="Alert Headline / Title"
-                placeholder="e.g. Senate Exam Timetable Revision or Campus Clinic Advisory"
-                value={broadcastTitle}
+                label="Alert Headline / Title"placeholder="e.g. Senate Exam Timetable Revision or Campus Clinic Advisory"value={broadcastTitle}
                 onChangeText={setBroadcastTitle}
               />
 
               <AppTextField
-                label="Message Body"
-                placeholder="Provide details, action required, or venue updates..."
-                value={broadcastBody}
+                label="Message Body"placeholder="Provide details, action required, or venue updates..."value={broadcastBody}
                 onChangeText={setBroadcastBody}
                 multiline
                 numberOfLines={4}
@@ -370,10 +344,9 @@ export default function PlatformConfigScreen() {
             </ScrollView>
 
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setBroadcastModalOpen(false)} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setBroadcastModalOpen(false)} />
               <AppButton
-                label="Dispatch Flash Alert"
-                onPress={handleSendBroadcast}
+                label="Dispatch Flash Alert"onPress={handleSendBroadcast}
                 disabled={!broadcastTitle.trim() || !broadcastBody.trim()}
               />
             </View>
@@ -404,8 +377,7 @@ function EcosystemTile({
         haptics.light();
         onPress();
       }}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
+      accessibilityRole="button"accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
       style={{ width: '48%' }}
     >
       <SolidCard radius={18} frosted style={{ minHeight: 110, justifyContent: 'space-between' }}>
@@ -424,17 +396,17 @@ function EcosystemTile({
           </View>
           {badge ? (
             <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 }}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 10 }}>
                 {badge}
               </AppText>
             </View>
           ) : null}
         </View>
         <View>
-          <AppText weight="bold" variant="bodySmall">
+          <AppText weight="bold"variant="bodySmall">
             {label}
           </AppText>
-          <AppText tone="secondary" variant="caption" numberOfLines={1}>
+          <AppText tone="secondary"variant="caption"numberOfLines={1}>
             {description}
           </AppText>
         </View>

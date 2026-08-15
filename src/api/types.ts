@@ -21,8 +21,8 @@ export interface UserProfile {
   isVerified: boolean;
   /**
    * 'verified' = blue tick shown on profile. Auto-set at registration
-   * for matching university emails; otherwise starts 'none' and only
-   * becomes 'verified' after a submitted document is approved (see
+   * for matching university emails; otherwise starts'none'and only
+   * becomes'verified'after a submitted document is approved (see
    * src/api/verification.ts). isVerified is kept in sync with this as
    * a convenience for existing UI checks.
    */
@@ -77,7 +77,7 @@ export interface Post {
   visibilityScope: PostVisibilityScope;
   /** Institution-scope badge (Campus/Global/Private) — orthogonal to visibilityScope's audience targeting. */
   scopeVisibility?: 'campus' | 'global' | 'private';
-  /** Which launch university this post belongs to when scopeVisibility is 'campus'. Omitted entirely for 'global' posts — that's what makes them visible across every university. */
+  /** Which launch university this post belongs to when scopeVisibility is'campus'. Omitted entirely for'global'posts — that's what makes them visible across every university. */
   institutionCode?: string;
   imageUrl?: string | null;
   videoUrl?: string | null;
@@ -88,11 +88,11 @@ export interface Post {
   isLikedByMe?: boolean;
   isPinned?: boolean;
   createdAt: string;
-  /** Collected in PublishThreadModal's checkbox but previously never stored anywhere — now backs a "Sponsored" badge on PostCard. */
+  /** Collected in PublishThreadModal's checkbox but previously never stored anywhere — now backs a"Sponsored"badge on PostCard. */
   sponsored?: boolean;
-  /** Free-text course codes (e.g. "CSC 301, MTH 101") collected in PublishThreadModal's "Course Tags" field — previously discarded, now shown on PostCard. */
+  /** Free-text course codes (e.g. "CSC 301, MTH 101") collected in PublishThreadModal's"Course Tags"field — previously discarded, now shown on PostCard. */
   courseTags?: string;
-  /** "Thread" vs "Rapid-Fire Conversation" toggle in PublishThreadModal — previously collected but discarded. Stored as metadata only; doesn't change posting behavior, just shown as a small tag on PostCard. */
+  /** "Thread"vs"Rapid-Fire Conversation"toggle in PublishThreadModal — previously collected but discarded. Stored as metadata only; doesn't change posting behavior, just shown as a small tag on PostCard. */
   postFormat?: 'Thread' | 'Rapid-Fire Conversation';
 }
 

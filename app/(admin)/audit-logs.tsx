@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Platform, Pressable, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
-import { Badge } from '@/components/Badge';
-import { AppButton } from '@/components/AppButton';
-import { ChipSelect } from '@/components/ChipSelect';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listAuditLog } from '@/api/auditLog';
-import { AuditLogAction, AuditLogEntry } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, FlatList, Platform, Pressable, View } from'react-native';
+import { useQuery } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { SolidCard } from'@/components/SolidCard';
+import { Badge } from'@/components/Badge';
+import { AppButton } from'@/components/AppButton';
+import { ChipSelect } from'@/components/ChipSelect';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listAuditLog } from'@/api/auditLog';
+import { AuditLogAction, AuditLogEntry } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
-const CATEGORY_FILTERS = ['All Events', 'Moderation 🛡️', 'Security & Keys 🔐', 'Verification 🪪', 'Escrow & Finance 💰'];
+const CATEGORY_FILTERS = ['All Events', 'Moderation', 'Security & Keys 🔐', 'Verification 🪪', 'Escrow & Finance'];
 
 const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | 'brand' | 'neutral'> = {
   report_resolved: 'success',
@@ -34,9 +34,9 @@ export default function AuditLogsScreen() {
   const { data: entries, isLoading } = useQuery({ queryKey: ['audit-log', 'global'], queryFn: () => listAuditLog() });
 
   const filtered = (entries ?? []).filter((e) => {
-    if (filter === 'Moderation 🛡️') return e.action.includes('report') || e.action.includes('event');
+    if (filter === 'Moderation') return e.action.includes('report') || e.action.includes('event');
     if (filter === 'Verification 🪪') return e.action.includes('verification');
-    if (filter === 'Escrow & Finance 💰') return e.action.includes('escrow');
+    if (filter === 'Escrow & Finance') return e.action.includes('escrow');
     if (filter === 'Security & Keys 🔐') return e.action.includes('impersonation');
     return true;
   });
@@ -68,12 +68,12 @@ export default function AuditLogsScreen() {
       <AppHeader />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: spacing.md, marginBottom: spacing.xs }}>
         <View>
-          <AppText variant="h1" weight="bold">
+          <AppText variant="h1"weight="bold">
             System Audit Trail 📜
           </AppText>
           <AppText tone="secondary">Immutable ledger of administrative and security events</AppText>
         </View>
-        <AppButton label="Export CSV 📥" variant="secondary" onPress={handleExportCsv} />
+        <AppButton label="Export CSV 📥"variant="secondary"onPress={handleExportCsv} />
       </View>
 
       <View style={{ marginVertical: spacing.md }}>
@@ -89,18 +89,18 @@ export default function AuditLogsScreen() {
           <SolidCard radius={18} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
               <Badge label={item.action.replace(/_/g, ' ').toUpperCase()} tone={ACTION_TONE[item.action] ?? 'neutral'} />
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 {new Date(item.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </AppText>
             </View>
 
-            <AppText weight="bold" variant="bodySmall" style={{ marginVertical: 2 }}>
+            <AppText weight="bold"variant="bodySmall"style={{ marginVertical: 2 }}>
               {item.summary}
             </AppText>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 2 }}>
-              <Ionicons name="shield-checkmark" size={14} color={colors.brandPrimary} />
-              <AppText tone="secondary" variant="caption">
+              <Ionicons name="shield-checkmark"size={14} color={colors.brandPrimary} />
+              <AppText tone="secondary"variant="caption">
                 Actor: {item.actorName} ({item.actorRole.toUpperCase()})
                 {item.institutionCode ? ` \u2022 Campus: ${item.institutionCode}` : ''}
               </AppText>
@@ -108,7 +108,7 @@ export default function AuditLogsScreen() {
 
             {item.reason ? (
               <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.xs, borderRadius: 8, marginTop: 4 }}>
-                <AppText variant="caption" tone="brand" style={{ fontSize: 11, fontStyle: 'italic' }}>
+                <AppText variant="caption"tone="brand"style={{ fontSize: 11, fontStyle: 'italic' }}>
                   Justification: {item.reason}
                 </AppText>
               </View>
@@ -116,7 +116,7 @@ export default function AuditLogsScreen() {
           </SolidCard>
         )}
         ListEmptyComponent={
-          !isLoading ? <EmptyState title="No audit entries" description="System actions will be recorded here automatically." /> : null
+          !isLoading ? <EmptyState title="No audit entries"description="System actions will be recorded here automatically." /> : null
         }
       />
     </ScreenContainer>

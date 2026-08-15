@@ -1,3 +1,3 @@
-import { MessagesListScreen } from '@/components/MessagesListScreen';
+import { MessagesListScreen } from'@/components/MessagesListScreen';
 
 export default MessagesListScreen;

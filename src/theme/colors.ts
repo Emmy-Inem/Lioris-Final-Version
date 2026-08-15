@@ -1,8 +1,8 @@
 /**
  * Exact design tokens ported from the Lioris native Android reference
  * app (Kotlin/Jetpack Compose — com.example.ui.theme.Color.kt), not the
- * generic "blue/orange" tokens the PRD described. Hex values are 1:1
- * matches; do not "round" these to nearby brand-blue shades.
+ * generic"blue/orange"tokens the PRD described. Hex values are 1:1
+ * matches; do not"round"these to nearby brand-blue shades.
  *
  * CORRECTION: an earlier pass wrongly set the primary to green based on
  * a partial screenshot set. A larger, more complete screenshot set
@@ -48,7 +48,7 @@ const palette = {
   navyDeep: '#152A4A', // section-label text
   navyPaleBg: '#E3E8F5', // info cards (Lioris Live box, workspace scope card, etc.)
   skyWhiteBg: '#F8FAF9', // ultra-clean modern light background
-  waitlistOrange: '#F08A2E', // "Join Waitlist" button
+  waitlistOrange: '#F08A2E', // "Join Waitlist"button
 
   // UniHub-inspired modern campus teal palette
   tealPrimary: '#0B7A75', // main brand — buttons, active tab, headers

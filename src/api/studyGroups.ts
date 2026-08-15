@@ -1,8 +1,8 @@
-import { api } from './client';
-import { StudyGroup } from './types';
-import { mockStudyGroups } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
+import { api } from'./client';
+import { StudyGroup } from'./types';
+import { mockStudyGroups } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 let studyGroupsState = [...mockStudyGroups];
 
@@ -15,7 +15,7 @@ export interface CreateStudyGroupPayload {
 
 // `StudyGroup.isPublic` implies these are student-created (like a
 // public/private server), but there was no way to create one at all —
-// same gap shape as Marketplace's missing "Sell an item" flow.
+// same gap shape as Marketplace's missing"Sell an item"flow.
 export async function createStudyGroup(payload: CreateStudyGroupPayload): Promise<StudyGroup> {
   const created: StudyGroup = {
     id: `mock-group-${Date.now()}`,

@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { SolidCard } from '@/components/SolidCard';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { Badge } from '@/components/Badge';
-import { AppButton } from '@/components/AppButton';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listResources, createResource, updateResource, approveResource, rejectResource, deleteResource } from '@/api/resources';
-import { Resource } from '@/api/types';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Image } from'expo-image';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { SolidCard } from'@/components/SolidCard';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { Badge } from'@/components/Badge';
+import { AppButton } from'@/components/AppButton';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listResources, createResource, updateResource, approveResource, rejectResource, deleteResource } from'@/api/resources';
+import { Resource } from'@/api/types';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { haptics } from'@/utils/haptics';
 
 const RESOURCE_COVER_PRESETS = [
   { id: 'campus_library_study', label: 'Study Archive', src: require('../../../assets/images/campus_library_study.jpg') },
@@ -112,7 +112,7 @@ export function ResourcesModerationTab() {
       });
       await queryClient.invalidateQueries({ queryKey: ['resources'] });
       await refetch();
-      Alert.alert('Resource Approved & Indexed', `"${resource.title}" is now live in the student catalog.`);
+      Alert.alert('Resource Approved & Indexed', `"${resource.title}"is now live in the student catalog.`);
     } finally {
       setActingId(null);
     }
@@ -123,7 +123,7 @@ export function ResourcesModerationTab() {
     Alert.prompt
       ? Alert.prompt(
           'Reject Submission',
-          `Provide a reason for declining "${resource.title}":`,
+          `Provide a reason for declining"${resource.title}":`,
           [
             { text: 'Cancel', style: 'cancel' },
             {
@@ -142,7 +142,7 @@ export function ResourcesModerationTab() {
         )
       : Alert.alert(
           'Reject Submission?',
-          `Decline "${resource.title}" by ${resource.authorName}?`,
+          `Decline"${resource.title}"by ${resource.authorName}?`,
           [
             { text: 'Cancel', style: 'cancel' },
             {
@@ -186,7 +186,7 @@ export function ResourcesModerationTab() {
           targetId: editingResource.id,
           reason: 'Resource metadata revision',
         });
-        Alert.alert('Resource Updated', `Changes to "${formTitle.trim()}" have been saved.`);
+        Alert.alert('Resource Updated', `Changes to"${formTitle.trim()}"have been saved.`);
       } else {
         await createResource({
           title: formTitle.trim(),
@@ -198,7 +198,7 @@ export function ResourcesModerationTab() {
           fileSize: formFileSize.trim(),
           description: formDesc.trim(),
         });
-        Alert.alert('Resource Published', `"${formTitle.trim()}" is now available in the university library.`);
+        Alert.alert('Resource Published', `"${formTitle.trim()}"is now available in the university library.`);
       }
 
       await queryClient.invalidateQueries({ queryKey: ['resources'] });
@@ -216,7 +216,7 @@ export function ResourcesModerationTab() {
     haptics.error();
     Alert.alert(
       'Purge Academic Resource?',
-      `Permanently remove "${resource.title}" (${resource.courseCode}) from the student archive?`,
+      `Permanently remove"${resource.title}" (${resource.courseCode}) from the student archive?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -261,7 +261,7 @@ export function ResourcesModerationTab() {
             backgroundColor: section === 'approved' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={section === 'approved' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption"weight="bold"tone={section === 'approved' ? 'inverse' : 'secondary'}>
             Live Library Archive ({approvedResources.length})
           </AppText>
         </Pressable>
@@ -279,7 +279,7 @@ export function ResourcesModerationTab() {
             backgroundColor: section === 'pending' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={section === 'pending' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption"weight="bold"tone={section === 'pending' ? 'inverse' : 'secondary'}>
             Pending Review Queue ({pendingSubmissions.length})
           </AppText>
         </Pressable>
@@ -289,13 +289,11 @@ export function ResourcesModerationTab() {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
         <View style={{ flex: 1, marginRight: spacing.sm }}>
           <AppTextField
-            label=""
-            placeholder="Search by course, title, uploader..."
-            value={searchQuery}
+            label=""placeholder="Search by course, title, uploader..."value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
-        <AppButton label="+ Add File" onPress={handleOpenCreate} variant="primary" />
+        <AppButton label="+ Add File"onPress={handleOpenCreate} variant="primary" />
       </View>
 
       {/* Category Filter Pills */}
@@ -316,7 +314,7 @@ export function ResourcesModerationTab() {
             backgroundColor: selectedCategory === 'all' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={selectedCategory === 'all' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption"weight="bold"tone={selectedCategory === 'all' ? 'inverse' : 'secondary'}>
             All ({section === 'approved' ? approvedResources.length : pendingSubmissions.length})
           </AppText>
         </Pressable>
@@ -337,7 +335,7 @@ export function ResourcesModerationTab() {
                 backgroundColor: selected ? colors.brandPrimary : colors.divider,
               }}
             >
-              <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                 {cat} ({count})
               </AppText>
             </Pressable>
@@ -368,7 +366,7 @@ export function ResourcesModerationTab() {
               />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <AppText variant="body" weight="bold" style={{ flex: 1, marginRight: 6 }}>
+                  <AppText variant="body"weight="bold"style={{ flex: 1, marginRight: 6 }}>
                     {resource.title}
                   </AppText>
                   <Badge
@@ -377,13 +375,13 @@ export function ResourcesModerationTab() {
                   />
                 </View>
 
-                <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                  {resource.courseCode} &bull; {resource.department} &bull; {resource.fileSize} &bull; {resource.fileType || 'PDF'}
+                <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
+                  {resource.courseCode} • {resource.department} • {resource.fileSize} • {resource.fileType || 'PDF'}
                 </AppText>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                  <Ionicons name="person-outline" size={12} color={colors.textSecondary} />
-                  <AppText tone="secondary" variant="caption">
+                  <Ionicons name="person-outline"size={12} color={colors.textSecondary} />
+                  <AppText tone="secondary"variant="caption">
                     Uploaded by: <AppText weight="bold">{resource.authorName}</AppText> ({resource.academicLevel || 'Student'})
                   </AppText>
                 </View>
@@ -392,10 +390,10 @@ export function ResourcesModerationTab() {
 
             {/* Document excerpt preview */}
             <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.sm, padding: spacing.sm, marginBottom: spacing.md }}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 2 }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: 2 }}>
                 SYLLABUS & DOCUMENT EXCERPT:
               </AppText>
-              <AppText tone="secondary" variant="bodySmall" numberOfLines={3}>
+              <AppText tone="secondary"variant="bodySmall"numberOfLines={3}>
                 {resource.description}
               </AppText>
             </View>
@@ -405,17 +403,13 @@ export function ResourcesModerationTab() {
               <View style={{ flexDirection: 'row', gap: spacing.xs }}>
                 <View style={{ flex: 1 }}>
                   <AppButton
-                    label="Approve & Index ✓"
-                    variant="primary"
-                    loading={actingId === resource.id}
+                    label="Approve & Index ✓"variant="primary"loading={actingId === resource.id}
                     onPress={() => handleApprove(resource)}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <AppButton
-                    label="Reject File ✕"
-                    variant="secondary"
-                    loading={actingId === resource.id}
+                    label="Reject File ✕"variant="secondary"loading={actingId === resource.id}
                     onPress={() => handleRejectConfirm(resource)}
                   />
                 </View>
@@ -431,13 +425,13 @@ export function ResourcesModerationTab() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="eye-outline" size={18} color={colors.textPrimary} />
+                  <Ionicons name="eye-outline"size={18} color={colors.textPrimary} />
                 </Pressable>
               </View>
             ) : (
               <View style={{ flexDirection: 'row', gap: spacing.xs }}>
                 <View style={{ flex: 1 }}>
-                  <AppButton label="Edit Resource" variant="secondary" onPress={() => handleOpenEdit(resource)} />
+                  <AppButton label="Edit Resource"variant="secondary"onPress={() => handleOpenEdit(resource)} />
                 </View>
                 <Pressable
                   onPress={() => handleDeleteConfirm(resource)}
@@ -451,7 +445,7 @@ export function ResourcesModerationTab() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="trash-outline" size={18} color={colors.critical} />
+                  <Ionicons name="trash-outline"size={18} color={colors.critical} />
                 </Pressable>
               </View>
             )}
@@ -467,7 +461,7 @@ export function ResourcesModerationTab() {
       ) : null}
 
       {/* Create / Edit Resource Modal */}
-      <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
+      <Modal visible={editModalOpen} transparent animationType="slide"onRequestClose={() => setEditModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setEditModalOpen(false)} />
           <View
@@ -481,39 +475,33 @@ export function ResourcesModerationTab() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="folder-outline" size={20} color={colors.brandPrimary} />
-                <AppText variant="h2" weight="bold">
+                <Ionicons name="folder-outline"size={20} color={colors.brandPrimary} />
+                <AppText variant="h2"weight="bold">
                   {editingResource ? 'Edit Academic Resource' : 'Publish Academic Resource'}
                 </AppText>
               </View>
               <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <AppTextField
-                label="Resource Title"
-                placeholder="e.g. CSC 301 Operating Systems Past Questions 2024"
-                value={formTitle}
+                label="Resource Title"placeholder="e.g. CSC 301 Operating Systems Past Questions 2024"value={formTitle}
                 onChangeText={setFormTitle}
               />
               <AppTextField
-                label="Course Code"
-                placeholder="e.g. CSC 301"
-                value={formCode}
+                label="Course Code"placeholder="e.g. CSC 301"value={formCode}
                 onChangeText={setFormCode}
                 autoCapitalize="characters"
               />
               <AppTextField
-                label="Academic Department"
-                placeholder="e.g. Computer Science & AI"
-                value={formDept}
+                label="Academic Department"placeholder="e.g. Computer Science & AI"value={formDept}
                 onChangeText={setFormDept}
               />
 
               {/* Category Picker */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
                 RESOURCE TYPE / CATEGORY
               </AppText>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -531,7 +519,7 @@ export function ResourcesModerationTab() {
                       backgroundColor: formCategory === cat ? colors.pastelPrimaryBg : colors.surface,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={formCategory === cat ? 'brand' : 'secondary'}>
+                    <AppText variant="caption"weight="bold"tone={formCategory === cat ? 'brand' : 'secondary'}>
                       {cat}
                     </AppText>
                   </Pressable>
@@ -541,7 +529,7 @@ export function ResourcesModerationTab() {
               {/* Academic Level & Format Row */}
               <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
                 <View style={{ flex: 1 }}>
-                  <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                  <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
                     LEVEL COHORT
                   </AppText>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4 }}>
@@ -558,7 +546,7 @@ export function ResourcesModerationTab() {
                           backgroundColor: formLevel === lvl ? colors.pastelPrimaryBg : colors.surface,
                         }}
                       >
-                        <AppText variant="caption" weight="bold" tone={formLevel === lvl ? 'brand' : 'secondary'}>
+                        <AppText variant="caption"weight="bold"tone={formLevel === lvl ? 'brand' : 'secondary'}>
                           {lvl}
                         </AppText>
                       </Pressable>
@@ -567,7 +555,7 @@ export function ResourcesModerationTab() {
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                  <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
                     FILE FORMAT
                   </AppText>
                   <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -585,7 +573,7 @@ export function ResourcesModerationTab() {
                           backgroundColor: formFileType === ft ? colors.pastelPrimaryBg : colors.surface,
                         }}
                       >
-                        <AppText variant="caption" weight="bold" tone={formFileType === ft ? 'brand' : 'secondary'}>
+                        <AppText variant="caption"weight="bold"tone={formFileType === ft ? 'brand' : 'secondary'}>
                           {ft}
                         </AppText>
                       </Pressable>
@@ -595,16 +583,12 @@ export function ResourcesModerationTab() {
               </View>
 
               <AppTextField
-                label="File Size (Estimated)"
-                placeholder="e.g. 4.8 MB"
-                value={formFileSize}
+                label="File Size (Estimated)"placeholder="e.g. 4.8 MB"value={formFileSize}
                 onChangeText={setFormFileSize}
               />
 
               <AppTextField
-                label="Description & Syllabus Coverage"
-                placeholder="Detail exam year, chapters covered, lecturer notes..."
-                value={formDesc}
+                label="Description & Syllabus Coverage"placeholder="Detail exam year, chapters covered, lecturer notes..."value={formDesc}
                 onChangeText={setFormDesc}
                 multiline
                 numberOfLines={3}
@@ -612,7 +596,7 @@ export function ResourcesModerationTab() {
             </ScrollView>
 
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setEditModalOpen(false)} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setEditModalOpen(false)} />
               <AppButton
                 label={editingResource ? 'Save Changes' : 'Upload to Catalog'}
                 loading={saving}
@@ -625,52 +609,52 @@ export function ResourcesModerationTab() {
       </Modal>
 
       {/* Document Inspector Modal */}
-      <Modal visible={!!previewModalResource} transparent animationType="fade" onRequestClose={() => setPreviewModalResource(null)}>
+      <Modal visible={!!previewModalResource} transparent animationType="fade"onRequestClose={() => setPreviewModalResource(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg }}>
           <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <AppText variant="h3" weight="bold">
+              <AppText variant="h3"weight="bold">
                 Document Inspection
               </AppText>
               <Pressable onPress={() => setPreviewModalResource(null)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
             {previewModalResource ? (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <AppText variant="body" weight="bold" style={{ marginBottom: 4 }}>
+                <AppText variant="body"weight="bold"style={{ marginBottom: 4 }}>
                   {previewModalResource.title}
                 </AppText>
-                <AppText tone="brand" variant="caption" weight="bold" style={{ marginBottom: spacing.md }}>
-                  {previewModalResource.courseCode} &bull; {previewModalResource.department} &bull; {previewModalResource.fileType} ({previewModalResource.fileSize})
+                <AppText tone="brand"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
+                  {previewModalResource.courseCode} • {previewModalResource.department} • {previewModalResource.fileType} ({previewModalResource.fileSize})
                 </AppText>
 
                 <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
-                  <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 4 }}>
+                  <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: 4 }}>
                     VERIFICATION CLEARANCES:
                   </AppText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <Ionicons name="shield-checkmark" size={14} color={colors.success} />
+                    <Ionicons name="shield-checkmark"size={14} color={colors.success} />
                     <AppText variant="caption">Virus & Malware Scan: Clean</AppText>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="school" size={14} color={colors.brandPrimary} />
+                    <Ionicons name="school"size={14} color={colors.brandPrimary} />
                     <AppText variant="caption">Syllabus Match: University of Ibadan Department Archive</AppText>
                   </View>
                 </View>
 
-                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+                <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 4 }}>
                   SUMMARY & CHAPTERS:
                 </AppText>
-                <AppText tone="primary" variant="bodySmall" style={{ lineHeight: 20 }}>
+                <AppText tone="primary"variant="bodySmall"style={{ lineHeight: 20 }}>
                   {previewModalResource.description}
                 </AppText>
               </ScrollView>
             ) : null}
 
             <View style={{ marginTop: spacing.md }}>
-              <AppButton label="Close Inspection" onPress={() => setPreviewModalResource(null)} />
+              <AppButton label="Close Inspection"onPress={() => setPreviewModalResource(null)} />
             </View>
           </View>
         </View>

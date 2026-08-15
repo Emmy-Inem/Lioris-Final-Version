@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
-import NetInfo from '@react-native-community/netinfo';
-import { onlineManager } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
+import React, { useEffect, useState } from'react';
+import { View } from'react-native';
+import NetInfo from'@react-native-community/netinfo';
+import { onlineManager } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
 
 // Wires NetInfo into React Query's own online/offline tracking, so
 // queries automatically pause retries while offline and refetch the
@@ -50,8 +50,8 @@ export function OfflineBanner() {
         paddingVertical: spacing.xs,
       }}
     >
-      <Ionicons name="cloud-offline-outline" size={14} color="#FFFFFF" />
-      <AppText variant="caption" weight="bold" tone="inverse">
+      <Ionicons name="cloud-offline-outline"size={14} color="#FFFFFF" />
+      <AppText variant="caption"weight="bold"tone="inverse">
         You&apos;re offline — some things may not load
       </AppText>
     </View>

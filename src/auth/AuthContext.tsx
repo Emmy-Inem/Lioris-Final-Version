@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import * as authApi from '@/api/auth';
-import { UserRole } from '@/api/types';
+import React, { createContext, useContext, useEffect, useMemo, useState } from'react';
+import * as authApi from'@/api/auth';
+import { UserRole } from'@/api/types';
 import {
   setTokens,
   clearTokens,
@@ -8,10 +8,10 @@ import {
   setSessionUser,
   getSessionUser,
   StoredSessionUser,
-} from './tokenStorage';
-import { firstOnboardingStep } from './onboardingSteps';
-import { roleRequiresMfa } from './mfaPolicy';
-import { registerForPushNotificationsAsync } from '@/notifications/push';
+} from'./tokenStorage';
+import { firstOnboardingStep } from'./onboardingSteps';
+import { roleRequiresMfa } from'./mfaPolicy';
+import { registerForPushNotificationsAsync } from'@/notifications/push';
 
 interface SessionUser {
   id: string;
@@ -101,8 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(nextUser);
         // Built (permission request, Android channels, token
         // registration) but never actually called from anywhere before
-        // this — its own comment said "call this after login rather
-        // than on cold start." Fire-and-forget: idempotent if
+        // this — its own comment said"call this after login rather
+        // than on cold start."Fire-and-forget: idempotent if
         // permission was already granted/denied, and must never block
         // the sign-in flow itself.
         registerForPushNotificationsAsync().catch(() => {});

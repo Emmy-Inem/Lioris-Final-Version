@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { SolidCard } from '@/components/SolidCard';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { Badge } from '@/components/Badge';
-import { AppButton } from '@/components/AppButton';
-import { Avatar } from '@/components/Avatar';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { UserProfile, UserRole } from '@/api/types';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { SolidCard } from'@/components/SolidCard';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { Badge } from'@/components/Badge';
+import { AppButton } from'@/components/AppButton';
+import { Avatar } from'@/components/Avatar';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { UserProfile, UserRole } from'@/api/types';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { haptics } from'@/utils/haptics';
 
 const INITIAL_USERS: UserProfile[] = [
   {
@@ -179,7 +179,7 @@ export function UserProfilesTab() {
           userType: editRole,
           department: editDept.trim() || u.department,
           isVerified: editVerified,
-          verificationStatus: editVerified ? ('verified' as const) : ('none' as const),
+          verificationStatus: editVerified ? ('verified'as const) : ('none'as const),
           bio: editBio.trim() || u.bio,
         };
       }
@@ -223,9 +223,7 @@ export function UserProfilesTab() {
       {/* Search and Role Filter Bar */}
       <View style={{ marginBottom: spacing.sm }}>
         <AppTextField
-          label=""
-          placeholder="Search by name, email, department, campus..."
-          value={searchQuery}
+          label=""placeholder="Search by name, email, department, campus..."value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
@@ -254,7 +252,7 @@ export function UserProfilesTab() {
                 backgroundColor: selected ? colors.brandPrimary : colors.divider,
               }}
             >
-              <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                 {label} ({count})
               </AppText>
             </Pressable>
@@ -270,36 +268,34 @@ export function UserProfilesTab() {
               <Avatar name={user.fullName} size={50} role={user.userType} />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <AppText weight="bold" variant="body">
+                  <AppText weight="bold"variant="body">
                     {user.fullName}
                   </AppText>
                   {user.isVerified ? (
-                    <Ionicons name="checkmark-circle" size={16} color={colors.brandPrimary} />
+                    <Ionicons name="checkmark-circle"size={16} color={colors.brandPrimary} />
                   ) : null}
                 </View>
-                <AppText tone="secondary" variant="caption">
+                <AppText tone="secondary"variant="caption">
                   {user.email}
                 </AppText>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
                   <Badge label={user.userType.toUpperCase()} tone={user.userType === 'admin' ? 'critical' : user.userType === 'staff' ? 'brand' : 'accent'} />
-                  <AppText variant="caption" tone="secondary">
+                  <AppText variant="caption"tone="secondary">
                     {user.institutionName ?? 'Campus Node'}
                   </AppText>
                 </View>
               </View>
             </View>
 
-            <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
-              Dept: {user.department ?? 'General'} &bull; Trust Level: {user.trustLevel}/10 &bull; {user.postsCount} Posts &bull; {user.resourcesCount} Files
+            <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
+              Dept: {user.department ?? 'General'} • Trust Level: {user.trustLevel}/10 • {user.postsCount} Posts • {user.resourcesCount} Files
             </AppText>
 
             {/* Quick Action Buttons */}
             <View style={{ flexDirection: 'row', gap: spacing.xs }}>
               <View style={{ flex: 1 }}>
                 <AppButton
-                  label="Edit Role & Status"
-                  variant="secondary"
-                  onPress={() => handleOpenEdit(user)}
+                  label="Edit Role & Status"variant="secondary"onPress={() => handleOpenEdit(user)}
                 />
               </View>
               <Pressable
@@ -314,7 +310,7 @@ export function UserProfilesTab() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="ban-outline" size={18} color={colors.critical} />
+                <Ionicons name="ban-outline"size={18} color={colors.critical} />
               </Pressable>
             </View>
           </SolidCard>
@@ -322,11 +318,11 @@ export function UserProfilesTab() {
       })}
 
       {filteredUsers.length === 0 ? (
-        <EmptyState title="No users found" description="Try clearing your search query or role filter." />
+        <EmptyState title="No users found"description="Try clearing your search query or role filter." />
       ) : null}
 
       {/* Edit User Modal */}
-      <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
+      <Modal visible={editModalOpen} transparent animationType="slide"onRequestClose={() => setEditModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setEditModalOpen(false)} />
           <View
@@ -340,22 +336,22 @@ export function UserProfilesTab() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="person-circle-outline" size={22} color={colors.brandPrimary} />
-                <AppText variant="h2" weight="bold">
+                <Ionicons name="person-circle-outline"size={22} color={colors.brandPrimary} />
+                <AppText variant="h2"weight="bold">
                   User Governance Controls
                 </AppText>
               </View>
               <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <AppTextField label="Full Name" value={editName} onChangeText={setEditName} />
-              <AppTextField label="Academic Department" value={editDept} onChangeText={setEditDept} />
+              <AppTextField label="Full Name"value={editName} onChangeText={setEditName} />
+              <AppTextField label="Academic Department"value={editDept} onChangeText={setEditDept} />
 
               {/* Role Picker */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
                 ASSIGN ROLE & PRIVILEGES
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -372,7 +368,7 @@ export function UserProfilesTab() {
                       backgroundColor: editRole === r ? colors.pastelPrimaryBg : colors.surface,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={editRole === r ? 'brand' : 'secondary'}>
+                    <AppText variant="caption"weight="bold"tone={editRole === r ? 'brand' : 'secondary'}>
                       {r.toUpperCase()}
                     </AppText>
                   </Pressable>
@@ -382,10 +378,10 @@ export function UserProfilesTab() {
               {/* Verified Badge Toggle */}
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, marginBottom: spacing.sm }}>
                 <View style={{ flex: 1, marginRight: spacing.sm }}>
-                  <AppText weight="bold" variant="bodySmall">
+                  <AppText weight="bold"variant="bodySmall">
                     Verified Academic Badge
                   </AppText>
-                  <AppText tone="secondary" variant="caption">
+                  <AppText tone="secondary"variant="caption">
                     Grants blue checkmark and elevated trust scoring.
                   </AppText>
                 </View>
@@ -398,7 +394,7 @@ export function UserProfilesTab() {
                     backgroundColor: editVerified ? colors.pastelPrimaryBg : colors.divider,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone={editVerified ? 'brand' : 'secondary'}>
+                  <AppText variant="caption"weight="bold"tone={editVerified ? 'brand' : 'secondary'}>
                     {editVerified ? 'Verified ✓' : 'Unverified'}
                   </AppText>
                 </Pressable>
@@ -407,10 +403,10 @@ export function UserProfilesTab() {
               {/* Trust Score Stepper */}
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, marginBottom: spacing.sm }}>
                 <View style={{ flex: 1, marginRight: spacing.sm }}>
-                  <AppText weight="bold" variant="bodySmall">
+                  <AppText weight="bold"variant="bodySmall">
                     Trust Rating Level ({selectedUser?.trustLevel ?? 8}/10)
                   </AppText>
-                  <AppText tone="secondary" variant="caption">
+                  <AppText tone="secondary"variant="caption">
                     Determines auto-flag exemptions and community clearance.
                   </AppText>
                 </View>
@@ -432,7 +428,7 @@ export function UserProfilesTab() {
                         justifyContent: 'center',
                       }}
                     >
-                      <AppText variant="caption" weight="bold" tone={(selectedUser?.trustLevel ?? 8) === num ? 'inverse' : 'secondary'}>
+                      <AppText variant="caption"weight="bold"tone={(selectedUser?.trustLevel ?? 8) === num ? 'inverse' : 'secondary'}>
                         {num}
                       </AppText>
                     </Pressable>
@@ -454,15 +450,14 @@ export function UserProfilesTab() {
                   marginBottom: spacing.md,
                 }}
               >
-                <Ionicons name="key-outline" size={16} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" tone="brand">
+                <Ionicons name="key-outline"size={16} color={colors.brandPrimary} />
+                <AppText variant="caption"weight="bold"tone="brand">
                   Reset MFA Credentials & Sessions
                 </AppText>
               </Pressable>
 
               <AppTextField
-                label="Academic Bio / Moderator Note"
-                value={editBio}
+                label="Academic Bio / Moderator Note"value={editBio}
                 onChangeText={setEditBio}
                 multiline
                 numberOfLines={3}
@@ -470,8 +465,8 @@ export function UserProfilesTab() {
             </ScrollView>
 
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setEditModalOpen(false)} />
-              <AppButton label="Save Changes" onPress={handleSaveUser} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setEditModalOpen(false)} />
+              <AppButton label="Save Changes"onPress={handleSaveUser} />
             </View>
           </View>
         </View>

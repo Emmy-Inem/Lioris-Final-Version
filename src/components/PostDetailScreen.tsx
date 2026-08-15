@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
-import { Image } from 'expo-image';
-import { router, useLocalSearchParams, useSegments } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ScreenContainer } from './ScreenContainer';
-import { AppHeader } from './AppHeader';
-import { AppText } from './AppText';
-import { Avatar } from './Avatar';
-import { Badge } from './Badge';
-import { UserTypeBadge } from './UserTypeBadge';
-import { SolidCard } from './SolidCard';
-import { AppTextField } from './AppTextField';
-import { AppButton } from './AppButton';
-import { ImageViewerModal } from './ImageViewerModal';
-import { UserProfileModal } from './UserProfileModal';
-import { ActionSheetModal } from './ActionSheetModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
-import { submitReport } from '@/api/moderation';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Platform, Pressable, ScrollView, View } from'react-native';
+import { Image } from'expo-image';
+import { router, useLocalSearchParams, useSegments } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { ScreenContainer } from'./ScreenContainer';
+import { AppHeader } from'./AppHeader';
+import { AppText } from'./AppText';
+import { Avatar } from'./Avatar';
+import { Badge } from'./Badge';
+import { UserTypeBadge } from'./UserTypeBadge';
+import { SolidCard } from'./SolidCard';
+import { AppTextField } from'./AppTextField';
+import { AppButton } from'./AppButton';
+import { ImageViewerModal } from'./ImageViewerModal';
+import { UserProfileModal } from'./UserProfileModal';
+import { ActionSheetModal } from'./ActionSheetModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
+import { submitReport } from'@/api/moderation';
+import { haptics } from'@/utils/haptics';
 
 const STOCK_IMAGES: Record<string, any> = {
   event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
@@ -39,7 +39,7 @@ const COMMENT_MEDIA_PRESETS = [
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (hours < 1) return 'Just now';
+  if (hours < 1) return'Just now';
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
 }
@@ -59,12 +59,12 @@ export function PostDetailScreen() {
     id: id ?? 'post-1',
     authorId: 'student-1',
     authorName: 'Diana Prince',
-    authorRole: 'student' as const,
+    authorRole: 'student'as const,
     title: 'CSC 301 Study Session & Algorithms Review Group',
     content: 'We are organizing an intensive peer study session on Dynamic Programming and Graph Algorithms ahead of midterm examinations. Feel free to join!',
     category: 'Academic',
-    visibilityScope: 'student' as const,
-    scopeVisibility: 'campus' as const,
+    visibilityScope: 'student'as const,
+    scopeVisibility: 'campus'as const,
     institutionCode: 'UI',
     imageUrl: 'campus_students_photo',
     likesCount: 24,
@@ -192,19 +192,18 @@ export function PostDetailScreen() {
           hitSlop={8}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 }}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-          <AppText variant="h3" weight="bold">Thread</AppText>
+          <Ionicons name="arrow-back"size={22} color={colors.textPrimary} />
+          <AppText variant="h3"weight="bold">Thread</AppText>
         </Pressable>
 
         <Pressable onPress={() => setMenuOpen(true)} hitSlop={8}>
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+          <Ionicons name="ellipsis-horizontal"size={20} color={colors.textSecondary} />
         </Pressable>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 120 }}
+        keyboardShouldPersistTaps="handled"contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Full-Screen Master Thread Card */}
         <SolidCard frosted radius={24} style={{ marginBottom: spacing.md }}>
@@ -219,25 +218,25 @@ export function PostDetailScreen() {
             <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={50} role={post.authorRole} />
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <AppText weight="bold" variant="body">
+                <AppText weight="bold"variant="body">
                   {post.authorName}
                 </AppText>
-                <Ionicons name="checkmark-circle" size={16} color={colors.brandPrimary} />
+                <Ionicons name="checkmark-circle"size={16} color={colors.brandPrimary} />
                 <UserTypeBadge role={post.authorRole} />
               </View>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 {timeAgo(post.createdAt)} | {post.institutionCode ?? 'University of Ibadan'}
               </AppText>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+            <Ionicons name="chevron-forward"size={16} color={colors.textSecondary} />
           </Pressable>
 
           {/* Topic & Full Body Text */}
-          <AppText variant="h2" weight="bold" style={{ marginBottom: spacing.xs, lineHeight: 28 }}>
+          <AppText variant="h2"weight="bold"style={{ marginBottom: spacing.xs, lineHeight: 28 }}>
             {post.title}
           </AppText>
 
-          <AppText variant="body" tone="primary" style={{ lineHeight: 24, marginBottom: spacing.md }}>
+          <AppText variant="body"tone="primary"style={{ lineHeight: 24, marginBottom: spacing.md }}>
             {post.content}
           </AppText>
 
@@ -254,8 +253,8 @@ export function PostDetailScreen() {
             >
               <Image source={postImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
               <View style={{ position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="expand" size={14} color="#FFFFFF" />
-                <AppText variant="caption" weight="bold" tone="inverse">Expand</AppText>
+                <Ionicons name="expand"size={14} color="#FFFFFF" />
+                <AppText variant="caption"weight="bold"tone="inverse">Expand</AppText>
               </View>
             </Pressable>
           ) : null}
@@ -273,8 +272,8 @@ export function PostDetailScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
-                <Ionicons name="bar-chart" size={18} color={colors.brandPrimary} />
-                <AppText weight="bold" variant="bodySmall" tone="brand">
+                <Ionicons name="bar-chart"size={18} color={colors.brandPrimary} />
+                <AppText weight="bold"variant="bodySmall"tone="brand">
                   {poll.question}
                 </AppText>
               </View>
@@ -319,12 +318,12 @@ export function PostDetailScreen() {
                           size={18}
                           color={opt.isVotedByMe ? colors.brandPrimary : colors.textSecondary}
                         />
-                        <AppText weight={opt.isVotedByMe ? 'bold' : 'medium'} variant="bodySmall" tone={opt.isVotedByMe ? 'brand' : 'primary'}>
+                        <AppText weight={opt.isVotedByMe ? 'bold' : 'medium'} variant="bodySmall"tone={opt.isVotedByMe ? 'brand' : 'primary'}>
                           {opt.label}
                         </AppText>
                       </View>
                       {hasVotedAny ? (
-                        <AppText weight="bold" variant="caption" tone={opt.isVotedByMe ? 'brand' : 'secondary'}>
+                        <AppText weight="bold"variant="caption"tone={opt.isVotedByMe ? 'brand' : 'secondary'}>
                           {percentage}% ({opt.votes})
                         </AppText>
                       ) : null}
@@ -339,24 +338,24 @@ export function PostDetailScreen() {
           {post.courseTags ? (
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.md }}>
               <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <AppText variant="caption" weight="bold" tone="brand">{post.courseTags}</AppText>
+                <AppText variant="caption"weight="bold"tone="brand">{post.courseTags}</AppText>
               </View>
             </View>
           ) : null}
 
           {/* Engagement Metrics Stats Row */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.divider }}>
-            <AppText variant="bodySmall" weight="bold">
-              {likesCount} <AppText tone="secondary" variant="caption">Likes</AppText>
+            <AppText variant="bodySmall"weight="bold">
+              {likesCount} <AppText tone="secondary"variant="caption">Likes</AppText>
             </AppText>
-            <AppText variant="bodySmall" weight="bold">
-              {comments?.length ?? 0} <AppText tone="secondary" variant="caption">Replies</AppText>
+            <AppText variant="bodySmall"weight="bold">
+              {comments?.length ?? 0} <AppText tone="secondary"variant="caption">Replies</AppText>
             </AppText>
-            <AppText variant="bodySmall" weight="bold">
-              18 <AppText tone="secondary" variant="caption">Reposts</AppText>
+            <AppText variant="bodySmall"weight="bold">
+              18 <AppText tone="secondary"variant="caption">Reposts</AppText>
             </AppText>
-            <AppText variant="bodySmall" weight="bold">
-              340 <AppText tone="secondary" variant="caption">Views</AppText>
+            <AppText variant="bodySmall"weight="bold">
+              340 <AppText tone="secondary"variant="caption">Views</AppText>
             </AppText>
           </View>
 
@@ -364,7 +363,7 @@ export function PostDetailScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingTop: spacing.sm }}>
             <Pressable onPress={handleToggleLike} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}>
               <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={liked ? '#E53E3E' : colors.textSecondary} />
-              <AppText variant="caption" weight="bold" style={{ color: liked ? '#E53E3E' : colors.textSecondary }}>
+              <AppText variant="caption"weight="bold"style={{ color: liked ? '#E53E3E' : colors.textSecondary }}>
                 {liked ? 'Liked' : 'Like'}
               </AppText>
             </Pressable>
@@ -377,8 +376,8 @@ export function PostDetailScreen() {
               }}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
             >
-              <Ionicons name="repeat" size={20} color={reposted ? colors.brandPrimary : colors.textSecondary} />
-              <AppText variant="caption" weight="bold" tone={reposted ? 'brand' : 'secondary'}>
+              <Ionicons name="repeat"size={20} color={reposted ? colors.brandPrimary : colors.textSecondary} />
+              <AppText variant="caption"weight="bold"tone={reposted ? 'brand' : 'secondary'}>
                 Repost
               </AppText>
             </Pressable>
@@ -392,7 +391,7 @@ export function PostDetailScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
             >
               <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
-              <AppText variant="caption" weight="bold" tone={bookmarked ? 'brand' : 'secondary'}>
+              <AppText variant="caption"weight="bold"tone={bookmarked ? 'brand' : 'secondary'}>
                 Save
               </AppText>
             </Pressable>
@@ -404,8 +403,8 @@ export function PostDetailScreen() {
               }}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
             >
-              <Ionicons name="share-social-outline" size={20} color={colors.textSecondary} />
-              <AppText variant="caption" weight="bold" tone="secondary">
+              <Ionicons name="share-social-outline"size={20} color={colors.textSecondary} />
+              <AppText variant="caption"weight="bold"tone="secondary">
                 Share
               </AppText>
             </Pressable>
@@ -414,10 +413,10 @@ export function PostDetailScreen() {
 
         {/* Discussion Replies List Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, paddingHorizontal: 4 }}>
-          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
             ALL CONVERSATION REPLIES ({comments?.length ?? 0})
           </AppText>
-          <Badge label="Live Thread" tone="brand" />
+          <Badge label="Live Thread"tone="brand" />
         </View>
 
         {/* Conversation Replies Tree */}
@@ -460,18 +459,18 @@ export function PostDetailScreen() {
                   <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)', borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <AppText weight="bold" variant="bodySmall">{c.authorName}</AppText>
+                        <AppText weight="bold"variant="bodySmall">{c.authorName}</AppText>
                         <UserTypeBadge role={c.authorRole} />
                         {c.authorDepartment ? (
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>{c.authorDepartment}</AppText>
+                          <AppText variant="caption"tone="secondary"style={{ fontSize: 10 }}>{c.authorDepartment}</AppText>
                         ) : null}
                       </View>
-                      <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+                      <AppText tone="secondary"variant="caption"style={{ fontSize: 10 }}>
                         {timeAgo(c.createdAt)}
                       </AppText>
                     </View>
 
-                    <AppText variant="bodySmall" tone="primary" style={{ marginTop: 4, lineHeight: 20 }}>
+                    <AppText variant="bodySmall"tone="primary"style={{ marginTop: 4, lineHeight: 20 }}>
                       {c.content}
                     </AppText>
 
@@ -496,7 +495,7 @@ export function PostDetailScreen() {
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                       >
                         <Ionicons name={isCommentLiked ? 'heart' : 'heart-outline'} size={15} color={isCommentLiked ? '#E53E3E' : colors.textSecondary} />
-                        <AppText variant="caption" weight={isCommentLiked ? 'bold' : 'regular'} style={{ color: isCommentLiked ? '#E53E3E' : colors.textSecondary }}>
+                        <AppText variant="caption"weight={isCommentLiked ? 'bold' : 'regular'} style={{ color: isCommentLiked ? '#E53E3E' : colors.textSecondary }}>
                           {cLikes > 0 ? cLikes : 'Like'}
                         </AppText>
                       </Pressable>
@@ -509,8 +508,8 @@ export function PostDetailScreen() {
                         }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                       >
-                        <Ionicons name="arrow-undo-outline" size={14} color={colors.brandPrimary} />
-                        <AppText variant="caption" weight="semiBold" tone="brand">
+                        <Ionicons name="arrow-undo-outline"size={14} color={colors.brandPrimary} />
+                        <AppText variant="caption"weight="semiBold"tone="brand">
                           Reply
                         </AppText>
                       </Pressable>
@@ -522,7 +521,7 @@ export function PostDetailScreen() {
           </View>
         ) : (
           <SolidCard frosted style={{ alignItems: 'center', padding: spacing.lg }}>
-            <AppText tone="secondary" variant="bodySmall">No replies yet. Join the conversation below!</AppText>
+            <AppText tone="secondary"variant="bodySmall">No replies yet. Join the conversation below!</AppText>
           </SolidCard>
         )}
       </ScrollView>
@@ -531,9 +530,9 @@ export function PostDetailScreen() {
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: isDark ? 'rgba(10, 19, 38, 0.92)' : 'rgba(255, 255, 255, 0.95)', borderTopWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
         {replyingToAuthor ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
-            <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToAuthor}</AppText>
+            <AppText variant="caption"tone="brand"weight="bold">Replying to @{replyingToAuthor}</AppText>
             <Pressable onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
-              <Ionicons name="close" size={14} color={colors.brandPrimary} />
+              <Ionicons name="close"size={14} color={colors.brandPrimary} />
             </Pressable>
           </View>
         ) : null}
@@ -543,8 +542,7 @@ export function PostDetailScreen() {
 
           <View style={{ flex: 1 }}>
             <AppTextField
-              label=""
-              placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Post your reply..."}
+              label=""placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Post your reply..."}
               value={newReply}
               onChangeText={setNewReply}
               multiline
@@ -559,15 +557,14 @@ export function PostDetailScreen() {
                 }}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill }}
               >
-                <Ionicons name="image-outline" size={13} color={colors.brandPrimary} />
-                <AppText variant="caption" tone="brand" weight="bold" style={{ fontSize: 10 }}>Photo</AppText>
+                <Ionicons name="image-outline"size={13} color={colors.brandPrimary} />
+                <AppText variant="caption"tone="brand"weight="bold"style={{ fontSize: 10 }}>Photo</AppText>
               </Pressable>
             </View>
           </View>
 
           <AppButton
-            label="Reply"
-            onPress={handleAddReply}
+            label="Reply"onPress={handleAddReply}
             loading={submittingReply}
             disabled={!newReply.trim() && !attachedReplyMedia}
           />
@@ -603,7 +600,7 @@ export function PostDetailScreen() {
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="share-social-outline" size={18} color={colors.textPrimary} />
+          <Ionicons name="share-social-outline"size={18} color={colors.textPrimary} />
           <AppText weight="medium">Share Thread Link</AppText>
         </Pressable>
 
@@ -611,7 +608,7 @@ export function PostDetailScreen() {
         {(user?.role === 'admin' || user?.role === 'staff') && (
           <>
             <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
-            <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginVertical: 2 }}>
+            <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginVertical: 2 }}>
               MODERATOR CONTROLS
             </AppText>
 
@@ -624,8 +621,8 @@ export function PostDetailScreen() {
               }}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
             >
-              <Ionicons name="pin-outline" size={18} color={colors.brandPrimary} />
-              <AppText weight="medium" tone="brand">{post.sponsored ? 'Unpin Announcement' : 'Pin as Campus Announcement'}</AppText>
+              <Ionicons name="pin-outline"size={18} color={colors.brandPrimary} />
+              <AppText weight="medium"tone="brand">{post.sponsored ? 'Unpin Announcement' : 'Pin as Campus Announcement'}</AppText>
             </Pressable>
 
             <Pressable
@@ -651,7 +648,7 @@ export function PostDetailScreen() {
               }}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
             >
-              <Ionicons name="trash-outline" size={18} color={colors.critical} />
+              <Ionicons name="trash-outline"size={18} color={colors.critical} />
               <AppText style={{ color: colors.critical }} weight="bold">Takedown & Delete Thread</AppText>
             </Pressable>
             <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
@@ -665,7 +662,7 @@ export function PostDetailScreen() {
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="flag-outline" size={18} color={colors.critical} />
+          <Ionicons name="flag-outline"size={18} color={colors.critical} />
           <AppText style={{ color: colors.critical }} weight="medium">Report Thread</AppText>
         </Pressable>
       </ActionSheetModal>

@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from './ScreenContainer';
-import { AppText } from './AppText';
-import { AppTextField } from './AppTextField';
-import { EmptyState } from './EmptyState';
-import { PostCard } from './PostCard';
-import { EventCard } from './EventCard';
-import { ResourceCard } from './ResourceCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listFeedPosts } from '@/api/posts';
-import { listEvents } from '@/api/events';
-import { listResources } from '@/api/resources';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import React, { useState } from'react';
+import { FlatList, Pressable, View } from'react-native';
+import { useQuery } from'@tanstack/react-query';
+import { router } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'./ScreenContainer';
+import { AppText } from'./AppText';
+import { AppTextField } from'./AppTextField';
+import { EmptyState } from'./EmptyState';
+import { PostCard } from'./PostCard';
+import { EventCard } from'./EventCard';
+import { ResourceCard } from'./ResourceCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listFeedPosts } from'@/api/posts';
+import { listEvents } from'@/api/events';
+import { listResources } from'@/api/resources';
+import { useDebouncedValue } from'@/hooks/useDebouncedValue';
 
 type SearchTab = 'posts' | 'events' | 'resources';
 
@@ -51,16 +51,13 @@ export function SearchScreen() {
         <Pressable
           onPress={() => router.back()}
           hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Close search"
+          accessibilityRole="button"accessibilityLabel="Close search"
         >
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+          <Ionicons name="arrow-back"size={22} color={colors.textPrimary} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <AppTextField
-            label=""
-            placeholder="Search threads, events, study resources..."
-            value={query}
+            label=""placeholder="Search threads, events, study resources..."value={query}
             onChangeText={setQuery}
             autoFocus
           />
@@ -70,13 +67,12 @@ export function SearchScreen() {
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
         {(['posts', 'events', 'resources'] as const).map((t) => {
           const selected = tab === t;
-          const label = t === 'posts' ? 'Threads 💬' : t === 'events' ? 'Events 📅' : 'Resources 📚';
+          const label = t === 'posts' ? 'Threads' : t === 'events' ? 'Events' : 'Resources';
           return (
             <Pressable
               key={t}
               onPress={() => setTab(t)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
+              accessibilityRole="tab"accessibilityState={{ selected }}
               accessibilityLabel={label}
               style={{
                 paddingHorizontal: spacing.md,
@@ -87,7 +83,7 @@ export function SearchScreen() {
                 borderColor: selected ? colors.brandPrimary : colors.border,
               }}
             >
-              <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'inverse' : 'secondary'}>
                 {label}
               </AppText>
             </Pressable>
@@ -96,14 +92,14 @@ export function SearchScreen() {
       </View>
 
       {trimmed.length === 0 ? (
-        <EmptyState title="Search Campus Knowledge" description="Find forum threads, campus events, and academic past questions." />
+        <EmptyState title="Search Campus Knowledge"description="Find forum threads, campus events, and academic past questions." />
       ) : tab === 'posts' ? (
         <FlatList
           data={posts ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 130 }}
           renderItem={({ item }) => <PostCard post={item} />}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No posts found" description={`No results for "${debouncedTrimmed}".`} /> : null}
+          ListEmptyComponent={!isLoading ? <EmptyState title="No posts found"description={`No results for"${debouncedTrimmed}".`} /> : null}
         />
       ) : tab === 'events' ? (
         <FlatList
@@ -111,7 +107,7 @@ export function SearchScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 130 }}
           renderItem={({ item }) => <EventCard event={item} />}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No events found" description={`No results for "${debouncedTrimmed}".`} /> : null}
+          ListEmptyComponent={!isLoading ? <EmptyState title="No events found"description={`No results for"${debouncedTrimmed}".`} /> : null}
         />
       ) : (
         <FlatList
@@ -119,7 +115,7 @@ export function SearchScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 130 }}
           renderItem={({ item }) => <ResourceCard resource={item} />}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No resources found" description={`No results for "${debouncedTrimmed}".`} /> : null}
+          ListEmptyComponent={!isLoading ? <EmptyState title="No resources found"description={`No results for"${debouncedTrimmed}".`} /> : null}
         />
       )}
     </ScreenContainer>

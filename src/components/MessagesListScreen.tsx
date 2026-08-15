@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
-import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from './ScreenContainer';
-import { AppHeader } from './AppHeader';
-import { AppText } from './AppText';
-import { ConversationRow } from './ConversationRow';
-import { SolidCard } from './SolidCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
-import { listConversations, archiveConversation } from '@/api/messaging';
+import React, { useState } from'react';
+import { FlatList, Pressable, TextInput, View } from'react-native';
+import Animated, { FadeOut, LinearTransition } from'react-native-reanimated';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'./ScreenContainer';
+import { AppHeader } from'./AppHeader';
+import { AppText } from'./AppText';
+import { ConversationRow } from'./ConversationRow';
+import { SolidCard } from'./SolidCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useRealtimeChannel } from'@/realtime/useRealtimeChannel';
+import { listConversations, archiveConversation } from'@/api/messaging';
 
 export function MessagesListScreen() {
   const { colors, spacing, radius } = useTheme();
@@ -46,10 +46,10 @@ export function MessagesListScreen() {
 
       {/* Screen Title */}
       <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
-        <AppText variant="h1" weight="bold">
-          Student Messages 💬
+        <AppText variant="h1"weight="bold">
+          Student Messages 
         </AppText>
-        <AppText tone="secondary" variant="bodySmall">
+        <AppText tone="secondary"variant="bodySmall">
           Direct chats with classmates, mentors & representatives
         </AppText>
       </View>
@@ -69,17 +69,16 @@ export function MessagesListScreen() {
           marginBottom: spacing.sm,
         }}
       >
-        <Ionicons name="search" size={16} color={colors.textSecondary} />
+        <Ionicons name="search"size={16} color={colors.textSecondary} />
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search conversations..."
-          placeholderTextColor={colors.textSecondary}
+          placeholder="Search conversations..."placeholderTextColor={colors.textSecondary}
           style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
         />
         {searchQuery ? (
           <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+            <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>
@@ -110,7 +109,7 @@ export function MessagesListScreen() {
                 backgroundColor: selected ? colors.brandPrimary : 'transparent',
               }}
             >
-              <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="bodySmall"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                 {tab === 'all' ? 'All Messages' : 'Unread ✉️'}
               </AppText>
             </Pressable>
@@ -145,12 +144,12 @@ export function MessagesListScreen() {
                     marginBottom: spacing.md,
                   }}
                 >
-                  <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+                  <Ionicons name="chatbubbles-outline"size={32} color={colors.brandPrimary} />
                 </View>
-                <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+                <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.xs }}>
                   No Conversations
                 </AppText>
-                <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+                <AppText tone="secondary"variant="bodySmall"style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
                   Connect with students from your course or message your class representative.
                 </AppText>
               </View>

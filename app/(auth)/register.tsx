@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { View, ScrollView, Alert, Pressable } from 'react-native';
-import { Link, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { AppButton } from '@/components/AppButton';
-import { PasswordChecklist } from '@/components/PasswordChecklist';
-import { AuthHeroBackground } from '@/components/AuthHeroBackground';
-import { WaveCard } from '@/components/WaveCard';
-import { useAuth } from '@/auth/AuthContext';
-import { useTheme } from '@/theme/ThemeProvider';
-import { UserRole } from '@/api/types';
-import { isPasswordValid, passwordStrength, isValidEmailFormat, isValidUsername } from '@/utils/validation';
-import { seedProfileUsername } from '@/api/profile';
-import { getInstitutionForEmail } from '@/api/institutions';
-import { institutionThemeOverrides } from '@/theme/colors';
+import React, { useState } from'react';
+import { View, ScrollView, Alert, Pressable } from'react-native';
+import { Link, router } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { AppButton } from'@/components/AppButton';
+import { PasswordChecklist } from'@/components/PasswordChecklist';
+import { AuthHeroBackground } from'@/components/AuthHeroBackground';
+import { WaveCard } from'@/components/WaveCard';
+import { useAuth } from'@/auth/AuthContext';
+import { useTheme } from'@/theme/ThemeProvider';
+import { UserRole } from'@/api/types';
+import { isPasswordValid, passwordStrength, isValidEmailFormat, isValidUsername } from'@/utils/validation';
+import { seedProfileUsername } from'@/api/profile';
+import { getInstitutionForEmail } from'@/api/institutions';
+import { institutionThemeOverrides } from'@/theme/colors';
 
 const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
   { value: 'student', label: 'Student Portal', icon: 'school' },
@@ -80,14 +80,14 @@ export default function RegisterScreen() {
 
   return (
     <ScreenContainer noPadding glow={false}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+      <ScrollView keyboardShouldPersistTaps="handled"contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <AuthHeroBackground height={140} fromColor={heroFromColor} toColor={heroToColor}>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: spacing.lg }}>
-            <AppText variant="h1" weight="bold" tone="inverse">
+            <AppText variant="h1"weight="bold"tone="inverse">
               Join Lioris
             </AppText>
             {matchedInstitution ? (
-              <AppText tone="inverse" weight="semiBold" style={{ opacity: 0.9, marginTop: 2 }}>
+              <AppText tone="inverse"weight="semiBold"style={{ opacity: 0.9, marginTop: 2 }}>
                 at {matchedInstitution.name}
               </AppText>
             ) : null}
@@ -102,8 +102,7 @@ export default function RegisterScreen() {
               <Pressable
                 key={p.value}
                 onPress={() => setPortal(p.value)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
+                accessibilityRole="tab"accessibilityState={{ selected }}
                 accessibilityLabel={p.label}
                 style={{
                   flex: 1,
@@ -117,7 +116,7 @@ export default function RegisterScreen() {
                 }}
               >
                 <Ionicons name={p.icon} size={14} color={selected ? '#FFFFFF' : colors.textSecondary} />
-                <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                <AppText variant="bodySmall"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                   {p.label}
                 </AppText>
               </Pressable>
@@ -125,43 +124,39 @@ export default function RegisterScreen() {
           })}
         </View>
 
-        <AppText variant="h1" weight="bold" style={{ marginBottom: spacing.xs }}>
+        <AppText variant="h1"weight="bold"style={{ marginBottom: spacing.xs }}>
           {portal === 'student' ? 'Create Student Workspace' : 'Create Alumni Workspace'}
         </AppText>
-        <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+        <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
           UNILAG, UI, and FUNAAB emails are verified automatically. Any other email still works —
           you can apply for the verified tick afterward.
         </AppText>
 
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.lg }}>
-          <Ionicons name="alert-circle" size={14} color={colors.critical} style={{ marginTop: 2 }} />
-          <AppText variant="caption" style={{ color: colors.critical, flex: 1 }}>
+          <Ionicons name="alert-circle"size={14} color={colors.critical} style={{ marginTop: 2 }} />
+          <AppText variant="caption"style={{ color: colors.critical, flex: 1 }}>
             Security Policy: password must be 12+ characters with uppercase, lowercase, a
             number, and a special character.
           </AppText>
         </View>
 
         <AppTextField
-          label="School Email"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
+          label="School Email"autoCapitalize="none"keyboardType="email-address"value={email}
           onChangeText={setEmail}
-          placeholder="you@unilag.edu.ng or any email"
-          error={emailTouched && !emailFormatValid ? 'Enter a valid email address' : undefined}
+          placeholder="you@unilag.edu.ng or any email"error={emailTouched && !emailFormatValid ? 'Enter a valid email address' : undefined}
         />
         {emailTouched && emailFormatValid && matchedInstitution ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -spacing.sm, marginBottom: spacing.lg }}>
-            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-            <AppText variant="bodySmall" style={{ color: colors.success }}>
+            <Ionicons name="checkmark-circle"size={14} color={colors.success} />
+            <AppText variant="bodySmall"style={{ color: colors.success }}>
               Registering at {matchedInstitution.name} — you'll be verified automatically.
             </AppText>
           </View>
         ) : null}
         {emailTouched && emailFormatValid && !matchedInstitution ? (
           <View style={{ flexDirection: 'row', gap: 6, marginTop: -spacing.sm, marginBottom: spacing.lg }}>
-            <Ionicons name="information-circle" size={14} color={colors.brandPrimary} style={{ marginTop: 2 }} />
-            <AppText variant="caption" tone="secondary" style={{ flex: 1 }}>
+            <Ionicons name="information-circle"size={14} color={colors.brandPrimary} style={{ marginTop: 2 }} />
+            <AppText variant="caption"tone="secondary"style={{ flex: 1 }}>
               We don't recognize this school domain yet, but you can still register. You won't
               have the verified tick until you apply with supporting documents from your Profile
               afterward.
@@ -171,16 +166,14 @@ export default function RegisterScreen() {
 
         <View>
           <AppTextField
-            label="Password (Min 12 characters)"
-            secureTextEntry={!showPassword}
+            label="Password (Min 12 characters)"secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••••••"
           />
           <Pressable
             onPress={() => setShowPassword((v) => !v)}
-            accessibilityRole="button"
-            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            accessibilityRole="button"accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             style={{ position: 'absolute', right: spacing.md, top: 40 }}
             hitSlop={8}
           >
@@ -192,9 +185,7 @@ export default function RegisterScreen() {
           <View style={{ marginTop: -spacing.sm, marginBottom: spacing.sm }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
               <AppText
-                variant="caption"
-                weight="bold"
-                style={{
+                variant="caption"weight="bold"style={{
                   color:
                     strength.color === 'critical'
                       ? colors.critical
@@ -207,7 +198,7 @@ export default function RegisterScreen() {
               >
                 {strength.label} strength
               </AppText>
-              <AppText variant="caption" tone="secondary">
+              <AppText variant="caption"tone="secondary">
                 {password.length} chars
               </AppText>
             </View>
@@ -233,38 +224,33 @@ export default function RegisterScreen() {
         {password.length > 0 ? <PasswordChecklist password={password} /> : null}
 
         <AppTextField
-          label="Choose Username (@handle)"
-          autoCapitalize="none"
-          value={username}
+          label="Choose Username (@handle)"autoCapitalize="none"value={username}
           onChangeText={setUsername}
-          placeholder="e.g. ineme.17"
-          error={usernameTouched && !usernameValid ? '3-24 characters: letters, numbers, dots, underscores' : undefined}
+          placeholder="e.g. ineme.17"error={usernameTouched && !usernameValid ? '3-24 characters: letters, numbers, dots, underscores' : undefined}
         />
 
-        <AppTextField label="Display Full Name" value={fullName} onChangeText={setFullName} placeholder="Inem Light" />
+        <AppTextField label="Display Full Name"value={fullName} onChangeText={setFullName} placeholder="Inem Light" />
 
         <Pressable
           onPress={() => setAcceptedTerms((v) => !v)}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: acceptedTerms }}
-          accessibilityLabel="I accept the Privacy Policy, Terms of Service, and Community Rules"
-          style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg, marginTop: spacing.sm }}
+          accessibilityRole="checkbox"accessibilityState={{ checked: acceptedTerms }}
+          accessibilityLabel="I accept the Privacy Policy, Terms of Service, and Community Rules"style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg, marginTop: spacing.sm }}
         >
           <Ionicons
             name={acceptedTerms ? 'checkbox' : 'square-outline'}
             size={20}
             color={acceptedTerms ? colors.brandPrimary : colors.textSecondary}
           />
-          <AppText variant="bodySmall" style={{ flex: 1 }}>
+          <AppText variant="bodySmall"style={{ flex: 1 }}>
             I accept the Privacy Policy, Terms of Service, and Community Rules.
           </AppText>
         </Pressable>
 
-        <AppButton label="Configure & Join" onPress={handleRegister} loading={submitting} disabled={!canSubmit} fullWidth />
+        <AppButton label="Configure & Join"onPress={handleRegister} loading={submitting} disabled={!canSubmit} fullWidth />
 
         <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
           <Link href="/(auth)/login">
-            <AppText tone="brand" weight="semiBold">
+            <AppText tone="brand"weight="semiBold">
               Already have an account? Log In
             </AppText>
           </Link>

@@ -1,8 +1,8 @@
-import { api } from './client';
-import { MarketplaceListing } from './types';
-import { mockMarketplaceListings } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
+import { api } from'./client';
+import { MarketplaceListing } from'./types';
+import { mockMarketplaceListings } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 export interface MarketplaceQuery {
   q?: string;

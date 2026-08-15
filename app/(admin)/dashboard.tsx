@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Alert } from 'react-native';
-import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { SolidCard } from '@/components/SolidCard';
-import { GlassCard } from '@/components/GlassCard';
-import { AppText } from '@/components/AppText';
-import { AppButton } from '@/components/AppButton';
-import { Badge } from '@/components/Badge';
-import { Avatar } from '@/components/Avatar';
-import { HealthMetricBar } from '@/components/HealthMetricBar';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { getPlatformHealthSummary } from '@/api/analytics';
-import { listReports } from '@/api/moderation';
-import { ManageCoursesModal } from '@/components/admin/ManageCoursesModal';
-import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
-import { ManageDirectoryModal } from '@/components/admin/ManageDirectoryModal';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { ScrollView, View, Pressable, Alert } from'react-native';
+import { router } from'expo-router';
+import { useQuery } from'@tanstack/react-query';
+import { Image } from'expo-image';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { SolidCard } from'@/components/SolidCard';
+import { GlassCard } from'@/components/GlassCard';
+import { AppText } from'@/components/AppText';
+import { AppButton } from'@/components/AppButton';
+import { Badge } from'@/components/Badge';
+import { Avatar } from'@/components/Avatar';
+import { HealthMetricBar } from'@/components/HealthMetricBar';
+import { Ionicons } from'@expo/vector-icons';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { getPlatformHealthSummary } from'@/api/analytics';
+import { listReports } from'@/api/moderation';
+import { ManageCoursesModal } from'@/components/admin/ManageCoursesModal';
+import { ManageResourcesModal } from'@/components/admin/ManageResourcesModal';
+import { ManageDirectoryModal } from'@/components/admin/ManageDirectoryModal';
+import { haptics } from'@/utils/haptics';
 
 export default function AdminDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -38,8 +38,7 @@ export default function AdminDashboard() {
       <AppHeader />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: 140 }}
       >
         {/* Admin Control Tower Banner Header */}
@@ -56,18 +55,18 @@ export default function AdminDashboard() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
-                    <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
+                    <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
                       ROOT ADMINISTRATOR
                     </AppText>
                   </View>
-                  <AppText variant="caption" tone="inverse" style={{ opacity: 0.9 }}>
+                  <AppText variant="caption"tone="inverse"style={{ opacity: 0.9 }}>
                     Multi-Campus Hub | 4 Nodes Active
                   </AppText>
                 </View>
-                <AppText variant="h1" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 22 }}>
+                <AppText variant="h1"weight="bold"tone="inverse"numberOfLines={1} style={{ fontSize: 22 }}>
                   Welcome, {user?.fullName?.split(' ')[0] ?? 'Admin'}
                 </AppText>
-                <AppText variant="caption" tone="inverse" style={{ opacity: 0.85, marginTop: 2 }}>
+                <AppText variant="caption"tone="inverse"style={{ opacity: 0.85, marginTop: 2 }}>
                   System Health 99.98% | All services operational
                 </AppText>
               </View>
@@ -96,10 +95,10 @@ export default function AdminDashboard() {
                 borderRadius: 14,
               }}
             >
-              <AppText variant="caption" weight="bold">
+              <AppText variant="caption"weight="bold">
                 {node.code}
               </AppText>
-              <AppText tone="secondary" style={{ fontSize: 9, marginTop: 1 }}>
+              <AppText tone="secondary"style={{ fontSize: 9, marginTop: 1 }}>
                 {node.status}
               </AppText>
             </SolidCard>
@@ -107,10 +106,10 @@ export default function AdminDashboard() {
         </View>
 
         {/* Academic & Platform Entity Management Hub */}
-        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+        <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.xs }}>
           Content & Entity Management
         </AppText>
-        <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+        <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
           Manage courses, resources, directory profiles and cover media
         </AppText>
 
@@ -130,11 +129,11 @@ export default function AdminDashboard() {
                 backgroundColor: colors.surface,
               }}
             >
-              <Ionicons name="book-outline" size={22} color={colors.brandPrimary} style={{ marginBottom: 4 }} />
-              <AppText weight="bold" variant="bodySmall">
+              <Ionicons name="book-outline"size={22} color={colors.brandPrimary} style={{ marginBottom: 4 }} />
+              <AppText weight="bold"variant="bodySmall">
                 Courses
               </AppText>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11 }}>
+              <AppText tone="secondary"variant="caption"style={{ marginTop: 2, fontSize: 11 }}>
                 Edit curriculum & covers
               </AppText>
             </SolidCard>
@@ -155,11 +154,11 @@ export default function AdminDashboard() {
                 backgroundColor: colors.surface,
               }}
             >
-              <Ionicons name="folder-open-outline" size={22} color={colors.brandAccent} style={{ marginBottom: 4 }} />
-              <AppText weight="bold" variant="bodySmall">
+              <Ionicons name="folder-open-outline"size={22} color={colors.brandAccent} style={{ marginBottom: 4 }} />
+              <AppText weight="bold"variant="bodySmall">
                 Resources
               </AppText>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11 }}>
+              <AppText tone="secondary"variant="caption"style={{ marginTop: 2, fontSize: 11 }}>
                 Edit files & past questions
               </AppText>
             </SolidCard>
@@ -180,11 +179,11 @@ export default function AdminDashboard() {
                 backgroundColor: colors.surface,
               }}
             >
-              <Ionicons name="people-outline" size={22} color="#38BDF8" style={{ marginBottom: 4 }} />
-              <AppText weight="bold" variant="bodySmall">
+              <Ionicons name="people-outline"size={22} color="#38BDF8"style={{ marginBottom: 4 }} />
+              <AppText weight="bold"variant="bodySmall">
                 Directory
               </AppText>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11 }}>
+              <AppText tone="secondary"variant="caption"style={{ marginTop: 2, fontSize: 11 }}>
                 Edit profiles & avatars
               </AppText>
             </SolidCard>
@@ -208,11 +207,11 @@ export default function AdminDashboard() {
                 borderRadius: 18,
               }}
             >
-              <Ionicons name="settings" size={22} color={colors.brandPrimary} style={{ marginBottom: 4 }} />
-              <AppText weight="bold" variant="bodySmall" tone="brand">
+              <Ionicons name="settings"size={22} color={colors.brandPrimary} style={{ marginBottom: 4 }} />
+              <AppText weight="bold"variant="bodySmall"tone="brand">
                 Workdesk & Alerts
               </AppText>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+              <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
                 Broadcast alerts & system params
               </AppText>
             </SolidCard>
@@ -232,19 +231,19 @@ export default function AdminDashboard() {
               }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <Ionicons name="shield-half" size={22} color={colors.critical} />
+                <Ionicons name="shield-half"size={22} color={colors.critical} />
                 {(openReports?.length ?? 0) > 0 && (
                   <View style={{ backgroundColor: colors.critical, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                    <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
+                    <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
                       {openReports?.length} pending
                     </AppText>
                   </View>
                 )}
               </View>
-              <AppText weight="bold" variant="bodySmall">
+              <AppText weight="bold"variant="bodySmall">
                 Moderation Queue
               </AppText>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+              <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
                 Content review & reports
               </AppText>
             </SolidCard>
@@ -254,10 +253,10 @@ export default function AdminDashboard() {
         {/* Quick Utilities Row */}
         <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
           {[
-            { icon: 'people-outline' as const, label: 'Directory', route: '/(admin)/user-directory' },
-            { icon: 'checkmark-done-circle-outline' as const, label: 'Verify IDs', route: '/(admin)/verification-requests' },
-            { icon: 'list-outline' as const, label: 'Audit Logs', route: '/(admin)/audit-logs' },
-            { icon: 'toggle-outline' as const, label: 'Features', route: '/(admin)/feature-controls' },
+            { icon: 'people-outline'as const, label: 'Directory', route: '/(admin)/user-directory' },
+            { icon: 'checkmark-done-circle-outline'as const, label: 'Verify IDs', route: '/(admin)/verification-requests' },
+            { icon: 'list-outline'as const, label: 'Audit Logs', route: '/(admin)/audit-logs' },
+            { icon: 'toggle-outline'as const, label: 'Features', route: '/(admin)/feature-controls' },
           ].map((item) => (
             <Pressable
               key={item.label}
@@ -277,7 +276,7 @@ export default function AdminDashboard() {
                 }}
               >
                 <Ionicons name={item.icon} size={18} color={colors.textPrimary} style={{ marginBottom: 2 }} />
-                <AppText variant="caption" weight="bold" style={{ fontSize: 11 }}>
+                <AppText variant="caption"weight="bold"style={{ fontSize: 11 }}>
                   {item.label}
                 </AppText>
               </SolidCard>
@@ -286,19 +285,18 @@ export default function AdminDashboard() {
         </View>
 
         {/* Platform Health Matrix */}
-        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+        <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.sm }}>
           Campus Platform Metrics
         </AppText>
         {health ? (
           <SolidCard frosted style={{ marginBottom: spacing.lg, borderRadius: 20 }}>
-            <HealthMetricBar label="Student MAU (target: 60% @ 6mo)" valuePct={health.studentMauPct} greenMin={60} amberMin={40} />
-            <HealthMetricBar label="Alumni MAU (target: 30% @ 9mo)" valuePct={health.alumniMauPct} greenMin={30} amberMin={20} />
-            <HealthMetricBar label="Event participation" valuePct={health.eventParticipationPct} greenMin={40} amberMin={20} />
-            <HealthMetricBar label="Connection activation" valuePct={health.connectionActivationPct} greenMin={25} amberMin={15} />
-            <HealthMetricBar label="Notification read rate" valuePct={health.notificationReadRatePct} greenMin={90} amberMin={70} />
+            <HealthMetricBar label="Student MAU (target: 60% @ 6mo)"valuePct={health.studentMauPct} greenMin={60} amberMin={40} />
+            <HealthMetricBar label="Alumni MAU (target: 30% @ 9mo)"valuePct={health.alumniMauPct} greenMin={30} amberMin={20} />
+            <HealthMetricBar label="Event participation"valuePct={health.eventParticipationPct} greenMin={40} amberMin={20} />
+            <HealthMetricBar label="Connection activation"valuePct={health.connectionActivationPct} greenMin={25} amberMin={15} />
+            <HealthMetricBar label="Notification read rate"valuePct={health.notificationReadRatePct} greenMin={90} amberMin={70} />
             <HealthMetricBar
-              label="Moderation false-positive rate"
-              valuePct={health.moderationFalsePositivePct}
+              label="Moderation false-positive rate"valuePct={health.moderationFalsePositivePct}
               greenMin={2}
               amberMin={5}
               invert

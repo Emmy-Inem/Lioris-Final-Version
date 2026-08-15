@@ -1,8 +1,8 @@
-import React from 'react';
-import { Modal, Pressable, StyleSheet, View, Dimensions, Share } from 'react-native';
-import { Image, ImageSource } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
+import React from'react';
+import { Modal, Pressable, StyleSheet, View, Dimensions, Share } from'react-native';
+import { Image, ImageSource } from'expo-image';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
 
 interface ImageViewerModalProps {
   visible: boolean;
@@ -47,17 +47,17 @@ export function ImageViewerModal({
       : imageSource;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade"onRequestClose={onClose}>
       <View style={styles.container}>
         {/* Top Header Bar */}
         <View style={styles.topBar}>
           <Pressable onPress={onClose} hitSlop={12} style={styles.iconButton} accessibilityLabel="Close Fullscreen View">
-            <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Ionicons name="close"size={24} color="#FFFFFF" />
           </Pressable>
 
           <View style={styles.actionsRight}>
             <Pressable onPress={handleShare} hitSlop={12} style={styles.iconButton} accessibilityLabel="Share Image">
-              <Ionicons name="share-outline" size={22} color="#FFFFFF" />
+              <Ionicons name="share-outline"size={22} color="#FFFFFF" />
             </Pressable>
           </View>
         </View>
@@ -67,15 +67,14 @@ export function ImageViewerModal({
           <Image
             source={resolvedSource}
             style={styles.fullImage}
-            contentFit="contain"
-            transition={300}
+            contentFit="contain"transition={300}
           />
         </Pressable>
 
         {/* Caption Bar */}
         {caption ? (
           <View style={styles.captionBar}>
-            <AppText variant="bodySmall" weight="medium" tone="inverse" style={{ textAlign: 'center' }}>
+            <AppText variant="bodySmall"weight="medium"tone="inverse"style={{ textAlign: 'center' }}>
               {caption}
             </AppText>
           </View>

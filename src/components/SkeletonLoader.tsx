@@ -1,14 +1,14 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect } from'react';
+import { StyleSheet, View } from'react-native';
+import { LinearGradient } from'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
   Easing,
-} from 'react-native-reanimated';
-import { useTheme } from '@/theme/ThemeProvider';
+} from'react-native-reanimated';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface SkeletonLoaderProps {
   height?: number;
@@ -19,7 +19,7 @@ interface SkeletonLoaderProps {
 /**
  * The reference app's SkeletonLoader (Common.kt) is a static 3-stop
  * gradient box. PRD Section 8's Design Philosophy explicitly calls for
- * "loading skeletons" as part of the motion design, so this version
+ * "loading skeletons"as part of the motion design, so this version
  * adds a real animated shimmer sweep rather than a static placeholder.
  */
 export function SkeletonLoader({ height = 120, width = '100%', borderRadius }: SkeletonLoaderProps) {

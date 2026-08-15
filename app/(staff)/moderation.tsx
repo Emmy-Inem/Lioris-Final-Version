@@ -1,14 +1,14 @@
-import React from 'react';
-import { View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { Badge } from '@/components/Badge';
-import { ModerationQueue } from '@/components/ModerationQueue';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { getMyProfile } from '@/api/profile';
+import React from'react';
+import { View } from'react-native';
+import { useQuery } from'@tanstack/react-query';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { Badge } from'@/components/Badge';
+import { ModerationQueue } from'@/components/ModerationQueue';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { getMyProfile } from'@/api/profile';
 
 /**
  * Staff moderation is scoped to their own campus only — the actual
@@ -28,12 +28,12 @@ export default function StaffModerationScreen() {
     <ScreenContainer glow={false}>
       <AppHeader />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.lg }}>
-        <AppText variant="h1" weight="bold">
+        <AppText variant="h1"weight="bold">
           Moderation
         </AppText>
         {profile?.institutionCode ? <Badge label={`${profile.institutionCode} only`} tone="brand" /> : null}
       </View>
-      <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+      <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
         Staff moderation covers reports filed on your own campus. Cross-university oversight is
         an Admin-level capability.
       </AppText>

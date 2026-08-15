@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View, Alert } from 'react-native';
-import { router } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { Avatar } from './Avatar';
-import { TypingIndicator } from './TypingIndicator';
-import { EmptyState } from './EmptyState';
-import { ActionSheetModal } from './ActionSheetModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
-import { listMessages, sendMessage, listConversations } from '@/api/messaging';
-import { Message } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View, Alert } from'react-native';
+import { router } from'expo-router';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { Avatar } from'./Avatar';
+import { TypingIndicator } from'./TypingIndicator';
+import { EmptyState } from'./EmptyState';
+import { ActionSheetModal } from'./ActionSheetModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useRealtimeChannel } from'@/realtime/useRealtimeChannel';
+import { listMessages, sendMessage, listConversations } from'@/api/messaging';
+import { Message } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
 interface OutgoingMessage extends Message {
   failed?: boolean;
@@ -104,16 +104,16 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
           <Pressable onPress={() => router.back()} hitSlop={8}>
-            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+            <Ionicons name="arrow-back"size={22} color={colors.textPrimary} />
           </Pressable>
           <Avatar name={partnerName} uri={partnerAvatar} size={36} />
           <View>
-            <AppText weight="bold" variant="bodySmall">
+            <AppText weight="bold"variant="bodySmall">
               {partnerName}
             </AppText>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Online | UI Verified
               </AppText>
             </View>
@@ -128,7 +128,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
               Alert.alert('Encrypted Call', `Calling ${partnerName} via encrypted peer-to-peer audio...`);
             }}
           >
-            <Ionicons name="call-outline" size={20} color={colors.brandPrimary} />
+            <Ionicons name="call-outline"size={20} color={colors.brandPrimary} />
           </Pressable>
           <Pressable
             hitSlop={8}
@@ -137,7 +137,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
               Alert.alert('Video Mentorship', `Launching video room with ${partnerName}...`);
             }}
           >
-            <Ionicons name="videocam-outline" size={20} color={colors.brandPrimary} />
+            <Ionicons name="videocam-outline"size={20} color={colors.brandPrimary} />
           </Pressable>
         </View>
       </View>
@@ -170,16 +170,14 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                 }}
               >
                 <AppText
-                  variant="bodySmall"
-                  tone={isMe ? 'inverse' : 'primary'}
+                  variant="bodySmall"tone={isMe ? 'inverse' : 'primary'}
                   style={{ lineHeight: 19 }}
                 >
                   {item.content}
                 </AppText>
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 3, marginTop: 3 }}>
                   <AppText
-                    variant="caption"
-                    style={{ fontSize: 9, color: isMe ? 'rgba(255,255,255,0.7)' : colors.textSecondary }}
+                    variant="caption"style={{ fontSize: 9, color: isMe ? 'rgba(255,255,255,0.7)' : colors.textSecondary }}
                   >
                     {new Date(item.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </AppText>
@@ -197,8 +195,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         }}
         ListEmptyComponent={
           <EmptyState
-            title="Start your conversation 💬"
-            description="Direct messages are protected with end-to-end encryption."
+            title="Start your conversation"description="Direct messages are protected with end-to-end encryption."
           />
         }
       />
@@ -220,12 +217,12 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
             marginBottom: spacing.xs,
           }}
         >
-          <Ionicons name="arrow-undo" size={14} color={colors.brandPrimary} />
-          <AppText tone="brand" variant="caption" numberOfLines={1} style={{ flex: 1 }}>
+          <Ionicons name="arrow-undo"size={14} color={colors.brandPrimary} />
+          <AppText tone="brand"variant="caption"numberOfLines={1} style={{ flex: 1 }}>
             Replying to: {replyingTo.content}
           </AppText>
           <Pressable onPress={() => setReplyingTo(null)} hitSlop={8}>
-            <Ionicons name="close" size={16} color={colors.brandPrimary} />
+            <Ionicons name="close"size={16} color={colors.brandPrimary} />
           </Pressable>
         </View>
       ) : null}
@@ -251,7 +248,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           }}
           style={{ padding: 4 }}
         >
-          <Ionicons name="add-circle" size={28} color={colors.brandPrimary} />
+          <Ionicons name="add-circle"size={28} color={colors.brandPrimary} />
         </Pressable>
 
         <View
@@ -270,8 +267,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            placeholder="Type encrypted message..."
-            placeholderTextColor={colors.textSecondary}
+            placeholder="Type encrypted message..."placeholderTextColor={colors.textSecondary}
             style={{ flex: 1, color: colors.textPrimary, fontSize: 14 }}
           />
         </View>
@@ -288,7 +284,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="send" size={17} color={draft.trim() ? '#FFFFFF' : colors.textSecondary} />
+          <Ionicons name="send"size={17} color={draft.trim() ? '#FFFFFF' : colors.textSecondary} />
         </Pressable>
       </View>
 
@@ -304,30 +300,30 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="image-outline" size={18} color={colors.brandPrimary} />
+          <Ionicons name="image-outline"size={18} color={colors.brandPrimary} />
           <AppText weight="medium">Send Study Photo / Diagram 📸</AppText>
         </Pressable>
 
         <Pressable
           onPress={() => {
             setAttachmentSheetOpen(false);
-            handleSend('📄 Attached PDF: CSC301_Complete_Lecture_Slides.pdf (2.4 MB)');
+            handleSend('Attached PDF: CSC301_Complete_Lecture_Slides.pdf (2.4 MB)');
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="document-attach-outline" size={18} color={colors.brandPrimary} />
-          <AppText weight="medium">Attach Course PDF Lecture Notes 📄</AppText>
+          <Ionicons name="document-attach-outline"size={18} color={colors.brandPrimary} />
+          <AppText weight="medium">Attach Course PDF Lecture Notes </AppText>
         </Pressable>
 
         <Pressable
           onPress={() => {
             setAttachmentSheetOpen(false);
-            handleSend('📍 Meet me at: Faculty of Science, Large Lecture Theatre (LT2)');
+            handleSend('Meet me at: Faculty of Science, Large Lecture Theatre (LT2)');
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="location-outline" size={18} color={colors.brandPrimary} />
-          <AppText weight="medium">Share Campus Location / LT Hall 📍</AppText>
+          <Ionicons name="location-outline"size={18} color={colors.brandPrimary} />
+          <AppText weight="medium">Share Campus Location / LT Hall </AppText>
         </Pressable>
       </ActionSheetModal>
     </KeyboardAvoidingView>

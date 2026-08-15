@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { AppButton } from '@/components/AppButton';
-import { ChipSelect } from '@/components/ChipSelect';
-import { SolidCard } from '@/components/SolidCard';
-import { Badge } from '@/components/Badge';
-import { Avatar } from '@/components/Avatar';
-import { UserTypeBadge } from '@/components/UserTypeBadge';
-import { ActionSheetModal } from '@/components/ActionSheetModal';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { AppButton } from'@/components/AppButton';
+import { ChipSelect } from'@/components/ChipSelect';
+import { SolidCard } from'@/components/SolidCard';
+import { Badge } from'@/components/Badge';
+import { Avatar } from'@/components/Avatar';
+import { UserTypeBadge } from'@/components/UserTypeBadge';
+import { ActionSheetModal } from'@/components/ActionSheetModal';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { haptics } from'@/utils/haptics';
 
 interface DirectoryUser {
   id: string;
@@ -115,7 +115,7 @@ export default function UserDirectoryScreen() {
     setNewFullName('');
     setNewEmail('');
     setNewMatric('');
-    Alert.alert('User Provisioned 🎉', `${newUser.fullName} has been registered as a verified ${newRole}. An activation link was dispatched to ${newUser.email}.`);
+    Alert.alert('User Provisioned', `${newUser.fullName} has been registered as a verified ${newRole}. An activation link was dispatched to ${newUser.email}.`);
   }
 
   function handleToggleSuspend(target: DirectoryUser) {
@@ -134,7 +134,7 @@ export default function UserDirectoryScreen() {
 
     setSelectedUser(null);
     Alert.alert(
-      nextSuspended ? 'Account Suspended 🚫' : 'Account Restored ✅',
+      nextSuspended ? 'Account Suspended 🚫' : 'Account Restored',
       `${target.fullName}'s login privileges have been ${nextSuspended ? 'revoked' : 'reactivated'}.`,
     );
   }
@@ -153,7 +153,7 @@ export default function UserDirectoryScreen() {
     });
 
     setSelectedUser(null);
-    Alert.alert('Role Mutated 🎓', `${target.fullName} is now assigned the ${targetRole} role.`);
+    Alert.alert('Role Mutated', `${target.fullName} is now assigned the ${targetRole} role.`);
   }
 
   function handleWipeAccount(target: DirectoryUser) {
@@ -191,22 +191,19 @@ export default function UserDirectoryScreen() {
       {/* Header & Quick Action Row */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.md }}>
         <View>
-          <AppText variant="h1" weight="bold">
-            User Directory 👥
+          <AppText variant="h1"weight="bold">
+            User Directory 
           </AppText>
           <AppText tone="secondary">Manage identities, matric records & role privileges</AppText>
         </View>
         <AppButton
-          label="+ Provision User"
-          onPress={() => setCreateModalOpen(true)}
+          label="+ Provision User"onPress={() => setCreateModalOpen(true)}
         />
       </View>
 
       {/* Search Input Field */}
       <AppTextField
-        label=""
-        placeholder="Search by name, @handle, matriculation number, or email..."
-        value={query}
+        label=""placeholder="Search by name, @handle, matriculation number, or email..."value={query}
         onChangeText={setQuery}
       />
 
@@ -234,23 +231,23 @@ export default function UserDirectoryScreen() {
                 <Avatar name={item.fullName} size={44} role={item.role.toLowerCase() as any} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <AppText weight="bold" variant="bodySmall">
+                    <AppText weight="bold"variant="bodySmall">
                       {item.fullName}
                     </AppText>
                     <UserTypeBadge role={item.role.toLowerCase() as any} />
                     {item.isVerified && (
-                      <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} />
+                      <Ionicons name="checkmark-circle"size={14} color={colors.brandPrimary} />
                     )}
                   </View>
-                  <AppText tone="secondary" variant="caption">
-                    @{item.username} &bull; {item.matricNo}
+                  <AppText tone="secondary"variant="caption">
+                    @{item.username} • {item.matricNo}
                   </AppText>
-                  <AppText tone="secondary" variant="caption">
-                    🏛️ {item.campus} &bull; {item.department}
+                  <AppText tone="secondary"variant="caption">
+                     {item.campus} • {item.department}
                   </AppText>
                   {item.suspended && (
                     <View style={{ marginTop: 4 }}>
-                      <Badge label="🚫 Suspended" tone="critical" />
+                      <Badge label="🚫 Suspended"tone="critical" />
                     </View>
                   )}
                 </View>
@@ -259,16 +256,15 @@ export default function UserDirectoryScreen() {
               <Pressable
                 onPress={() => setSelectedUser(item)}
                 hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel={`Manage ${item.fullName}`}
+                accessibilityRole="button"accessibilityLabel={`Manage ${item.fullName}`}
                 style={{ padding: spacing.xs, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill }}
               >
-                <Ionicons name="ellipsis-horizontal" size={18} color={colors.brandPrimary} />
+                <Ionicons name="ellipsis-horizontal"size={18} color={colors.brandPrimary} />
               </Pressable>
             </View>
           </SolidCard>
         )}
-        ListEmptyComponent={<EmptyState title="No matching campus users" description="Try clearing your filters or search terms." />}
+        ListEmptyComponent={<EmptyState title="No matching campus users"description="Try clearing your filters or search terms." />}
       />
 
       {/* User Actions Sheet Modal */}
@@ -279,8 +275,8 @@ export default function UserDirectoryScreen() {
               <Avatar name={selectedUser.fullName} size={40} role={selectedUser.role.toLowerCase() as any} />
               <View>
                 <AppText weight="bold">{selectedUser.fullName}</AppText>
-                <AppText tone="secondary" variant="caption">
-                  {selectedUser.matricNo} &bull; {selectedUser.email}
+                <AppText tone="secondary"variant="caption">
+                  {selectedUser.matricNo} • {selectedUser.email}
                 </AppText>
               </View>
             </View>
@@ -292,8 +288,8 @@ export default function UserDirectoryScreen() {
                 setSelectedUser(null);
               }}
             >
-              <Ionicons name="information-circle-outline" size={18} color={colors.brandPrimary} />
-              <AppText tone="brand" weight="bold">View Full Profile & Identity Record</AppText>
+              <Ionicons name="information-circle-outline"size={18} color={colors.brandPrimary} />
+              <AppText tone="brand"weight="bold">View Full Profile & Identity Record</AppText>
             </Pressable>
 
             {selectedUser.role !== 'Alumni' && (
@@ -301,8 +297,8 @@ export default function UserDirectoryScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleMutateRole(selectedUser, 'Alumni')}
               >
-                <Ionicons name="school-outline" size={18} color={colors.textPrimary} />
-                <AppText>🎓 Promote / Mutate role to Alumni</AppText>
+                <Ionicons name="school-outline"size={18} color={colors.textPrimary} />
+                <AppText> Promote / Mutate role to Alumni</AppText>
               </Pressable>
             )}
 
@@ -311,8 +307,8 @@ export default function UserDirectoryScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleMutateRole(selectedUser, 'Staff')}
               >
-                <Ionicons name="briefcase-outline" size={18} color={colors.textPrimary} />
-                <AppText>🧑‍🏫 Promote to Faculty Staff / Advisor</AppText>
+                <Ionicons name="briefcase-outline"size={18} color={colors.textPrimary} />
+                <AppText>🧑‍ Promote to Faculty Staff / Advisor</AppText>
               </Pressable>
             )}
 
@@ -322,7 +318,7 @@ export default function UserDirectoryScreen() {
             >
               <Ionicons name={selectedUser.suspended ? 'checkmark-circle-outline' : 'ban-outline'} size={18} color={selectedUser.suspended ? colors.success : colors.critical} />
               <AppText style={{ color: selectedUser.suspended ? colors.success : colors.critical }}>
-                {selectedUser.suspended ? '✅ Revoke Suspension & Reactivate' : '🚫 Shadow-Ban / Suspend User'}
+                {selectedUser.suspended ? 'Revoke Suspension & Reactivate' : '🚫 Shadow-Ban / Suspend User'}
               </AppText>
             </Pressable>
 
@@ -330,7 +326,7 @@ export default function UserDirectoryScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
               onPress={() => handleWipeAccount(selectedUser)}
             >
-              <Ionicons name="trash-outline" size={18} color={colors.critical} />
+              <Ionicons name="trash-outline"size={18} color={colors.critical} />
               <AppText tone="critical">🗑️ Wipe All Account Records & Sessions</AppText>
             </Pressable>
           </View>
@@ -338,22 +334,22 @@ export default function UserDirectoryScreen() {
       </ActionSheetModal>
 
       {/* User Inspect Details Modal */}
-      <Modal visible={!!detailModalUser} transparent animationType="fade" onRequestClose={() => setDetailModalUser(null)}>
+      <Modal visible={!!detailModalUser} transparent animationType="fade"onRequestClose={() => setDetailModalUser(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
           {detailModalUser && (
             <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <AppText variant="h2" weight="bold">
+                <AppText variant="h2"weight="bold">
                   Identity Record 🪪
                 </AppText>
                 <Pressable onPress={() => setDetailModalUser(null)} hitSlop={8}>
-                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                  <Ionicons name="close"size={22} color={colors.textSecondary} />
                 </Pressable>
               </View>
 
               <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
                 <Avatar name={detailModalUser.fullName} size={72} role={detailModalUser.role.toLowerCase() as any} />
-                <AppText variant="h3" weight="bold" style={{ marginTop: spacing.xs }}>
+                <AppText variant="h3"weight="bold"style={{ marginTop: spacing.xs }}>
                   {detailModalUser.fullName}
                 </AppText>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
@@ -364,81 +360,73 @@ export default function UserDirectoryScreen() {
 
               <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16, marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <AppText tone="secondary" variant="caption">Matriculation / Staff ID</AppText>
-                  <AppText weight="bold" variant="caption">{detailModalUser.matricNo}</AppText>
+                  <AppText tone="secondary"variant="caption">Matriculation / Staff ID</AppText>
+                  <AppText weight="bold"variant="caption">{detailModalUser.matricNo}</AppText>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <AppText tone="secondary" variant="caption">Institutional Email</AppText>
-                  <AppText weight="bold" variant="caption">{detailModalUser.email}</AppText>
+                  <AppText tone="secondary"variant="caption">Institutional Email</AppText>
+                  <AppText weight="bold"variant="caption">{detailModalUser.email}</AppText>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <AppText tone="secondary" variant="caption">Campus Node</AppText>
-                  <AppText weight="bold" variant="caption">{detailModalUser.campus} University</AppText>
+                  <AppText tone="secondary"variant="caption">Campus Node</AppText>
+                  <AppText weight="bold"variant="caption">{detailModalUser.campus} University</AppText>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <AppText tone="secondary" variant="caption">Faculty & Department</AppText>
-                  <AppText weight="bold" variant="caption">{detailModalUser.department}</AppText>
+                  <AppText tone="secondary"variant="caption">Faculty & Department</AppText>
+                  <AppText weight="bold"variant="caption">{detailModalUser.department}</AppText>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <AppText tone="secondary" variant="caption">Joined Date</AppText>
-                  <AppText weight="bold" variant="caption">{detailModalUser.joinedDate}</AppText>
+                  <AppText tone="secondary"variant="caption">Joined Date</AppText>
+                  <AppText weight="bold"variant="caption">{detailModalUser.joinedDate}</AppText>
                 </View>
               </View>
 
-              <AppButton label="Close Record" onPress={() => setDetailModalUser(null)} fullWidth />
+              <AppButton label="Close Record"onPress={() => setDetailModalUser(null)} fullWidth />
             </SolidCard>
           )}
         </View>
       </Modal>
 
       {/* Provision New User Modal */}
-      <Modal visible={createModalOpen} transparent animationType="slide" onRequestClose={() => setCreateModalOpen(false)}>
+      <Modal visible={createModalOpen} transparent animationType="slide"onRequestClose={() => setCreateModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setCreateModalOpen(false)} />
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="person-add" size={20} color={colors.brandPrimary} />
-                <AppText variant="h2" weight="bold">
+                <Ionicons name="person-add"size={20} color={colors.brandPrimary} />
+                <AppText variant="h2"weight="bold">
                   Provision New Campus User ➕
                 </AppText>
               </View>
               <Pressable onPress={() => setCreateModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
               <AppTextField
-                label="Full Legal Name"
-                placeholder="e.g. Samuel Adeyinka"
-                value={newFullName}
+                label="Full Legal Name"placeholder="e.g. Samuel Adeyinka"value={newFullName}
                 onChangeText={setNewFullName}
               />
 
               <AppTextField
-                label="Official University Email"
-                placeholder="e.g. s.adeyinka@ui.edu.ng"
-                value={newEmail}
+                label="Official University Email"placeholder="e.g. s.adeyinka@ui.edu.ng"value={newEmail}
                 onChangeText={setNewEmail}
               />
 
               <AppTextField
-                label="Matric / Staff ID (Optional)"
-                placeholder="e.g. UI/2024/8892"
-                value={newMatric}
+                label="Matric / Staff ID (Optional)"placeholder="e.g. UI/2024/8892"value={newMatric}
                 onChangeText={setNewMatric}
               />
 
               <AppTextField
-                label="Department / Faculty"
-                placeholder="e.g. Computer Science"
-                value={newDepartment}
+                label="Department / Faculty"placeholder="e.g. Computer Science"value={newDepartment}
                 onChangeText={setNewDepartment}
               />
 
               {/* Role Selection */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
                 ASSIGN USER ROLE
               </AppText>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -454,7 +442,7 @@ export default function UserDirectoryScreen() {
                       alignItems: 'center',
                     }}
                   >
-                    <AppText weight="bold" tone={newRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+                    <AppText weight="bold"tone={newRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
                       {r}
                     </AppText>
                   </Pressable>
@@ -462,7 +450,7 @@ export default function UserDirectoryScreen() {
               </View>
 
               {/* Campus Instance Selection */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
                 TARGET UNIVERSITY CAMPUS NODE
               </AppText>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.lg }}>
@@ -478,7 +466,7 @@ export default function UserDirectoryScreen() {
                       alignItems: 'center',
                     }}
                   >
-                    <AppText weight="bold" tone={newCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+                    <AppText weight="bold"tone={newCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
                       {c}
                     </AppText>
                   </Pressable>
@@ -486,8 +474,7 @@ export default function UserDirectoryScreen() {
               </View>
 
               <AppButton
-                label="Provision & Issue Credentials 🚀"
-                onPress={handleCreateUser}
+                label="Provision & Issue Credentials"onPress={handleCreateUser}
                 fullWidth
               />
             </ScrollView>

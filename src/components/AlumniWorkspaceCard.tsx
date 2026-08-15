@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Pressable } from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { SolidCard } from './SolidCard';
-import { AppText } from './AppText';
-import { Badge } from './Badge';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { View, Pressable } from'react-native';
+import { router } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { SolidCard } from'./SolidCard';
+import { AppText } from'./AppText';
+import { Badge } from'./Badge';
+import { useTheme } from'@/theme/ThemeProvider';
 
 const CHECKLIST = [
   'Complete your professional bio & expertise tags',
@@ -13,7 +13,7 @@ const CHECKLIST = [
   'Accept incoming student connection invitations',
 ];
 
-/** Ported from the "ALUMNI V1 WORKSPACE" / "Graduate Guild Lounge" card in DashboardScreen (DashboardAndProfile.kt). */
+/** Ported from the"ALUMNI V1 WORKSPACE" / "Graduate Guild Lounge"card in DashboardScreen (DashboardAndProfile.kt). */
 export function AlumniWorkspaceCard() {
   const { colors, spacing, radius } = useTheme();
 
@@ -21,30 +21,30 @@ export function AlumniWorkspaceCard() {
     <SolidCard radius={20} style={{ marginBottom: spacing.lg, borderWidth: 1, borderColor: `${colors.brandMagenta}4D` }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="ribbon-outline" size={18} color={colors.brandMagenta} />
-          <AppText variant="caption" weight="bold" style={{ color: colors.brandMagenta, letterSpacing: 1 }}>
+          <Ionicons name="ribbon-outline"size={18} color={colors.brandMagenta} />
+          <AppText variant="caption"weight="bold"style={{ color: colors.brandMagenta, letterSpacing: 1 }}>
             ALUMNI V1 WORKSPACE
           </AppText>
         </View>
-        <Badge label="Verified Alumni" tone="accent" />
+        <Badge label="Verified Alumni"tone="accent" />
       </View>
 
-      <AppText variant="h3" weight="bold" style={{ marginTop: spacing.sm }}>
+      <AppText variant="h3"weight="bold"style={{ marginTop: spacing.sm }}>
         Welcome to the Graduate Guild Lounge 👋
       </AppText>
-      <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 4, marginBottom: spacing.md }}>
+      <AppText tone="secondary"variant="bodySmall"style={{ marginTop: 4, marginBottom: spacing.md }}>
         Thank you for joining our professional alumni network. Complete your profile to guide
         current students as they begin their career journeys.
       </AppText>
 
-      <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.sm }}>
-        ⚡ LEAN ONBOARDING STEPS
+      <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.sm }}>
+         LEAN ONBOARDING STEPS
       </AppText>
       <View style={{ backgroundColor: colors.divider, borderRadius: radius.md, padding: spacing.md, gap: spacing.sm }}>
         {CHECKLIST.map((item) => (
           <View key={item} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-            <AppText variant="bodySmall" style={{ flex: 1 }}>
+            <Ionicons name="checkmark-circle"size={14} color={colors.success} />
+            <AppText variant="bodySmall"style={{ flex: 1 }}>
               {item}
             </AppText>
           </View>
@@ -55,14 +55,13 @@ export function AlumniWorkspaceCard() {
         <View style={{ flex: 1 }}>
           <Pressable
             onPress={() => router.push('/(alumni)/mentorship')}
-            accessibilityRole="button"
-            accessibilityLabel="Check pending mentorship requests"
+            accessibilityRole="button"accessibilityLabel="Check pending mentorship requests"
           >
             <SolidCard radius={12}>
-              <AppText variant="caption" tone="secondary">
+              <AppText variant="caption"tone="secondary">
                 Pending Requests
               </AppText>
-              <AppText tone="brand" weight="bold" variant="bodySmall">
+              <AppText tone="brand"weight="bold"variant="bodySmall">
                 Check now ↗
               </AppText>
             </SolidCard>
@@ -70,10 +69,10 @@ export function AlumniWorkspaceCard() {
         </View>
         <View style={{ flex: 1 }}>
           <SolidCard radius={12}>
-            <AppText variant="caption" tone="secondary">
+            <AppText variant="caption"tone="secondary">
               Mentees Guided
             </AppText>
-            <AppText weight="bold" variant="bodySmall" style={{ color: colors.success }}>
+            <AppText weight="bold"variant="bodySmall"style={{ color: colors.success }}>
               1 undergrad
             </AppText>
           </SolidCard>

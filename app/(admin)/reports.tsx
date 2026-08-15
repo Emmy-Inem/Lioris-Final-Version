@@ -1,10 +1,10 @@
-import React from 'react';
-import { View } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { ModerationQueue } from '@/components/ModerationQueue';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { View } from'react-native';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { ModerationQueue } from'@/components/ModerationQueue';
+import { useTheme } from'@/theme/ThemeProvider';
 
 export default function AdminReportsScreen() {
   const { spacing } = useTheme();
@@ -13,7 +13,7 @@ export default function AdminReportsScreen() {
     <ScreenContainer glow={true}>
       <AppHeader />
       <View style={{ paddingTop: spacing.md, marginBottom: spacing.sm }}>
-        <AppText variant="h1" weight="bold">
+        <AppText variant="h1"weight="bold">
           Incident Reports & Safety 🚩
         </AppText>
         <AppText tone="secondary">

@@ -1,3 +1,3 @@
-import JobsScreen from '../(student)/jobs';
+import JobsScreen from'../(student)/jobs';
 
 export default JobsScreen;

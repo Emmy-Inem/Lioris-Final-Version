@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
-import { Badge } from '@/components/Badge';
-import { useTheme } from '@/theme/ThemeProvider';
+import React, { useState } from'react';
+import { Pressable, ScrollView, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { SolidCard } from'@/components/SolidCard';
+import { Badge } from'@/components/Badge';
+import { useTheme } from'@/theme/ThemeProvider';
 
 const RETENTION_COHORTS = [
   { label: 'Day 1', percent: 94, users: '22.8k' },
@@ -34,20 +34,19 @@ export default function PulseAnalyticsScreen() {
       <AppHeader />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: 150 }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: spacing.md, marginBottom: spacing.md }}>
           <View>
-            <AppText variant="h1" weight="bold">
-              Campus Pulse Analytics 📊
+            <AppText variant="h1"weight="bold">
+              Campus Pulse Analytics 
             </AppText>
-            <AppText tone="secondary" variant="bodySmall">
+            <AppText tone="secondary"variant="bodySmall">
               Real-time student engagement, DAU metrics & retention
             </AppText>
           </View>
-          <Badge label="Live Telemetry" tone="accent" />
+          <Badge label="Live Telemetry"tone="accent" />
         </View>
 
         {/* Timeframe Filter Pills */}
@@ -72,7 +71,7 @@ export default function PulseAnalyticsScreen() {
                   borderColor: selected ? colors.brandPrimary : colors.border,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                   {t}
                 </AppText>
               </Pressable>
@@ -84,30 +83,30 @@ export default function PulseAnalyticsScreen() {
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
           <SolidCard radius={20} style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <Ionicons name="people-outline" size={16} color={colors.brandPrimary} />
-              <AppText tone="secondary" variant="caption">
+              <Ionicons name="people-outline"size={16} color={colors.brandPrimary} />
+              <AppText tone="secondary"variant="caption">
                 DAU / MAU Ratio
               </AppText>
             </View>
-            <AppText variant="h2" weight="bold" tone="brand">
+            <AppText variant="h2"weight="bold"tone="brand">
               24.2k / 89.4k
             </AppText>
-            <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+            <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
               27.1% stickiness (+3.4%)
             </AppText>
           </SolidCard>
 
           <SolidCard radius={20} style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <Ionicons name="chatbubbles-outline" size={16} color={colors.brandAccent} />
-              <AppText tone="secondary" variant="caption">
+              <Ionicons name="chatbubbles-outline"size={16} color={colors.brandAccent} />
+              <AppText tone="secondary"variant="caption">
                 Threads & Polls
               </AppText>
             </View>
-            <AppText variant="h2" weight="bold" tone="accent">
+            <AppText variant="h2"weight="bold"tone="accent">
               4,812
             </AppText>
-            <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+            <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
               +18% this month
             </AppText>
           </SolidCard>
@@ -117,14 +116,14 @@ export default function PulseAnalyticsScreen() {
         <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View>
-              <AppText weight="bold" variant="bodySmall">
-                Cohort Retention Benchmark 📈
+              <AppText weight="bold"variant="bodySmall">
+                Cohort Retention Benchmark 
               </AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Percentage of registered students returning after N days
               </AppText>
             </View>
-            <Badge label="Healthy (Tier 1)" tone="brand" />
+            <Badge label="Healthy (Tier 1)"tone="brand" />
           </View>
 
           {/* Retention Bars */}
@@ -132,10 +131,10 @@ export default function PulseAnalyticsScreen() {
             {RETENTION_COHORTS.map((c) => (
               <View key={c.label}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <AppText variant="caption" weight="bold">
+                  <AppText variant="caption"weight="bold">
                     {c.label}
                   </AppText>
-                  <AppText variant="caption" tone="brand" weight="bold">
+                  <AppText variant="caption"tone="brand"weight="bold">
                     {c.percent}% ({c.users})
                   </AppText>
                 </View>
@@ -157,10 +156,10 @@ export default function PulseAnalyticsScreen() {
         {/* Department Engagement Breakdown */}
         <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText weight="bold" variant="bodySmall">
-              Departmental Activity Share 🏛️
+            <AppText weight="bold"variant="bodySmall">
+              Departmental Activity Share 
             </AppText>
-            <AppText tone="secondary" variant="caption">
+            <AppText tone="secondary"variant="caption">
               24,200 active students
             </AppText>
           </View>
@@ -169,17 +168,17 @@ export default function PulseAnalyticsScreen() {
             {DEPARTMENT_TRAFFIC.map((dept) => (
               <View key={dept.name} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, paddingRight: spacing.sm }}>
-                  <AppText weight="medium" variant="bodySmall" numberOfLines={1}>
+                  <AppText weight="medium"variant="bodySmall"numberOfLines={1}>
                     {dept.name}
                   </AppText>
-                  <AppText tone="secondary" variant="caption">
+                  <AppText tone="secondary"variant="caption">
                     {dept.count}
                   </AppText>
                 </View>
                 <View style={{ width: 100, height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden', marginHorizontal: spacing.sm }}>
                   <View style={{ width: `${dept.percentage}%`, height: '100%', backgroundColor: dept.color, borderRadius: 4 }} />
                 </View>
-                <AppText weight="bold" variant="caption" style={{ width: 35, textAlign: 'right' }}>
+                <AppText weight="bold"variant="caption"style={{ width: 35, textAlign: 'right' }}>
                   {dept.percentage}%
                 </AppText>
               </View>

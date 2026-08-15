@@ -1,8 +1,8 @@
-import { api } from './client';
-import { Conversation, Message } from './types';
-import { mockConversations, mockMessages } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
+import { api } from'./client';
+import { Conversation, Message } from'./types';
+import { mockConversations, mockMessages } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 // Mutable in-memory copy so archiving a conversation actually persists
 // for the session, rather than reappearing on the next fetch — same
@@ -17,7 +17,7 @@ export async function listConversations(): Promise<Conversation[]> {
 }
 
 // DELETE /conversations/{id} — not in Section 15's excerpted contracts,
-// but implied by the "archive/delete a conversation" swipe gesture on
+// but implied by the"archive/delete a conversation"swipe gesture on
 // the Messages list (PRD Section 8's gesture-interactions requirement).
 export async function archiveConversation(id: string): Promise<void> {
   if (!FALL_BACK_TO_MOCKS) {
@@ -33,8 +33,8 @@ export async function archiveConversation(id: string): Promise<void> {
 }
 
 // POST /conversations — not in Section 15's excerpted contracts, but
-// implied by any "Message [person]" action starting a fresh thread
-// (e.g. Marketplace's "Message Seller") where no conversation with
+// implied by any"Message [person]"action starting a fresh thread
+// (e.g. Marketplace's"Message Seller") where no conversation with
 // that person exists yet. Previously there was no way to start a new
 // conversation at all — only list ones that already existed.
 export async function getOrCreateConversationWithUser(

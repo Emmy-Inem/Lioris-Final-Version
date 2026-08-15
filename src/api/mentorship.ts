@@ -1,9 +1,9 @@
-import { api } from './client';
-import { Mentorship, MentorProfile } from './types';
-import { mockMentorships, mockMentorProfiles } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
-import { createNotification } from './notifications';
+import { api } from'./client';
+import { Mentorship, MentorProfile } from'./types';
+import { mockMentorships, mockMentorProfiles } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { createNotification } from'./notifications';
 
 // Mutable in-memory copy so accept/decline visibly updates status
 // within a session, without needing a real backend.
@@ -101,7 +101,7 @@ export async function respondToMentorshipRequest(
     });
     createNotification({
       type: 'system',
-      title: action === 'accept' ? 'Mentorship request accepted 🎉' : 'Mentorship request declined',
+      title: action === 'accept' ? 'Mentorship request accepted' : 'Mentorship request declined',
       body:
         action === 'accept'
           ? `${updated?.mentorName ?? 'Your mentor'} accepted your mentorship request — say hello!`

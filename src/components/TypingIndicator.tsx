@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
+import React, { useEffect } from'react';
+import { View } from'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from'react-native-reanimated';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
 
 function Dot({ delay, color }: { delay: number; color: string }) {
   const translateY = useSharedValue(0);
@@ -41,7 +41,7 @@ export function TypingIndicator() {
       <Dot delay={0} color={colors.brandPrimary} />
       <Dot delay={100} color={colors.brandPrimary} />
       <Dot delay={200} color={colors.brandPrimary} />
-      <AppText variant="caption" weight="semiBold" tone="secondary" style={{ marginLeft: 6 }}>
+      <AppText variant="caption"weight="semiBold"tone="secondary"style={{ marginLeft: 6 }}>
         typing...
       </AppText>
     </View>

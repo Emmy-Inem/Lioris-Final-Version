@@ -1,5 +1,5 @@
-import { FALL_BACK_TO_MOCKS } from './config';
-import { api } from './client';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { api } from'./client';
 
 export interface DashboardShortcut {
   id: string;

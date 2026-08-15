@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AppText } from '../AppText';
-import { AppTextField } from '../AppTextField';
-import { AppButton } from '../AppButton';
-import { Badge } from '../Badge';
-import { SolidCard } from '../SolidCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listResources, createResource, updateResource, deleteResource } from '@/api/resources';
-import { Resource } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, FlatList, Modal, Pressable, ScrollView, TextInput, View } from'react-native';
+import { Image } from'expo-image';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { AppText } from'../AppText';
+import { AppTextField } from'../AppTextField';
+import { AppButton } from'../AppButton';
+import { Badge } from'../Badge';
+import { SolidCard } from'../SolidCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listResources, createResource, updateResource, deleteResource } from'@/api/resources';
+import { Resource } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
 const RESOURCE_COVER_PRESETS = [
   { id: 'campus_library_study', label: 'Study Archive', src: require('../../../assets/images/campus_library_study.jpg') },
@@ -126,7 +126,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
     haptics.error();
     Alert.alert(
       'Delete Resource',
-      `Are you sure you want to remove "${resource.title}"? Students will no longer be able to download this file.`,
+      `Are you sure you want to remove"${resource.title}"? Students will no longer be able to download this file.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -144,7 +144,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.70)', justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
@@ -172,23 +172,23 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
             }}
           >
             <View>
-              <AppText variant="h2" weight="bold">
+              <AppText variant="h2"weight="bold">
                 Manage Academic Library
               </AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Admin resource files, documents & past questions
               </AppText>
             </View>
 
             <Pressable onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
+              <Ionicons name="close"size={24} color={colors.textPrimary} />
             </Pressable>
           </View>
 
           {isCreating || editingResource ? (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <AppText variant="h3" weight="bold">
+                <AppText variant="h3"weight="bold">
                   {editingResource ? `Edit Resource: ${editingResource.title}` : 'Add Academic Resource'}
                 </AppText>
                 <Pressable
@@ -197,27 +197,27 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                     setEditingResource(null);
                   }}
                 >
-                  <AppText tone="brand" variant="bodySmall" weight="bold">
+                  <AppText tone="brand"variant="bodySmall"weight="bold">
                     Cancel
                   </AppText>
                 </Pressable>
               </View>
 
-              <AppTextField label="Resource Title *" placeholder="e.g. CSC 301 Past Exam 2024 with Solutions" value={formTitle} onChangeText={setFormTitle} />
+              <AppTextField label="Resource Title *"placeholder="e.g. CSC 301 Past Exam 2024 with Solutions"value={formTitle} onChangeText={setFormTitle} />
               
               <View style={{ flexDirection: 'row', gap: spacing.md }}>
                 <View style={{ flex: 1 }}>
-                  <AppTextField label="Course Code *" placeholder="CSC 301" value={formCode} onChangeText={setFormCode} />
+                  <AppTextField label="Course Code *"placeholder="CSC 301"value={formCode} onChangeText={setFormCode} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppTextField label="File Size" placeholder="3.2 MB" value={formFileSize} onChangeText={setFormFileSize} />
+                  <AppTextField label="File Size"placeholder="3.2 MB"value={formFileSize} onChangeText={setFormFileSize} />
                 </View>
               </View>
 
-              <AppTextField label="Department" placeholder="Computer Science & AI" value={formDept} onChangeText={setFormDept} />
+              <AppTextField label="Department"placeholder="Computer Science & AI"value={formDept} onChangeText={setFormDept} />
 
               {/* Category Pills */}
-              <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
+              <AppText variant="bodySmall"weight="bold"style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
                 Category
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
@@ -236,7 +236,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                         borderColor: isSelected ? colors.brandPrimary : colors.border,
                       }}
                     >
-                      <AppText variant="caption" weight={isSelected ? 'bold' : 'regular'} style={{ color: isSelected ? (isDark ? '#0B1120' : '#FFFFFF') : colors.textPrimary }}>
+                      <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} style={{ color: isSelected ? (isDark ? '#0B1120' : '#FFFFFF') : colors.textPrimary }}>
                         {cat}
                       </AppText>
                     </Pressable>
@@ -244,10 +244,10 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                 })}
               </View>
 
-              <AppTextField label="Description & Notes" placeholder="Key topics covered, semester year, solutions guide..." value={formDescription} onChangeText={setFormDescription} multiline numberOfLines={3} />
+              <AppTextField label="Description & Notes"placeholder="Key topics covered, semester year, solutions guide..."value={formDescription} onChangeText={setFormDescription} multiline numberOfLines={3} />
 
               {/* Cover Image Selector */}
-              <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
+              <AppText variant="bodySmall"weight="bold"style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
                 Select Resource Thumbnail / Cover
               </AppText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -267,7 +267,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                     >
                       <Image source={preset.src} style={{ width: '100%', height: 60 }} contentFit="cover" />
                       <View style={{ padding: 4, backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface }}>
-                        <AppText variant="caption" weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9 }} numberOfLines={1}>
+                        <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9 }} numberOfLines={1}>
                           {preset.label}
                         </AppText>
                       </View>
@@ -298,7 +298,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                     borderColor: selectedCategory === 'all' ? colors.brandPrimary : colors.border,
                   }}
                 >
-                  <AppText variant="caption" weight={selectedCategory === 'all' ? 'bold' : 'regular'} style={{ color: selectedCategory === 'all' ? (isDark ? '#0B1120' : '#FFFFFF') : colors.textPrimary }}>
+                  <AppText variant="caption"weight={selectedCategory === 'all' ? 'bold' : 'regular'} style={{ color: selectedCategory === 'all' ? (isDark ? '#0B1120' : '#FFFFFF') : colors.textPrimary }}>
                     All
                   </AppText>
                 </Pressable>
@@ -317,7 +317,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                         borderColor: isSel ? colors.brandPrimary : colors.border,
                       }}
                     >
-                      <AppText variant="caption" weight={isSel ? 'bold' : 'regular'} style={{ color: isSel ? (isDark ? '#0B1120' : '#FFFFFF') : colors.textPrimary }}>
+                      <AppText variant="caption"weight={isSel ? 'bold' : 'regular'} style={{ color: isSel ? (isDark ? '#0B1120' : '#FFFFFF') : colors.textPrimary }}>
                         {cat}
                       </AppText>
                     </Pressable>
@@ -340,22 +340,21 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                     height: 44,
                   }}
                 >
-                  <Ionicons name="search" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                  <Ionicons name="search"size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
                   <TextInput
-                    placeholder="Search title, course code or department..."
-                    placeholderTextColor={colors.textSecondary}
+                    placeholder="Search title, course code or department..."placeholderTextColor={colors.textSecondary}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
                   />
                   {searchQuery ? (
                     <Pressable onPress={() => setSearchQuery('')}>
-                      <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                      <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
                     </Pressable>
                   ) : null}
                 </View>
 
-                <AppButton label="Add Resource" onPress={handleOpenCreate} />
+                <AppButton label="Add Resource"onPress={handleOpenCreate} />
               </View>
 
               {/* Resource List */}
@@ -369,23 +368,23 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                     <SolidCard style={{ marginBottom: spacing.sm, padding: spacing.md }}>
                       <View style={{ flexDirection: 'row', gap: spacing.md }}>
                         <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                          <Ionicons name="document-text" size={24} color={colors.brandPrimary} />
+                          <Ionicons name="document-text"size={24} color={colors.brandPrimary} />
                         </View>
 
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Badge label={item.courseCode} tone="brand" />
-                            <AppText variant="caption" tone="secondary">
+                            <AppText variant="caption"tone="secondary">
                               {item.fileSize} | {item.downloadsCount} dl
                             </AppText>
                           </View>
 
-                          <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2 }}>
+                          <AppText weight="bold"variant="bodySmall"numberOfLines={1} style={{ marginTop: 2 }}>
                             {item.title}
                           </AppText>
 
-                          <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                            {item.category} &bull; {item.department}
+                          <AppText tone="secondary"variant="caption"numberOfLines={1}>
+                            {item.category} • {item.department}
                           </AppText>
 
                           <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
@@ -393,8 +392,8 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                               onPress={() => handleOpenEdit(item)}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 }}
                             >
-                              <Ionicons name="pencil" size={13} color={colors.brandPrimary} />
-                              <AppText variant="caption" tone="brand" weight="bold">
+                              <Ionicons name="pencil"size={13} color={colors.brandPrimary} />
+                              <AppText variant="caption"tone="brand"weight="bold">
                                 Edit Resource & Cover
                               </AppText>
                             </Pressable>
@@ -403,8 +402,8 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
                               onPress={() => handleDelete(item)}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, marginLeft: spacing.sm }}
                             >
-                              <Ionicons name="trash-outline" size={13} color={colors.critical} />
-                              <AppText variant="caption" style={{ color: colors.critical }} weight="bold">
+                              <Ionicons name="trash-outline"size={13} color={colors.critical} />
+                              <AppText variant="caption"style={{ color: colors.critical }} weight="bold">
                                 Delete
                               </AppText>
                             </Pressable>

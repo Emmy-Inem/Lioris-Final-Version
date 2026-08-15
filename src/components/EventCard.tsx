@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
-import { Image } from 'expo-image';
-import { router, useSegments } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import * as Notifications from 'expo-notifications';
-import { SolidCard } from './SolidCard';
-import { AppText } from './AppText';
-import { AppButton } from './AppButton';
-import { Badge } from './Badge';
-import { ActionSheetModal } from './ActionSheetModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { CampusEvent } from '@/api/types';
-import { rsvpToEvent } from '@/api/events';
-import { submitReport } from '@/api/moderation';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Pressable, View } from'react-native';
+import { Image } from'expo-image';
+import { router, useSegments } from'expo-router';
+import { useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from'react-native-reanimated';
+import * as Notifications from'expo-notifications';
+import { SolidCard } from'./SolidCard';
+import { AppText } from'./AppText';
+import { AppButton } from'./AppButton';
+import { Badge } from'./Badge';
+import { ActionSheetModal } from'./ActionSheetModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { CampusEvent } from'@/api/types';
+import { rsvpToEvent } from'@/api/events';
+import { submitReport } from'@/api/moderation';
+import { haptics } from'@/utils/haptics';
 
 const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
 const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
@@ -158,10 +158,10 @@ export function EventCard({ event }: { event: CampusEvent }) {
                   borderColor: colors.brandPrimary,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10, letterSpacing: 0.5 }}>
+                <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 10, letterSpacing: 0.5 }}>
                   {month}
                 </AppText>
-                <AppText variant="h2" weight="bold" tone="brand" style={{ lineHeight: 24 }}>
+                <AppText variant="h2"weight="bold"tone="brand"style={{ lineHeight: 24 }}>
                   {day}
                 </AppText>
               </Pressable>
@@ -170,7 +170,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Pressable onPress={handleOpenEvent} style={{ flex: 1, paddingRight: 4 }}>
-                    <AppText variant="h3" weight="bold" numberOfLines={2}>
+                    <AppText variant="h3"weight="bold"numberOfLines={2}>
                       {event.title}
                     </AppText>
                   </Pressable>
@@ -184,14 +184,14 @@ export function EventCard({ event }: { event: CampusEvent }) {
                       />
                     </Pressable>
                     <Pressable onPress={() => setMenuOpen(true)} hitSlop={8} style={{ padding: 2 }}>
-                      <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+                      <Ionicons name="ellipsis-horizontal"size={18} color={colors.textSecondary} />
                     </Pressable>
                   </View>
                 </View>
 
                 <Pressable onPress={handleOpenEvent} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                  <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-                  <AppText tone="secondary" variant="caption">
+                  <Ionicons name="time-outline"size={13} color={colors.textSecondary} />
+                  <AppText tone="secondary"variant="caption">
                     {time} | {event.location}
                   </AppText>
                 </Pressable>
@@ -200,7 +200,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
 
             {/* Description */}
             <Pressable onPress={handleOpenEvent}>
-              <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ marginTop: spacing.sm, lineHeight: 18 }}>
+              <AppText tone="secondary"variant="bodySmall"numberOfLines={2} style={{ marginTop: spacing.sm, lineHeight: 18 }}>
                 {event.description}
               </AppText>
             </Pressable>
@@ -218,8 +218,8 @@ export function EventCard({ event }: { event: CampusEvent }) {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="people" size={16} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" tone="brand">
+                <Ionicons name="people"size={16} color={colors.brandPrimary} />
+                <AppText variant="caption"weight="bold"tone="brand">
                   {rsvpCount} attending{event.capacity ? ` (${event.capacity} max)` : ''}
                 </AppText>
               </View>
@@ -240,7 +240,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
           onPress={handleReport}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="flag-outline" size={18} color={colors.critical} />
+          <Ionicons name="flag-outline"size={18} color={colors.critical} />
           <AppText style={{ color: colors.critical }} weight="medium">Report Event</AppText>
         </Pressable>
       </ActionSheetModal>

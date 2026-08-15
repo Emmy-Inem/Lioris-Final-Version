@@ -1,6 +1,6 @@
-import 'react-native-url-polyfill/auto';
-import Constants from 'expo-constants';
-import { getAccessToken } from '@/auth/tokenStorage';
+import'react-native-url-polyfill/auto';
+import Constants from'expo-constants';
+import { getAccessToken } from'@/auth/tokenStorage';
 
 const { wsBaseUrl } = (Constants.expoConfig?.extra ?? {}) as { wsBaseUrl?: string };
 
@@ -16,8 +16,8 @@ type ConnectionStatusListener = (status: 'connecting' | 'open' | 'closed') => vo
 
 /**
  * PRD Section 12.2: messaging/connection/notification updates ride a
- * real-time channel, and must "degrade gracefully to polling ... if the
- * socket connection fails." This client owns the reconnect policy;
+ * real-time channel, and must"degrade gracefully to polling ... if the
+ * socket connection fails."This client owns the reconnect policy;
  * consumers (useRealtimeChannel) own the polling fallback decision.
  */
 class RealtimeSocket {

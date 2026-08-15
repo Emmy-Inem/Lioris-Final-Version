@@ -1,8 +1,8 @@
-import { api } from './client';
-import { AppNotification } from './types';
-import { mockNotifications } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
+import { api } from'./client';
+import { AppNotification } from'./types';
+import { mockNotifications } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
 
 let notificationsState = [...mockNotifications];
 

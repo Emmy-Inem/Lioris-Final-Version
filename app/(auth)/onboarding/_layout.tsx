@@ -1,9 +1,9 @@
-import React from 'react';
-import { Stack } from 'expo-router';
+import React from'react';
+import { Stack } from'expo-router';
 
 export default function OnboardingLayout() {
   return (
-    // PRD Section 8 — deliberate "moving forward" motion for the linear
+    // PRD Section 8 — deliberate"moving forward"motion for the linear
     // onboarding chain, explicit and consistent across iOS/Android
     // rather than left to each platform's differing default.
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>

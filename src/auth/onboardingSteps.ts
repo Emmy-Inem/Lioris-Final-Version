@@ -1,4 +1,4 @@
-import { UserRole } from '@/api/types';
+import { UserRole } from'@/api/types';
 
 /**
  * Mirrors the onboarding flowcharts in PRD Section 5. Each entry is an
@@ -34,7 +34,7 @@ export function firstOnboardingStep(role: UserRole): string {
   // Staff/admin accounts are provisioned by invite (PRD Sections 5.3/5.4)
   // and don't self-register through this flow, so they have no
   // onboarding chain here.
-  return '/(auth)/verify-email';
+  return'/(auth)/verify-email';
 }
 
 export function nextOnboardingStep(role: UserRole, currentPath: string): string | null {

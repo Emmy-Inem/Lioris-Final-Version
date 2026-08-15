@@ -1,7 +1,7 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Pressable, View } from'react-native';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface ChipSelectProps<T extends string> {
   options: T[];
@@ -19,8 +19,7 @@ export function ChipSelect<T extends string>({ options, selected, onToggle }: Ch
           <Pressable
             key={option}
             onPress={() => onToggle(option)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: isSelected }}
+            accessibilityRole="checkbox"accessibilityState={{ checked: isSelected }}
             accessibilityLabel={option}
             style={{
               paddingHorizontal: spacing.md,
@@ -31,7 +30,7 @@ export function ChipSelect<T extends string>({ options, selected, onToggle }: Ch
               backgroundColor: isSelected ? `${colors.brandPrimary}18` : 'transparent',
             }}
           >
-            <AppText variant="bodySmall" weight="semiBold" tone={isSelected ? 'brand' : 'secondary'}>
+            <AppText variant="bodySmall"weight="semiBold"tone={isSelected ? 'brand' : 'secondary'}>
               {option}
             </AppText>
           </Pressable>

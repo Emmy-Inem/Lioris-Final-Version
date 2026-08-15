@@ -1,13 +1,13 @@
-import React from 'react';
-import { ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { Avatar } from './Avatar';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { ScrollView, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { Avatar } from'./Avatar';
+import { useTheme } from'@/theme/ThemeProvider';
 
 const MOCK_STORIES = ['Tunde', 'Chioma', 'Sade', 'Adebayo', 'Sithole'];
 
-/** Ported from StoriesBar (DashboardAndProfile.kt): "My Story" add bubble + friends' story avatars in a ring border. */
+/** Ported from StoriesBar (DashboardAndProfile.kt): "My Story"add bubble + friends'story avatars in a ring border. */
 export function StoriesBar() {
   const { colors, spacing } = useTheme();
 
@@ -29,7 +29,7 @@ export function StoriesBar() {
             marginBottom: 4,
           }}
         >
-          <Ionicons name="add" size={22} color={colors.brandPrimary} />
+          <Ionicons name="add"size={22} color={colors.brandPrimary} />
         </View>
         <AppText variant="caption">My Story</AppText>
       </View>
@@ -50,7 +50,7 @@ export function StoriesBar() {
           >
             <Avatar name={name} size={54} />
           </View>
-          <AppText variant="caption" numberOfLines={1}>
+          <AppText variant="caption"numberOfLines={1}>
             {name}
           </AppText>
         </View>

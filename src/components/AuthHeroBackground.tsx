@@ -1,7 +1,7 @@
-import React from 'react';
-import { View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { View } from'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from'react-native-svg';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface AuthHeroBackgroundProps {
   height: number;
@@ -21,21 +21,21 @@ interface AuthHeroBackgroundProps {
  * remote URL that goes dead in production looks worse than an honest
  * gradient placeholder. Swap the <Svg> below for an
  * <ImageBackground source={{ uri: ... }}> of real branded photography
- * before shipping (see README's "Known follow-ups").
+ * before shipping (see README's"Known follow-ups").
  */
 export function AuthHeroBackground({ height, children, fromColor, toColor, radius }: AuthHeroBackgroundProps) {
   const { colors } = useTheme();
 
   return (
     <View style={{ height, overflow: 'hidden', borderRadius: radius }}>
-      <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
+      <Svg width="100%"height="100%"style={{ position: 'absolute' }}>
         <Defs>
-          <LinearGradient id="authHeroGradient" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0%" stopColor={fromColor ?? colors.brandPrimaryPressed} />
-            <Stop offset="100%" stopColor={toColor ?? colors.brandPrimary} />
+          <LinearGradient id="authHeroGradient"x1="0"y1="0"x2="1"y2="1">
+            <Stop offset="0%"stopColor={fromColor ?? colors.brandPrimaryPressed} />
+            <Stop offset="100%"stopColor={toColor ?? colors.brandPrimary} />
           </LinearGradient>
         </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#authHeroGradient)" />
+        <Rect x="0"y="0"width="100%"height="100%"fill="url(#authHeroGradient)" />
       </Svg>
       {children}
     </View>

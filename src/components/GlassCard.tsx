@@ -1,8 +1,8 @@
-import React from 'react';
-import { Platform, StyleSheet, View, ViewProps } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Platform, StyleSheet, View, ViewProps } from'react-native';
+import { LinearGradient } from'expo-linear-gradient';
+import { BlurView } from'expo-blur';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface GlassCardProps extends ViewProps {
   padded?: boolean;

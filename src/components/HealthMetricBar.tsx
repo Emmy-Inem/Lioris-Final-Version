@@ -1,8 +1,8 @@
-import React from 'react';
-import { View } from 'react-native';
-import { AppText } from './AppText';
-import { Badge } from './Badge';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { View } from'react-native';
+import { AppText } from'./AppText';
+import { Badge } from'./Badge';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface HealthMetricBarProps {
   label: string;
@@ -15,13 +15,13 @@ interface HealthMetricBarProps {
 
 function bandFor(valuePct: number, greenMin: number, amberMin: number, invert?: boolean) {
   if (invert) {
-    if (valuePct <= greenMin) return 'green';
-    if (valuePct <= amberMin) return 'amber';
-    return 'red';
+    if (valuePct <= greenMin) return'green';
+    if (valuePct <= amberMin) return'amber';
+    return'red';
   }
-  if (valuePct >= greenMin) return 'green';
-  if (valuePct >= amberMin) return 'amber';
-  return 'red';
+  if (valuePct >= greenMin) return'green';
+  if (valuePct >= amberMin) return'amber';
+  return'red';
 }
 
 export function HealthMetricBar({ label, valuePct, greenMin, amberMin, invert }: HealthMetricBarProps) {
@@ -35,7 +35,7 @@ export function HealthMetricBar({ label, valuePct, greenMin, amberMin, invert }:
   return (
     <View style={{ marginBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-        <AppText weight="medium" variant="bodySmall">
+        <AppText weight="medium"variant="bodySmall">
           {label}
         </AppText>
         <Badge label={bandLabel} tone={bandTone[band]} />
@@ -49,7 +49,7 @@ export function HealthMetricBar({ label, valuePct, greenMin, amberMin, invert }:
           }}
         />
       </View>
-      <AppText tone="secondary" variant="caption" style={{ marginTop: spacing.xs }}>
+      <AppText tone="secondary"variant="caption"style={{ marginTop: spacing.xs }}>
         {valuePct}%
       </AppText>
     </View>

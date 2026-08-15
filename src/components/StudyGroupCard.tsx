@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SolidCard } from './SolidCard';
-import { AppText } from './AppText';
-import { Badge } from './Badge';
-import { AppButton } from './AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
-import { StudyGroup } from '@/api/types';
-import { joinStudyGroup } from '@/api/studyGroups';
+import React, { useState } from'react';
+import { View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { SolidCard } from'./SolidCard';
+import { AppText } from'./AppText';
+import { Badge } from'./Badge';
+import { AppButton } from'./AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
+import { StudyGroup } from'@/api/types';
+import { joinStudyGroup } from'@/api/studyGroups';
 
 export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoined?: () => void }) {
   const { colors, spacing, radius } = useTheme();
@@ -38,25 +38,25 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="people-outline" size={22} color={colors.brandPrimary} />
+          <Ionicons name="people-outline"size={22} color={colors.brandPrimary} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Badge label={group.isPublic ? 'Public Pod' : 'Private Pod'} tone={group.isPublic ? 'brand' : 'neutral'} />
-            <AppText tone="secondary" variant="caption">
+            <AppText tone="secondary"variant="caption">
               {group.memberCount} members
             </AppText>
           </View>
-          <AppText variant="h3" weight="bold" style={{ marginTop: 2 }}>
+          <AppText variant="h3"weight="bold"style={{ marginTop: 2 }}>
             {group.name}
           </AppText>
-          <AppText tone="brand" variant="caption" weight="bold">
+          <AppText tone="brand"variant="caption"weight="bold">
             {group.courseCode}
           </AppText>
         </View>
       </View>
 
-      <AppText tone="secondary" variant="bodySmall" style={{ marginTop: spacing.sm, marginBottom: spacing.md, lineHeight: 18 }}>
+      <AppText tone="secondary"variant="bodySmall"style={{ marginTop: spacing.sm, marginBottom: spacing.md, lineHeight: 18 }}>
         {group.description}
       </AppText>
 

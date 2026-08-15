@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, ViewStyle } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { View, ViewStyle } from'react-native';
+import Svg, { Path } from'react-native-svg';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface WaveCardProps {
   children: React.ReactNode;
@@ -20,8 +20,8 @@ export function WaveCard({ children, style }: WaveCardProps) {
 
   return (
     <View style={style}>
-      <Svg width="100%" height={32} viewBox="0 0 100 20" preserveAspectRatio="none">
-        <Path d="M0,16 C25,0 75,32 100,16 L100,20 L0,20 Z" fill={colors.surface} />
+      <Svg width="100%"height={32} viewBox="0 0 100 20"preserveAspectRatio="none">
+        <Path d="M0,16 C25,0 75,32 100,16 L100,20 L0,20 Z"fill={colors.surface} />
       </Svg>
       <View
         style={{

@@ -1,10 +1,10 @@
-import React from 'react';
-import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
-import { roleBadgeColors } from '@/theme/colors';
-import { UserRole } from '@/api/types';
+import React from'react';
+import { View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
+import { roleBadgeColors } from'@/theme/colors';
+import { UserRole } from'@/api/types';
 
 const ICON_BY_ROLE: Record<UserRole, keyof typeof Ionicons.glyphMap> = {
   student: 'happy-outline',
@@ -45,7 +45,7 @@ export function UserTypeBadge({ role }: { role: UserRole }) {
       }}
     >
       <Ionicons name={ICON_BY_ROLE[role]} size={11} color={text} />
-      <AppText variant="caption" weight="bold" style={{ color: text, fontSize: 9 }}>
+      <AppText variant="caption"weight="bold"style={{ color: text, fontSize: 9 }}>
         {LABEL_BY_ROLE[role]}
       </AppText>
     </View>

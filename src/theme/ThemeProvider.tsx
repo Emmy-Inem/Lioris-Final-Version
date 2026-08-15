@@ -1,12 +1,12 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Platform, useColorScheme } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import { useQuery } from '@tanstack/react-query';
-import { darkColors, lightColors, ThemeColors, institutionThemeOverrides, ACCENT_PRESETS, AccentPreset } from './colors';
-import { spacing, radius, minTouchTarget, glassBlur } from './tokens';
-import { useAuth } from '@/auth/AuthContext';
-import { getMyProfile } from '@/api/profile';
-import { useViewScope } from '@/hooks/useViewScope';
+import React, { createContext, useContext, useEffect, useMemo, useState } from'react';
+import { Platform, useColorScheme } from'react-native';
+import * as SecureStore from'expo-secure-store';
+import { useQuery } from'@tanstack/react-query';
+import { darkColors, lightColors, ThemeColors, institutionThemeOverrides, ACCENT_PRESETS, AccentPreset } from'./colors';
+import { spacing, radius, minTouchTarget, glassBlur } from'./tokens';
+import { useAuth } from'@/auth/AuthContext';
+import { getMyProfile } from'@/api/profile';
+import { useViewScope } from'@/hooks/useViewScope';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 

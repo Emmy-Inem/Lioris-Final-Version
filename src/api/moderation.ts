@@ -1,14 +1,14 @@
-import { api } from './client';
-import { Report } from './types';
-import { mockReports } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
-import { recordAuditLogEntry } from './auditLog';
-import { createNotification } from './notifications';
+import { api } from'./client';
+import { Report } from'./types';
+import { mockReports } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { recordAuditLogEntry } from'./auditLog';
+import { createNotification } from'./notifications';
 
 // Mutable in-memory copy so resolve/dismiss actually persists — the
 // previous version returned a fabricated success object without ever
-// updating the underlying list, so a "resolved" report would silently
+// updating the underlying list, so a"resolved"report would silently
 // reappear as open on the next fetch.
 let reportsState = [...mockReports];
 
@@ -95,7 +95,7 @@ export async function resolveReport(
 }
 
 // Submits a new report — the content-side counterpart to the admin
-// review flow above. Used from post/message/profile "Report" actions.
+// review flow above. Used from post/message/profile"Report"actions.
 // Previously fired the request and did nothing else — meaning a
 // report a real user submitted would never actually appear in
 // listReports()'s queue for staff/admin to review, only the

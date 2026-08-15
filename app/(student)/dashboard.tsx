@@ -1,37 +1,37 @@
-import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Alert, Modal } from 'react-native';
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { SolidCard } from '@/components/SolidCard';
-import { AppText } from '@/components/AppText';
-import { AppButton } from '@/components/AppButton';
-import { Avatar } from '@/components/Avatar';
-import { Badge } from '@/components/Badge';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { getMyProfile, updateProfileImages } from '@/api/profile';
-import { listEvents } from '@/api/events';
-import { listDashboardShortcuts, DashboardShortcut } from '@/api/adminShortcuts';
+import React, { useState } from'react';
+import { ScrollView, View, Pressable, Alert, Modal } from'react-native';
+import { Image } from'expo-image';
+import { router } from'expo-router';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { SolidCard } from'@/components/SolidCard';
+import { AppText } from'@/components/AppText';
+import { AppButton } from'@/components/AppButton';
+import { Avatar } from'@/components/Avatar';
+import { Badge } from'@/components/Badge';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { getMyProfile, updateProfileImages } from'@/api/profile';
+import { listEvents } from'@/api/events';
+import { listDashboardShortcuts, DashboardShortcut } from'@/api/adminShortcuts';
 
 const COVER_PRESETS = [
-  { id: 'campus_students_photo', label: 'Campus Quad 🏛️', src: require('../../assets/images/campus_students_photo.jpg') },
-  { id: 'campus_library_study', label: 'University Library 📖', src: require('../../assets/images/campus_library_study.jpg') },
+  { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
+  { id: 'campus_library_study', label: 'University Library', src: require('../../assets/images/campus_library_study.jpg') },
   { id: 'student_rep_group', label: 'Student Senate 🤝', src: require('../../assets/images/student_rep_group.jpg') },
-  { id: 'event_tech_hackathon', label: 'Hackfest Arena 💻', src: require('../../assets/images/event_tech_hackathon.jpg') },
-  { id: 'hero_student_3d', label: 'Futuristic Studio 🚀', src: require('../../assets/images/hero_student_3d.jpg') },
+  { id: 'event_tech_hackathon', label: 'Hackfest Arena', src: require('../../assets/images/event_tech_hackathon.jpg') },
+  { id: 'hero_student_3d', label: 'Futuristic Studio', src: require('../../assets/images/hero_student_3d.jpg') },
 ];
 
 const AVATAR_PRESETS = [
-  { id: 'avatar_male', label: 'Male Student 👨‍🎓', src: require('../../assets/images/avatar_male.jpg') },
-  { id: 'avatar_female', label: 'Female Student 👩‍🎓', src: require('../../assets/images/avatar_female.jpg') },
-  { id: 'avatar_male_2', label: 'Engineering Student 💻', src: require('../../assets/images/avatar_male_2.jpg') },
-  { id: 'avatar_female_2', label: 'Honor Scholar 📚', src: require('../../assets/images/avatar_female_2.jpg') },
-  { id: 'avatar_alumni_2', label: 'Alumni Founder 💼', src: require('../../assets/images/avatar_alumni_2.jpg') },
-  { id: 'avatar_mentor', label: 'Faculty Advisor 🧑‍🏫', src: require('../../assets/images/avatar_mentor.jpg') },
+  { id: 'avatar_male', label: 'Male Student 👨‍', src: require('../../assets/images/avatar_male.jpg') },
+  { id: 'avatar_female', label: 'Female Student 👩‍', src: require('../../assets/images/avatar_female.jpg') },
+  { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
+  { id: 'avatar_female_2', label: 'Honor Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
+  { id: 'avatar_alumni_2', label: 'Alumni Founder', src: require('../../assets/images/avatar_alumni_2.jpg') },
+  { id: 'avatar_mentor', label: 'Faculty Advisor 🧑‍', src: require('../../assets/images/avatar_mentor.jpg') },
 ];
 
 export default function StudentDashboard() {
@@ -60,7 +60,7 @@ export default function StudentDashboard() {
     await updateProfileImages(user.id, { avatarUrl: presetId });
     await queryClient.invalidateQueries({ queryKey: ['profile'] });
     setPhotoPickerOpen(false);
-    Alert.alert('Avatar Updated 🌟', 'New profile avatar applied.');
+    Alert.alert('Avatar Updated', 'New profile avatar applied.');
   }
 
   async function handleSelectCover(presetId: string) {
@@ -68,7 +68,7 @@ export default function StudentDashboard() {
     await updateProfileImages(user.id, { coverUrl: presetId });
     await queryClient.invalidateQueries({ queryKey: ['profile'] });
     setPhotoPickerOpen(false);
-    Alert.alert('Campus Banner Updated 🏛️', 'New cover banner applied.');
+    Alert.alert('Campus Banner Updated', 'New cover banner applied.');
   }
 
   return (
@@ -76,8 +76,7 @@ export default function StudentDashboard() {
       <AppHeader />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: 140 }}
       >
         {/* Customizable Campus Cover Banner */}
@@ -97,7 +96,7 @@ export default function StudentDashboard() {
           <View style={{ position: 'absolute', top: 12, left: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <View style={{ backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#48BB78' }} />
-              <AppText variant="caption" weight="bold" tone="inverse">
+              <AppText variant="caption"weight="bold"tone="inverse">
                 {profile?.institutionName ?? 'University of Ibadan'}
               </AppText>
             </View>
@@ -119,17 +118,17 @@ export default function StudentDashboard() {
               gap: 5,
             }}
           >
-            <Ionicons name="camera" size={13} color="#FFFFFF" />
-            <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
+            <Ionicons name="camera"size={13} color="#FFFFFF" />
+            <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
               Customize
             </AppText>
           </Pressable>
 
           <View style={{ position: 'absolute', bottom: 12, left: 14 }}>
-            <AppText variant="h2" weight="bold" tone="inverse">
+            <AppText variant="h2"weight="bold"tone="inverse">
               Hello {firstName}
             </AppText>
-            <AppText tone="inverse" variant="caption" style={{ opacity: 0.9 }}>
+            <AppText tone="inverse"variant="caption"style={{ opacity: 0.9 }}>
               {profile?.department ?? 'Computer Science & AI'} | Level {profile?.level ?? 4}
             </AppText>
           </View>
@@ -151,8 +150,8 @@ export default function StudentDashboard() {
             marginBottom: spacing.md,
           }}
         >
-          <Ionicons name="search" size={18} color={colors.textSecondary} />
-          <AppText tone="secondary" variant="bodySmall">
+          <Ionicons name="search"size={18} color={colors.textSecondary} />
+          <AppText tone="secondary"variant="bodySmall">
             Search threads, past questions, events, portals...
           </AppText>
         </Pressable>
@@ -161,19 +160,19 @@ export default function StudentDashboard() {
         <SolidCard radius={20} backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="time" size={16} color={colors.brandPrimary} />
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
-                NEXT LECTURE TODAY &bull; IN 42 MINS
+              <Ionicons name="time"size={16} color={colors.brandPrimary} />
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
+                NEXT LECTURE TODAY • IN 42 MINS
               </AppText>
             </View>
-            <Badge label="LT 2 Main" tone="brand" />
+            <Badge label="LT 2 Main"tone="brand" />
           </View>
 
-          <AppText variant="h3" weight="bold" style={{ marginBottom: 2 }}>
+          <AppText variant="h3"weight="bold"style={{ marginBottom: 2 }}>
             CSC 301: Advanced Algorithms & Data Structures
           </AppText>
-          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
-            11:00 AM – 1:00 PM &bull; Prof. O. Adeyemi &bull; Topic: Dynamic Programming & Graphs
+          <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
+            11:00 AM – 1:00 PM • Prof. O. Adeyemi • Topic: Dynamic Programming & Graphs
           </AppText>
 
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -189,8 +188,8 @@ export default function StudentDashboard() {
                 borderColor: colors.border,
               }}
             >
-              <AppText variant="caption" weight="bold" tone="brand">
-                📚 Course Notes & Solved PQs
+              <AppText variant="caption"weight="bold"tone="brand">
+                 Course Notes & Solved PQs
               </AppText>
             </Pressable>
             <Pressable
@@ -203,8 +202,8 @@ export default function StudentDashboard() {
                 alignItems: 'center',
               }}
             >
-              <AppText variant="caption" weight="bold" tone="inverse">
-                📅 Full Timetable &rarr;
+              <AppText variant="caption"weight="bold"tone="inverse">
+                 Full Timetable →
               </AppText>
             </Pressable>
           </View>
@@ -213,10 +212,10 @@ export default function StudentDashboard() {
         {/* Live Study Squads & Campus Hub Activity */}
         <View style={{ marginBottom: spacing.lg }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText variant="h3" weight="bold">
-              Live Study Squads & Hubs ⚡
+            <AppText variant="h3"weight="bold">
+              Live Study Squads & Hubs 
             </AppText>
-            <Badge label="2 Active Now" tone="success" />
+            <Badge label="2 Active Now"tone="success" />
           </View>
 
           <View style={{ gap: spacing.sm }}>
@@ -224,13 +223,13 @@ export default function StudentDashboard() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <Ionicons name="location" size={14} color={colors.brandPrimary} />
-                    <AppText weight="bold" variant="bodySmall">
+                    <Ionicons name="location"size={14} color={colors.brandPrimary} />
+                    <AppText weight="bold"variant="bodySmall">
                       Senate E-Library (2nd Floor Quiet Zone)
                     </AppText>
                   </View>
-                  <AppText tone="secondary" variant="caption">
-                    28 students &bull; CSC 301 & MEE 305 peer revision sprint
+                  <AppText tone="secondary"variant="caption">
+                    28 students • CSC 301 & MEE 305 peer revision sprint
                   </AppText>
                 </View>
                 <Pressable
@@ -242,8 +241,8 @@ export default function StudentDashboard() {
                     borderRadius: radius.pill,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone="brand">
-                    Join Squad 💬
+                  <AppText variant="caption"weight="bold"tone="brand">
+                    Join Squad 
                   </AppText>
                 </Pressable>
               </View>
@@ -253,13 +252,13 @@ export default function StudentDashboard() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <Ionicons name="code-slash" size={14} color={colors.brandPrimary} />
-                    <AppText weight="bold" variant="bodySmall">
+                    <Ionicons name="code-slash"size={14} color={colors.brandPrimary} />
+                    <AppText weight="bold"variant="bodySmall">
                       Tech Hub / Hackfest Arena (Faculty Hall)
                     </AppText>
                   </View>
-                  <AppText tone="secondary" variant="caption">
-                    14 students &bull; Team Aqua demo rehearsal & mobile UI testing
+                  <AppText tone="secondary"variant="caption">
+                    14 students • Team Aqua demo rehearsal & mobile UI testing
                   </AppText>
                 </View>
                 <Pressable
@@ -271,8 +270,8 @@ export default function StudentDashboard() {
                     borderRadius: radius.pill,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone="brand">
-                    View Demo 🚀
+                  <AppText variant="caption"weight="bold"tone="brand">
+                    View Demo 
                   </AppText>
                 </Pressable>
               </View>
@@ -283,12 +282,12 @@ export default function StudentDashboard() {
         {/* Dynamic Campus Utilities & Portal Grid */}
         <View style={{ marginBottom: spacing.lg }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText variant="h3" weight="bold">
-              Campus Utilities & Portals 🏛️
+            <AppText variant="h3"weight="bold">
+              Campus Utilities & Portals 
             </AppText>
             <Pressable onPress={() => router.push('/(student)/resources')}>
-              <AppText tone="brand" variant="bodySmall" weight="bold">
-                View All &rarr;
+              <AppText tone="brand"variant="bodySmall"weight="bold">
+                View All →
               </AppText>
             </Pressable>
           </View>
@@ -322,12 +321,12 @@ export default function StudentDashboard() {
         {/* Featured Campus Events Preview */}
         <View style={{ marginBottom: spacing.lg }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText variant="h3" weight="bold">
-              Featured Campus Events 📅
+            <AppText variant="h3"weight="bold">
+              Featured Campus Events 
             </AppText>
             <Pressable onPress={() => router.push('/(student)/events-list')}>
-              <AppText tone="brand" variant="bodySmall" weight="bold">
-                See All ({events?.length ?? 0}) &rarr;
+              <AppText tone="brand"variant="bodySmall"weight="bold">
+                See All ({events?.length ?? 0}) →
               </AppText>
             </Pressable>
           </View>
@@ -347,14 +346,14 @@ export default function StudentDashboard() {
                     borderColor: colors.brandPrimary,
                   }}
                 >
-                  <Ionicons name="calendar" size={22} color={colors.brandPrimary} />
+                  <Ionicons name="calendar"size={22} color={colors.brandPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText weight="bold" variant="bodySmall">
+                  <AppText weight="bold"variant="bodySmall">
                     {evt.title}
                   </AppText>
-                  <AppText tone="secondary" variant="caption">
-                    📍 {evt.location} &bull; {evt.rsvpCount} RSVPs
+                  <AppText tone="secondary"variant="caption">
+                     {evt.location} • {evt.rsvpCount} RSVPs
                   </AppText>
                 </View>
                 <Pressable
@@ -366,7 +365,7 @@ export default function StudentDashboard() {
                     paddingVertical: 6,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone="inverse">
+                  <AppText variant="caption"weight="bold"tone="inverse">
                     RSVP
                   </AppText>
                 </Pressable>
@@ -377,23 +376,23 @@ export default function StudentDashboard() {
       </ScrollView>
 
       {/* Photo Picker Modal */}
-      <Modal visible={photoPickerOpen} transparent animationType="slide" onRequestClose={() => setPhotoPickerOpen(false)}>
+      <Modal visible={photoPickerOpen} transparent animationType="slide"onRequestClose={() => setPhotoPickerOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name="images" size={20} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold">
+                <Ionicons name="images"size={20} color={colors.brandPrimary} />
+                <AppText variant="h3"weight="bold">
                   Customize App Photos 📷
                 </AppText>
               </View>
               <Pressable onPress={() => setPhotoPickerOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
                 CHOOSE AVATAR PHOTO
               </AppText>
               <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
@@ -414,7 +413,7 @@ export default function StudentDashboard() {
                       }}
                     >
                       <Image source={preset.src} style={{ width: 56, height: 56, borderRadius: 28, marginBottom: 4 }} />
-                      <AppText variant="caption" weight="bold" numberOfLines={1}>
+                      <AppText variant="caption"weight="bold"numberOfLines={1}>
                         {preset.label}
                       </AppText>
                     </Pressable>
@@ -422,7 +421,7 @@ export default function StudentDashboard() {
                 })}
               </View>
 
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
                 CHOOSE CAMPUS BANNER
               </AppText>
               <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -443,11 +442,11 @@ export default function StudentDashboard() {
                     >
                       <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingLeft: spacing.md }}>
-                        <AppText variant="bodySmall" weight="bold" tone="inverse">
+                        <AppText variant="bodySmall"weight="bold"tone="inverse">
                           {preset.label}
                         </AppText>
                         {isSelected ? (
-                          <AppText variant="caption" weight="bold" tone="brand" style={{ color: '#68D391' }}>
+                          <AppText variant="caption"weight="bold"tone="brand"style={{ color: '#68D391' }}>
                             ✓ Active Banner
                           </AppText>
                         ) : null}
@@ -458,7 +457,7 @@ export default function StudentDashboard() {
               </View>
             </ScrollView>
 
-            <AppButton label="Done" onPress={() => setPhotoPickerOpen(false)} />
+            <AppButton label="Done"onPress={() => setPhotoPickerOpen(false)} />
           </View>
         </View>
       </Modal>
@@ -468,14 +467,14 @@ export default function StudentDashboard() {
 
 function resolveShortcutRoute(internalAction: string): string | null {
   switch (internalAction) {
-    case 'library':
-    case 'courses':
-    case 'past_questions':
-      return '/(student)/resources';
-    case 'timetable':
-      return '/(student)/calendar';
-    case 'upload_events':
-      return '/(student)/events-list';
+    case'library':
+    case'courses':
+    case'past_questions':
+      return'/(student)/resources';
+    case'timetable':
+      return'/(student)/calendar';
+    case'upload_events':
+      return'/(student)/events-list';
     default:
       return null;
   }
@@ -512,8 +511,7 @@ function ShortcutTile({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${title}, ${subtitle}`}
+      accessibilityRole="button"accessibilityLabel={`${title}, ${subtitle}`}
       style={{ width: '48%' }}
     >
       <SolidCard backgroundColor={bg} radius={18}>
@@ -530,10 +528,10 @@ function ShortcutTile({
         >
           <Ionicons name={icon} size={18} color={iconColor} />
         </View>
-        <AppText weight="bold" variant="bodySmall" style={{ marginBottom: 2 }}>
+        <AppText weight="bold"variant="bodySmall"style={{ marginBottom: 2 }}>
           {title}
         </AppText>
-        <AppText variant="caption" weight="semiBold" style={{ color: subtitleColor }} numberOfLines={1}>
+        <AppText variant="caption"weight="semiBold"style={{ color: subtitleColor }} numberOfLines={1}>
           {subtitle}
         </AppText>
       </SolidCard>

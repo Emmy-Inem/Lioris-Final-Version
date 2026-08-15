@@ -1,7 +1,7 @@
-import { FALL_BACK_TO_MOCKS } from './config';
-import { api } from './client';
-import { recordAuditLogEntry } from './auditLog';
-import { createNotification } from './notifications';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { api } from'./client';
+import { recordAuditLogEntry } from'./auditLog';
+import { createNotification } from'./notifications';
 
 export interface VerificationRequest {
   id: string;
@@ -50,7 +50,7 @@ export interface SubmitVerificationPayload {
   documentPhotoUri?: string | null;
 }
 
-// Backs the Profile screen's "Apply for Verification" flow. Submitting
+// Backs the Profile screen's"Apply for Verification"flow. Submitting
 // does NOT immediately grant the tick — a real reviewer (Admin's
 // Verify Credentials tool) approves or rejects it, matching how actual
 // document verification has to work.
@@ -106,7 +106,7 @@ export async function respondToVerificationRequest(id: string, status: 'approved
     // no notification was ever created anywhere in the app before this.
     createNotification({
       type: 'system',
-      title: status === 'approved' ? 'Verification approved ✅' : 'Verification not approved',
+      title: status === 'approved' ? 'Verification approved' : 'Verification not approved',
       body:
         status === 'approved'
           ? `Your ${updated.institutionClaimed} verification was approved. Your profile now shows the verified badge.`

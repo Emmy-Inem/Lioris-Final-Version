@@ -1,7 +1,7 @@
-import React from 'react';
-import { View } from 'react-native';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { View } from'react-native';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
 
 type Visibility = 'campus' | 'global' | 'private';
 
@@ -14,14 +14,14 @@ const CONFIG: Record<Visibility, { label: string; lightBg: string; lightText: st
     darkText: '#93C5FD',
   },
   private: {
-    label: 'Private 🔒',
+    label: 'Private',
     lightBg: '#FEF2F2',
     lightText: '#991B1B',
     darkBg: 'rgba(252,165,165,0.18)',
     darkText: '#FCA5A5',
   },
   campus: {
-    label: 'Campus 🏫',
+    label: 'Campus',
     lightBg: '#ECFDF5',
     lightText: '#065F46',
     darkBg: 'rgba(52,211,153,0.18)',
@@ -47,7 +47,7 @@ export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
         alignSelf: 'flex-start',
       }}
     >
-      <AppText variant="caption" weight="bold" style={{ color: text, fontSize: 11 }}>
+      <AppText variant="caption"weight="bold"style={{ color: text, fontSize: 11 }}>
         {config.label}
       </AppText>
     </View>

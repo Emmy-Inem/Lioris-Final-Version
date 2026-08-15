@@ -1,18 +1,18 @@
-import React, { useEffect } from 'react';
-import { Modal, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
+import React, { useEffect } from'react';
+import { Modal, Pressable, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { router } from'expo-router';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
 
 const CHANNELS = [
-  { icon: 'megaphone' as const, label: 'All Academic Feed ✨', pinned: true, unread: 0 },
-  { icon: 'settings-outline' as const, label: 'Tech Hub', pinned: false, unread: 0 },
-  { icon: 'home-outline' as const, label: 'Housing', pinned: false, unread: 3 },
-  { icon: 'star-outline' as const, label: 'Social', pinned: false, unread: 0 },
-  { icon: 'search-outline' as const, label: 'Lost & Found', pinned: false, unread: 1 },
+  { icon: 'megaphone'as const, label: 'All Academic Feed', pinned: true, unread: 0 },
+  { icon: 'settings-outline'as const, label: 'Tech Hub', pinned: false, unread: 0 },
+  { icon: 'home-outline'as const, label: 'Housing', pinned: false, unread: 3 },
+  { icon: 'star-outline'as const, label: 'Social', pinned: false, unread: 0 },
+  { icon: 'search-outline'as const, label: 'Lost & Found', pinned: false, unread: 1 },
 ];
 
 interface DiscussionWorkspacesModalProps {
@@ -21,7 +21,7 @@ interface DiscussionWorkspacesModalProps {
 }
 
 /**
- * Ported from the "Discussion Workspaces" modal (Forum's hamburger-menu
+ * Ported from the"Discussion Workspaces"modal (Forum's hamburger-menu
  * icon). PRD Section 8 — real scale+fade entrance for the dialog
  * content rather than popping in instantly under RN Modal's native
  * backdrop fade (same treatment as AdminConfigModal).
@@ -49,20 +49,20 @@ export function DiscussionWorkspacesModal({ visible, onClose }: DiscussionWorksp
   }));
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: spacing.lg }}>
         <Animated.View style={[{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, maxHeight: '80%' }, animatedStyle]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-            <AppText variant="h2" weight="bold">
+            <AppText variant="h2"weight="bold">
               Discussion Workspaces
             </AppText>
-            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
-              <Ionicons name="close" size={22} color={colors.textPrimary} />
+            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button"accessibilityLabel="Close">
+              <Ionicons name="close"size={22} color={colors.textPrimary} />
             </Pressable>
           </View>
           <View style={{ height: 1, backgroundColor: colors.divider, marginBottom: spacing.md }} />
 
-          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.sm }}>
+          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.sm }}>
             WORKSPACES
           </AppText>
           <View
@@ -76,13 +76,13 @@ export function DiscussionWorkspacesModal({ visible, onClose }: DiscussionWorksp
               marginBottom: spacing.lg,
             }}
           >
-            <Ionicons name="school" size={16} color={colors.brandPrimary} />
-            <AppText weight="semiBold" tone="brand">
-              Student Academic Spaces 🎓
+            <Ionicons name="school"size={16} color={colors.brandPrimary} />
+            <AppText weight="semiBold"tone="brand">
+              Student Academic Spaces 
             </AppText>
           </View>
 
-          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.sm }}>
+          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.sm }}>
             CHANNELS
           </AppText>
           {CHANNELS.map((ch) => (
@@ -116,7 +116,7 @@ export function DiscussionWorkspacesModal({ visible, onClose }: DiscussionWorksp
                     paddingHorizontal: 5,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone="inverse">
+                  <AppText variant="caption"weight="bold"tone="inverse">
                     {ch.unread}
                   </AppText>
                 </View>
@@ -130,9 +130,7 @@ export function DiscussionWorkspacesModal({ visible, onClose }: DiscussionWorksp
                 onClose();
                 router.push(user?.role === 'admin' ? '/(admin)/platform-config' : '/(staff)/moderation');
               }}
-              accessibilityRole="button"
-              accessibilityLabel="Open admin dashboard"
-              style={{
+              accessibilityRole="button"accessibilityLabel="Open admin dashboard"style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -143,8 +141,8 @@ export function DiscussionWorkspacesModal({ visible, onClose }: DiscussionWorksp
                 marginTop: spacing.lg,
               }}
             >
-              <Ionicons name="shield" size={16} color={colors.roseText} />
-              <AppText weight="bold" style={{ color: colors.roseText }}>
+              <Ionicons name="shield"size={16} color={colors.roseText} />
+              <AppText weight="bold"style={{ color: colors.roseText }}>
                 Admin Dashboard
               </AppText>
             </Pressable>

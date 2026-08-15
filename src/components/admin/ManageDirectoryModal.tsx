@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AppText } from '../AppText';
-import { AppTextField } from '../AppTextField';
-import { AppButton } from '../AppButton';
-import { Avatar } from '../Avatar';
-import { Badge } from '../Badge';
-import { SolidCard } from '../SolidCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listDirectory, createDirectoryEntry, updateDirectoryEntry, deleteDirectoryEntry } from '@/api/directory';
-import { AlumniDirectoryEntry } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, FlatList, Modal, Pressable, ScrollView, TextInput, View } from'react-native';
+import { Image } from'expo-image';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { AppText } from'../AppText';
+import { AppTextField } from'../AppTextField';
+import { AppButton } from'../AppButton';
+import { Avatar } from'../Avatar';
+import { Badge } from'../Badge';
+import { SolidCard } from'../SolidCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listDirectory, createDirectoryEntry, updateDirectoryEntry, deleteDirectoryEntry } from'@/api/directory';
+import { AlumniDirectoryEntry } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
 const AVATAR_PRESETS = [
   { id: 'avatar_male', label: 'Student Alpha', src: require('../../../assets/images/avatar_male.jpg') },
@@ -143,7 +143,7 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.70)', justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
@@ -171,23 +171,23 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
             }}
           >
             <View>
-              <AppText variant="h2" weight="bold">
+              <AppText variant="h2"weight="bold">
                 Manage Campus Directory
               </AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Admin directory profiles, verified alumni & staff
               </AppText>
             </View>
 
             <Pressable onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
+              <Ionicons name="close"size={24} color={colors.textPrimary} />
             </Pressable>
           </View>
 
           {isCreating || editingEntry ? (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <AppText variant="h3" weight="bold">
+                <AppText variant="h3"weight="bold">
                   {editingEntry ? `Edit Member: ${editingEntry.fullName}` : 'Add Directory Member'}
                 </AppText>
                 <Pressable
@@ -196,28 +196,28 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
                     setEditingEntry(null);
                   }}
                 >
-                  <AppText tone="brand" variant="bodySmall" weight="bold">
+                  <AppText tone="brand"variant="bodySmall"weight="bold">
                     Cancel
                   </AppText>
                 </Pressable>
               </View>
 
-              <AppTextField label="Full Name *" placeholder="e.g. Dr. Folake Solanke" value={formName} onChangeText={setFormName} />
+              <AppTextField label="Full Name *"placeholder="e.g. Dr. Folake Solanke"value={formName} onChangeText={setFormName} />
               
               <View style={{ flexDirection: 'row', gap: spacing.md }}>
                 <View style={{ flex: 1 }}>
-                  <AppTextField label="Organization / Company *" placeholder="e.g. Paystack / Google" value={formCompany} onChangeText={setFormCompany} />
+                  <AppTextField label="Organization / Company *"placeholder="e.g. Paystack / Google"value={formCompany} onChangeText={setFormCompany} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppTextField label="Class Year" placeholder="2020" keyboardType="numeric" value={formYear} onChangeText={setFormYear} />
+                  <AppTextField label="Class Year"placeholder="2020"keyboardType="numeric"value={formYear} onChangeText={setFormYear} />
                 </View>
               </View>
 
-              <AppTextField label="Industry / Specialty" placeholder="Fintech, AI, Cloud Infrastructure" value={formIndustry} onChangeText={setFormIndustry} />
-              <AppTextField label="Professional Bio & Focus" placeholder="Roles, research interests, mentorship willingness..." value={formBio} onChangeText={setFormBio} multiline numberOfLines={3} />
+              <AppTextField label="Industry / Specialty"placeholder="Fintech, AI, Cloud Infrastructure"value={formIndustry} onChangeText={setFormIndustry} />
+              <AppTextField label="Professional Bio & Focus"placeholder="Roles, research interests, mentorship willingness..."value={formBio} onChangeText={setFormBio} multiline numberOfLines={3} />
 
               {/* Avatar Preset Selector */}
-              <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
+              <AppText variant="bodySmall"weight="bold"style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
                 Select Profile Avatar Photo
               </AppText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -238,7 +238,7 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
                       }}
                     >
                       <Image source={preset.src} style={{ width: 50, height: 50, borderRadius: 25 }} contentFit="cover" />
-                      <AppText variant="caption" weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9, marginTop: 4 }} numberOfLines={1}>
+                      <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9, marginTop: 4 }} numberOfLines={1}>
                         {preset.label}
                       </AppText>
                     </Pressable>
@@ -270,22 +270,21 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
                     height: 44,
                   }}
                 >
-                  <Ionicons name="search" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                  <Ionicons name="search"size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
                   <TextInput
-                    placeholder="Search name, company, or industry..."
-                    placeholderTextColor={colors.textSecondary}
+                    placeholder="Search name, company, or industry..."placeholderTextColor={colors.textSecondary}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
                   />
                   {searchQuery ? (
                     <Pressable onPress={() => setSearchQuery('')}>
-                      <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                      <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
                     </Pressable>
                   ) : null}
                 </View>
 
-                <AppButton label="Add Member" onPress={handleOpenCreate} />
+                <AppButton label="Add Member"onPress={handleOpenCreate} />
               </View>
 
               {/* Directory List */}
@@ -302,17 +301,17 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
 
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <AppText weight="bold" variant="bodySmall">
+                            <AppText weight="bold"variant="bodySmall">
                               {item.fullName}
                             </AppText>
-                            <Badge label={`Class of '${String(item.graduationYear).slice(-2)}`} tone="brand" />
+                            <Badge label={`Class of'${String(item.graduationYear).slice(-2)}`} tone="brand" />
                           </View>
 
-                          <AppText tone="brand" variant="caption" weight="semiBold">
-                            {item.company} &bull; {item.industry}
+                          <AppText tone="brand"variant="caption"weight="semiBold">
+                            {item.company} • {item.industry}
                           </AppText>
 
-                          <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                          <AppText tone="secondary"variant="caption"numberOfLines={1}>
                             {item.bio}
                           </AppText>
 
@@ -321,8 +320,8 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
                               onPress={() => handleOpenEdit(item)}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 }}
                             >
-                              <Ionicons name="pencil" size={13} color={colors.brandPrimary} />
-                              <AppText variant="caption" tone="brand" weight="bold">
+                              <Ionicons name="pencil"size={13} color={colors.brandPrimary} />
+                              <AppText variant="caption"tone="brand"weight="bold">
                                 Edit Profile & Avatar
                               </AppText>
                             </Pressable>
@@ -331,8 +330,8 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
                               onPress={() => handleDelete(item)}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, marginLeft: spacing.sm }}
                             >
-                              <Ionicons name="trash-outline" size={13} color={colors.critical} />
-                              <AppText variant="caption" style={{ color: colors.critical }} weight="bold">
+                              <Ionicons name="trash-outline"size={13} color={colors.critical} />
+                              <AppText variant="caption"style={{ color: colors.critical }} weight="bold">
                                 Remove
                               </AppText>
                             </Pressable>

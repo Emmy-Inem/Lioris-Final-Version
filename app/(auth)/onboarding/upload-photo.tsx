@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
-import { OnboardingShell } from '@/components/OnboardingShell';
-import { AppButton } from '@/components/AppButton';
-import { AppText } from '@/components/AppText';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import React, { useState } from'react';
+import { Pressable, View } from'react-native';
+import { Image } from'expo-image';
+import * as ImagePicker from'expo-image-picker';
+import { Ionicons } from'@expo/vector-icons';
+import { OnboardingShell } from'@/components/OnboardingShell';
+import { AppButton } from'@/components/AppButton';
+import { AppText } from'@/components/AppText';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
 
 export default function UploadPhotoScreen() {
   const { colors, spacing } = useTheme();
@@ -62,10 +62,7 @@ export default function UploadPhotoScreen() {
 
   return (
     <OnboardingShell
-      currentPath="/(auth)/onboarding/upload-photo"
-      title="Add a profile photo"
-      subtitle="Helps classmates and alumni recognize you. You can skip this and add one later."
-      footer={
+      currentPath="/(auth)/onboarding/upload-photo"title="Add a profile photo"subtitle="Helps classmates and alumni recognize you. You can skip this and add one later."footer={
         <AppButton label={photoUri ? 'Continue' : 'Skip for now'} onPress={handleContinue} loading={submitting} fullWidth />
       }
     >
@@ -83,9 +80,9 @@ export default function UploadPhotoScreen() {
           }}
         >
           {photoUri ? (
-            <Image source={{ uri: photoUri }} style={{ width: 140, height: 140 }} contentFit="cover" transition={200} />
+            <Image source={{ uri: photoUri }} style={{ width: 140, height: 140 }} contentFit="cover"transition={200} />
           ) : (
-            <AppText tone="inverse" variant="h1" weight="bold">
+            <AppText tone="inverse"variant="h1"weight="bold">
               {initials}
             </AppText>
           )}
@@ -94,23 +91,19 @@ export default function UploadPhotoScreen() {
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           <Pressable
             onPress={pickFromLibrary}
-            accessibilityRole="button"
-            accessibilityLabel="Choose photo from library"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}
+            accessibilityRole="button"accessibilityLabel="Choose photo from library"style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}
           >
-            <Ionicons name="images-outline" size={18} color={colors.brandPrimary} />
-            <AppText tone="brand" weight="semiBold" variant="bodySmall">
+            <Ionicons name="images-outline"size={18} color={colors.brandPrimary} />
+            <AppText tone="brand"weight="semiBold"variant="bodySmall">
               Choose photo
             </AppText>
           </Pressable>
           <Pressable
             onPress={takePhoto}
-            accessibilityRole="button"
-            accessibilityLabel="Take photo"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}
+            accessibilityRole="button"accessibilityLabel="Take photo"style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}
           >
-            <Ionicons name="camera-outline" size={18} color={colors.brandPrimary} />
-            <AppText tone="brand" weight="semiBold" variant="bodySmall">
+            <Ionicons name="camera-outline"size={18} color={colors.brandPrimary} />
+            <AppText tone="brand"weight="semiBold"variant="bodySmall">
               Take photo
             </AppText>
           </Pressable>

@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
-import { router } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { SolidCard } from '@/components/SolidCard';
-import { Badge } from '@/components/Badge';
-import { Avatar } from '@/components/Avatar';
-import { AppButton } from '@/components/AppButton';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listMentorships, respondToMentorshipRequest } from '@/api/mentorship';
-import { createNotification } from '@/api/notifications';
-import { getOrCreateConversationWithUser } from '@/api/messaging';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { router } from'expo-router';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { SolidCard } from'@/components/SolidCard';
+import { Badge } from'@/components/Badge';
+import { Avatar } from'@/components/Avatar';
+import { AppButton } from'@/components/AppButton';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listMentorships, respondToMentorshipRequest } from'@/api/mentorship';
+import { createNotification } from'@/api/notifications';
+import { getOrCreateConversationWithUser } from'@/api/messaging';
 
 const STATUS_TONE = {
   pending: 'warning',
@@ -67,13 +67,13 @@ export default function AlumniMentorshipScreen() {
     const meetUrl = `https://meet.google.com/lio-${Math.random().toString(36).substring(2, 6)}-${Math.random().toString(36).substring(2, 6)}`;
     createNotification({
       type: 'event',
-      title: '📹 Mentorship Video Call Scheduled',
-      body: `Your 1-on-1 session on "${sessionTopic}" is scheduled for ${sessionDate}. Link: ${meetUrl}`,
+      title: 'Mentorship Video Call Scheduled',
+      body: `Your 1-on-1 session on"${sessionTopic}"is scheduled for ${sessionDate}. Link: ${meetUrl}`,
       deepLinkPath: '/(student)/mentorship',
     });
     setScheduleModalOpen(false);
     Alert.alert(
-      'Session Scheduled 📹',
+      'Session Scheduled',
       `Google Meet session created for ${sessionDate}.\n\nMeeting URL: ${meetUrl}\n\nCalendar invite and notification sent to ${selectedMentee.name}.`,
     );
   }
@@ -92,22 +92,22 @@ export default function AlumniMentorshipScreen() {
       <AppHeader />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
         <View style={{ paddingTop: spacing.md, marginBottom: spacing.md }}>
-          <AppText variant="h1" weight="bold">
-            Alumni Mentorship Desk 🎓
+          <AppText variant="h1"weight="bold">
+            Alumni Mentorship Desk 
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary"variant="bodySmall">
             Guide university students, review portfolio code, and conduct 1-on-1 video calls.
           </AppText>
         </View>
 
         {/* Overview Stats */}
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
-          <StatBox label="Active Mentees" value={mentorships?.filter((m) => m.status === 'active').length ?? 2} icon="people" />
-          <StatBox label="Pending Requests" value={mentorships?.filter((m) => m.status === 'pending').length ?? 1} icon="time" />
-          <StatBox label="Sessions Done" value={8} icon="videocam" />
+          <StatBox label="Active Mentees"value={mentorships?.filter((m) => m.status === 'active').length ?? 2} icon="people" />
+          <StatBox label="Pending Requests"value={mentorships?.filter((m) => m.status === 'pending').length ?? 1} icon="time" />
+          <StatBox label="Sessions Done"value={8} icon="videocam" />
         </View>
 
-        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+        <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.sm }}>
           Student Mentorship Inquiries ({mentorships?.length ?? 0})
         </AppText>
 
@@ -119,11 +119,11 @@ export default function AlumniMentorshipScreen() {
                 <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
                   <Avatar name={studentName} size={42} />
                   <View>
-                    <AppText variant="bodySmall" weight="bold">
+                    <AppText variant="bodySmall"weight="bold">
                       {studentName}
                     </AppText>
-                    <AppText tone="secondary" variant="caption">
-                      University of Ibadan &bull; GPA 4.7 / 5.0
+                    <AppText tone="secondary"variant="caption">
+                      University of Ibadan • GPA 4.7 / 5.0
                     </AppText>
                   </View>
                 </View>
@@ -132,10 +132,10 @@ export default function AlumniMentorshipScreen() {
 
               {m.focusArea ? (
                 <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, marginVertical: spacing.sm }}>
-                  <AppText variant="caption" weight="bold" tone="brand">
+                  <AppText variant="caption"weight="bold"tone="brand">
                     REQUESTED FOCUS:
                   </AppText>
-                  <AppText variant="bodySmall" weight="medium" style={{ marginTop: 2 }}>
+                  <AppText variant="bodySmall"weight="medium"style={{ marginTop: 2 }}>
                     {m.focusArea}
                   </AppText>
                 </View>
@@ -143,19 +143,16 @@ export default function AlumniMentorshipScreen() {
 
               {m.status === 'pending' ? (
                 <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-                  <AppButton label="Accept Mentee 🤝" onPress={() => respond(m.id, 'accept')} loading={submittingId === m.id} />
-                  <AppButton label="Decline" variant="secondary" onPress={() => respond(m.id, 'decline')} />
+                  <AppButton label="Accept Mentee 🤝"onPress={() => respond(m.id, 'accept')} loading={submittingId === m.id} />
+                  <AppButton label="Decline"variant="secondary"onPress={() => respond(m.id, 'decline')} />
                 </View>
               ) : m.status === 'active' ? (
                 <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
                   <AppButton
-                    label="Schedule Video Call 📹"
-                    onPress={() => handleOpenScheduler({ id: m.studentId, name: studentName })}
+                    label="Schedule Video Call"onPress={() => handleOpenScheduler({ id: m.studentId, name: studentName })}
                   />
                   <AppButton
-                    label="Message 💬"
-                    variant="secondary"
-                    onPress={() => handleOpenChat(m.studentId, studentName)}
+                    label="Message"variant="secondary"onPress={() => handleOpenChat(m.studentId, studentName)}
                   />
                 </View>
               ) : null}
@@ -164,36 +161,36 @@ export default function AlumniMentorshipScreen() {
         })}
 
         {!isLoading && (mentorships?.length ?? 0) === 0 ? (
-          <EmptyState title="No mentorship activity" description="Incoming requests from students will appear here." />
+          <EmptyState title="No mentorship activity"description="Incoming requests from students will appear here." />
         ) : null}
       </ScrollView>
 
       {/* Schedule Video Session Modal */}
-      <Modal visible={scheduleModalOpen} transparent animationType="slide" onRequestClose={() => setScheduleModalOpen(false)}>
+      <Modal visible={scheduleModalOpen} transparent animationType="slide"onRequestClose={() => setScheduleModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="videocam" size={22} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold">
+                <Ionicons name="videocam"size={22} color={colors.brandPrimary} />
+                <AppText variant="h3"weight="bold">
                   Schedule 1-on-1 Video Session
                 </AppText>
               </View>
               <Pressable onPress={() => setScheduleModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
-            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
               With: {selectedMentee?.name}
             </AppText>
 
-            <AppTextField label="Session Focus / Agenda" value={sessionTopic} onChangeText={setSessionTopic} />
-            <AppTextField label="Date & Time" value={sessionDate} onChangeText={setSessionDate} placeholder="e.g. Saturday 4:00 PM" />
+            <AppTextField label="Session Focus / Agenda"value={sessionTopic} onChangeText={setSessionTopic} />
+            <AppTextField label="Date & Time"value={sessionDate} onChangeText={setSessionDate} placeholder="e.g. Saturday 4:00 PM" />
 
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setScheduleModalOpen(false)} />
-              <AppButton label="Generate Meet Link & Confirm 📹" onPress={handleConfirmVideoSession} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setScheduleModalOpen(false)} />
+              <AppButton label="Generate Meet Link & Confirm"onPress={handleConfirmVideoSession} />
             </View>
           </View>
         </View>
@@ -217,10 +214,10 @@ function StatBox({ label, value, icon }: { label: string; value: number; icon: k
       }}
     >
       <Ionicons name={icon} size={18} color={colors.brandPrimary} style={{ marginBottom: 2 }} />
-      <AppText variant="h3" weight="bold" tone="brand">
+      <AppText variant="h3"weight="bold"tone="brand">
         {value}
       </AppText>
-      <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+      <AppText tone="secondary"variant="caption"style={{ fontSize: 10 }}>
         {label}
       </AppText>
     </View>

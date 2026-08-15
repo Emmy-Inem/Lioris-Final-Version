@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { AppText } from './AppText';
-import { AppTextField } from './AppTextField';
-import { AppButton } from './AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
+import React, { useEffect, useState } from'react';
+import { Modal, Pressable, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
+import { AppText } from'./AppText';
+import { AppTextField } from'./AppTextField';
+import { AppButton } from'./AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
 
 const CATEGORIES = ['Notes', 'Past Questions', 'Projects'] as const;
 
@@ -51,7 +51,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
   }
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none"onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Animated.View
           style={[
@@ -61,20 +61,20 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
         />
         <Animated.View style={[{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }, sheetStyle]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-            <Ionicons name="cloud-upload" size={20} color={colors.brandPrimary} />
-            <AppText variant="h2" weight="bold">
+            <Ionicons name="cloud-upload"size={20} color={colors.brandPrimary} />
+            <AppText variant="h2"weight="bold">
               Share Academic File
             </AppText>
           </View>
-          <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+          <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
             Upload reference notes, past exams, or group projects to help your classmates learn.
           </AppText>
 
-          <AppTextField label="" placeholder="Resource Title / Subject" value={title} onChangeText={setTitle} />
-          <AppTextField label="" placeholder="Course Code" value={courseCode} onChangeText={setCourseCode} />
-          <AppTextField label="" placeholder="Short Description" value={description} onChangeText={setDescription} multiline />
+          <AppTextField label=""placeholder="Resource Title / Subject"value={title} onChangeText={setTitle} />
+          <AppTextField label=""placeholder="Course Code"value={courseCode} onChangeText={setCourseCode} />
+          <AppTextField label=""placeholder="Short Description"value={description} onChangeText={setDescription} multiline />
 
-          <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+          <AppText weight="bold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
             Resource Category:
           </AppText>
           <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -84,8 +84,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
                 <Pressable
                   key={cat}
                   onPress={() => setCategory(cat)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
+                  accessibilityRole="radio"accessibilityState={{ checked: selected }}
                   accessibilityLabel={cat}
                   style={{
                     paddingHorizontal: spacing.md,
@@ -96,7 +95,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
                     borderColor: colors.border,
                   }}
                 >
-                  <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
+                  <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'brand' : 'secondary'}>
                     {cat}
                   </AppText>
                 </Pressable>
@@ -105,8 +104,8 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
           </View>
 
           <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
-            <AppButton label="Cancel" variant="ghost" onPress={onClose} />
-            <AppButton label="Upload File" onPress={handleUpload} disabled={!canUpload} />
+            <AppButton label="Cancel"variant="ghost"onPress={onClose} />
+            <AppButton label="Upload File"onPress={handleUpload} disabled={!canUpload} />
           </View>
         </Animated.View>
       </View>

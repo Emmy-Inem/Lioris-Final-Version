@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
-import { router, useSegments } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
-import { SolidCard } from './SolidCard';
-import { AppText } from './AppText';
-import { AppButton } from './AppButton';
-import { Avatar } from './Avatar';
-import { Badge } from './Badge';
-import { UserProfileModal } from './UserProfileModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { AlumniDirectoryEntry } from '@/api/types';
-import { sendConnectionRequest } from '@/api/connections';
-import { getOrCreateConversationWithUser } from '@/api/messaging';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Pressable, View } from'react-native';
+import { router, useSegments } from'expo-router';
+import { useQueryClient } from'@tanstack/react-query';
+import { SolidCard } from'./SolidCard';
+import { AppText } from'./AppText';
+import { AppButton } from'./AppButton';
+import { Avatar } from'./Avatar';
+import { Badge } from'./Badge';
+import { UserProfileModal } from'./UserProfileModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { AlumniDirectoryEntry } from'@/api/types';
+import { sendConnectionRequest } from'@/api/connections';
+import { getOrCreateConversationWithUser } from'@/api/messaging';
+import { haptics } from'@/utils/haptics';
 
 const STATUS_LABEL = {
   none: null,
@@ -74,10 +74,10 @@ export function DirectoryCard({ entry }: { entry: AlumniDirectoryEntry }) {
         >
           <Avatar name={entry.fullName} uri={entry.avatarUrl} size={52} role="alumni" />
           <View style={{ flex: 1 }}>
-            <AppText variant="h3" weight="bold">
+            <AppText variant="h3"weight="bold">
               {entry.fullName}
             </AppText>
-            <AppText tone="secondary" variant="bodySmall">
+            <AppText tone="secondary"variant="bodySmall">
               {[entry.company, entry.industry].filter(Boolean).join(' \u00b7 ')}
               {entry.graduationYear ? ` \u00b7 Class of ${entry.graduationYear}` : ''}
             </AppText>
@@ -86,16 +86,16 @@ export function DirectoryCard({ entry }: { entry: AlumniDirectoryEntry }) {
         </Pressable>
 
         {entry.bio ? (
-          <AppText tone="secondary" style={{ marginTop: spacing.sm }}>
+          <AppText tone="secondary"style={{ marginTop: spacing.sm }}>
             {entry.bio}
           </AppText>
         ) : null}
 
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
           {status === 'none' && (
-            <AppButton label="Connect 🤝" onPress={handleConnect} loading={submitting} />
+            <AppButton label="Connect 🤝"onPress={handleConnect} loading={submitting} />
           )}
-          <AppButton label="Message 💬" variant="secondary" onPress={handleMessage} />
+          <AppButton label="Message"variant="secondary"onPress={handleMessage} />
         </View>
       </SolidCard>
 
@@ -104,8 +104,7 @@ export function DirectoryCard({ entry }: { entry: AlumniDirectoryEntry }) {
         onClose={() => setInspectOpen(false)}
         userId={entry.id}
         userName={entry.fullName}
-        userRole="alumni"
-        userAvatarUrl={entry.avatarUrl}
+        userRole="alumni"userAvatarUrl={entry.avatarUrl}
         department={entry.industry ?? 'Software & Technology'}
       />
     </>

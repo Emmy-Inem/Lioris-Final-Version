@@ -1,7 +1,7 @@
-import { api } from './client';
-import { AlumniDirectoryEntry } from './types';
-import { mockDirectory } from './mockData';
-import { withMockFallback } from './withMockFallback';
+import { api } from'./client';
+import { AlumniDirectoryEntry } from'./types';
+import { mockDirectory } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
 
 let directoryState = [...mockDirectory];
 

@@ -1,25 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { ScreenContainer } from './ScreenContainer';
-import { AppHeader } from './AppHeader';
-import { AppText } from './AppText';
-import { AppTextField } from './AppTextField';
-import { SolidCard } from './SolidCard';
-import { GlassCard } from './GlassCard';
-import { AppButton } from './AppButton';
-import { Avatar } from './Avatar';
-import { Badge } from './Badge';
-import { AuthHeroBackground } from './AuthHeroBackground';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { getMyProfile } from '@/api/profile';
-import { queryClient } from '@/api/queryClient';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { haptics } from '@/utils/haptics';
+import React, { useEffect, useState } from'react';
+import { Alert, Modal, Platform, Pressable, ScrollView, Switch, View } from'react-native';
+import { router } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery } from'@tanstack/react-query';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
+import { ScreenContainer } from'./ScreenContainer';
+import { AppHeader } from'./AppHeader';
+import { AppText } from'./AppText';
+import { AppTextField } from'./AppTextField';
+import { SolidCard } from'./SolidCard';
+import { GlassCard } from'./GlassCard';
+import { AppButton } from'./AppButton';
+import { Avatar } from'./Avatar';
+import { Badge } from'./Badge';
+import { AuthHeroBackground } from'./AuthHeroBackground';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { getMyProfile } from'@/api/profile';
+import { queryClient } from'@/api/queryClient';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { haptics } from'@/utils/haptics';
 
 interface ActiveDeviceSession {
   id: string;
@@ -51,7 +51,7 @@ Lioris is restricted to verified students, faculty staff, accredited alumni, and
 Users must not upload copyright-infringing exam papers, unauthorized faculty answer keys, malicious scripts, or harassing content. All peer-to-peer transactions conducted via Campus Marketplace are subject to local escrow compliance.
 
 4. DISCLAIMER OF WARRANTIES
-Lioris is provided "as is" to facilitate university communications, past questions distribution, and alumni mentorship. The platform does not guarantee continuous uninterrupted network operation during university network downtime.`,
+Lioris is provided"as is"to facilitate university communications, past questions distribution, and alumni mentorship. The platform does not guarantee continuous uninterrupted network operation during university network downtime.`,
   },
   'Platform Privacy Policy': {
     icon: 'shield-checkmark-outline',
@@ -220,7 +220,7 @@ export function SettingsScreen() {
   async function handleRevokeSession(sessionId: string) {
     haptics.medium();
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    Alert.alert('Session Terminated 🔒', 'Device access token revoked. The device will be logged out immediately.');
+    Alert.alert('Session Terminated', 'Device access token revoked. The device will be logged out immediately.');
   }
 
   async function handleRevokeAllOtherSessions() {
@@ -233,7 +233,7 @@ export function SettingsScreen() {
       targetId: user?.id ?? 'user-self',
       reason: 'Security self-audit session wipe',
     });
-    Alert.alert('All Other Sessions Revoked 🛡️', 'Only your current device remains authenticated.');
+    Alert.alert('All Other Sessions Revoked', 'Only your current device remains authenticated.');
   }
 
   function handleEnable2FA() {
@@ -245,12 +245,12 @@ export function SettingsScreen() {
     setTwoFactorEnabled(true);
     setTwoFactorModalOpen(false);
     setTotpCode('');
-    Alert.alert('Two-Factor Authentication Active 🛡️', 'TOTP Hardware Authentication is now required at login.');
+    Alert.alert('Two-Factor Authentication Active', 'TOTP Hardware Authentication is now required at login.');
   }
 
   function handleRotateE2eeKeys() {
     haptics.medium();
-    Alert.alert('Device Key Pair Rotated 🔑', 'New 256-bit AES-GCM session key generated and synced to local hardware keychain.');
+    Alert.alert('Device Key Pair Rotated', 'New 256-bit AES-GCM session key generated and synced to local hardware keychain.');
     setE2eeModalOpen(false);
   }
 
@@ -281,7 +281,7 @@ export function SettingsScreen() {
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      Alert.alert('Password Updated 🔑', 'Your security credentials have been updated.');
+      Alert.alert('Password Updated', 'Your security credentials have been updated.');
     }, 800);
   }
 
@@ -323,12 +323,12 @@ export function SettingsScreen() {
       <AuthHeroBackground height={96}>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
-            <AppText variant="h1" weight="bold" tone="inverse">
+            <Ionicons name="settings-outline"size={24} color="#FFFFFF" />
+            <AppText variant="h1"weight="bold"tone="inverse">
               Settings & Privacy Center
             </AppText>
           </View>
-          <AppText variant="caption" tone="inverse" style={{ opacity: 0.9, marginTop: 2 }}>
+          <AppText variant="caption"tone="inverse"style={{ opacity: 0.9, marginTop: 2 }}>
             Account governance, role controls, E2EE security & compliance
           </AppText>
         </View>
@@ -336,8 +336,7 @@ export function SettingsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"nestedScrollEnabled
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 150 }}
       >
         <View style={{ height: spacing.md }} />
@@ -345,7 +344,7 @@ export function SettingsScreen() {
         {/* My Profile Quick Summary Card */}
         <SolidCard frosted style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm }}>
-            <AppText tone="brand" weight="bold" variant="bodySmall">
+            <AppText tone="brand"weight="bold"variant="bodySmall">
               AUTHENTICATED IDENTITY
             </AppText>
             <Badge label={userRole.toUpperCase()} tone="brand" />
@@ -354,13 +353,13 @@ export function SettingsScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <Avatar name={profile?.fullName ?? user?.fullName ?? 'You'} size={52} role={userRole} />
             <View style={{ flex: 1 }}>
-              <AppText weight="bold" variant="body">{profile?.fullName ?? user?.fullName}</AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText weight="bold"variant="body">{profile?.fullName ?? user?.fullName}</AppText>
+              <AppText tone="secondary"variant="caption">
                 {profile?.email ?? 'verified.member@campus.edu.ng'}
               </AppText>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                <Ionicons name="business-outline" size={12} color={colors.brandPrimary} />
-                <AppText variant="caption" tone="brand" weight="bold">
+                <Ionicons name="business-outline"size={12} color={colors.brandPrimary} />
+                <AppText variant="caption"tone="brand"weight="bold">
                   {profile?.institutionName ?? 'University of Ibadan'}
                 </AppText>
               </View>
@@ -369,19 +368,19 @@ export function SettingsScreen() {
 
           <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.md }} />
 
-          <AppText weight="bold" variant="caption" tone="secondary" style={{ marginBottom: 4 }}>
+          <AppText weight="bold"variant="caption"tone="secondary"style={{ marginBottom: 4 }}>
             ACADEMIC BIO / ADVISOR NOTE
           </AppText>
           {editingBio ? (
-            <AppTextField label="" value={bio} onChangeText={setBio} multiline numberOfLines={2} />
+            <AppTextField label=""value={bio} onChangeText={setBio} multiline numberOfLines={2} />
           ) : (
-            <AppText tone="primary" variant="bodySmall" onPress={() => setEditingBio(true)}>
+            <AppText tone="primary"variant="bodySmall"onPress={() => setEditingBio(true)}>
               {bio || 'Tap to set an academic bio or focus area...'}
             </AppText>
           )}
           {editingBio ? (
             <View style={{ marginTop: spacing.xs, flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <AppButton label="Save Bio" onPress={() => setEditingBio(false)} />
+              <AppButton label="Save Bio"onPress={() => setEditingBio(false)} />
             </View>
           ) : null}
         </SolidCard>
@@ -389,21 +388,21 @@ export function SettingsScreen() {
         {/* Role Switcher & Sandbox Testing Mode */}
         <SolidCard frosted radius={20} style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-            <AppText tone="brand" weight="bold" variant="bodySmall">
-              Role Switcher & Sandbox Mode 🎓
+            <AppText tone="brand"weight="bold"variant="bodySmall">
+              Role Switcher & Sandbox Mode 
             </AppText>
             <Badge label={`Current: ${userRole.toUpperCase()}`} tone="accent" />
           </View>
-          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+          <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
             Switch account perspectives to test student, faculty staff, alumni fellow, or root administrator views.
           </AppText>
 
           <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
             {[
-              { role: 'student', label: '🎓 Student Portal', path: '/(student)/dashboard' },
-              { role: 'staff', label: '🏫 Faculty Staff', path: '/(staff)/dashboard' },
-              { role: 'alumni', label: '💼 Alumni Fellow', path: '/(alumni)/dashboard' },
-              { role: 'admin', label: '🛡️ Root Admin', path: '/(admin)/dashboard' },
+              { role: 'student', label: 'Student Portal', path: '/(student)/dashboard' },
+              { role: 'staff', label: 'Faculty Staff', path: '/(staff)/dashboard' },
+              { role: 'alumni', label: 'Alumni Fellow', path: '/(alumni)/dashboard' },
+              { role: 'admin', label: 'Root Admin', path: '/(admin)/dashboard' },
             ].map((r) => {
               const active = userRole === r.role;
               return (
@@ -415,8 +414,7 @@ export function SettingsScreen() {
                     queryClient.clear();
                     router.replace(r.path as any);
                   }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Switch to ${r.label}`}
+                  accessibilityRole="button"accessibilityLabel={`Switch to ${r.label}`}
                   style={{
                     flex: 1,
                     minWidth: '47%',
@@ -430,7 +428,7 @@ export function SettingsScreen() {
                     marginBottom: 4,
                   }}
                 >
-                  <AppText variant="bodySmall" weight="bold" tone={active ? 'inverse' : 'brand'}>
+                  <AppText variant="bodySmall"weight="bold"tone={active ? 'inverse' : 'brand'}>
                     {r.label}
                   </AppText>
                 </Pressable>
@@ -443,36 +441,32 @@ export function SettingsScreen() {
         {userRole === 'student' && (
           <SolidCard frosted style={{ marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
-              <Ionicons name="school-outline" size={18} color={colors.brandPrimary} />
-              <AppText tone="brand" weight="bold" variant="bodySmall">
-                Student Academic Privacy & Squad Controls 📚
+              <Ionicons name="school-outline"size={18} color={colors.brandPrimary} />
+              <AppText tone="brand"weight="bold"variant="bodySmall">
+                Student Academic Privacy & Squad Controls 
               </AppText>
             </View>
 
             <SettingSwitchRow
-              title="Study Squad Invites"
-              description="Allow peers in your department to invite you to study circles."
-              value={studySquadOpen}
+              title="Study Squad Invites"description="Allow peers in your department to invite you to study circles."value={studySquadOpen}
               onValueChange={setStudySquadOpen}
             />
             <SettingSwitchRow
-              title="1-on-1 Alumni Mentee Matching"
-              description="Enable alumni fellows to view your career interests for mentorship."
-              value={menteeMatchingActive}
+              title="1-on-1 Alumni Mentee Matching"description="Enable alumni fellows to view your career interests for mentorship."value={menteeMatchingActive}
               onValueChange={setMenteeMatchingActive}
             />
 
             <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
 
             <View style={{ paddingVertical: spacing.xs }}>
-              <AppText weight="bold" variant="bodySmall" style={{ marginBottom: 4 }}>
+              <AppText weight="bold"variant="bodySmall"style={{ marginBottom: 4 }}>
                 Matriculation Number Visibility
               </AppText>
               <View style={{ flexDirection: 'row', gap: spacing.xs }}>
                 {[
-                  { key: 'public' as const, label: 'Public' },
-                  { key: 'department_only' as const, label: 'Department Only' },
-                  { key: 'hidden' as const, label: 'Private (Hidden)' },
+                  { key: 'public'as const, label: 'Public' },
+                  { key: 'department_only'as const, label: 'Department Only' },
+                  { key: 'hidden'as const, label: 'Private (Hidden)' },
                 ].map((item) => (
                   <Pressable
                     key={item.key}
@@ -485,7 +479,7 @@ export function SettingsScreen() {
                       alignItems: 'center',
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={matricVisibility === item.key ? 'inverse' : 'brand'} style={{ fontSize: 10 }}>
+                    <AppText variant="caption"weight="bold"tone={matricVisibility === item.key ? 'inverse' : 'brand'} style={{ fontSize: 10 }}>
                       {item.label}
                     </AppText>
                   </Pressable>
@@ -498,22 +492,18 @@ export function SettingsScreen() {
         {userRole === 'alumni' && (
           <SolidCard frosted style={{ marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
-              <Ionicons name="briefcase-outline" size={18} color={colors.brandPrimary} />
-              <AppText tone="brand" weight="bold" variant="bodySmall">
-                Alumni Mentorship & Office Hours 💼
+              <Ionicons name="briefcase-outline"size={18} color={colors.brandPrimary} />
+              <AppText tone="brand"weight="bold"variant="bodySmall">
+                Alumni Mentorship & Office Hours 
               </AppText>
             </View>
 
             <SettingSwitchRow
-              title="Auto-Accept Student Video Calls"
-              description="Directly sync scheduled mentorship slots to Google Calendar / Zoom."
-              value={autoAcceptCalls}
+              title="Auto-Accept Student Video Calls"description="Directly sync scheduled mentorship slots to Google Calendar / Zoom."value={autoAcceptCalls}
               onValueChange={setAutoAcceptCalls}
             />
             <SettingSwitchRow
-              title="Hide Current Company & Workplace"
-              description="Suppress employer details from general student search results."
-              value={workplaceHidden}
+              title="Hide Current Company & Workplace"description="Suppress employer details from general student search results."value={workplaceHidden}
               onValueChange={setWorkplaceHidden}
             />
           </SolidCard>
@@ -522,16 +512,14 @@ export function SettingsScreen() {
         {userRole === 'admin' && (
           <SolidCard frosted style={{ marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
-              <Ionicons name="shield-outline" size={18} color={colors.critical} />
-              <AppText tone="brand" weight="bold" variant="bodySmall">
-                Administrator Safety & Panic Controls 🚨
+              <Ionicons name="shield-outline"size={18} color={colors.critical} />
+              <AppText tone="brand"weight="bold"variant="bodySmall">
+                Administrator Safety & Panic Controls 
               </AppText>
             </View>
 
             <SettingSwitchRow
-              title="Emergency Campus Panic Mode"
-              description="Immediately locks database writes and puts platform in read-only maintenance."
-              value={maintenanceModeActive}
+              title="Emergency Campus Panic Mode"description="Immediately locks database writes and puts platform in read-only maintenance."value={maintenanceModeActive}
               onValueChange={(val) => {
                 haptics.medium();
                 if (val) {
@@ -545,9 +533,7 @@ export function SettingsScreen() {
               }}
             />
             <SettingSwitchRow
-              title="Verbose Cryptographic Audit Trail"
-              description="Log detailed packet-level telemetry to campus audit ledger."
-              value={auditVerbosityHigh}
+              title="Verbose Cryptographic Audit Trail"description="Log detailed packet-level telemetry to campus audit ledger."value={auditVerbosityHigh}
               onValueChange={setAuditVerbosityHigh}
             />
           </SolidCard>
@@ -556,23 +542,19 @@ export function SettingsScreen() {
         {/* Advanced Security & Devices Hub */}
         <SolidCard frosted style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText tone="brand" weight="bold" variant="bodySmall">
+            <AppText tone="brand"weight="bold"variant="bodySmall">
               Security, 2FA & Sessions 🔐
             </AppText>
-            <Badge label="Hardware Shield" tone="brand" />
+            <Badge label="Hardware Shield"tone="brand" />
           </View>
 
           <SettingSwitchRow
-            title="Biometric App Lock"
-            description="Require Face ID / Touch ID / Fingerprint on launch."
-            value={biometricShield}
+            title="Biometric App Lock"description="Require Face ID / Touch ID / Fingerprint on launch."value={biometricShield}
             onValueChange={setBiometricShield}
           />
 
           <SettingSwitchRow
-            title="Private Profile Visibility"
-            description="Only fellow verified students in your campus see contact details."
-            value={privateVisibility}
+            title="Private Profile Visibility"description="Only fellow verified students in your campus see contact details."value={privateVisibility}
             onValueChange={setPrivateVisibility}
           />
 
@@ -588,14 +570,14 @@ export function SettingsScreen() {
           >
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <AppText weight="bold" variant="bodySmall">Active Device Sessions</AppText>
+                <AppText weight="bold"variant="bodySmall">Active Device Sessions</AppText>
                 <Badge label={`${sessions.length} Active`} tone="brand" />
               </View>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Manage authenticated phones, tablets & desktop browsers
               </AppText>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
           </Pressable>
 
           {/* 2FA Setup Row */}
@@ -608,14 +590,14 @@ export function SettingsScreen() {
           >
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <AppText weight="bold" variant="bodySmall">Two-Factor Authentication (2FA)</AppText>
+                <AppText weight="bold"variant="bodySmall">Two-Factor Authentication (2FA)</AppText>
                 <Badge label={twoFactorEnabled ? 'Enabled 🟢' : 'Disabled ⚪'} tone={twoFactorEnabled ? 'success' : 'neutral'} />
               </View>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 TOTP Authenticator app verification codes
               </AppText>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
           </Pressable>
 
           {/* E2EE Cryptography Fingerprint Row */}
@@ -628,26 +610,26 @@ export function SettingsScreen() {
           >
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <AppText weight="bold" variant="bodySmall">E2EE Chat Encryption Keys</AppText>
-                <Badge label="AES-256-GCM" tone="accent" />
+                <AppText weight="bold"variant="bodySmall">E2EE Chat Encryption Keys</AppText>
+                <Badge label="AES-256-GCM"tone="accent" />
               </View>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Verify device encryption keys & cryptographic fingerprints
               </AppText>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
           </Pressable>
         </SolidCard>
 
         {/* Display & Visual Preferences */}
         <SolidCard frosted style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
-            <Ionicons name="color-palette-outline" size={18} color={colors.brandPrimary} />
-            <AppText tone="brand" weight="bold" variant="bodySmall">
+            <Ionicons name="color-palette-outline"size={18} color={colors.brandPrimary} />
+            <AppText tone="brand"weight="bold"variant="bodySmall">
               Display & Experience
             </AppText>
           </View>
-          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+          <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
             Choose your interface theme mode or match device system settings.
           </AppText>
           <View
@@ -661,9 +643,9 @@ export function SettingsScreen() {
             }}
           >
             {[
-              { key: 'system' as const, label: 'System', icon: 'phone-portrait-outline' as const },
-              { key: 'light' as const, label: 'Light', icon: 'sunny-outline' as const },
-              { key: 'dark' as const, label: 'Dark', icon: 'moon-outline' as const },
+              { key: 'system'as const, label: 'System', icon: 'phone-portrait-outline'as const },
+              { key: 'light'as const, label: 'Light', icon: 'sunny-outline'as const },
+              { key: 'dark'as const, label: 'Dark', icon: 'moon-outline'as const },
             ].map((option) => {
               const selected = themeMode === option.key;
               return (
@@ -673,8 +655,7 @@ export function SettingsScreen() {
                     haptics.light();
                     setThemeMode(option.key);
                   }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Switch to ${option.label} theme`}
+                  accessibilityRole="button"accessibilityLabel={`Switch to ${option.label} theme`}
                   accessibilityState={{ selected }}
                   style={{
                     flex: 1,
@@ -688,7 +669,7 @@ export function SettingsScreen() {
                   }}
                 >
                   <Ionicons name={option.icon} size={15} color={selected ? '#FFFFFF' : colors.textSecondary} />
-                  <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'secondary'}>
+                  <AppText variant="bodySmall"weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'secondary'}>
                     {option.label}
                   </AppText>
                 </Pressable>
@@ -699,7 +680,7 @@ export function SettingsScreen() {
           <View style={{ height: 1, backgroundColor: colors.divider, marginBottom: spacing.sm }} />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-            <AppText weight="bold" variant="bodySmall">
+            <AppText weight="bold"variant="bodySmall">
               Brand Accent Color
             </AppText>
             {customAccent ? (
@@ -710,13 +691,13 @@ export function SettingsScreen() {
                 }}
                 hitSlop={8}
               >
-                <AppText variant="caption" tone="brand" weight="bold">
+                <AppText variant="caption"tone="brand"weight="bold">
                   Reset to Campus Auto
                 </AppText>
               </Pressable>
             ) : null}
           </View>
-          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+          <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
             Personalize the primary accent color across buttons, tabs, badges, and headers.
           </AppText>
 
@@ -752,7 +733,7 @@ export function SettingsScreen() {
                       backgroundColor: colorHex,
                     }}
                   />
-                  <AppText variant="caption" weight={isSelected ? 'bold' : 'medium'} style={{ color: isSelected ? colors.brandPrimary : colors.textPrimary }}>
+                  <AppText variant="caption"weight={isSelected ? 'bold' : 'medium'} style={{ color: isSelected ? colors.brandPrimary : colors.textPrimary }}>
                     {preset.label}
                   </AppText>
                 </Pressable>
@@ -764,30 +745,30 @@ export function SettingsScreen() {
         {/* Notification Preferences */}
         <SolidCard frosted style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
-            <Ionicons name="notifications-outline" size={18} color={colors.brandPrimary} />
-            <AppText tone="brand" weight="bold" variant="bodySmall">
+            <Ionicons name="notifications-outline"size={18} color={colors.brandPrimary} />
+            <AppText tone="brand"weight="bold"variant="bodySmall">
               Notification Channels
             </AppText>
           </View>
-          <SettingSwitchRow title="Push notifications" value={pushEnabled} onValueChange={setPushEnabled} />
-          <SettingSwitchRow title="Institutional email alerts" value={emailEnabled} onValueChange={setEmailEnabled} />
-          <SettingSwitchRow title="Forum reply alerts" value={forumAlerts} onValueChange={setForumAlerts} />
-          <SettingSwitchRow title="Event calendar reminders" value={eventAlerts} onValueChange={setEventAlerts} />
-          <SettingSwitchRow title="Marketplace & escrow alerts" value={marketAlerts} onValueChange={setMarketAlerts} last />
+          <SettingSwitchRow title="Push notifications"value={pushEnabled} onValueChange={setPushEnabled} />
+          <SettingSwitchRow title="Institutional email alerts"value={emailEnabled} onValueChange={setEmailEnabled} />
+          <SettingSwitchRow title="Forum reply alerts"value={forumAlerts} onValueChange={setForumAlerts} />
+          <SettingSwitchRow title="Event calendar reminders"value={eventAlerts} onValueChange={setEventAlerts} />
+          <SettingSwitchRow title="Marketplace & escrow alerts"value={marketAlerts} onValueChange={setMarketAlerts} last />
         </SolidCard>
 
         {/* Comprehensive Legal & Compliance Hub */}
         <SolidCard frosted style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="document-text-outline" size={18} color={colors.brandPrimary} />
-              <AppText tone="brand" weight="bold" variant="bodySmall">
+              <Ionicons name="document-text-outline"size={18} color={colors.brandPrimary} />
+              <AppText tone="brand"weight="bold"variant="bodySmall">
                 Legal, Safety & Compliance Hub
               </AppText>
             </View>
-            <Badge label="NDPR / GDPR" tone="brand" />
+            <Badge label="NDPR / GDPR"tone="brand" />
           </View>
-          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+          <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
             Official student agreements, honor codes, dispute policies, and privacy standards.
           </AppText>
 
@@ -808,63 +789,61 @@ export function SettingsScreen() {
         {/* Storage, Data Saver & Cache */}
         <SolidCard frosted style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
-            <Ionicons name="server-outline" size={18} color={colors.brandPrimary} />
-            <AppText tone="brand" weight="bold" variant="bodySmall">
+            <Ionicons name="server-outline"size={18} color={colors.brandPrimary} />
+            <AppText tone="brand"weight="bold"variant="bodySmall">
               Storage & Local Cache
             </AppText>
           </View>
           <SettingSwitchRow
-            title="Low Data Mode"
-            description="Compress attached PDF lecture notes and forum photos."
-            value={dataSaver}
+            title="Low Data Mode"description="Compress attached PDF lecture notes and forum photos."value={dataSaver}
             onValueChange={setDataSaver}
           />
           <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.sm }} />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flex: 1, marginRight: spacing.sm }}>
-              <AppText weight="bold" variant="bodySmall">
+              <AppText weight="bold"variant="bodySmall">
                 Cached Attachments & Temp Indices
               </AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Current storage usage: {cacheSizeMb.toFixed(1)} MB
               </AppText>
             </View>
-            <AppButton label="Flush Cache" variant="secondary" onPress={handlePurgeCache} loading={purging} />
+            <AppButton label="Flush Cache"variant="secondary"onPress={handlePurgeCache} loading={purging} />
           </View>
         </SolidCard>
 
         {/* Account Credentials & Export */}
         <SolidCard frosted style={{ marginBottom: spacing.lg }}>
-          <AppText tone="brand" weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+          <AppText tone="brand"weight="bold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
             Account Credentials & GDPR Export
           </AppText>
-          <AppButton label="Change Password 🔑" variant="secondary" onPress={() => setPasswordModalOpen(true)} fullWidth />
+          <AppButton label="Change Password"variant="secondary"onPress={() => setPasswordModalOpen(true)} fullWidth />
           <View style={{ height: spacing.sm }} />
-          <AppButton label="Export My Academic Archive (JSON) 📥" variant="secondary" onPress={() => setExportModalOpen(true)} fullWidth />
+          <AppButton label="Export My Academic Archive (JSON) 📥"variant="secondary"onPress={() => setExportModalOpen(true)} fullWidth />
           <View style={{ height: spacing.sm }} />
-          <AppButton label="Erase Account & Profile Permanently 🗑️" variant="accent" onPress={() => setEraseModalOpen(true)} fullWidth />
+          <AppButton label="Erase Account & Profile Permanently 🗑️"variant="accent"onPress={() => setEraseModalOpen(true)} fullWidth />
         </SolidCard>
 
         {/* Sign Out Button */}
-        <AppButton label="Sign Out 🚪" variant="secondary" onPress={handleLogout} fullWidth />
+        <AppButton label="Sign Out 🚪"variant="secondary"onPress={handleLogout} fullWidth />
       </ScrollView>
 
       {/* Active Device Sessions Modal */}
-      <Modal visible={sessionsModalOpen} transparent animationType="slide" onRequestClose={() => setSessionsModalOpen(false)}>
+      <Modal visible={sessionsModalOpen} transparent animationType="slide"onRequestClose={() => setSessionsModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setSessionsModalOpen(false)} />
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="phone-portrait" size={20} color={colors.brandPrimary} />
-                <AppText variant="h2" weight="bold">Active Device Sessions 🔒</AppText>
+                <Ionicons name="phone-portrait"size={20} color={colors.brandPrimary} />
+                <AppText variant="h2"weight="bold">Active Device Sessions </AppText>
               </View>
               <Pressable onPress={() => setSessionsModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
-            <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.md }}>
               Devices currently authorized to access your campus account.
             </AppText>
 
@@ -875,20 +854,20 @@ export function SettingsScreen() {
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Ionicons name={session.type === 'mobile' ? 'phone-portrait-outline' : 'laptop-outline'} size={18} color={colors.brandPrimary} />
-                        <AppText weight="bold" variant="bodySmall">{session.deviceName}</AppText>
+                        <AppText weight="bold"variant="bodySmall">{session.deviceName}</AppText>
                       </View>
-                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                        📍 {session.location} &bull; IP: {session.ipAddress}
+                      <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
+                         {session.location} • IP: {session.ipAddress}
                       </AppText>
-                      <AppText tone="brand" variant="caption" weight="bold" style={{ marginTop: 2 }}>
+                      <AppText tone="brand"variant="caption"weight="bold"style={{ marginTop: 2 }}>
                         Status: {session.lastActive}
                       </AppText>
                     </View>
 
                     {session.isCurrent ? (
-                      <Badge label="THIS DEVICE" tone="success" />
+                      <Badge label="THIS DEVICE"tone="success" />
                     ) : (
-                      <AppButton label="Revoke" variant="ghost" onPress={() => handleRevokeSession(session.id)} />
+                      <AppButton label="Revoke"variant="ghost"onPress={() => handleRevokeSession(session.id)} />
                     )}
                   </View>
                 </SolidCard>
@@ -896,53 +875,51 @@ export function SettingsScreen() {
             </ScrollView>
 
             <View style={{ marginTop: spacing.md }}>
-              <AppButton label="Revoke All Other Sessions 🛑" variant="accent" onPress={handleRevokeAllOtherSessions} fullWidth />
+              <AppButton label="Revoke All Other Sessions 🛑"variant="accent"onPress={handleRevokeAllOtherSessions} fullWidth />
             </View>
           </View>
         </View>
       </Modal>
 
       {/* Two-Factor Authentication Modal */}
-      <Modal visible={twoFactorModalOpen} transparent animationType="slide" onRequestClose={() => setTwoFactorModalOpen(false)}>
+      <Modal visible={twoFactorModalOpen} transparent animationType="slide"onRequestClose={() => setTwoFactorModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setTwoFactorModalOpen(false)} />
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="shield-checkmark" size={20} color={colors.brandPrimary} />
-                <AppText variant="h2" weight="bold">Two-Factor Authentication (2FA) 🛡️</AppText>
+                <Ionicons name="shield-checkmark"size={20} color={colors.brandPrimary} />
+                <AppText variant="h2"weight="bold">Two-Factor Authentication (2FA) </AppText>
               </View>
               <Pressable onPress={() => setTwoFactorModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
-            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
               Scan the setup QR code in Google Authenticator, Authy, or 1Password, then enter the 6-digit confirmation code below:
             </AppText>
 
             {/* Simulated Authenticator Secret Key Box */}
             <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md, alignItems: 'center' }}>
-              <AppText variant="caption" tone="secondary" style={{ marginBottom: 4 }}>AUTHENTICATOR SECRET KEY</AppText>
-              <AppText variant="bodySmall" weight="bold" tone="brand" style={{ letterSpacing: 2 }}>
+              <AppText variant="caption"tone="secondary"style={{ marginBottom: 4 }}>AUTHENTICATOR SECRET KEY</AppText>
+              <AppText variant="bodySmall"weight="bold"tone="brand"style={{ letterSpacing: 2 }}>
                 LIORIS-AUTH-8924-X99Q
               </AppText>
             </View>
 
             <AppTextField
-              label="6-Digit Verification Code"
-              placeholder="e.g. 492104"
-              value={totpCode}
+              label="6-Digit Verification Code"placeholder="e.g. 492104"value={totpCode}
               onChangeText={setTotpCode}
               keyboardType="number-pad"
             />
 
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
               <View style={{ flex: 1 }}>
-                <AppButton label="Cancel" variant="ghost" onPress={() => setTwoFactorModalOpen(false)} fullWidth />
+                <AppButton label="Cancel"variant="ghost"onPress={() => setTwoFactorModalOpen(false)} fullWidth />
               </View>
               <View style={{ flex: 2 }}>
-                <AppButton label="Activate 2FA 🛡️" onPress={handleEnable2FA} fullWidth />
+                <AppButton label="Activate 2FA"onPress={handleEnable2FA} fullWidth />
               </View>
             </View>
           </View>
@@ -950,36 +927,36 @@ export function SettingsScreen() {
       </Modal>
 
       {/* E2EE Cryptography Details Modal */}
-      <Modal visible={e2eeModalOpen} transparent animationType="fade" onRequestClose={() => setE2eeModalOpen(false)}>
+      <Modal visible={e2eeModalOpen} transparent animationType="fade"onRequestClose={() => setE2eeModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
           <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="key" size={20} color={colors.brandPrimary} />
-                <AppText variant="h2" weight="bold">E2EE Cryptography 🔐</AppText>
+                <Ionicons name="key"size={20} color={colors.brandPrimary} />
+                <AppText variant="h2"weight="bold">E2EE Cryptography 🔐</AppText>
               </View>
               <Pressable onPress={() => setE2eeModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
 
-            <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.md }}>
               Your device encryption identity fingerprint used for end-to-end encrypted direct messaging:
             </AppText>
 
             <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md }}>
-              <AppText variant="caption" tone="secondary" style={{ marginBottom: 4 }}>DEVICE PUBLIC KEY FINGERPRINT</AppText>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11 }}>
+              <AppText variant="caption"tone="secondary"style={{ marginBottom: 4 }}>DEVICE PUBLIC KEY FINGERPRINT</AppText>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11 }}>
                 SHA-256: 8F:4A:91:2C:B3:01:DF:77:E5:60:88:19:AC:EE:44:90
               </AppText>
             </View>
 
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <View style={{ flex: 1 }}>
-                <AppButton label="Rotate Session Key 🔑" variant="secondary" onPress={handleRotateE2eeKeys} fullWidth />
+                <AppButton label="Rotate Session Key"variant="secondary"onPress={handleRotateE2eeKeys} fullWidth />
               </View>
               <View style={{ flex: 1 }}>
-                <AppButton label="Close" onPress={() => setE2eeModalOpen(false)} fullWidth />
+                <AppButton label="Close"onPress={() => setE2eeModalOpen(false)} fullWidth />
               </View>
             </View>
           </SolidCard>
@@ -987,7 +964,7 @@ export function SettingsScreen() {
       </Modal>
 
       {/* Comprehensive Legal Documents Reader Modal */}
-      <Modal visible={!!activeLegalKey} transparent animationType="slide" onRequestClose={() => setActiveLegalKey(null)}>
+      <Modal visible={!!activeLegalKey} transparent animationType="slide"onRequestClose={() => setActiveLegalKey(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setActiveLegalKey(null)} />
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
@@ -996,25 +973,25 @@ export function SettingsScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                     <Ionicons name={LEGAL_DOCUMENTS[activeLegalKey]?.icon as any} size={22} color={colors.brandPrimary} />
-                    <AppText variant="h2" weight="bold">{activeLegalKey}</AppText>
+                    <AppText variant="h2"weight="bold">{activeLegalKey}</AppText>
                   </View>
                   <Pressable onPress={() => setActiveLegalKey(null)} hitSlop={8}>
-                    <Ionicons name="close" size={22} color={colors.textSecondary} />
+                    <Ionicons name="close"size={22} color={colors.textSecondary} />
                   </Pressable>
                 </View>
 
-                <AppText tone="brand" variant="caption" weight="bold" style={{ marginBottom: spacing.md }}>
+                <AppText tone="brand"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
                   {LEGAL_DOCUMENTS[activeLegalKey]?.subtitle}
                 </AppText>
 
                 <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380, backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16 }}>
-                  <AppText variant="bodySmall" tone="primary" style={{ lineHeight: 22 }}>
+                  <AppText variant="bodySmall"tone="primary"style={{ lineHeight: 22 }}>
                     {LEGAL_DOCUMENTS[activeLegalKey]?.content}
                   </AppText>
                 </ScrollView>
 
                 <View style={{ marginTop: spacing.md }}>
-                  <AppButton label="Understood & Accept" onPress={() => setActiveLegalKey(null)} fullWidth />
+                  <AppButton label="Understood & Accept"onPress={() => setActiveLegalKey(null)} fullWidth />
                 </View>
               </>
             )}
@@ -1023,38 +1000,38 @@ export function SettingsScreen() {
       </Modal>
 
       {/* Change Password Modal */}
-      <Modal visible={passwordModalOpen} transparent animationType="fade" onRequestClose={() => setPasswordModalOpen(false)}>
+      <Modal visible={passwordModalOpen} transparent animationType="fade"onRequestClose={() => setPasswordModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
           <SolidCard style={{ width: '100%', maxWidth: 420 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <AppText variant="h3" weight="bold">Change Password 🔑</AppText>
+              <AppText variant="h3"weight="bold">Change Password </AppText>
               <Pressable onPress={() => setPasswordModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={20} color={colors.textSecondary} />
+                <Ionicons name="close"size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
-            <AppTextField label="Current Password" placeholder="Enter current password" secureTextEntry value={oldPassword} onChangeText={setOldPassword} />
-            <AppTextField label="New Password" placeholder="At least 6 characters" secureTextEntry value={newPassword} onChangeText={setNewPassword} />
-            <AppTextField label="Confirm New Password" placeholder="Re-enter new password" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} />
+            <AppTextField label="Current Password"placeholder="Enter current password"secureTextEntry value={oldPassword} onChangeText={setOldPassword} />
+            <AppTextField label="New Password"placeholder="At least 6 characters"secureTextEntry value={newPassword} onChangeText={setNewPassword} />
+            <AppTextField label="Confirm New Password"placeholder="Re-enter new password"secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} />
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setPasswordModalOpen(false)} />
-              <AppButton label="Update Password" loading={passwordSaved} onPress={handleSavePassword} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setPasswordModalOpen(false)} />
+              <AppButton label="Update Password"loading={passwordSaved} onPress={handleSavePassword} />
             </View>
           </SolidCard>
         </View>
       </Modal>
 
       {/* Export Data Modal */}
-      <Modal visible={exportModalOpen} transparent animationType="fade" onRequestClose={() => setExportModalOpen(false)}>
+      <Modal visible={exportModalOpen} transparent animationType="fade"onRequestClose={() => setExportModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
           <SolidCard style={{ width: '100%', maxWidth: 440 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-              <AppText variant="h3" weight="bold">Academic Archive Export 📥</AppText>
+              <AppText variant="h3"weight="bold">Academic Archive Export 📥</AppText>
               <Pressable onPress={() => setExportModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={20} color={colors.textSecondary} />
+                <Ionicons name="close"size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
             <ScrollView style={{ maxHeight: 220, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
-              <AppText tone="secondary" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 10 }}>
+              <AppText tone="secondary"style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 10 }}>
                 {exportDataJson}
               </AppText>
             </ScrollView>
@@ -1081,24 +1058,22 @@ export function SettingsScreen() {
       </Modal>
 
       {/* Erase Profile Confirmation Modal */}
-      <Modal visible={eraseModalOpen} transparent animationType="fade" onRequestClose={() => setEraseModalOpen(false)}>
+      <Modal visible={eraseModalOpen} transparent animationType="fade"onRequestClose={() => setEraseModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
           <Animated.View style={[{ width: '100%', maxWidth: 420 }, eraseAnimatedStyle]}>
             <SolidCard style={{ width: '100%' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
-                <Ionicons name="warning" size={20} color={colors.critical} />
-                <AppText variant="h3" weight="bold" style={{ color: colors.critical }}>Erase Profile Permanently</AppText>
+                <Ionicons name="warning"size={20} color={colors.critical} />
+                <AppText variant="h3"weight="bold"style={{ color: colors.critical }}>Erase Profile Permanently</AppText>
               </View>
-              <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+              <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
                 This permanently wipes your academic workspace index — posts, resources, event history, and connections. Type ERASE to confirm.
               </AppText>
-              <AppTextField label="" placeholder="ERASE" value={eraseConfirmText} onChangeText={setEraseConfirmText} autoCapitalize="characters" />
+              <AppTextField label=""placeholder="ERASE"value={eraseConfirmText} onChangeText={setEraseConfirmText} autoCapitalize="characters" />
               <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
-                <AppButton label="Cancel" variant="ghost" onPress={() => setEraseModalOpen(false)} />
+                <AppButton label="Cancel"variant="ghost"onPress={() => setEraseModalOpen(false)} />
                 <AppButton
-                  label="Erase permanently"
-                  variant="accent"
-                  disabled={eraseConfirmText.trim().toUpperCase() !== 'ERASE'}
+                  label="Erase permanently"variant="accent"disabled={eraseConfirmText.trim().toUpperCase() !== 'ERASE'}
                   onPress={handleEraseProfile}
                 />
               </View>
@@ -1115,8 +1090,7 @@ function LinkRow({ title, description, onPress, last }: { title: string; descrip
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityRole="button"accessibilityLabel={title}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -1126,14 +1100,14 @@ function LinkRow({ title, description, onPress, last }: { title: string; descrip
       }}
     >
       <View style={{ flex: 1, paddingRight: spacing.sm }}>
-        <AppText weight="semiBold" variant="bodySmall">
+        <AppText weight="semiBold"variant="bodySmall">
           {title}
         </AppText>
-        <AppText tone="secondary" variant="caption">
+        <AppText tone="secondary"variant="caption">
           {description}
         </AppText>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+      <Ionicons name="chevron-forward"size={16} color={colors.textSecondary} />
     </Pressable>
   );
 }
@@ -1163,11 +1137,11 @@ function SettingSwitchRow({
       }}
     >
       <View style={{ flex: 1, marginRight: spacing.sm }}>
-        <AppText variant="bodySmall" weight="medium">
+        <AppText variant="bodySmall"weight="medium">
           {title}
         </AppText>
         {description ? (
-          <AppText tone="secondary" variant="caption">
+          <AppText tone="secondary"variant="caption">
             {description}
           </AppText>
         ) : null}

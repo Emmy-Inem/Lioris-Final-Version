@@ -1,9 +1,9 @@
-import { api } from './client';
-import { AlumniDirectoryEntry, Connection, IncomingConnectionRequest } from './types';
-import { mockDirectory, mockIncomingConnectionRequests } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
-import { createNotification } from './notifications';
+import { api } from'./client';
+import { AlumniDirectoryEntry, Connection, IncomingConnectionRequest } from'./types';
+import { mockDirectory, mockIncomingConnectionRequests } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { createNotification } from'./notifications';
 
 // Mutable in-memory copy so accept/decline visibly removes a request
 // from the inbox within a session, without needing a real backend.
@@ -123,7 +123,7 @@ export async function respondToConnectionRequest(
     if (action === 'accept') {
       createNotification({
         type: 'system',
-        title: 'Connection accepted 🎉',
+        title: 'Connection accepted',
         body: 'You have a new connection — start a conversation!',
       });
     }

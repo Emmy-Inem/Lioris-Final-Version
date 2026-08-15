@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from'react-native';
+import * as SecureStore from'expo-secure-store';
 
 const ACCESS_TOKEN_KEY = 'lioris.accessToken';
 const REFRESH_TOKEN_KEY = 'lioris.refreshToken';
@@ -66,8 +66,8 @@ export async function getRefreshToken() {
 // Persisted session-user shape. onboardingComplete/onboardingStep are
 // client-only scaffold concepts (the PRD's API contracts in Section 15
 // don't define an onboarding-status field on the wire) — they exist so
-// this app can tell "not authenticated" apart from "authenticated but
-// mid-onboarding" and resume at the right step after a reload. Replace
+// this app can tell"not authenticated"apart from"authenticated but
+// mid-onboarding"and resume at the right step after a reload. Replace
 // with a real server-tracked status once a backend exists.
 export interface StoredSessionUser {
   id: string;

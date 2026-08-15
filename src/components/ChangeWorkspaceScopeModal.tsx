@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { AppTextField } from './AppTextField';
-import { AppButton } from './AppButton';
-import { SolidCard } from './SolidCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { useViewScope } from '@/hooks/useViewScope';
-import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { AppTextField } from'./AppTextField';
+import { AppButton } from'./AppButton';
+import { SolidCard } from'./SolidCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { useViewScope } from'@/hooks/useViewScope';
+import { LAUNCH_INSTITUTIONS } from'@/api/institutions';
 
 interface ChangeWorkspaceScopeModalProps {
   visible: boolean;
@@ -64,7 +64,7 @@ export function ChangeWorkspaceScopeModal({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} accessible={false} />
         <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
@@ -73,21 +73,19 @@ export function ChangeWorkspaceScopeModal({
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-            <Ionicons name="globe" size={20} color={colors.brandPrimary} />
-            <AppText variant="h2" weight="bold">
+            <Ionicons name="globe"size={20} color={colors.brandPrimary} />
+            <AppText variant="h2"weight="bold">
               Change Workspace Scope
             </AppText>
           </View>
-          <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+          <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
             Select your current viewing scope. Highlight regional cross-university feeds or
             filter strictly for your local campus.
           </AppText>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <ScopeOption
-              icon="school"
-              title="My Campus Workspace"
-              subtitle={`${homeInstitution} (${homeInstitutionCode})`}
+              icon="school"title="My Campus Workspace"subtitle={`${homeInstitution} (${homeInstitutionCode})`}
               selected={scope === 'campus' && activeCampusCode === homeInstitutionCode}
               onPress={() => {
                 setActiveCampusCode(homeInstitutionCode);
@@ -97,10 +95,7 @@ export function ChangeWorkspaceScopeModal({
               }}
             />
             <ScopeOption
-              icon="globe-outline"
-              title="All Lioris Global Feed"
-              subtitle="See posts and announcements cross-country"
-              selected={scope === 'global'}
+              icon="globe-outline"title="All Lioris Global Feed"subtitle="See posts and announcements cross-country"selected={scope === 'global'}
               onPress={() => {
                 setCustomAccent(null);
                 onSelectScope('global');
@@ -114,11 +109,11 @@ export function ChangeWorkspaceScopeModal({
                 <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-                  <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+                  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
                     EXPLORE OTHER CAMPUS WORKSPACES
                   </AppText>
                   <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                    <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 9 }}>
+                    <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 9 }}>
                       ADMIN ONLY
                     </AppText>
                   </View>
@@ -148,12 +143,12 @@ export function ChangeWorkspaceScopeModal({
                         borderColor: colors.brandPrimary,
                       }}
                     >
-                      <Ionicons name="school-outline" size={20} color={isCurrentCampus ? colors.brandPrimary : colors.textSecondary} />
+                      <Ionicons name="school-outline"size={20} color={isCurrentCampus ? colors.brandPrimary : colors.textSecondary} />
                       <View style={{ flex: 1 }}>
-                        <AppText weight="bold" variant="bodySmall" tone={isCurrentCampus ? 'brand' : 'primary'}>
+                        <AppText weight="bold"variant="bodySmall"tone={isCurrentCampus ? 'brand' : 'primary'}>
                           {w.name} ({w.code})
                         </AppText>
-                        <AppText tone="secondary" variant="caption">
+                        <AppText tone="secondary"variant="caption">
                           {w.description}
                         </AppText>
                       </View>
@@ -163,10 +158,9 @@ export function ChangeWorkspaceScopeModal({
                           removeGuest(w.code);
                         }}
                         hitSlop={8}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove ${w.name} guest workspace`}
+                        accessibilityRole="button"accessibilityLabel={`Remove ${w.name} guest workspace`}
                       >
-                        <Ionicons name="trash-outline" size={18} color={colors.critical} />
+                        <Ionicons name="trash-outline"size={18} color={colors.critical} />
                       </Pressable>
                     </Pressable>
                   );
@@ -174,9 +168,7 @@ export function ChangeWorkspaceScopeModal({
 
                 <View style={{ marginTop: spacing.md, marginBottom: spacing.lg }}>
                   <AppButton
-                    label="+ Add Campus Workspace"
-                    variant="secondary"
-                    onPress={() => setCreateModalOpen(true)}
+                    label="+ Add Campus Workspace"variant="secondary"onPress={() => setCreateModalOpen(true)}
                     fullWidth
                   />
                 </View>
@@ -187,38 +179,33 @@ export function ChangeWorkspaceScopeModal({
       </View>
 
       {/* Create Custom Workspace Modal */}
-      <Modal visible={createModalOpen} transparent animationType="fade" onRequestClose={() => setCreateModalOpen(false)}>
+      <Modal visible={createModalOpen} transparent animationType="fade"onRequestClose={() => setCreateModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
           <SolidCard style={{ width: '100%', maxWidth: 420 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-              <AppText variant="h3" weight="bold">
-                Add Campus Workspace 🎓
+              <AppText variant="h3"weight="bold">
+                Add Campus Workspace 
               </AppText>
               <Pressable onPress={() => setCreateModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={20} color={colors.textSecondary} />
+                <Ionicons name="close"size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
-            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
               Add a partner university or regional campus hub to explore student groups and events.
             </AppText>
             <AppTextField
-              label="Campus Name"
-              placeholder="e.g. Obafemi Awolowo University"
-              value={newCampusName}
+              label="Campus Name"placeholder="e.g. Obafemi Awolowo University"value={newCampusName}
               onChangeText={setNewCampusName}
             />
             <AppTextField
-              label="Campus Acronym / Code"
-              placeholder="e.g. OAU"
-              value={newCampusCode}
+              label="Campus Acronym / Code"placeholder="e.g. OAU"value={newCampusCode}
               onChangeText={setNewCampusCode}
               autoCapitalize="characters"
             />
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setCreateModalOpen(false)} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setCreateModalOpen(false)} />
               <AppButton
-                label="Add Workspace"
-                disabled={!newCampusName.trim() || !newCampusCode.trim()}
+                label="Add Workspace"disabled={!newCampusName.trim() || !newCampusCode.trim()}
                 onPress={handleAddCustomWorkspace}
               />
             </View>
@@ -246,8 +233,7 @@ function ScopeOption({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
+      accessibilityRole="radio"accessibilityState={{ checked: selected }}
       accessibilityLabel={`${title}, ${subtitle}`}
     >
       <View
@@ -263,10 +249,10 @@ function ScopeOption({
       >
         <Ionicons name={icon} size={20} color={selected ? colors.brandPrimary : colors.textSecondary} />
         <View style={{ flex: 1 }}>
-          <AppText weight="bold" tone={selected ? 'brand' : 'primary'}>
+          <AppText weight="bold"tone={selected ? 'brand' : 'primary'}>
             {title}
           </AppText>
-          <AppText tone="secondary" variant="caption">
+          <AppText tone="secondary"variant="caption">
             {subtitle}
           </AppText>
         </View>

@@ -1,8 +1,8 @@
-import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Pressable, ScrollView, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
 
 const TRENDS = [
   { tag: 'CONVOCATION_2026', title: 'Convocation', count: '2.4K' },
@@ -25,13 +25,13 @@ export function HorizontalTrendsSlider({ selectedTrend, onSelectTrend }: Horizon
     <View style={{ marginBottom: spacing.md }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="flame" size={16} color="#EA580C" />
-          <AppText variant="bodySmall" weight="bold">
+          <Ionicons name="flame"size={16} color="#EA580C" />
+          <AppText variant="bodySmall"weight="bold">
             Trending Hot Topics
           </AppText>
         </View>
         {selectedTrend ? (
-          <AppText variant="caption" weight="bold" tone="brand" onPress={() => onSelectTrend(null)}>
+          <AppText variant="caption"weight="bold"tone="brand"onPress={() => onSelectTrend(null)}>
             Clear filter ×
           </AppText>
         ) : null}
@@ -44,8 +44,7 @@ export function HorizontalTrendsSlider({ selectedTrend, onSelectTrend }: Horizon
             <Pressable
               key={trend.tag}
               onPress={() => onSelectTrend(trend.tag)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
+              accessibilityRole="button"accessibilityState={{ selected }}
               accessibilityLabel={trend.title}
               style={{
                 flexDirection: 'row',
@@ -59,10 +58,10 @@ export function HorizontalTrendsSlider({ selectedTrend, onSelectTrend }: Horizon
                 borderColor: colors.border,
               }}
             >
-              <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'primary'}>
+              <AppText variant="bodySmall"weight="bold"tone={selected ? 'inverse' : 'primary'}>
                 {trend.title}
               </AppText>
-              <AppText variant="caption" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="caption"tone={selected ? 'inverse' : 'secondary'}>
                 {trend.count}
               </AppText>
             </Pressable>

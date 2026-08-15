@@ -1,9 +1,9 @@
-import React from 'react';
-import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { useTheme } from '@/theme/ThemeProvider';
-import { checkPassword } from '@/utils/validation';
+import React from'react';
+import { View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { useTheme } from'@/theme/ThemeProvider';
+import { checkPassword } from'@/utils/validation';
 
 export function PasswordChecklist({ password }: { password: string }) {
   const { colors, spacing } = useTheme();
@@ -18,7 +18,7 @@ export function PasswordChecklist({ password }: { password: string }) {
             size={14}
             color={check.met ? colors.success : colors.textSecondary}
           />
-          <AppText variant="caption" tone={check.met ? 'secondary' : 'secondary'} style={{ opacity: check.met ? 1 : 0.7 }}>
+          <AppText variant="caption"tone={check.met ? 'secondary' : 'secondary'} style={{ opacity: check.met ? 1 : 0.7 }}>
             {check.label}
           </AppText>
         </View>

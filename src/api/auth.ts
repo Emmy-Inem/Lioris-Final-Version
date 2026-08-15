@@ -1,6 +1,6 @@
-import { api } from './client';
-import { AuthSession, UserRole } from './types';
-import { withMockFallback } from './withMockFallback';
+import { api } from'./client';
+import { AuthSession, UserRole } from'./types';
+import { withMockFallback } from'./withMockFallback';
 
 export interface LoginPayload {
   email: string;
@@ -16,16 +16,16 @@ export interface RegisterPayload {
 }
 
 // Until a real backend exists, mock logins/registrations infer a role
-// from the email address (containing "admin", "staff", or "alumni"),
-// defaulting to "student" — so every one of the four dashboards built
-// in this app is reachable without a server. See README's "Mock data
-// fallback" section.
+// from the email address (containing"admin", "staff", or"alumni"),
+// defaulting to"student" — so every one of the four dashboards built
+// in this app is reachable without a server. See README's"Mock data
+// fallback"section.
 function guessRoleFromEmail(email: string): UserRole {
   const lower = email.toLowerCase();
-  if (lower.includes('admin') || lower.includes('inememmanuel')) return 'admin';
-  if (lower.includes('staff')) return 'staff';
-  if (lower.includes('alumni')) return 'alumni';
-  return 'student';
+  if (lower.includes('admin') || lower.includes('inememmanuel')) return'admin';
+  if (lower.includes('staff')) return'staff';
+  if (lower.includes('alumni')) return'alumni';
+  return'student';
 }
 
 function mockSession(email: string, role: UserRole, customName?: string): AuthSession {

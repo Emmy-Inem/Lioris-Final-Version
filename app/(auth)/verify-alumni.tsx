@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { View, ScrollView, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { AppButton } from '@/components/AppButton';
-import { AuthHeroBackground } from '@/components/AuthHeroBackground';
-import { WaveCard } from '@/components/WaveCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import * as authApi from '@/api/auth';
-import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import React, { useState } from'react';
+import { View, ScrollView, Alert } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { AppButton } from'@/components/AppButton';
+import { AuthHeroBackground } from'@/components/AuthHeroBackground';
+import { WaveCard } from'@/components/WaveCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import * as authApi from'@/api/auth';
+import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
 
 export default function VerifyAlumniScreen() {
   const { spacing } = useTheme();
@@ -58,39 +58,33 @@ export default function VerifyAlumniScreen() {
                 marginBottom: spacing.md,
               }}
             >
-              <Ionicons name="ribbon" size={26} color="#FFFFFF" />
+              <Ionicons name="ribbon"size={26} color="#FFFFFF" />
             </View>
-            <AppText variant="h1" weight="bold" tone="inverse">
+            <AppText variant="h1"weight="bold"tone="inverse">
               Verify your alumni status
             </AppText>
           </View>
         </AuthHeroBackground>
 
         <WaveCard>
-          <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+          <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
             This confirms your graduation record so you can access the alumni directory
             and mentorship tools.
           </AppText>
 
           <AppTextField
-            label="Graduation year"
-            keyboardType="number-pad"
-            value={graduationYear}
+            label="Graduation year"keyboardType="number-pad"value={graduationYear}
             onChangeText={setGraduationYear}
-            placeholder="2019"
-            maxLength={4}
+            placeholder="2019"maxLength={4}
           />
           <AppTextField
-            label="Former student ID (optional)"
-            value={studentId}
+            label="Former student ID (optional)"value={studentId}
             onChangeText={setStudentId}
-            placeholder="e.g. S00123456"
-            autoCapitalize="characters"
+            placeholder="e.g. S00123456"autoCapitalize="characters"
           />
 
           <AppButton
-            label="Verify alumni status"
-            onPress={handleVerify}
+            label="Verify alumni status"onPress={handleVerify}
             loading={submitting}
             disabled={graduationYear.length !== 4}
             fullWidth

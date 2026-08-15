@@ -1,21 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, useSegments } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from './ScreenContainer';
-import { AppHeader } from './AppHeader';
-import { AppText } from './AppText';
-import { Badge } from './Badge';
-import { EventCard } from './EventCard';
-import { SpotlightEventsCarousel } from './SpotlightEventsCarousel';
-import { PublishEventModal } from './PublishEventModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listEvents, EventsQuery } from '@/api/events';
-import { CampusEvent } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useEffect, useRef, useState } from'react';
+import { Dimensions, FlatList, Pressable, ScrollView, TextInput, View } from'react-native';
+import { Image } from'expo-image';
+import Animated, { FadeInUp } from'react-native-reanimated';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { router, useSegments } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'./ScreenContainer';
+import { AppHeader } from'./AppHeader';
+import { AppText } from'./AppText';
+import { Badge } from'./Badge';
+import { EventCard } from'./EventCard';
+import { SpotlightEventsCarousel } from'./SpotlightEventsCarousel';
+import { PublishEventModal } from'./PublishEventModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listEvents, EventsQuery } from'@/api/events';
+import { CampusEvent } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
 const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
 const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
@@ -90,10 +90,10 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       {/* Screen Title & Post Event Button */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.md }}>
         <View>
-          <AppText variant="h1" weight="bold">
+          <AppText variant="h1"weight="bold">
             Campus Events
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary"variant="bodySmall">
             Spotlight workshops, career fairs & gatherings
           </AppText>
         </View>
@@ -103,9 +103,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
             haptics.light();
             setPublishModalOpen(true);
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Post event"
-          style={{
+          accessibilityRole="button"accessibilityLabel="Post event"style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 4,
@@ -115,8 +113,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
             paddingVertical: 8,
           }}
         >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <AppText weight="bold" tone="inverse" variant="caption">
+          <Ionicons name="add"size={18} color="#FFFFFF" />
+          <AppText weight="bold"tone="inverse"variant="caption">
             Post Event
           </AppText>
         </Pressable>
@@ -141,10 +139,9 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           height: 46,
         }}
       >
-        <Ionicons name="search-outline" size={18} color={colors.textSecondary} style={{ marginRight: spacing.sm }} />
+        <Ionicons name="search-outline"size={18} color={colors.textSecondary} style={{ marginRight: spacing.sm }} />
         <TextInput
-          placeholder="Search campus events, hackathons, seminars..."
-          placeholderTextColor={colors.textSecondary}
+          placeholder="Search campus events, hackathons, seminars..."placeholderTextColor={colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
           style={{
@@ -155,7 +152,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
         />
         {searchQuery.trim() ? (
           <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            <Ionicons name="close-circle"size={18} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>
@@ -185,8 +182,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               }}
             >
               <AppText
-                variant="caption"
-                weight={active ? 'bold' : 'medium'}
+                variant="caption"weight={active ? 'bold' : 'medium'}
                 tone={active ? 'inverse' : 'secondary'}
               >
                 {f.label}
@@ -216,11 +212,11 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
         ListEmptyComponent={
           !isLoading ? (
             <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-              <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
-              <AppText variant="h3" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
+              <Ionicons name="calendar-outline"size={48} color={colors.textSecondary} />
+              <AppText variant="h3"weight="bold"style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
                 No events found
               </AppText>
-              <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center' }}>
+              <AppText tone="secondary"variant="bodySmall"style={{ textAlign: 'center' }}>
                 Try changing your search filter or post the first campus event!
               </AppText>
             </View>

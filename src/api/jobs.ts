@@ -1,7 +1,7 @@
-import { api } from './client';
-import { JobListing } from './types';
-import { mockJobListings } from './mockData';
-import { withMockFallback } from './withMockFallback';
+import { api } from'./client';
+import { JobListing } from'./types';
+import { mockJobListings } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
 
 export interface JobsQuery {
   q?: string;

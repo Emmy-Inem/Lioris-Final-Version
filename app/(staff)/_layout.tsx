@@ -1,9 +1,9 @@
-import React from 'react';
-import { Platform, View } from 'react-native';
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { RoleGate } from '@/auth/RoleGate';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Platform, View } from'react-native';
+import { Tabs } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { RoleGate } from'@/auth/RoleGate';
+import { useTheme } from'@/theme/ThemeProvider';
 
 export default function StaffLayout() {
   const { colors, isDark } = useTheme();
@@ -37,8 +37,7 @@ export default function StaffLayout() {
         }}
       >
         <Tabs.Screen
-          name="dashboard"
-          options={{
+          name="dashboard"options={{
             title: 'Home',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} size={size} />
@@ -46,8 +45,7 @@ export default function StaffLayout() {
           }}
         />
         <Tabs.Screen
-          name="forum"
-          options={{
+          name="forum"options={{
             title: 'Forum',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />
@@ -55,8 +53,7 @@ export default function StaffLayout() {
           }}
         />
         <Tabs.Screen
-          name="moderation"
-          options={{
+          name="moderation"options={{
             title: 'Admin Desk',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'shield' : 'shield-outline'} focused={focused} size={size} />
@@ -65,15 +62,15 @@ export default function StaffLayout() {
         />
 
         {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
-        <Tabs.Screen name="announcements" options={{ href: null }} />
-        <Tabs.Screen name="events" options={{ href: null }} />
-        <Tabs.Screen name="profile" options={{ href: null }} />
-        <Tabs.Screen name="notifications" options={{ href: null }} />
-        <Tabs.Screen name="search" options={{ href: null }} />
-        <Tabs.Screen name="settings" options={{ href: null }} />
-        <Tabs.Screen name="messages" options={{ href: null }} />
-        <Tabs.Screen name="post/[id]" options={{ href: null }} />
-        <Tabs.Screen name="post" options={{ href: null }} />
+        <Tabs.Screen name="announcements"options={{ href: null }} />
+        <Tabs.Screen name="events"options={{ href: null }} />
+        <Tabs.Screen name="profile"options={{ href: null }} />
+        <Tabs.Screen name="notifications"options={{ href: null }} />
+        <Tabs.Screen name="search"options={{ href: null }} />
+        <Tabs.Screen name="settings"options={{ href: null }} />
+        <Tabs.Screen name="messages"options={{ href: null }} />
+        <Tabs.Screen name="post/[id]"options={{ href: null }} />
+        <Tabs.Screen name="post"options={{ href: null }} />
       </Tabs>
     </RoleGate>
   );

@@ -1,5 +1,5 @@
-import { FALL_BACK_TO_MOCKS } from './config';
-import { api } from './client';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { api } from'./client';
 
 export interface Institution {
   code: string;
@@ -69,7 +69,7 @@ export interface JoinWaitlistPayload {
   email: string;
 }
 
-// Backs the "Join Waitlist" card on the login screen. Submissions land
+// Backs the"Join Waitlist"card on the login screen. Submissions land
 // in the same store the Admin Workdesk's Approvals tab reads from, so
 // there's a real (if fully mock) loop between the two.
 export async function joinWaitlist(payload: JoinWaitlistPayload): Promise<WaitlistEntry> {

@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import { Modal, Pressable } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { useTheme } from '@/theme/ThemeProvider';
+import React, { useEffect } from'react';
+import { Modal, Pressable } from'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface ActionSheetModalProps {
   visible: boolean;
@@ -12,7 +12,7 @@ interface ActionSheetModalProps {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
- * Shared bottom-sheet action menu — backs the post/event "..." options
+ * Shared bottom-sheet action menu — backs the post/event"..."options
  * menus (PostCard, EventCard), both very high-traffic since they render
  * on every post/event across every role. PRD Section 8's Design
  * Philosophy calls for modal enter/exit animations; previously these
@@ -40,7 +40,7 @@ export function ActionSheetModal({ visible, onClose, children }: ActionSheetModa
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none"onRequestClose={onClose}>
       <AnimatedPressable
         style={[{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' }, backdropStyle]}
         onPress={onClose}

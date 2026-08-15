@@ -1,9 +1,9 @@
-import React from 'react';
-import { Platform, View } from 'react-native';
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { RoleGate } from '@/auth/RoleGate';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Platform, View } from'react-native';
+import { Tabs } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { RoleGate } from'@/auth/RoleGate';
+import { useTheme } from'@/theme/ThemeProvider';
 
 export default function AdminLayout() {
   const { colors, isDark } = useTheme();
@@ -37,8 +37,7 @@ export default function AdminLayout() {
         }}
       >
         <Tabs.Screen
-          name="dashboard"
-          options={{
+          name="dashboard"options={{
             title: 'Home',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} size={size} />
@@ -46,8 +45,7 @@ export default function AdminLayout() {
           }}
         />
         <Tabs.Screen
-          name="forum"
-          options={{
+          name="forum"options={{
             title: 'Forum',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />
@@ -55,8 +53,7 @@ export default function AdminLayout() {
           }}
         />
         <Tabs.Screen
-          name="platform-config"
-          options={{
+          name="platform-config"options={{
             title: 'Admin Desk',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'shield' : 'shield-outline'} focused={focused} size={size} />
@@ -65,25 +62,25 @@ export default function AdminLayout() {
         />
 
         {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
-        <Tabs.Screen name="analytics" options={{ href: null }} />
-        <Tabs.Screen name="super-admin-config" options={{ href: null }} />
-        <Tabs.Screen name="moderation-queue" options={{ href: null }} />
-        <Tabs.Screen name="reports" options={{ href: null }} />
-        <Tabs.Screen name="feature-controls" options={{ href: null }} />
-        <Tabs.Screen name="user-directory" options={{ href: null }} />
-        <Tabs.Screen name="audit-logs" options={{ href: null }} />
-        <Tabs.Screen name="moderation-audit-log" options={{ href: null }} />
-        <Tabs.Screen name="verification-requests" options={{ href: null }} />
-        <Tabs.Screen name="pulse-analytics" options={{ href: null }} />
-        <Tabs.Screen name="profile" options={{ href: null }} />
-        <Tabs.Screen name="notifications" options={{ href: null }} />
-        <Tabs.Screen name="search" options={{ href: null }} />
-        <Tabs.Screen name="settings" options={{ href: null }} />
-        <Tabs.Screen name="messages" options={{ href: null }} />
-        <Tabs.Screen name="events" options={{ href: null }} />
-        <Tabs.Screen name="events/[id]" options={{ href: null }} />
-        <Tabs.Screen name="post/[id]" options={{ href: null }} />
-        <Tabs.Screen name="post" options={{ href: null }} />
+        <Tabs.Screen name="analytics"options={{ href: null }} />
+        <Tabs.Screen name="super-admin-config"options={{ href: null }} />
+        <Tabs.Screen name="moderation-queue"options={{ href: null }} />
+        <Tabs.Screen name="reports"options={{ href: null }} />
+        <Tabs.Screen name="feature-controls"options={{ href: null }} />
+        <Tabs.Screen name="user-directory"options={{ href: null }} />
+        <Tabs.Screen name="audit-logs"options={{ href: null }} />
+        <Tabs.Screen name="moderation-audit-log"options={{ href: null }} />
+        <Tabs.Screen name="verification-requests"options={{ href: null }} />
+        <Tabs.Screen name="pulse-analytics"options={{ href: null }} />
+        <Tabs.Screen name="profile"options={{ href: null }} />
+        <Tabs.Screen name="notifications"options={{ href: null }} />
+        <Tabs.Screen name="search"options={{ href: null }} />
+        <Tabs.Screen name="settings"options={{ href: null }} />
+        <Tabs.Screen name="messages"options={{ href: null }} />
+        <Tabs.Screen name="events"options={{ href: null }} />
+        <Tabs.Screen name="events/[id]"options={{ href: null }} />
+        <Tabs.Screen name="post/[id]"options={{ href: null }} />
+        <Tabs.Screen name="post"options={{ href: null }} />
       </Tabs>
     </RoleGate>
   );

@@ -1,4 +1,4 @@
-import type { ExpoConfig, ConfigContext } from 'expo/config';
+import type { ExpoConfig, ConfigContext } from'expo/config';
 
 // Values are pulled from the shell / EAS build profile environment.
 // See eas.json for the per-environment variable sets and .env.example

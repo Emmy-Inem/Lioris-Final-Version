@@ -1,13 +1,13 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router, useSegments } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { AppText } from './AppText';
-import { Avatar } from './Avatar';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { listNotifications } from '@/api/notifications';
+import React from'react';
+import { Pressable, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { router, useSegments } from'expo-router';
+import { useQuery } from'@tanstack/react-query';
+import { AppText } from'./AppText';
+import { Avatar } from'./Avatar';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { listNotifications } from'@/api/notifications';
 
 interface DashboardHeaderProps {
   greetingOverride?: string;
@@ -40,15 +40,14 @@ export function DashboardHeader({ greetingOverride, notificationsPath }: Dashboa
       <Pressable
         onPress={() => router.push(`/${roleGroup}/profile` as any)}
         style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
-        accessibilityRole="button"
-        accessibilityLabel="Open profile"
+        accessibilityRole="button"accessibilityLabel="Open profile"
       >
         <Avatar name={user?.fullName ?? 'You'} />
         <View>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary"variant="bodySmall">
             {greetingOverride ?? 'Welcome back'}
           </AppText>
-          <AppText variant="h3" weight="bold">
+          <AppText variant="h3"weight="bold">
             {user?.fullName ?? 'There'}
           </AppText>
         </View>
@@ -58,11 +57,10 @@ export function DashboardHeader({ greetingOverride, notificationsPath }: Dashboa
         onPress={() => router.push(notificationsPath as any)}
         hitSlop={12}
         style={{ padding: spacing.sm }}
-        accessibilityRole="button"
-        accessibilityLabel="Notifications"
+        accessibilityRole="button"accessibilityLabel="Notifications"
       >
         <View>
-          <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+          <Ionicons name="notifications-outline"size={24} color={colors.textPrimary} />
           {unreadCount > 0 ? (
             <View
               style={{

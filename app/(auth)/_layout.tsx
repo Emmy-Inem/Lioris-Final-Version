@@ -1,7 +1,7 @@
-import React from 'react';
-import { Redirect, Stack } from 'expo-router';
-import { useAuth } from '@/auth/AuthContext';
-import { roleRequiresMfa } from '@/auth/mfaPolicy';
+import React from'react';
+import { Redirect, Stack } from'expo-router';
+import { useAuth } from'@/auth/AuthContext';
+import { roleRequiresMfa } from'@/auth/mfaPolicy';
 
 export default function AuthLayout() {
   const { user, isLoading } = useAuth();

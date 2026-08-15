@@ -1,10 +1,10 @@
-import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { Redirect } from 'expo-router';
-import { useAuth } from './AuthContext';
-import { useTheme } from '@/theme/ThemeProvider';
-import { UserRole } from '@/api/types';
-import { roleRequiresMfa } from './mfaPolicy';
+import React from'react';
+import { ActivityIndicator, View } from'react-native';
+import { Redirect } from'expo-router';
+import { useAuth } from'./AuthContext';
+import { useTheme } from'@/theme/ThemeProvider';
+import { UserRole } from'@/api/types';
+import { roleRequiresMfa } from'./mfaPolicy';
 
 /**
  * Client-side convenience gate matching PRD Section 6.2's acceptance

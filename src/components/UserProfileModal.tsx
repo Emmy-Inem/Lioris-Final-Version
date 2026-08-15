@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
-import { router, useSegments } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { Avatar } from './Avatar';
-import { Badge } from './Badge';
-import { UserTypeBadge } from './UserTypeBadge';
-import { SolidCard } from './SolidCard';
-import { AppButton } from './AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
-import { sendConnectionRequest } from '@/api/connections';
-import { UserRole } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { Image } from'expo-image';
+import { router, useSegments } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { Avatar } from'./Avatar';
+import { Badge } from'./Badge';
+import { UserTypeBadge } from'./UserTypeBadge';
+import { SolidCard } from'./SolidCard';
+import { AppButton } from'./AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
+import { sendConnectionRequest } from'@/api/connections';
+import { UserRole } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
 const STOCK_IMAGES: Record<string, any> = {
   campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
@@ -56,7 +56,7 @@ export function UserProfileModal({
   const isStaff = userRole === 'staff';
 
   const bioText = isAlumni
-    ? "Senior Software Architect @ Google. University of Ibadan Class of '21. Mentoring students in distributed systems & fintech architecture."
+    ? "Senior Software Architect @ Google. University of Ibadan Class of'21. Mentoring students in distributed systems & fintech architecture."
     : isStaff
     ? 'Associate Professor of Distributed Systems & Cloud Computing. Department of Computer Science. Research lead for Campus AI.'
     : 'Honors Student & President of Google Developer Student Club (GDSC). Passionate about Mobile Systems, React Native & Machine Learning.';
@@ -103,7 +103,7 @@ export function UserProfileModal({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
@@ -137,7 +137,7 @@ export function UserProfileModal({
               zIndex: 20,
             }}
           >
-            <Ionicons name="close" size={20} color="#FFFFFF" />
+            <Ionicons name="close"size={20} color="#FFFFFF" />
           </Pressable>
 
           <ScrollView
@@ -150,9 +150,7 @@ export function UserProfileModal({
               <Image
                 source={coverSource}
                 style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={200}
+                contentFit="cover"cachePolicy="memory-disk"transition={200}
               />
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
             </View>
@@ -189,9 +187,7 @@ export function UserProfileModal({
                     loading={connecting}
                   />
                   <AppButton
-                    label="Message"
-                    variant="secondary"
-                    onPress={handleStartChat}
+                    label="Message"variant="secondary"onPress={handleStartChat}
                   />
                 </View>
               </View>
@@ -199,18 +195,18 @@ export function UserProfileModal({
               {/* User Name & Academic Role Meta */}
               <View style={{ marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <AppText variant="h2" weight="bold">
+                  <AppText variant="h2"weight="bold">
                     {userName}
                   </AppText>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.brandPrimary} />
+                  <Ionicons name="checkmark-circle"size={18} color={colors.brandPrimary} />
                   <UserTypeBadge role={userRole} />
                 </View>
 
-                <AppText tone="brand" weight="semiBold" variant="bodySmall" style={{ marginTop: 3 }}>
+                <AppText tone="brand"weight="semiBold"variant="bodySmall"style={{ marginTop: 3 }}>
                   {institution} | {department}
                 </AppText>
 
-                <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
                   Member since Sept 2024 | Trust Score 9.6 / 10 | Verified Student
                 </AppText>
               </View>
@@ -219,35 +215,35 @@ export function UserProfileModal({
               <SolidCard frosted radius={16} style={{ marginBottom: spacing.md, padding: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }}>
                   <View style={{ alignItems: 'center' }}>
-                    <AppText variant="h3" weight="bold" tone="brand">142</AppText>
-                    <AppText tone="secondary" variant="caption">Connections</AppText>
+                    <AppText variant="h3"weight="bold"tone="brand">142</AppText>
+                    <AppText tone="secondary"variant="caption">Connections</AppText>
                   </View>
                   <View style={{ width: 1, height: 28, backgroundColor: colors.divider }} />
                   <View style={{ alignItems: 'center' }}>
-                    <AppText variant="h3" weight="bold" tone="brand">Lv. 4</AppText>
-                    <AppText tone="secondary" variant="caption">Campus XP</AppText>
+                    <AppText variant="h3"weight="bold"tone="brand">Lv. 4</AppText>
+                    <AppText tone="secondary"variant="caption">Campus XP</AppText>
                   </View>
                   <View style={{ width: 1, height: 28, backgroundColor: colors.divider }} />
                   <View style={{ alignItems: 'center' }}>
-                    <AppText variant="h3" weight="bold" tone="brand">18</AppText>
-                    <AppText tone="secondary" variant="caption">Discussions</AppText>
+                    <AppText variant="h3"weight="bold"tone="brand">18</AppText>
+                    <AppText tone="secondary"variant="caption">Discussions</AppText>
                   </View>
                 </View>
               </SolidCard>
 
               {/* Academic Bio */}
               <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
-                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: 4 }}>
+                <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginBottom: 4 }}>
                   ABOUT & ACADEMIC BIO
                 </AppText>
-                <AppText variant="bodySmall" tone="primary" style={{ lineHeight: 22 }}>
+                <AppText variant="bodySmall"tone="primary"style={{ lineHeight: 22 }}>
                   {bioText}
                 </AppText>
               </SolidCard>
 
               {/* Academic Interests Tags */}
               <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
-                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
+                <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
                   FOCUS AREAS & INTERESTS
                 </AppText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -263,7 +259,7 @@ export function UserProfileModal({
                         borderColor: `${colors.brandPrimary}30`,
                       }}
                     >
-                      <AppText variant="caption" weight="semiBold" tone="brand">
+                      <AppText variant="caption"weight="semiBold"tone="brand">
                         {tag}
                       </AppText>
                     </View>
@@ -274,12 +270,12 @@ export function UserProfileModal({
               {/* Mutual Connections & Cohort */}
               <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-                  <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5 }}>
+                  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5 }}>
                     MUTUAL CONNECTIONS (12)
                   </AppText>
-                  <Badge label="Verified Network" tone="brand" />
+                  <Badge label="Verified Network"tone="brand" />
                 </View>
-                <AppText tone="secondary" variant="caption" style={{ lineHeight: 18 }}>
+                <AppText tone="secondary"variant="caption"style={{ lineHeight: 18 }}>
                   Connected with Diana Prince, Marcus Webb, Amina Yusuf and 9 other students in your department.
                 </AppText>
               </SolidCard>

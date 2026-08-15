@@ -1,10 +1,10 @@
-import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { Redirect } from 'expo-router';
-import { useAuth } from '@/auth/AuthContext';
-import { useTheme } from '@/theme/ThemeProvider';
-import { firstOnboardingStep } from '@/auth/onboardingSteps';
-import { roleRequiresMfa } from '@/auth/mfaPolicy';
+import React from'react';
+import { ActivityIndicator, View } from'react-native';
+import { Redirect } from'expo-router';
+import { useAuth } from'@/auth/AuthContext';
+import { useTheme } from'@/theme/ThemeProvider';
+import { firstOnboardingStep } from'@/auth/onboardingSteps';
+import { roleRequiresMfa } from'@/auth/mfaPolicy';
 
 // PRD Section 6.1 (Dashboard Routing): each role lands on its own
 // dedicated dashboard. This is a client-side convenience redirect only —
@@ -12,10 +12,10 @@ import { roleRequiresMfa } from '@/auth/mfaPolicy';
 // (PRD Section 12.1).
 //
 // Admin is a deliberate exception: it lands on Platform Config (the
-// "Admin Desk" tab) instead of the plain dashboard, since that's where
-// the "Preview As" role switcher lives — landing there first means an
+// "Admin Desk"tab) instead of the plain dashboard, since that's where
+// the"Preview As"role switcher lives — landing there first means an
 // admin can jump straight to switching roles without an extra tap. The
-// regular admin dashboard is still one tap away via the "Home" tab.
+// regular admin dashboard is still one tap away via the"Home"tab.
 const DASHBOARD_BY_ROLE = {
   student: '/(student)/dashboard',
   alumni: '/(alumni)/dashboard',

@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { Platform } from'react-native';
+import * as Haptics from'expo-haptics';
 
 /**
  * Thin wrapper around expo-haptics — the library wasn't installed at

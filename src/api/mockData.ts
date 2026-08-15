@@ -14,7 +14,7 @@ import {
   Report,
   Resource,
   StudyGroup,
-} from './types';
+} from'./types';
 
 export const mockPosts: Post[] = [
   {
@@ -24,7 +24,7 @@ export const mockPosts: Post[] = [
     authorAvatarUrl: 'avatar_male',
     authorRole: 'student',
     authorTrustLevel: 8,
-    title: 'Building Open-Source Attendance App for CSC Department 🚀',
+    title: 'Building Open-Source Attendance App for CSC Department',
     content: 'Just deployed the first beta of our campus attendance & study squad system. Looking for 5 beta testers from 300L CS to test QR check-in!',
     category: 'Tech Hub',
     visibilityScope: 'student',
@@ -44,7 +44,7 @@ export const mockPosts: Post[] = [
     authorAvatarUrl: 'avatar_male',
     authorRole: 'student',
     authorTrustLevel: 8,
-    title: 'Algorithms Midterm Review Poll 📊',
+    title: 'Algorithms Midterm Review Poll',
     content: 'Which chapter do we focus on during Saturday peer study session in Faculty Library?',
     category: 'Academic',
     visibilityScope: 'student',
@@ -73,7 +73,7 @@ export const mockPosts: Post[] = [
     authorAvatarUrl: null,
     authorRole: 'student',
     authorTrustLevel: 7,
-    title: 'CSC 301 Revision Session Timing 📊',
+    title: 'CSC 301 Revision Session Timing',
     content: 'Dr. Adeyemi agreed to host an extra exam prep and algorithm review session. Which time slot works best for our department?',
     category: 'Academic',
     visibilityScope: 'student',
@@ -102,7 +102,7 @@ export const mockPosts: Post[] = [
     authorAvatarUrl: null,
     authorRole: 'student',
     authorTrustLevel: 9,
-    title: 'Hackfest 2026: Team Aqua Prototype 🚀',
+    title: 'Hackfest 2026: Team Aqua Prototype',
     content: 'Excited to showcase our smart campus attendance & study squad prototype built during the 48h hackathon! Check out the workshop demo:',
     category: 'Tech Hub',
     visibilityScope: 'global',

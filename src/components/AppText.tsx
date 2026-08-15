@@ -1,6 +1,6 @@
-import React from 'react';
-import { Text as RNText, TextProps, TextStyle } from 'react-native';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Text as RNText, TextProps, TextStyle } from'react-native';
+import { useTheme } from'@/theme/ThemeProvider';
 import {
   fontFamily,
   fontFamilyMedium,
@@ -8,7 +8,7 @@ import {
   fontFamilyBold,
   weightForPlatform,
   typeScale,
-} from '@/theme/typography';
+} from'@/theme/typography';
 
 type Variant = keyof typeof typeScale;
 type Weight = 'regular' | 'medium' | 'semiBold' | 'bold';

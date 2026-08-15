@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
-import { AppText } from './AppText';
-import { Avatar } from './Avatar';
-import { AppButton } from './AppButton';
-import { UserProfileModal } from './UserProfileModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { sendConnectionRequest } from '@/api/connections';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Pressable, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { useQueryClient } from'@tanstack/react-query';
+import { AppText } from'./AppText';
+import { Avatar } from'./Avatar';
+import { AppButton } from'./AppButton';
+import { UserProfileModal } from'./UserProfileModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { sendConnectionRequest } from'@/api/connections';
+import { haptics } from'@/utils/haptics';
 
 export interface SuggestedPerson {
   id: string;
@@ -66,20 +66,20 @@ export function SuggestedConnectionCard({ person, index }: { person: SuggestedPe
             <Avatar name={person.name} uri={person.avatarUrl} size={60} />
           </View>
 
-          <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+          <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
             {person.name}
           </AppText>
-          <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 1 }}>
+          <AppText tone="secondary"variant="caption"style={{ fontSize: 11, marginTop: 1 }}>
             {person.roleLabel}
           </AppText>
-          <AppText tone="secondary" variant="caption" style={{ fontSize: 10, marginBottom: spacing.xs }}>
+          <AppText tone="secondary"variant="caption"style={{ fontSize: 10, marginBottom: spacing.xs }}>
             {person.department}
           </AppText>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm }}>
-            <Ionicons name="shield-checkmark" size={13} color={colors.brandPrimary} />
-            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-              Level {person.level} &bull; Verified
+            <Ionicons name="shield-checkmark"size={13} color={colors.brandPrimary} />
+            <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 11 }}>
+              Level {person.level} • Verified
             </AppText>
           </View>
         </Pressable>

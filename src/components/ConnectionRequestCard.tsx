@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View } from 'react-native';
-import { SolidCard } from './SolidCard';
-import { AppText } from './AppText';
-import { AppButton } from './AppButton';
-import { Avatar } from './Avatar';
-import { useTheme } from '@/theme/ThemeProvider';
-import { IncomingConnectionRequest } from '@/api/types';
-import { respondToConnectionRequest } from '@/api/connections';
+import React, { useState } from'react';
+import { View } from'react-native';
+import { SolidCard } from'./SolidCard';
+import { AppText } from'./AppText';
+import { AppButton } from'./AppButton';
+import { Avatar } from'./Avatar';
+import { useTheme } from'@/theme/ThemeProvider';
+import { IncomingConnectionRequest } from'@/api/types';
+import { respondToConnectionRequest } from'@/api/connections';
 
 interface ConnectionRequestCardProps {
   request: IncomingConnectionRequest;
@@ -32,22 +32,20 @@ export function ConnectionRequestCard({ request, onHandled }: ConnectionRequestC
       <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
         <Avatar name={request.requesterName} uri={request.requesterAvatarUrl} size={52} />
         <View style={{ flex: 1 }}>
-          <AppText variant="h3" weight="bold">
+          <AppText variant="h3"weight="bold">
             {request.requesterName}
           </AppText>
           {request.requesterHeadline ? (
-            <AppText tone="secondary" variant="bodySmall">
+            <AppText tone="secondary"variant="bodySmall">
               {request.requesterHeadline}
             </AppText>
           ) : null}
         </View>
       </View>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        <AppButton label="Accept" onPress={() => respond('accept')} loading={submitting === 'accept'} />
+        <AppButton label="Accept"onPress={() => respond('accept')} loading={submitting === 'accept'} />
         <AppButton
-          label="Decline"
-          variant="secondary"
-          onPress={() => respond('decline')}
+          label="Decline"variant="secondary"onPress={() => respond('decline')}
           loading={submitting === 'decline'}
         />
       </View>

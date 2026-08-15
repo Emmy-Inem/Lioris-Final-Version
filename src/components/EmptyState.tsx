@@ -1,8 +1,8 @@
-import React from 'react';
-import { View } from 'react-native';
-import { useTheme } from '@/theme/ThemeProvider';
-import { AppText } from './AppText';
-import { EmptyTrayIllustration } from './illustrations/EmptyTrayIllustration';
+import React from'react';
+import { View } from'react-native';
+import { useTheme } from'@/theme/ThemeProvider';
+import { AppText } from'./AppText';
+import { EmptyTrayIllustration } from'./illustrations/EmptyTrayIllustration';
 
 interface EmptyStateProps {
   title: string;
@@ -16,11 +16,11 @@ export function EmptyState({ title, description, illustration = true }: EmptySta
   return (
     <View style={{ alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg }}>
       {illustration ? <EmptyTrayIllustration size={104} /> : null}
-      <AppText variant="h3" weight="semiBold" style={{ marginTop: illustration ? spacing.md : 0, marginBottom: spacing.xs }}>
+      <AppText variant="h3"weight="semiBold"style={{ marginTop: illustration ? spacing.md : 0, marginBottom: spacing.xs }}>
         {title}
       </AppText>
       {description ? (
-        <AppText tone="secondary" style={{ textAlign: 'center' }}>
+        <AppText tone="secondary"style={{ textAlign: 'center' }}>
           {description}
         </AppText>
       ) : null}

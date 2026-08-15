@@ -1,3 +1,3 @@
-import { NotificationsScreen } from '@/components/NotificationsList';
+import { NotificationsScreen } from'@/components/NotificationsList';
 
 export default NotificationsScreen;

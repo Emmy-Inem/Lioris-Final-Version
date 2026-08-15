@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router, useSegments } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { AppText } from './AppText';
-import { Avatar } from './Avatar';
-import { LiorisLogo } from './LiorisLogo';
-import { ChangeWorkspaceScopeModal } from './ChangeWorkspaceScopeModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { listNotifications } from '@/api/notifications';
-import { getMyProfile } from '@/api/profile';
-import { getInstitutionByCode } from '@/api/institutions';
-import { useViewScope } from '@/hooks/useViewScope';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Platform, Pressable, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { router, useSegments } from'expo-router';
+import { useQuery } from'@tanstack/react-query';
+import { AppText } from'./AppText';
+import { Avatar } from'./Avatar';
+import { LiorisLogo } from'./LiorisLogo';
+import { ChangeWorkspaceScopeModal } from'./ChangeWorkspaceScopeModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { listNotifications } from'@/api/notifications';
+import { getMyProfile } from'@/api/profile';
+import { getInstitutionByCode } from'@/api/institutions';
+import { useViewScope } from'@/hooks/useViewScope';
+import { haptics } from'@/utils/haptics';
 
 export function AppHeader() {
   const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
@@ -51,7 +51,7 @@ export function AppHeader() {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 }}>
         <LiorisLogo size={28} />
-        <AppText variant="h3" weight="bold" tone="brand" style={{ letterSpacing: 0.8 }}>
+        <AppText variant="h3"weight="bold"tone="brand"style={{ letterSpacing: 0.8 }}>
           LIORIS
         </AppText>
         {showWorkspaceSwitcher ? (
@@ -60,10 +60,8 @@ export function AppHeader() {
               haptics.light();
               setScopeModalOpen(true);
             }}
-            accessibilityRole="button"
-            accessibilityLabel={`Workspace scope: ${scope === 'campus' ? homeInstitutionCode : 'Global'}`}
-            accessibilityHint="Opens the workspace scope switcher"
-            style={{
+            accessibilityRole="button"accessibilityLabel={`Workspace scope: ${scope === 'campus' ? homeInstitutionCode : 'Global'}`}
+            accessibilityHint="Opens the workspace scope switcher"style={{
               flexDirection: 'row',
               alignItems: 'center',
               gap: 4,
@@ -81,10 +79,10 @@ export function AppHeader() {
               size={12}
               color={colors.brandPrimary}
             />
-            <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
+            <AppText variant="caption"weight="bold"style={{ color: colors.brandPrimary, fontSize: 11 }}>
               {scope === 'campus' ? homeInstitutionCode : 'Global'}
             </AppText>
-            <Ionicons name="chevron-down" size={11} color={colors.brandPrimary} />
+            <Ionicons name="chevron-down"size={11} color={colors.brandPrimary} />
           </Pressable>
         ) : null}
       </View>
@@ -93,8 +91,7 @@ export function AppHeader() {
         {/* Theme Toggle Button */}
         <Pressable
           hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          accessibilityRole="button"accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           onPress={() => {
             haptics.light();
             toggleTheme();
@@ -114,9 +111,7 @@ export function AppHeader() {
         {/* Global Search Button */}
         <Pressable
           hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Search"
-          onPress={() => {
+          accessibilityRole="button"accessibilityLabel="Search"onPress={() => {
             haptics.light();
             router.push(`/${roleGroup}/search` as any);
           }}
@@ -129,14 +124,13 @@ export function AppHeader() {
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="search" size={18} color={colors.textPrimary} />
+          <Ionicons name="search"size={18} color={colors.textPrimary} />
         </Pressable>
 
         {/* Notifications Bell Button */}
         <Pressable
           hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+          accessibilityRole="button"accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
           onPress={() => {
             haptics.light();
             router.push(`/${roleGroup}/notifications` as any);
@@ -151,7 +145,7 @@ export function AppHeader() {
           }}
         >
           <View>
-            <Ionicons name="notifications-outline" size={18} color={colors.textPrimary} />
+            <Ionicons name="notifications-outline"size={18} color={colors.textPrimary} />
             {unreadCount > 0 ? (
               <View
                 style={{
@@ -181,9 +175,7 @@ export function AppHeader() {
             haptics.light();
             router.push(`/${roleGroup}/profile` as any);
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Open profile"
-          style={{ marginLeft: 2 }}
+          accessibilityRole="button"accessibilityLabel="Open profile"style={{ marginLeft: 2 }}
         >
           <Avatar name={user?.fullName ?? 'You'} size={32} />
         </Pressable>

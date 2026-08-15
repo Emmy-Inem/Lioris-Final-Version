@@ -1,25 +1,25 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
-import { Image } from 'expo-image';
-import { router, useSegments } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { SolidCard } from './SolidCard';
-import { AppText } from './AppText';
-import { Avatar } from './Avatar';
-import { Badge } from './Badge';
-import { UserTypeBadge } from './UserTypeBadge';
-import { AppTextField } from './AppTextField';
-import { AppButton } from './AppButton';
-import { ActionSheetModal } from './ActionSheetModal';
-import { ImageViewerModal } from './ImageViewerModal';
-import { UserProfileModal } from './UserProfileModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { Post } from '@/api/types';
-import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
-import { submitReport } from '@/api/moderation';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Platform, Pressable, ScrollView, View } from'react-native';
+import { Image } from'expo-image';
+import { router, useSegments } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { SolidCard } from'./SolidCard';
+import { AppText } from'./AppText';
+import { Avatar } from'./Avatar';
+import { Badge } from'./Badge';
+import { UserTypeBadge } from'./UserTypeBadge';
+import { AppTextField } from'./AppTextField';
+import { AppButton } from'./AppButton';
+import { ActionSheetModal } from'./ActionSheetModal';
+import { ImageViewerModal } from'./ImageViewerModal';
+import { UserProfileModal } from'./UserProfileModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { Post } from'@/api/types';
+import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
+import { submitReport } from'@/api/moderation';
+import { haptics } from'@/utils/haptics';
 
 const STOCK_IMAGES: Record<string, any> = {
   event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
@@ -33,7 +33,7 @@ const STOCK_IMAGES: Record<string, any> = {
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (hours < 1) return 'Just now';
+  if (hours < 1) return'Just now';
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
 }
@@ -125,23 +125,23 @@ export function PostCard({ post }: { post: Post }) {
           <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={44} role={post.authorRole} />
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <AppText weight="bold" variant="bodySmall">
+              <AppText weight="bold"variant="bodySmall">
                 {post.authorName}
               </AppText>
-              <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} />
+              <Ionicons name="checkmark-circle"size={14} color={colors.brandPrimary} />
               <UserTypeBadge role={post.authorRole} />
               <View style={{ backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9 }}>
-                  {post.authorRole === 'student' ? '300L CS' : post.authorRole === 'alumni' ? "Alumni '21" : 'Staff Advisor'}
+                <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 9 }}>
+                  {post.authorRole === 'student' ? '300L CS' : post.authorRole === 'alumni' ? "Alumni'21" : 'Staff Advisor'}
                 </AppText>
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 {timeAgo(post.createdAt)}
               </AppText>
-              <AppText tone="secondary" variant="caption">|</AppText>
-              <AppText tone="brand" variant="caption" weight="semiBold">
+              <AppText tone="secondary"variant="caption">|</AppText>
+              <AppText tone="brand"variant="caption"weight="semiBold">
                 {post.category}
               </AppText>
             </View>
@@ -151,13 +151,13 @@ export function PostCard({ post }: { post: Post }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {isGlobalPost ? (
             <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3 }}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
+              <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 10 }}>
                 Global
               </AppText>
             </View>
           ) : (
             <View style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3 }}>
-              <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
+              <AppText variant="caption"weight="bold"tone="secondary"style={{ fontSize: 10 }}>
                 {post.institutionCode ?? 'UI Campus'}
               </AppText>
             </View>
@@ -166,21 +166,19 @@ export function PostCard({ post }: { post: Post }) {
           <Pressable
             onPress={() => setMenuOpen(true)}
             hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Post options"
-            style={{ padding: 4 }}
+            accessibilityRole="button"accessibilityLabel="Post options"style={{ padding: 4 }}
           >
-            <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+            <Ionicons name="ellipsis-horizontal"size={18} color={colors.textSecondary} />
           </Pressable>
         </View>
       </View>
 
       {/* Thread Title & Content (Tap to Open Full Screen Post) */}
       <Pressable onPress={handleOpenDedicatedPost} style={{ marginTop: spacing.xs, marginBottom: spacing.sm }}>
-        <AppText variant="h3" weight="bold" style={{ marginBottom: 4 }}>
+        <AppText variant="h3"weight="bold"style={{ marginBottom: 4 }}>
           {post.title}
         </AppText>
-        <AppText tone="primary" variant="bodySmall" style={{ lineHeight: 20 }}>
+        <AppText tone="primary"variant="bodySmall"style={{ lineHeight: 20 }}>
           {post.content}
         </AppText>
       </Pressable>
@@ -202,18 +200,18 @@ export function PostCard({ post }: { post: Post }) {
           {isVideoPost ? (
             <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' }}>
               <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' }}>
-                <Ionicons name="play" size={24} color="#FFFFFF" style={{ marginLeft: 3 }} />
+                <Ionicons name="play"size={24} color="#FFFFFF"style={{ marginLeft: 3 }} />
               </View>
               <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="videocam" size={12} color="#FFFFFF" />
-                <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>0:45 Demo</AppText>
+                <Ionicons name="videocam"size={12} color="#FFFFFF" />
+                <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>0:45 Demo</AppText>
               </View>
             </View>
           ) : null}
 
           <View style={{ position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Ionicons name="expand" size={12} color="#FFFFFF" />
-            <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>Expand</AppText>
+            <Ionicons name="expand"size={12} color="#FFFFFF" />
+            <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>Expand</AppText>
           </View>
         </Pressable>
       ) : null}
@@ -231,8 +229,8 @@ export function PostCard({ post }: { post: Post }) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
-            <Ionicons name="bar-chart-outline" size={16} color={colors.brandPrimary} />
-            <AppText weight="bold" variant="bodySmall" tone="brand">
+            <Ionicons name="bar-chart-outline"size={16} color={colors.brandPrimary} />
+            <AppText weight="bold"variant="bodySmall"tone="brand">
               {poll.question}
             </AppText>
           </View>
@@ -279,15 +277,14 @@ export function PostCard({ post }: { post: Post }) {
                     />
                     <AppText
                       weight={opt.isVotedByMe ? 'bold' : 'medium'}
-                      variant="bodySmall"
-                      tone={opt.isVotedByMe ? 'brand' : 'primary'}
+                      variant="bodySmall"tone={opt.isVotedByMe ? 'brand' : 'primary'}
                       numberOfLines={1}
                     >
                       {opt.label}
                     </AppText>
                   </View>
                   {hasVotedAny ? (
-                    <AppText weight="bold" variant="caption" tone={opt.isVotedByMe ? 'brand' : 'secondary'}>
+                    <AppText weight="bold"variant="caption"tone={opt.isVotedByMe ? 'brand' : 'secondary'}>
                       {percentage}% ({opt.votes})
                     </AppText>
                   ) : null}
@@ -297,11 +294,11 @@ export function PostCard({ post }: { post: Post }) {
           })}
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-            <AppText tone="secondary" variant="caption">
+            <AppText tone="secondary"variant="caption">
               {poll.totalVotes} votes | {poll.expiresIn ?? 'Active poll'}
             </AppText>
             {poll.options.some((o) => o.isVotedByMe) && (
-              <AppText tone="brand" variant="caption" weight="bold">
+              <AppText tone="brand"variant="caption"weight="bold">
                 Vote recorded
               </AppText>
             )}
@@ -313,11 +310,11 @@ export function PostCard({ post }: { post: Post }) {
       {post.courseTags ? (
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.sm, flexWrap: 'wrap' }}>
           <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3 }}>
-            <AppText variant="caption" weight="bold" tone="brand">
+            <AppText variant="caption"weight="bold"tone="brand">
               {post.courseTags}
             </AppText>
           </View>
-          {post.sponsored ? <Badge label="Sponsored" tone="accent" /> : null}
+          {post.sponsored ? <Badge label="Sponsored"tone="accent" /> : null}
         </View>
       ) : null}
 
@@ -336,8 +333,7 @@ export function PostCard({ post }: { post: Post }) {
         {/* Upvote / Like Pill */}
         <Pressable
           onPress={handleToggleLike}
-          accessibilityRole="button"
-          accessibilityLabel={liked ? 'Remove like' : 'Like thread'}
+          accessibilityRole="button"accessibilityLabel={liked ? 'Remove like' : 'Like thread'}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -349,7 +345,7 @@ export function PostCard({ post }: { post: Post }) {
           }}
         >
           <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? '#E53E3E' : colors.textSecondary} />
-          <AppText variant="bodySmall" weight={liked ? 'bold' : 'medium'} style={{ color: liked ? '#E53E3E' : colors.textSecondary }}>
+          <AppText variant="bodySmall"weight={liked ? 'bold' : 'medium'} style={{ color: liked ? '#E53E3E' : colors.textSecondary }}>
             {likesCount}
           </AppText>
         </Pressable>
@@ -357,9 +353,7 @@ export function PostCard({ post }: { post: Post }) {
         {/* Reply / Comment Button (Opens Dedicated Full Screen Post Thread) */}
         <Pressable
           onPress={handleOpenDedicatedPost}
-          accessibilityRole="button"
-          accessibilityLabel="Open full screen thread"
-          style={{
+          accessibilityRole="button"accessibilityLabel="Open full screen thread"style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 6,
@@ -367,8 +361,8 @@ export function PostCard({ post }: { post: Post }) {
             paddingVertical: 6,
           }}
         >
-          <Ionicons name="chatbubble-outline" size={17} color={colors.textSecondary} />
-          <AppText variant="bodySmall" tone="secondary" weight="medium">
+          <Ionicons name="chatbubble-outline"size={17} color={colors.textSecondary} />
+          <AppText variant="bodySmall"tone="secondary"weight="medium">
             {post.commentsCount ?? 6}
           </AppText>
         </Pressable>
@@ -380,12 +374,10 @@ export function PostCard({ post }: { post: Post }) {
             setReposted((r) => !r);
             Alert.alert(reposted ? 'Removed from Reposts' : 'Reposted', 'Thread amplified to your campus followers.');
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Repost to cohort"
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
+          accessibilityRole="button"accessibilityLabel="Repost to cohort"style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
         >
-          <Ionicons name="repeat" size={18} color={reposted ? colors.brandPrimary : colors.textSecondary} />
-          <AppText variant="bodySmall" tone={reposted ? 'brand' : 'secondary'} weight={reposted ? 'bold' : 'regular'}>
+          <Ionicons name="repeat"size={18} color={reposted ? colors.brandPrimary : colors.textSecondary} />
+          <AppText variant="bodySmall"tone={reposted ? 'brand' : 'secondary'} weight={reposted ? 'bold' : 'regular'}>
             {reposted ? 'Reposted' : 'Repost'}
           </AppText>
         </Pressable>
@@ -397,12 +389,10 @@ export function PostCard({ post }: { post: Post }) {
             setBookmarked((b) => !b);
             Alert.alert(bookmarked ? 'Bookmark Removed' : 'Saved', 'Saved to your profile bookmarks.');
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Bookmark thread"
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
+          accessibilityRole="button"accessibilityLabel="Bookmark thread"style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
         >
           <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={17} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
-          <AppText variant="bodySmall" tone={bookmarked ? 'brand' : 'secondary'} weight={bookmarked ? 'bold' : 'regular'}>
+          <AppText variant="bodySmall"tone={bookmarked ? 'brand' : 'secondary'} weight={bookmarked ? 'bold' : 'regular'}>
             {bookmarked ? 'Saved' : 'Save'}
           </AppText>
         </Pressable>
@@ -417,7 +407,7 @@ export function PostCard({ post }: { post: Post }) {
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="share-social-outline" size={18} color={colors.textPrimary} />
+          <Ionicons name="share-social-outline"size={18} color={colors.textPrimary} />
           <AppText weight="medium">Share Thread Link</AppText>
         </Pressable>
 
@@ -425,7 +415,7 @@ export function PostCard({ post }: { post: Post }) {
         {(user?.role === 'admin' || user?.role === 'staff') && (
           <>
             <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
-            <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginVertical: 2 }}>
+            <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginVertical: 2 }}>
               MODERATOR CONTROLS
             </AppText>
 
@@ -438,8 +428,8 @@ export function PostCard({ post }: { post: Post }) {
               }}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
             >
-              <Ionicons name="pin-outline" size={18} color={colors.brandPrimary} />
-              <AppText weight="medium" tone="brand">{post.sponsored ? 'Unpin Announcement' : 'Pin as Campus Announcement'}</AppText>
+              <Ionicons name="pin-outline"size={18} color={colors.brandPrimary} />
+              <AppText weight="medium"tone="brand">{post.sponsored ? 'Unpin Announcement' : 'Pin as Campus Announcement'}</AppText>
             </Pressable>
 
             <Pressable
@@ -464,7 +454,7 @@ export function PostCard({ post }: { post: Post }) {
               }}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
             >
-              <Ionicons name="trash-outline" size={18} color={colors.critical} />
+              <Ionicons name="trash-outline"size={18} color={colors.critical} />
               <AppText style={{ color: colors.critical }} weight="bold">Takedown & Delete Thread</AppText>
             </Pressable>
             <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
@@ -478,38 +468,34 @@ export function PostCard({ post }: { post: Post }) {
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="flag-outline" size={18} color={colors.critical} />
+          <Ionicons name="flag-outline"size={18} color={colors.critical} />
           <AppText style={{ color: colors.critical }} weight="medium">Report Thread to Moderation</AppText>
         </Pressable>
       </ActionSheetModal>
 
       {/* Report Modal */}
-      <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>
+      <Modal visible={reportOpen} transparent animationType="fade"onRequestClose={() => setReportOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
           <SolidCard style={{ width: '100%', maxWidth: 400 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm }}>
-              <Ionicons name="shield-outline" size={20} color={colors.critical} />
-              <AppText variant="h3" weight="bold" style={{ color: colors.critical }}>
+              <Ionicons name="shield-outline"size={20} color={colors.critical} />
+              <AppText variant="h3"weight="bold"style={{ color: colors.critical }}>
                 Report Policy Violation
               </AppText>
             </View>
-            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
               Describe how this post violates the Campus Honor Code or Academic Integrity policies.
             </AppText>
             <AppTextField
-              label="Reason for Flag"
-              placeholder="e.g. Harassment, unauthorized exam paper..."
-              value={reportReason}
+              label="Reason for Flag"placeholder="e.g. Harassment, unauthorized exam paper..."value={reportReason}
               onChangeText={setReportReason}
               multiline
               numberOfLines={3}
             />
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setReportOpen(false)} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setReportOpen(false)} />
               <AppButton
-                label="Submit Report"
-                variant="accent"
-                onPress={async () => {
+                label="Submit Report"variant="accent"onPress={async () => {
                   if (!reportReason.trim()) return;
                   await submitReport({
                     targetType: 'post',
@@ -518,7 +504,7 @@ export function PostCard({ post }: { post: Post }) {
                   });
                   setReportOpen(false);
                   setReportReason('');
-                  Alert.alert('Report Dispatched 🛡️', 'Campus moderators have been notified.');
+                  Alert.alert('Report Dispatched', 'Campus moderators have been notified.');
                 }}
               />
             </View>

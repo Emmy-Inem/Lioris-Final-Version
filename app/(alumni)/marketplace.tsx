@@ -1,3 +1,3 @@
-import MarketplaceScreen from '../(student)/marketplace';
+import MarketplaceScreen from'../(student)/marketplace';
 
 export default MarketplaceScreen;

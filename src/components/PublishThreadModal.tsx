@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { AppTextField } from './AppTextField';
-import { AppButton } from './AppButton';
-import { Badge } from './Badge';
-import { SolidCard } from './SolidCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Modal, Platform, Pressable, ScrollView, View } from'react-native';
+import { Image } from'expo-image';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { AppTextField } from'./AppTextField';
+import { AppButton } from'./AppButton';
+import { Badge } from'./Badge';
+import { SolidCard } from'./SolidCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { haptics } from'@/utils/haptics';
 
 const CHANNELS = ['Tech Hub', 'Academic', 'Polls', 'Housing', 'Social', 'Lost & Found'] as const;
 
 const ATTACHABLE_MEDIA = [
-  { id: 'event_tech_hackathon', label: 'Tech Demo / Hackathon 💻', type: 'image', src: require('../../assets/images/event_tech_hackathon.jpg') },
-  { id: 'campus_students_photo', label: 'Campus Quad 🏛️', type: 'image', src: require('../../assets/images/campus_students_photo.jpg') },
-  { id: 'campus_library_study', label: 'Study Circle 📖', type: 'image', src: require('../../assets/images/campus_library_study.jpg') },
+  { id: 'event_tech_hackathon', label: 'Tech Demo / Hackathon', type: 'image', src: require('../../assets/images/event_tech_hackathon.jpg') },
+  { id: 'campus_students_photo', label: 'Campus Quad', type: 'image', src: require('../../assets/images/campus_students_photo.jpg') },
+  { id: 'campus_library_study', label: 'Study Circle', type: 'image', src: require('../../assets/images/campus_library_study.jpg') },
   { id: 'student_rep_group', label: 'Student Senate 🤝', type: 'image', src: require('../../assets/images/student_rep_group.jpg') },
-  { id: 'event_academic_symposium', label: 'Symposium Keynote 🎓', type: 'image', src: require('../../assets/images/event_academic_symposium.jpg') },
+  { id: 'event_academic_symposium', label: 'Symposium Keynote', type: 'image', src: require('../../assets/images/event_academic_symposium.jpg') },
 ];
 
 interface PublishThreadModalProps {
@@ -101,26 +101,25 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 52, paddingHorizontal: spacing.lg }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 100 }}
+          keyboardShouldPersistTaps="handled"contentContainerStyle={{ paddingBottom: 100 }}
         >
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Ionicons name="create-outline" size={22} color={colors.brandPrimary} />
-              <AppText variant="h2" weight="bold">
-                Create Campus Thread 💬
+              <Ionicons name="create-outline"size={22} color={colors.brandPrimary} />
+              <AppText variant="h2"weight="bold">
+                Create Campus Thread 
               </AppText>
             </View>
             <Pressable onPress={onClose} hitSlop={8}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
+              <Ionicons name="close"size={24} color={colors.textSecondary} />
             </Pressable>
           </View>
-          <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
+          <AppText tone="secondary"style={{ marginBottom: spacing.md }}>
             Start a discussion, share academic insights, attach demo videos or launch live polls.
           </AppText>
 
@@ -135,8 +134,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                     haptics.light();
                     setMode(m);
                   }}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected }}
+                  accessibilityRole="tab"accessibilityState={{ selected }}
                   accessibilityLabel={m}
                   style={{
                     flex: 1,
@@ -146,35 +144,32 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                     backgroundColor: selected ? colors.surface : 'transparent',
                   }}
                 >
-                  <AppText variant="bodySmall" weight={selected ? 'bold' : 'regular'} tone={selected ? 'primary' : 'secondary'}>
-                    {m === 'Thread' ? '📝 Structured Thread' : '⚡ Rapid-Fire Post'}
+                  <AppText variant="bodySmall"weight={selected ? 'bold' : 'regular'} tone={selected ? 'primary' : 'secondary'}>
+                    {m === 'Thread' ? 'Structured Thread' : 'Rapid-Fire Post'}
                   </AppText>
                 </Pressable>
               );
             })}
           </View>
 
-          <AppTextField label="Headline / Thread Topic" value={topic} onChangeText={setTopic} placeholder="e.g. CSC 301 Study Circle or Aqua AI Demo" />
+          <AppTextField label="Headline / Thread Topic"value={topic} onChangeText={setTopic} placeholder="e.g. CSC 301 Study Circle or Aqua AI Demo" />
           <AppTextField
-            label="Course Tags (Optional)"
-            value={courseTags}
+            label="Course Tags (Optional)"value={courseTags}
             onChangeText={setCourseTags}
             placeholder="e.g. CSC 301, MTH 101, Algorithms"
           />
           <AppTextField
-            label="Body Content"
-            value={content}
+            label="Body Content"value={content}
             onChangeText={setContent}
-            placeholder="Share your thoughts, ask questions, or provide project notes..."
-            multiline
+            placeholder="Share your thoughts, ask questions, or provide project notes..."multiline
             numberOfLines={4}
           />
 
           {/* Media Attachments Hub */}
           <View style={{ marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
-                ATTACH MEDIA (PHOTO / VIDEO) 📸🎥
+              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
+                ATTACH MEDIA (PHOTO / VIDEO) 📸
               </AppText>
               <Pressable
                 onPress={() => {
@@ -184,8 +179,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
               >
                 <Ionicons name={isVideoAttachment ? 'videocam' : 'videocam-outline'} size={15} color={isVideoAttachment ? colors.brandPrimary : colors.textSecondary} />
-                <AppText variant="caption" weight="bold" tone={isVideoAttachment ? 'brand' : 'secondary'}>
-                  {isVideoAttachment ? 'Video Mode Active 🎥' : 'Enable Video Badge'}
+                <AppText variant="caption"weight="bold"tone={isVideoAttachment ? 'brand' : 'secondary'}>
+                  {isVideoAttachment ? 'Video Mode Active' : 'Enable Video Badge'}
                 </AppText>
               </Pressable>
             </View>
@@ -213,7 +208,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                     <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                     {isSelected ? (
                       <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: colors.brandPrimary, borderRadius: 10, padding: 2 }}>
-                        <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                        <Ionicons name="checkmark"size={14} color="#FFFFFF" />
                       </View>
                     ) : null}
                   </Pressable>
@@ -232,17 +227,17 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="bar-chart-outline" size={18} color={colors.brandPrimary} />
-                <AppText weight="bold" variant="bodySmall">Attach Live Poll 📊</AppText>
+                <Ionicons name="bar-chart-outline"size={18} color={colors.brandPrimary} />
+                <AppText weight="bold"variant="bodySmall">Attach Live Poll </AppText>
               </View>
               <Badge label={attachPoll ? 'Active' : 'Add Poll'} tone={attachPoll ? 'brand' : 'neutral'} />
             </Pressable>
 
             {attachPoll && (
               <View style={{ marginTop: spacing.sm }}>
-                <AppTextField label="Poll Question" value={pollQuestion} onChangeText={setPollQuestion} placeholder="e.g. Which programming language for CSC301 project?" />
+                <AppTextField label="Poll Question"value={pollQuestion} onChangeText={setPollQuestion} placeholder="e.g. Which programming language for CSC301 project?" />
 
-                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+                <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 4 }}>
                   POLL OPTIONS
                 </AppText>
 
@@ -250,8 +245,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                   <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 4 }}>
                     <View style={{ flex: 1 }}>
                       <AppTextField
-                        label=""
-                        value={opt}
+                        label=""value={opt}
                         onChangeText={(val) => {
                           const updated = [...pollOptions];
                           updated[idx] = val;
@@ -262,7 +256,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                     </View>
                     {pollOptions.length > 2 && (
                       <Pressable onPress={() => handleRemovePollOption(idx)} hitSlop={8}>
-                        <Ionicons name="trash-outline" size={18} color={colors.critical} />
+                        <Ionicons name="trash-outline"size={18} color={colors.critical} />
                       </Pressable>
                     )}
                   </View>
@@ -270,8 +264,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
 
                 {pollOptions.length < 4 && (
                   <Pressable onPress={handleAddPollOption} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                    <Ionicons name="add-circle-outline" size={16} color={colors.brandPrimary} />
-                    <AppText variant="caption" weight="bold" tone="brand">+ Add Option</AppText>
+                    <Ionicons name="add-circle-outline"size={16} color={colors.brandPrimary} />
+                    <AppText variant="caption"weight="bold"tone="brand">+ Add Option</AppText>
                   </Pressable>
                 )}
               </View>
@@ -279,7 +273,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
           </SolidCard>
 
           {/* Channel Selector */}
-          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
             TOPIC CHANNEL
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -301,7 +295,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                     backgroundColor: selected ? colors.brandPrimary : colors.surface,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                  <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
                     {ch}
                   </AppText>
                 </Pressable>
@@ -310,7 +304,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
           </View>
 
           {/* Audience Reach */}
-          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
             AUDIENCE REACH
           </AppText>
           <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
@@ -333,8 +327,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                     backgroundColor: selected ? colors.pastelPrimaryBg : colors.surface,
                   }}
                 >
-                  <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'brand' : 'secondary'}>
-                    {v === 'Campus Only' ? '🏫 My Campus Only' : '🌍 Global University Network'}
+                  <AppText variant="bodySmall"weight={selected ? 'bold' : 'medium'} tone={selected ? 'brand' : 'secondary'}>
+                    {v === 'Campus Only' ? 'My Campus Only' : '🌍 Global University Network'}
                   </AppText>
                 </Pressable>
               );
@@ -347,10 +341,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               haptics.light();
               setSponsored((v) => !v);
             }}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: sponsored }}
-            accessibilityLabel="Sponsor this post"
-            style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}
+            accessibilityRole="checkbox"accessibilityState={{ checked: sponsored }}
+            accessibilityLabel="Sponsor this post"style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}
           >
             <Ionicons
               name={sponsored ? 'checkbox' : 'square-outline'}
@@ -358,10 +350,10 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               color={sponsored ? colors.brandPrimary : colors.textSecondary}
             />
             <View style={{ flex: 1 }}>
-              <AppText weight="semiBold" tone="brand">
-                Sponsor this Thread 🌟
+              <AppText weight="semiBold"tone="brand">
+                Sponsor this Thread 
               </AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Pin and highlight this discussion at the top of your campus feed.
               </AppText>
             </View>
@@ -369,10 +361,9 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
         </ScrollView>
 
         <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider }}>
-          <AppButton label="Cancel" variant="ghost" onPress={onClose} />
+          <AppButton label="Cancel"variant="ghost"onPress={onClose} />
           <AppButton
-            label="Publish Thread 🚀"
-            onPress={handlePublish}
+            label="Publish Thread"onPress={handlePublish}
             disabled={!topic.trim() || !content.trim()}
           />
         </View>

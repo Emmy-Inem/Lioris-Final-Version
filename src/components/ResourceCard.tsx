@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SolidCard } from './SolidCard';
-import { AppText } from './AppText';
-import { Badge } from './Badge';
-import { AppButton } from './AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
-import { Resource } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Pressable, View } from'react-native';
+import { Ionicons } from'@expo/vector-icons';
+import { SolidCard } from'./SolidCard';
+import { AppText } from'./AppText';
+import { Badge } from'./Badge';
+import { AppButton } from'./AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
+import { Resource } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
 export function ResourceCard({ resource }: { resource: Resource }) {
   const { colors, spacing, radius } = useTheme();
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [upvoted, setUpvoted] = useState(false);
+  const [upvotes, setUpvotes] = useState(resource.likesCount);
 
   function handleDownload() {
     haptics.light();
@@ -20,8 +22,14 @@ export function ResourceCard({ resource }: { resource: Resource }) {
     setTimeout(() => {
       setDownloading(false);
       setDownloaded(true);
-      Alert.alert('Download Complete', `${resource.title} (${resource.fileSize}) has been saved to your device.`);
-    }, 600);
+      Alert.alert('Download Complete', `${resource.title} (${resource.fileSize}) has been indexed and saved to your device offline storage.`);
+    }, 500);
+  }
+
+  function handleToggleUpvote() {
+    haptics.light();
+    setUpvoted(!upvoted);
+    setUpvotes(upvotes + (upvoted ? -1 : 1));
   }
 
   return (
@@ -56,7 +64,7 @@ export function ResourceCard({ resource }: { resource: Resource }) {
             {resource.title}
           </AppText>
           <AppText tone="secondary" variant="caption">
-            {resource.courseCode} &bull; {resource.department}
+            {resource.courseCode} • {resource.department}
           </AppText>
         </View>
       </View>
@@ -83,16 +91,20 @@ export function ResourceCard({ resource }: { resource: Resource }) {
               {resource.downloadsCount + (downloaded ? 1 : 0)}
             </AppText>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Ionicons name="thumbs-up-outline" size={14} color={colors.textSecondary} />
-            <AppText tone="secondary" variant="caption">
-              {resource.likesCount}
+          <Pressable onPress={handleToggleUpvote} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons
+              name={upvoted ? 'thumbs-up' : 'thumbs-up-outline'}
+              size={14}
+              color={upvoted ? colors.brandPrimary : colors.textSecondary}
+            />
+            <AppText tone={upvoted ? 'brand' : 'secondary'} variant="caption" weight={upvoted ? 'bold' : 'regular'}>
+              {upvotes}
             </AppText>
-          </View>
+          </Pressable>
         </View>
 
         <AppButton
-          label={downloaded ? 'Saved ✓' : 'Download'}
+          label={downloaded ? 'Saved' : 'Download'}
           variant={downloaded ? 'secondary' : 'primary'}
           onPress={handleDownload}
           loading={downloading}

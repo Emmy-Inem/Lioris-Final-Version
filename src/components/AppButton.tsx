@@ -1,18 +1,18 @@
-import React from 'react';
+import React from'react';
 import {
   ActivityIndicator,
   Pressable,
   PressableProps,
   StyleSheet,
   View,
-} from 'react-native';
+} from'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
-import { useTheme } from '@/theme/ThemeProvider';
-import { AppText } from './AppText';
+} from'react-native-reanimated';
+import { useTheme } from'@/theme/ThemeProvider';
+import { AppText } from'./AppText';
 
 interface AppButtonProps extends Omit<PressableProps, 'style'> {
   label: string;
@@ -47,8 +47,7 @@ export function AppButton({
 
   return (
     <AnimatedPressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityRole="button"accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled || !!loading, busy: !!loading }}
       disabled={disabled || loading}
       onPressIn={() => (scale.value = withTiming(0.97, { duration: 100 }))}
@@ -73,7 +72,7 @@ export function AppButton({
         {loading ? (
           <ActivityIndicator color={palette.fg} />
         ) : (
-          <AppText weight="semiBold" style={{ color: palette.fg }}>
+          <AppText weight="semiBold"style={{ color: palette.fg }}>
             {label}
           </AppText>
         )}

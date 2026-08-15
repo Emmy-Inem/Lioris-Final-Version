@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { realtimeSocket, RealtimeEvent } from './socket';
+import { useEffect, useRef, useState } from'react';
+import { useQueryClient } from'@tanstack/react-query';
+import { realtimeSocket, RealtimeEvent } from'./socket';
 
 type ConnectionStatus = 'connecting' | 'open' | 'closed';
 
@@ -58,21 +58,21 @@ export function useRealtimeChannel(
 
 function invalidateForEvent(event: RealtimeEvent, queryClient: ReturnType<typeof useQueryClient>) {
   switch (event.type) {
-    case 'message.created':
+    case'message.created':
       queryClient.invalidateQueries({ queryKey: ['messages', event.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       break;
-    case 'connection.updated':
+    case'connection.updated':
       queryClient.invalidateQueries({ queryKey: ['connections'] });
       queryClient.invalidateQueries({ queryKey: ['directory'] });
       break;
-    case 'notification.created':
+    case'notification.created':
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       break;
-    case 'rsvp.updated':
+    case'rsvp.updated':
       queryClient.invalidateQueries({ queryKey: ['events'] });
       break;
-    case 'moderation.updated':
+    case'moderation.updated':
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       break;
   }

@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { AppTextField } from '@/components/AppTextField';
-import { AppButton } from '@/components/AppButton';
-import { ChipSelect } from '@/components/ChipSelect';
-import { SolidCard } from '@/components/SolidCard';
-import { Badge } from '@/components/Badge';
-import { MentorCard } from '@/components/MentorCard';
-import { EmptyState } from '@/components/EmptyState';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listMentorships, searchMentors } from '@/api/mentorship';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import React, { useState } from'react';
+import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Image } from'expo-image';
+import { router } from'expo-router';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { AppTextField } from'@/components/AppTextField';
+import { AppButton } from'@/components/AppButton';
+import { ChipSelect } from'@/components/ChipSelect';
+import { SolidCard } from'@/components/SolidCard';
+import { Badge } from'@/components/Badge';
+import { MentorCard } from'@/components/MentorCard';
+import { EmptyState } from'@/components/EmptyState';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listMentorships, searchMentors } from'@/api/mentorship';
+import { useDebouncedValue } from'@/hooks/useDebouncedValue';
 
 const EXPERTISE_CATEGORIES = ['All Fields', 'Software', 'Resume Prep', 'Finance', 'Research', 'Design'];
 
@@ -51,10 +51,10 @@ export default function StudentMentorshipScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
         {/* Top Header & Intro */}
         <View style={{ paddingTop: spacing.sm, marginBottom: spacing.md }}>
-          <AppText variant="h1" weight="bold">
-            Connect & Leadership 👥
+          <AppText variant="h1"weight="bold">
+            Connect & Leadership 
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary"variant="bodySmall">
             Stay connected with your class representative, department leaders, and mentors.
           </AppText>
         </View>
@@ -82,11 +82,9 @@ export default function StudentMentorshipScreen() {
             }}
           >
             <AppText
-              weight="bold"
-              variant="bodySmall"
-              tone={activeSection === 'rep' ? 'inverse' : 'secondary'}
+              weight="bold"variant="bodySmall"tone={activeSection === 'rep' ? 'inverse' : 'secondary'}
             >
-              Class Representative 🎓
+              Class Representative 
             </AppText>
           </Pressable>
           <Pressable
@@ -100,11 +98,9 @@ export default function StudentMentorshipScreen() {
             }}
           >
             <AppText
-              weight="bold"
-              variant="bodySmall"
-              tone={activeSection === 'mentors' ? 'inverse' : 'secondary'}
+              weight="bold"variant="bodySmall"tone={activeSection === 'mentors' ? 'inverse' : 'secondary'}
             >
-              Alumni Mentors 🎯
+              Alumni Mentors 
             </AppText>
           </Pressable>
         </View>
@@ -133,7 +129,7 @@ export default function StudentMentorshipScreen() {
                     contentFit="cover"
                   />
                 </View>
-                <AppText variant="h2" weight="bold">
+                <AppText variant="h2"weight="bold">
                   Tara Vaishnavi
                 </AppText>
                 <View
@@ -149,12 +145,12 @@ export default function StudentMentorshipScreen() {
                     marginBottom: 4,
                   }}
                 >
-                  <Ionicons name="school" size={12} color={colors.brandPrimary} />
-                  <AppText variant="caption" weight="bold" tone="brand">
+                  <Ionicons name="school"size={12} color={colors.brandPrimary} />
+                  <AppText variant="caption"weight="bold"tone="brand">
                     Class Representative
                   </AppText>
                 </View>
-                <AppText tone="secondary" variant="bodySmall">
+                <AppText tone="secondary"variant="bodySmall">
                   III B.Sc Computer Science - Cohort A
                 </AppText>
               </View>
@@ -170,23 +166,23 @@ export default function StudentMentorshipScreen() {
                   borderLeftColor: colors.brandPrimary,
                 }}
               >
-                <AppText variant="bodySmall" style={{ fontStyle: 'italic', color: colors.sectionLabel }}>
-                  &ldquo;Let&rsquo;s grow together, support each other, and make our class the best it can be.&rdquo;
+                <AppText variant="bodySmall"style={{ fontStyle: 'italic', color: colors.sectionLabel }}>
+                  "Let's grow together, support each other, and make our class the best it can be."
                 </AppText>
               </View>
 
               {/* Achievements & Highlights */}
-              <AppText variant="bodySmall" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
-                ACHIEVEMENTS & HIGHLIGHTS 🌟
+              <AppText variant="bodySmall"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
+                ACHIEVEMENTS & HIGHLIGHTS 
               </AppText>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.lg }}>
-                <AchievementBox icon="trophy-outline" title="Tech Fest Winner" subtitle="Annual Hackathon" />
-                <AchievementBox icon="ribbon-outline" title="Class Topper" subtitle="GPA 4.8 / 5.0" />
-                <AchievementBox icon="medal-outline" title="Debate Finalist" subtitle="Inter-Campus Cup" />
+                <AchievementBox icon="trophy-outline"title="Tech Fest Winner"subtitle="Annual Hackathon" />
+                <AchievementBox icon="ribbon-outline"title="Class Topper"subtitle="GPA 4.8 / 5.0" />
+                <AchievementBox icon="medal-outline"title="Debate Finalist"subtitle="Inter-Campus Cup" />
               </View>
 
               {/* Responsibilities Checklist */}
-              <AppText variant="bodySmall" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
+              <AppText variant="bodySmall"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
                 CORE RESPONSIBILITIES 📋
               </AppText>
               <View style={{ gap: spacing.xs, marginBottom: spacing.lg }}>
@@ -198,8 +194,7 @@ export default function StudentMentorshipScreen() {
 
               {/* Full Width Primary Message Button */}
               <AppButton
-                label="Message Representative 💬"
-                onPress={() => setMessageModalOpen(true)}
+                label="Message Representative"onPress={() => setMessageModalOpen(true)}
                 fullWidth
               />
             </SolidCard>
@@ -207,9 +202,7 @@ export default function StudentMentorshipScreen() {
         ) : (
           <View>
             <AppTextField
-              label=""
-              placeholder="Search mentors by name, company, or skills..."
-              value={query}
+              label=""placeholder="Search mentors by name, company, or skills..."value={query}
               onChangeText={setQuery}
             />
 
@@ -224,7 +217,7 @@ export default function StudentMentorshipScreen() {
             {myApplications.length > 0 ? (
               <SolidCard style={{ marginBottom: spacing.lg }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                  <AppText weight="bold" tone="brand">
+                  <AppText weight="bold"tone="brand">
                     My Sent Applications 🤝
                   </AppText>
                   <Badge label={`${myApplications.length} pending`} tone="brand" />
@@ -232,11 +225,11 @@ export default function StudentMentorshipScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
                   {myApplications.map((app) => (
                     <SolidCard key={app.id} radius={12} style={{ width: 200 }}>
-                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                      <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
                         {app.mentorName}
                       </AppText>
                       {app.focusArea ? (
-                        <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                        <AppText tone="secondary"variant="caption"numberOfLines={1} style={{ marginTop: 2 }}>
                           Focus: {app.focusArea}
                         </AppText>
                       ) : null}
@@ -246,8 +239,8 @@ export default function StudentMentorshipScreen() {
               </SolidCard>
             ) : null}
 
-            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
-              Verified Alumni Mentors 🌟
+            <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }}>
+              Verified Alumni Mentors 
             </AppText>
             {mentors?.map((mentor) => (
               <MentorCard
@@ -257,14 +250,14 @@ export default function StudentMentorshipScreen() {
               />
             ))}
             {!isLoading && (mentors?.length ?? 0) === 0 ? (
-              <EmptyState title="No mentors found" description="Try a different search term or category." />
+              <EmptyState title="No mentors found"description="Try a different search term or category." />
             ) : null}
           </View>
         )}
       </ScrollView>
 
       {/* Direct Message to Rep Modal */}
-      <Modal visible={messageModalOpen} transparent animationType="slide" onRequestClose={() => setMessageModalOpen(false)}>
+      <Modal visible={messageModalOpen} transparent animationType="slide"onRequestClose={() => setMessageModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setMessageModalOpen(false)} accessible={false} />
           <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
@@ -273,29 +266,27 @@ export default function StudentMentorshipScreen() {
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="chatbubble-ellipses" size={20} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold">
+                <Ionicons name="chatbubble-ellipses"size={20} color={colors.brandPrimary} />
+                <AppText variant="h3"weight="bold">
                   Message Class Representative
                 </AppText>
               </View>
               <Pressable onPress={() => setMessageModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close"size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
-            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
               Your message goes directly to Tara Vaishnavi. For urgent timetable inquiries, please include your matric number.
             </AppText>
             <AppTextField
-              label="Message"
-              placeholder="Hi Tara, I have a question regarding the updated semester timetable..."
-              value={messageText}
+              label="Message"placeholder="Hi Tara, I have a question regarding the updated semester timetable..."value={messageText}
               onChangeText={setMessageText}
               multiline
               numberOfLines={4}
             />
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel" variant="ghost" onPress={() => setMessageModalOpen(false)} />
-              <AppButton label="Send Message" disabled={!messageText.trim()} onPress={handleSendMessage} />
+              <AppButton label="Cancel"variant="ghost"onPress={() => setMessageModalOpen(false)} />
+              <AppButton label="Send Message"disabled={!messageText.trim()} onPress={handleSendMessage} />
             </View>
           </View>
         </View>
@@ -319,10 +310,10 @@ function AchievementBox({ icon, title, subtitle }: { icon: keyof typeof Ionicons
       }}
     >
       <Ionicons name={icon} size={20} color={colors.brandPrimary} style={{ marginBottom: 4 }} />
-      <AppText weight="bold" variant="caption" style={{ textAlign: 'center', marginBottom: 2 }}>
+      <AppText weight="bold"variant="caption"style={{ textAlign: 'center', marginBottom: 2 }}>
         {title}
       </AppText>
-      <AppText tone="secondary" variant="caption" style={{ fontSize: 10, textAlign: 'center' }}>
+      <AppText tone="secondary"variant="caption"style={{ fontSize: 10, textAlign: 'center' }}>
         {subtitle}
       </AppText>
     </View>
@@ -333,8 +324,8 @@ function CheckItem({ text }: { text: string }) {
   const { colors, spacing } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-      <Ionicons name="checkmark-circle" size={18} color={colors.brandPrimary} />
-      <AppText variant="bodySmall" weight="medium" style={{ flex: 1 }}>
+      <Ionicons name="checkmark-circle"size={18} color={colors.brandPrimary} />
+      <AppText variant="bodySmall"weight="medium"style={{ flex: 1 }}>
         {text}
       </AppText>
     </View>

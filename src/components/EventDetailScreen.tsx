@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import { Alert, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { ScreenContainer } from './ScreenContainer';
-import { AppText } from './AppText';
-import { SolidCard } from './SolidCard';
-import { AppButton } from './AppButton';
-import { Badge } from './Badge';
-import { Avatar } from './Avatar';
-import { ImageViewerModal } from './ImageViewerModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { getEvent, rsvpToEvent } from '@/api/events';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { router, useLocalSearchParams } from'expo-router';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { Image } from'expo-image';
+import { ScreenContainer } from'./ScreenContainer';
+import { AppText } from'./AppText';
+import { SolidCard } from'./SolidCard';
+import { AppButton } from'./AppButton';
+import { Badge } from'./Badge';
+import { Avatar } from'./Avatar';
+import { ImageViewerModal } from'./ImageViewerModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { getEvent, rsvpToEvent } from'@/api/events';
+import { haptics } from'@/utils/haptics';
 
 const EVENT_MEDIA_MAP: Record<string, any> = {
   event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
@@ -75,9 +75,9 @@ export function EventDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       haptics.success();
       Alert.alert(
-        !isRsvpd ? 'RSVP Confirmed! 🎉' : 'RSVP Cancelled',
+        !isRsvpd ? 'RSVP Confirmed! ' : 'RSVP Cancelled',
         !isRsvpd
-          ? `You have secured a seat for "${event.title}". An in-app calendar reminder has been set.`
+          ? `You have secured a seat for"${event.title}". An in-app calendar reminder has been set.`
           : 'Your seat has been released for another student.',
       );
     } catch {
@@ -143,7 +143,7 @@ export function EventDetailScreen() {
   function handleVoiceGuide() {
     haptics.light();
     if (isSpeaking) {
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis'in window) {
         window.speechSynthesis.cancel();
       }
       setIsSpeaking(false);
@@ -153,7 +153,7 @@ export function EventDetailScreen() {
     const currentInstruction = walkingSteps[voiceStep];
     setIsSpeaking(true);
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis'in window) {
       const utterance = new SpeechSynthesisUtterance(currentInstruction);
       utterance.rate = 0.95;
       utterance.onend = () => {
@@ -173,8 +173,8 @@ export function EventDetailScreen() {
     return (
       <ScreenContainer>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-          <Ionicons name="calendar-outline" size={36} color={colors.brandPrimary} />
-          <AppText tone="secondary" style={{ marginTop: spacing.sm }}>Loading event details...</AppText>
+          <Ionicons name="calendar-outline"size={36} color={colors.brandPrimary} />
+          <AppText tone="secondary"style={{ marginTop: spacing.sm }}>Loading event details...</AppText>
         </View>
       </ScreenContainer>
     );
@@ -190,8 +190,7 @@ export function EventDetailScreen() {
     <ScreenContainer glow={true} style={{ paddingHorizontal: 0 }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: 140 }}
       >
         {/* Top Hero Banner & Media Header */}
@@ -200,8 +199,7 @@ export function EventDetailScreen() {
             <Image
               source={heroImageSource}
               style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-              transition={300}
+              contentFit="cover"transition={300}
             />
             {/* Dark gradient backdrop overlay */}
             <View
@@ -222,7 +220,7 @@ export function EventDetailScreen() {
               onPress={() => router.back()}
               style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
             >
-              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+              <Ionicons name="chevron-back"size={24} color="#FFFFFF" />
             </Pressable>
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -241,7 +239,7 @@ export function EventDetailScreen() {
                 onPress={() => setLightboxOpen(true)}
                 style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Ionicons name="expand-outline" size={20} color="#FFFFFF" />
+                <Ionicons name="expand-outline"size={20} color="#FFFFFF" />
               </Pressable>
             </View>
           </View>
@@ -250,15 +248,15 @@ export function EventDetailScreen() {
           <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
               <View style={{ backgroundColor: colors.brandPrimary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
-                <AppText variant="caption" weight="bold" tone="inverse" style={{ textTransform: 'uppercase' }}>
+                <AppText variant="caption"weight="bold"tone="inverse"style={{ textTransform: 'uppercase' }}>
                   {event.category}
                 </AppText>
               </View>
-              {event.sponsored ? <Badge label="Featured" tone="accent" /> : null}
+              {event.sponsored ? <Badge label="Featured"tone="accent" /> : null}
             </View>
 
             <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
-              <AppText variant="caption" weight="bold" tone="inverse">
+              <AppText variant="caption"weight="bold"tone="inverse">
                 {currentRsvpCount} / {capacity} Registered
               </AppText>
             </View>
@@ -268,22 +266,22 @@ export function EventDetailScreen() {
         {/* Content Body Container */}
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
           {/* Event Title */}
-          <AppText variant="h1" weight="bold" style={{ fontSize: 24, lineHeight: 30, marginBottom: spacing.xs }}>
+          <AppText variant="h1"weight="bold"style={{ fontSize: 24, lineHeight: 30, marginBottom: spacing.xs }}>
             {event.title}
           </AppText>
 
           {/* Date & Location Pill Highlights */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap', marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="calendar-outline" size={16} color={colors.brandPrimary} />
-              <AppText weight="bold" variant="bodySmall" tone="primary">
+              <Ionicons name="calendar-outline"size={16} color={colors.brandPrimary} />
+              <AppText weight="bold"variant="bodySmall"tone="primary">
                 {event.startAt ? new Date(event.startAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Tomorrow, 10:00 AM'}
               </AppText>
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="location-outline" size={16} color={colors.brandPrimary} />
-              <AppText weight="bold" variant="bodySmall" tone="primary">
+              <Ionicons name="location-outline"size={16} color={colors.brandPrimary} />
+              <AppText weight="bold"variant="bodySmall"tone="primary">
                 {event.location}
               </AppText>
             </View>
@@ -292,10 +290,10 @@ export function EventDetailScreen() {
           {/* Capacity Progress Bar */}
           <View style={{ backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <AppText weight="bold" variant="bodySmall">
+              <AppText weight="bold"variant="bodySmall">
                 Seats and Attendance
               </AppText>
-              <AppText variant="caption" tone="brand" weight="bold">
+              <AppText variant="caption"tone="brand"weight="bold">
                 {remainingSpots > 0 ? `${remainingSpots} spots left` : 'Fully Booked'}
               </AppText>
             </View>
@@ -314,11 +312,11 @@ export function EventDetailScreen() {
             {/* Attendee Avatars Row */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ marginLeft: 0 }}><Avatar name="Diana Prince" size={26} role="student" /></View>
-                <View style={{ marginLeft: -8 }}><Avatar name="Tunde Adebayo" size={26} role="student" /></View>
-                <View style={{ marginLeft: -8 }}><Avatar name="Amina Yusuf" size={26} role="student" /></View>
-                <View style={{ marginLeft: -8 }}><Avatar name="Emeka Okafor" size={26} role="student" /></View>
-                <AppText variant="caption" tone="secondary" style={{ marginLeft: 8, fontSize: 11 }}>
+                <View style={{ marginLeft: 0 }}><Avatar name="Diana Prince"size={26} role="student" /></View>
+                <View style={{ marginLeft: -8 }}><Avatar name="Tunde Adebayo"size={26} role="student" /></View>
+                <View style={{ marginLeft: -8 }}><Avatar name="Amina Yusuf"size={26} role="student" /></View>
+                <View style={{ marginLeft: -8 }}><Avatar name="Emeka Okafor"size={26} role="student" /></View>
+                <AppText variant="caption"tone="secondary"style={{ marginLeft: 8, fontSize: 11 }}>
                   +{currentRsvpCount} attending
                 </AppText>
               </View>
@@ -349,7 +347,7 @@ export function EventDetailScreen() {
                     backgroundColor: isSelected ? colors.brandPrimary : 'transparent',
                   }}
                 >
-                  <AppText weight="bold" variant="bodySmall" tone={isSelected ? 'inverse' : 'secondary'}>
+                  <AppText weight="bold"variant="bodySmall"tone={isSelected ? 'inverse' : 'secondary'}>
                     {labels[tab]}
                   </AppText>
                 </Pressable>
@@ -362,10 +360,10 @@ export function EventDetailScreen() {
             <View>
               {/* Event Description */}
               <SolidCard style={{ marginBottom: spacing.md }}>
-                <AppText weight="bold" variant="h3" style={{ marginBottom: 6 }}>
+                <AppText weight="bold"variant="h3"style={{ marginBottom: 6 }}>
                   About This Event
                 </AppText>
-                <AppText tone="primary" variant="bodySmall" style={{ lineHeight: 22 }}>
+                <AppText tone="primary"variant="bodySmall"style={{ lineHeight: 22 }}>
                   {event.description}
                 </AppText>
               </SolidCard>
@@ -377,35 +375,30 @@ export function EventDetailScreen() {
                     <Avatar name={event.organizerName ?? 'Faculty Student Council'} size={44} role="staff" />
                     <View>
                       <AppText weight="bold">{event.organizerName ?? 'Faculty Student Council'}</AppText>
-                      <AppText tone="secondary" variant="caption">Verified Campus Organizer</AppText>
+                      <AppText tone="secondary"variant="caption">Verified Campus Organizer</AppText>
                     </View>
                   </View>
                   <AppButton
-                    label="Contact"
-                    variant="ghost"
-                    onPress={() => Alert.alert('Contact Organizer', `Sending query to ${event.organizerName ?? 'Organizer'}`)}
+                    label="Contact"variant="ghost"onPress={() => Alert.alert('Contact Organizer', `Sending query to ${event.organizerName ?? 'Organizer'}`)}
                   />
                 </View>
               </SolidCard>
 
               {/* Calendar Sync Actions */}
               <SolidCard style={{ marginBottom: spacing.md }}>
-                <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.xs }}>
+                <AppText weight="bold"variant="bodySmall"style={{ marginBottom: spacing.xs }}>
                   Calendar Sync
                 </AppText>
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                   <View style={{ flex: 1 }}>
                     <AppButton
-                      label="Google Calendar"
-                      variant="secondary"
-                      onPress={handleGoogleCalendar}
+                      label="Google Calendar"variant="secondary"onPress={handleGoogleCalendar}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
                     <AppButton
                       label={icsExported ? 'Saved .ICS' : 'Export .ICS'}
-                      variant="secondary"
-                      onPress={handleExportIcs}
+                      variant="secondary"onPress={handleExportIcs}
                     />
                   </View>
                 </View>
@@ -416,7 +409,7 @@ export function EventDetailScreen() {
           {/* TAB 2: AGENDA */}
           {activeTab === 'agenda' && (
             <SolidCard style={{ marginBottom: spacing.md }}>
-              <AppText weight="bold" variant="h3" style={{ marginBottom: spacing.md }}>
+              <AppText weight="bold"variant="h3"style={{ marginBottom: spacing.md }}>
                 Program Schedule & Timeline
               </AppText>
 
@@ -433,13 +426,13 @@ export function EventDetailScreen() {
                     {index < 4 ? <View style={{ width: 2, height: 42, backgroundColor: colors.border, marginVertical: 2 }} /> : null}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <AppText weight="bold" variant="caption" tone="brand">
+                    <AppText weight="bold"variant="caption"tone="brand">
                       {item.time}
                     </AppText>
-                    <AppText weight="bold" variant="bodySmall">
+                    <AppText weight="bold"variant="bodySmall">
                       {item.title}
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                    <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
                       {item.desc}
                     </AppText>
                   </View>
@@ -487,7 +480,7 @@ export function EventDetailScreen() {
                   }}
                 >
                   <AppText style={{ fontSize: 11 }} weight="bold">
-                    🏛️ Senate Hub
+                     Senate Hub
                   </AppText>
                 </Pressable>
 
@@ -523,7 +516,7 @@ export function EventDetailScreen() {
                   }}
                 >
                   <AppText style={{ fontSize: 11 }} weight="bold">
-                    💻 ICT Center
+                     ICT Center
                   </AppText>
                 </Pressable>
 
@@ -543,7 +536,7 @@ export function EventDetailScreen() {
                   }}
                 >
                   <AppText style={{ fontSize: 11, color: colors.brandPrimary }} weight="bold">
-                    📍 {event.location}
+                     {event.location}
                   </AppText>
                 </Pressable>
 
@@ -565,8 +558,8 @@ export function EventDetailScreen() {
                     borderRadius: radius.pill,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone="inverse">
-                    📍 Focused: {selectedWaypoint}
+                  <AppText variant="caption"weight="bold"tone="inverse">
+                     Focused: {selectedWaypoint}
                   </AppText>
                 </View>
 
@@ -584,7 +577,7 @@ export function EventDetailScreen() {
                     borderColor: colors.brandPrimary,
                   }}
                 >
-                  <AppText variant="caption" tone="brand" weight="bold">
+                  <AppText variant="caption"tone="brand"weight="bold">
                     4 min walk (310m) | Verified Route
                   </AppText>
                 </View>
@@ -595,19 +588,19 @@ export function EventDetailScreen() {
                     onPress={() => setZoomLevel((z) => Math.min(z + 0.2, 1.6))}
                     style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}
                   >
-                    <Ionicons name="add" size={16} color={colors.textPrimary} />
+                    <Ionicons name="add"size={16} color={colors.textPrimary} />
                   </Pressable>
                   <Pressable
                     onPress={() => setZoomLevel((z) => Math.max(z - 0.2, 0.8))}
                     style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}
                   >
-                    <Ionicons name="remove" size={16} color={colors.textPrimary} />
+                    <Ionicons name="remove"size={16} color={colors.textPrimary} />
                   </Pressable>
                   <Pressable
                     onPress={handleLaunchMaps}
                     style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Ionicons name="navigate" size={16} color="#FFFFFF" />
+                    <Ionicons name="navigate"size={16} color="#FFFFFF" />
                   </Pressable>
                 </View>
               </View>
@@ -616,30 +609,28 @@ export function EventDetailScreen() {
               <SolidCard style={{ marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="compass" size={18} color={colors.brandPrimary} />
-                    <AppText weight="bold" variant="bodySmall">
+                    <Ionicons name="compass"size={18} color={colors.brandPrimary} />
+                    <AppText weight="bold"variant="bodySmall">
                       Turn-by-Turn Campus Guide
                     </AppText>
                   </View>
-                  <Badge label="Live GPS" tone="brand" />
+                  <Badge label="Live GPS"tone="brand" />
                 </View>
 
-                <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+                <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
                   Step {voiceStep + 1} of {walkingSteps.length}: {walkingSteps[voiceStep]}
                 </AppText>
 
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                   <View style={{ flex: 1 }}>
                     <AppButton
-                      label="Launch Maps"
-                      onPress={handleLaunchMaps}
+                      label="Launch Maps"onPress={handleLaunchMaps}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
                     <AppButton
                       label={isSpeaking ? 'Stop Voice' : 'Voice Guide'}
-                      variant="secondary"
-                      onPress={handleVoiceGuide}
+                      variant="secondary"onPress={handleVoiceGuide}
                     />
                   </View>
                 </View>

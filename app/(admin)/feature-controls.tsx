@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Alert, ScrollView, Switch, View } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { AppHeader } from '@/components/AppHeader';
-import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
-import { Badge } from '@/components/Badge';
-import { AppButton } from '@/components/AppButton';
-import { useTheme } from '@/theme/ThemeProvider';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, ScrollView, Switch, View } from'react-native';
+import { ScreenContainer } from'@/components/ScreenContainer';
+import { AppHeader } from'@/components/AppHeader';
+import { AppText } from'@/components/AppText';
+import { SolidCard } from'@/components/SolidCard';
+import { Badge } from'@/components/Badge';
+import { AppButton } from'@/components/AppButton';
+import { useTheme } from'@/theme/ThemeProvider';
+import { recordAuditLogEntry } from'@/api/auditLog';
+import { haptics } from'@/utils/haptics';
 
 interface FeatureFlag {
   key: string;
@@ -42,7 +42,7 @@ export default function AdminFeatureControlsScreen() {
 
     recordAuditLogEntry({
       action: 'escrow_funds_released',
-      summary: `Feature Toggle Changed: "${label}" set to ${next ? 'ENABLED 🟢' : 'DISABLED 🔴'}`,
+      summary: `Feature Toggle Changed: "${label}"set to ${next ? 'ENABLED 🟢' : 'DISABLED 🔴'}`,
       targetType: 'user',
       targetId: key,
       reason: 'Administrative runtime feature flag mutation',
@@ -60,18 +60,17 @@ export default function AdminFeatureControlsScreen() {
       <AppHeader />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: 150 }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: spacing.md, marginBottom: spacing.xs }}>
           <View>
-            <AppText variant="h1" weight="bold">
+            <AppText variant="h1"weight="bold">
               Feature Controls 🎛️
             </AppText>
             <AppText tone="secondary">Toggle runtime modules, rollouts, and campus kill switches</AppText>
           </View>
-          <AppButton label="Reset Defaults" variant="ghost" onPress={handleResetDefaults} />
+          <AppButton label="Reset Defaults"variant="ghost"onPress={handleResetDefaults} />
         </View>
 
         <View style={{ height: spacing.md }} />
@@ -83,12 +82,12 @@ export default function AdminFeatureControlsScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, paddingRight: spacing.sm }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 }}>
-                    <AppText weight="bold" variant="bodySmall">
+                    <AppText weight="bold"variant="bodySmall">
                       {flag.label}
                     </AppText>
                     <Badge label={flag.category} tone="brand" />
                   </View>
-                  <AppText tone="secondary" variant="caption" style={{ lineHeight: 16 }}>
+                  <AppText tone="secondary"variant="caption"style={{ lineHeight: 16 }}>
                     {flag.description}
                   </AppText>
                 </View>

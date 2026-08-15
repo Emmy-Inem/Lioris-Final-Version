@@ -1,9 +1,9 @@
-import React from 'react';
-import { Platform, View } from 'react-native';
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { RoleGate } from '@/auth/RoleGate';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Platform, View } from'react-native';
+import { Tabs } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { RoleGate } from'@/auth/RoleGate';
+import { useTheme } from'@/theme/ThemeProvider';
 
 export default function StudentLayout() {
   const { colors, isDark } = useTheme();
@@ -37,8 +37,7 @@ export default function StudentLayout() {
         }}
       >
         <Tabs.Screen
-          name="dashboard"
-          options={{
+          name="dashboard"options={{
             title: 'Home',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} size={size} />
@@ -46,8 +45,7 @@ export default function StudentLayout() {
           }}
         />
         <Tabs.Screen
-          name="feed"
-          options={{
+          name="feed"options={{
             title: 'Forum',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />
@@ -55,8 +53,7 @@ export default function StudentLayout() {
           }}
         />
         <Tabs.Screen
-          name="events-list"
-          options={{
+          name="events-list"options={{
             title: 'Events',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} size={size} />
@@ -64,8 +61,7 @@ export default function StudentLayout() {
           }}
         />
         <Tabs.Screen
-          name="resources"
-          options={{
+          name="resources"options={{
             title: 'Resources',
             tabBarIcon: ({ focused, size }) => (
               <TabIcon name={focused ? 'folder' : 'folder-outline'} focused={focused} size={size} />
@@ -74,19 +70,19 @@ export default function StudentLayout() {
         />
 
         {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
-        <Tabs.Screen name="events" options={{ href: null }} />
-        <Tabs.Screen name="profile" options={{ href: null }} />
-        <Tabs.Screen name="mentorship" options={{ href: null }} />
-        <Tabs.Screen name="notifications" options={{ href: null }} />
-        <Tabs.Screen name="search" options={{ href: null }} />
-        <Tabs.Screen name="marketplace" options={{ href: null }} />
-        <Tabs.Screen name="jobs" options={{ href: null }} />
-        <Tabs.Screen name="study-groups" options={{ href: null }} />
-        <Tabs.Screen name="calendar" options={{ href: null }} />
-        <Tabs.Screen name="settings" options={{ href: null }} />
-        <Tabs.Screen name="messages" options={{ href: null }} />
-        <Tabs.Screen name="post/[id]" options={{ href: null }} />
-        <Tabs.Screen name="post" options={{ href: null }} />
+        <Tabs.Screen name="events"options={{ href: null }} />
+        <Tabs.Screen name="profile"options={{ href: null }} />
+        <Tabs.Screen name="mentorship"options={{ href: null }} />
+        <Tabs.Screen name="notifications"options={{ href: null }} />
+        <Tabs.Screen name="search"options={{ href: null }} />
+        <Tabs.Screen name="marketplace"options={{ href: null }} />
+        <Tabs.Screen name="jobs"options={{ href: null }} />
+        <Tabs.Screen name="study-groups"options={{ href: null }} />
+        <Tabs.Screen name="calendar"options={{ href: null }} />
+        <Tabs.Screen name="settings"options={{ href: null }} />
+        <Tabs.Screen name="messages"options={{ href: null }} />
+        <Tabs.Screen name="post/[id]"options={{ href: null }} />
+        <Tabs.Screen name="post"options={{ href: null }} />
       </Tabs>
     </RoleGate>
   );

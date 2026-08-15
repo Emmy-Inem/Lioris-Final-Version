@@ -1,33 +1,33 @@
-import React, { useState } from 'react';
-import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from './ScreenContainer';
-import { AppHeader } from './AppHeader';
-import { AppText } from './AppText';
-import { SolidCard } from './SolidCard';
-import { Avatar } from './Avatar';
-import { PostCard } from './PostCard';
-import { PublishThreadModal } from './PublishThreadModal';
-import { DiscussionWorkspacesModal } from './DiscussionWorkspacesModal';
-import { ActionSheetModal } from './ActionSheetModal';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
-import { listFeedPosts, createPost } from '@/api/posts';
-import { getMyProfile } from '@/api/profile';
-import { useViewScope } from '@/hooks/useViewScope';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { PostVisibilityScope } from '@/api/types';
+import React, { useState } from'react';
+import { FlatList, Pressable, ScrollView, TextInput, View } from'react-native';
+import Animated, { FadeInUp } from'react-native-reanimated';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from'@expo/vector-icons';
+import { ScreenContainer } from'./ScreenContainer';
+import { AppHeader } from'./AppHeader';
+import { AppText } from'./AppText';
+import { SolidCard } from'./SolidCard';
+import { Avatar } from'./Avatar';
+import { PostCard } from'./PostCard';
+import { PublishThreadModal } from'./PublishThreadModal';
+import { DiscussionWorkspacesModal } from'./DiscussionWorkspacesModal';
+import { ActionSheetModal } from'./ActionSheetModal';
+import { useTheme } from'@/theme/ThemeProvider';
+import { useAuth } from'@/auth/AuthContext';
+import { listFeedPosts, createPost } from'@/api/posts';
+import { getMyProfile } from'@/api/profile';
+import { useViewScope } from'@/hooks/useViewScope';
+import { useDebouncedValue } from'@/hooks/useDebouncedValue';
+import { PostVisibilityScope } from'@/api/types';
 
 const CHANNELS = [
-  { id: 'all', label: 'All Threads 💬', category: null },
-  { id: 'polls', label: 'Polls 📊', category: 'Polls' },
-  { id: 'tech', label: 'Tech Hub 💻', category: 'Tech Hub' },
-  { id: 'academic', label: 'Academic 📚', category: 'Academic' },
-  { id: 'housing', label: 'Housing 🏠', category: 'Housing' },
-  { id: 'social', label: 'Campus Life 🎉', category: 'Social' },
-  { id: 'lost', label: 'Lost & Found 🔍', category: 'Lost & Found' },
+  { id: 'all', label: 'All Threads', category: null },
+  { id: 'polls', label: 'Polls', category: 'Polls' },
+  { id: 'tech', label: 'Tech Hub', category: 'Tech Hub' },
+  { id: 'academic', label: 'Academic', category: 'Academic' },
+  { id: 'housing', label: 'Housing', category: 'Housing' },
+  { id: 'social', label: 'Campus Life', category: 'Social' },
+  { id: 'lost', label: 'Lost & Found', category: 'Lost & Found' },
 ];
 
 export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
@@ -111,19 +111,17 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       {/* Screen Title & Workspace Selector */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.md }}>
         <View>
-          <AppText variant="h1" weight="bold">
-            Campus Forum 💬
+          <AppText variant="h1"weight="bold">
+            Campus Forum 
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary"variant="bodySmall">
             Trending discussions, polls, and academic threads
           </AppText>
         </View>
 
         <Pressable
           onPress={() => setWorkspacesOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Open discussion workspaces"
-          style={{
+          accessibilityRole="button"accessibilityLabel="Open discussion workspaces"style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 4,
@@ -133,8 +131,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             paddingVertical: 8,
           }}
         >
-          <Ionicons name="chatbubbles" size={16} color={colors.brandPrimary} />
-          <AppText weight="bold" tone="brand" variant="caption">
+          <Ionicons name="chatbubbles"size={16} color={colors.brandPrimary} />
+          <AppText weight="bold"tone="brand"variant="caption">
             Channels
           </AppText>
         </Pressable>
@@ -158,8 +156,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             <Pressable
               key={s}
               onPress={() => setViewScope(s)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
+              accessibilityRole="tab"accessibilityState={{ selected }}
               accessibilityLabel={s === 'campus' ? 'My Campus Feed' : 'Global Network Feed'}
               style={{
                 flex: 1,
@@ -169,8 +166,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 alignItems: 'center',
               }}
             >
-              <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
-                {s === 'campus' ? '🏫 My Campus' : '🌍 Global Network'}
+              <AppText variant="bodySmall"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
+                {s === 'campus' ? 'My Campus' : '🌍 Global Network'}
               </AppText>
             </Pressable>
           );
@@ -193,24 +190,22 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             height: 42,
           }}
         >
-          <Ionicons name="search" size={16} color={colors.textSecondary} />
+          <Ionicons name="search"size={16} color={colors.textSecondary} />
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search discussions, polls, courses..."
-            placeholderTextColor={colors.textSecondary}
+            placeholder="Search discussions, polls, courses..."placeholderTextColor={colors.textSecondary}
             style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
           />
           {query ? (
             <Pressable onPress={() => setQuery('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+              <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
             </Pressable>
           ) : null}
         </View>
         <Pressable
           onPress={() => setSortModalOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={`Sort: ${sortBy === 'latest' ? 'Latest' : 'Most Popular'}`}
+          accessibilityRole="button"accessibilityLabel={`Sort: ${sortBy === 'latest' ? 'Latest' : 'Most Popular'}`}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -223,8 +218,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             backgroundColor: colors.surface,
           }}
         >
-          <Ionicons name="swap-vertical" size={16} color={colors.textSecondary} />
-          <AppText variant="caption" weight="semiBold" tone="secondary">
+          <Ionicons name="swap-vertical"size={16} color={colors.textSecondary} />
+          <AppText variant="caption"weight="semiBold"tone="secondary">
             {sortBy === 'latest' ? 'Latest' : 'Top'}
           </AppText>
         </Pressable>
@@ -243,8 +238,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             <Pressable
               key={ch.id}
               onPress={() => setSelectedChannel(ch.category)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
+              accessibilityRole="button"accessibilityState={{ selected }}
               style={{
                 backgroundColor: selected ? colors.brandPrimary : colors.surface,
                 borderRadius: radius.pill,
@@ -255,8 +249,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               }}
             >
               <AppText
-                variant="caption"
-                weight={selected ? 'bold' : 'medium'}
+                variant="caption"weight={selected ? 'bold' : 'medium'}
                 tone={selected ? 'inverse' : 'secondary'}
               >
                 {ch.label}
@@ -269,14 +262,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       {/* Interactive Quick Thread Composer Bar */}
       <Pressable
         onPress={() => setComposerOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Start a new thread or create a poll"
+        accessibilityRole="button"accessibilityLabel="Start a new thread or create a poll"
       >
         <SolidCard backgroundColor={colors.surface} radius={18} style={{ marginBottom: spacing.sm }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <Avatar name={user?.fullName ?? 'You'} size={38} role={user?.role} />
             <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 8 }}>
-              <AppText tone="secondary" variant="bodySmall">
+              <AppText tone="secondary"variant="bodySmall">
                 Start a discussion or create a poll...
               </AppText>
             </View>
@@ -290,7 +282,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Ionicons name="add"size={20} color="#FFFFFF" />
             </View>
           </View>
         </SolidCard>
@@ -332,12 +324,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   marginBottom: spacing.md,
                 }}
               >
-                <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+                <Ionicons name="chatbubbles-outline"size={32} color={colors.brandPrimary} />
               </View>
-              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+              <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.xs }}>
                 No Threads in this Channel Yet
               </AppText>
-              <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+              <AppText tone="secondary"variant="bodySmall"style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
                 Be the first to share an academic question or start a discussion for your cohort.
               </AppText>
             </View>
@@ -347,8 +339,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
       {/* Sort Options Modal */}
       <ActionSheetModal visible={sortModalOpen} onClose={() => setSortModalOpen(false)}>
-        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
-          Sort Threads By 📊
+        <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }}>
+          Sort Threads By 
         </AppText>
         {(['latest', 'popular'] as const).map((option) => {
           const selected = sortBy === option;
@@ -359,8 +351,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 setSortBy(option);
                 setSortModalOpen(false);
               }}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
+              accessibilityRole="radio"accessibilityState={{ checked: selected }}
               accessibilityLabel={option === 'latest' ? 'Most Recent' : 'Most Upvoted'}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
             >

@@ -1,7 +1,7 @@
-import React from 'react';
-import { View } from 'react-native';
-import { useTheme } from '@/theme/ThemeProvider';
-import { AppText } from './AppText';
+import React from'react';
+import { View } from'react-native';
+import { useTheme } from'@/theme/ThemeProvider';
+import { AppText } from'./AppText';
 
 type BadgeTone = 'neutral' | 'brand' | 'accent' | 'success' | 'warning' | 'critical';
 
@@ -40,7 +40,7 @@ export function Badge({ label, tone = 'neutral' }: BadgeProps) {
         paddingVertical: 4,
       }}
     >
-      <AppText variant="caption" weight="semiBold" style={{ color: fg[tone] }}>
+      <AppText variant="caption"weight="semiBold"style={{ color: fg[tone] }}>
         {label}
       </AppText>
     </View>

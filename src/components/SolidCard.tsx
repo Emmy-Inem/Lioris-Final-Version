@@ -1,7 +1,7 @@
-import React from 'react';
-import { Platform, StyleSheet, View, ViewProps } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { Platform, StyleSheet, View, ViewProps } from'react-native';
+import { BlurView } from'expo-blur';
+import { useTheme } from'@/theme/ThemeProvider';
 
 interface SolidCardProps extends ViewProps {
   padded?: boolean;

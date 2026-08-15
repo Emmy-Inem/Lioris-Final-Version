@@ -1,6 +1,6 @@
-import React from 'react';
-import { View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from'react';
+import { View } from'react-native';
+import { LinearGradient } from'expo-linear-gradient';
 
 interface GradientProgressBarProps {
   progress: number; // 0-1

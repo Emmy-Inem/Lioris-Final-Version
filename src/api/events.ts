@@ -1,13 +1,13 @@
-import { api } from './client';
-import { CampusEvent, EventCategory } from './types';
-import { mockEvents } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
-import { recordAuditLogEntry } from './auditLog';
-import { getSessionUser } from '@/auth/tokenStorage';
+import { api } from'./client';
+import { CampusEvent, EventCategory } from'./types';
+import { mockEvents } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { recordAuditLogEntry } from'./auditLog';
+import { getSessionUser } from'@/auth/tokenStorage';
 
 const INITIAL_EVENTS: CampusEvent[] = [
-  ...mockEvents.map((e) => ({ ...e, approvalStatus: 'approved' as const })),
+  ...mockEvents.map((e) => ({ ...e, approvalStatus: 'approved'as const })),
   {
     id: 'event-sub-1',
     organizerId: 'user-chioma',
@@ -136,7 +136,7 @@ export interface CreateEventPayload {
   sponsored?: boolean;
 }
 
-// Backs the "Publish Event" flow (PublishEventModal). No direct PRD
+// Backs the"Publish Event"flow (PublishEventModal). No direct PRD
 // Section 15.2 contract for creation was specified, so this follows the
 // same convention as the read endpoints.
 export async function createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
@@ -261,7 +261,7 @@ export async function revokeEventApproval(id: string) {
   // PRD Section 6.2 — moderation decisions must be audit-logged.
   await recordAuditLogEntry({
     action: 'event_approval_revoked',
-    summary: `Revoked approval on event "${target?.title ?? id}"`,
+    summary: `Revoked approval on event"${target?.title ?? id}"`,
     targetType: 'event',
     targetId: id,
   });
@@ -280,7 +280,7 @@ export async function purgeEvent(id: string) {
   }
   await recordAuditLogEntry({
     action: 'event_purged',
-    summary: `Purged event "${target?.title ?? id}"`,
+    summary: `Purged event"${target?.title ?? id}"`,
     targetType: 'event',
     targetId: id,
   });

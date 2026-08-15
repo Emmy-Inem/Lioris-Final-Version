@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AppText } from '../AppText';
-import { AppTextField } from '../AppTextField';
-import { AppButton } from '../AppButton';
-import { Badge } from '../Badge';
-import { SolidCard } from '../SolidCard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { listCourses, createCourse, updateCourse, deleteCourse, Course } from '@/api/courses';
-import { haptics } from '@/utils/haptics';
+import React, { useState } from'react';
+import { Alert, FlatList, Modal, Pressable, ScrollView, TextInput, View } from'react-native';
+import { Image } from'expo-image';
+import { Ionicons } from'@expo/vector-icons';
+import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { AppText } from'../AppText';
+import { AppTextField } from'../AppTextField';
+import { AppButton } from'../AppButton';
+import { Badge } from'../Badge';
+import { SolidCard } from'../SolidCard';
+import { useTheme } from'@/theme/ThemeProvider';
+import { listCourses, createCourse, updateCourse, deleteCourse, Course } from'@/api/courses';
+import { haptics } from'@/utils/haptics';
 
 const COURSE_COVER_PRESETS = [
   { id: 'campus_library_study', label: 'Library & Study', src: require('../../../assets/images/campus_library_study.jpg') },
@@ -150,7 +150,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.70)', justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
@@ -178,16 +178,16 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
             }}
           >
             <View>
-              <AppText variant="h2" weight="bold">
+              <AppText variant="h2"weight="bold">
                 Manage Courses & Curriculum
               </AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary"variant="caption">
                 Admin course catalog & syllabus editor
               </AppText>
             </View>
 
             <Pressable onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
+              <Ionicons name="close"size={24} color={colors.textPrimary} />
             </Pressable>
           </View>
 
@@ -195,7 +195,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
           {isCreating || editingCourse ? (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <AppText variant="h3" weight="bold">
+                <AppText variant="h3"weight="bold">
                   {editingCourse ? `Edit Course: ${editingCourse.courseCode}` : 'Add New Course'}
                 </AppText>
                 <Pressable
@@ -204,30 +204,30 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
                     setEditingCourse(null);
                   }}
                 >
-                  <AppText tone="brand" variant="bodySmall" weight="bold">
+                  <AppText tone="brand"variant="bodySmall"weight="bold">
                     Cancel
                   </AppText>
                 </Pressable>
               </View>
 
-              <AppTextField label="Course Code *" placeholder="e.g. CSC 301" value={formCode} onChangeText={setFormCode} />
-              <AppTextField label="Course Title *" placeholder="e.g. Advanced Operating Systems" value={formTitle} onChangeText={setFormTitle} />
-              <AppTextField label="Department" placeholder="e.g. Computer Science & AI" value={formDept} onChangeText={setFormDept} />
+              <AppTextField label="Course Code *"placeholder="e.g. CSC 301"value={formCode} onChangeText={setFormCode} />
+              <AppTextField label="Course Title *"placeholder="e.g. Advanced Operating Systems"value={formTitle} onChangeText={setFormTitle} />
+              <AppTextField label="Department"placeholder="e.g. Computer Science & AI"value={formDept} onChangeText={setFormDept} />
               
               <View style={{ flexDirection: 'row', gap: spacing.md }}>
                 <View style={{ flex: 1 }}>
-                  <AppTextField label="Units" placeholder="3" keyboardType="numeric" value={formUnits} onChangeText={setFormUnits} />
+                  <AppTextField label="Units"placeholder="3"keyboardType="numeric"value={formUnits} onChangeText={setFormUnits} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppTextField label="Level" placeholder="300" keyboardType="numeric" value={formLevel} onChangeText={setFormLevel} />
+                  <AppTextField label="Level"placeholder="300"keyboardType="numeric"value={formLevel} onChangeText={setFormLevel} />
                 </View>
               </View>
 
-              <AppTextField label="Assigned Lecturer / Professor" placeholder="e.g. Prof. Adebayo" value={formLecturer} onChangeText={setFormLecturer} />
-              <AppTextField label="Course Description & Syllabus" placeholder="Brief outline of topics and prerequisites" value={formDescription} onChangeText={setFormDescription} multiline numberOfLines={3} />
+              <AppTextField label="Assigned Lecturer / Professor"placeholder="e.g. Prof. Adebayo"value={formLecturer} onChangeText={setFormLecturer} />
+              <AppTextField label="Course Description & Syllabus"placeholder="Brief outline of topics and prerequisites"value={formDescription} onChangeText={setFormDescription} multiline numberOfLines={3} />
 
               {/* Cover Image Preset Picker */}
-              <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
+              <AppText variant="bodySmall"weight="bold"style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
                 Select Course Cover Image
               </AppText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -247,7 +247,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
                     >
                       <Image source={preset.src} style={{ width: '100%', height: 60 }} contentFit="cover" />
                       <View style={{ padding: 4, backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface }}>
-                        <AppText variant="caption" weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9 }} numberOfLines={1}>
+                        <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9 }} numberOfLines={1}>
                           {preset.label}
                         </AppText>
                       </View>
@@ -281,22 +281,21 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
                     height: 44,
                   }}
                 >
-                  <Ionicons name="search" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                  <Ionicons name="search"size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
                   <TextInput
-                    placeholder="Search course code or title..."
-                    placeholderTextColor={colors.textSecondary}
+                    placeholder="Search course code or title..."placeholderTextColor={colors.textSecondary}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
                   />
                   {searchQuery ? (
                     <Pressable onPress={() => setSearchQuery('')}>
-                      <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                      <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
                     </Pressable>
                   ) : null}
                 </View>
 
-                <AppButton label="Add Course" onPress={handleOpenCreate} />
+                <AppButton label="Add Course"onPress={handleOpenCreate} />
               </View>
 
               {/* Course Items */}
@@ -320,16 +319,16 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Badge label={item.courseCode} tone="brand" />
-                            <AppText variant="caption" tone="secondary">
+                            <AppText variant="caption"tone="secondary">
                               {item.units} Units | Level {item.level}
                             </AppText>
                           </View>
 
-                          <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2 }}>
+                          <AppText weight="bold"variant="bodySmall"numberOfLines={1} style={{ marginTop: 2 }}>
                             {item.title}
                           </AppText>
 
-                          <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                          <AppText tone="secondary"variant="caption"numberOfLines={1}>
                             {item.lecturerName ? `Lecturer: ${item.lecturerName}` : item.department}
                           </AppText>
 
@@ -339,8 +338,8 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
                               onPress={() => handleOpenEdit(item)}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 }}
                             >
-                              <Ionicons name="pencil" size={13} color={colors.brandPrimary} />
-                              <AppText variant="caption" tone="brand" weight="bold">
+                              <Ionicons name="pencil"size={13} color={colors.brandPrimary} />
+                              <AppText variant="caption"tone="brand"weight="bold">
                                 Edit Course & Cover
                               </AppText>
                             </Pressable>
@@ -349,8 +348,8 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
                               onPress={() => handleDelete(item)}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, marginLeft: spacing.sm }}
                             >
-                              <Ionicons name="trash-outline" size={13} color={colors.critical} />
-                              <AppText variant="caption" style={{ color: colors.critical }} weight="bold">
+                              <Ionicons name="trash-outline"size={13} color={colors.critical} />
+                              <AppText variant="caption"style={{ color: colors.critical }} weight="bold">
                                 Delete
                               </AppText>
                             </Pressable>

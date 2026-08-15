@@ -1,9 +1,9 @@
-import { api } from './client';
-import { Announcement } from './types';
-import { mockAnnouncements } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
-import { createNotification } from './notifications';
+import { api } from'./client';
+import { Announcement } from'./types';
+import { mockAnnouncements } from'./mockData';
+import { withMockFallback } from'./withMockFallback';
+import { FALL_BACK_TO_MOCKS } from'./config';
+import { createNotification } from'./notifications';
 
 // Mutable in-memory copy so a newly published announcement actually
 // persists — publishAnnouncement previously built and returned an
@@ -28,7 +28,7 @@ export interface PublishAnnouncementPayload {
 }
 
 // PRD Section 7.4: staff publish to approved audiences; admins may
-// additionally mark a notice "critical" for emergency broadcast handling.
+// additionally mark a notice"critical"for emergency broadcast handling.
 export async function publishAnnouncement(
   payload: PublishAnnouncementPayload,
 ): Promise<Announcement> {
@@ -49,7 +49,7 @@ export async function publishAnnouncement(
     announcementsState = [data, ...announcementsState];
     createNotification({
       type: 'announcement',
-      title: payload.priority === 'critical' ? `🚨 ${payload.title}` : payload.title,
+      title: payload.priority === 'critical' ? ` ${payload.title}` : payload.title,
       body: payload.content,
     });
     return data;
@@ -57,7 +57,7 @@ export async function publishAnnouncement(
     announcementsState = [created, ...announcementsState];
     createNotification({
       type: 'announcement',
-      title: payload.priority === 'critical' ? `🚨 ${payload.title}` : payload.title,
+      title: payload.priority === 'critical' ? ` ${payload.title}` : payload.title,
       body: payload.content,
     });
     return created;

@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText } from './AppText';
-import { Badge } from './Badge';
-import { useTheme } from '@/theme/ThemeProvider';
-import { CampusEvent } from '@/api/types';
-import { haptics } from '@/utils/haptics';
+import React, { useEffect, useRef, useState } from'react';
+import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Image } from'expo-image';
+import { router } from'expo-router';
+import { Ionicons } from'@expo/vector-icons';
+import { AppText } from'./AppText';
+import { Badge } from'./Badge';
+import { useTheme } from'@/theme/ThemeProvider';
+import { CampusEvent } from'@/api/types';
+import { haptics } from'@/utils/haptics';
 
 const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
 const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
@@ -25,8 +25,8 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
   const resumeTimeout = useRef<any>(null);
 
   const displayEvents = events.length > 0 ? events : [];
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth > 500 ? 440 : screenWidth - 32;
+  const { width: screenWidth } = useWindowDimensions();
+  const cardWidth = screenWidth > 500 ? 440 : Math.max(280, screenWidth - 32);
   const cardGap = 14;
   const itemStride = cardWidth + cardGap;
 
@@ -83,8 +83,8 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
       {/* Header Row: Clean Title & Pagination Controls */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="flash-outline" size={15} color={colors.brandPrimary} />
-          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.6 }}>
+          <Ionicons name="flash-outline"size={15} color={colors.brandPrimary} />
+          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.6 }}>
             FEATURED EVENTS
           </AppText>
         </View>
@@ -124,7 +124,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="chevron-back" size={14} color={colors.textPrimary} />
+              <Ionicons name="chevron-back"size={14} color={colors.textPrimary} />
             </Pressable>
             <Pressable
               onPress={() => scrollToSlide((activeIndex + 1) % displayEvents.length)}
@@ -140,7 +140,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="chevron-forward" size={14} color={colors.textPrimary} />
+              <Ionicons name="chevron-forward"size={14} color={colors.textPrimary} />
             </Pressable>
           </View>
         </View>
@@ -151,10 +151,8 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        decelerationRate="fast"
-        snapToInterval={itemStride}
-        snapToAlignment="start"
-        onScrollBeginDrag={() => {
+        decelerationRate="fast"snapToInterval={itemStride}
+        snapToAlignment="start"onScrollBeginDrag={() => {
           isInteracting.current = true;
         }}
         onMomentumScrollEnd={handleScrollEnd}
@@ -216,7 +214,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
                       borderColor: 'rgba(255, 255, 255, 0.25)',
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10, letterSpacing: 0.5 }}>
+                    <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10, letterSpacing: 0.5 }}>
                       SPOTLIGHT
                     </AppText>
                   </View>
@@ -226,12 +224,12 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
 
                 {/* Event Details */}
                 <View>
-                  <AppText variant="h2" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 18, lineHeight: 23, marginBottom: 4 }}>
+                  <AppText variant="h2"weight="bold"tone="inverse"numberOfLines={1} style={{ fontSize: 18, lineHeight: 23, marginBottom: 4 }}>
                     {item.title}
                   </AppText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="location-outline" size={13} color="#FFFFFF" />
-                    <AppText tone="inverse" variant="caption" style={{ opacity: 0.9 }}>
+                    <Ionicons name="location-outline"size={13} color="#FFFFFF" />
+                    <AppText tone="inverse"variant="caption"style={{ opacity: 0.9 }}>
                       {item.location} | {new Date(item.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                     </AppText>
                   </View>
@@ -240,8 +238,8 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
                 {/* Footer RSVP Info & Action */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="people" size={14} color="#FFFFFF" />
-                    <AppText tone="inverse" variant="caption" weight="semiBold">
+                    <Ionicons name="people"size={14} color="#FFFFFF" />
+                    <AppText tone="inverse"variant="caption"weight="semiBold">
                       {item.rsvpCount} attending
                     </AppText>
                   </View>
@@ -257,10 +255,10 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
                       gap: 4,
                     }}
                   >
-                    <AppText weight="bold" variant="caption" style={{ color: '#0F172A' }}>
+                    <AppText weight="bold"variant="caption"style={{ color: '#0F172A' }}>
                       View Details
                     </AppText>
-                    <Ionicons name="arrow-forward" size={12} color="#0F172A" />
+                    <Ionicons name="arrow-forward"size={12} color="#0F172A" />
                   </View>
                 </View>
               </View>

@@ -1,6 +1,6 @@
-import React from 'react';
-import { View } from 'react-native';
-import { useTheme } from '@/theme/ThemeProvider';
+import React from'react';
+import { View } from'react-native';
+import { useTheme } from'@/theme/ThemeProvider';
 
 /**
  * Ultra-clean, premium background surface container.
