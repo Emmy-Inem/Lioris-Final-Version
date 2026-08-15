@@ -8,7 +8,8 @@ import { AppButton } from'@/components/AppButton';
 import { AppText } from'@/components/AppText';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
-import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
+import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import { uploadAvatarImage, updateMyProfile } from '@/api/profile';
 
 export default function UploadPhotoScreen() {
   const { colors, spacing } = useTheme();
@@ -43,10 +44,15 @@ export default function UploadPhotoScreen() {
   async function handleContinue() {
     setSubmitting(true);
     try {
-      // Real backend integration would upload photoUri to a private,
-      // signed-URL bucket here per the Secure File Uploads requirement
-      // in PRD's Security Requirements — restricted file types/size and
-      // malware scanning happen server-side, not in this client.
+      if (photoUri && user?.id) {
+        try {
+          const res = await fetch(photoUri);
+          const blob = await res.blob();
+          await uploadAvatarImage(user.id, blob);
+        } catch {
+          await updateMyProfile({ avatarUrl: photoUri });
+        }
+      }
       await advance();
     } finally {
       setSubmitting(false);

@@ -15,6 +15,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
 import { joinWaitlist } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
+import { sendPasswordResetEmail, verifyPasswordResetOtpAndSetPassword } from '@/api/auth';
 import { haptics } from '@/utils/haptics';
 
 const SLIDES = [
@@ -52,7 +53,50 @@ export default function LoginScreen() {
   // Forgot password modal state
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotStep, setForgotStep] = useState<'request' | 'sent'>('request');
+  const [submittingForgot, setSubmittingForgot] = useState(false);
+
+  async function handleSendRecoveryCode() {
+    if (!forgotEmail.trim()) {
+      Alert.alert('Missing Email', 'Please enter your registered campus email.');
+      return;
+    }
+    setSubmittingForgot(true);
+    try {
+      await sendPasswordResetEmail(forgotEmail.trim());
+      setForgotStep('sent');
+      haptics.success();
+    } catch (err: any) {
+      Alert.alert('Recovery Error', err?.message || 'Could not send recovery code. Please verify your email.');
+    } finally {
+      setSubmittingForgot(false);
+    }
+  }
+
+  async function handleResetPasswordSubmit() {
+    if (!forgotOtp.trim() || !forgotNewPassword) {
+      Alert.alert('Missing Details', 'Please enter the 6-digit recovery code and your new password.');
+      return;
+    }
+    setSubmittingForgot(true);
+    try {
+      await verifyPasswordResetOtpAndSetPassword(forgotEmail.trim(), forgotOtp.trim(), forgotNewPassword);
+      haptics.success();
+      Alert.alert('Password Updated', 'Your password has been successfully reset. You can now log in.');
+      setPassword(forgotNewPassword);
+      setEmail(forgotEmail.trim());
+      setForgotModalOpen(false);
+      setForgotStep('request');
+      setForgotOtp('');
+      setForgotNewPassword('');
+    } catch (err: any) {
+      Alert.alert('Reset Failed', err?.message || 'Invalid or expired recovery code. Please try again.');
+    } finally {
+      setSubmittingForgot(false);
+    }
+  }
 
   async function handleJoinWaitlist() {
     setSubmittingWaitlist(true);
@@ -372,34 +416,61 @@ export default function LoginScreen() {
                   Enter your registered campus email address and we'll send you a password recovery code.
                 </AppText>
                 <AppTextField
-                  label=""
+                  label="Campus Email"
                   placeholder="name@student.unilag.edu.ng"
                   value={forgotEmail}
                   onChangeText={setForgotEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
                 />
-                <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
+                <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
                   <AppButton label="Cancel" variant="ghost" onPress={() => setForgotModalOpen(false)} />
                   <AppButton
                     label="Send Code"
-                    disabled={!forgotEmail.trim()}
-                    onPress={() => setForgotStep('sent')}
+                    disabled={!forgotEmail.trim() || submittingForgot}
+                    loading={submittingForgot}
+                    onPress={handleSendRecoveryCode}
                   />
                 </View>
               </>
             ) : (
               <>
-                <View style={{ alignItems: 'center', marginVertical: spacing.md }}>
-                  <Ionicons name="mail-unread" size={44} color={colors.brandPrimary} />
-                  <AppText weight="bold" variant="h3" style={{ marginTop: spacing.sm }}>
-                    Code Dispatched!
+                <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
+                  <Ionicons name="shield-checkmark" size={36} color={colors.brandPrimary} />
+                  <AppText weight="bold" variant="h3" style={{ marginTop: spacing.xs }}>
+                    Enter Recovery Code
                   </AppText>
-                  <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginTop: 4 }}>
-                    We sent a 6-digit recovery code to {forgotEmail}. Check your inbox.
+                  <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2 }}>
+                    We sent a 6-digit recovery code to {forgotEmail}.
                   </AppText>
                 </View>
-                <AppButton label="Back to Login" fullWidth onPress={() => setForgotModalOpen(false)} />
+
+                <AppTextField
+                  label="6-Digit Recovery Code"
+                  placeholder="123456"
+                  value={forgotOtp}
+                  onChangeText={setForgotOtp}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+
+                <AppTextField
+                  label="New Password"
+                  placeholder="At least 8 characters"
+                  value={forgotNewPassword}
+                  onChangeText={setForgotNewPassword}
+                  secureTextEntry
+                />
+
+                <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+                  <AppButton label="Back" variant="ghost" onPress={() => setForgotStep('request')} />
+                  <AppButton
+                    label="Update Password"
+                    disabled={!forgotOtp.trim() || !forgotNewPassword || submittingForgot}
+                    loading={submittingForgot}
+                    onPress={handleResetPasswordSubmit}
+                  />
+                </View>
               </>
             )}
           </SolidCard>

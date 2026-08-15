@@ -98,12 +98,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const role = (profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
           const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
           
+          const storedUser = await getSessionUser();
+          const isOnboarded =
+            storedUser?.onboardingComplete ??
+            (Boolean(profile?.department) || role === 'admin' || role === 'staff');
+
           const nextUser: SessionUser = {
             id: session.user.id,
             fullName,
             email: userEmail,
             role,
-            onboardingComplete: true,
+            onboardingComplete: isOnboarded,
             mfaVerified: !roleRequiresMfa(role),
           };
           await persist(nextUser);
@@ -135,12 +140,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const role = (profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
         const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
         
+        const storedUser = await getSessionUser();
+        const isOnboarded =
+          storedUser?.onboardingComplete ??
+          (Boolean(profile?.department) || role === 'admin' || role === 'staff');
+
         const nextUser: SessionUser = {
           id: session.user.id,
           fullName,
           email: userEmail,
           role,
-          onboardingComplete: true,
+          onboardingComplete: isOnboarded,
           mfaVerified: !roleRequiresMfa(role),
         };
         await persist(nextUser);

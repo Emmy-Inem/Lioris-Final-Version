@@ -1,7 +1,10 @@
-import { api } from'./client';
-import { UserProfile, UserRole } from'./types';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
+import { api } from './client';
+import { UserProfile, UserRole } from './types';
+import { withMockFallback } from './withMockFallback';
+import { FALL_BACK_TO_MOCKS } from './config';
+import { supabase } from './supabase';
+import { getInstitutionByCode, LAUNCH_INSTITUTIONS } from './institutions';
+import { getSessionUser } from '../auth/tokenStorage';
 
 export function nextLevelXp(level: number): number {
   if (level === 1) return 200;
@@ -72,8 +75,6 @@ function mockProfileFor(user: { id: string; fullName: string; role: UserRole; em
   return created;
 }
 
-import { supabase } from './supabase';
-
 export async function getMyProfile(user: {
   id: string;
   fullName: string;
@@ -86,13 +87,23 @@ export async function getMyProfile(user: {
     if (!error && data) {
       const isVerified = data.is_verified ?? (data.verification_status === 'verified');
       const verificationStatus = data.verification_status || (isVerified ? 'verified' : 'none');
+      
+      const campusCode = data.campus_code || fallback.institutionCode;
+      const inst = getInstitutionByCode(campusCode) || {
+        code: campusCode,
+        name: campusCode === 'UNILAG' ? 'University of Lagos' : campusCode === 'FUNAAB' ? 'Federal University of Agriculture, Abeokuta' : 'University of Ibadan',
+        domain: 'ui.edu.ng',
+      };
+
       const merged: UserProfile = {
         ...fallback,
         fullName: data.full_name || fallback.fullName,
         bio: data.bio || fallback.bio,
         department: data.department || fallback.department,
-        institutionName: data.institution_name || fallback.institutionName,
-        institutionCode: data.institution_code || fallback.institutionCode,
+        institutionName: inst.name,
+        institutionCode: inst.code,
+        avatarUrl: data.avatar_url || fallback.avatarUrl,
+        coverUrl: data.banner_url || fallback.coverUrl,
         isVerified,
         verificationStatus,
       };
@@ -119,7 +130,7 @@ export function seedProfileUsername(
           institutionCode: institution.code,
           institutionName: institution.name,
           isVerified: true,
-          verificationStatus: 'verified'as const,
+          verificationStatus: 'verified' as const,
         }
       : {}),
   });
@@ -213,25 +224,60 @@ export async function updateProfileImages(
   return updated;
 }
 
-export async function updateMyProfile(userId: string, patch: Partial<UserProfile>): Promise<UserProfile> {
+export async function updateMyProfile(
+  userIdOrPatch: string | Partial<UserProfile>,
+  maybePatch?: Partial<UserProfile>,
+): Promise<UserProfile> {
+  let userId: string;
+  let patch: Partial<UserProfile>;
+
+  if (typeof userIdOrPatch === 'string') {
+    userId = userIdOrPatch;
+    patch = maybePatch || {};
+  } else {
+    patch = userIdOrPatch;
+    const { data } = await supabase.auth.getUser();
+    const stored = await getSessionUser();
+    userId = data?.user?.id || stored?.id || 'me';
+  }
+
   const current = profileState.get(userId) || mockProfileFor({ id: userId, fullName: 'You', role: 'student' });
   const updated: UserProfile = { ...current, ...patch };
   profileState.set(userId, updated);
 
   try {
-    await supabase.from('profiles').upsert({
-      id: userId,
-      full_name: updated.fullName,
-      bio: updated.bio,
-      department: updated.department,
-      campus_code: updated.institutionCode,
-      avatar_url: updated.avatarUrl,
-      banner_url: updated.coverUrl,
+    const dbPatch: any = {
       updated_at: new Date().toISOString(),
-    });
+    };
+    if (patch.fullName !== undefined) dbPatch.full_name = patch.fullName;
+    if (patch.bio !== undefined) dbPatch.bio = patch.bio;
+    if (patch.department !== undefined) dbPatch.department = patch.department;
+    if (patch.institutionCode !== undefined) dbPatch.campus_code = patch.institutionCode;
+    if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
+    if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
+
+    if (userId !== 'me') {
+      await supabase.from('profiles').update(dbPatch).eq('id', userId);
+    }
   } catch {
     // Session fallback
   }
 
   return updated;
+}
+
+export async function deleteMyAccount(userId?: string): Promise<{ success: boolean }> {
+  let targetId = userId;
+  if (!targetId) {
+    const { data } = await supabase.auth.getUser();
+    targetId = data?.user?.id;
+  }
+  if (targetId) {
+    try {
+      await supabase.from('profiles').delete().eq('id', targetId);
+      profileState.delete(targetId);
+    } catch {}
+  }
+  await supabase.auth.signOut().catch(() => {});
+  return { success: true };
 }

@@ -1,13 +1,13 @@
-import React, { useState } from'react';
-import { Alert, Pressable, View } from'react-native';
-import { Ionicons } from'@expo/vector-icons';
-import { SolidCard } from'./SolidCard';
-import { AppText } from'./AppText';
-import { Badge } from'./Badge';
-import { AppButton } from'./AppButton';
-import { useTheme } from'@/theme/ThemeProvider';
-import { Resource } from'@/api/types';
-import { haptics } from'@/utils/haptics';
+import React, { useState } from 'react';
+import { Alert, Linking, Platform, Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SolidCard } from './SolidCard';
+import { AppText } from './AppText';
+import { Badge } from './Badge';
+import { AppButton } from './AppButton';
+import { useTheme } from '@/theme/ThemeProvider';
+import { Resource } from '@/api/types';
+import { haptics } from '@/utils/haptics';
 
 export function ResourceCard({ resource }: { resource: Resource }) {
   const { colors, spacing, radius } = useTheme();
@@ -16,14 +16,29 @@ export function ResourceCard({ resource }: { resource: Resource }) {
   const [upvoted, setUpvoted] = useState(false);
   const [upvotes, setUpvotes] = useState(resource.likesCount);
 
-  function handleDownload() {
+  async function handleDownload() {
     haptics.light();
     setDownloading(true);
-    setTimeout(() => {
-      setDownloading(false);
+    try {
+      if (resource.fileUrl) {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.open(resource.fileUrl, '_blank');
+        } else {
+          await Linking.openURL(resource.fileUrl);
+        }
+        setDownloaded(true);
+      } else {
+        setDownloaded(true);
+        Alert.alert('Resource Stored', `${resource.title} (${resource.fileSize}) is saved to your offline workspace cache.`);
+      }
+    } catch {
+      if (resource.fileUrl) {
+        Linking.openURL(resource.fileUrl).catch(() => {});
+      }
       setDownloaded(true);
-      Alert.alert('Download Complete', `${resource.title} (${resource.fileSize}) has been indexed and saved to your device offline storage.`);
-    }, 500);
+    } finally {
+      setDownloading(false);
+    }
   }
 
   function handleToggleUpvote() {

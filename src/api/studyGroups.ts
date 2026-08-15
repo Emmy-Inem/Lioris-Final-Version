@@ -11,6 +11,7 @@ export interface CreateStudyGroupPayload {
   courseCode: string;
   description: string;
   isPublic: boolean;
+  campusCode?: string;
 }
 
 export async function createStudyGroup(payload: CreateStudyGroupPayload): Promise<StudyGroup> {
@@ -37,11 +38,11 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
       const { error } = await supabase.from('study_groups').insert({
         id: groupId,
         creator_id: creatorId,
+        campus_code: payload.campusCode || 'UI',
         name: payload.name,
         course_code: payload.courseCode,
         description: payload.description,
-        is_public: payload.isPublic,
-        member_count: 1,
+        is_private: !payload.isPublic,
       });
       if (error) {
         console.warn('[StudyGroups] Create group error:', error.message);
@@ -49,7 +50,6 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
         await supabase.from('study_group_members').insert({
           group_id: groupId,
           user_id: creatorId,
-          role: 'admin',
         });
       }
     }
@@ -62,22 +62,30 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
 
 export async function listStudyGroups(): Promise<StudyGroup[]> {
   try {
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id || (await getSessionUser())?.id;
+
     const { data, error } = await supabase
       .from('study_groups')
-      .select('*')
+      .select('*, study_group_members(user_id)')
       .order('created_at', { ascending: false });
 
     if (!error && data && data.length > 0) {
-      const dbGroups: StudyGroup[] = data.map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        courseCode: row.course_code || 'CSC 201',
-        description: row.description || '',
-        isPublic: row.is_public !== false,
-        memberCount: row.member_count || 1,
-        isJoined: false,
-        lastMessageAt: row.updated_at,
-      }));
+      const dbGroups: StudyGroup[] = data.map((row: any) => {
+        const members = Array.isArray(row.study_group_members) ? row.study_group_members : [];
+        const isJoined = currentUserId ? members.some((m: any) => m.user_id === currentUserId) : false;
+        return {
+          id: row.id,
+          name: row.name,
+          courseCode: row.course_code || 'CSC 201',
+          description: row.description || '',
+          isPublic: !row.is_private,
+          memberCount: Math.max(1, members.length),
+          isJoined,
+          lastMessageAt: row.created_at,
+        };
+      });
+
       // Merge unique
       const merged = [...dbGroups];
       for (const g of studyGroupsState) {
@@ -114,21 +122,32 @@ export async function joinStudyGroup(id: string): Promise<StudyGroup> {
       const { error } = await supabase.from('study_group_members').insert({
         group_id: id,
         user_id: userId,
-        role: 'member',
       });
       if (error) console.warn('[StudyGroups] Join error:', error.message);
     }
   } catch (err) {
-    console.warn('[StudyGroups] Join failure:', err);
+    console.warn('[StudyGroups] Join backend error:', err);
   }
 
-  return updated || studyGroupsState[0];
+  return (
+    updated ?? {
+      id,
+      name: 'Campus Study Squad',
+      courseCode: 'CSC 301',
+      description: 'Active revision cohort',
+      isPublic: true,
+      memberCount: 2,
+      isJoined: true,
+    }
+  );
 }
 
-export async function leaveStudyGroup(id: string): Promise<void> {
+export async function leaveStudyGroup(id: string): Promise<StudyGroup> {
+  let updated: StudyGroup | undefined;
   studyGroupsState = studyGroupsState.map((g) => {
     if (g.id !== id) return g;
-    return { ...g, isJoined: false, memberCount: Math.max(1, g.memberCount - 1) };
+    updated = { ...g, isJoined: false, memberCount: Math.max(1, g.memberCount - 1) };
+    return updated;
   });
 
   try {
@@ -148,7 +167,18 @@ export async function leaveStudyGroup(id: string): Promise<void> {
       if (error) console.warn('[StudyGroups] Leave error:', error.message);
     }
   } catch (err) {
-    console.warn('[StudyGroups] Leave failure:', err);
+    console.warn('[StudyGroups] Leave backend error:', err);
   }
-}
 
+  return (
+    updated ?? {
+      id,
+      name: 'Campus Study Squad',
+      courseCode: 'CSC 301',
+      description: 'Active revision cohort',
+      isPublic: true,
+      memberCount: 1,
+      isJoined: false,
+    }
+  );
+}

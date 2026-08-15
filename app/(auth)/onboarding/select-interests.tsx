@@ -2,7 +2,8 @@ import React, { useState } from'react';
 import { OnboardingShell } from'@/components/OnboardingShell';
 import { ChipSelect } from'@/components/ChipSelect';
 import { AppButton } from'@/components/AppButton';
-import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
+import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import { updateMyProfile } from '@/api/profile';
 
 const INTERESTS = [
   'Career & Networking',
@@ -28,6 +29,9 @@ export default function SelectInterestsScreen() {
   async function handleContinue() {
     setSubmitting(true);
     try {
+      await updateMyProfile({ interests });
+      await advance();
+    } catch {
       await advance();
     } finally {
       setSubmitting(false);

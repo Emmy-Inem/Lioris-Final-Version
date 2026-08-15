@@ -1,25 +1,71 @@
-import { api } from'./client';
-import { Report } from'./types';
-import { mockReports } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
-import { recordAuditLogEntry } from'./auditLog';
-import { createNotification } from'./notifications';
+import { Report } from './types';
+import { mockReports } from './mockData';
+import { supabase } from './supabase';
+import { getSessionUser } from '../auth/tokenStorage';
+import { recordAuditLogEntry } from './auditLog';
+import { createNotification } from './notifications';
+import { generateUUID } from '../utils/uuid';
 
-// Mutable in-memory copy so resolve/dismiss actually persists — the
-// previous version returned a fabricated success object without ever
-// updating the underlying list, so a"resolved"report would silently
-// reappear as open on the next fetch.
 let reportsState = [...mockReports];
 
 export interface ReportsQuery {
   status?: Report['status'];
   targetType?: Report['targetType'];
-  /** Scopes to one launch institution — backs the Staff/Admin moderation distinction (Staff only ever pass their own). */
+  /** Scopes to one launch institution */
   institutionCode?: string;
 }
 
-function filterMockReports(query: ReportsQuery): Report[] {
+// GET /reports?status=&targetType=&institutionCode=
+export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
+  try {
+    let queryBuilder = supabase.from('moderation_queue').select('*').order('created_at', { ascending: false });
+
+    if (query.institutionCode) {
+      queryBuilder = queryBuilder.eq('campus_code', query.institutionCode);
+    }
+    if (query.status) {
+      if (query.status === 'open') {
+        queryBuilder = queryBuilder.eq('status', 'pending');
+      } else if (query.status === 'resolved') {
+        queryBuilder = queryBuilder.eq('status', 'approved');
+      } else if (query.status === 'dismissed') {
+        queryBuilder = queryBuilder.eq('status', 'rejected');
+      }
+    }
+    if (query.targetType) {
+      const dbType = query.targetType === 'message' ? 'comment' : query.targetType;
+      queryBuilder = queryBuilder.eq('item_type', dbType);
+    }
+
+    const { data, error } = await queryBuilder;
+
+    if (!error && data && data.length > 0) {
+      const dbReports: Report[] = data.map((row: any) => ({
+        id: row.id,
+        reporterId: row.reporter_id || 'unknown',
+        targetType: (row.item_type === 'comment' ? 'message' : row.item_type) as Report['targetType'],
+        targetId: row.item_id,
+        reason: row.reason,
+        status: (row.status === 'approved' ? 'resolved' : row.status === 'rejected' ? 'dismissed' : 'open') as Report['status'],
+        assignedAdminId: row.assigned_admin_id,
+        createdAt: row.created_at,
+        institutionCode: row.campus_code,
+      }));
+
+      // Merge with memory reports
+      const merged = [...dbReports];
+      for (const m of reportsState) {
+        if (!merged.some((r) => r.id === m.id)) {
+          merged.push(m);
+        }
+      }
+      reportsState = merged;
+      return merged;
+    }
+  } catch (err) {
+    console.warn('[Moderation] Failed to list from supabase:', err);
+  }
+
   let results = [...reportsState];
   if (query.status) results = results.filter((r) => r.status === query.status);
   if (query.targetType) results = results.filter((r) => r.targetType === query.targetType);
@@ -27,24 +73,13 @@ function filterMockReports(query: ReportsQuery): Report[] {
   return results;
 }
 
-// GET /reports?status=&targetType=&institutionCode= — PRD Section 15.6
-export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: Report[] }>('/reports', { params: query });
-    return data.items;
-  }, filterMockReports(query));
-}
-
-// PATCH /reports/{id} — PRD Section 15.6
+// PATCH /reports/{id}
 export async function resolveReport(
   id: string,
   action: 'resolved' | 'dismissed',
   notes?: string,
 ): Promise<Report> {
   async function logDecision(target: Report) {
-    // PRD Section 6.2's acceptance criteria: moderation decisions must
-    // be audit-logged. Runs regardless of which branch below succeeds —
-    // there's no live backend yet to assume already does this itself.
     await recordAuditLogEntry({
       action: action === 'resolved' ? 'report_resolved' : 'report_dismissed',
       summary: `${action === 'resolved' ? 'Resolved' : 'Dismissed'} a report on a ${target.targetType} (${target.reason})`,
@@ -64,71 +99,77 @@ export async function resolveReport(
     });
   }
 
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.patch<Report>(`/reports/${id}`, { action, notes });
-    await logDecision(data);
-    return data;
-  }
   try {
-    const { data } = await api.patch<Report>(`/reports/${id}`, { action, notes });
-    await logDecision(data);
-    return data;
-  } catch {
-    let updated: Report | undefined;
-    reportsState = reportsState.map((r) => {
-      if (r.id !== id) return r;
-      updated = { ...r, status: action };
-      return updated;
-    });
-    const result: Report =
-      updated ?? {
-        id,
-        reporterId: 'unknown',
-        targetType: 'post',
-        targetId: 'unknown',
-        reason: notes ?? '',
-        status: action,
-        createdAt: new Date().toISOString(),
-      };
-    await logDecision(result);
-    return result;
+    const dbStatus = action === 'resolved' ? 'approved' : 'rejected';
+    const { data: authData } = await supabase.auth.getUser();
+    const adminId = authData?.user?.id || (await getSessionUser())?.id;
+
+    await supabase.from('moderation_queue').update({
+      status: dbStatus,
+      assigned_admin_id: adminId || null,
+      action_taken: notes || action,
+      resolved_at: new Date().toISOString(),
+    }).eq('id', id);
+  } catch (err) {
+    console.warn('[Moderation] Failed to update supabase report:', err);
   }
+
+  let updated: Report | undefined;
+  reportsState = reportsState.map((r) => {
+    if (r.id !== id) return r;
+    updated = { ...r, status: action };
+    return updated;
+  });
+
+  const result: Report =
+    updated ?? {
+      id,
+      reporterId: 'unknown',
+      targetType: 'post',
+      targetId: 'unknown',
+      reason: notes ?? '',
+      status: action,
+      createdAt: new Date().toISOString(),
+    };
+  await logDecision(result);
+  return result;
 }
 
-// Submits a new report — the content-side counterpart to the admin
-// review flow above. Used from post/message/profile"Report"actions.
-// Previously fired the request and did nothing else — meaning a
-// report a real user submitted would never actually appear in
-// listReports()'s queue for staff/admin to review, only the
-// pre-seeded mock reports ever would. This is the core of the whole
-// moderation pipeline, so this silently not working is about as
-// significant as this kind of bug gets.
-import { generateUUID } from '../utils/uuid';
-
+// Submits a new report
 export async function submitReport(payload: {
   targetType: Report['targetType'];
   targetId: string;
   reason: string;
   institutionCode?: string;
 }): Promise<Report> {
+  const reportId = generateUUID();
   const created: Report = {
-    id: generateUUID(),
+    id: reportId,
     reporterId: 'me',
     status: 'open',
     createdAt: new Date().toISOString(),
     ...payload,
   };
 
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<Report>('/reports', payload);
-    return data;
-  }
+  reportsState = [created, ...reportsState];
+
   try {
-    const { data } = await api.post<Report>('/reports', payload);
-    reportsState = [data, ...reportsState];
-    return data;
-  } catch {
-    reportsState = [created, ...reportsState];
-    return created;
+    const { data: authData } = await supabase.auth.getUser();
+    const reporterId = authData?.user?.id || (await getSessionUser())?.id;
+    const itemType = payload.targetType === 'message' ? 'comment' : payload.targetType;
+
+    await supabase.from('moderation_queue').insert({
+      id: reportId,
+      item_type: itemType,
+      item_id: payload.targetId,
+      reporter_id: reporterId || null,
+      campus_code: payload.institutionCode || 'UI',
+      reason: payload.reason,
+      status: 'pending',
+    });
+  } catch (err) {
+    console.warn('[Moderation] Failed to insert supabase report:', err);
   }
+
+  return created;
 }

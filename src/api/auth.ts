@@ -1,7 +1,6 @@
 import { api } from './client';
 import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
-import { withMockFallback } from './withMockFallback';
 
 export interface LoginPayload {
   email: string;
@@ -14,32 +13,6 @@ export interface RegisterPayload {
   email: string;
   password: string;
   userType: UserRole;
-}
-
-function guessRoleFromEmail(email: string): UserRole {
-  const lower = email.toLowerCase();
-  if (lower.includes('admin')) return 'admin';
-  if (lower.includes('staff')) return 'staff';
-  if (lower.includes('alumni')) return 'alumni';
-  return 'student';
-}
-
-import { generateUUID } from '../utils/uuid';
-
-function mockSession(email: string, role: UserRole, customName?: string): AuthSession {
-  const derivedName =
-    customName || email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-  return {
-    accessToken: `auth-token.${role}.${Date.now()}`,
-    refreshToken: `refresh-token.${role}.${Date.now()}`,
-    user: {
-      id: generateUUID(),
-      fullName: derivedName,
-      email: email.trim(),
-      role,
-    },
-  };
 }
 
 // POST /auth/login — Real Supabase Auth (Strict)
@@ -122,34 +95,90 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
   };
 }
 
+export async function sendPasswordResetEmail(email: string): Promise<{ success: boolean }> {
+  const cleanEmail = email.trim();
+  if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
+  if (error) {
+    throw new Error(error.message || 'Could not send recovery email. Please check your email.');
+  }
+  return { success: true };
+}
+
+export async function verifyPasswordResetOtpAndSetPassword(
+  email: string,
+  token: string,
+  newPassword: string,
+): Promise<{ success: boolean }> {
+  const cleanEmail = email.trim();
+  const cleanToken = token.trim();
+  if (!cleanToken) throw new Error('Recovery code is required.');
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error('New password must be at least 8 characters long.');
+  }
+
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: cleanEmail,
+    token: cleanToken,
+    type: 'recovery',
+  });
+
+  if (error || !data.session) {
+    throw new Error(error?.message || 'Invalid or expired recovery code.');
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message || 'Failed to update password.');
+  }
+
+  return { success: true };
+}
+
 export async function verifyEmail(code: string, email?: string): Promise<{ verified: boolean }> {
   const cleanCode = code.trim();
-  if (email && cleanCode) {
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: cleanCode,
-        type: 'signup',
-      });
-      if (!error && data?.session) {
-        return { verified: true };
-      }
-    } catch {}
+  if (!cleanCode) throw new Error('Verification code is required.');
+  if (email) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: cleanCode,
+      type: 'signup',
+    });
+    if (!error && data?.session) {
+      return { verified: true };
+    }
+    // Also try 'email' type
+    const { data: emailData, error: emailError } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: cleanCode,
+      type: 'email',
+    });
+    if (!emailError && emailData?.session) {
+      return { verified: true };
+    }
+    if (error) {
+      throw new Error(error.message || 'Invalid verification code. Please check your email.');
+    }
   }
+
   try {
     const { data } = await api.post('/auth/verify-email', { code: cleanCode, email });
     return data;
-  } catch {
-    return { verified: true };
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.message || err?.message || 'Email verification failed.');
   }
 }
 
 export async function verifySchool(schoolId: string): Promise<{ status: string }> {
+  if (!schoolId.trim()) throw new Error('Valid Student / Staff ID is required.');
   try {
     const { data } = await api.post('/auth/verify-school', { schoolId });
     return data;
-  } catch {
-    return { status: 'verified' };
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.message || err?.message || 'School verification failed.');
   }
 }
 
@@ -157,22 +186,29 @@ export async function verifyAlumniStatus(payload: {
   graduationYear: number;
   studentId?: string;
 }): Promise<{ status: string }> {
+  if (!payload.graduationYear || payload.graduationYear < 1960 || payload.graduationYear > new Date().getFullYear()) {
+    throw new Error('Please provide a valid graduation year.');
+  }
   try {
     const { data } = await api.post('/auth/verify-alumni', payload);
     return data;
-  } catch {
-    return { status: 'verified' };
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.message || err?.message || 'Alumni status verification failed.');
   }
 }
 
 // POST /auth/mfa/verify — PRD Section 11 requires staff/admin to clear
 // an MFA challenge at every sign-in.
 export async function verifyMfaCode(code: string): Promise<{ verified: boolean }> {
+  const cleanCode = code.trim();
+  if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
+    throw new Error('Please enter a valid 6-digit numeric security code.');
+  }
   try {
-    const { data } = await api.post('/auth/mfa/verify', { code });
+    const { data } = await api.post('/auth/mfa/verify', { code: cleanCode });
     return data;
-  } catch {
-    return { verified: true };
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.message || err?.message || 'Invalid MFA security code.');
   }
 }
 
@@ -181,13 +217,12 @@ export async function resendMfaCode(): Promise<{ sent: boolean }> {
   try {
     const { data } = await api.post('/auth/mfa/resend');
     return data;
-  } catch {
-    return { sent: true };
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.message || err?.message || 'Could not resend MFA code.');
   }
 }
 
-// POST /auth/refresh — PRD Section 15.1. Normally called only by the
-// axios interceptor in client.ts, exposed here for completeness/testing.
+// POST /auth/refresh — PRD Section 15.1.
 export async function refresh(refreshToken: string) {
   const { data } = await api.post<{ accessToken: string; refreshToken: string }>(
     '/auth/refresh',
@@ -197,7 +232,6 @@ export async function refresh(refreshToken: string) {
 }
 
 export async function logout() {
-  await api.post('/auth/logout').catch(() => {
-    // Best-effort — token is cleared client-side regardless (see AuthContext).
-  });
+  await supabase.auth.signOut().catch(() => {});
+  await api.post('/auth/logout').catch(() => {});
 }

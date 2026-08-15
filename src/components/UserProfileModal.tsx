@@ -1,18 +1,19 @@
-import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
-import { Image } from'expo-image';
-import { router, useSegments } from'expo-router';
-import { Ionicons } from'@expo/vector-icons';
-import { AppText } from'./AppText';
-import { Avatar } from'./Avatar';
-import { Badge } from'./Badge';
-import { UserTypeBadge } from'./UserTypeBadge';
-import { SolidCard } from'./SolidCard';
-import { AppButton } from'./AppButton';
-import { useTheme } from'@/theme/ThemeProvider';
-import { sendConnectionRequest } from'@/api/connections';
-import { UserRole } from'@/api/types';
-import { haptics } from'@/utils/haptics';
+import React, { useState, useEffect } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { router, useSegments } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText } from './AppText';
+import { Avatar } from './Avatar';
+import { Badge } from './Badge';
+import { UserTypeBadge } from './UserTypeBadge';
+import { SolidCard } from './SolidCard';
+import { AppButton } from './AppButton';
+import { useTheme } from '@/theme/ThemeProvider';
+import { sendConnectionRequest, checkConnectionStatus, deleteConnection } from '@/api/connections';
+import { getOrCreateConversationWithUser } from '@/api/messaging';
+import { UserRole } from '@/api/types';
+import { haptics } from '@/utils/haptics';
 
 const STOCK_IMAGES: Record<string, any> = {
   campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
@@ -52,6 +53,14 @@ export function UserProfileModal({
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
+  useEffect(() => {
+    if (visible && userId) {
+      checkConnectionStatus(userId).then((status) => {
+        setConnected(status === 'accepted' || status === 'pending');
+      }).catch(() => {});
+    }
+  }, [visible, userId]);
+
   const isAlumni = userRole === 'alumni';
   const isStaff = userRole === 'staff';
 
@@ -79,6 +88,7 @@ export function UserProfileModal({
     haptics.medium();
     if (connected) {
       setConnected(false);
+      await deleteConnection(userId).catch(() => {});
       Alert.alert('Connection Removed', `You have disconnected from ${userName}.`);
       return;
     }
@@ -96,10 +106,15 @@ export function UserProfileModal({
     }
   }
 
-  function handleStartChat() {
+  async function handleStartChat() {
     haptics.light();
     onClose();
-    router.push(`/${roleGroup}/messages/conv-${userId}` as any);
+    try {
+      const conv = await getOrCreateConversationWithUser(userId, userName, userAvatarUrl);
+      router.push(`/${roleGroup}/messages/${conv.id}` as any);
+    } catch {
+      router.push(`/${roleGroup}/messages/${userId}` as any);
+    }
   }
 
   return (

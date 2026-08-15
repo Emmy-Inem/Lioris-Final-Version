@@ -298,4 +298,36 @@ export async function unblockUser(userId: string): Promise<void> {
   }
 }
 
+export async function checkConnectionStatus(targetUserId: string): Promise<'none' | 'pending' | 'accepted'> {
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const myId = authData?.user?.id || (await getSessionUser())?.id;
+    if (!myId || myId === targetUserId) return 'none';
 
+    const { data, error } = await supabase
+      .from('connections')
+      .select('status')
+      .or(`and(requester_id.eq.${myId},recipient_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},recipient_id.eq.${myId})`)
+      .maybeSingle();
+
+    if (!error && data) {
+      return (data.status as any) || 'pending';
+    }
+  } catch {}
+  return 'none';
+}
+
+export async function deleteConnection(targetUserId: string): Promise<void> {
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const myId = authData?.user?.id || (await getSessionUser())?.id;
+    if (!myId) return;
+
+    await supabase
+      .from('connections')
+      .delete()
+      .or(`and(requester_id.eq.${myId},recipient_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},recipient_id.eq.${myId})`);
+  } catch (err) {
+    console.warn('[Connections] Delete connection error:', err);
+  }
+}

@@ -2,7 +2,8 @@ import React, { useState } from'react';
 import { OnboardingShell } from'@/components/OnboardingShell';
 import { ChipSelect } from'@/components/ChipSelect';
 import { AppButton } from'@/components/AppButton';
-import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
+import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import { updateMyProfile } from '@/api/profile';
 
 const DEPARTMENTS = [
   'Computer Science',
@@ -21,8 +22,12 @@ export default function ChooseDepartmentScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   async function handleContinue() {
+    if (!department) return;
     setSubmitting(true);
     try {
+      await updateMyProfile({ department });
+      await advance();
+    } catch {
       await advance();
     } finally {
       setSubmitting(false);

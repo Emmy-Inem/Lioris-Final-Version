@@ -2,7 +2,8 @@ import React, { useState } from'react';
 import { OnboardingShell } from'@/components/OnboardingShell';
 import { AppTextField } from'@/components/AppTextField';
 import { AppButton } from'@/components/AppButton';
-import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
+import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import { updateMyProfile } from '@/api/profile';
 
 export default function CompleteProfileScreen() {
   const advance = useAdvanceOnboarding('/(auth)/onboarding/complete-profile');
@@ -12,6 +13,11 @@ export default function CompleteProfileScreen() {
   async function handleContinue() {
     setSubmitting(true);
     try {
+      if (bio.trim()) {
+        await updateMyProfile({ bio: bio.trim() });
+      }
+      await advance();
+    } catch {
       await advance();
     } finally {
       setSubmitting(false);

@@ -15,11 +15,12 @@ import { Avatar } from'./Avatar';
 import { Badge } from'./Badge';
 import { AuthHeroBackground } from'./AuthHeroBackground';
 import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { getMyProfile } from'@/api/profile';
-import { queryClient } from'@/api/queryClient';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { haptics } from'@/utils/haptics';
+import { useAuth } from '@/auth/AuthContext';
+import { getMyProfile, deleteMyAccount } from '@/api/profile';
+import { supabase } from '@/api/supabase';
+import { queryClient } from '@/api/queryClient';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { haptics } from '@/utils/haptics';
 
 interface ActiveDeviceSession {
   id: string;
@@ -257,6 +258,9 @@ export function SettingsScreen() {
   async function handleEraseProfile() {
     if (eraseConfirmText.trim().toUpperCase() !== 'ERASE') return;
     haptics.error();
+    try {
+      await deleteMyAccount(user?.id);
+    } catch {}
     setEraseModalOpen(false);
     setEraseConfirmText('');
     queryClient.clear();
@@ -264,9 +268,9 @@ export function SettingsScreen() {
     router.replace('/(auth)/login');
   }
 
-  function handleSavePassword() {
-    if (newPassword.length < 6) {
-      Alert.alert('Password too short', 'New password must be at least 6 characters.');
+  async function handleSavePassword() {
+    if (newPassword.length < 8) {
+      Alert.alert('Password too short', 'New password must be at least 8 characters.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -274,15 +278,24 @@ export function SettingsScreen() {
       return;
     }
     haptics.medium();
-    setPasswordSaved(true);
-    setTimeout(() => {
-      setPasswordSaved(false);
-      setPasswordModalOpen(false);
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      Alert.alert('Password Updated', 'Your security credentials have been updated.');
-    }, 800);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        Alert.alert('Password Update Error', error.message);
+        return;
+      }
+      setPasswordSaved(true);
+      setTimeout(() => {
+        setPasswordSaved(false);
+        setPasswordModalOpen(false);
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        Alert.alert('Password Updated', 'Your security credentials have been updated.');
+      }, 500);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not update password.');
+    }
   }
 
   const exportDataJson = JSON.stringify(

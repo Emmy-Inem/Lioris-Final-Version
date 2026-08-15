@@ -129,7 +129,8 @@ BEGIN
         COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
         CASE 
             WHEN NEW.email = 'inememmanuel@gmail.com' THEN 'admin'::user_role_type
-            ELSE COALESCE((NEW.raw_user_meta_data->>'role')::user_role_type, 'student'::user_role_type)
+            WHEN NEW.raw_user_meta_data->>'role' = 'alumni' THEN 'alumni'::user_role_type
+            ELSE 'student'::user_role_type
         END,
         COALESCE(NEW.raw_user_meta_data->>'campus_code', 'GLOBAL'),
         CASE 
@@ -416,6 +417,10 @@ ALTER TABLE chat_channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_channel_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mentorships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marketplace_listings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE waitlist_entries ENABLE ROW LEVEL SECURITY;
 
 -- Campuses: Public Read, Admin Full Management
 CREATE POLICY "Campuses are viewable by everyone" ON campuses FOR SELECT USING (true);
