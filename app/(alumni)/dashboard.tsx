@@ -54,13 +54,11 @@ export default function AlumniDashboard() {
             <View style={{ position: 'absolute', top: 16, left: 16, right: 16, bottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <View style={{ backgroundColor: '#D97706', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
-                    <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
-                       ALUMNI FELLOW
-                    </AppText>
-                  </View>
-                  <AppText variant="caption"tone="inverse"style={{ opacity: 0.9 }}>
-                    Class of'20 • UI Node
+                  <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11, letterSpacing: 0.5, color: '#FCD34D' }}>
+                    ALUMNI FELLOW
+                  </AppText>
+                  <AppText variant="caption" tone="inverse" style={{ opacity: 0.9 }}>
+                    • Class of '20 (UI Node)
                   </AppText>
                 </View>
                 <AppText variant="h1"weight="bold"tone="inverse"numberOfLines={1} style={{ fontSize: 22 }}>

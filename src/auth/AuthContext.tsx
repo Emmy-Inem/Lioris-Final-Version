@@ -59,15 +59,6 @@ async function persist(user: SessionUser) {
   await setSessionUser(stored);
 }
 
-function deriveRoleFromEmail(email?: string): UserRole {
-  if (!email) return 'student';
-  const lower = email.toLowerCase();
-  if (lower.includes('admin')) return 'admin';
-  if (lower.includes('staff') || lower.includes('prof') || lower.includes('dr.')) return 'staff';
-  if (lower.includes('alumni') || lower.includes('grad')) return 'alumni';
-  return 'student';
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,8 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && mounted) {
           const userEmail = session.user.email ?? '';
-          const role = deriveRoleFromEmail(userEmail);
-          const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus User';
+          
+          // Securely query verified database profile for role
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          const role = (profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
+          const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
           
           const nextUser: SessionUser = {
             id: session.user.id,
@@ -100,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: userEmail,
             role,
             onboardingComplete: true,
-            mfaVerified: true,
+            mfaVerified: !roleRequiresMfa(role),
           };
           await persist(nextUser);
           await setTokens(session.access_token, session.refresh_token ?? session.access_token);
@@ -120,8 +119,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user && mounted) {
         const userEmail = session.user.email ?? '';
-        const role = deriveRoleFromEmail(userEmail);
-        const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus User';
+        
+        // Securely query database profile for role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        const role = (profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
+        const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
         
         const nextUser: SessionUser = {
           id: session.user.id,
@@ -129,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: userEmail,
           role,
           onboardingComplete: true,
-          mfaVerified: true,
+          mfaVerified: !roleRequiresMfa(role),
         };
         await persist(nextUser);
         await setTokens(session.access_token, session.refresh_token ?? session.access_token);
@@ -214,12 +221,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async switchRole(newRole: UserRole) {
         setUser((prev) => {
           if (!prev) return prev;
+          // Security gate: only verified admin accounts can switch role views
+          if (prev.role !== 'admin' && (prev as any)._originalRole !== 'admin') {
+            return prev;
+          }
+          const originalRole = (prev as any)._originalRole || prev.role;
           const next: SessionUser = {
             ...prev,
             role: newRole,
             onboardingComplete: true,
-            mfaVerified: true,
-          };
+            mfaVerified: !roleRequiresMfa(newRole),
+            _originalRole: originalRole,
+          } as any;
           persist(next);
           return next;
         });

@@ -378,7 +378,7 @@ function EcosystemTile({
         onPress();
       }}
       accessibilityRole="button"accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
-      style={{ width: '48%' }}
+      style={{ flex: 1, minWidth: '47%' }}
     >
       <SolidCard radius={18} frosted style={{ minHeight: 110, justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>

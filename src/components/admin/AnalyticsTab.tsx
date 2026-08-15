@@ -217,7 +217,7 @@ function MetricCard({
 }) {
   const { colors, spacing, radius } = useTheme();
   return (
-    <SolidCard radius={18} frosted style={{ width: '48%', minHeight: 90, justifyContent: 'space-between' }}>
+    <SolidCard radius={18} frosted style={{ flex: 1, minWidth: '47%', minHeight: 90, justifyContent: 'space-between' }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <AppText tone="secondary"variant="caption"numberOfLines={1} style={{ flex: 1, marginRight: 4 }}>
           {label}

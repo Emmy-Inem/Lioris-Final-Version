@@ -118,30 +118,40 @@ export default function AlumniHubScreen() {
         ) : null}
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.divider, marginBottom: spacing.lg }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ flexDirection: 'row', gap: spacing.md, paddingBottom: 2 }}
+        style={{ borderBottomWidth: 1, borderBottomColor: colors.divider, marginBottom: spacing.md, maxHeight: 44 }}
+      >
         {TABS.map((t) => {
           const selected = t === tab;
           return (
             <Pressable
               key={t}
-              onPress={() => setTab(t)}
-              accessibilityRole="tab"accessibilityState={{ selected }}
+              onPress={() => {
+                haptics.light();
+                setTab(t);
+              }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
               accessibilityLabel={t}
-              style={{ paddingBottom: spacing.sm }}
+              style={{ paddingBottom: spacing.xs, paddingHorizontal: 4 }}
             >
               <AppText
-                variant="bodySmall"weight={selected ? 'bold' : 'medium'}
+                variant="bodySmall"
+                weight={selected ? 'bold' : 'medium'}
                 style={{ color: selected ? colors.brandPrimary : colors.textSecondary }}
               >
                 {t}
               </AppText>
               {selected ? (
-                <View style={{ height: 2, backgroundColor: colors.brandPrimary, marginTop: spacing.sm, borderRadius: 1 }} />
+                <View style={{ height: 2, backgroundColor: colors.brandPrimary, marginTop: spacing.xs, borderRadius: 1 }} />
               ) : null}
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       {tab === 'Overview Hub 📺' ? <OverviewHubTab /> : null}
       {tab === 'Member Search' ? <MemberSearchTab /> : null}

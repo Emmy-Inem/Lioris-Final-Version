@@ -385,57 +385,60 @@ export function SettingsScreen() {
           ) : null}
         </SolidCard>
 
-        {/* Role Switcher & Sandbox Testing Mode */}
-        <SolidCard frosted radius={20} style={{ marginBottom: spacing.md }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-            <AppText tone="brand"weight="bold"variant="bodySmall">
-              Role Switcher & Sandbox Mode 
+        {/* Role Switcher & Sandbox Testing Mode (Admin Only) */}
+        {(userRole === 'admin' || (user as any)?._originalRole === 'admin') && (
+          <SolidCard frosted radius={20} style={{ marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+              <AppText tone="brand" weight="bold" variant="bodySmall">
+                Role Switcher (Admin Preview)
+              </AppText>
+              <Badge label={`Current: ${userRole.toUpperCase()}`} tone="accent" />
+            </View>
+            <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+              Switch portal perspectives to preview student, faculty staff, alumni fellow, or root administrator views.
             </AppText>
-            <Badge label={`Current: ${userRole.toUpperCase()}`} tone="accent" />
-          </View>
-          <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
-            Switch account perspectives to test student, faculty staff, alumni fellow, or root administrator views.
-          </AppText>
 
-          <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-            {[
-              { role: 'student', label: 'Student Portal', path: '/(student)/dashboard' },
-              { role: 'staff', label: 'Faculty Staff', path: '/(staff)/dashboard' },
-              { role: 'alumni', label: 'Alumni Fellow', path: '/(alumni)/dashboard' },
-              { role: 'admin', label: 'Root Admin', path: '/(admin)/dashboard' },
-            ].map((r) => {
-              const active = userRole === r.role;
-              return (
-                <Pressable
-                  key={r.role}
-                  onPress={async () => {
-                    haptics.medium();
-                    await switchRole(r.role as any);
-                    queryClient.clear();
-                    router.replace(r.path as any);
-                  }}
-                  accessibilityRole="button"accessibilityLabel={`Switch to ${r.label}`}
-                  style={{
-                    flex: 1,
-                    minWidth: '47%',
-                    backgroundColor: active ? colors.brandPrimary : colors.pastelPrimaryBg,
-                    borderRadius: radius.md,
-                    paddingVertical: spacing.sm,
-                    paddingHorizontal: spacing.sm,
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: active ? colors.brandPrimary : colors.border,
-                    marginBottom: 4,
-                  }}
-                >
-                  <AppText variant="bodySmall"weight="bold"tone={active ? 'inverse' : 'brand'}>
-                    {r.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </SolidCard>
+            <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
+              {[
+                { role: 'student', label: 'Student Portal', path: '/(student)/dashboard' },
+                { role: 'staff', label: 'Faculty Staff', path: '/(staff)/dashboard' },
+                { role: 'alumni', label: 'Alumni Fellow', path: '/(alumni)/dashboard' },
+                { role: 'admin', label: 'Root Admin', path: '/(admin)/dashboard' },
+              ].map((r) => {
+                const active = userRole === r.role;
+                return (
+                  <Pressable
+                    key={r.role}
+                    onPress={async () => {
+                      haptics.medium();
+                      await switchRole(r.role as any);
+                      queryClient.clear();
+                      router.replace(r.path as any);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Switch to ${r.label}`}
+                    style={{
+                      flex: 1,
+                      minWidth: '47%',
+                      backgroundColor: active ? colors.brandPrimary : colors.pastelPrimaryBg,
+                      borderRadius: radius.md,
+                      paddingVertical: spacing.sm,
+                      paddingHorizontal: spacing.sm,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: active ? colors.brandPrimary : colors.border,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <AppText variant="bodySmall" weight="bold" tone={active ? 'inverse' : 'brand'}>
+                      {r.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </SolidCard>
+        )}
 
         {/* Role-Specific Custom Controls */}
         {userRole === 'student' && (

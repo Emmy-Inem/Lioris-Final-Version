@@ -53,12 +53,14 @@ export function AddUniversityWizardContent({ onComplete }: { onComplete: () => v
         </>
       )}
 
-      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
-        {step > 1 ? <AppButton label="Back"variant="ghost"onPress={() => setStep((s) => s - 1)} /> : null}
-        <AppButton
-          label={step < 3 ? 'Next step' : 'Provision node'}
-          onPress={() => (step < 3 ? setStep((s) => s + 1) : onComplete())}
-        />
+      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, alignItems: 'center' }}>
+        {step > 1 ? <AppButton label="Back" variant="ghost" onPress={() => setStep((s) => s - 1)} /> : null}
+        <View style={{ flex: 1 }}>
+          <AppButton
+            label={step < 3 ? 'Next step' : 'Provision node'}
+            onPress={() => (step < 3 ? setStep((s) => s + 1) : onComplete())}
+          />
+        </View>
       </View>
     </View>
   );
