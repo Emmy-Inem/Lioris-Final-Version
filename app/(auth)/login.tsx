@@ -100,7 +100,15 @@ export default function LoginScreen() {
       });
 
       if (error) {
-        Alert.alert('Google Sign-In', error.message);
+        if (error.message?.includes('Unsupported provider') || (error as any).error_code === 'validation_failed') {
+          Alert.alert(
+            'Google Sign-In Notice',
+            'Google OAuth is not enabled in your Supabase dashboard yet.\n\nTo activate it, enable Google in Supabase under Authentication → Providers. In the meantime, you can log in directly with your email and password below.',
+            [{ text: 'Got It', style: 'default' }]
+          );
+        } else {
+          Alert.alert('Google Sign-In', error.message);
+        }
       } else if (data?.url) {
         if (Platform.OS === 'web') {
           window.location.href = data.url;
@@ -109,7 +117,10 @@ export default function LoginScreen() {
         }
       }
     } catch (err: any) {
-      Alert.alert('Google Sign-In', err?.message || 'Unable to connect to Google Auth');
+      Alert.alert(
+        'Google Sign-In',
+        err?.message || 'Unable to connect to Google Auth. Please check your network or sign in with your email.'
+      );
     } finally {
       setGoogleSubmitting(false);
     }
@@ -117,62 +128,56 @@ export default function LoginScreen() {
 
   return (
     <ScreenContainer noPadding glow={false}>
-      <ScrollView keyboardShouldPersistTaps="handled"contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <View style={{ height: 230, position: 'relative', overflow: 'hidden' }}>
           <Image
-            source={require('@/../assets/images/campus_students_photo.jpg')}
+            source={require('../../assets/images/campus_students_photo.jpg')}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
           />
-          {/* Subtle Dark/Teal Gradient Overlay */}
-          <View
-            style={{
-              ...{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-              backgroundColor: 'rgba(11, 122, 117, 0.72)',
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: spacing.md,
-            }}
-          >
+          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.48)' }} />
+          <View style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
             <Pressable
               onPress={toggleTheme}
-              accessibilityRole="button"accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
               hitSlop={8}
               style={{
-                position: 'absolute',
-                top: spacing.md,
-                right: spacing.md,
-                zIndex: 10,
-                backgroundColor: 'rgba(255,255,255,0.25)',
-                borderRadius: radius.pill,
-                padding: 8,
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: 'rgba(0,0,0,0.4)',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={18} color="#FFFFFF" />
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#FFFFFF" />
             </Pressable>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md }}>
-              <LiorisLogo size={44} />
-              <AppText variant="display"weight="bold"tone="inverse">
-                Lioris
-              </AppText>
+          </View>
+          <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+            <LiorisLogo size={56} variant="symbol" />
+            <View style={{ marginTop: 8 }}>
+              <LiorisLogo size={32} variant="wordmark" />
             </View>
-            <AppText tone="inverse"weight="medium"style={{ marginTop: 4, opacity: 0.95, textAlign: 'center' }}>
-              Your all-in-one campus companion 
-            </AppText>
           </View>
         </View>
 
         <WaveCard>
-          <View style={{ flexDirection: 'row', backgroundColor: colors.divider, borderRadius: radius.pill, padding: 4, marginBottom: spacing.lg }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              backgroundColor: colors.divider,
+              borderRadius: radius.pill,
+              padding: 4,
+              marginBottom: spacing.lg,
+            }}
+          >
             {(['student', 'alumni'] as const).map((p) => {
               const selected = portal === p;
               return (
                 <Pressable
                   key={p}
                   onPress={() => setPortal(p)}
-                  accessibilityRole="tab"accessibilityState={{ selected }}
-                  accessibilityLabel={p === 'student' ? 'Student Portal' : 'Alumni Circle'}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
                   style={{
                     flex: 1,
                     flexDirection: 'row',
@@ -189,7 +194,7 @@ export default function LoginScreen() {
                     size={14}
                     color={selected ? '#FFFFFF' : colors.textSecondary}
                   />
-                  <AppText variant="bodySmall"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
+                  <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
                     {p === 'student' ? 'Student Portal' : 'Alumni Circle'}
                   </AppText>
                 </Pressable>
@@ -197,23 +202,23 @@ export default function LoginScreen() {
             })}
           </View>
 
-          <AppText variant="h2"weight="bold"style={{ marginBottom: spacing.xs }}>
+          <AppText variant="h2" weight="bold" style={{ marginBottom: spacing.xs }}>
             {portal === 'student' ? "Verify & Let's Study!" : 'Welcome Back, Graduate!'}
           </AppText>
-          <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
+          <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
             {portal === 'student'
               ? 'Log into your secure, verified student space and connect with complete privacy.'
               : 'Sign in to reconnect with classmates and give back to your campus community.'}
           </AppText>
 
           <AppTextField
-            label=""placeholder="School Email (.edu / .edu.ng)"autoCapitalize="none"keyboardType="email-address"value={email}
+            label=""
+            placeholder="School Email (.edu / .edu.ng)"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
             onChangeText={setEmail}
           />
-          <AppText tone="secondary"variant="caption"style={{ marginTop: -spacing.sm, marginBottom: spacing.sm }}>
-            Preview build: include"admin", "staff", or"alumni"anywhere in your email to see
-            that role's experience — otherwise you'll see the student view.
-          </AppText>
           <AppTextField
             label=""
             placeholder="Password (Min 6 Characters)"
