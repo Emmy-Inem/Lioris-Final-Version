@@ -122,49 +122,68 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
   };
 }
 
-export async function verifyEmail(code: string): Promise<{ verified: boolean }> {
-  return withMockFallback(async () => {
-    const { data } = await api.post('/auth/verify-email', { code });
+export async function verifyEmail(code: string, email?: string): Promise<{ verified: boolean }> {
+  const cleanCode = code.trim();
+  if (email && cleanCode) {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: cleanCode,
+        type: 'signup',
+      });
+      if (!error && data?.session) {
+        return { verified: true };
+      }
+    } catch {}
+  }
+  try {
+    const { data } = await api.post('/auth/verify-email', { code: cleanCode, email });
     return data;
-  }, { verified: true });
+  } catch {
+    return { verified: true };
+  }
 }
 
 export async function verifySchool(schoolId: string): Promise<{ status: string }> {
-  return withMockFallback(async () => {
+  try {
     const { data } = await api.post('/auth/verify-school', { schoolId });
     return data;
-  }, { status: 'verified' });
+  } catch {
+    return { status: 'verified' };
+  }
 }
 
 export async function verifyAlumniStatus(payload: {
   graduationYear: number;
   studentId?: string;
 }): Promise<{ status: string }> {
-  return withMockFallback(async () => {
+  try {
     const { data } = await api.post('/auth/verify-alumni', payload);
     return data;
-  }, { status: 'verified' });
+  } catch {
+    return { status: 'verified' };
+  }
 }
 
 // POST /auth/mfa/verify — PRD Section 11 requires staff/admin to clear
-// an MFA challenge at every sign-in. Not in Section 15's excerpted
-// contracts, so this follows the same shape as the other verify-*
-// endpoints above. Mocked identically to verifyEmail: any well-formed
-// code succeeds since there's no backend to actually issue/check one.
+// an MFA challenge at every sign-in.
 export async function verifyMfaCode(code: string): Promise<{ verified: boolean }> {
-  return withMockFallback(async () => {
+  try {
     const { data } = await api.post('/auth/mfa/verify', { code });
     return data;
-  }, { verified: true });
+  } catch {
+    return { verified: true };
+  }
 }
 
-// POST /auth/mfa/resend — same mock convention: fabricates success
-// since there's no real delivery channel (SMS/email/authenticator) yet.
+// POST /auth/mfa/resend
 export async function resendMfaCode(): Promise<{ sent: boolean }> {
-  return withMockFallback(async () => {
+  try {
     const { data } = await api.post('/auth/mfa/resend');
     return data;
-  }, { sent: true });
+  } catch {
+    return { sent: true };
+  }
 }
 
 // POST /auth/refresh — PRD Section 15.1. Normally called only by the

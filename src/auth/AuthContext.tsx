@@ -72,7 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (token) {
         const stored = await getSessionUser();
         if (mounted && stored) {
-          setUser({ ...stored, mfaVerified: stored.mfaVerified ?? false } as SessionUser);
+          const isOnboarding = stored.onboardingComplete === false && Boolean(stored.onboardingStep);
+          setUser({
+            ...stored,
+            onboardingComplete: !isOnboarding,
+            mfaVerified: stored.mfaVerified ?? !roleRequiresMfa(stored.role as UserRole),
+          } as SessionUser);
           loadBlockedUserIds().catch(() => {});
         }
       }
