@@ -69,87 +69,128 @@ export async function searchAlumniDirectory(
   }, filterMockDirectory(query));
 }
 
+import { generateUUID } from '../utils/uuid';
+import { getSessionUser } from '../auth/tokenStorage';
+
 // POST /connections — PRD Section 15.3
 export async function sendConnectionRequest(recipientId: string): Promise<Connection> {
+  const connId = generateUUID();
+  let senderId = 'me';
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      senderId = authData.user.id;
+    } else {
+      const stored = await getSessionUser();
+      if (stored?.id) senderId = stored.id;
+    }
+
+    if (senderId && senderId !== 'me') {
+      const { error } = await supabase.from('connections').upsert({
+        id: connId,
+        requester_id: senderId,
+        recipient_id: recipientId,
+        status: 'pending',
+      }, { onConflict: 'requester_id,recipient_id' });
+      if (error) {
+        console.warn('[Connections] Send connection request Supabase error:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Connections] Send request error:', err);
+  }
+
   const created: Connection = {
-    id: `mock-conn-${recipientId}`,
-    requesterId: 'me',
+    id: connId,
+    requesterId: senderId,
     recipientId,
     status: 'pending',
     createdAt: new Date().toISOString(),
   };
 
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<Connection>('/connections', { recipientId });
-    return data;
-  }
-  try {
-    const { data } = await api.post<Connection>('/connections', { recipientId });
-    return data;
-  } catch {
-    // There's no real backend here to actually deliver this to a
-    // separate recipient's session — this app models one active user
-    // at a time, not two concurrent sessions. Consistent with how the
-    // rest of this mocked notification feed already works (e.g. the
-    // verification-decision notification), this surfaces in the
-    // shared demo feed as what the *recipient* would see, since
-    // that's the whole point of a connection request existing at all —
-    // previously nothing anywhere created a notification for this.
-    createNotification({
-      recipientId,
-      type: 'system',
-      title: 'New connection request',
-      body: 'Someone on your campus wants to connect with you.',
-      deepLinkPath: '/(alumni)/connection-requests',
-    });
-    return created;
-  }
+  createNotification({
+    recipientId,
+    type: 'system',
+    title: 'New connection request',
+    body: 'Someone on your campus wants to connect with you.',
+    deepLinkPath: '/(alumni)/connection-requests',
+  });
+
+  return created;
 }
 
 export async function respondToConnectionRequest(
   connectionId: string,
   action: 'accept' | 'decline',
 ): Promise<Connection> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.patch<Connection>(`/connections/${connectionId}`, { action });
-    return data;
-  }
+  const target = incomingRequestsState.find((r) => r.id === connectionId);
+  incomingRequestsState = incomingRequestsState.filter((r) => r.id !== connectionId);
+
   try {
-    const { data } = await api.patch<Connection>(`/connections/${connectionId}`, { action });
-    return data;
-  } catch {
-    // Only mutate the local mock inbox once we know there's no real
-    // backend to talk to — withMockFallback's plain-value API would
-    // otherwise run this eagerly even when a real call succeeds.
-    const target = incomingRequestsState.find((r) => r.id === connectionId);
-    incomingRequestsState = incomingRequestsState.filter((r) => r.id !== connectionId);
-    if (action === 'accept') {
-      createNotification({
-        recipientId: target?.requesterId,
-        type: 'system',
-        title: 'Connection accepted',
-        body: `${target?.requesterName ? `${target.requesterName} accepted your connection request` : 'Your connection request was accepted'} — start a conversation!`,
-      });
-    }
-    return {
-      id: connectionId,
-      requesterId: 'unknown',
-      recipientId: 'me',
-      status: action === 'accept' ? 'accepted' : 'declined',
-      createdAt: new Date().toISOString(),
-      respondedAt: new Date().toISOString(),
-    };
+    await supabase
+      .from('connections')
+      .update({
+        status: action === 'accept' ? 'accepted' : 'declined',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', connectionId);
+  } catch (err) {
+    console.warn('[Connections] Update connection error:', err);
   }
+
+  if (action === 'accept') {
+    createNotification({
+      recipientId: target?.requesterId,
+      type: 'system',
+      title: 'Connection accepted',
+      body: `${target?.requesterName ? `${target.requesterName} accepted your connection request` : 'Your connection request was accepted'} — start a conversation!`,
+    });
+  }
+
+  return {
+    id: connectionId,
+    requesterId: target?.requesterId ?? 'unknown',
+    recipientId: 'me',
+    status: action === 'accept' ? 'accepted' : 'declined',
+    createdAt: new Date().toISOString(),
+    respondedAt: new Date().toISOString(),
+  };
 }
 
-// Incoming connection requests inbox — PRD Section 13.1's connection
-// lifecycle (None -> Pending -> Accepted/Declined) implies a recipient
-// needs somewhere to see and act on pending requests sent to them.
+// Incoming connection requests inbox — PRD Section 13.1
 export async function listIncomingConnectionRequests(): Promise<IncomingConnectionRequest[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: IncomingConnectionRequest[] }>('/connections/incoming');
-    return data.items;
-  }, incomingRequestsState);
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let currentUserId = authData?.user?.id;
+    if (!currentUserId) {
+      const stored = await getSessionUser();
+      if (stored?.id) currentUserId = stored.id;
+    }
+
+    if (currentUserId) {
+      const { data, error } = await supabase
+        .from('connections')
+        .select('*, requester:profiles!connections_requester_id_fkey(full_name, role, department, avatar_url, campus_code)')
+        .eq('recipient_id', currentUserId)
+        .eq('status', 'pending');
+
+      if (!error && data && data.length > 0) {
+        return data.map((row: any) => ({
+          id: row.id,
+          requesterId: row.requester_id,
+          requesterName: row.requester?.full_name || 'Campus Student',
+          requesterAvatarUrl: row.requester?.avatar_url || null,
+          requesterHeadline: row.requester?.department || 'Verified Member',
+          createdAt: row.created_at,
+        }));
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  return incomingRequestsState;
 }
 
 // "People you may know" — a mixed-role suggestion list, distinct from

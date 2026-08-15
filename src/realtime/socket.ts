@@ -5,9 +5,9 @@ import { getAccessToken } from'@/auth/tokenStorage';
 const { wsBaseUrl } = (Constants.expoConfig?.extra ?? {}) as { wsBaseUrl?: string };
 
 export type RealtimeEvent =
-  | { type: 'message.created'; conversationId: string; messageId: string }
+  | { type: 'message.created'; conversationId: string; messageId?: string; message?: any }
   | { type: 'connection.updated'; connectionId: string; status: string }
-  | { type: 'notification.created'; notificationId: string }
+  | { type: 'notification.created'; notificationId?: string; notification?: any }
   | { type: 'rsvp.updated'; eventId: string; rsvpCount: number }
   | { type: 'moderation.updated'; reportId: string; status: string };
 

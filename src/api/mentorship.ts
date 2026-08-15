@@ -1,20 +1,53 @@
-import { api } from'./client';
-import { Mentorship, MentorProfile } from'./types';
-import { mockMentorships, mockMentorProfiles } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
-import { createNotification } from'./notifications';
+import { Mentorship, MentorProfile } from './types';
+import { mockMentorships, mockMentorProfiles } from './mockData';
+import { createNotification } from './notifications';
+import { supabase } from './supabase';
+import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 
-// Mutable in-memory copy so accept/decline visibly updates status
-// within a session, without needing a real backend.
 let mentorshipsState = [...mockMentorships];
 
 export async function listMentorships(): Promise<Mentorship[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: Mentorship[] }>('/mentorships');
-    return data.items;
-  }, mentorshipsState);
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let currentUserId = authData?.user?.id;
+    if (!currentUserId) {
+      const stored = await getSessionUser();
+      if (stored?.id) currentUserId = stored.id;
+    }
+
+    if (currentUserId) {
+      const { data, error } = await supabase
+        .from('mentorships')
+        .select('*, mentor:profiles!mentorships_mentor_id_fkey(full_name, role, department, avatar_url), student:profiles!mentorships_student_id_fkey(full_name, role, department, avatar_url)')
+        .or(`student_id.eq.${currentUserId},mentor_id.eq.${currentUserId}`)
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const dbMentorships: Mentorship[] = data.map((row: any) => ({
+          id: row.id,
+          studentId: row.student_id,
+          mentorId: row.mentor_id,
+          mentorName: row.mentor?.full_name || 'Verified Mentor',
+          status: row.status as any,
+          focusArea: row.focus_area,
+          createdAt: row.created_at,
+        }));
+
+        const merged = [...dbMentorships];
+        for (const item of mentorshipsState) {
+          if (!merged.some((m) => m.id === item.id)) {
+            merged.push(item);
+          }
+        }
+        return merged;
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  return mentorshipsState;
 }
 
 export interface MentorSearchQuery {
@@ -22,9 +55,6 @@ export interface MentorSearchQuery {
   q?: string;
 }
 
-// Ported from MentorshipScreen's `filteredProfiles` logic
-// (DirectoriesAndMarket.kt): matches name/bio/expertise/company text,
-// plus an expertise-tag filter ("All Fields" = no filter).
 function filterMockMentors(query: MentorSearchQuery): MentorProfile[] {
   let results = [...mockMentorProfiles];
 
@@ -49,74 +79,129 @@ function filterMockMentors(query: MentorSearchQuery): MentorProfile[] {
 }
 
 export async function searchMentors(query: MentorSearchQuery = {}): Promise<MentorProfile[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get('/mentorships/mentors', { params: query });
-    return data.items as MentorProfile[];
-  }, filterMockMentors(query));
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, bio, role, department, avatar_url, campus_code')
+      .in('role', ['staff', 'alumni', 'admin']);
+
+    if (!error && data && data.length > 0) {
+      const dbMentors: MentorProfile[] = data.map((row: any) => ({
+        id: row.id,
+        fullName: row.full_name,
+        department: row.department || 'Academic Department',
+        bio: row.bio || `Academic Mentor & Verified ${row.role} at ${row.campus_code || 'University'}`,
+        expertiseTags: ['Leadership', 'Career Growth', 'Research', 'Tech'],
+        avatarUrl: row.avatar_url,
+        company: row.campus_code || 'Academic Faculty',
+        availableSlots: 4,
+      }));
+
+      // Merge unique
+      const local = filterMockMentors(query);
+      const merged = [...dbMentors];
+      for (const item of local) {
+        if (!merged.some((m) => m.id === item.id)) {
+          merged.push(item);
+        }
+      }
+      return merged;
+    }
+  } catch {
+    // fallback
+  }
+
+  return filterMockMentors(query);
 }
 
 export async function requestMentorship(
   mentorId: string,
   focusArea?: string,
 ): Promise<Mentorship> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<Mentorship>('/mentorships', { mentorId, focusArea });
-    return data;
-  }
+  const reqId = generateUUID();
+  let studentId = 'me';
+
   try {
-    const { data } = await api.post<Mentorship>('/mentorships', { mentorId, focusArea });
-    return data;
-  } catch {
-    const mentor = mockMentorProfiles.find((m) => m.id === mentorId);
-    const created: Mentorship = {
-      id: generateUUID(),
-      studentId: 'me',
-      mentorId,
-      mentorName: mentor?.fullName ?? 'Verified Mentor',
-      status: 'pending',
-      focusArea,
-    };
-    mentorshipsState = [...mentorshipsState, created];
-    return created;
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      studentId = authData.user.id;
+    } else {
+      const stored = await getSessionUser();
+      if (stored?.id) studentId = stored.id;
+    }
+
+    if (studentId && studentId !== 'me') {
+      const { error } = await supabase.from('mentorships').insert({
+        id: reqId,
+        student_id: studentId,
+        mentor_id: mentorId,
+        status: 'pending',
+        focus_area: focusArea || 'Academic Guidance',
+      });
+      if (error) {
+        console.warn('[Mentorship] Request mentorship Supabase error:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Mentorship] Request exception:', err);
   }
+
+  const mentor = mockMentorProfiles.find((m) => m.id === mentorId);
+  const created: Mentorship = {
+    id: reqId,
+    studentId,
+    mentorId,
+    mentorName: mentor?.fullName ?? 'Verified Mentor',
+    status: 'pending',
+    focusArea,
+  };
+
+  mentorshipsState = [...mentorshipsState, created];
+  return created;
 }
 
 export async function respondToMentorshipRequest(
   mentorshipId: string,
   action: 'accept' | 'decline',
 ): Promise<Mentorship> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.patch<Mentorship>(`/mentorships/${mentorshipId}`, { action });
-    return data;
-  }
+  const newStatus = action === 'accept' ? 'active' : 'declined';
+  let updated: Mentorship | undefined;
+
   try {
-    const { data } = await api.patch<Mentorship>(`/mentorships/${mentorshipId}`, { action });
-    return data;
-  } catch {
-    const newStatus = action === 'accept' ? 'active' : 'declined';
-    let updated: Mentorship | undefined;
-    mentorshipsState = mentorshipsState.map((m) => {
-      if (m.id !== mentorshipId) return m;
-      updated = { ...m, status: newStatus };
-      return updated;
-    });
-    createNotification({
-      recipientId: updated?.studentId,
-      type: 'system',
-      title: action === 'accept' ? 'Mentorship request accepted' : 'Mentorship request declined',
-      body:
-        action === 'accept'
-          ? `${updated?.mentorName ?? 'Your mentor'} accepted your mentorship request — say hello!`
-          : `${updated?.mentorName ?? 'The mentor'} wasn't able to take on a new mentee right now.`,
-    });
-    return (
-      updated ?? {
-        id: mentorshipId,
-        studentId: 'unknown',
-        mentorId: 'me',
-        mentorName: 'You',
+    await supabase
+      .from('mentorships')
+      .update({
         status: newStatus,
-      }
-    );
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', mentorshipId);
+  } catch (err) {
+    console.warn('[Mentorship] Update exception:', err);
   }
+
+  mentorshipsState = mentorshipsState.map((m) => {
+    if (m.id !== mentorshipId) return m;
+    updated = { ...m, status: newStatus };
+    return updated;
+  });
+
+  createNotification({
+    recipientId: updated?.studentId,
+    type: 'system',
+    title: action === 'accept' ? 'Mentorship request accepted' : 'Mentorship request declined',
+    body:
+      action === 'accept'
+        ? `${updated?.mentorName ?? 'Your mentor'} accepted your mentorship request — say hello!`
+        : `${updated?.mentorName ?? 'The mentor'} wasn't able to take on a new mentee right now.`,
+  });
+
+  return (
+    updated ?? {
+      id: mentorshipId,
+      studentId: 'unknown',
+      mentorId: 'me',
+      mentorName: 'You',
+      status: newStatus,
+    }
+  );
 }

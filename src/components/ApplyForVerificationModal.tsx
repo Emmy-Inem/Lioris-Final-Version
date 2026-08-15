@@ -20,14 +20,13 @@ interface ApplyForVerificationModalProps {
     documentType: (typeof DOCUMENT_TYPES)[number];
     documentReference: string;
     documentPhotoUri?: string | null;
+    photoBlob?: Blob;
   }) => void;
 }
 
 /**
- * Backs the Profile screen's"Apply for Verification"banner for
- * accounts that didn't auto-verify at registration. PRD Section 8 —
- * real scale+fade entrance for the dialog (same treatment as
- * AdminConfigModal / DiscussionWorkspacesModal).
+ * Backs the Profile screen's "Apply for Verification" banner for
+ * accounts that didn't auto-verify at registration.
  */
 export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyForVerificationModalProps) {
   const { colors, spacing, radius } = useTheme();
@@ -57,7 +56,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return;
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) setDocumentPhotoUri(result.assets[0].uri);
@@ -65,13 +64,23 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
 
   const canSubmit = institutionClaimed.trim().length > 0 && documentReference.trim().length > 0;
 
-  function handleSubmit() {
+  async function handleSubmit() {
     haptics.success();
+    let photoBlob: Blob | undefined;
+    if (documentPhotoUri) {
+      try {
+        const res = await fetch(documentPhotoUri);
+        photoBlob = await res.blob();
+      } catch {
+        // pass
+      }
+    }
     onSubmit({
       institutionClaimed: institutionClaimed.trim(),
       documentType,
       documentReference: documentReference.trim(),
       documentPhotoUri,
+      photoBlob,
     });
     onClose();
     setDocumentPhotoUri(null);

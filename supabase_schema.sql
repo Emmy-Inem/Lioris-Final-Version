@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     avatar_url TEXT,
     banner_url TEXT,
     student_id_number TEXT,
+    push_token TEXT,
     verification_status verification_status_type DEFAULT 'unverified',
     custom_accent_color TEXT DEFAULT '#2563EB',
     trust_score NUMERIC(5,2) DEFAULT 80.00,
@@ -580,14 +581,97 @@ CREATE POLICY "Users can delete own notifications" ON notifications FOR DELETE T
 );
 
 -- ============================================================================
--- 14. REALTIME REPLICATION CONFIGURATION
+-- 14. NETWORKING, MENTORSHIP, MARKETPLACE & WAITLIST TABLES
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS connections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    requester_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    recipient_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (requester_id, recipient_id)
+);
+
+CREATE POLICY "Connections viewable by participants or admin" ON connections FOR SELECT TO authenticated USING (
+    auth.uid() = requester_id OR auth.uid() = recipient_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Users can create connection requests" ON connections FOR INSERT TO authenticated WITH CHECK (
+    auth.uid() = requester_id
+);
+CREATE POLICY "Participants can update connection status" ON connections FOR UPDATE TO authenticated USING (
+    auth.uid() = requester_id OR auth.uid() = recipient_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Participants can delete connections" ON connections FOR DELETE TO authenticated USING (
+    auth.uid() = requester_id OR auth.uid() = recipient_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+CREATE TABLE IF NOT EXISTS mentorships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    mentor_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending',
+    focus_area TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE POLICY "Mentorships viewable by student, mentor, or admin" ON mentorships FOR SELECT TO authenticated USING (
+    auth.uid() = student_id OR auth.uid() = mentor_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Students can request mentorship" ON mentorships FOR INSERT TO authenticated WITH CHECK (
+    auth.uid() = student_id
+);
+CREATE POLICY "Mentors and students can update mentorship status" ON mentorships FOR UPDATE TO authenticated USING (
+    auth.uid() = student_id OR auth.uid() = mentor_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Participants can cancel mentorship" ON mentorships FOR DELETE TO authenticated USING (
+    auth.uid() = student_id OR auth.uid() = mentor_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+CREATE TABLE IF NOT EXISTS marketplace_listings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    seller_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    campus_code TEXT REFERENCES campuses(code) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    price_kobo BIGINT NOT NULL DEFAULT 0,
+    price_display TEXT NOT NULL,
+    currency TEXT DEFAULT 'NGN',
+    condition TEXT DEFAULT 'good',
+    category TEXT NOT NULL,
+    image_url TEXT,
+    is_sold BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE POLICY "Marketplace listings viewable by all authenticated users" ON marketplace_listings FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Authenticated users can create marketplace listings" ON marketplace_listings FOR INSERT TO authenticated WITH CHECK (auth.uid() = seller_id);
+CREATE POLICY "Sellers and admins can update listings" ON marketplace_listings FOR UPDATE TO authenticated USING (auth.uid() = seller_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Sellers and admins can delete listings" ON marketplace_listings FOR DELETE TO authenticated USING (auth.uid() = seller_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+CREATE TABLE IF NOT EXISTS waitlist_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    university_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    submitted_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE POLICY "Waitlist viewable by admins" ON waitlist_entries FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Anyone can join waitlist" ON waitlist_entries FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Admins can update waitlist" ON waitlist_entries FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- ============================================================================
+-- 15. REALTIME REPLICATION CONFIGURATION
 -- ============================================================================
 DO $$ BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, chat_messages, notifications, moderation_queue;
+    ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, chat_messages, chat_channels, notifications, moderation_queue, verifications, connections, mentorships, marketplace_listings;
 EXCEPTION WHEN OTHERS THEN null; END $$;
 
 -- ============================================================================
--- 15. STORAGE BUCKETS & POLICIES (Academic Documents & Media)
+-- 16. STORAGE BUCKETS & POLICIES (Academic Documents & Media)
 -- ============================================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('resources', 'resources', true)
@@ -619,6 +703,7 @@ FOR DELETE TO authenticated USING (
         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
     )
 );
+
 
 
 

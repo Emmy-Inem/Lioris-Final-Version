@@ -1,24 +1,25 @@
-import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
-import { Image } from'expo-image';
-import { router } from'expo-router';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'./ScreenContainer';
-import { AppHeader } from'./AppHeader';
-import { AppText } from'./AppText';
-import { AppTextField } from'./AppTextField';
-import { Avatar } from'./Avatar';
-import { SolidCard } from'./SolidCard';
-import { AppButton } from'./AppButton';
-import { PostCard } from'./PostCard';
-import { Badge } from'./Badge';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { getMyProfile, markVerificationPending, updateMyProfile, updateProfileImages } from'@/api/profile';
-import { listMyPosts } from'@/api/posts';
-import { submitVerificationRequest } from'@/api/verification';
-import { ApplyForVerificationModal } from'./ApplyForVerificationModal';
+import React, { useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from './ScreenContainer';
+import { AppHeader } from './AppHeader';
+import { AppText } from './AppText';
+import { AppTextField } from './AppTextField';
+import { Avatar } from './Avatar';
+import { SolidCard } from './SolidCard';
+import { AppButton } from './AppButton';
+import { PostCard } from './PostCard';
+import { Badge } from './Badge';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { getMyProfile, markVerificationPending, updateMyProfile, updateProfileImages, uploadAvatarImage } from '@/api/profile';
+import { listMyPosts } from '@/api/posts';
+import { submitVerificationRequest } from '@/api/verification';
+import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 
 const AVATAR_PRESETS = [
   { id: 'avatar_male', label: 'Male Student 👨‍', src: require('../../assets/images/avatar_male.jpg') },
@@ -106,6 +107,35 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     }
   }
 
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  async function handlePickCustomAvatar() {
+    if (!user) return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]?.uri) {
+        setUploadingAvatar(true);
+        const uri = result.assets[0].uri;
+        const res = await fetch(uri);
+        const blob = await res.blob();
+        await uploadAvatarImage(user.id, blob, 'jpg');
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        setPhotoPickerOpen(false);
+        Alert.alert('Avatar Uploaded 📸', 'Your real photo has been uploaded and set as your campus avatar.');
+      }
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   async function handleSelectAvatar(presetId: string) {
     if (!user) return;
     await updateProfileImages(user.id, { avatarUrl: presetId });
@@ -127,6 +157,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
     documentReference: string;
     documentPhotoUri?: string | null;
+    photoBlob?: Blob;
   }) {
     if (!user) return;
     try {
@@ -137,6 +168,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         documentReference: data.documentReference,
         institutionClaimed: data.institutionClaimed,
         documentPhotoUri: data.documentPhotoUri,
+        photoBlob: data.photoBlob,
       });
       markVerificationPending(user.id);
       queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -442,9 +474,20 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Custom Photo Upload */}
+              <View style={{ marginBottom: spacing.md }}>
+                <AppButton
+                  label="Upload Custom Photo 📸"
+                  variant="secondary"
+                  onPress={handlePickCustomAvatar}
+                  loading={uploadingAvatar}
+                  fullWidth
+                />
+              </View>
+
               {/* Avatar Selector */}
-              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
-                CHOOSE AVATAR PRESET
+              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+                OR CHOOSE AVATAR PRESET
               </AppText>
               <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
                 {AVATAR_PRESETS.map((preset) => {

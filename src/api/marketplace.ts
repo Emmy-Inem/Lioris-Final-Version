@@ -1,8 +1,8 @@
-import { api } from'./client';
-import { MarketplaceListing } from'./types';
-import { mockMarketplaceListings } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
+import { MarketplaceListing } from './types';
+import { mockMarketplaceListings } from './mockData';
+import { supabase } from './supabase';
+import { getSessionUser } from '../auth/tokenStorage';
+import { generateUUID } from '../utils/uuid';
 
 export interface MarketplaceQuery {
   q?: string;
@@ -11,10 +11,6 @@ export interface MarketplaceQuery {
 }
 
 let wishlistIds = new Set<string>();
-// Mutable in-memory copy so a created listing actually persists for the
-// session — createListing previously built and returned a listing
-// object without ever storing it anywhere, so it would vanish on the
-// next fetch (same bug class as listConversations before it was fixed).
 let marketplaceListingsState = [...mockMarketplaceListings];
 
 function filterMockListings(query: MarketplaceQuery): MarketplaceListing[] {
@@ -46,10 +42,50 @@ function filterMockListings(query: MarketplaceQuery): MarketplaceListing[] {
 }
 
 export async function listMarketplaceListings(query: MarketplaceQuery = {}): Promise<MarketplaceListing[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: MarketplaceListing[] }>('/marketplace', { params: query });
-    return data.items;
-  }, filterMockListings(query));
+  try {
+    let req = supabase
+      .from('marketplace_listings')
+      .select('*, seller:profiles(full_name, avatar_url, trust_score)')
+      .eq('is_sold', false)
+      .order('created_at', { ascending: false });
+
+    if (query.category && query.category !== 'All Categories' && query.category !== 'Wishlist') {
+      req = req.eq('category', query.category);
+    }
+
+    const { data, error } = await req;
+
+    if (!error && data && data.length > 0) {
+      const dbListings: MarketplaceListing[] = data.map((row: any) => ({
+        id: row.id,
+        sellerId: row.seller_id,
+        sellerName: row.seller?.full_name || 'Campus Student',
+        sellerAvatarUrl: row.seller?.avatar_url || null,
+        sellerTrustLevel: Math.max(1, Math.round((row.seller?.trust_score || 80) / 20)),
+        title: row.title,
+        description: row.description || '',
+        price: row.price_display || `₦${(row.price_kobo / 100).toLocaleString()}`,
+        condition: row.condition as any,
+        category: row.category as any,
+        imageUrl: row.image_url,
+        createdAt: row.created_at,
+      }));
+
+      // Merge unique
+      const local = filterMockListings(query);
+      const merged = [...dbListings];
+      for (const item of local) {
+        if (!merged.some((m) => m.id === item.id)) {
+          merged.push(item);
+        }
+      }
+      return merged;
+    }
+  } catch {
+    // fallback
+  }
+
+  return filterMockListings(query);
 }
 
 export function isWishlisted(id: string): boolean {
@@ -62,9 +98,6 @@ export async function toggleWishlist(id: string): Promise<boolean> {
   } else {
     wishlistIds.add(id);
   }
-  await api.post(`/marketplace/${id}/wishlist`).catch(() => {
-    // Non-fatal in dev/mock mode; local wishlist state already updated.
-  });
   return wishlistIds.has(id);
 }
 
@@ -74,31 +107,60 @@ export interface CreateListingPayload {
   price: string;
   condition: MarketplaceListing['condition'];
   category: MarketplaceListing['category'];
+  imageUrl?: string | null;
 }
 
-import { generateUUID } from '../utils/uuid';
-
 export async function createListing(payload: CreateListingPayload): Promise<MarketplaceListing> {
+  const listingId = generateUUID();
+  let sellerId = 'me';
+  let sellerName = 'You';
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      sellerId = authData.user.id;
+      sellerName = authData.user.user_metadata?.full_name || 'Campus Student';
+    } else {
+      const stored = await getSessionUser();
+      if (stored?.id) {
+        sellerId = stored.id;
+        sellerName = stored.fullName || 'You';
+      }
+    }
+
+    if (sellerId && sellerId !== 'me') {
+      const priceClean = Number(payload.price.replace(/[^0-9]/g, '')) || 5000;
+      const { error } = await supabase.from('marketplace_listings').insert({
+        id: listingId,
+        seller_id: sellerId,
+        title: payload.title,
+        description: payload.description,
+        price_kobo: priceClean * 100,
+        price_display: payload.price.startsWith('₦') ? payload.price : `₦${payload.price}`,
+        currency: 'NGN',
+        condition: payload.condition,
+        category: payload.category,
+        image_url: payload.imageUrl || null,
+        is_sold: false,
+      });
+      if (error) {
+        console.warn('[Marketplace] Create listing Supabase error:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Marketplace] Create listing exception:', err);
+  }
+
   const created: MarketplaceListing = {
-    id: generateUUID(),
-    sellerName: 'You',
+    id: listingId,
+    sellerName,
     sellerAvatarUrl: null,
-    sellerId: 'me',
+    sellerId,
     sellerTrustLevel: 1,
     createdAt: new Date().toISOString(),
     ...payload,
   };
 
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<MarketplaceListing>('/marketplace', payload);
-    return data;
-  }
-  try {
-    const { data } = await api.post<MarketplaceListing>('/marketplace', payload);
-    marketplaceListingsState = [data, ...marketplaceListingsState];
-    return data;
-  } catch {
-    marketplaceListingsState = [created, ...marketplaceListingsState];
-    return created;
-  }
+  marketplaceListingsState = [created, ...marketplaceListingsState];
+  return created;
 }

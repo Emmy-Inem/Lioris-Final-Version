@@ -160,6 +160,32 @@ export async function verifyProfileEmail(userId: string): Promise<UserProfile> {
   }
 }
 
+export async function uploadAvatarImage(
+  userId: string,
+  imageBlob: Blob | ArrayBuffer,
+  fileExt = 'jpg',
+): Promise<string> {
+  const filePath = `${userId}/avatar_${Date.now()}.${fileExt}`;
+  const { error } = await supabase.storage.from('avatars').upload(filePath, imageBlob, {
+    contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
+    upsert: true,
+  });
+  if (error) {
+    console.warn('[Profile] Upload avatar error:', error.message);
+  }
+  const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+  const avatarUrl = publicUrlData?.publicUrl || filePath;
+
+  try {
+    await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', userId);
+  } catch {
+    // fallback
+  }
+
+  await updateProfileImages(userId, { avatarUrl });
+  return avatarUrl;
+}
+
 export async function updateProfileImages(
   userId: string,
   updates: { avatarUrl?: string | null; coverUrl?: string | null },
@@ -171,6 +197,16 @@ export async function updateProfileImages(
     ...(updates.coverUrl !== undefined ? { coverUrl: updates.coverUrl } : {}),
   };
   profileState.set(userId, updated);
+
+  try {
+    const patch: any = {};
+    if (updates.avatarUrl !== undefined) patch.avatar_url = updates.avatarUrl;
+    if (updates.coverUrl !== undefined) patch.banner_url = updates.coverUrl;
+    await supabase.from('profiles').update(patch).eq('id', userId);
+  } catch {
+    // fallback
+  }
+
   return updated;
 }
 
@@ -185,8 +221,9 @@ export async function updateMyProfile(userId: string, patch: Partial<UserProfile
       full_name: updated.fullName,
       bio: updated.bio,
       department: updated.department,
-      institution_name: updated.institutionName,
-      institution_code: updated.institutionCode,
+      campus_code: updated.institutionCode,
+      avatar_url: updated.avatarUrl,
+      banner_url: updated.coverUrl,
       updated_at: new Date().toISOString(),
     });
   } catch {

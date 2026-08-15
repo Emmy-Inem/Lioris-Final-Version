@@ -1,7 +1,8 @@
-import { FALL_BACK_TO_MOCKS } from'./config';
-import { api } from'./client';
-import { recordAuditLogEntry } from'./auditLog';
-import { createNotification } from'./notifications';
+import { recordAuditLogEntry } from './auditLog';
+import { createNotification } from './notifications';
+import { supabase } from './supabase';
+import { getSessionUser } from '../auth/tokenStorage';
+import { generateUUID } from '../utils/uuid';
 
 export interface VerificationRequest {
   id: string;
@@ -12,7 +13,6 @@ export interface VerificationRequest {
   institutionClaimed: string;
   submittedAt: string;
   status: 'pending' | 'approved' | 'rejected';
-  /** Local device URI of the uploaded document photo, if provided. A real backend would upload this to a signed-URL bucket, not store a device-local path. */
   documentPhotoUri?: string | null;
 }
 
@@ -48,64 +48,143 @@ export interface SubmitVerificationPayload {
   documentReference: string;
   institutionClaimed: string;
   documentPhotoUri?: string | null;
+  photoBlob?: Blob;
 }
 
-import { generateUUID } from '../utils/uuid';
-
-// Backs the Profile screen's"Apply for Verification"flow. Submitting
-// does NOT immediately grant the tick — a real reviewer (Admin's
-// Verify Credentials tool) approves or rejects it, matching how actual
-// document verification has to work.
 export async function submitVerificationRequest(payload: SubmitVerificationPayload): Promise<VerificationRequest> {
+  const reqId = generateUUID();
+  let photoUrl = payload.documentPhotoUri || null;
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let authUserId = authData?.user?.id;
+    if (!authUserId) {
+      const stored = await getSessionUser();
+      if (stored?.id) authUserId = stored.id;
+    }
+
+    if (authUserId) {
+      if (payload.photoBlob) {
+        const filePath = `verifications/${authUserId}/${reqId}.jpg`;
+        await supabase.storage.from('resources').upload(filePath, payload.photoBlob, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+        const { data: publicUrlData } = supabase.storage.from('resources').getPublicUrl(filePath);
+        photoUrl = publicUrlData?.publicUrl || photoUrl;
+      }
+
+      const campusCode = payload.institutionClaimed.includes('UNILAG')
+        ? 'UNILAG'
+        : payload.institutionClaimed.includes('UI')
+          ? 'UI'
+          : 'GLOBAL';
+
+      const { error } = await supabase.from('verifications').insert({
+        id: reqId,
+        user_id: authUserId,
+        campus_code: campusCode,
+        requested_role: 'student',
+        id_card_front_url: photoUrl || 'https://storage.lioris.app/verifications/default-id.jpg',
+        status: 'pending',
+        review_notes: `${payload.documentType}: ${payload.documentReference}`,
+      });
+      if (error) {
+        console.warn('[Verification] Supabase insert warning:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Verification] Submission backend warning:', err);
+  }
+
   const created: VerificationRequest = {
-    id: generateUUID(),
+    id: reqId,
     ...payload,
+    documentPhotoUri: photoUrl,
     submittedAt: new Date().toISOString(),
     status: 'pending',
   };
-  if (!FALL_BACK_TO_MOCKS) {
-    await api.post('/verification-requests', payload);
-    return created;
-  }
-  try {
-    await api.post('/verification-requests', payload);
-  } catch {
-    // Expected in mock mode.
-  }
+
   verificationState = [...verificationState, created];
   return created;
 }
 
 export async function listVerificationRequests(): Promise<VerificationRequest[]> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.get<{ items: VerificationRequest[] }>('/verification-requests');
-    return data.items;
-  }
   try {
-    const { data } = await api.get<{ items: VerificationRequest[] }>('/verification-requests');
-    return data.items;
+    const { data, error } = await supabase
+      .from('verifications')
+      .select('*, profiles(full_name, role, campus_code)')
+      .order('created_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const dbRequests: VerificationRequest[] = data.map((row: any) => ({
+        id: row.id,
+        userId: row.user_id,
+        applicantName: row.profiles?.full_name || 'Campus Applicant',
+        documentType: 'Student ID',
+        documentReference: row.review_notes || 'ID-VERIFY',
+        institutionClaimed: row.campus_code || 'University Campus',
+        submittedAt: row.created_at,
+        status: row.status === 'approved' ? 'approved' : row.status === 'rejected' ? 'rejected' : 'pending',
+        documentPhotoUri: row.id_card_front_url,
+      }));
+      return dbRequests.filter((v) => v.status === 'pending');
+    }
   } catch {
-    return verificationState.filter((v) => v.status === 'pending');
+    // fallback
   }
+
+  return verificationState.filter((v) => v.status === 'pending');
 }
 
-export async function respondToVerificationRequest(id: string, status: 'approved' | 'rejected'): Promise<VerificationRequest | undefined> {
+export async function respondToVerificationRequest(
+  id: string,
+  status: 'approved' | 'rejected',
+): Promise<VerificationRequest | undefined> {
   let updated: VerificationRequest | undefined;
   verificationState = verificationState.map((v) => {
     if (v.id !== id) return v;
     updated = { ...v, status };
     return updated;
   });
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const reviewerId = authData?.user?.id || null;
+
+    const { data: reqRow } = await supabase
+      .from('verifications')
+      .select('user_id, campus_code')
+      .eq('id', id)
+      .maybeSingle();
+
+    await supabase
+      .from('verifications')
+      .update({
+        status: status === 'approved' ? 'approved' : 'rejected',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: reviewerId,
+      })
+      .eq('id', id);
+
+    if (status === 'approved' && reqRow?.user_id) {
+      await supabase
+        .from('profiles')
+        .update({ verification_status: 'verified' })
+        .eq('id', reqRow.user_id);
+    }
+  } catch (err) {
+    console.warn('[Verification] Status update backend warning:', err);
+  }
+
   if (updated) {
-    // PRD Section 6.2 — moderation decisions must be audit-logged.
     await recordAuditLogEntry({
       action: status === 'approved' ? 'verification_approved' : 'verification_rejected',
       summary: `${status === 'approved' ? 'Approved' : 'Rejected'} a verification application from ${updated.applicantName} (claimed ${updated.institutionClaimed})`,
       targetType: 'verification_request',
       targetId: id,
     });
-    // The applicant themselves was previously never told either way —
-    // no notification was ever created anywhere in the app before this.
+
     createNotification({
       recipientId: updated.userId,
       type: 'system',
@@ -116,5 +195,6 @@ export async function respondToVerificationRequest(id: string, status: 'approved
           : `Your ${updated.institutionClaimed} verification wasn't approved this time. Check your submitted details and try again.`,
     });
   }
+
   return updated;
 }
