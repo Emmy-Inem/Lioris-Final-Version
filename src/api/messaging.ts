@@ -152,6 +152,8 @@ export async function listMessages(
   return { items: messagesState[conversationId] };
 }
 
+import { getSessionUser } from '../auth/tokenStorage';
+
 export async function sendMessage(
   conversationId: string,
   content: string,
@@ -159,10 +161,24 @@ export async function sendMessage(
   const msgId = `msg-${Date.now()}`;
   const now = new Date().toISOString();
 
+  // Resolve authentic sender identity
+  let currentSenderId = 'me';
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.id) {
+      currentSenderId = authData.user.id;
+    } else {
+      const stored = await getSessionUser();
+      if (stored?.id) currentSenderId = stored.id;
+    }
+  } catch {
+    // fallback
+  }
+
   const newMessage: Message = {
     id: msgId,
     conversationId,
-    senderId: 'me',
+    senderId: currentSenderId,
     content,
     messageType: 'text',
     status: 'sent',
@@ -182,16 +198,25 @@ export async function sendMessage(
       : c,
   );
 
-  // 3. Persist into Supabase chat_messages table
+  // 3. Persist into Supabase chat_messages table with valid sender_id
   try {
-    const { error } = await supabase.from('chat_messages').insert({
-      id: msgId,
-      channel_id: conversationId,
-      content,
-      message_type: 'text',
-    });
-    if (error) {
-      console.warn('[Messaging] Supabase persistence error:', error.message);
+    const { data: authData } = await supabase.auth.getUser();
+    const authUid = authData?.user?.id;
+
+    if (authUid) {
+      const { error } = await supabase.from('chat_messages').insert({
+        id: msgId,
+        channel_id: conversationId,
+        sender_id: authUid,
+        content,
+        message_type: 'text',
+      });
+      if (error) {
+        console.warn('[Messaging] Supabase persistence error:', error.message);
+      }
+    } else {
+      // Local session message
+      console.log('[Messaging] Message stored in local active session (unauthenticated guest mode)');
     }
   } catch (err) {
     console.warn('[Messaging] Failed to reach Supabase backend:', err);
@@ -199,4 +224,5 @@ export async function sendMessage(
 
   return newMessage;
 }
+
 
