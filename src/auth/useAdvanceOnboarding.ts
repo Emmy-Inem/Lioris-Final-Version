@@ -13,9 +13,9 @@ export function useAdvanceOnboarding(currentPath: string) {
   const { user, setOnboardingStep, completeOnboarding } = useAuth();
 
   return async function advance() {
-    if (!user) return;
-    const next = nextOnboardingStep(user.role, currentPath);
-    if (next) {
+    const userRole = user?.role || 'student';
+    const next = nextOnboardingStep(userRole, currentPath);
+    if (next && user && user.onboardingComplete === false) {
       await setOnboardingStep(next);
       router.replace(next as any);
     } else {

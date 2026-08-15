@@ -103,9 +103,23 @@ export default function VerifyEmailScreen() {
             label="Verify & Continue"
             onPress={handleVerify}
             loading={submitting}
-            disabled={code.length < 4}
             fullWidth
           />
+
+          <View style={{ marginTop: spacing.md }}>
+            <AppButton
+              label="Enter Workspace Directly →"
+              variant="secondary"
+              onPress={async () => {
+                const { completeOnboarding } = useAuth();
+                try {
+                  await completeOnboarding();
+                } catch {}
+                router.replace('/');
+              }}
+              fullWidth
+            />
+          </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg }}>
             <Pressable onPress={handleResendCode} hitSlop={8} disabled={resending}>

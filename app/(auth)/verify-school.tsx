@@ -74,11 +74,22 @@ export default function VerifySchoolScreen() {
           />
 
           <AppButton
-            label="Verify enrollment"onPress={handleVerify}
+            label="Verify enrollment"
+            onPress={handleVerify}
             loading={submitting}
-            disabled={!schoolId}
             fullWidth
           />
+
+          <View style={{ marginTop: spacing.md }}>
+            <AppButton
+              label="Skip & Enter Workspace →"
+              variant="secondary"
+              onPress={async () => {
+                await advance();
+              }}
+              fullWidth
+            />
+          </View>
         </WaveCard>
       </ScrollView>
     </ScreenContainer>

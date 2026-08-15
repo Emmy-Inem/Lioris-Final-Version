@@ -84,11 +84,22 @@ export default function VerifyAlumniScreen() {
           />
 
           <AppButton
-            label="Verify alumni status"onPress={handleVerify}
+            label="Verify alumni status"
+            onPress={handleVerify}
             loading={submitting}
-            disabled={graduationYear.length !== 4}
             fullWidth
           />
+
+          <View style={{ marginTop: spacing.md }}>
+            <AppButton
+              label="Skip & Enter Workspace →"
+              variant="secondary"
+              onPress={async () => {
+                await advance();
+              }}
+              fullWidth
+            />
+          </View>
         </WaveCard>
       </ScrollView>
     </ScreenContainer>
