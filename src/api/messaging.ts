@@ -71,14 +71,30 @@ export async function getOrCreateConversationWithUser(
   };
 
   try {
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+
+    // 1. Insert chat channel
     await supabase.from('chat_channels').insert({
       id: convId,
       name: userName,
-      channel_type: 'direct',
-      description: `Direct chat with ${userName}`,
+      is_direct_message: true,
+      created_by: currentUserId || null,
     });
-  } catch {
-    // Local fallback
+
+    // 2. Populate chat_channel_members for both participants
+    const memberRows: { channel_id: string; user_id: string }[] = [];
+    if (currentUserId) memberRows.push({ channel_id: convId, user_id: currentUserId });
+    if (userId && userId !== currentUserId) memberRows.push({ channel_id: convId, user_id: userId });
+
+    if (memberRows.length > 0) {
+      const { error: memberError } = await supabase.from('chat_channel_members').insert(memberRows);
+      if (memberError) {
+        console.warn('[Messaging] Channel member enrollment warning:', memberError.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Messaging] Local fallback for channel creation:', err);
   }
 
   conversationsState = [created, ...conversationsState];
@@ -198,12 +214,17 @@ export async function sendMessage(
       : c,
   );
 
-  // 3. Persist into Supabase chat_messages table with valid sender_id
+  // 3. Persist into Supabase chat_messages table with valid sender_id & ensured membership
   try {
     const { data: authData } = await supabase.auth.getUser();
     const authUid = authData?.user?.id;
 
     if (authUid) {
+      // Ensure sender is registered in chat_channel_members so RLS permits insert
+      await supabase
+        .from('chat_channel_members')
+        .insert({ channel_id: conversationId, user_id: authUid });
+
       const { error } = await supabase.from('chat_messages').insert({
         id: msgId,
         channel_id: conversationId,

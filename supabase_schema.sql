@@ -347,12 +347,32 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_channel ON chat_messages(channel_id
 CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_chat_members_user ON chat_channel_members(user_id);
 
+-- Auto-enroll channel creator into chat_channel_members
+CREATE OR REPLACE FUNCTION handle_new_chat_channel()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.created_by IS NOT NULL THEN
+        INSERT INTO chat_channel_members (channel_id, user_id)
+        VALUES (NEW.id, NEW.created_by)
+        ON CONFLICT DO NOTHING;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_chat_channel_created ON chat_channels;
+CREATE TRIGGER on_chat_channel_created
+    AFTER INSERT ON chat_channels
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_new_chat_channel();
+
 -- ============================================================================
 -- 12. NOTIFICATIONS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     recipient_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     title TEXT NOT NULL,
     body TEXT NOT NULL,
     type TEXT DEFAULT 'system',
@@ -360,6 +380,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id);
 
 -- ============================================================================
 -- 13. ROW LEVEL SECURITY (RLS) POLICIES
@@ -518,12 +540,13 @@ CREATE POLICY "Senders and admins can delete messages" ON chat_messages FOR DELE
     auth.uid() = sender_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
--- Notifications
+-- Notifications (Strict Sender & Recipient Security)
 CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT TO authenticated USING (
     auth.uid() = recipient_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
-CREATE POLICY "Authenticated users or system can insert notifications" ON notifications FOR INSERT TO authenticated WITH CHECK (
-    auth.uid() IS NOT NULL
+CREATE POLICY "Admins or authentic senders can create notifications" ON notifications FOR INSERT TO authenticated WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff')) OR
+    (auth.uid() = sender_id OR auth.uid() = recipient_id)
 );
 CREATE POLICY "Users can update own notification read state" ON notifications FOR UPDATE TO authenticated USING (
     auth.uid() = recipient_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
