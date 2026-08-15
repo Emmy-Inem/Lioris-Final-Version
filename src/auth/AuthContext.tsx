@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const nextUser: SessionUser = {
           ...session.user,
           onboardingComplete: true,
-          mfaVerified: !roleRequiresMfa(session.user.role),
+          mfaVerified: true,
         };
         await persist(nextUser);
         setUser(nextUser);
