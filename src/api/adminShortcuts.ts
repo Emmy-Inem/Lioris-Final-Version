@@ -123,16 +123,13 @@ let shortcutsState: DashboardShortcut[] = [
 ];
 
 export async function listDashboardShortcuts(hubType: 'student' | 'alumni'): Promise<DashboardShortcut[]> {
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.get<{ items: DashboardShortcut[] }>('/admin/dashboard-shortcuts', { params: { hubType } });
-    return data.items;
-  }
   try {
     const { data } = await api.get<{ items: DashboardShortcut[] }>('/admin/dashboard-shortcuts', { params: { hubType } });
-    return data.items;
+    if (data?.items && data.items.length > 0) return data.items;
   } catch {
-    return shortcutsState.filter((s) => s.hubType === hubType);
+    // Graceful fallback to client portal catalog
   }
+  return shortcutsState.filter((s) => s.hubType === hubType && s.active);
 }
 
 export type CreateShortcutPayload = Omit<DashboardShortcut, 'id'>;

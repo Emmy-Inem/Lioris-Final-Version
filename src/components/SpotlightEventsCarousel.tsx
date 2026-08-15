@@ -151,14 +151,18 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        decelerationRate="fast"snapToInterval={itemStride}
-        snapToAlignment="start"onScrollBeginDrag={() => {
+        decelerationRate="fast"
+        snapToInterval={itemStride}
+        snapToAlignment="start"
+        disableIntervalMomentum={true}
+        onScrollBeginDrag={() => {
           isInteracting.current = true;
         }}
+        onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}
         contentContainerStyle={{ paddingRight: 16 }}
       >
-        {displayEvents.map((item, index) => {
+        {displayEvents.map((item) => {
           const imageSource = item.coverImageUrl
             ? { uri: item.coverImageUrl }
             : item.category.toLowerCase().includes('career') || item.category.toLowerCase().includes('tech')
@@ -172,17 +176,17 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
               style={{
                 width: cardWidth,
                 marginRight: cardGap,
-                borderRadius: 24,
+                borderRadius: 18,
                 overflow: 'hidden',
-                height: 185,
+                height: 180,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
                 position: 'relative',
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.12,
-                shadowRadius: 14,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.1,
+                shadowRadius: 10,
                 elevation: 3,
               }}
             >
@@ -202,35 +206,26 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
                   justifyContent: 'space-between',
                 }}
               >
-                {/* Header Tag Row */}
+                {/* Header Tag Row — Clean Typography without Vibe Pills */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.18)',
-                      borderRadius: radius.pill,
-                      paddingHorizontal: 10,
-                      paddingVertical: 3,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.25)',
-                    }}
-                  >
-                    <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10, letterSpacing: 0.5 }}>
-                      SPOTLIGHT
-                    </AppText>
-                  </View>
+                  <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11, letterSpacing: 0.8 }}>
+                    FEATURED
+                  </AppText>
 
-                  <Badge label={item.category} tone="accent" />
+                  <AppText variant="caption" weight="semiBold" tone="inverse" style={{ fontSize: 11, opacity: 0.9 }}>
+                    {item.category}
+                  </AppText>
                 </View>
 
                 {/* Event Details */}
                 <View>
-                  <AppText variant="h2"weight="bold"tone="inverse"numberOfLines={1} style={{ fontSize: 18, lineHeight: 23, marginBottom: 4 }}>
+                  <AppText variant="h2" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 18, lineHeight: 23, marginBottom: 4 }}>
                     {item.title}
                   </AppText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="location-outline"size={13} color="#FFFFFF" />
-                    <AppText tone="inverse"variant="caption"style={{ opacity: 0.9 }}>
-                      {item.location} | {new Date(item.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    <Ionicons name="location-outline" size={13} color="#FFFFFF" />
+                    <AppText tone="inverse" variant="caption" style={{ opacity: 0.9 }}>
+                      {item.location} • {new Date(item.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                     </AppText>
                   </View>
                 </View>
@@ -238,8 +233,8 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
                 {/* Footer RSVP Info & Action */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="people"size={14} color="#FFFFFF" />
-                    <AppText tone="inverse"variant="caption"weight="semiBold">
+                    <Ionicons name="people" size={14} color="#FFFFFF" />
+                    <AppText tone="inverse" variant="caption" weight="semiBold">
                       {item.rsvpCount} attending
                     </AppText>
                   </View>
@@ -247,18 +242,18 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
                   <View
                     style={{
                       backgroundColor: '#FFFFFF',
-                      borderRadius: radius.pill,
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: 6,
+                      borderRadius: radius.sm,
+                      paddingHorizontal: spacing.sm,
+                      paddingVertical: 5,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 4,
                     }}
                   >
-                    <AppText weight="bold"variant="caption"style={{ color: '#0F172A' }}>
+                    <AppText weight="bold" variant="caption" style={{ color: '#0F172A', fontSize: 11 }}>
                       View Details
                     </AppText>
-                    <Ionicons name="arrow-forward"size={12} color="#0F172A" />
+                    <Ionicons name="arrow-forward" size={11} color="#0F172A" />
                   </View>
                 </View>
               </View>

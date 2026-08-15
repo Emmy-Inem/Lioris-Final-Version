@@ -242,42 +242,6 @@ export default function LoginScreen() {
 
           <AppButton label="Secure Login" onPress={handleLogin} loading={submitting} disabled={!email || !password} fullWidth />
 
-          {/* Quick Demo Access Bar */}
-          <View style={{ marginTop: spacing.md }}>
-            <AppText variant="caption" tone="secondary" weight="bold" style={{ textAlign: 'center', marginBottom: spacing.xs }}>
-              QUICK TEST CREDENTIALS (1-TAP AUTO-FILL)
-            </AppText>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-              {[
-                { label: '👨‍🎓 Student', email: 'student@unilag.edu.ng', pass: 'password123', p: 'student' as const },
-                { label: '🎓 Alumni', email: 'alumni@ui.edu.ng', pass: 'password123', p: 'alumni' as const },
-                { label: '🧑‍🏫 Faculty', email: 'staff@funaab.edu.ng', pass: 'password123', p: 'student' as const },
-                { label: '🛡️ Root Admin', email: 'admin@lioris.edu', pass: 'password123', p: 'student' as const },
-              ].map((acc) => (
-                <Pressable
-                  key={acc.label}
-                  onPress={() => {
-                    setEmail(acc.email);
-                    setPassword(acc.pass);
-                    setPortal(acc.p);
-                  }}
-                  style={{
-                    backgroundColor: colors.divider,
-                    paddingHorizontal: spacing.sm,
-                    paddingVertical: 4,
-                    borderRadius: radius.pill,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <AppText variant="caption" weight="semiBold" tone="brand">
-                    {acc.label}
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
           <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
             <Link href="/(auth)/register">
               <AppText tone="brand" weight="semiBold">

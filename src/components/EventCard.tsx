@@ -133,11 +133,15 @@ export function EventCard({ event }: { event: CampusEvent }) {
                 position: 'absolute',
                 top: spacing.sm,
                 right: spacing.sm,
-                flexDirection: 'row',
-                gap: spacing.xs,
+                backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: radius.sm,
               }}
             >
-              <Badge label={event.category} tone="brand" />
+              <AppText variant="caption" weight="semiBold" tone="inverse" style={{ fontSize: 11 }}>
+                {event.category}
+              </AppText>
             </View>
           </Pressable>
 

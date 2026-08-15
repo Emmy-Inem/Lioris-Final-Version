@@ -65,13 +65,16 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
 
     if (authUserId) {
       if (payload.photoBlob) {
-        const filePath = `verifications/${authUserId}/${reqId}.jpg`;
-        await supabase.storage.from('resources').upload(filePath, payload.photoBlob, {
+        const filePath = `${authUserId}/${reqId}.jpg`;
+        await supabase.storage.from('verifications').upload(filePath, payload.photoBlob, {
           contentType: 'image/jpeg',
           upsert: true,
         });
-        const { data: publicUrlData } = supabase.storage.from('resources').getPublicUrl(filePath);
-        photoUrl = publicUrlData?.publicUrl || photoUrl;
+        // Generate secure temporary signed URL for authorized viewing
+        const { data: signedUrlData } = await supabase.storage
+          .from('verifications')
+          .createSignedUrl(filePath, 60 * 60 * 24 * 30);
+        photoUrl = signedUrlData?.signedUrl || filePath;
       }
 
       const campusCode = payload.institutionClaimed.includes('UNILAG')

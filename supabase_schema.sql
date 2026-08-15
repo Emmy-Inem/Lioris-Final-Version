@@ -671,7 +671,7 @@ DO $$ BEGIN
 EXCEPTION WHEN OTHERS THEN null; END $$;
 
 -- ============================================================================
--- 16. STORAGE BUCKETS & POLICIES (Academic Documents & Media)
+-- 16. STORAGE BUCKETS & POLICIES (Academic Documents, Media & Private Verifications)
 -- ============================================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('resources', 'resources', true)
@@ -681,14 +681,18 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Storage RLS Policies
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('verifications', 'verifications', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Public Storage RLS Policies (resources & avatars)
 CREATE POLICY "Public storage objects viewable by anyone" ON storage.objects
 FOR SELECT USING (bucket_id IN ('resources', 'avatars'));
 
-CREATE POLICY "Authenticated users can upload storage objects" ON storage.objects
+CREATE POLICY "Authenticated users can upload public storage objects" ON storage.objects
 FOR INSERT TO authenticated WITH CHECK (bucket_id IN ('resources', 'avatars'));
 
-CREATE POLICY "Users and admins can update storage objects" ON storage.objects
+CREATE POLICY "Users and admins can update public storage objects" ON storage.objects
 FOR UPDATE TO authenticated USING (
     bucket_id IN ('resources', 'avatars') AND (
         auth.uid()::text = (storage.foldername(name))[1] OR 
@@ -696,10 +700,41 @@ FOR UPDATE TO authenticated USING (
     )
 );
 
-CREATE POLICY "Users and admins can delete storage objects" ON storage.objects
+CREATE POLICY "Users and admins can delete public storage objects" ON storage.objects
 FOR DELETE TO authenticated USING (
     bucket_id IN ('resources', 'avatars') AND (
         auth.uid()::text = (storage.foldername(name))[1] OR 
+        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    )
+);
+
+-- Private Storage RLS Policies (verifications PII protection)
+CREATE POLICY "Verifications viewable only by owner and admins" ON storage.objects
+FOR SELECT TO authenticated USING (
+    bucket_id = 'verifications' AND (
+        auth.uid()::text = (storage.foldername(name))[1] OR
+        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    )
+);
+
+CREATE POLICY "Users can upload their own verification documents" ON storage.objects
+FOR INSERT TO authenticated WITH CHECK (
+    bucket_id = 'verifications' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+);
+
+CREATE POLICY "Users and admins can update their verification documents" ON storage.objects
+FOR UPDATE TO authenticated USING (
+    bucket_id = 'verifications' AND (
+        auth.uid()::text = (storage.foldername(name))[1] OR
+        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    )
+);
+
+CREATE POLICY "Users and admins can delete their verification documents" ON storage.objects
+FOR DELETE TO authenticated USING (
+    bucket_id = 'verifications' AND (
+        auth.uid()::text = (storage.foldername(name))[1] OR
         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
     )
 );

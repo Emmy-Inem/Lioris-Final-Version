@@ -88,13 +88,13 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       <AppHeader />
 
       {/* Screen Title & Post Event Button */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.md }}>
-        <View>
-          <AppText variant="h1"weight="bold">
-            Campus Events
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
+          <AppText variant="h1" weight="bold">
+            Events
           </AppText>
-          <AppText tone="secondary"variant="bodySmall">
-            Spotlight workshops, career fairs & gatherings
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+            Workshops, career fairs & campus gatherings
           </AppText>
         </View>
 
@@ -103,18 +103,21 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
             haptics.light();
             setPublishModalOpen(true);
           }}
-          accessibilityRole="button"accessibilityLabel="Post event"style={{
+          accessibilityRole="button"
+          accessibilityLabel="Post event"
+          style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 4,
             backgroundColor: colors.brandPrimary,
             borderRadius: radius.pill,
-            paddingHorizontal: spacing.md,
+            paddingHorizontal: spacing.sm,
             paddingVertical: 8,
+            flexShrink: 0,
           }}
         >
-          <Ionicons name="add"size={18} color="#FFFFFF" />
-          <AppText weight="bold"tone="inverse"variant="caption">
+          <Ionicons name="add" size={16} color="#FFFFFF" />
+          <AppText weight="bold" tone="inverse" variant="caption">
             Post Event
           </AppText>
         </Pressable>

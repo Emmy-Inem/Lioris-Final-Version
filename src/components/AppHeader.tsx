@@ -49,9 +49,9 @@ export function AppHeader() {
         zIndex: 10,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0 }}>
-        <LiorisLogo size={28} variant="symbol" />
-        <LiorisLogo size={20} variant="wordmark" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 }}>
+        <LiorisLogo size={38} variant="symbol" />
+        <LiorisLogo size={28} variant="wordmark" />
         {showWorkspaceSwitcher ? (
           <Pressable
             onPress={() => {

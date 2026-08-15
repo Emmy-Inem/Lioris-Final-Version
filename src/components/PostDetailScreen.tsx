@@ -1,5 +1,5 @@
-import React, { useState } from'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View } from'react-native';
+import React, { useState } from 'react';
+import { Alert, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Image } from'expo-image';
 import { router, useLocalSearchParams, useSegments } from'expo-router';
 import { Ionicons } from'@expo/vector-icons';
@@ -413,12 +413,14 @@ export function PostDetailScreen() {
           </View>
         </SolidCard>
 
-        {/* Discussion Replies List Header */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, paddingHorizontal: 4 }}>
-          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
-            ALL CONVERSATION REPLIES ({comments?.length ?? 0})
+        {/* Comments Count & Header */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, marginTop: spacing.xs }}>
+          <AppText variant="h3" weight="bold">
+            Discussion ({comments?.length ?? post.commentsCount})
           </AppText>
-          <Badge label="Live Thread"tone="brand" />
+          <AppText variant="caption" tone="brand" weight="bold">
+            Live Thread
+          </AppText>
         </View>
 
         {/* Conversation Replies Tree */}
@@ -436,8 +438,8 @@ export function PostDetailScreen() {
                     <View
                       style={{
                         position: 'absolute',
-                        left: 19,
-                        top: 40,
+                        left: 17,
+                        top: 36,
                         bottom: -spacing.md,
                         width: 2,
                         backgroundColor: colors.divider,
@@ -454,25 +456,25 @@ export function PostDetailScreen() {
                     }}
                     style={{ zIndex: 2, marginRight: spacing.sm }}
                   >
-                    <Avatar name={c.authorName} uri={c.authorAvatarUrl} size={40} role={c.authorRole} />
+                    <Avatar name={c.authorName} uri={c.authorAvatarUrl} size={36} role={c.authorRole} />
                   </Pressable>
 
                   {/* Comment Bubble */}
-                  <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)', borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
+                  <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)', borderRadius: 16, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <AppText weight="bold"variant="bodySmall">{c.authorName}</AppText>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+                        <AppText weight="bold" variant="bodySmall">{c.authorName}</AppText>
                         <UserTypeBadge role={c.authorRole} />
                         {c.authorDepartment ? (
-                          <AppText variant="caption"tone="secondary"style={{ fontSize: 10 }}>{c.authorDepartment}</AppText>
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>{c.authorDepartment}</AppText>
                         ) : null}
                       </View>
-                      <AppText tone="secondary"variant="caption"style={{ fontSize: 10 }}>
+                      <AppText tone="secondary" variant="caption" style={{ fontSize: 10, flexShrink: 0 }}>
                         {timeAgo(c.createdAt)}
                       </AppText>
                     </View>
 
-                    <AppText variant="bodySmall"tone="primary"style={{ marginTop: 4, lineHeight: 20 }}>
+                    <AppText variant="bodySmall" tone="primary" style={{ marginTop: 4, lineHeight: 20 }}>
                       {c.content}
                     </AppText>
 
@@ -484,7 +486,7 @@ export function PostDetailScreen() {
                           setLightboxCaption(`Shared by ${c.authorName}`);
                           setLightboxOpen(true);
                         }}
-                        style={{ marginTop: spacing.xs, height: 140, borderRadius: 14, overflow: 'hidden' }}
+                        style={{ marginTop: spacing.xs, height: 140, borderRadius: 12, overflow: 'hidden' }}
                       >
                         <Image source={commentImage} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       </Pressable>
@@ -496,8 +498,8 @@ export function PostDetailScreen() {
                         onPress={() => handleToggleCommentLikeAction(c.id, c.likesCount)}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                       >
-                        <Ionicons name={isCommentLiked ? 'heart' : 'heart-outline'} size={15} color={isCommentLiked ? '#E53E3E' : colors.textSecondary} />
-                        <AppText variant="caption"weight={isCommentLiked ? 'bold' : 'regular'} style={{ color: isCommentLiked ? '#E53E3E' : colors.textSecondary }}>
+                        <Ionicons name={isCommentLiked ? 'heart' : 'heart-outline'} size={14} color={isCommentLiked ? '#E53E3E' : colors.textSecondary} />
+                        <AppText variant="caption" weight={isCommentLiked ? 'bold' : 'regular'} style={{ color: isCommentLiked ? '#E53E3E' : colors.textSecondary }}>
                           {cLikes > 0 ? cLikes : 'Like'}
                         </AppText>
                       </Pressable>
@@ -510,8 +512,8 @@ export function PostDetailScreen() {
                         }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                       >
-                        <Ionicons name="arrow-undo-outline"size={14} color={colors.brandPrimary} />
-                        <AppText variant="caption"weight="semiBold"tone="brand">
+                        <Ionicons name="arrow-undo-outline" size={13} color={colors.brandPrimary} />
+                        <AppText variant="caption" weight="semiBold" tone="brand">
                           Reply
                         </AppText>
                       </Pressable>
@@ -523,53 +525,64 @@ export function PostDetailScreen() {
           </View>
         ) : (
           <SolidCard frosted style={{ alignItems: 'center', padding: spacing.lg }}>
-            <AppText tone="secondary"variant="bodySmall">No replies yet. Join the conversation below!</AppText>
+            <AppText tone="secondary" variant="bodySmall">No replies yet. Join the conversation below!</AppText>
           </SolidCard>
         )}
       </ScrollView>
 
-      {/* Sticky Bottom Reply Composer Bar */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: isDark ? 'rgba(10, 19, 38, 0.92)' : 'rgba(255, 255, 255, 0.95)', borderTopWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
+      {/* Sticky Bottom Reply Composer Bar (Mobile Optimized) */}
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: isDark ? 'rgba(10, 19, 38, 0.96)' : 'rgba(255, 255, 255, 0.98)', borderTopWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, zIndex: 20 }}>
         {replyingToAuthor ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
-            <AppText variant="caption"tone="brand"weight="bold">Replying to @{replyingToAuthor}</AppText>
+            <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToAuthor}</AppText>
             <Pressable onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
-              <Ionicons name="close"size={14} color={colors.brandPrimary} />
+              <Ionicons name="close" size={14} color={colors.brandPrimary} />
             </Pressable>
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'flex-end' }}>
-          <Avatar name={user?.fullName ?? 'You'} size={34} role={user?.role} />
+        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+          <Avatar name={user?.fullName ?? 'You'} size={32} role={user?.role} />
 
-          <View style={{ flex: 1 }}>
-            <AppTextField
-              label=""placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Post your reply..."}
+          <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <TextInput
+              placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Write a reply..."}
+              placeholderTextColor={colors.textSecondary}
               value={newReply}
               onChangeText={setNewReply}
               multiline
-              numberOfLines={2}
+              style={{ flex: 1, color: colors.textPrimary, fontSize: 13, maxHeight: 72, paddingVertical: 2 }}
             />
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 4 }}>
-              <Pressable
-                onPress={() => {
-                  haptics.light();
-                  setAttachedReplyMedia(COMMENT_MEDIA_PRESETS[0].id);
-                }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill }}
-              >
-                <Ionicons name="image-outline"size={13} color={colors.brandPrimary} />
-                <AppText variant="caption"tone="brand"weight="bold"style={{ fontSize: 10 }}>Photo</AppText>
-              </Pressable>
-            </View>
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setAttachedReplyMedia(attachedReplyMedia ? null : COMMENT_MEDIA_PRESETS[0].id);
+              }}
+              hitSlop={6}
+              style={{ padding: 4 }}
+            >
+              <Ionicons name={attachedReplyMedia ? "image" : "image-outline"} size={18} color={attachedReplyMedia ? colors.brandPrimary : colors.textSecondary} />
+            </Pressable>
           </View>
 
-          <AppButton
-            label="Reply"onPress={handleAddReply}
-            loading={submittingReply}
-            disabled={!newReply.trim() && !attachedReplyMedia}
-          />
+          <Pressable
+            onPress={handleAddReply}
+            disabled={submittingReply || (!newReply.trim() && !attachedReplyMedia)}
+            style={{
+              backgroundColor: (!newReply.trim() && !attachedReplyMedia) ? colors.border : colors.brandPrimary,
+              borderRadius: radius.pill,
+              paddingHorizontal: 14,
+              height: 36,
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'inverse'}>
+              {submittingReply ? '...' : 'Reply'}
+            </AppText>
+          </Pressable>
         </View>
       </View>
 

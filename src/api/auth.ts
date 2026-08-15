@@ -42,132 +42,84 @@ function mockSession(email: string, role: UserRole, customName?: string): AuthSe
   };
 }
 
-// POST /auth/login — Real Supabase Auth with Guaranteed Session Flow
+// POST /auth/login — Real Supabase Auth (Strict)
 export async function login(payload: LoginPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim();
-  const guessedRole = guessRoleFromEmail(cleanEmail);
-  const derivedName = cleanEmail.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password: payload.password,
+  });
 
-  try {
-    // 1. Try direct Supabase sign in
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password: payload.password,
-    });
-
-    if (!signInError && signInData?.session && signInData?.user) {
-      // Fetch or upsert profile in Supabase
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', signInData.user.id)
-        .maybeSingle();
-
-      const userRole = (profile?.role || signInData.user.user_metadata?.role || guessedRole) as UserRole;
-      const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || derivedName;
-
-      return {
-        accessToken: signInData.session.access_token,
-        refreshToken: signInData.session.refresh_token,
-        user: {
-          id: signInData.user.id,
-          fullName,
-          email: signInData.user.email || cleanEmail,
-          role: userRole,
-        },
-      };
-    }
-
-    // 2. If user doesn't exist in Supabase auth yet, attempt auto-signup
-    if (signInError) {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: payload.password,
-        options: {
-          data: {
-            full_name: derivedName,
-            role: guessedRole,
-          },
-        },
-      });
-
-      if (!signUpError && signUpData?.user) {
-        const userId = signUpData.user.id;
-        await supabase.from('profiles').upsert({
-          id: userId,
-          email: cleanEmail,
-          full_name: derivedName,
-          role: guessedRole,
-        });
-
-        const token = signUpData.session?.access_token || `auth-token.${guessedRole}.${Date.now()}`;
-        const refresh = signUpData.session?.refresh_token || `refresh-token.${guessedRole}.${Date.now()}`;
-
-        return {
-          accessToken: token,
-          refreshToken: refresh,
-          user: {
-            id: userId,
-            fullName: derivedName,
-            email: cleanEmail,
-            role: guessedRole,
-          },
-        };
-      }
-    }
-  } catch (err) {
-    console.warn('[Auth] Supabase auth attempt notice:', err);
+  if (signInError || !signInData?.session || !signInData?.user) {
+    throw new Error(signInError?.message || 'Invalid email or password.');
   }
 
-  // 3. Guaranteed valid session fallback (never crashes or locks user out)
-  return mockSession(cleanEmail, guessedRole, derivedName);
+  // Fetch verified user profile from Supabase
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', signInData.user.id)
+    .maybeSingle();
+
+  const userRole = (profile?.role || signInData.user.user_metadata?.role || 'student') as UserRole;
+  const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
+
+  return {
+    accessToken: signInData.session.access_token,
+    refreshToken: signInData.session.refresh_token,
+    user: {
+      id: signInData.user.id,
+      fullName,
+      email: signInData.user.email || cleanEmail,
+      role: userRole,
+    },
+  };
 }
 
-// POST /auth/register — Real Supabase Auth with Profile Provisioning
+// POST /auth/register — Real Supabase Auth with Profile Provisioning (Student & Alumni only)
 export async function register(payload: RegisterPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim();
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password: payload.password,
-      options: {
-        data: {
-          full_name: payload.fullName,
-          username: payload.username,
-          role: payload.userType,
-        },
-      },
-    });
+  // Ensure self-registration can only produce student or alumni accounts
+  const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
 
-    if (!error && data?.user) {
-      // Upsert profile in Supabase
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        email: cleanEmail,
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password: payload.password,
+    options: {
+      data: {
         full_name: payload.fullName,
         username: payload.username,
-        role: payload.userType,
-      });
+        role: assignedRole,
+      },
+    },
+  });
 
-      const accessToken = data.session?.access_token || `auth-token.${payload.userType}.${Date.now()}`;
-      const refreshToken = data.session?.refresh_token || `refresh-token.${payload.userType}.${Date.now()}`;
-
-      return {
-        accessToken,
-        refreshToken,
-        user: {
-          id: data.user.id,
-          fullName: payload.fullName,
-          email: cleanEmail,
-          role: payload.userType,
-        },
-      };
-    }
-  } catch (err) {
-    console.warn('[Auth] Supabase register error:', err);
+  if (error || !data?.user) {
+    throw new Error(error?.message || 'Unable to register account. Please check your details.');
   }
 
-  return mockSession(cleanEmail, payload.userType, payload.fullName);
+  // Upsert profile in Supabase profiles table
+  await supabase.from('profiles').upsert({
+    id: data.user.id,
+    email: cleanEmail,
+    full_name: payload.fullName,
+    username: payload.username,
+    role: assignedRole,
+  });
+
+  const accessToken = data.session?.access_token || `auth-token.${assignedRole}.${Date.now()}`;
+  const refreshToken = data.session?.refresh_token || `refresh-token.${assignedRole}.${Date.now()}`;
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: data.user.id,
+      fullName: payload.fullName,
+      email: cleanEmail,
+      role: assignedRole,
+    },
+  };
 }
 
 export async function verifyEmail(code: string): Promise<{ verified: boolean }> {
