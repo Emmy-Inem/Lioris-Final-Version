@@ -76,9 +76,11 @@ export interface CreateListingPayload {
   category: MarketplaceListing['category'];
 }
 
+import { generateUUID } from '../utils/uuid';
+
 export async function createListing(payload: CreateListingPayload): Promise<MarketplaceListing> {
   const created: MarketplaceListing = {
-    id: `mock-listing-${Date.now()}`,
+    id: generateUUID(),
     sellerName: 'You',
     sellerAvatarUrl: null,
     sellerId: 'me',

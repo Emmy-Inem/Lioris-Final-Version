@@ -4,6 +4,7 @@ import { mockMentorships, mockMentorProfiles } from'./mockData';
 import { withMockFallback } from'./withMockFallback';
 import { FALL_BACK_TO_MOCKS } from'./config';
 import { createNotification } from'./notifications';
+import { generateUUID } from '../utils/uuid';
 
 // Mutable in-memory copy so accept/decline visibly updates status
 // within a session, without needing a real backend.
@@ -68,7 +69,7 @@ export async function requestMentorship(
   } catch {
     const mentor = mockMentorProfiles.find((m) => m.id === mentorId);
     const created: Mentorship = {
-      id: `mock-ment-${mentorId}-${Date.now()}`,
+      id: generateUUID(),
       studentId: 'me',
       mentorId,
       mentorName: mentor?.fullName ?? 'Verified Mentor',

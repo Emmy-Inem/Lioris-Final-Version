@@ -103,6 +103,8 @@ export async function resolveReport(
 // pre-seeded mock reports ever would. This is the core of the whole
 // moderation pipeline, so this silently not working is about as
 // significant as this kind of bug gets.
+import { generateUUID } from '../utils/uuid';
+
 export async function submitReport(payload: {
   targetType: Report['targetType'];
   targetId: string;
@@ -110,7 +112,7 @@ export async function submitReport(payload: {
   institutionCode?: string;
 }): Promise<Report> {
   const created: Report = {
-    id: `mock-report-${Date.now()}`,
+    id: generateUUID(),
     reporterId: 'me',
     status: 'open',
     createdAt: new Date().toISOString(),

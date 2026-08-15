@@ -27,13 +27,15 @@ export interface PublishAnnouncementPayload {
   expiresAt?: string;
 }
 
+import { generateUUID } from '../utils/uuid';
+
 // PRD Section 7.4: staff publish to approved audiences; admins may
 // additionally mark a notice"critical"for emergency broadcast handling.
 export async function publishAnnouncement(
   payload: PublishAnnouncementPayload,
 ): Promise<Announcement> {
   const created: Announcement = {
-    id: `mock-ann-${Date.now()}`,
+    id: generateUUID(),
     authorId: 'me',
     authorName: 'You',
     publishedAt: new Date().toISOString(),

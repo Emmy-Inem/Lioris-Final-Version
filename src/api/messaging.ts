@@ -50,6 +50,8 @@ export async function archiveConversation(id: string): Promise<void> {
   delete messagesState[id];
 }
 
+import { generateUUID } from '../utils/uuid';
+
 export async function getOrCreateConversationWithUser(
   userId: string,
   userName: string,
@@ -58,7 +60,7 @@ export async function getOrCreateConversationWithUser(
   const existing = conversationsState.find((c) => c.participantId === userId || c.id === userId);
   if (existing) return existing;
 
-  const convId = `conv-${userId.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
+  const convId = generateUUID();
   const created: Conversation = {
     id: convId,
     participantId: userId,
@@ -103,7 +105,7 @@ export async function getOrCreateConversationWithUser(
   if (!messagesState[convId]) {
     messagesState[convId] = [
       {
-        id: `welcome-${Date.now()}`,
+        id: generateUUID(),
         conversationId: convId,
         senderId: userId,
         content: `Hi there! I am ${userName}. Feel free to ask anything about courses, events, or listings.`,
@@ -176,7 +178,7 @@ export async function sendMessage(
   conversationId: string,
   content: string,
 ): Promise<Message> {
-  const msgId = `msg-${Date.now()}`;
+  const msgId = generateUUID();
   const now = new Date().toISOString();
 
   // Resolve authentic sender identity

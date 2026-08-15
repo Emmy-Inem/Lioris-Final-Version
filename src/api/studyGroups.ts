@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { StudyGroup } from './types';
 import { mockStudyGroups } from './mockData';
 import { getSessionUser } from '../auth/tokenStorage';
+import { generateUUID } from '../utils/uuid';
 
 let studyGroupsState: StudyGroup[] = [...mockStudyGroups];
 
@@ -13,7 +14,7 @@ export interface CreateStudyGroupPayload {
 }
 
 export async function createStudyGroup(payload: CreateStudyGroupPayload): Promise<StudyGroup> {
-  const groupId = `group-${Date.now()}`;
+  const groupId = generateUUID();
   const created: StudyGroup = {
     id: groupId,
     memberCount: 1,

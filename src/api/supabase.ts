@@ -33,8 +33,8 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fdtnbluslkabwsmspbem.supabase.co';
-const SUPABASE_ANON_KEY =
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fdtnbluslkabwsmspbem.supabase.co';
+export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

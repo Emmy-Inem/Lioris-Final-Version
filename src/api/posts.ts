@@ -119,10 +119,11 @@ export interface CreatePostPayload {
 }
 
 import { getSessionUser } from '../auth/tokenStorage';
+import { generateUUID } from '../utils/uuid';
 
 export async function createPost(payload: CreatePostPayload): Promise<Post> {
   const { authorInstitutionCode, scopeVisibility, ...rest } = payload;
-  const postId = `post-${Date.now()}`;
+  const postId = generateUUID();
   const now = new Date().toISOString();
 
   let authorId = 'me';
@@ -307,7 +308,7 @@ export async function createPostComment(
   authorRole: 'student' | 'staff' | 'alumni' | 'admin' = 'student',
   imageUrl?: string | null,
 ): Promise<PostComment> {
-  const commentId = `c-${Date.now()}`;
+  const commentId = generateUUID();
   const created: PostComment = {
     id: commentId,
     postId,

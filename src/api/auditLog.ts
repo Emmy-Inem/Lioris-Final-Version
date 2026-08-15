@@ -64,10 +64,12 @@ export interface RecordAuditLogEntryPayload {
  * API layer, outside React context (same pattern client.ts already
  * uses for tokens).
  */
+import { generateUUID } from '../utils/uuid';
+
 export async function recordAuditLogEntry(payload: RecordAuditLogEntryPayload): Promise<AuditLogEntry> {
   const actor = await getSessionUser();
   const entry: AuditLogEntry = {
-    id: `audit-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+    id: generateUUID(),
     actorId: actor?.id ?? 'unknown',
     actorName: actor?.fullName ?? 'Unknown actor',
     actorRole: (actor?.role as UserRole) ?? 'admin',

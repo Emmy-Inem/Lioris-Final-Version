@@ -86,14 +86,25 @@ export default function UserDirectoryScreen() {
 
     const username = newEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
     const matricNo = newMatric.trim() || `${newCampus}/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
-    let userId = `u-${Date.now()}`;
+    const { generateUUID } = await import('@/utils/uuid');
+    let userId = generateUUID();
     let provisionSucceeded = false;
+    const tempPassword = `Lioris#${Math.floor(100000 + Math.random() * 900000)}!`;
 
     try {
-      const { supabase } = await import('@/api/supabase');
-      // Attempt real user creation in Supabase auth
-      const tempPassword = `Lioris#${Math.floor(100000 + Math.random() * 900000)}!`;
-      const { data, error } = await supabase.auth.signUp({
+      const { createClient } = await import('@supabase/supabase-js');
+      const { SUPABASE_URL, SUPABASE_ANON_KEY, supabase } = await import('@/api/supabase');
+
+      // Use an isolated client instance without session persistence to prevent overwriting admin session
+      const isolatedAuthClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      });
+
+      const { data, error } = await isolatedAuthClient.auth.signUp({
         email: newEmail.trim(),
         password: tempPassword,
         options: {
@@ -123,7 +134,7 @@ export default function UserDirectoryScreen() {
           is_suspended: false,
         });
       } else if (error) {
-        console.warn('[UserDirectory] Supabase signUp note:', error.message);
+        console.warn('[UserDirectory] Supabase isolated signUp note:', error.message);
       }
     } catch (err) {
       console.warn('[UserDirectory] Auth provision exception:', err);
@@ -163,12 +174,12 @@ export default function UserDirectoryScreen() {
     if (provisionSucceeded) {
       Alert.alert(
         'User Provisioned in Supabase',
-        `${newUser.fullName} has been registered with ID ${userId.slice(0, 8)}... A confirmation email has been dispatched by Supabase to ${newUser.email}.`,
+        `${newUser.fullName} has been registered with ID ${userId.slice(0, 8)}...\n\nTemporary Password: ${tempPassword}\n\nPlease share this temporary password with the user.`,
       );
     } else {
       Alert.alert(
         'User Provisioned Locally',
-        `${newUser.fullName} has been created in the local directory for this session. (Note: Direct client-side user creation requires Supabase service role privileges).`,
+        `${newUser.fullName} has been created in the local directory for this session.\n\nTemporary Password: ${tempPassword}`,
       );
     }
   }

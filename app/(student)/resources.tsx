@@ -100,8 +100,12 @@ export default function ResourcesScreen() {
     courseCode: string;
     description: string;
     category: 'Notes' | 'Past Questions' | 'Projects';
+    fileBlob?: Blob;
+    fileSize?: string;
+    fileType?: 'PDF' | 'ZIP' | 'EPUB';
   }) {
-    await createResource(payload);
+    const { fileBlob, ...rest } = payload;
+    await createResource(rest, fileBlob);
     queryClient.invalidateQueries({ queryKey: ['resources'] });
   }
 

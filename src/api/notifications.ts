@@ -14,8 +14,10 @@ export interface CreateNotificationPayload {
   senderId?: string;
 }
 
+import { generateUUID } from '../utils/uuid';
+
 export async function createNotification(payload: CreateNotificationPayload): Promise<AppNotification> {
-  const notifId = `notif-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+  const notifId = generateUUID();
   const now = new Date().toISOString();
 
   // Resolve authentic sender and recipient identities
@@ -49,18 +51,20 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
   notificationsState = [notification, ...notificationsState];
 
   try {
-    const { error } = await supabase.from('notifications').insert({
-      id: notifId,
-      recipient_id: targetRecipientId,
-      sender_id: notificationSenderId,
-      title: payload.title,
-      body: payload.body,
-      type: payload.type,
-      action_url: payload.deepLinkPath,
-      is_read: false,
-    });
-    if (error) {
-      console.warn('[Notifications] Supabase persistence error:', error.message);
+    if (targetRecipientId && targetRecipientId !== 'me') {
+      const { error } = await supabase.from('notifications').insert({
+        id: notifId,
+        recipient_id: targetRecipientId,
+        sender_id: notificationSenderId,
+        title: payload.title,
+        body: payload.body,
+        type: payload.type,
+        action_url: payload.deepLinkPath,
+        is_read: false,
+      });
+      if (error) {
+        console.warn('[Notifications] Supabase persistence error:', error.message);
+      }
     }
   } catch (err) {
     console.warn('[Notifications] Failed to reach backend:', err);

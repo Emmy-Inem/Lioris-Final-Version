@@ -193,8 +193,10 @@ export interface CreateEventPayload {
   sponsored?: boolean;
 }
 
+import { generateUUID } from '../utils/uuid';
+
 export async function createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
-  const eventId = `event-${Date.now()}`;
+  const eventId = generateUUID();
 
   let organizerId = 'me';
   try {

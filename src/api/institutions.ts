@@ -69,12 +69,14 @@ export interface JoinWaitlistPayload {
   email: string;
 }
 
+import { generateUUID } from '../utils/uuid';
+
 // Backs the"Join Waitlist"card on the login screen. Submissions land
 // in the same store the Admin Workdesk's Approvals tab reads from, so
 // there's a real (if fully mock) loop between the two.
 export async function joinWaitlist(payload: JoinWaitlistPayload): Promise<WaitlistEntry> {
   const created: WaitlistEntry = {
-    id: `w-${Date.now()}`,
+    id: generateUUID(),
     universityName: payload.universityName,
     email: payload.email,
     submittedAt: new Date().toISOString(),

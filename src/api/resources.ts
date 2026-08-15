@@ -163,11 +163,13 @@ export interface CreateResourcePayload {
   academicLevel?: Resource['academicLevel'];
 }
 
+import { generateUUID } from '../utils/uuid';
+
 export async function createResource(
   payload: CreateResourcePayload,
   fileBlob?: Blob | ArrayBuffer,
 ): Promise<Resource> {
-  const resourceId = `res-${Date.now()}`;
+  const resourceId = generateUUID();
   const created: Resource = {
     id: resourceId,
     title: payload.title,

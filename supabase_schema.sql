@@ -597,5 +597,29 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Storage RLS Policies
+CREATE POLICY "Public storage objects viewable by anyone" ON storage.objects
+FOR SELECT USING (bucket_id IN ('resources', 'avatars'));
+
+CREATE POLICY "Authenticated users can upload storage objects" ON storage.objects
+FOR INSERT TO authenticated WITH CHECK (bucket_id IN ('resources', 'avatars'));
+
+CREATE POLICY "Users and admins can update storage objects" ON storage.objects
+FOR UPDATE TO authenticated USING (
+    bucket_id IN ('resources', 'avatars') AND (
+        auth.uid()::text = (storage.foldername(name))[1] OR 
+        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    )
+);
+
+CREATE POLICY "Users and admins can delete storage objects" ON storage.objects
+FOR DELETE TO authenticated USING (
+    bucket_id IN ('resources', 'avatars') AND (
+        auth.uid()::text = (storage.foldername(name))[1] OR 
+        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    )
+);
+
+
 
 

@@ -1,29 +1,45 @@
-import React, { useEffect, useState } from'react';
-import { Modal, Pressable, View } from'react-native';
-import { Ionicons } from'@expo/vector-icons';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
-import { AppText } from'./AppText';
-import { AppTextField } from'./AppTextField';
-import { AppButton } from'./AppButton';
-import { useTheme } from'@/theme/ThemeProvider';
+import React, { useEffect, useState } from 'react';
+import { Alert, Modal, Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import * as DocumentPicker from 'expo-document-picker';
+import { AppText } from './AppText';
+import { AppTextField } from './AppTextField';
+import { AppButton } from './AppButton';
+import { useTheme } from '@/theme/ThemeProvider';
 
 const CATEGORIES = ['Notes', 'Past Questions', 'Projects'] as const;
+
+export interface UploadAcademicPayload {
+  title: string;
+  courseCode: string;
+  description: string;
+  category: (typeof CATEGORIES)[number];
+  fileBlob?: Blob;
+  fileSize?: string;
+  fileType?: 'PDF' | 'ZIP' | 'EPUB';
+}
 
 interface ShareAcademicFileModalProps {
   visible: boolean;
   onClose: () => void;
-  onUpload: (payload: { title: string; courseCode: string; description: string; category: (typeof CATEGORIES)[number] }) => void;
+  onUpload: (payload: UploadAcademicPayload) => Promise<void> | void;
 }
 
-// PRD Section 8 — real slide-up + spring entrance and a fading backdrop
-// for this bottom sheet, instead of popping in instantly under RN
-// Modal's native fade.
 export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcademicFileModalProps) {
   const { colors, spacing, radius } = useTheme();
   const [title, setTitle] = useState('');
   const [courseCode, setCourseCode] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('Notes');
+  const [selectedFile, setSelectedFile] = useState<{
+    name: string;
+    size?: number;
+    mimeType?: string;
+    file?: Blob;
+  } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const translateY = useSharedValue(80);
   const backdropOpacity = useSharedValue(0);
 
@@ -40,18 +56,72 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
-  const canUpload = title.trim().length > 0 && courseCode.trim().length > 0;
+  const canUpload = title.trim().length > 0 && courseCode.trim().length > 0 && !isUploading;
 
-  function handleUpload() {
-    onUpload({ title, courseCode, description, category });
-    onClose();
-    setTitle('');
-    setCourseCode('');
-    setDescription('');
+  async function handlePickFile() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/zip', 'application/x-zip-compressed'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        let fileBlob: Blob | undefined = asset.file;
+        if (!fileBlob && asset.uri) {
+          try {
+            const response = await fetch(asset.uri);
+            fileBlob = await response.blob();
+          } catch {
+            // fallback
+          }
+        }
+        setSelectedFile({
+          name: asset.name,
+          size: asset.size,
+          mimeType: asset.mimeType,
+          file: fileBlob,
+        });
+      }
+    } catch {
+      Alert.alert('File Picker Error', 'Unable to access document.');
+    }
+  }
+
+  async function handleUpload() {
+    if (!canUpload) return;
+    setIsUploading(true);
+
+    const sizeFormatted = selectedFile?.size
+      ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`
+      : '2.4 MB';
+
+    const fileType = selectedFile?.name?.toLowerCase().endsWith('.zip') ? 'ZIP' : 'PDF';
+
+    try {
+      await onUpload({
+        title,
+        courseCode,
+        description,
+        category,
+        fileBlob: selectedFile?.file,
+        fileSize: sizeFormatted,
+        fileType,
+      });
+      onClose();
+      setTitle('');
+      setCourseCode('');
+      setDescription('');
+      setSelectedFile(null);
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err?.message || 'Unable to upload file.');
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   return (
-    <Modal visible={visible} transparent animationType="none"onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Animated.View
           style={[
@@ -59,22 +129,71 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
             backdropStyle,
           ]}
         />
-        <Animated.View style={[{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }, sheetStyle]}>
+        <Animated.View
+          style={[
+            {
+              backgroundColor: colors.background,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing.lg,
+              maxHeight: '90%',
+            },
+            sheetStyle,
+          ]}
+        >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-            <Ionicons name="cloud-upload"size={20} color={colors.brandPrimary} />
-            <AppText variant="h2"weight="bold">
+            <Ionicons name="cloud-upload" size={20} color={colors.brandPrimary} />
+            <AppText variant="h2" weight="bold">
               Share Academic File
             </AppText>
           </View>
-          <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
+          <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
             Upload reference notes, past exams, or group projects to help your classmates learn.
           </AppText>
 
-          <AppTextField label=""placeholder="Resource Title / Subject"value={title} onChangeText={setTitle} />
-          <AppTextField label=""placeholder="Course Code"value={courseCode} onChangeText={setCourseCode} />
-          <AppTextField label=""placeholder="Short Description"value={description} onChangeText={setDescription} multiline />
+          <AppTextField label="" placeholder="Resource Title / Subject" value={title} onChangeText={setTitle} />
+          <AppTextField label="" placeholder="Course Code (e.g. CSC 301)" value={courseCode} onChangeText={setCourseCode} />
+          <AppTextField label="" placeholder="Short Description" value={description} onChangeText={setDescription} multiline />
 
-          <AppText weight="bold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
+          {/* Document Attachment Picker Button */}
+          <Pressable
+            onPress={handlePickFile}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: spacing.md,
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderStyle: 'dashed',
+              borderColor: selectedFile ? colors.brandPrimary : colors.border,
+              backgroundColor: selectedFile ? colors.pastelPrimaryBg : colors.surface,
+              marginBottom: spacing.md,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
+              <Ionicons
+                name={selectedFile ? 'document-text' : 'attach-outline'}
+                size={20}
+                color={selectedFile ? colors.brandPrimary : colors.textSecondary}
+              />
+              <View style={{ flex: 1 }}>
+                <AppText weight="semiBold" variant="bodySmall" numberOfLines={1}>
+                  {selectedFile ? selectedFile.name : 'Attach Document (PDF, ZIP)'}
+                </AppText>
+                {selectedFile?.size ? (
+                  <AppText variant="caption" tone="secondary">
+                    {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                  </AppText>
+                ) : null}
+              </View>
+            </View>
+            <AppText variant="caption" weight="bold" tone="brand">
+              {selectedFile ? 'Change' : 'Browse'}
+            </AppText>
+          </Pressable>
+
+          <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
             Resource Category:
           </AppText>
           <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -84,7 +203,8 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
                 <Pressable
                   key={cat}
                   onPress={() => setCategory(cat)}
-                  accessibilityRole="radio"accessibilityState={{ checked: selected }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
                   accessibilityLabel={cat}
                   style={{
                     paddingHorizontal: spacing.md,
@@ -95,7 +215,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
                     borderColor: colors.border,
                   }}
                 >
-                  <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'brand' : 'secondary'}>
+                  <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
                     {cat}
                   </AppText>
                 </Pressable>
@@ -104,8 +224,12 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
           </View>
 
           <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
-            <AppButton label="Cancel"variant="ghost"onPress={onClose} />
-            <AppButton label="Upload File"onPress={handleUpload} disabled={!canUpload} />
+            <AppButton label="Cancel" variant="ghost" onPress={onClose} disabled={isUploading} />
+            <AppButton
+              label={isUploading ? 'Uploading...' : 'Upload File'}
+              onPress={handleUpload}
+              disabled={!canUpload}
+            />
           </View>
         </Animated.View>
       </View>

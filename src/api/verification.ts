@@ -50,13 +50,15 @@ export interface SubmitVerificationPayload {
   documentPhotoUri?: string | null;
 }
 
+import { generateUUID } from '../utils/uuid';
+
 // Backs the Profile screen's"Apply for Verification"flow. Submitting
 // does NOT immediately grant the tick — a real reviewer (Admin's
 // Verify Credentials tool) approves or rejects it, matching how actual
 // document verification has to work.
 export async function submitVerificationRequest(payload: SubmitVerificationPayload): Promise<VerificationRequest> {
   const created: VerificationRequest = {
-    id: `vr-${Date.now()}`,
+    id: generateUUID(),
     ...payload,
     submittedAt: new Date().toISOString(),
     status: 'pending',
