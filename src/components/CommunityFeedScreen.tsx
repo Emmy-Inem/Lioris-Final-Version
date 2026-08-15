@@ -109,30 +109,33 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       <AppHeader />
 
       {/* Screen Title & Workspace Selector */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.md }}>
-        <View>
-          <AppText variant="h1"weight="bold">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
+          <AppText variant="h1" weight="bold">
             Campus Forum 
           </AppText>
-          <AppText tone="secondary"variant="bodySmall">
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ fontSize: 12 }}>
             Trending discussions, polls, and academic threads
           </AppText>
         </View>
 
         <Pressable
           onPress={() => setWorkspacesOpen(true)}
-          accessibilityRole="button"accessibilityLabel="Open discussion workspaces"style={{
+          accessibilityRole="button"
+          accessibilityLabel="Open discussion workspaces"
+          style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 4,
             backgroundColor: colors.pastelPrimaryBg,
             borderRadius: radius.pill,
-            paddingHorizontal: spacing.md,
-            paddingVertical: 8,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: 7,
+            flexShrink: 0,
           }}
         >
-          <Ionicons name="chatbubbles"size={16} color={colors.brandPrimary} />
-          <AppText weight="bold"tone="brand"variant="caption">
+          <Ionicons name="chatbubbles" size={15} color={colors.brandPrimary} />
+          <AppText weight="bold" tone="brand" variant="caption">
             Channels
           </AppText>
         </Pressable>

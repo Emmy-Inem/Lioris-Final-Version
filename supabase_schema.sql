@@ -667,7 +667,7 @@ CREATE POLICY "Admins can update waitlist" ON waitlist_entries FOR UPDATE TO aut
 -- 15. REALTIME REPLICATION CONFIGURATION
 -- ============================================================================
 DO $$ BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, chat_messages, chat_channels, notifications, moderation_queue, verifications, connections, mentorships, marketplace_listings;
+    ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, post_comments, event_attendees, chat_messages, chat_channels, notifications, moderation_queue, verifications, connections, mentorships, marketplace_listings;
 EXCEPTION WHEN OTHERS THEN null; END $$;
 
 -- ============================================================================

@@ -49,43 +49,46 @@ export function AppHeader() {
         zIndex: 10,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
-        <LiorisLogo size={30} variant="symbol" />
-        <LiorisLogo size={22} variant="wordmark" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0 }}>
+        <LiorisLogo size={28} variant="symbol" />
+        <LiorisLogo size={20} variant="wordmark" />
         {showWorkspaceSwitcher ? (
           <Pressable
             onPress={() => {
               haptics.light();
               setScopeModalOpen(true);
             }}
-            accessibilityRole="button"accessibilityLabel={`Workspace scope: ${scope === 'campus' ? homeInstitutionCode : 'Global'}`}
-            accessibilityHint="Opens the workspace scope switcher"style={{
+            accessibilityRole="button"
+            accessibilityLabel={`Workspace scope: ${scope === 'campus' ? homeInstitutionCode : 'Global'}`}
+            accessibilityHint="Opens the workspace scope switcher"
+            style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 4,
+              gap: 3,
               backgroundColor: colors.pastelPrimaryBg,
               borderRadius: radius.pill,
-              paddingHorizontal: spacing.sm,
-              paddingVertical: 5,
-              marginLeft: spacing.xs,
+              paddingHorizontal: 6,
+              paddingVertical: 4,
+              marginLeft: 4,
               borderWidth: 1,
               borderColor: `${colors.brandPrimary}25`,
+              flexShrink: 0,
             }}
           >
             <Ionicons
               name={scope === 'campus' ? 'school-outline' : 'globe-outline'}
-              size={12}
+              size={11}
               color={colors.brandPrimary}
             />
-            <AppText variant="caption"weight="bold"style={{ color: colors.brandPrimary, fontSize: 11 }}>
+            <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 10 }}>
               {scope === 'campus' ? homeInstitutionCode : 'Global'}
             </AppText>
-            <Ionicons name="chevron-down"size={11} color={colors.brandPrimary} />
+            <Ionicons name="chevron-down" size={10} color={colors.brandPrimary} />
           </Pressable>
         ) : null}
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         {/* Theme Toggle Button */}
         <Pressable
           hitSlop={8}

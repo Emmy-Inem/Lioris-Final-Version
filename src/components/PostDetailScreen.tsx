@@ -159,6 +159,8 @@ export function PostDetailScreen() {
       setAttachedReplyMedia(null);
       setReplyingToAuthor(null);
       await refetchComments();
+      await queryClient.invalidateQueries({ queryKey: ['post-comments', post.id] });
+      await queryClient.invalidateQueries({ queryKey: ['feed'] });
       haptics.success();
     } catch {
       Alert.alert('Error', 'Could not submit reply.');

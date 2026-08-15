@@ -108,6 +108,7 @@ export function useRealtimeChannel(
         () => {
           queryClient.invalidateQueries({ queryKey: ['feed'] });
           queryClient.invalidateQueries({ queryKey: ['comments'] });
+          queryClient.invalidateQueries({ queryKey: ['post-comments'] });
         },
       )
       .on(

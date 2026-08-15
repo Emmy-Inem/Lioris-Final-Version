@@ -253,22 +253,25 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
   try {
     const { data, error } = await supabase
       .from('post_comments')
-      .select('*')
+      .select('*, author:profiles(full_name, role, department, avatar_url)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
 
-    if (!error && data && data.length > 0) {
+    if (!error && data) {
       const dbComments: PostComment[] = data.map((row: any) => ({
         id: row.id,
         postId: row.post_id,
-        authorName: 'Campus Member',
-        authorRole: 'student',
+        authorName: row.author?.full_name || 'Campus Member',
+        authorRole: (row.author?.role || 'student') as any,
+        authorDepartment: row.author?.department || 'Verified Member',
+        authorAvatarUrl: row.author?.avatar_url || null,
         content: row.content,
         createdAt: row.created_at,
         likesCount: row.likes_count || 0,
         isLikedByMe: false,
       }));
-      // Merge unique
+
+      // Merge local in-memory comments
       const local = commentsState[postId] ?? [];
       const merged = [...dbComments];
       for (const c of local) {
@@ -279,26 +282,11 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
       commentsState[postId] = merged;
       return merged;
     }
-  } catch {
-    // fallback
+  } catch (err) {
+    console.warn('[Posts] listPostComments Supabase notice:', err);
   }
 
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: PostComment[] }>(`/feed/${postId}/comments`);
-    return data.items;
-  }, commentsState[postId] ?? [
-    {
-      id: `c-default-${postId}`,
-      postId,
-      authorName: 'Tunde Bakare',
-      authorRole: 'student',
-      authorDepartment: '200L Elect Eng',
-      content: 'Great discussion thread. Following for updates!',
-      createdAt: new Date(Date.now() - 600000).toISOString(),
-      likesCount: 2,
-      isLikedByMe: false,
-    }
-  ]);
+  return commentsState[postId] ?? [];
 }
 
 export async function createPostComment(
