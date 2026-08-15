@@ -3,9 +3,9 @@ import type { ExpoConfig, ConfigContext } from'expo/config';
 // Values are pulled from the shell / EAS build profile environment.
 // See eas.json for the per-environment variable sets and .env.example
 // for local development.
-const API_BASE_URL = process.env.API_BASE_URL ?? 'https://api.dev.lioris.app';
-const WS_BASE_URL = process.env.WS_BASE_URL ?? 'wss://api.dev.lioris.app/realtime';
-const APP_ENV = process.env.APP_ENV ?? 'development';
+const API_BASE_URL = process.env.API_BASE_URL ?? 'https://api.lioris.app';
+const WS_BASE_URL = process.env.WS_BASE_URL ?? 'wss://api.lioris.app/realtime';
+const APP_ENV = process.env.APP_ENV ?? 'production';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,

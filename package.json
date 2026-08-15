@@ -4,9 +4,9 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "build": "expo export -p web",
-    "build:web": "expo export -p web",
-    "export": "expo export -p web",
+    "build": "cross-env APP_ENV=production expo export -p web --clear",
+    "build:web": "cross-env APP_ENV=production expo export -p web --clear",
+    "export": "cross-env APP_ENV=production expo export -p web --clear",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
@@ -53,6 +53,7 @@
     "@typescript-eslint/eslint-plugin": "^8.67.0",
     "@typescript-eslint/parser": "^8.67.0",
     "babel-preset-expo": "^57.0.3",
+    "cross-env": "^10.1.0",
     "eslint": "^10.8.1",
     "typescript": "~6.0.3"
   },
