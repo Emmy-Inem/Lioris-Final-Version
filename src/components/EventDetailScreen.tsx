@@ -478,14 +478,14 @@ export function EventDetailScreen() {
                   />
                 ) : (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.pastelPrimaryBg }}>
-                    <Ionicons name="map" size={48} color={colors.brandPrimary} />
-                    <AppText weight="bold" variant="h3" style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+                    <Ionicons name="location" size={44} color={colors.brandPrimary} />
+                    <AppText weight="bold" variant="h3" style={{ marginTop: spacing.xs, textAlign: 'center' }}>
                       {event.location}
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
-                      Live GPS Coordinates: 6.5173° N, 3.3872° E • Verified Campus Venue
+                    <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 4, marginBottom: spacing.md }}>
+                      {event.campusCode ? `${event.campusCode} Campus Venue` : 'Campus Location'} • Tap below to navigate
                     </AppText>
-                    <AppButton label="Open Google Maps App" onPress={handleLaunchMaps} />
+                    <AppButton label="Open in Google Maps" onPress={handleLaunchMaps} />
                   </View>
                 )}
               </View>

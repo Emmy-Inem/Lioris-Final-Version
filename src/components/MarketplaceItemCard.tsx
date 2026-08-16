@@ -8,8 +8,8 @@ import { AppButton } from'./AppButton';
 import { Avatar } from'./Avatar';
 import { useTheme } from'@/theme/ThemeProvider';
 import { MarketplaceListing } from'@/api/types';
-import { isWishlisted, toggleWishlist } from'@/api/marketplace';
-import { getOrCreateConversationWithUser } from '@/api/messaging';
+import { isWishlisted, toggleWishlist } from '@/api/marketplace';
+import { getOrCreateConversationWithUser, sendMessage } from '@/api/messaging';
 import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
 
@@ -56,17 +56,37 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
   async function handleConfirmEscrowOrder() {
     setProcessingOrder(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setProcessingOrder(false);
-    setOrderComplete(true);
-    setTimeout(() => {
-      setOrderComplete(false);
+    try {
+      const conversation = await getOrCreateConversationWithUser(item.sellerId, item.sellerName, item.sellerAvatarUrl);
+      await sendMessage(
+        conversation.id,
+        `Hi ${item.sellerName}, I would like to reserve "${item.title}" (${item.price}) for campus pickup. Let's coordinate a safe in-person meetup (e.g. Student Union Building or Library foyer).`,
+      );
+      setProcessingOrder(false);
+      setOrderComplete(true);
+      setTimeout(() => {
+        setOrderComplete(false);
+        setCheckoutModalOpen(false);
+        Alert.alert(
+          'Meetup Request Sent 🤝',
+          `Your reservation for "${item.title}" was delivered to ${item.sellerName}. A chat thread has been opened to coordinate handover.`,
+          [
+            {
+              text: 'Open Chat',
+              onPress: () => router.push(`/${roleGroup}/messages/${conversation.id}` as any),
+            },
+            { text: 'Done', style: 'cancel' },
+          ],
+        );
+      }, 600);
+    } catch {
+      setProcessingOrder(false);
       setCheckoutModalOpen(false);
       Alert.alert(
         'Purchase Request Placed',
-        `Your reservation request for "${item.title}" was sent to ${item.sellerName}. Meet safely on campus (e.g. Student Union or Library) to inspect the item and complete the exchange.`,
+        `Your reservation request for "${item.title}" was sent to ${item.sellerName}. Meet safely on campus to inspect the item and complete the exchange.`,
       );
-    }, 1000);
+    }
   }
 
   return (
@@ -221,9 +241,8 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
               Preferred Payment on Pickup
             </AppText>
             {[
-              { id: 'wallet' as const, name: 'Campus Student Wallet / Transfer', icon: 'wallet-outline', desc: 'Instant bank or peer transfer on handover' },
-              { id: 'card' as const, name: 'Cash on Delivery', icon: 'cash-outline', desc: 'Direct cash payment after in-person inspection' },
-              { id: 'transfer' as const, name: 'Automated Escrow (Coming Soon)', icon: 'time-outline', desc: 'In-app automated multi-signature escrow' },
+              { id: 'wallet' as const, name: 'Campus Bank / Mobile Transfer', icon: 'wallet-outline', desc: 'Instant bank or mobile peer transfer on handover' },
+              { id: 'card' as const, name: 'Cash on Handover', icon: 'cash-outline', desc: 'Direct cash payment after in-person inspection' },
             ].map((method) => {
               const isSelected = paymentMethod === method.id;
               return (

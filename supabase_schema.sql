@@ -466,8 +466,8 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- Allow Campus Staff to update is_suspended and verification_status for users in their same campus
-    IF v_caller_role = 'staff' AND (v_caller_campus = OLD.campus_code OR OLD.campus_code = 'GLOBAL') THEN
+    -- Allow Campus Staff to update is_suspended and verification_status for users in their same campus or when staff has GLOBAL scope
+    IF v_caller_role = 'staff' AND (v_caller_campus = OLD.campus_code OR v_caller_campus = 'GLOBAL' OR OLD.campus_code = 'GLOBAL') THEN
         -- Role and campus code cannot be escalated by staff
         NEW.role := OLD.role;
         NEW.campus_code := OLD.campus_code;
@@ -1359,13 +1359,13 @@ WITH CHECK (
     )
 );
 
--- Staff permissions for profiles (same campus verification & suspension)
+-- Staff permissions for profiles (same campus verification & suspension or global staff)
 CREATE POLICY "Staff can update profiles for their campus" ON public.profiles
 FOR UPDATE TO authenticated
 USING (
     EXISTS (
         SELECT 1 FROM profiles 
-        WHERE id = auth.uid() AND role = 'staff' AND campus_code = profiles.campus_code
+        WHERE id = auth.uid() AND role = 'staff' AND (campus_code = profiles.campus_code OR campus_code = 'GLOBAL' OR profiles.campus_code = 'GLOBAL')
     )
 );
 

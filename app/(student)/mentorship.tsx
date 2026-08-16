@@ -38,7 +38,7 @@ export default function StudentMentorshipScreen() {
     queryFn: () => searchMentors({ q: debouncedQuery || undefined, focusArea: expertise }),
   });
 
-  const myApplications = mentorships?.filter((m) => (user?.id && m.studentId === user.id) || m.studentId === 'me') ?? [];
+  const myApplications = mentorships?.filter((m) => !!user?.id && m.studentId === user.id) ?? [];
 
   function handleSendMessage() {
     if (!messageText.trim()) return;

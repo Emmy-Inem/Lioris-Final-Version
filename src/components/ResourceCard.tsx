@@ -28,14 +28,15 @@ export function ResourceCard({ resource }: { resource: Resource }) {
         }
         setDownloaded(true);
       } else {
-        setDownloaded(true);
-        Alert.alert('Resource Stored', `${resource.title} (${resource.fileSize}) is saved to your offline workspace cache.`);
+        Alert.alert(
+          'Sample Curriculum Reference',
+          `"${resource.title}" is a seeded reference placeholder. You can upload and download real course materials directly via the "+ Share Study Material" button.`,
+        );
       }
     } catch {
       if (resource.fileUrl) {
         Linking.openURL(resource.fileUrl).catch(() => {});
       }
-      setDownloaded(true);
     } finally {
       setDownloading(false);
     }
@@ -119,8 +120,8 @@ export function ResourceCard({ resource }: { resource: Resource }) {
         </View>
 
         <AppButton
-          label={downloaded ? 'Saved' : 'Download'}
-          variant={downloaded ? 'secondary' : 'primary'}
+          label={downloaded ? 'Saved' : resource.fileUrl ? 'Download' : 'Info'}
+          variant={downloaded ? 'secondary' : resource.fileUrl ? 'primary' : 'ghost'}
           onPress={handleDownload}
           loading={downloading}
         />

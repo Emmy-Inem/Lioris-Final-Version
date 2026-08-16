@@ -38,14 +38,14 @@ const COVER_PRESETS = [
   { id: 'hero_student_3d', label: 'Futuristic Studio', src: require('../../assets/images/hero_student_3d.jpg') },
 ];
 
-const PROFILE_TABS = ['My Posts', 'Academic & Bio', 'Badges & XP'] as const;
+const PROFILE_TABS = ['Posts & Activity', 'Academic & Credentials'] as const;
 
 export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const { colors, spacing, radius } = useTheme();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<(typeof PROFILE_TABS)[number]>('My Posts');
+  const [activeTab, setActiveTab] = useState<(typeof PROFILE_TABS)[number]>('Posts & Activity');
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
 
@@ -366,42 +366,42 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             })}
           </View>
 
-          {/* Tab Content 1: My Posts */}
-          {activeTab === 'My Posts' ? (
+          {/* Tab Content 1: Posts & Activity */}
+          {activeTab === 'Posts & Activity' ? (
             <View style={{ marginTop: spacing.sm }}>
               {postsLoading ? (
-                <AppText tone="secondary"style={{ textAlign: 'center', padding: spacing.lg }}>Loading your posts...</AppText>
+                <AppText tone="secondary" style={{ textAlign: 'center', padding: spacing.lg }}>Loading your posts...</AppText>
               ) : myPosts && myPosts.length > 0 ? (
                 myPosts.map((p) => <PostCard key={p.id} post={p} />)
               ) : (
                 <SolidCard style={{ alignItems: 'center', padding: spacing.xl }}>
-                  <Ionicons name="chatbubbles-outline"size={32} color={colors.textSecondary} style={{ marginBottom: spacing.sm }} />
-                  <AppText weight="bold"style={{ marginBottom: 4 }}>No Threads Published Yet</AppText>
-                  <AppText tone="secondary"variant="bodySmall"style={{ textAlign: 'center', marginBottom: spacing.md }}>
+                  <Ionicons name="chatbubbles-outline" size={32} color={colors.textSecondary} style={{ marginBottom: spacing.sm }} />
+                  <AppText weight="bold" style={{ marginBottom: 4 }}>No Threads Published Yet</AppText>
+                  <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md }}>
                     Share study questions, poll your cohort, or showcase projects on the Campus Forum!
                   </AppText>
-                  <AppButton label="Publish First Thread"onPress={() => router.push('./feed'as any)} />
+                  <AppButton label="Publish First Thread" onPress={() => router.push('./feed' as any)} />
                 </SolidCard>
               )}
             </View>
           ) : null}
 
-          {/* Tab Content 2: Academic & Bio */}
-          {activeTab === 'Academic & Bio' ? (
+          {/* Tab Content 2: Academic & Credentials */}
+          {activeTab === 'Academic & Credentials' ? (
             <View style={{ marginTop: spacing.sm, gap: spacing.md }}>
               <SolidCard>
-                <AppText weight="bold"variant="bodySmall"tone="brand"style={{ marginBottom: spacing.sm }}>
+                <AppText weight="bold" variant="bodySmall" tone="brand" style={{ marginBottom: spacing.sm }}>
                   Academic Credentials
                 </AppText>
                 <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                  <DetailColumn label="Department"value={profile.department ?? 'Computer Science'} icon="book-outline" />
-                  <DetailColumn label="Grad Class"value={profile.graduationYear ? String(profile.graduationYear) : '2026'} icon="school-outline" />
+                  <DetailColumn label="Department" value={profile.department ?? 'Computer Science'} icon="book-outline" />
+                  <DetailColumn label="Grad Class" value={profile.graduationYear ? String(profile.graduationYear) : '2026'} icon="school-outline" />
                 </View>
               </SolidCard>
 
               {profile.interests && profile.interests.length > 0 ? (
                 <SolidCard>
-                  <AppText weight="bold"variant="bodySmall"tone="brand"style={{ marginBottom: spacing.sm }}>
+                  <AppText weight="bold" variant="bodySmall" tone="brand" style={{ marginBottom: spacing.sm }}>
                     Skills & Areas of Interest
                   </AppText>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
@@ -415,7 +415,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                           borderRadius: radius.pill,
                         }}
                       >
-                        <AppText variant="caption"weight="semiBold"style={{ color: colors.brandPrimary }}>
+                        <AppText variant="caption" weight="semiBold" style={{ color: colors.brandPrimary }}>
                           {interest}
                         </AppText>
                       </View>
@@ -423,33 +423,6 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                   </View>
                 </SolidCard>
               ) : null}
-            </View>
-          ) : null}
-
-          {/* Tab Content 3: Badges & XP */}
-          {activeTab === 'Badges & XP' ? (
-            <View style={{ marginTop: spacing.sm, gap: spacing.md }}>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <GridStatCard icon="flame"label="Daily Streak"value={`${profile.streakDays} Days `} />
-                <GridStatCard icon="star"label="Campus Level"value={`Level ${profile.level} `} />
-              </View>
-
-              <SolidCard>
-                <AppText weight="bold"variant="bodySmall"tone="brand"style={{ marginBottom: spacing.sm }}>
-                  Earned Badges & Distinctions 
-                </AppText>
-                <View style={{ gap: spacing.sm }}>
-                  <BadgeRow
-                    icon="checkmark-done-circle"title="Verified Campus Identity"subtitle="Verified matriculation ID with official institutional email"tone="success"
-                  />
-                  <BadgeRow
-                    icon="trophy"title="Hackfest 2026 Finalist"subtitle="Top 5 team in 48-Hour Campus Smart City & App Hackathon"tone="brand"
-                  />
-                  <BadgeRow
-                    icon="heart-circle"title="Peer Study Contributor"subtitle="Uploaded verified past question solutions for CSC 301"tone="accent"
-                  />
-                </View>
-              </SolidCard>
             </View>
           ) : null}
 
@@ -634,40 +607,6 @@ function DetailColumn({ label, value, icon }: { label: string; value: string; ic
         {icon ? <Ionicons name={icon} size={12} color={colors.textSecondary} /> : null}
         <AppText variant="bodySmall"weight="semiBold">
           {value}
-        </AppText>
-      </View>
-    </View>
-  );
-}
-
-function GridStatCard({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
-  const { colors, spacing } = useTheme();
-  return (
-    <SolidCard style={{ flex: 1 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.xs }}>
-        <Ionicons name={icon} size={14} color={colors.brandPrimary} />
-        <AppText tone="secondary"variant="caption">
-          {label}
-        </AppText>
-      </View>
-      <AppText variant="h3"weight="bold">
-        {value}
-      </AppText>
-    </SolidCard>
-  );
-}
-
-function BadgeRow({ icon, title, subtitle, tone }: { icon: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; tone: 'success' | 'brand' | 'accent' }) {
-  const { colors, spacing } = useTheme();
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xs }}>
-      <Ionicons name={icon} size={24} color={tone === 'success' ? colors.success : tone === 'accent' ? colors.roseText : colors.brandPrimary} />
-      <View style={{ flex: 1 }}>
-        <AppText weight="bold"variant="bodySmall">
-          {title}
-        </AppText>
-        <AppText tone="secondary"variant="caption">
-          {subtitle}
         </AppText>
       </View>
     </View>

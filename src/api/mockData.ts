@@ -509,7 +509,7 @@ export const mockNotifications: AppNotification[] = [
 export const mockMentorships: Mentorship[] = [
   {
     id: 'ment-1',
-    studentId: 'me',
+    studentId: 'student-seed-1',
     mentorId: 'alumni-14',
     mentorName: 'Marcus Webb',
     status: 'active',
@@ -518,8 +518,8 @@ export const mockMentorships: Mentorship[] = [
   {
     id: 'ment-2',
     studentId: 'student-8',
-    mentorId: 'me',
-    mentorName: 'You',
+    mentorId: 'alumni-12',
+    mentorName: 'Dr. Sarah Jenkins',
     status: 'pending',
     focusArea: 'Academics',
   },

@@ -115,7 +115,7 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
     const realPosterId = authData?.user?.id;
 
     if (realPosterId) {
-      await supabase.from('jobs').insert({
+      const { error } = await supabase.from('jobs').insert({
         id: jobId,
         poster_id: realPosterId,
         campus_code: campusCode,
@@ -129,9 +129,13 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
         description: payload.description || null,
         posted_by_name: posterName,
       });
+      if (error) {
+        throw error;
+      }
     }
   } catch (err) {
     console.warn('[Jobs] Supabase insert error:', err);
+    throw err;
   }
 
   return created;

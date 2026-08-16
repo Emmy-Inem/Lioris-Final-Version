@@ -285,11 +285,12 @@ export async function createResource(
         is_approved: true,
       });
       if (error) {
-        console.warn('[Resources] Create resource Supabase error:', error.message);
+        throw error;
       }
     }
   } catch (err) {
     console.warn('[Resources] Create resource error:', err);
+    throw err;
   }
 
   return created;
