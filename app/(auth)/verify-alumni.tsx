@@ -12,31 +12,35 @@ import * as authApi from'@/api/auth';
 import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
 
 export default function VerifyAlumniScreen() {
-  const { spacing } = useTheme();
+  const { spacing, colors, radius, isDark } = useTheme();
   const advance = useAdvanceOnboarding('/(auth)/verify-alumni');
   const [graduationYear, setGraduationYear] = useState('');
   const [studentId, setStudentId] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleVerify() {
+    setErrorMessage(null);
+    const yr = Number(graduationYear);
+    if (!graduationYear.trim() || isNaN(yr) || yr < 1960 || yr > 2035) {
+      setErrorMessage('Please enter a valid 4-digit graduation year (e.g. 2022).');
+      return;
+    }
     setSubmitting(true);
     try {
       const result = await authApi.verifyAlumniStatus({
-        graduationYear: Number(graduationYear),
+        graduationYear: yr,
         studentId: studentId.trim() || undefined,
       });
       if (result.status === 'pending') {
-        // PRD Edge Cases: "Failed alumni verification: keep user in
-        // verification pending state, show next steps, restrict
-        // privileged actions" — e.g. messaging/directory visibility.
         Alert.alert(
           'Verification pending',
-          'We couldn\u2019t confirm your alumni status against our records yet. Our team will review your account — some features will stay limited until then.',
+          'We couldn’t confirm your alumni status against our records yet. Our team will review your account — some features will stay limited until then.',
         );
       }
       await advance();
     } catch {
-      Alert.alert('Verification failed', 'Please double check your graduation year and try again.');
+      setErrorMessage('Verification failed. Please double check your graduation year and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -58,30 +62,61 @@ export default function VerifyAlumniScreen() {
                 marginBottom: spacing.md,
               }}
             >
-              <Ionicons name="ribbon"size={26} color="#FFFFFF" />
+              <Ionicons name="ribbon" size={26} color="#FFFFFF" />
             </View>
-            <AppText variant="h1"weight="bold"tone="inverse">
+            <AppText variant="h1" weight="bold" tone="inverse">
               Verify your alumni status
             </AppText>
           </View>
         </AuthHeroBackground>
 
         <WaveCard>
-          <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
+          <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
             This confirms your graduation record so you can access the alumni directory
             and mentorship tools.
           </AppText>
 
           <AppTextField
-            label="Graduation year"keyboardType="number-pad"value={graduationYear}
-            onChangeText={setGraduationYear}
-            placeholder="2019"maxLength={4}
+            label="Graduation year"
+            keyboardType="number-pad"
+            value={graduationYear}
+            onChangeText={(t) => { setGraduationYear(t); if (errorMessage) setErrorMessage(null); }}
+            placeholder="2019"
+            maxLength={4}
           />
           <AppTextField
-            label="Former student ID (optional)"value={studentId}
-            onChangeText={setStudentId}
-            placeholder="e.g. S00123456"autoCapitalize="characters"
+            label="Former student ID (optional)"
+            value={studentId}
+            onChangeText={(t) => { setStudentId(t); if (errorMessage) setErrorMessage(null); }}
+            placeholder="e.g. S00123456"
+            autoCapitalize="characters"
           />
+
+          {errorMessage ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                borderColor: colors.critical,
+                borderWidth: 1,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.critical} />
+              <AppText
+                variant="bodySmall"
+                weight="semiBold"
+                style={{ color: colors.critical, flex: 1 }}
+              >
+                {errorMessage}
+              </AppText>
+            </View>
+          ) : null}
 
           <AppButton
             label="Verify alumni status"

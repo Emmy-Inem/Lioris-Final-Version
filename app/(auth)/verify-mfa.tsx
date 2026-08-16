@@ -20,6 +20,7 @@ export default function VerifyMfaScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user, verifyMfa, logout } = useAuth();
   const [code, setCode] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
@@ -35,8 +36,10 @@ export default function VerifyMfaScreen() {
   const maskedEmail = userEmail.replace(/(.{2})(.*)(?=@)/, (_gp1, h, r) => `${h}${'•'.repeat(Math.max(3, r.length))}`);
 
   async function handleVerify() {
+    setErrorMessage(null);
     if (code.trim().length < 6) {
-      Alert.alert('Incomplete Code', 'Please enter the complete 6-digit verification code.');
+      setErrorMessage('Please enter the complete 6-digit verification code.');
+      haptics.error();
       return;
     }
     haptics.medium();
@@ -47,7 +50,7 @@ export default function VerifyMfaScreen() {
       router.replace('/');
     } catch {
       haptics.error();
-      Alert.alert('Verification Failed', 'The verification code entered is invalid or has expired. Please try again.');
+      setErrorMessage('Invalid or expired MFA code. Please check and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -183,6 +186,32 @@ export default function VerifyMfaScreen() {
               style={{ position: 'absolute', opacity: 0, width: '100%', height: 50 }}
             />
           </Pressable>
+
+          {errorMessage ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                borderColor: colors.critical,
+                borderWidth: 1,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.critical} />
+              <AppText
+                variant="bodySmall"
+                weight="semiBold"
+                style={{ color: colors.critical, flex: 1 }}
+              >
+                {errorMessage}
+              </AppText>
+            </View>
+          ) : null}
 
           <AppButton
             label="Authorize & Continue →"

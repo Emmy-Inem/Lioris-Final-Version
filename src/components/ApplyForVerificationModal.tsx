@@ -29,11 +29,12 @@ interface ApplyForVerificationModalProps {
  * accounts that didn't auto-verify at registration.
  */
 export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyForVerificationModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const [institutionClaimed, setInstitutionClaimed] = useState('');
   const [documentType, setDocumentType] = useState<(typeof DOCUMENT_TYPES)[number]>('Student ID');
   const [documentReference, setDocumentReference] = useState('');
   const [documentPhotoUri, setDocumentPhotoUri] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.92);
 
@@ -41,6 +42,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
     if (visible) {
       opacity.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.quad) });
       scale.value = withSpring(1, { damping: 16, stiffness: 220 });
+      setErrorMessage(null);
     } else {
       opacity.value = 0;
       scale.value = 0.92;
@@ -59,12 +61,24 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
       mediaTypes: ['images'],
       quality: 0.8,
     });
-    if (!result.canceled && result.assets[0]) setDocumentPhotoUri(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) {
+      setDocumentPhotoUri(result.assets[0].uri);
+      if (errorMessage) setErrorMessage(null);
+    }
   }
 
-  const canSubmit = institutionClaimed.trim().length > 0 && documentReference.trim().length > 0;
-
   async function handleSubmit() {
+    setErrorMessage(null);
+    if (!institutionClaimed.trim()) {
+      setErrorMessage('Please enter your university or institution name.');
+      haptics.error();
+      return;
+    }
+    if (!documentReference.trim()) {
+      setErrorMessage('Please enter your document ID or matric number.');
+      haptics.error();
+      return;
+    }
     haptics.success();
     let photoBlob: Blob | undefined;
     if (documentPhotoUri) {
@@ -86,6 +100,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
     setDocumentPhotoUri(null);
     setInstitutionClaimed('');
     setDocumentReference('');
+    setErrorMessage(null);
   }
 
   return (
@@ -166,9 +181,35 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
             )}
           </Pressable>
 
+          {errorMessage ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                borderColor: colors.critical,
+                borderWidth: 1,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.critical} />
+              <AppText
+                variant="bodySmall"
+                weight="semiBold"
+                style={{ color: colors.critical, flex: 1 }}
+              >
+                {errorMessage}
+              </AppText>
+            </View>
+          ) : null}
+
           <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
-            <AppButton label="Cancel"variant="ghost"onPress={onClose} />
-            <AppButton label="Submit for review"onPress={handleSubmit} disabled={!canSubmit} />
+            <AppButton label="Cancel" variant="ghost" onPress={onClose} />
+            <AppButton label="Submit for review" onPress={handleSubmit} />
           </View>
         </Animated.View>
       </View>

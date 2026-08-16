@@ -27,7 +27,7 @@ interface ShareAcademicFileModalProps {
 }
 
 export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcademicFileModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const [title, setTitle] = useState('');
   const [courseCode, setCourseCode] = useState('');
   const [description, setDescription] = useState('');
@@ -38,6 +38,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
     mimeType?: string;
     file?: Blob;
   } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const translateY = useSharedValue(80);
@@ -47,6 +48,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
     if (visible) {
       translateY.value = withSpring(0, { damping: 18, stiffness: 260 });
       backdropOpacity.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) });
+      setErrorMessage(null);
     } else {
       translateY.value = 80;
       backdropOpacity.value = 0;
@@ -55,8 +57,6 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
-
-  const canUpload = title.trim().length > 0 && courseCode.trim().length > 0 && !isUploading;
 
   async function handlePickFile() {
     try {
@@ -82,6 +82,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
           mimeType: asset.mimeType,
           file: fileBlob,
         });
+        if (errorMessage) setErrorMessage(null);
       }
     } catch {
       Alert.alert('File Picker Error', 'Unable to access document.');
@@ -89,7 +90,16 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
   }
 
   async function handleUpload() {
-    if (!canUpload) return;
+    setErrorMessage(null);
+    if (!title.trim()) {
+      setErrorMessage('Please enter a descriptive resource title.');
+      return;
+    }
+    if (!courseCode.trim()) {
+      setErrorMessage('Please enter the target course code (e.g. CSC 301).');
+      return;
+    }
+
     setIsUploading(true);
 
     const sizeFormatted = selectedFile?.size
@@ -100,21 +110,22 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
 
     try {
       await onUpload({
-        title,
-        courseCode,
-        description,
+        title: title.trim(),
+        courseCode: courseCode.trim().toUpperCase(),
+        description: description.trim(),
         category,
         fileBlob: selectedFile?.file,
         fileSize: sizeFormatted,
         fileType,
       });
-      onClose();
       setTitle('');
       setCourseCode('');
       setDescription('');
       setSelectedFile(null);
+      setErrorMessage(null);
+      onClose();
     } catch (err: any) {
-      Alert.alert('Upload Failed', err?.message || 'Unable to upload file.');
+      setErrorMessage(err?.message || 'Failed to upload resource. Please check and try again.');
     } finally {
       setIsUploading(false);
     }
@@ -223,12 +234,38 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
             })}
           </View>
 
+          {errorMessage ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                borderColor: colors.critical,
+                borderWidth: 1,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.critical} />
+              <AppText
+                variant="bodySmall"
+                weight="semiBold"
+                style={{ color: colors.critical, flex: 1 }}
+              >
+                {errorMessage}
+              </AppText>
+            </View>
+          ) : null}
+
           <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
             <AppButton label="Cancel" variant="ghost" onPress={onClose} disabled={isUploading} />
             <AppButton
               label={isUploading ? 'Uploading...' : 'Upload File'}
               onPress={handleUpload}
-              disabled={!canUpload}
+              loading={isUploading}
             />
           </View>
         </Animated.View>

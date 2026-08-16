@@ -16,21 +16,29 @@ import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 
 export default function VerifyEmailScreen() {
-  const { spacing, colors } = useTheme();
+  const { spacing, colors, radius, isDark } = useTheme();
   const { user, logout, completeOnboarding } = useAuth();
   const advance = useAdvanceOnboarding('/(auth)/verify-email');
   const [code, setCode] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
 
   async function handleVerify() {
+    setErrorMessage(null);
+    if (!code.trim() || code.trim().length < 6) {
+      setErrorMessage('Please enter the full 6-digit verification code.');
+      haptics.error();
+      return;
+    }
     haptics.medium();
     setSubmitting(true);
     try {
       await authApi.verifyEmail(code.trim(), user?.email);
       await advance();
     } catch {
-      Alert.alert('Invalid code', 'That verification code didn’t work — please try again or request a new code.');
+      haptics.error();
+      setErrorMessage('Invalid verification code. Please check your inbox or click Resend Code.');
     } finally {
       setSubmitting(false);
     }
@@ -40,6 +48,7 @@ export default function VerifyEmailScreen() {
     if (resending) return;
     haptics.light();
     setResending(true);
+    setErrorMessage(null);
     try {
       if (user?.email) {
         await supabase.auth.resend({
@@ -94,10 +103,39 @@ export default function VerifyEmailScreen() {
             label="Verification code"
             keyboardType="number-pad"
             value={code}
-            onChangeText={setCode}
+            onChangeText={(text) => {
+              setCode(text);
+              if (errorMessage) setErrorMessage(null);
+            }}
             placeholder="123456"
             maxLength={6}
           />
+
+          {errorMessage ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                borderColor: colors.critical,
+                borderWidth: 1,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.critical} />
+              <AppText
+                variant="bodySmall"
+                weight="semiBold"
+                style={{ color: colors.critical, flex: 1 }}
+              >
+                {errorMessage}
+              </AppText>
+            </View>
+          ) : null}
 
           <AppButton
             label="Verify & Continue"

@@ -178,6 +178,8 @@ export function SettingsScreen() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [eraseError, setEraseError] = useState<string | null>(null);
   const [passwordSaved, setPasswordSaved] = useState(false);
 
   // Data Export modal state
@@ -256,32 +258,42 @@ export function SettingsScreen() {
   }
 
   async function handleEraseProfile() {
-    if (eraseConfirmText.trim().toUpperCase() !== 'ERASE') return;
+    setEraseError(null);
+    if (eraseConfirmText.trim().toUpperCase() !== 'ERASE') {
+      setEraseError('Please type ERASE in capital letters to confirm.');
+      haptics.error();
+      return;
+    }
     haptics.error();
     try {
       await deleteMyAccount(user?.id);
     } catch {}
     setEraseModalOpen(false);
     setEraseConfirmText('');
+    setEraseError(null);
     queryClient.clear();
     await logout();
     router.replace('/(auth)/login');
   }
 
   async function handleSavePassword() {
-    if (newPassword.length < 8) {
-      Alert.alert('Password too short', 'New password must be at least 8 characters.');
+    setPasswordError(null);
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long.');
+      haptics.error();
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Mismatch', 'New passwords do not match.');
+      setPasswordError('New password and confirmation do not match.');
+      haptics.error();
       return;
     }
     haptics.medium();
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
-        Alert.alert('Password Update Error', error.message);
+        setPasswordError(error.message || 'Could not update password.');
+        haptics.error();
         return;
       }
       setPasswordSaved(true);
@@ -291,10 +303,12 @@ export function SettingsScreen() {
         setOldPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        Alert.alert('Password Updated', 'Your security credentials have been updated.');
+        setPasswordError(null);
+        Alert.alert('Password Updated', 'Your security credentials have been updated successfully.');
       }, 500);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not update password.');
+      haptics.error();
+      setPasswordError(err?.message || 'Could not update password.');
     }
   }
 
@@ -1016,38 +1030,83 @@ export function SettingsScreen() {
       </Modal>
 
       {/* Change Password Modal */}
-      <Modal visible={passwordModalOpen} transparent animationType="fade"onRequestClose={() => setPasswordModalOpen(false)}>
+      <Modal visible={passwordModalOpen} transparent animationType="fade" onRequestClose={() => setPasswordModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
           <SolidCard style={{ width: '100%', maxWidth: 420 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <AppText variant="h3"weight="bold">Change Password </AppText>
-              <Pressable onPress={() => setPasswordModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close"size={20} color={colors.textSecondary} />
+              <AppText variant="h3" weight="bold">Change Password</AppText>
+              <Pressable onPress={() => { setPasswordModalOpen(false); setPasswordError(null); }} hitSlop={8}>
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
-            <AppTextField label="Current Password"placeholder="Enter current password"secureTextEntry value={oldPassword} onChangeText={setOldPassword} />
-            <AppTextField label="New Password"placeholder="At least 6 characters"secureTextEntry value={newPassword} onChangeText={setNewPassword} />
-            <AppTextField label="Confirm New Password"placeholder="Re-enter new password"secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} />
+
+            {passwordError ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                  borderColor: colors.critical,
+                  borderWidth: 1,
+                  borderRadius: radius.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name="alert-circle" size={18} color={colors.critical} />
+                <AppText
+                  variant="bodySmall"
+                  weight="semiBold"
+                  style={{ color: colors.critical, flex: 1 }}
+                >
+                  {passwordError}
+                </AppText>
+              </View>
+            ) : null}
+
+            <AppTextField
+              label="Current Password"
+              placeholder="Enter current password"
+              secureTextEntry
+              value={oldPassword}
+              onChangeText={(t) => { setOldPassword(t); if (passwordError) setPasswordError(null); }}
+            />
+            <AppTextField
+              label="New Password"
+              placeholder="At least 8 characters"
+              secureTextEntry
+              value={newPassword}
+              onChangeText={(t) => { setNewPassword(t); if (passwordError) setPasswordError(null); }}
+            />
+            <AppTextField
+              label="Confirm New Password"
+              placeholder="Re-enter new password"
+              secureTextEntry
+              value={confirmPassword}
+              onChangeText={(t) => { setConfirmPassword(t); if (passwordError) setPasswordError(null); }}
+            />
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel"variant="ghost"onPress={() => setPasswordModalOpen(false)} />
-              <AppButton label="Update Password"loading={passwordSaved} onPress={handleSavePassword} />
+              <AppButton label="Cancel" variant="ghost" onPress={() => { setPasswordModalOpen(false); setPasswordError(null); }} />
+              <AppButton label="Update Password" loading={passwordSaved} onPress={handleSavePassword} />
             </View>
           </SolidCard>
         </View>
       </Modal>
 
       {/* Export Data Modal */}
-      <Modal visible={exportModalOpen} transparent animationType="fade"onRequestClose={() => setExportModalOpen(false)}>
+      <Modal visible={exportModalOpen} transparent animationType="fade" onRequestClose={() => setExportModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
           <SolidCard style={{ width: '100%', maxWidth: 440 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-              <AppText variant="h3"weight="bold">Academic Archive Export 📥</AppText>
+              <AppText variant="h3" weight="bold">Academic Archive Export 📥</AppText>
               <Pressable onPress={() => setExportModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close"size={20} color={colors.textSecondary} />
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
             <ScrollView style={{ maxHeight: 220, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
-              <AppText tone="secondary"style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 10 }}>
+              <AppText tone="secondary" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 10 }}>
                 {exportDataJson}
               </AppText>
             </ScrollView>
@@ -1074,22 +1133,57 @@ export function SettingsScreen() {
       </Modal>
 
       {/* Erase Profile Confirmation Modal */}
-      <Modal visible={eraseModalOpen} transparent animationType="fade"onRequestClose={() => setEraseModalOpen(false)}>
+      <Modal visible={eraseModalOpen} transparent animationType="fade" onRequestClose={() => setEraseModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
           <Animated.View style={[{ width: '100%', maxWidth: 420 }, eraseAnimatedStyle]}>
             <SolidCard style={{ width: '100%' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
-                <Ionicons name="warning"size={20} color={colors.critical} />
-                <AppText variant="h3"weight="bold"style={{ color: colors.critical }}>Erase Profile Permanently</AppText>
+                <Ionicons name="warning" size={20} color={colors.critical} />
+                <AppText variant="h3" weight="bold" style={{ color: colors.critical }}>Erase Profile Permanently</AppText>
               </View>
-              <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
+              <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
                 This permanently wipes your academic workspace index — posts, resources, event history, and connections. Type ERASE to confirm.
               </AppText>
-              <AppTextField label=""placeholder="ERASE"value={eraseConfirmText} onChangeText={setEraseConfirmText} autoCapitalize="characters" />
+
+              {eraseError ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                    borderColor: colors.critical,
+                    borderWidth: 1,
+                    borderRadius: radius.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    marginBottom: spacing.md,
+                  }}
+                >
+                  <Ionicons name="alert-circle" size={18} color={colors.critical} />
+                  <AppText
+                    variant="bodySmall"
+                    weight="semiBold"
+                    style={{ color: colors.critical, flex: 1 }}
+                  >
+                    {eraseError}
+                  </AppText>
+                </View>
+              ) : null}
+
+              <AppTextField
+                label=""
+                placeholder="ERASE"
+                value={eraseConfirmText}
+                onChangeText={(t) => { setEraseConfirmText(t); if (eraseError) setEraseError(null); }}
+                autoCapitalize="characters"
+              />
               <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
-                <AppButton label="Cancel"variant="ghost"onPress={() => setEraseModalOpen(false)} />
+                <AppButton label="Cancel" variant="ghost" onPress={() => { setEraseModalOpen(false); setEraseError(null); }} />
                 <AppButton
-                  label="Erase permanently"variant="accent"disabled={eraseConfirmText.trim().toUpperCase() !== 'ERASE'}
+                  label="Erase permanently"
+                  variant="accent"
+                  disabled={eraseConfirmText.trim().toUpperCase() !== 'ERASE'}
                   onPress={handleEraseProfile}
                 />
               </View>

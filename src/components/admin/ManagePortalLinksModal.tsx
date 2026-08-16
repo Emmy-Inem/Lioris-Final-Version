@@ -28,10 +28,11 @@ const INITIAL_LINKS: PortalLink[] = [
 ];
 
 export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const [links, setLinks] = useState<PortalLink[]>(INITIAL_LINKS);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -59,6 +60,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
     setUrl('');
     setCategory('Academic');
     setSelectedIcon('link-outline');
+    setFormError(null);
     setAdding(true);
   }
 
@@ -70,6 +72,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
     setUrl(link.url);
     setCategory(link.category);
     setSelectedIcon(link.icon);
+    setFormError(null);
   }
 
   function cancelForm() {
@@ -77,11 +80,19 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
     setEditingId(null);
     setTitle('');
     setUrl('');
+    setFormError(null);
   }
 
   function handleSave() {
-    if (!title.trim() || !url.trim()) {
-      Alert.alert('Missing Fields', 'Please enter a title and URL.');
+    setFormError(null);
+    if (!title.trim()) {
+      setFormError('Please enter a link title.');
+      haptics.error();
+      return;
+    }
+    if (!url.trim()) {
+      setFormError('Please enter a valid URL destination.');
+      haptics.error();
       return;
     }
     haptics.success();
@@ -225,11 +236,36 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
                   })}
                 </View>
 
+                {formError ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                      borderColor: colors.critical,
+                      borderWidth: 1,
+                      borderRadius: radius.md,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      marginBottom: spacing.md,
+                    }}
+                  >
+                    <Ionicons name="alert-circle" size={18} color={colors.critical} />
+                    <AppText
+                      variant="bodySmall"
+                      weight="semiBold"
+                      style={{ color: colors.critical, flex: 1 }}
+                    >
+                      {formError}
+                    </AppText>
+                  </View>
+                ) : null}
+
                 <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
                   <AppButton label="Cancel" variant="ghost" onPress={cancelForm} />
                   <AppButton
                     label={editingId ? 'Save Changes' : 'Publish Link'}
-                    disabled={!title.trim() || !url.trim()}
                     onPress={handleSave}
                   />
                 </View>

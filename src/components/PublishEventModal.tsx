@@ -26,12 +26,13 @@ interface PublishEventModalProps {
 }
 
 export function PublishEventModal({ visible, onClose, onPublish }: PublishEventModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventType, setEventType] = useState<(typeof EVENT_TYPES)[number]>('Lioris Live Event (In-App)');
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('Academic');
   const [sponsored, setSponsored] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bannerUri, setBannerUri] = useState<string | null>(null);
 
@@ -48,6 +49,12 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
   }
 
   async function handleHost() {
+    setErrorMessage(null);
+    if (!title.trim()) {
+      setErrorMessage('Please enter an event title.');
+      haptics.error();
+      return;
+    }
     haptics.medium();
     setSubmitting(true);
     try {
@@ -70,6 +77,10 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
       setDescription('');
       setBannerUri(null);
       setSponsored(false);
+      setErrorMessage(null);
+    } catch (err: any) {
+      haptics.error();
+      setErrorMessage(err?.message || 'Could not publish event. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -210,9 +221,35 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
           </Pressable>
         </ScrollView>
 
+        {errorMessage ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+              borderColor: colors.critical,
+              borderWidth: 1,
+              borderRadius: radius.md,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              marginBottom: spacing.sm,
+            }}
+          >
+            <Ionicons name="alert-circle" size={18} color={colors.critical} />
+            <AppText
+              variant="bodySmall"
+              weight="semiBold"
+              style={{ color: colors.critical, flex: 1 }}
+            >
+              {errorMessage}
+            </AppText>
+          </View>
+        ) : null}
+
         <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingVertical: spacing.md }}>
-          <AppButton label="Cancel"variant="ghost"onPress={onClose} />
-          <AppButton label="Host Event"onPress={handleHost} disabled={!title.trim()} loading={submitting} />
+          <AppButton label="Cancel" variant="ghost" onPress={onClose} />
+          <AppButton label="Host Event" onPress={handleHost} loading={submitting} />
         </View>
       </View>
     </Modal>

@@ -43,6 +43,7 @@ export default function LoginScreen() {
   const [slide, setSlide] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState('');
@@ -55,12 +56,15 @@ export default function LoginScreen() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotOtp, setForgotOtp] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotStep, setForgotStep] = useState<'request' | 'sent'>('request');
   const [submittingForgot, setSubmittingForgot] = useState(false);
 
   async function handleSendRecoveryCode() {
+    setForgotError(null);
     if (!forgotEmail.trim()) {
-      Alert.alert('Missing Email', 'Please enter your registered campus email.');
+      setForgotError('Please enter your registered campus email address.');
+      haptics.error();
       return;
     }
     setSubmittingForgot(true);
@@ -69,15 +73,23 @@ export default function LoginScreen() {
       setForgotStep('sent');
       haptics.success();
     } catch (err: any) {
-      Alert.alert('Recovery Error', err?.message || 'Could not send recovery code. Please verify your email.');
+      haptics.error();
+      setForgotError(err?.message || 'Could not send recovery code. Please verify your email.');
     } finally {
       setSubmittingForgot(false);
     }
   }
 
   async function handleResetPasswordSubmit() {
-    if (!forgotOtp.trim() || !forgotNewPassword) {
-      Alert.alert('Missing Details', 'Please enter the 6-digit recovery code and your new password.');
+    setForgotError(null);
+    if (!forgotOtp.trim()) {
+      setForgotError('Please enter the 6-digit recovery code.');
+      haptics.error();
+      return;
+    }
+    if (!forgotNewPassword || forgotNewPassword.length < 8) {
+      setForgotError('New password must be at least 8 characters long.');
+      haptics.error();
       return;
     }
     setSubmittingForgot(true);
@@ -92,7 +104,8 @@ export default function LoginScreen() {
       setForgotOtp('');
       setForgotNewPassword('');
     } catch (err: any) {
-      Alert.alert('Reset Failed', err?.message || 'Invalid or expired recovery code. Please try again.');
+      haptics.error();
+      setForgotError(err?.message || 'Invalid or expired recovery code. Please try again.');
     } finally {
       setSubmittingForgot(false);
     }
@@ -109,8 +122,20 @@ export default function LoginScreen() {
   }
 
   async function handleLogin() {
-    if (!email.trim() || !password) {
-      Alert.alert('Missing Details', 'Please enter both your email address and password.');
+    setErrorMessage(null);
+    if (!email.trim()) {
+      setErrorMessage('Please enter your campus email or username.');
+      haptics.error();
+      return;
+    }
+    if (!password) {
+      setErrorMessage('Please enter your password.');
+      haptics.error();
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters.');
+      haptics.error();
       return;
     }
     haptics.medium();
@@ -119,7 +144,9 @@ export default function LoginScreen() {
       await login(email.trim(), password);
       router.replace('/');
     } catch (err: any) {
-      Alert.alert('Login Notice', err?.message || 'Unable to authenticate with these credentials. Please check and try again.');
+      haptics.error();
+      const msg = err?.message || 'Incorrect email or password. Please verify your credentials and try again.';
+      setErrorMessage(msg);
     } finally {
       setSubmitting(false);
     }
@@ -265,7 +292,10 @@ export default function LoginScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (errorMessage) setErrorMessage(null);
+            }}
           />
           <AppTextField
             label=""
@@ -273,16 +303,45 @@ export default function LoginScreen() {
             secureTextEntry
             showPasswordToggle
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errorMessage) setErrorMessage(null);
+            }}
           />
 
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md, marginTop: -spacing.xs }}>
-            <Pressable onPress={() => { setForgotStep('request'); setForgotModalOpen(true); }}>
+            <Pressable onPress={() => { setForgotStep('request'); setForgotError(null); setForgotModalOpen(true); }}>
               <AppText variant="caption" tone="brand" weight="semiBold">
                 Forgot Password?
               </AppText>
             </Pressable>
           </View>
+
+          {errorMessage ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                borderColor: colors.critical,
+                borderWidth: 1,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.critical} />
+              <AppText
+                variant="bodySmall"
+                weight="semiBold"
+                style={{ color: colors.critical, flex: 1 }}
+              >
+                {errorMessage}
+              </AppText>
+            </View>
+          ) : null}
 
           <AppButton label="Secure Login" onPress={handleLogin} loading={submitting} disabled={!email || !password} fullWidth />
 
@@ -410,6 +469,32 @@ export default function LoginScreen() {
               </Pressable>
             </View>
 
+            {forgotError ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                  borderColor: colors.critical,
+                  borderWidth: 1,
+                  borderRadius: radius.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name="alert-circle" size={18} color={colors.critical} />
+                <AppText
+                  variant="bodySmall"
+                  weight="semiBold"
+                  style={{ color: colors.critical, flex: 1 }}
+                >
+                  {forgotError}
+                </AppText>
+              </View>
+            ) : null}
+
             {forgotStep === 'request' ? (
               <>
                 <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
@@ -419,7 +504,10 @@ export default function LoginScreen() {
                   label="Campus Email"
                   placeholder="name@student.unilag.edu.ng"
                   value={forgotEmail}
-                  onChangeText={setForgotEmail}
+                  onChangeText={(text) => {
+                    setForgotEmail(text);
+                    if (forgotError) setForgotError(null);
+                  }}
                   autoCapitalize="none"
                   keyboardType="email-address"
                 />
@@ -449,7 +537,10 @@ export default function LoginScreen() {
                   label="6-Digit Recovery Code"
                   placeholder="123456"
                   value={forgotOtp}
-                  onChangeText={setForgotOtp}
+                  onChangeText={(text) => {
+                    setForgotOtp(text);
+                    if (forgotError) setForgotError(null);
+                  }}
                   keyboardType="number-pad"
                   maxLength={6}
                 />
@@ -458,7 +549,10 @@ export default function LoginScreen() {
                   label="New Password"
                   placeholder="At least 8 characters"
                   value={forgotNewPassword}
-                  onChangeText={setForgotNewPassword}
+                  onChangeText={(text) => {
+                    setForgotNewPassword(text);
+                    if (forgotError) setForgotError(null);
+                  }}
                   secureTextEntry
                 />
 

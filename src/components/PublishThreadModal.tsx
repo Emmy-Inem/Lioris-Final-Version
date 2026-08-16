@@ -50,6 +50,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const [sponsored, setSponsored] = useState(false);
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   const [isVideoAttachment, setIsVideoAttachment] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Poll state
   const [attachPoll, setAttachPoll] = useState(false);
@@ -67,6 +68,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setPollOptions(['Option A', 'Option B']);
     setSponsored(false);
     setMode('Thread');
+    setErrorMessage(null);
   }
 
   function handleAddPollOption() {
@@ -80,7 +82,22 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   }
 
   function handlePublish() {
-    if (!topic.trim() || !content.trim()) return;
+    setErrorMessage(null);
+    if (!topic.trim()) {
+      setErrorMessage('Please enter a headline or topic for your discussion.');
+      haptics.error();
+      return;
+    }
+    if (!content.trim()) {
+      setErrorMessage('Please write your post thoughts or questions before publishing.');
+      haptics.error();
+      return;
+    }
+    if (attachPoll && !pollQuestion.trim()) {
+      setErrorMessage('Please enter your poll question or disable the poll.');
+      haptics.error();
+      return;
+    }
     haptics.medium();
     onPublish({
       title: topic.trim(),
@@ -360,11 +377,37 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
           </Pressable>
         </ScrollView>
 
+        {errorMessage ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+              borderColor: colors.critical,
+              borderWidth: 1,
+              borderRadius: radius.md,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              marginBottom: spacing.sm,
+            }}
+          >
+            <Ionicons name="alert-circle" size={18} color={colors.critical} />
+            <AppText
+              variant="bodySmall"
+              weight="semiBold"
+              style={{ color: colors.critical, flex: 1 }}
+            >
+              {errorMessage}
+            </AppText>
+          </View>
+        ) : null}
+
         <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider }}>
-          <AppButton label="Cancel"variant="ghost"onPress={onClose} />
+          <AppButton label="Cancel" variant="ghost" onPress={onClose} />
           <AppButton
-            label="Publish Thread"onPress={handlePublish}
-            disabled={!topic.trim() || !content.trim()}
+            label="Publish Thread"
+            onPress={handlePublish}
           />
         </View>
       </View>

@@ -34,13 +34,14 @@ interface SellItemModalProps {
  * condition chips, same modal chrome) rather than inventing a new one.
  */
 export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState<MarketplaceListing['condition']>('Like New');
   const [category, setCategory] = useState<MarketplaceListing['category']>('Electronics');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function pickPhoto() {
@@ -60,9 +61,21 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
     setDescription('');
     setPrice('');
     setPhotoUri(null);
+    setErrorMessage(null);
   }
 
   async function handlePublish() {
+    setErrorMessage(null);
+    if (!title.trim()) {
+      setErrorMessage('Please enter an item title.');
+      haptics.error();
+      return;
+    }
+    if (!price.trim()) {
+      setErrorMessage('Please specify an asking price (e.g. ₦15,000).');
+      haptics.error();
+      return;
+    }
     haptics.medium();
     setSubmitting(true);
     try {
@@ -76,6 +89,9 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
       });
       onClose();
       reset();
+    } catch (err: any) {
+      haptics.error();
+      setErrorMessage(err?.message || 'Failed to publish listing. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -188,7 +204,33 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
             })}
           </View>
 
-          <AppButton label="Publish Listing"onPress={handlePublish} loading={submitting} disabled={!canSubmit} fullWidth />
+          {errorMessage ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                borderColor: colors.critical,
+                borderWidth: 1,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.critical} />
+              <AppText
+                variant="bodySmall"
+                weight="semiBold"
+                style={{ color: colors.critical, flex: 1 }}
+              >
+                {errorMessage}
+              </AppText>
+            </View>
+          ) : null}
+
+          <AppButton label="Publish Listing" onPress={handlePublish} loading={submitting} fullWidth />
         </ScrollView>
       </View>
     </Modal>

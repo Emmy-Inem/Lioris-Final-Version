@@ -32,6 +32,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const passwordValid = isPasswordValid(password);
@@ -42,20 +43,33 @@ export default function RegisterScreen() {
   const usernameTouched = username.length > 0;
   const usernameValid = isValidUsername(username);
 
-  // Live-preview the matched university's own brand color as soon as
-  // the person types a recognized school email — the same colors
-  // ThemeProvider applies globally once they're logged in
-  // (src/theme/colors.ts's institutionThemeOverrides), just surfaced a
-  // moment earlier since there's no profile yet during registration.
   const institutionOverride = matchedInstitution ? institutionThemeOverrides[matchedInstitution.code] : undefined;
   const heroFromColor = institutionOverride ? (isDark ? institutionOverride.dark.brandPrimaryPressed : institutionOverride.light.brandPrimaryPressed) : undefined;
   const heroToColor = institutionOverride ? (isDark ? institutionOverride.dark.brandPrimary : institutionOverride.light.brandPrimary) : undefined;
 
-  const canSubmit =
-    fullName.trim().length > 1 && emailFormatValid && passwordValid && usernameValid && acceptedTerms;
-
   async function handleRegister() {
-    if (!canSubmit) return;
+    setErrorMessage(null);
+    if (fullName.trim().length < 2) {
+      setErrorMessage('Please enter your full display name.');
+      return;
+    }
+    if (!emailFormatValid) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+    if (!passwordValid) {
+      setErrorMessage('Password must meet all security criteria (12+ characters with uppercase, lowercase, numbers, and symbols).');
+      return;
+    }
+    if (!usernameValid) {
+      setErrorMessage('Username must be 3-24 characters (letters, numbers, dots, underscores).');
+      return;
+    }
+    if (!acceptedTerms) {
+      setErrorMessage('Please accept the Terms of Service & Privacy Policy to continue.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const createdUser = await register({
@@ -65,14 +79,10 @@ export default function RegisterScreen() {
         password,
         userType: portal,
       });
-      // Anyone can register with any real email. Only a matching
-      // launch-university domain auto-verifies the account (the tick);
-      // everyone else starts unverified and can apply later from their
-      // Profile by submitting documents for manual review.
       seedProfileUsername(createdUser, username, matchedInstitution ?? undefined);
       router.replace('/');
-    } catch {
-      Alert.alert('Registration failed', 'Please check your details and try again.');
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Registration failed. Please check your details and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -246,7 +256,33 @@ export default function RegisterScreen() {
           </AppText>
         </Pressable>
 
-        <AppButton label="Configure & Join"onPress={handleRegister} loading={submitting} disabled={!canSubmit} fullWidth />
+        {errorMessage ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+              borderColor: colors.critical,
+              borderWidth: 1,
+              borderRadius: radius.md,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              marginBottom: spacing.md,
+            }}
+          >
+            <Ionicons name="alert-circle" size={18} color={colors.critical} />
+            <AppText
+              variant="bodySmall"
+              weight="semiBold"
+              style={{ color: colors.critical, flex: 1 }}
+            >
+              {errorMessage}
+            </AppText>
+          </View>
+        ) : null}
+
+        <AppButton label="Configure & Join" onPress={handleRegister} loading={submitting} fullWidth />
 
         <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
           <Link href="/(auth)/login">

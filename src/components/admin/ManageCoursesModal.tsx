@@ -41,6 +41,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
   const [formLecturer, setFormLecturer] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formCover, setFormCover] = useState('campus_library_study');
+  const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const { data: courses = [], refetch } = useQuery({
@@ -65,6 +66,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
     setFormLecturer('');
     setFormDescription('');
     setFormCover('campus_library_study');
+    setFormError(null);
     setIsCreating(true);
   }
 
@@ -79,12 +81,20 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
     setFormLecturer(course.lecturerName ?? '');
     setFormDescription(course.description);
     setFormCover(course.coverImageUrl ?? 'campus_library_study');
+    setFormError(null);
     setIsCreating(false);
   }
 
   async function handleSave() {
-    if (!formCode.trim() || !formTitle.trim()) {
-      Alert.alert('Required Fields', 'Please enter course code and course title.');
+    setFormError(null);
+    if (!formCode.trim()) {
+      setFormError('Please enter a course code (e.g. CSC 301).');
+      haptics.error();
+      return;
+    }
+    if (!formTitle.trim()) {
+      setFormError('Please enter a course title.');
+      haptics.error();
       return;
     }
 
@@ -98,31 +108,31 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
           department: formDept.trim(),
           units: Number(formUnits) || 3,
           level: Number(formLevel) || 300,
-          lecturerName: formLecturer.trim(),
+          lecturerName: formLecturer.trim() || undefined,
           description: formDescription.trim(),
           coverImageUrl: formCover,
         });
-        Alert.alert('Course Updated', `${formCode.trim()} updated successfully.`);
       } else {
         await createCourse({
           courseCode: formCode.trim(),
           title: formTitle.trim(),
-          department: formDept.trim() || 'General',
+          department: formDept.trim(),
           units: Number(formUnits) || 3,
-          level: Number(formLevel) || 100,
-          lecturerName: formLecturer.trim(),
+          level: Number(formLevel) || 300,
+          lecturerName: formLecturer.trim() || undefined,
           description: formDescription.trim(),
           coverImageUrl: formCover,
         });
-        Alert.alert('Course Created', `${formCode.trim()} added to curriculum.`);
       }
-
-      await queryClient.invalidateQueries({ queryKey: ['courses'] });
-      await refetch();
-      setEditingCourse(null);
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      refetch();
       setIsCreating(false);
+      setEditingCourse(null);
+      setFormError(null);
+      haptics.success();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Could not save course.');
+      haptics.error();
+      setFormError(err?.message || 'Could not save course. Please verify fields and try again.');
     } finally {
       setSaving(false);
     }
@@ -255,6 +265,32 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
                   );
                 })}
               </ScrollView>
+
+              {formError ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                    borderColor: colors.critical,
+                    borderWidth: 1,
+                    borderRadius: radius.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    marginBottom: spacing.md,
+                  }}
+                >
+                  <Ionicons name="alert-circle" size={18} color={colors.critical} />
+                  <AppText
+                    variant="bodySmall"
+                    weight="semiBold"
+                    style={{ color: colors.critical, flex: 1 }}
+                  >
+                    {formError}
+                  </AppText>
+                </View>
+              ) : null}
 
               <AppButton
                 label={saving ? 'Saving...' : editingCourse ? 'Save Changes' : 'Create Course'}
