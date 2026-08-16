@@ -30,6 +30,7 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [botField, setBotField] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -78,6 +79,7 @@ export default function RegisterScreen() {
         email: email.trim(),
         password,
         userType: portal,
+        botField,
       });
       seedProfileUsername(createdUser, username, matchedInstitution ?? undefined);
       router.replace('/');
@@ -239,7 +241,19 @@ export default function RegisterScreen() {
           placeholder="e.g. ineme.17"error={usernameTouched && !usernameValid ? '3-24 characters: letters, numbers, dots, underscores' : undefined}
         />
 
-        <AppTextField label="Display Full Name"value={fullName} onChangeText={setFullName} placeholder="Inem Light" />
+        <AppTextField label="Display Full Name" value={fullName} onChangeText={setFullName} placeholder="Inem Light" />
+
+        {/* Anti-Bot Honeypot Field (Visually hidden off-screen, traps automated spam bots) */}
+        <View style={{ position: 'absolute', left: -9999, top: -9999, width: 0, height: 0, opacity: 0, overflow: 'hidden' }} aria-hidden={true}>
+          <AppTextField
+            label="Website URL"
+            value={botField}
+            onChangeText={setBotField}
+            placeholder="Do not fill this field"
+            autoCapitalize="none"
+            autoComplete="off"
+          />
+        </View>
 
         <Pressable
           onPress={() => setAcceptedTerms((v) => !v)}

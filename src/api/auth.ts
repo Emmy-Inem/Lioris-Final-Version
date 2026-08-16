@@ -18,7 +18,7 @@ export interface RegisterPayload {
   botField?: string;
 }
 
-// In-memory rate limiting and brute force protection
+// Server & Client hybrid rate limiting and brute force protection
 interface LoginAttemptRecord {
   failures: number;
   lockedUntil?: number;
@@ -27,29 +27,59 @@ interface LoginAttemptRecord {
 
 const loginAttempts = new Map<string, LoginAttemptRecord>();
 
-function checkLoginRateLimit(email: string): void {
-  const record = loginAttempts.get(email.toLowerCase());
+async function checkLoginRateLimit(email: string): Promise<void> {
+  const clean = email.toLowerCase().trim();
+
+  // 1. Check server-side Postgres rate limiting via RPC (authoritative)
+  try {
+    const { data, error } = await supabase.rpc('check_auth_rate_limit', {
+      p_identifier: clean,
+    });
+    if (!error && data && data.allowed === false) {
+      const retrySec = data.retry_after_seconds || 60;
+      throw new Error(data.message || `Too many failed login attempts. Temporarily locked for ${retrySec}s.`);
+    }
+  } catch (err: any) {
+    if (err.message && err.message.includes('Too many failed login attempts')) {
+      throw err;
+    }
+    // If RPC is unavailable (e.g. offline/network), fall through to local client tracking
+  }
+
+  // 2. Client-side memory check
+  const record = loginAttempts.get(clean);
   if (!record) return;
   const now = Date.now();
   if (record.lockedUntil && now < record.lockedUntil) {
     const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
     throw new Error(`Too many failed login attempts. Account temporarily locked for security. Please try again in ${remainingSec}s.`);
   }
-  // If window expired (5 minutes since last attempt), reset failures
-  if (now - record.lastAttempt > 5 * 60 * 1000) {
-    loginAttempts.delete(email.toLowerCase());
+  if (now - record.lastAttempt > 15 * 60 * 1000) {
+    loginAttempts.delete(clean);
   }
 }
 
-function recordLoginFailure(email: string): void {
-  const key = email.toLowerCase();
+async function recordLoginFailure(email: string): Promise<void> {
+  const key = email.toLowerCase().trim();
   const now = Date.now();
+
+  // 1. Record on server-side Postgres
+  try {
+    await supabase.rpc('record_auth_attempt', {
+      p_identifier: key,
+      p_success: false,
+    });
+  } catch {
+    // Non-blocking fallback
+  }
+
+  // 2. Record locally
   const existing = loginAttempts.get(key) || { failures: 0, lastAttempt: now };
   const failures = existing.failures + 1;
   let lockedUntil: number | undefined;
 
   if (failures >= 5) {
-    const lockoutDurationSec = Math.min(300, 60 * (failures - 4)); // 60s, 120s, 180s... up to 5 mins
+    const lockoutDurationSec = Math.min(300, 60 * (failures - 4));
     lockedUntil = now + lockoutDurationSec * 1000;
   }
 
@@ -60,16 +90,25 @@ function recordLoginFailure(email: string): void {
   });
 }
 
-function clearLoginFailures(email: string): void {
-  loginAttempts.delete(email.toLowerCase());
+async function clearLoginFailures(email: string): Promise<void> {
+  const key = email.toLowerCase().trim();
+  try {
+    await supabase.rpc('record_auth_attempt', {
+      p_identifier: key,
+      p_success: true,
+    });
+  } catch {
+    // Non-blocking
+  }
+  loginAttempts.delete(key);
 }
 
-// POST /auth/login — Strictly Real Supabase Authentication with Rate Limiting
+// POST /auth/login — Strictly Real Supabase Authentication with Server-Side Rate Limiting
 export async function login(payload: LoginPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim();
 
-  // Enforce brute-force lockout check
-  checkLoginRateLimit(cleanEmail);
+  // Enforce server-side brute-force lockout check
+  await checkLoginRateLimit(cleanEmail);
 
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: cleanEmail,
@@ -77,7 +116,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   });
 
   if (signInError || !signInData?.session || !signInData?.user) {
-    recordLoginFailure(cleanEmail);
+    await recordLoginFailure(cleanEmail);
     const rawMsg = signInError?.message || 'Invalid email or password.';
     if (rawMsg.toLowerCase().includes('email not confirmed')) {
       throw new Error('Your email address is not verified yet. Please check your inbox for the confirmation link.');
@@ -86,7 +125,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   }
 
   // Clear failures upon successful authentication
-  clearLoginFailures(cleanEmail);
+  await clearLoginFailures(cleanEmail);
 
   // Fetch verified user profile from Supabase profiles table with targeted column projection
   const { data: profile } = await supabase

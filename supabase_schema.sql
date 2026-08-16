@@ -1003,6 +1003,107 @@ FOR DELETE TO authenticated USING (
     )
 );
 
+-- ============================================================================
+-- 18. SERVER-SIDE AUTH RATE LIMITING & BRUTE FORCE DEFENSE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.auth_rate_limits (
+    identifier TEXT PRIMARY KEY,
+    failed_attempts INT NOT NULL DEFAULT 0,
+    locked_until TIMESTAMPTZ,
+    last_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.auth_rate_limits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Rate limits managed via security definer functions only"
+ON public.auth_rate_limits
+FOR ALL
+TO authenticated, anon
+USING (false);
+
+-- RPC: Check rate limit status server-side
+CREATE OR REPLACE FUNCTION public.check_auth_rate_limit(p_identifier TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_clean TEXT := LOWER(TRIM(p_identifier));
+    v_rec RECORD;
+    v_retry_seconds INT;
+BEGIN
+    SELECT * INTO v_rec FROM public.auth_rate_limits WHERE identifier = v_clean;
+    
+    IF FOUND THEN
+        IF v_rec.locked_until IS NOT NULL AND v_rec.locked_until > NOW() THEN
+            v_retry_seconds := CEIL(EXTRACT(EPOCH FROM (v_rec.locked_until - NOW())));
+            RETURN jsonb_build_object(
+                'allowed', false,
+                'retry_after_seconds', v_retry_seconds,
+                'message', format('Too many failed login attempts. Temporarily locked for %s seconds.', v_retry_seconds)
+            );
+        END IF;
+    END IF;
+
+    RETURN jsonb_build_object('allowed', true);
+END;
+$$;
+
+-- RPC: Record auth attempt success or failure server-side
+CREATE OR REPLACE FUNCTION public.record_auth_attempt(p_identifier TEXT, p_success BOOLEAN)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_clean TEXT := LOWER(TRIM(p_identifier));
+    v_rec RECORD;
+    v_fails INT;
+    v_lock_duration INT;
+BEGIN
+    IF p_success THEN
+        DELETE FROM public.auth_rate_limits WHERE identifier = v_clean;
+        RETURN jsonb_build_object('status', 'reset');
+    ELSE
+        SELECT * INTO v_rec FROM public.auth_rate_limits WHERE identifier = v_clean;
+        
+        IF FOUND THEN
+            IF v_rec.last_attempt_at < NOW() - INTERVAL '15 minutes' THEN
+                v_fails := 1;
+            ELSE
+                v_fails := v_rec.failed_attempts + 1;
+            END IF;
+            
+            IF v_fails >= 5 THEN
+                v_lock_duration := LEAST(300, 60 * (v_fails - 4));
+                UPDATE public.auth_rate_limits
+                SET failed_attempts = v_fails,
+                    locked_until = NOW() + (v_lock_duration || ' seconds')::INTERVAL,
+                    last_attempt_at = NOW()
+                WHERE identifier = v_clean;
+            ELSE
+                UPDATE public.auth_rate_limits
+                SET failed_attempts = v_fails,
+                    locked_until = NULL,
+                    last_attempt_at = NOW()
+                WHERE identifier = v_clean;
+            END IF;
+        ELSE
+            INSERT INTO public.auth_rate_limits (identifier, failed_attempts, last_attempt_at)
+            VALUES (v_clean, 1, NOW());
+        END IF;
+        
+        RETURN jsonb_build_object('status', 'recorded');
+    END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.check_auth_rate_limit(TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_auth_attempt(TEXT, BOOLEAN) TO anon, authenticated;
+
+
 
 
 
