@@ -127,30 +127,46 @@ export async function respondToConnectionRequest(
   const target = incomingRequestsState.find((r) => r.id === connectionId);
   incomingRequestsState = incomingRequestsState.filter((r) => r.id !== connectionId);
 
+  let realRequesterId = target?.requesterId;
+  let responderName = 'A colleague';
+
   try {
-    await supabase
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+    if (currentUserId) {
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', currentUserId).maybeSingle();
+      if (profile?.full_name) responderName = profile.full_name;
+    }
+
+    const { data: connRow } = await supabase
       .from('connections')
       .update({
         status: action === 'accept' ? 'accepted' : 'declined',
         updated_at: new Date().toISOString(),
       })
-      .eq('id', connectionId);
+      .eq('id', connectionId)
+      .select('requester_id')
+      .maybeSingle();
+
+    if (connRow?.requester_id) {
+      realRequesterId = connRow.requester_id;
+    }
   } catch (err) {
     console.warn('[Connections] Update connection error:', err);
   }
 
-  if (action === 'accept') {
+  if (action === 'accept' && realRequesterId) {
     createNotification({
-      recipientId: target?.requesterId,
+      recipientId: realRequesterId,
       type: 'system',
       title: 'Connection accepted',
-      body: `${target?.requesterName ? `${target.requesterName} accepted your connection request` : 'Your connection request was accepted'} — start a conversation!`,
+      body: `${responderName} accepted your connection request — start a conversation!`,
     });
   }
 
   return {
     id: connectionId,
-    requesterId: target?.requesterId ?? 'unknown',
+    requesterId: realRequesterId ?? 'unknown',
     recipientId: 'me',
     status: action === 'accept' ? 'accepted' : 'declined',
     createdAt: new Date().toISOString(),

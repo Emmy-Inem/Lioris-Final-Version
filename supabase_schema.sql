@@ -1103,6 +1103,140 @@ $$;
 GRANT EXECUTE ON FUNCTION public.check_auth_rate_limit(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_auth_attempt(TEXT, BOOLEAN) TO anon, authenticated;
 
+-- ============================================================================
+-- 19. SERVER-SIDE USER SUSPENSION & CAMPUS MODERATION AUTHORITY
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.suspend_user_account(p_target_user_id UUID, p_reason TEXT DEFAULT 'Moderation policy violation')
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_caller_role TEXT;
+    v_caller_campus TEXT;
+    v_target_campus TEXT;
+BEGIN
+    -- Resolve caller identity
+    SELECT role, campus_code INTO v_caller_role, v_caller_campus
+    FROM public.profiles
+    WHERE id = auth.uid();
+
+    -- Check if caller is admin or campus-matched staff
+    IF v_caller_role = 'admin' THEN
+        -- Admin can suspend any user
+        UPDATE public.profiles
+        SET is_suspended = true
+        WHERE id = p_target_user_id;
+
+        RETURN jsonb_build_object('success', true, 'message', 'User account permanently suspended by Admin.');
+    ELSIF v_caller_role = 'staff' THEN
+        SELECT campus_code INTO v_target_campus
+        FROM public.profiles
+        WHERE id = p_target_user_id;
+
+        IF v_target_campus = v_caller_campus OR v_caller_campus = 'GLOBAL' THEN
+            UPDATE public.profiles
+            SET is_suspended = true
+            WHERE id = p_target_user_id;
+
+            RETURN jsonb_build_object('success', true, 'message', 'User account suspended by Campus Staff.');
+        ELSE
+            RAISE EXCEPTION 'Staff cannot moderate users outside their registered campus node.';
+        END IF;
+    ELSE
+        RAISE EXCEPTION 'Insufficient permissions to suspend user accounts.';
+    END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.suspend_user_account(UUID, TEXT) TO authenticated;
+
+-- ============================================================================
+-- 20. AUTOMATIC COUNTER SYNCHRONIZATION TRIGGERS
+-- ============================================================================
+-- 1. Post Likes Count Sync
+CREATE OR REPLACE FUNCTION public.sync_post_likes_count()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE public.posts
+        SET likes_count = COALESCE(likes_count, 0) + 1
+        WHERE id = NEW.post_id;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE public.posts
+        SET likes_count = GREATEST(0, COALESCE(likes_count, 0) - 1)
+        WHERE id = OLD.post_id;
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_sync_post_likes ON public.post_likes;
+CREATE TRIGGER trigger_sync_post_likes
+AFTER INSERT OR DELETE ON public.post_likes
+FOR EACH ROW EXECUTE FUNCTION public.sync_post_likes_count();
+
+-- 2. Post Comments Count Sync
+CREATE OR REPLACE FUNCTION public.sync_post_comments_count()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE public.posts
+        SET comments_count = COALESCE(comments_count, 0) + 1
+        WHERE id = NEW.post_id;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE public.posts
+        SET comments_count = GREATEST(0, COALESCE(comments_count, 0) - 1)
+        WHERE id = OLD.post_id;
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_sync_post_comments ON public.post_comments;
+CREATE TRIGGER trigger_sync_post_comments
+AFTER INSERT OR DELETE ON public.post_comments
+FOR EACH ROW EXECUTE FUNCTION public.sync_post_comments_count();
+
+-- 3. Event RSVPs Count Sync
+CREATE OR REPLACE FUNCTION public.sync_event_rsvps_count()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE public.events
+        SET registered_count = COALESCE(registered_count, 0) + 1
+        WHERE id = NEW.event_id;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE public.events
+        SET registered_count = GREATEST(0, COALESCE(registered_count, 0) - 1)
+        WHERE id = OLD.event_id;
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_sync_event_rsvps ON public.event_rsvps;
+CREATE TRIGGER trigger_sync_event_rsvps
+AFTER INSERT OR DELETE ON public.event_rsvps
+FOR EACH ROW EXECUTE FUNCTION public.sync_event_rsvps_count();
+
+
 
 
 

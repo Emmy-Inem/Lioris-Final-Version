@@ -130,9 +130,15 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   // Fetch verified user profile from Supabase profiles table with targeted column projection
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, username, role, campus_code')
+    .select('id, full_name, username, role, campus_code, is_suspended')
     .eq('id', signInData.user.id)
     .maybeSingle();
+
+  // Enforce server-side account suspension check
+  if (profile?.is_suspended) {
+    await supabase.auth.signOut();
+    throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
+  }
 
   const userRole = (profile?.role || signInData.user.user_metadata?.role || 'student') as UserRole;
   const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];

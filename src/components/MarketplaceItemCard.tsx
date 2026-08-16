@@ -56,17 +56,17 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
   async function handleConfirmEscrowOrder() {
     setProcessingOrder(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 800));
     setProcessingOrder(false);
     setOrderComplete(true);
     setTimeout(() => {
       setOrderComplete(false);
       setCheckoutModalOpen(false);
       Alert.alert(
-        'Escrow Order Placed',
-        `Funds for"${item.title}"are locked in Lioris Campus Escrow. Meet ${item.sellerName} at Student Union Center to inspect and release payment.`,
+        'Purchase Request Placed',
+        `Your reservation request for "${item.title}" was sent to ${item.sellerName}. Meet safely on campus (e.g. Student Union or Library) to inspect the item and complete the exchange.`,
       );
-    }, 1200);
+    }, 1000);
   }
 
   return (
@@ -186,44 +186,44 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
           <SolidCard style={{ width: '100%', maxWidth: 440 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="shield-checkmark"size={20} color={colors.brandPrimary} />
-                <AppText variant="h3"weight="bold">
-                  Campus Escrow Checkout
+                <Ionicons name="shield-checkmark" size={20} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold">
+                  Campus Pickup & Handover
                 </AppText>
               </View>
               <Pressable onPress={() => setCheckoutModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close"size={20} color={colors.textSecondary} />
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
 
-            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
-              Your money is protected. The seller is only paid after you inspect the item in person.
+            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+              Arrange a safe in-person campus meetup with the seller. Inspect your item thoroughly before completing payment.
             </AppText>
 
             <View style={{ backgroundColor: colors.divider, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                <AppText weight="bold"variant="bodySmall">
+                <AppText weight="bold" variant="bodySmall">
                   {item.title}
                 </AppText>
-                <AppText weight="bold"tone="brand">
+                <AppText weight="bold" tone="brand">
                   {item.price}
                 </AppText>
               </View>
-              <AppText variant="caption"tone="secondary">
+              <AppText variant="caption" tone="secondary">
                 Seller: {item.sellerName} | Condition: {item.condition}
               </AppText>
-              <AppText variant="caption"tone="brand"style={{ marginTop: 4 }}>
-                Recommended Meetup: Student Union Building (SUB) Ground Floor
+              <AppText variant="caption" tone="brand" style={{ marginTop: 4 }}>
+                Recommended Meetup: Student Union Building (SUB) or Main Library Foyer
               </AppText>
             </View>
 
-            <AppText weight="bold"variant="bodySmall"style={{ marginBottom: spacing.xs }}>
-              Payment Method
+            <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.xs }}>
+              Preferred Payment on Pickup
             </AppText>
             {[
-              { id: 'wallet'as const, name: 'Campus Student Wallet', icon: 'wallet-outline', desc: 'Instant 0% transaction fee' },
-              { id: 'card'as const, name: 'Debit Card (Mastercard / Visa / Verve)', icon: 'card-outline', desc: 'Secure payment gateway' },
-              { id: 'transfer'as const, name: 'Direct Bank Transfer', icon: 'business-outline', desc: 'Dedicated dynamic account' },
+              { id: 'wallet' as const, name: 'Campus Student Wallet / Transfer', icon: 'wallet-outline', desc: 'Instant bank or peer transfer on handover' },
+              { id: 'card' as const, name: 'Cash on Delivery', icon: 'cash-outline', desc: 'Direct cash payment after in-person inspection' },
+              { id: 'transfer' as const, name: 'Automated Escrow (Coming Soon)', icon: 'time-outline', desc: 'In-app automated multi-signature escrow' },
             ].map((method) => {
               const isSelected = paymentMethod === method.id;
               return (
@@ -244,22 +244,22 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
                 >
                   <Ionicons name={method.icon as any} size={18} color={isSelected ? colors.brandPrimary : colors.textSecondary} />
                   <View style={{ flex: 1 }}>
-                    <AppText weight="bold"variant="caption">
+                    <AppText weight="bold" variant="caption">
                       {method.name}
                     </AppText>
-                    <AppText tone="secondary"variant="caption"style={{ fontSize: 9 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: 9 }}>
                       {method.desc}
                     </AppText>
                   </View>
-                  {isSelected ? <Ionicons name="checkmark-circle"size={16} color={colors.brandPrimary} /> : null}
+                  {isSelected ? <Ionicons name="checkmark-circle" size={16} color={colors.brandPrimary} /> : null}
                 </Pressable>
               );
             })}
 
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel"variant="ghost"onPress={() => setCheckoutModalOpen(false)} />
+              <AppButton label="Cancel" variant="ghost" onPress={() => setCheckoutModalOpen(false)} />
               <AppButton
-                label={orderComplete ? 'Order Placed! ✓' : processingOrder ? 'Securing Funds...' : `Pay ${item.price} into Escrow`}
+                label={orderComplete ? 'Request Sent! ✓' : processingOrder ? 'Sending Request...' : `Reserve & Request Meetup`}
                 loading={processingOrder}
                 onPress={handleConfirmEscrowOrder}
               />

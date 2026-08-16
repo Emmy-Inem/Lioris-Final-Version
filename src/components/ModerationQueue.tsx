@@ -90,16 +90,31 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
     try {
       await resolveReport(report.id, 'resolved');
       
-      // If it was a reported post, immediately purge from live feed
+      const { supabase } = await import('@/api/supabase');
+
+      // Resolve author profile ID if target was content (post, event, resource)
+      let targetUserId = report.targetId;
       if (report.targetType === 'post') {
+        const { data: postData } = await supabase.from('posts').select('author_id').eq('id', report.targetId).maybeSingle();
+        if (postData?.author_id) targetUserId = postData.author_id;
         await deletePost(report.targetId);
         queryClient.invalidateQueries({ queryKey: ['feed'] });
+      } else if (report.targetType === 'event') {
+        const { data: eventData } = await supabase.from('events').select('creator_id').eq('id', report.targetId).maybeSingle();
+        if (eventData?.creator_id) targetUserId = eventData.creator_id;
+      } else if ((report.targetType as string) === 'resource') {
+        const { data: resData } = await supabase.from('resources').select('uploader_id').eq('id', report.targetId).maybeSingle();
+        if (resData?.uploader_id) targetUserId = resData.uploader_id;
       }
 
-      // If user ban/suspension or reported user target, enforce is_suspended on profiles
+      // If user ban/suspension or reported user target, enforce is_suspended on target user profile via RPC
       if (punishmentType === 'permaban' || punishmentType === 'shadowban' || report.targetType === 'user') {
-        const { supabase } = await import('@/api/supabase');
-        await supabase.from('profiles').update({ is_suspended: true }).eq('id', report.targetId);
+        if (targetUserId && targetUserId !== 'unknown') {
+          await supabase.rpc('suspend_user_account', {
+            p_target_user_id: targetUserId,
+            p_reason: adminModNote.trim() || `Punishment for report: ${report.reason}`,
+          });
+        }
       }
 
       recordAuditLogEntry({

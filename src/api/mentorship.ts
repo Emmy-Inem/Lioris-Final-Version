@@ -167,15 +167,30 @@ export async function respondToMentorshipRequest(
 ): Promise<Mentorship> {
   const newStatus = action === 'accept' ? 'active' : 'declined';
   let updated: Mentorship | undefined;
+  let realStudentId: string | undefined;
+  let mentorName = 'Your mentor';
 
   try {
-    await supabase
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+    if (currentUserId) {
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', currentUserId).maybeSingle();
+      if (profile?.full_name) mentorName = profile.full_name;
+    }
+
+    const { data: mRow } = await supabase
       .from('mentorships')
       .update({
         status: newStatus,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', mentorshipId);
+      .eq('id', mentorshipId)
+      .select('student_id')
+      .maybeSingle();
+
+    if (mRow?.student_id) {
+      realStudentId = mRow.student_id;
+    }
   } catch (err) {
     console.warn('[Mentorship] Update exception:', err);
   }
@@ -186,22 +201,26 @@ export async function respondToMentorshipRequest(
     return updated;
   });
 
-  createNotification({
-    recipientId: updated?.studentId,
-    type: 'system',
-    title: action === 'accept' ? 'Mentorship request accepted' : 'Mentorship request declined',
-    body:
-      action === 'accept'
-        ? `${updated?.mentorName ?? 'Your mentor'} accepted your mentorship request — say hello!`
-        : `${updated?.mentorName ?? 'The mentor'} wasn't able to take on a new mentee right now.`,
-  });
+  const finalStudentId = realStudentId || updated?.studentId;
+
+  if (finalStudentId && finalStudentId !== 'unknown' && finalStudentId !== 'me') {
+    createNotification({
+      recipientId: finalStudentId,
+      type: 'system',
+      title: action === 'accept' ? 'Mentorship request accepted' : 'Mentorship request declined',
+      body:
+        action === 'accept'
+          ? `${mentorName} accepted your mentorship request — say hello!`
+          : `${mentorName} wasn't able to take on a new mentee right now.`,
+    });
+  }
 
   return (
     updated ?? {
       id: mentorshipId,
-      studentId: 'unknown',
+      studentId: finalStudentId ?? 'unknown',
       mentorId: 'me',
-      mentorName: 'You',
+      mentorName,
       status: newStatus,
     }
   );

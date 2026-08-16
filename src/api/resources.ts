@@ -105,6 +105,7 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         category: mapResourceTypeToCategory(row.resource_type),
         description: row.description || '',
         fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : '2.5 MB',
+        fileUrl: row.file_url || null,
         authorName: 'Verified Student',
         authorId: row.uploader_id,
         authorRole: 'student',

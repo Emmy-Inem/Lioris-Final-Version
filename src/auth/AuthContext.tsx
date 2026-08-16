@@ -173,9 +173,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async login(email, password) {
         const session = await authApi.login({ email, password });
         await setTokens(session.accessToken, session.refreshToken);
+
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('department, is_suspended')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (prof?.is_suspended) {
+          await clearTokens();
+          await setSessionUser(null as any);
+          await supabase.auth.signOut();
+          setUser(null);
+          throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
+        }
+
+        const isOnboarded = Boolean(prof?.department) || session.user.role === 'admin' || session.user.role === 'staff';
+
         const nextUser: SessionUser = {
           ...session.user,
-          onboardingComplete: true,
+          onboardingComplete: isOnboarded,
+          onboardingStep: isOnboarded ? undefined : firstOnboardingStep(session.user.role),
           mfaVerified: !roleRequiresMfa(session.user.role),
         };
         await persist(nextUser);

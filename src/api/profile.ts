@@ -118,11 +118,11 @@ export async function getMyProfile(user?: {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, bio, department, interests, campus_code, avatar_url, banner_url, is_verified, verification_status, role, is_suspended')
+      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, is_suspended')
       .eq('id', resolvedUser.id)
       .single();
     if (!error && data) {
-      const isVerified = data.is_verified ?? (data.verification_status === 'verified');
+      const isVerified = data.verification_status === 'verified';
       const verificationStatus = data.verification_status || (isVerified ? 'verified' : 'none');
       
       const campusCode = data.campus_code || fallback.institutionCode;
@@ -135,6 +135,7 @@ export async function getMyProfile(user?: {
       const merged: UserProfile = {
         ...fallback,
         fullName: data.full_name || fallback.fullName,
+        username: data.username || fallback.username,
         bio: data.bio || fallback.bio,
         department: data.department || fallback.department,
         interests: data.interests || fallback.interests,
