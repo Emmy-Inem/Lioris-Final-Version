@@ -1,6 +1,13 @@
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 
+const BUCKET_LIMITS: Record<string, { maxSize: number; label: string }> = {
+  resources: { maxSize: 50 * 1024 * 1024, label: '50MB' },
+  avatars: { maxSize: 5 * 1024 * 1024, label: '5MB' },
+  'campus-media': { maxSize: 25 * 1024 * 1024, label: '25MB' },
+  verifications: { maxSize: 10 * 1024 * 1024, label: '10MB' },
+};
+
 export async function uploadMediaFile(
   bucket: 'resources' | 'avatars' | 'verifications' | 'campus-media',
   fileUriOrBlob: string | Blob,
@@ -28,6 +35,12 @@ export async function uploadMediaFile(
     blob = await response.blob();
   } else {
     blob = fileUriOrBlob;
+  }
+
+  // Enforce client-side file size limits before uploading
+  const limit = BUCKET_LIMITS[bucket];
+  if (limit && blob.size > limit.maxSize) {
+    throw new Error(`File size (${(blob.size / (1024 * 1024)).toFixed(1)}MB) exceeds the maximum allowed limit of ${limit.label} for ${bucket}.`);
   }
 
   if (blob.type) {

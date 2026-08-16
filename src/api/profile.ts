@@ -116,7 +116,11 @@ export async function getMyProfile(user?: {
 
   const fallback = mockProfileFor(resolvedUser);
   try {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', resolvedUser.id).single();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, bio, department, interests, campus_code, avatar_url, banner_url, is_verified, verification_status, role, is_suspended')
+      .eq('id', resolvedUser.id)
+      .single();
     if (!error && data) {
       const isVerified = data.is_verified ?? (data.verification_status === 'verified');
       const verificationStatus = data.verification_status || (isVerified ? 'verified' : 'none');

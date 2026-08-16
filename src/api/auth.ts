@@ -15,11 +15,61 @@ export interface RegisterPayload {
   password: string;
   userType: UserRole;
   campusCode?: string;
+  botField?: string;
 }
 
-// POST /auth/login — Strictly Real Supabase Authentication
+// In-memory rate limiting and brute force protection
+interface LoginAttemptRecord {
+  failures: number;
+  lockedUntil?: number;
+  lastAttempt: number;
+}
+
+const loginAttempts = new Map<string, LoginAttemptRecord>();
+
+function checkLoginRateLimit(email: string): void {
+  const record = loginAttempts.get(email.toLowerCase());
+  if (!record) return;
+  const now = Date.now();
+  if (record.lockedUntil && now < record.lockedUntil) {
+    const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
+    throw new Error(`Too many failed login attempts. Account temporarily locked for security. Please try again in ${remainingSec}s.`);
+  }
+  // If window expired (5 minutes since last attempt), reset failures
+  if (now - record.lastAttempt > 5 * 60 * 1000) {
+    loginAttempts.delete(email.toLowerCase());
+  }
+}
+
+function recordLoginFailure(email: string): void {
+  const key = email.toLowerCase();
+  const now = Date.now();
+  const existing = loginAttempts.get(key) || { failures: 0, lastAttempt: now };
+  const failures = existing.failures + 1;
+  let lockedUntil: number | undefined;
+
+  if (failures >= 5) {
+    const lockoutDurationSec = Math.min(300, 60 * (failures - 4)); // 60s, 120s, 180s... up to 5 mins
+    lockedUntil = now + lockoutDurationSec * 1000;
+  }
+
+  loginAttempts.set(key, {
+    failures,
+    lockedUntil,
+    lastAttempt: now,
+  });
+}
+
+function clearLoginFailures(email: string): void {
+  loginAttempts.delete(email.toLowerCase());
+}
+
+// POST /auth/login — Strictly Real Supabase Authentication with Rate Limiting
 export async function login(payload: LoginPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim();
+
+  // Enforce brute-force lockout check
+  checkLoginRateLimit(cleanEmail);
 
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: cleanEmail,
@@ -27,6 +77,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   });
 
   if (signInError || !signInData?.session || !signInData?.user) {
+    recordLoginFailure(cleanEmail);
     const rawMsg = signInError?.message || 'Invalid email or password.';
     if (rawMsg.toLowerCase().includes('email not confirmed')) {
       throw new Error('Your email address is not verified yet. Please check your inbox for the confirmation link.');
@@ -34,10 +85,13 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     throw new Error(rawMsg);
   }
 
-  // Fetch verified user profile from Supabase profiles table
+  // Clear failures upon successful authentication
+  clearLoginFailures(cleanEmail);
+
+  // Fetch verified user profile from Supabase profiles table with targeted column projection
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, full_name, username, role, campus_code')
     .eq('id', signInData.user.id)
     .maybeSingle();
 
@@ -58,6 +112,11 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 
 // POST /auth/register — Real Supabase Auth with Profile Provisioning (Student & Alumni only)
 export async function register(payload: RegisterPayload): Promise<AuthSession> {
+  // Anti-bot honeypot protection
+  if (payload.botField && payload.botField.trim().length > 0) {
+    throw new Error('Registration verification failed. Please try again.');
+  }
+
   const cleanEmail = payload.email.trim();
   // Ensure self-registration can only produce student or alumni accounts
   const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
