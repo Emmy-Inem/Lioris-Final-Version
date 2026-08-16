@@ -528,6 +528,7 @@ export function PostCard({ post }: { post: Post }) {
                   await submitReport({
                     targetType: 'post',
                     targetId: post.id,
+                    institutionCode: post.institutionCode || (post as any).campusCode || undefined,
                     reason: reportReason.trim(),
                   });
                   setReportOpen(false);

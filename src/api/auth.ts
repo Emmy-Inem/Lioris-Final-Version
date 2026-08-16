@@ -1,6 +1,7 @@
 import { api } from './client';
 import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
+import { getInstitutionForEmail } from './institutions';
 
 export interface LoginPayload {
   email: string;
@@ -13,6 +14,7 @@ export interface RegisterPayload {
   email: string;
   password: string;
   userType: UserRole;
+  campusCode?: string;
 }
 
 // POST /auth/login — Strictly Real Supabase Authentication
@@ -59,6 +61,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim();
   // Ensure self-registration can only produce student or alumni accounts
   const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
+  const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || 'GLOBAL';
 
   const { data, error } = await supabase.auth.signUp({
     email: cleanEmail,
@@ -68,6 +71,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
         full_name: payload.fullName,
         username: payload.username,
         role: assignedRole,
+        campus_code: detectedCampus,
       },
     },
   });
@@ -76,13 +80,14 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
     throw new Error(error?.message || 'Unable to register account. Please check your details.');
   }
 
-  // Upsert profile in Supabase profiles table
+  // Upsert profile in Supabase profiles table with campus_code
   await supabase.from('profiles').upsert({
     id: data.user.id,
     email: cleanEmail,
     full_name: payload.fullName,
     username: payload.username,
     role: assignedRole,
+    campus_code: detectedCampus,
   });
 
   const accessToken = data.session?.access_token || `auth-token.${assignedRole}.${Date.now()}`;
@@ -208,12 +213,36 @@ export async function verifyMfaCode(code: string): Promise<{ verified: boolean }
   if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
     throw new Error('Please enter a valid 6-digit numeric security code.');
   }
+
+  // Check Supabase MFA factors if enrolled
+  try {
+    const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+    if (!factorsError && factors?.totp && factors.totp.length > 0) {
+      const activeFactor = factors.totp[0];
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: activeFactor.id,
+      });
+      if (!challengeError && challenge) {
+        const { error: verifyError } = await supabase.auth.mfa.verify({
+          factorId: activeFactor.id,
+          challengeId: challenge.id,
+          code: cleanCode,
+        });
+        if (verifyError) {
+          throw new Error('Invalid MFA 2FA verification code. Please check your authenticator app.');
+        }
+        return { verified: true };
+      }
+    }
+  } catch (err: any) {
+    if (err?.message?.includes('Invalid MFA')) throw err;
+  }
+
   try {
     const { data } = await api.post('/auth/mfa/verify', { code: cleanCode });
     return data;
-  } catch {
-    // If external REST MFA server is unprovisioned, accept valid 6-digit numeric code
-    return { verified: true };
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.message || err?.message || 'Invalid MFA 2FA verification code.');
   }
 }
 

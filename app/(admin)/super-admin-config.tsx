@@ -218,21 +218,26 @@ export default function SuperAdminConfigScreen() {
         <AddUniversityWizardContent
           onComplete={async (data) => {
             try {
-              const { supabase } = await import('@/api/supabase');
-              await supabase.from('platform_settings').upsert({
-                key: `university_${data.abbrev.toLowerCase()}`,
-                value: { name: data.name, abbrev: data.abbrev, region: data.region, created_at: new Date().toISOString() },
-                updated_at: new Date().toISOString(),
+              const { createInstitution } = await import('@/api/institutions');
+              await createInstitution({
+                code: data.abbrev.toUpperCase(),
+                name: data.name,
+                shortName: data.abbrev,
+                location: data.region,
+                domain: `${data.abbrev.toLowerCase()}.edu.ng`,
               });
-            } catch {}
-            await recordAuditLogEntry({
-              action: 'platform_config_updated' as any,
-              summary: `Provisioned new university tenant partition for ${data.name} (${data.abbrev}) in ${data.region}`,
-              targetType: 'platform_config',
-              targetId: `univ-${data.abbrev.toLowerCase()}`,
-            });
-            setActiveModal(null);
-            Alert.alert('University Added', `New institutional node partition created for ${data.name}.`);
+
+              await recordAuditLogEntry({
+                action: 'platform_config_updated' as any,
+                summary: `Provisioned new university tenant partition for ${data.name} (${data.abbrev}) in ${data.region}`,
+                targetType: 'platform_config',
+                targetId: `univ-${data.abbrev.toLowerCase()}`,
+              });
+              setActiveModal(null);
+              Alert.alert('University Added', `New institutional node partition successfully created in database for ${data.name}.`);
+            } catch (err: any) {
+              Alert.alert('Provisioning Error', err?.message || 'Failed to add university.');
+            }
           }}
         />
       </AdminConfigModal>

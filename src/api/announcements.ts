@@ -1,22 +1,46 @@
-import { api } from'./client';
-import { Announcement } from'./types';
-import { mockAnnouncements } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
-import { createNotification } from'./notifications';
+import { supabase } from './supabase';
+import { getSessionUser } from '../auth/tokenStorage';
+import { Announcement } from './types';
+import { mockAnnouncements } from './mockData';
+import { createNotification } from './notifications';
+import { generateUUID } from '../utils/uuid';
 
-// Mutable in-memory copy so a newly published announcement actually
-// persists — publishAnnouncement previously built and returned an
-// Announcement without ever storing it, so the screen's own
-// `invalidateQueries` call right after publishing would immediately
-// refetch the static list and make the new announcement vanish.
 let announcementsState = [...mockAnnouncements];
 
 export async function listAnnouncements(): Promise<Announcement[]> {
-  return withMockFallback(async () => {
-    const { data } = await api.get<{ items: Announcement[] }>('/announcements');
-    return data.items;
-  }, announcementsState);
+  try {
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('*, author:profiles!announcements_author_id_fkey(full_name)')
+      .order('published_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const dbItems: Announcement[] = data.map((row: any) => ({
+        id: row.id,
+        authorId: row.author_id,
+        authorName: row.author?.full_name || 'Campus Administrator',
+        campusCode: row.campus_code || 'GLOBAL',
+        title: row.title,
+        content: row.content,
+        audienceScope: row.audience_scope as any,
+        priority: row.priority as any,
+        publishedAt: row.published_at,
+        expiresAt: row.expires_at,
+      }));
+
+      const merged = [...dbItems];
+      for (const item of announcementsState) {
+        if (!merged.some((m) => m.id === item.id)) {
+          merged.push(item);
+        }
+      }
+      return merged;
+    }
+  } catch (err) {
+    console.warn('[Announcements] Fetch error:', err);
+  }
+
+  return announcementsState;
 }
 
 export interface PublishAnnouncementPayload {
@@ -24,44 +48,64 @@ export interface PublishAnnouncementPayload {
   content: string;
   audienceScope: Announcement['audienceScope'];
   priority: Announcement['priority'];
+  campusCode?: string;
   expiresAt?: string;
 }
 
-import { generateUUID } from '../utils/uuid';
-
-// PRD Section 7.4: staff publish to approved audiences; admins may
-// additionally mark a notice"critical"for emergency broadcast handling.
 export async function publishAnnouncement(
   payload: PublishAnnouncementPayload,
 ): Promise<Announcement> {
+  const announcementId = generateUUID();
+  const sessionUser = await getSessionUser();
+  const authorId = sessionUser?.id || 'me';
+  const authorName = sessionUser?.fullName || 'Campus Staff';
+  const campusCode = payload.campusCode || (sessionUser as any)?.campusCode || 'GLOBAL';
+
   const created: Announcement = {
-    id: generateUUID(),
-    authorId: 'me',
-    authorName: 'You',
+    id: announcementId,
+    authorId,
+    authorName,
+    campusCode,
     publishedAt: new Date().toISOString(),
     ...payload,
   };
 
-  if (!FALL_BACK_TO_MOCKS) {
-    const { data } = await api.post<Announcement>('/announcements', payload);
-    return data;
-  }
+  announcementsState = [created, ...announcementsState];
+
   try {
-    const { data } = await api.post<Announcement>('/announcements', payload);
-    announcementsState = [data, ...announcementsState];
-    createNotification({
-      type: 'announcement',
-      title: payload.priority === 'critical' ? ` ${payload.title}` : payload.title,
-      body: payload.content,
-    });
-    return data;
-  } catch {
-    announcementsState = [created, ...announcementsState];
-    createNotification({
-      type: 'announcement',
-      title: payload.priority === 'critical' ? ` ${payload.title}` : payload.title,
-      body: payload.content,
-    });
-    return created;
+    const { data: authData } = await supabase.auth.getUser();
+    const realAuthorId = authData?.user?.id;
+
+    if (realAuthorId) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('campus_code')
+        .eq('id', realAuthorId)
+        .maybeSingle();
+
+      const userCampus = prof?.campus_code || campusCode;
+
+      await supabase.from('announcements').insert({
+        id: announcementId,
+        author_id: realAuthorId,
+        campus_code: userCampus,
+        title: payload.title,
+        content: payload.content,
+        audience_scope: payload.audienceScope,
+        priority: payload.priority,
+        published_at: created.publishedAt,
+        expires_at: payload.expiresAt || null,
+      });
+    }
+  } catch (err) {
+    console.warn('[Announcements] Database insert error:', err);
   }
+
+  createNotification({
+    type: 'announcement',
+    title: payload.priority === 'critical' ? `🚨 ${payload.title}` : payload.title,
+    body: payload.content,
+  }).catch(() => {});
+
+  return created;
 }

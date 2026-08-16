@@ -112,7 +112,12 @@ export function EventCard({ event }: { event: CampusEvent }) {
 
   async function handleReport() {
     setMenuOpen(false);
-    await submitReport({ targetType: 'event', targetId: event.id, reason: 'Reported from event card' });
+    await submitReport({
+      targetType: 'event',
+      targetId: event.id,
+      institutionCode: (event as any).campusCode || (event as any).institutionCode || undefined,
+      reason: 'Reported from event card',
+    });
     Alert.alert('Reported', 'Thanks — our campus moderation team will review this event.');
   }
 

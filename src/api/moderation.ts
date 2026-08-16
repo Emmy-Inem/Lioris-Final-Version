@@ -158,12 +158,23 @@ export async function submitReport(payload: {
     const reporterId = authData?.user?.id || (await getSessionUser())?.id;
     const itemType = payload.targetType === 'message' ? 'comment' : payload.targetType;
 
+    let targetCampus = payload.institutionCode;
+    if (!targetCampus && reporterId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('campus_code')
+        .eq('id', reporterId)
+        .maybeSingle();
+      targetCampus = profile?.campus_code || 'GLOBAL';
+    }
+    if (!targetCampus) targetCampus = 'GLOBAL';
+
     await supabase.from('moderation_queue').insert({
       id: reportId,
       item_type: itemType,
       item_id: payload.targetId,
       reporter_id: reporterId || null,
-      campus_code: payload.institutionCode || 'UI',
+      campus_code: targetCampus,
       reason: payload.reason,
       status: 'pending',
     });

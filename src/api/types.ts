@@ -288,6 +288,7 @@ export interface Announcement {
   id: string;
   authorId: string;
   authorName: string;
+  campusCode?: string;
   title: string;
   content: string;
   audienceScope: 'global' | 'student' | 'alumni' | 'staff';

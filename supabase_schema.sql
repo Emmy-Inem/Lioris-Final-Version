@@ -115,7 +115,22 @@ CREATE INDEX IF NOT EXISTS idx_user_blocks_blocked ON user_blocks(blocked_id);
 -- (inememmanuel@gmail.com is configured as Platform Root Admin)
 CREATE OR REPLACE FUNCTION handle_new_user_profile()
 RETURNS TRIGGER AS $$
+DECLARE
+    detected_campus TEXT;
 BEGIN
+    detected_campus := COALESCE(
+        NULLIF(NEW.raw_user_meta_data->>'campus_code', ''),
+        CASE 
+            WHEN NEW.email ILIKE '%unilag.edu.ng' THEN 'UNILAG'
+            WHEN NEW.email ILIKE '%ui.edu.ng' THEN 'UI'
+            WHEN NEW.email ILIKE '%funaab.edu.ng' OR NEW.email ILIKE '%unaab.edu.ng' THEN 'FUNAAB'
+            WHEN NEW.email ILIKE '%unn.edu.ng' THEN 'UNN'
+            WHEN NEW.email ILIKE '%oauife.edu.ng' THEN 'OAU'
+            WHEN NEW.email ILIKE '%covenantuniversity.edu.ng' THEN 'CU'
+            ELSE 'GLOBAL'
+        END
+    );
+
     INSERT INTO profiles (
         id, 
         email, 
@@ -133,7 +148,7 @@ BEGIN
             WHEN NEW.raw_user_meta_data->>'role' = 'alumni' THEN 'alumni'::user_role_type
             ELSE 'student'::user_role_type
         END,
-        COALESCE(NEW.raw_user_meta_data->>'campus_code', 'GLOBAL'),
+        detected_campus,
         CASE 
             WHEN NEW.email = 'inememmanuel@gmail.com' THEN 'verified'::verification_status_type
             ELSE 'unverified'::verification_status_type
@@ -427,6 +442,8 @@ ALTER TABLE waitlist_entries ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Campuses are viewable by everyone" ON campuses FOR SELECT USING (true);
 CREATE POLICY "Admins have full campus management access" ON campuses FOR ALL TO authenticated USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+) WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
 -- User Blocks: Self Read/Insert/Delete
@@ -434,20 +451,22 @@ CREATE POLICY "Users can view their own block list" ON user_blocks FOR SELECT TO
 CREATE POLICY "Users can block other users" ON user_blocks FOR INSERT TO authenticated WITH CHECK (auth.uid() = blocker_id);
 CREATE POLICY "Users can unblock users" ON user_blocks FOR DELETE TO authenticated USING (auth.uid() = blocker_id);
 
--- Profiles: Public Read, Self Insert/Update (Protected against role/verification/suspension escalation), Admin Full Access
+-- Profiles: Public Read, Self Insert/Update (Protected against role/verification/suspension/campus escalation), Admin Full Access
 CREATE OR REPLACE FUNCTION prevent_profile_role_escalation()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- If role, verification_status, is_suspended, or trust_score is modified by non-admin
+    -- If role, verification_status, is_suspended, trust_score, or campus_code is modified by non-admin
     IF (NEW.role IS DISTINCT FROM OLD.role)
        OR (NEW.verification_status IS DISTINCT FROM OLD.verification_status)
        OR (NEW.is_suspended IS DISTINCT FROM OLD.is_suspended)
-       OR (NEW.trust_score IS DISTINCT FROM OLD.trust_score) THEN
+       OR (NEW.trust_score IS DISTINCT FROM OLD.trust_score)
+       OR (NEW.campus_code IS DISTINCT FROM OLD.campus_code) THEN
         IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
             NEW.role := OLD.role;
             NEW.verification_status := OLD.verification_status;
             NEW.is_suspended := OLD.is_suspended;
             NEW.trust_score := OLD.trust_score;
+            NEW.campus_code := OLD.campus_code;
         END IF;
     END IF;
     RETURN NEW;
@@ -460,7 +479,12 @@ BEFORE UPDATE ON profiles
 FOR EACH ROW
 EXECUTE FUNCTION prevent_profile_role_escalation();
 
-CREATE POLICY "Profiles are viewable by authenticated users" ON profiles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Profiles viewable by same campus or global or self or admin" ON profiles FOR SELECT TO authenticated USING (
+    auth.uid() = id OR
+    campus_code = 'GLOBAL' OR
+    campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+);
 CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO authenticated 
 USING (auth.uid() = id)
@@ -468,6 +492,7 @@ WITH CHECK (
     auth.uid() = id AND (
         (
             role = (SELECT role FROM profiles WHERE id = auth.uid()) AND
+            campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) AND
             is_suspended = (SELECT is_suspended FROM profiles WHERE id = auth.uid()) AND
             trust_score = (SELECT trust_score FROM profiles WHERE id = auth.uid()) AND
             verification_status = (SELECT verification_status FROM profiles WHERE id = auth.uid())
@@ -482,15 +507,18 @@ CREATE POLICY "Admins have full profile access" ON profiles FOR ALL TO authentic
 -- Posts: Viewable by campus scope or global
 CREATE POLICY "Posts viewable by campus or global" ON posts FOR SELECT TO authenticated USING (
     visibility_scope = 'global' OR 
+    campus_code = 'GLOBAL' OR
     campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
 );
 CREATE POLICY "Authenticated users can create posts" ON posts FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);
-CREATE POLICY "Authors and admins can update posts" ON posts FOR UPDATE TO authenticated USING (
-    auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Authors, admins and staff can update posts" ON posts FOR UPDATE TO authenticated USING (
+    auth.uid() = author_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = posts.campus_code)))
 );
-CREATE POLICY "Authors and admins can delete posts" ON posts FOR DELETE TO authenticated USING (
-    auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Authors, admins and staff can delete posts" ON posts FOR DELETE TO authenticated USING (
+    auth.uid() = author_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = posts.campus_code)))
 );
 
 -- Post Likes
@@ -501,17 +529,30 @@ CREATE POLICY "Users can unlike posts" ON post_likes FOR DELETE TO authenticated
 -- Post Comments
 CREATE POLICY "Post comments are viewable by authenticated users" ON post_comments FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated users can comment on posts" ON post_comments FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);
-CREATE POLICY "Authors and admins can update comments" ON post_comments FOR UPDATE TO authenticated USING (auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
-CREATE POLICY "Authors and admins can delete comments" ON post_comments FOR DELETE TO authenticated USING (auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
-
--- Events: Viewable by all authenticated users
-CREATE POLICY "Events viewable by authenticated users" ON events FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Users can create events" ON events FOR INSERT TO authenticated WITH CHECK (auth.uid() = creator_id);
-CREATE POLICY "Creators and admins can modify events" ON events FOR UPDATE TO authenticated USING (
-    auth.uid() = creator_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Authors, admins and staff can update comments" ON post_comments FOR UPDATE TO authenticated USING (
+    auth.uid() = author_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
-CREATE POLICY "Creators and admins can delete events" ON events FOR DELETE TO authenticated USING (
-    auth.uid() = creator_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Authors, admins and staff can delete comments" ON post_comments FOR DELETE TO authenticated USING (
+    auth.uid() = author_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- Events: Viewable by campus scope or global
+CREATE POLICY "Events viewable by campus or global" ON events FOR SELECT TO authenticated USING (
+    visibility_scope = 'global' OR
+    campus_code = 'GLOBAL' OR
+    campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+);
+CREATE POLICY "Users can create events" ON events FOR INSERT TO authenticated WITH CHECK (auth.uid() = creator_id);
+CREATE POLICY "Creators, admins and staff can modify events" ON events FOR UPDATE TO authenticated USING (
+    auth.uid() = creator_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = events.campus_code)))
+);
+CREATE POLICY "Creators, admins and staff can delete events" ON events FOR DELETE TO authenticated USING (
+    auth.uid() = creator_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = events.campus_code)))
 );
 
 -- Event Attendees
@@ -520,14 +561,19 @@ CREATE POLICY "Users can RSVP to events" ON event_attendees FOR INSERT TO authen
 CREATE POLICY "Users can cancel RSVP" ON event_attendees FOR DELETE TO authenticated USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
 -- Resources
-CREATE POLICY "Resources viewable if approved or owner or admin" ON resources FOR SELECT TO authenticated USING (
-    is_approved = TRUE OR 
+CREATE POLICY "Resources viewable if approved and matching campus or global or owner or admin or staff" ON resources FOR SELECT TO authenticated USING (
+    (
+        is_approved = TRUE AND (
+            campus_code = 'GLOBAL' OR
+            campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid())
+        )
+    ) OR 
     uploader_id = auth.uid() OR 
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = resources.campus_code)))
 );
 CREATE POLICY "Users can upload resources" ON resources FOR INSERT TO authenticated WITH CHECK (auth.uid() = uploader_id);
-CREATE POLICY "Admins can approve and manage resources" ON resources FOR ALL TO authenticated USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Admins and staff can approve and manage resources" ON resources FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = resources.campus_code)))
 );
 
 -- Verifications
@@ -535,17 +581,18 @@ CREATE POLICY "Users can view own verification requests, admins view all" ON ver
     auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 CREATE POLICY "Users can submit verification requests" ON verifications FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can update verification status" ON verifications FOR UPDATE TO authenticated USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Admins and staff can update verification status" ON verifications FOR UPDATE TO authenticated USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = verifications.campus_code)))
 );
 
 -- Moderation Queue & Reports
-CREATE POLICY "Users can view their own reports, admins view all" ON moderation_queue FOR SELECT TO authenticated USING (
-    reporter_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+CREATE POLICY "Users can view their own reports, admins and staff view all" ON moderation_queue FOR SELECT TO authenticated USING (
+    reporter_id = auth.uid() OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = moderation_queue.campus_code)))
 );
 CREATE POLICY "Users can submit reports" ON moderation_queue FOR INSERT TO authenticated WITH CHECK (auth.uid() = reporter_id);
 CREATE POLICY "Admins and staff can resolve reports" ON moderation_queue FOR UPDATE TO authenticated USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = moderation_queue.campus_code)))
 );
 
 -- Audit Logs (Strict Admin / Staff only)
@@ -557,13 +604,19 @@ CREATE POLICY "Admins and staff can create audit log entries" ON audit_logs FOR 
 );
 
 -- Study Groups
-CREATE POLICY "Study groups viewable by authenticated users" ON study_groups FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Users can create study groups" ON study_groups FOR INSERT TO authenticated WITH CHECK (auth.uid() = creator_id);
-CREATE POLICY "Creators and admins can update study groups" ON study_groups FOR UPDATE TO authenticated USING (
-    auth.uid() = creator_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Study groups viewable by campus or global" ON study_groups FOR SELECT TO authenticated USING (
+    campus_code = 'GLOBAL' OR
+    campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
 );
-CREATE POLICY "Creators and admins can delete study groups" ON study_groups FOR DELETE TO authenticated USING (
-    auth.uid() = creator_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Users can create study groups" ON study_groups FOR INSERT TO authenticated WITH CHECK (auth.uid() = creator_id);
+CREATE POLICY "Creators, admins and staff can update study groups" ON study_groups FOR UPDATE TO authenticated USING (
+    auth.uid() = creator_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = study_groups.campus_code)))
+);
+CREATE POLICY "Creators, admins and staff can delete study groups" ON study_groups FOR DELETE TO authenticated USING (
+    auth.uid() = creator_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = study_groups.campus_code)))
 );
 
 -- Study Group Members
@@ -689,10 +742,63 @@ CREATE TABLE IF NOT EXISTS marketplace_listings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE POLICY "Marketplace listings viewable by all authenticated users" ON marketplace_listings FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Marketplace listings viewable by campus or global" ON marketplace_listings FOR SELECT TO authenticated USING (
+    campus_code IS NULL OR
+    campus_code = 'GLOBAL' OR
+    campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
+    auth.uid() = seller_id OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR role = 'staff'))
+);
 CREATE POLICY "Authenticated users can create marketplace listings" ON marketplace_listings FOR INSERT TO authenticated WITH CHECK (auth.uid() = seller_id);
-CREATE POLICY "Sellers and admins can update listings" ON marketplace_listings FOR UPDATE TO authenticated USING (auth.uid() = seller_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
-CREATE POLICY "Sellers and admins can delete listings" ON marketplace_listings FOR DELETE TO authenticated USING (auth.uid() = seller_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Sellers, admins and staff can update listings" ON marketplace_listings FOR UPDATE TO authenticated USING (
+    auth.uid() = seller_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = marketplace_listings.campus_code)))
+);
+CREATE POLICY "Sellers, admins and staff can delete listings" ON marketplace_listings FOR DELETE TO authenticated USING (
+    auth.uid() = seller_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = marketplace_listings.campus_code)))
+);
+
+-- ============================================================================
+-- 15. CAMPUS & GLOBAL ANNOUNCEMENTS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS announcements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    campus_code TEXT REFERENCES campuses(code) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    audience_scope TEXT NOT NULL DEFAULT 'global', -- 'global', 'student', 'alumni', 'staff'
+    priority TEXT NOT NULL DEFAULT 'normal', -- 'normal', 'high', 'critical'
+    published_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_announcements_campus ON announcements(campus_code);
+CREATE INDEX IF NOT EXISTS idx_announcements_published ON announcements(published_at DESC);
+
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Announcements viewable by target audience and campus" ON announcements FOR SELECT TO authenticated USING (
+    (campus_code IS NULL OR campus_code = 'GLOBAL' OR campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid())) AND
+    (audience_scope = 'global' OR audience_scope = (SELECT role::text FROM profiles WHERE id = auth.uid()) OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'))
+);
+
+CREATE POLICY "Admins and staff can publish announcements" ON announcements FOR INSERT TO authenticated WITH CHECK (
+    auth.uid() = author_id AND
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR role = 'staff'))
+);
+
+CREATE POLICY "Admins and staff can update announcements" ON announcements FOR UPDATE TO authenticated USING (
+    auth.uid() = author_id OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = announcements.campus_code)))
+);
+
+CREATE POLICY "Admins and staff can delete announcements" ON announcements FOR DELETE TO authenticated USING (
+    auth.uid() = author_id OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = announcements.campus_code)))
+);
 
 CREATE TABLE IF NOT EXISTS waitlist_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -705,6 +811,7 @@ CREATE TABLE IF NOT EXISTS waitlist_entries (
 CREATE TABLE IF NOT EXISTS platform_settings (
     key TEXT PRIMARY KEY,
     value JSONB NOT NULL,
+    description TEXT,
     updated_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -712,6 +819,8 @@ CREATE TABLE IF NOT EXISTS platform_settings (
 ALTER TABLE platform_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Platform settings viewable by authenticated users" ON platform_settings FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Admins can manage platform settings" ON platform_settings FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+) WITH CHECK (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
@@ -787,7 +896,7 @@ ON CONFLICT DO NOTHING;
 -- 16. REALTIME REPLICATION CONFIGURATION
 -- ============================================================================
 DO $$ BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, post_comments, event_attendees, chat_messages, chat_channels, notifications, moderation_queue, verifications, connections, mentorships, marketplace_listings, portal_links;
+    ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, post_comments, event_attendees, chat_messages, chat_channels, notifications, moderation_queue, verifications, connections, mentorships, marketplace_listings, portal_links, announcements;
 EXCEPTION WHEN OTHERS THEN null; END $$;
 
 -- ============================================================================
