@@ -14,176 +14,59 @@ import { UserProfile, UserRole } from'@/api/types';
 import { recordAuditLogEntry } from'@/api/auditLog';
 import { haptics } from'@/utils/haptics';
 
-const INITIAL_USERS: UserProfile[] = [
-  {
-    id: 'user-inememmanuel',
-    fullName: 'Inem Emmanuel',
-    username: 'inememmanuel',
-    email: 'inememmanuel@gmail.com',
-    userType: 'admin',
-    graduationYear: 2024,
-    connectionsCount: 340,
-    bio: 'Platform Root Administrator & Campus Architect. Managing multi-node workspaces & security policies.',
-    department: 'Computer Science & AI',
-    interests: ['Systems Architecture', 'Cloud Infrastructure', 'Cybersecurity'],
-    institutionName: 'University of Ibadan',
-    institutionCode: 'UI',
-    avatarUrl: 'avatar_male_2',
-    isVerified: true,
-    verificationStatus: 'verified',
-    xp: 3200,
-    level: 10,
-    reputationScore: 980,
-    trustLevel: 10,
-    streakDays: 28,
-    postsCount: 16,
-    resourcesCount: 24,
-    eventsCount: 12,
-    badgesCount: 8,
-    followersCount: 340,
-    followingCount: 120,
-  },
-  {
-    id: 'user-chioma',
-    fullName: 'Chioma Okonkwo',
-    username: 'chioma.okonkwo',
-    email: 'c.okonkwo@ui.edu.ng',
-    userType: 'student',
-    graduationYear: 2026,
-    connectionsCount: 88,
-    bio: 'Computer Science senior studying mobile distributed systems. Faculty peer tutor.',
-    department: 'Computer Science & AI',
-    interests: ['Mobile App Dev', 'React Native', 'Data Structures'],
-    institutionName: 'University of Ibadan',
-    institutionCode: 'UI',
-    avatarUrl: 'avatar_female',
-    isVerified: true,
-    verificationStatus: 'verified',
-    xp: 850,
-    level: 4,
-    reputationScore: 320,
-    trustLevel: 8,
-    streakDays: 14,
-    postsCount: 6,
-    resourcesCount: 12,
-    eventsCount: 4,
-    badgesCount: 3,
-    followersCount: 112,
-    followingCount: 80,
-  },
-  {
-    id: 'user-adekunle',
-    fullName: 'Adekunle Gold',
-    username: 'adekunle.gold',
-    email: 'a.gold@student.unilag.edu.ng',
-    userType: 'student',
-    graduationYear: 2025,
-    connectionsCount: 142,
-    bio: 'Electrical & Electronics Engineering student building embedded IoT systems.',
-    department: 'Electrical Engineering',
-    interests: ['Embedded Systems', 'IoT', 'Hardware'],
-    institutionName: 'University of Lagos',
-    institutionCode: 'UNILAG',
-    avatarUrl: 'avatar_male',
-    isVerified: false,
-    verificationStatus: 'none',
-    xp: 420,
-    level: 2,
-    reputationScore: 180,
-    trustLevel: 6,
-    streakDays: 5,
-    postsCount: 3,
-    resourcesCount: 4,
-    eventsCount: 2,
-    badgesCount: 1,
-    followersCount: 64,
-    followingCount: 42,
-  },
-  {
-    id: 'user-lawal',
-    fullName: 'Dr. Babatunde Lawal',
-    username: 'babatunde.lawal',
-    email: 'b.lawal@funaab.edu.ng',
-    userType: 'staff',
-    graduationYear: 2012,
-    connectionsCount: 260,
-    bio: 'Associate Professor & Faculty Coordinator. Researching agrarian distributed databases.',
-    department: 'Agricultural Computing',
-    interests: ['Distributed Databases', 'Agritech', 'Big Data'],
-    institutionName: 'FUNAAB',
-    institutionCode: 'FUNAAB',
-    avatarUrl: 'avatar_mentor',
-    isVerified: true,
-    verificationStatus: 'verified',
-    xp: 1800,
-    level: 8,
-    reputationScore: 750,
-    trustLevel: 9,
-    streakDays: 20,
-    postsCount: 14,
-    resourcesCount: 30,
-    eventsCount: 8,
-    badgesCount: 6,
-    followersCount: 280,
-    followingCount: 95,
-  },
-];
-
 export function UserProfilesTab() {
-  const { colors, spacing, radius, isDark } = useTheme();
-  const queryClient = useQueryClient();
-  const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
+  const { colors, spacing, radius } = useTheme();
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
 
-  React.useEffect(() => {
-    async function loadProfiles() {
-      try {
-        const { supabase } = await import('@/api/supabase');
-        const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
-          const mapped: UserProfile[] = data.map((p: any) => ({
-            id: p.id,
-            fullName: p.full_name || 'Campus Member',
-            username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
-            email: p.email || '',
-            userType: (p.role || 'student') as UserRole,
-            graduationYear: 2026,
-            connectionsCount: 88,
-            bio: p.bio || `Verified ${p.role} on ${p.campus_code || 'UI'} node.`,
-            department: p.department || 'General Studies',
-            interests: ['Academic Excellence', 'Campus Life'],
-            institutionName: 'University of Ibadan',
-            institutionCode: p.campus_code || 'UI',
-            avatarUrl: (p.avatar_url || 'avatar_male') as any,
-            isVerified: p.verification_status === 'verified',
-            verificationStatus: p.verification_status === 'verified' ? 'verified' : 'none',
-            xp: 850,
-            level: 4,
-            reputationScore: 320,
-            trustLevel: 8,
-            streakDays: 14,
-            postsCount: 6,
-            resourcesCount: 12,
-            eventsCount: 4,
-            badgesCount: 3,
-            followersCount: 112,
-            followingCount: 80,
-          }));
-          const merged = [...mapped];
-          for (const u of INITIAL_USERS) {
-            if (!merged.some((m) => m.id === u.id || m.email === u.email)) {
-              merged.push(u);
-            }
-          }
-          setUsers(merged);
-        }
-      } catch (err) {
-        console.warn('[UserProfilesTab] Supabase load error:', err);
+  const loadProfiles = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const { supabase } = await import('@/api/supabase');
+      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        const mapped: UserProfile[] = data.map((p: any) => ({
+          id: p.id,
+          fullName: p.full_name || 'Campus Member',
+          username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
+          email: p.email || '',
+          userType: (p.role || 'student') as UserRole,
+          graduationYear: 2026,
+          connectionsCount: 88,
+          bio: p.bio || `Verified ${p.role} on ${p.campus_code || 'UI'} node.`,
+          department: p.department || 'General Studies',
+          interests: ['Academic Excellence', 'Campus Life'],
+          institutionName: 'University of Ibadan',
+          institutionCode: p.campus_code || 'UI',
+          avatarUrl: (p.avatar_url || 'avatar_male') as any,
+          isVerified: p.verification_status === 'verified',
+          verificationStatus: p.verification_status === 'verified' ? 'verified' : 'none',
+          xp: 850,
+          level: 4,
+          reputationScore: 320,
+          trustLevel: 8,
+          streakDays: 14,
+          postsCount: 6,
+          resourcesCount: 12,
+          eventsCount: 4,
+          badgesCount: 3,
+          followersCount: 112,
+          followingCount: 80,
+        }));
+        setUsers(mapped);
       }
+    } catch (err) {
+      console.warn('[UserProfilesTab] Supabase load error:', err);
+    } finally {
+      setLoading(false);
     }
-    loadProfiles();
   }, []);
+
+  React.useEffect(() => {
+    loadProfiles();
+  }, [loadProfiles]);
 
   // Edit Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -360,6 +243,13 @@ export function UserProfilesTab() {
       </ScrollView>
 
       {/* User Profiles List */}
+      {filteredUsers.length === 0 && !loading ? (
+        <EmptyState
+          title="No users found"
+          description="No profiles match your filter criteria or search query."
+        />
+      ) : null}
+
       {filteredUsers.map((user) => {
         return (
           <SolidCard key={user.id} radius={18} frosted style={{ marginBottom: spacing.md }}>

@@ -99,16 +99,23 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
   try {
     const { data: authData } = await supabase.auth.getUser();
     let userCampus = (query as any).campusCode;
-    if (!userCampus && authData?.user?.id) {
-      const { data: prof } = await supabase.from('profiles').select('campus_code').eq('id', authData.user.id).maybeSingle();
-      if (prof?.campus_code) userCampus = prof.campus_code;
+    let userRole = 'student';
+    if (authData?.user?.id) {
+      const { data: prof } = await supabase.from('profiles').select('campus_code, role').eq('id', authData.user.id).maybeSingle();
+      if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
+      if (prof?.role) userRole = prof.role;
     }
+
+    const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
     const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
     if (!error && data && data.length > 0) {
       const dbResources: Resource[] = data
         .filter((row: any) => !isUserBlocked(row.uploader_id))
-        .filter((row: any) => !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus)
+        .filter((row: any) => {
+          if (isStaffOrAdmin && !(query as any).campusCode) return true;
+          return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
+        })
         .map((row: any) => ({
           id: row.id,
           title: row.title,
@@ -132,7 +139,9 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
       const merged = [...dbResources];
       for (const r of resourcesState) {
         if (!merged.some((m) => m.id === r.id) && !isUserBlocked(r.authorId)) {
-          if (!userCampus || userCampus === 'GLOBAL' || !(r as any).campusCode || (r as any).campusCode === 'GLOBAL' || (r as any).campusCode === userCampus) {
+          if (isStaffOrAdmin && !(query as any).campusCode) {
+            merged.push(r);
+          } else if (!userCampus || userCampus === 'GLOBAL' || !(r as any).campusCode || (r as any).campusCode === 'GLOBAL' || (r as any).campusCode === userCampus) {
             merged.push(r);
           }
         }

@@ -32,16 +32,6 @@ interface DirectoryUser {
   joinedDate: string;
 }
 
-const INITIAL_USERS: DirectoryUser[] = [
-  { id: 'u1', fullName: 'Tunde Adebayo', username: 'tundea', email: 'tunde.adebayo@ui.edu.ng', role: 'Student', campus: 'UI', department: 'Computer Science', matricNo: 'UI/2023/4821', suspended: false, isVerified: true, trustScore: 92, joinedDate: 'Sep 2023' },
-  { id: 'u2', fullName: 'Chioma Nwosu', username: 'chioman', email: 'chioma.nwosu@unilag.edu.ng', role: 'Student', campus: 'UNILAG', department: 'Electrical Engineering', matricNo: 'UNILAG/2024/1109', suspended: false, isVerified: true, trustScore: 88, joinedDate: 'Jan 2024' },
-  { id: 'u3', fullName: 'Priya Nair', username: 'priyan', email: 'priya.nair@alumni.ui.edu.ng', role: 'Alumni', campus: 'UI', department: 'Computer Science', matricNo: 'UI/2018/0091', suspended: false, isVerified: true, trustScore: 99, joinedDate: 'Nov 2018' },
-  { id: 'u4', fullName: 'Marcus Webb', username: 'marcusw', email: 'marcus.webb@alumni.funaab.edu.ng', role: 'Alumni', campus: 'FUNAAB', department: 'Economics', matricNo: 'FUN/2015/3412', suspended: true, isVerified: false, trustScore: 45, joinedDate: 'Feb 2015' },
-  { id: 'u5', fullName: 'Prof. Adeyemi Balogun', username: 'adeyemib', email: 'a.balogun@ui.edu.ng', role: 'Staff', campus: 'UI', department: 'Computer Science', matricNo: 'STAFF/UI/402', suspended: false, isVerified: true, trustScore: 100, joinedDate: 'Aug 2016' },
-  { id: 'u6', fullName: 'Diana Prince', username: 'dianap', email: 'diana.prince@ui.edu.ng', role: 'Student', campus: 'UI', department: 'Computer Science', matricNo: 'UI/2023/1084', suspended: false, isVerified: true, trustScore: 95, joinedDate: 'Sep 2023' },
-  { id: 'u7', fullName: 'Amina Yusuf', username: 'aminay', email: 'amina.yusuf@oau.edu.ng', role: 'Student', campus: 'OAU', department: 'Pharmacy', matricNo: 'OAU/2024/7712', suspended: false, isVerified: true, trustScore: 91, joinedDate: 'Mar 2024' },
-];
-
 const ROLE_FILTERS = ['All Roles', 'Student', 'Alumni', 'Staff', 'Admin'];
 const CAMPUS_FILTERS = ['All Campuses', 'UI', 'UNILAG', 'OAU', 'FUNAAB'];
 
@@ -50,42 +40,41 @@ export default function UserDirectoryScreen() {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('All Roles');
   const [campus, setCampus] = useState('All Campuses');
-  const [users, setUsers] = useState<DirectoryUser[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<DirectoryUser[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadProfiles = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const { supabase } = await import('@/api/supabase');
+      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        const mapped: DirectoryUser[] = data.map((p: any) => ({
+          id: p.id,
+          fullName: p.full_name || 'Campus Member',
+          username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
+          email: p.email || '',
+          role: (p.role ? p.role.charAt(0).toUpperCase() + p.role.slice(1) : 'Student') as any,
+          campus: p.campus_code || 'UI',
+          department: p.department || 'General Studies',
+          matricNo: p.student_id_number || 'STU/2024/001',
+          suspended: p.is_suspended ?? false,
+          isVerified: p.verification_status === 'verified',
+          trustScore: p.trust_score ? Math.round(Number(p.trust_score)) : 85,
+          joinedDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2024',
+        }));
+        setUsers(mapped);
+      }
+    } catch (err) {
+      console.warn('[UserDirectory] Supabase profiles load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
-    async function loadProfiles() {
-      try {
-        const { supabase } = await import('@/api/supabase');
-        const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
-          const mapped: DirectoryUser[] = data.map((p: any) => ({
-            id: p.id,
-            fullName: p.full_name || 'Campus Member',
-            username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
-            email: p.email || '',
-            role: (p.role ? p.role.charAt(0).toUpperCase() + p.role.slice(1) : 'Student') as any,
-            campus: p.campus_code || 'UI',
-            department: p.department || 'General Studies',
-            matricNo: p.student_id_number || 'STU/2024/001',
-            suspended: p.is_suspended ?? false,
-            isVerified: p.verification_status === 'verified',
-            trustScore: p.trust_score ? Math.round(Number(p.trust_score)) : 85,
-            joinedDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2024',
-          }));
-          const merged = [...mapped];
-          for (const u of INITIAL_USERS) {
-            if (!merged.some((m) => m.id === u.id || m.email === u.email)) {
-              merged.push(u);
-            }
-          }
-          setUsers(merged);
-        }
-      } catch (err) {
-        console.warn('[UserDirectory] Supabase profiles load error:', err);
-      }
-    }
     loadProfiles();
-  }, []);
+  }, [loadProfiles]);
 
   // Selected User Actions & Details Drawer
   const [selectedUser, setSelectedUser] = useState<DirectoryUser | null>(null);

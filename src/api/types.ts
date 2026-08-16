@@ -328,7 +328,7 @@ export interface JobListing {
   title: string;
   company: string;
   location: string;
-  type: 'Full-time' | 'Part-time' | 'Internship';
+  type: 'Full-time' | 'Part-time' | 'Internship' | 'Contract';
   remote: boolean;
   applyUrl: string;
   postedByName: string;

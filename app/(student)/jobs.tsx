@@ -1,15 +1,18 @@
 import React, { useState } from'react';
 import { FlatList, Pressable, ScrollView, TextInput, View } from'react-native';
-import { useQuery } from'@tanstack/react-query';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'@/components/ScreenContainer';
-import { AppHeader } from'@/components/AppHeader';
-import { AppText } from'@/components/AppText';
-import { JobCard } from'@/components/JobCard';
-import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listJobs } from'@/api/jobs';
-import { useDebouncedValue } from'@/hooks/useDebouncedValue';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '@/components/ScreenContainer';
+import { AppHeader } from '@/components/AppHeader';
+import { AppText } from '@/components/AppText';
+import { JobCard } from '@/components/JobCard';
+import { EmptyState } from '@/components/EmptyState';
+import { CreateJobModal } from '@/components/CreateJobModal';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { listJobs } from '@/api/jobs';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { haptics } from '@/utils/haptics';
 
 const JOB_FILTERS = [
   { id: 'all', label: 'All Openings' },
@@ -20,8 +23,11 @@ const JOB_FILTERS = [
 
 export default function JobsScreen() {
   const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const debouncedQuery = useDebouncedValue(query);
 
   const { data: jobs, isLoading } = useQuery({
@@ -39,13 +45,37 @@ export default function JobsScreen() {
   return (
     <ScreenContainer glow={false}>
       <AppHeader />
-      <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
-        <AppText variant="h1"weight="bold">
-          Career & Internships 
-        </AppText>
-        <AppText tone="secondary"variant="bodySmall">
-          Verified student roles, alumni referrals & industry gigs
-        </AppText>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flex: 1, marginRight: spacing.sm }}>
+          <AppText variant="h1" weight="bold">
+            Career & Internships 💼
+          </AppText>
+          <AppText tone="secondary" variant="bodySmall">
+            Verified student roles, alumni referrals & industry gigs
+          </AppText>
+        </View>
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setCreateModalOpen(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Post a new job opening"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: colors.brandPrimary,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 8,
+          }}
+        >
+          <Ionicons name="add" size={18} color="#FFFFFF" />
+          <AppText weight="bold" tone="inverse" variant="caption">
+            Post Job
+          </AppText>
+        </Pressable>
       </View>
 
       {/* Search Input Bar */}
@@ -116,7 +146,13 @@ export default function JobsScreen() {
         contentContainerStyle={{ paddingBottom: 130 }}
         renderItem={({ item }) => <JobCard job={item} />}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found"description="Try clearing search or check back soon." /> : null}
+        ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found" description="Try clearing search or check back soon." /> : null}
+      />
+
+      <CreateJobModal
+        visible={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onCreated={() => queryClient.invalidateQueries({ queryKey: ['jobs'] })}
       />
     </ScreenContainer>
   );

@@ -92,7 +92,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
       
       const { supabase } = await import('@/api/supabase');
 
-      // Resolve author profile ID if target was content (post, event, resource)
+      // Resolve author profile ID if target was content (post, event, resource, comment, message)
       let targetUserId = report.targetId;
       if (report.targetType === 'post') {
         const { data: postData } = await supabase.from('posts').select('author_id').eq('id', report.targetId).maybeSingle();
@@ -105,6 +105,18 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
       } else if ((report.targetType as string) === 'resource') {
         const { data: resData } = await supabase.from('resources').select('uploader_id').eq('id', report.targetId).maybeSingle();
         if (resData?.uploader_id) targetUserId = resData.uploader_id;
+      } else if ((report.targetType as string) === 'comment') {
+        const { data: cData } = await supabase.from('post_comments').select('author_id').eq('id', report.targetId).maybeSingle();
+        if (cData?.author_id) targetUserId = cData.author_id;
+        if (punishmentType !== 'warn') {
+          await supabase.from('post_comments').delete().eq('id', report.targetId);
+        }
+      } else if ((report.targetType as string) === 'message') {
+        const { data: msgData } = await supabase.from('chat_messages').select('sender_id').eq('id', report.targetId).maybeSingle();
+        if (msgData?.sender_id) targetUserId = msgData.sender_id;
+        if (punishmentType !== 'warn') {
+          await supabase.from('chat_messages').delete().eq('id', report.targetId);
+        }
       }
 
       // If user ban/suspension or reported user target, enforce is_suspended on target user profile via RPC

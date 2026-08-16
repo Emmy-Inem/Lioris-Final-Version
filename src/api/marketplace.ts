@@ -54,10 +54,14 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
   try {
     const { data: authData } = await supabase.auth.getUser();
     let userCampus = query.campusCode;
-    if (!userCampus && authData?.user?.id) {
-      const { data: prof } = await supabase.from('profiles').select('campus_code').eq('id', authData.user.id).maybeSingle();
-      if (prof?.campus_code) userCampus = prof.campus_code;
+    let userRole = 'student';
+    if (authData?.user?.id) {
+      const { data: prof } = await supabase.from('profiles').select('campus_code, role').eq('id', authData.user.id).maybeSingle();
+      if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
+      if (prof?.role) userRole = prof.role;
     }
+
+    const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
     let req = supabase
       .from('marketplace_listings')
@@ -74,7 +78,10 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
     if (!error && data && data.length > 0) {
       const dbListings: MarketplaceListing[] = data
         .filter((row: any) => !isUserBlocked(row.seller_id))
-        .filter((row: any) => !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus)
+        .filter((row: any) => {
+          if (isStaffOrAdmin && !query.campusCode) return true;
+          return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
+        })
         .map((row: any) => ({
           id: row.id,
           sellerId: row.seller_id,
@@ -92,7 +99,7 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
         }));
 
       // Merge unique
-      const local = filterMockListings({ ...query, campusCode: userCampus });
+      const local = filterMockListings({ ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
       const merged = [...dbListings];
       for (const item of local) {
         if (!merged.some((m) => m.id === item.id) && !isUserBlocked(item.sellerId)) {

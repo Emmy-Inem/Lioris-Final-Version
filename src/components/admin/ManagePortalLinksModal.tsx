@@ -15,6 +15,7 @@ import {
   updatePortalLink,
   deletePortalLink,
 } from '@/api/portalLinks';
+import { recordAuditLogEntry } from '@/api/auditLog';
 
 export { PortalLink };
 
@@ -122,6 +123,13 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
           campusCode,
         });
         setLinks((prev) => prev.map((l) => (l.id === editingId ? updated : l)));
+        recordAuditLogEntry({
+          action: 'portal_link_updated',
+          summary: `Updated institutional portal link: "${title.trim()}" (${category})`,
+          targetType: 'portal_link',
+          targetId: editingId,
+          institutionCode: campusCode,
+        }).catch(() => {});
         haptics.success();
         Alert.alert('Link Updated', `"${title.trim()}" changes saved.`);
       } else {
@@ -134,6 +142,13 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
           campusCode,
         });
         setLinks((prev) => [created, ...prev]);
+        recordAuditLogEntry({
+          action: 'portal_link_created',
+          summary: `Published institutional portal link: "${created.title}" (${created.category})`,
+          targetType: 'portal_link',
+          targetId: created.id,
+          institutionCode: campusCode,
+        }).catch(() => {});
         haptics.success();
         Alert.alert('Link Published', `"${created.title}" is now available to students.`);
       }
@@ -154,6 +169,13 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
     setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, active: nextState } : l)));
     try {
       await updatePortalLink(id, { active: nextState });
+      recordAuditLogEntry({
+        action: 'portal_link_updated',
+        summary: `${nextState ? 'Activated' : 'Deactivated'} portal link "${current.title}"`,
+        targetType: 'portal_link',
+        targetId: id,
+        institutionCode: current.campusCode,
+      }).catch(() => {});
     } catch (err) {
       console.warn('Failed to toggle active status:', err);
     }
@@ -161,6 +183,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
 
   function handleDeleteLink(id: string) {
     haptics.medium();
+    const current = links.find((l) => l.id === id);
     Alert.alert('Delete Portal Link', 'Are you sure you want to remove this institutional bookmark?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -171,6 +194,13 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
           if (editingId === id) cancelForm();
           try {
             await deletePortalLink(id);
+            recordAuditLogEntry({
+              action: 'portal_link_deleted',
+              summary: `Deleted institutional portal link: "${current?.title || id}"`,
+              targetType: 'portal_link',
+              targetId: id,
+              institutionCode: current?.campusCode,
+            }).catch(() => {});
           } catch (err) {
             console.warn('Failed to delete portal link:', err);
           }
