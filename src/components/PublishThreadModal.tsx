@@ -1,14 +1,15 @@
-import React, { useState } from'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View } from'react-native';
-import { Image } from'expo-image';
-import { Ionicons } from'@expo/vector-icons';
-import { AppText } from'./AppText';
-import { AppTextField } from'./AppTextField';
-import { AppButton } from'./AppButton';
-import { Badge } from'./Badge';
-import { SolidCard } from'./SolidCard';
-import { useTheme } from'@/theme/ThemeProvider';
-import { haptics } from'@/utils/haptics';
+import React, { useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { AppText } from './AppText';
+import { AppTextField } from './AppTextField';
+import { AppButton } from './AppButton';
+import { Badge } from './Badge';
+import { SolidCard } from './SolidCard';
+import { useTheme } from '@/theme/ThemeProvider';
+import { haptics } from '@/utils/haptics';
 
 const CHANNELS = ['Tech Hub', 'Academic', 'Polls', 'Housing', 'Social', 'Lost & Found'] as const;
 
@@ -49,6 +50,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const [visibility, setVisibility] = useState<'Campus Only' | 'Global Reach'>('Campus Only');
   const [sponsored, setSponsored] = useState(false);
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+  const [customMediaUri, setCustomMediaUri] = useState<string | null>(null);
+  const [customMediaType, setCustomMediaType] = useState<'image' | 'video' | null>(null);
   const [isVideoAttachment, setIsVideoAttachment] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -62,6 +65,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setCourseTags('');
     setContent('');
     setSelectedMediaId(null);
+    setCustomMediaUri(null);
+    setCustomMediaType(null);
     setIsVideoAttachment(false);
     setAttachPoll(false);
     setPollQuestion('');
@@ -69,6 +74,53 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setSponsored(false);
     setMode('Thread');
     setErrorMessage(null);
+  }
+
+  async function handlePickCustomImage() {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please enable media library access in your settings to select photos.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setCustomMediaUri(result.assets[0].uri);
+        setCustomMediaType('image');
+        setSelectedMediaId(null);
+        setIsVideoAttachment(false);
+        haptics.light();
+      }
+    } catch {
+      Alert.alert('Image Picker Error', 'Unable to load image.');
+    }
+  }
+
+  async function handlePickCustomVideo() {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please enable media library access in your settings to select videos.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsEditing: true,
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setCustomMediaUri(result.assets[0].uri);
+        setCustomMediaType('video');
+        setSelectedMediaId(null);
+        setIsVideoAttachment(true);
+        haptics.light();
+      }
+    } catch {
+      Alert.alert('Video Picker Error', 'Unable to load video.');
+    }
   }
 
   function handleAddPollOption() {
@@ -99,6 +151,12 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
       return;
     }
     haptics.medium();
+
+    const finalImageUrl = customMediaType === 'image' && customMediaUri ? customMediaUri : (selectedMediaId || undefined);
+    const finalVideoUrl = customMediaType === 'video' && customMediaUri
+      ? customMediaUri
+      : (isVideoAttachment ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' : undefined);
+
     onPublish({
       title: topic.trim(),
       content: content.trim(),
@@ -108,8 +166,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
       sponsored,
       courseTags: courseTags.trim() || undefined,
       postFormat: mode,
-      imageUrl: selectedMediaId || undefined,
-      videoUrl: isVideoAttachment ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' : undefined,
+      imageUrl: finalImageUrl,
+      videoUrl: finalVideoUrl,
       pollQuestion: attachPoll && pollQuestion.trim() ? pollQuestion.trim() : undefined,
       pollOptions: attachPoll && pollQuestion.trim() ? pollOptions.filter((o) => o.trim().length > 0) : undefined,
     });
@@ -185,53 +243,136 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
           {/* Media Attachments Hub */}
           <View style={{ marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-              <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
                 ATTACH MEDIA (PHOTO / VIDEO) 📸
               </AppText>
+              {customMediaUri ? (
+                <Pressable
+                  onPress={() => {
+                    setCustomMediaUri(null);
+                    setCustomMediaType(null);
+                    setIsVideoAttachment(false);
+                    haptics.light();
+                  }}
+                  hitSlop={8}
+                >
+                  <AppText variant="caption" weight="bold" tone="critical">
+                    ✕ Remove Attachment
+                  </AppText>
+                </Pressable>
+              ) : null}
+            </View>
+
+            {/* Custom Upload Buttons */}
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
               <Pressable
-                onPress={() => {
-                  haptics.light();
-                  setIsVideoAttachment((v) => !v);
+                onPress={handlePickCustomImage}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  paddingVertical: 10,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: customMediaType === 'image' ? colors.brandPrimary : colors.border,
+                  backgroundColor: customMediaType === 'image' ? colors.pastelPrimaryBg : colors.surface,
                 }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
               >
-                <Ionicons name={isVideoAttachment ? 'videocam' : 'videocam-outline'} size={15} color={isVideoAttachment ? colors.brandPrimary : colors.textSecondary} />
-                <AppText variant="caption"weight="bold"tone={isVideoAttachment ? 'brand' : 'secondary'}>
-                  {isVideoAttachment ? 'Video Mode Active' : 'Enable Video Badge'}
+                <Ionicons name="image-outline" size={18} color={customMediaType === 'image' ? colors.brandPrimary : colors.textSecondary} />
+                <AppText variant="caption" weight="bold" tone={customMediaType === 'image' ? 'brand' : 'secondary'}>
+                  {customMediaType === 'image' ? 'Photo Attached' : 'Pick Photo'}
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                onPress={handlePickCustomVideo}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  paddingVertical: 10,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: customMediaType === 'video' ? colors.brandPrimary : colors.border,
+                  backgroundColor: customMediaType === 'video' ? colors.pastelPrimaryBg : colors.surface,
+                }}
+              >
+                <Ionicons name="videocam-outline" size={18} color={customMediaType === 'video' ? colors.brandPrimary : colors.textSecondary} />
+                <AppText variant="caption" weight="bold" tone={customMediaType === 'video' ? 'brand' : 'secondary'}>
+                  {customMediaType === 'video' ? 'Video Attached' : 'Pick Video'}
                 </AppText>
               </Pressable>
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
-              {ATTACHABLE_MEDIA.map((preset) => {
-                const isSelected = selectedMediaId === preset.id;
-                return (
-                  <Pressable
-                    key={preset.id}
-                    onPress={() => {
-                      haptics.light();
-                      setSelectedMediaId(isSelected ? null : preset.id);
-                    }}
-                    style={{
-                      width: 120,
-                      height: 80,
-                      borderRadius: radius.md,
-                      overflow: 'hidden',
-                      borderWidth: 2,
-                      borderColor: isSelected ? colors.brandPrimary : colors.border,
-                      position: 'relative',
-                    }}
-                  >
-                    <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                    {isSelected ? (
-                      <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: colors.brandPrimary, borderRadius: 10, padding: 2 }}>
-                        <Ionicons name="checkmark"size={14} color="#FFFFFF" />
-                      </View>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            {/* Custom Media Preview */}
+            {customMediaUri ? (
+              <View
+                style={{
+                  height: 140,
+                  borderRadius: radius.md,
+                  overflow: 'hidden',
+                  marginBottom: spacing.sm,
+                  position: 'relative',
+                  borderWidth: 2,
+                  borderColor: colors.brandPrimary,
+                  backgroundColor: '#000000',
+                }}
+              >
+                {customMediaType === 'image' ? (
+                  <Image source={{ uri: customMediaUri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                ) : (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1E293B' }}>
+                    <Ionicons name="videocam" size={40} color="#FFFFFF" />
+                    <AppText variant="caption" weight="bold" tone="inverse" style={{ marginTop: 6 }}>
+                      Custom Video Selected
+                    </AppText>
+                  </View>
+                )}
+                <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+                  <AppText variant="caption" weight="bold" tone="inverse">
+                    {customMediaType === 'video' ? '📹 Video' : '📷 Image'}
+                  </AppText>
+                </View>
+              </View>
+            ) : (
+              /* Preset Campus Images */
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+                {ATTACHABLE_MEDIA.map((preset) => {
+                  const isSelected = selectedMediaId === preset.id;
+                  return (
+                    <Pressable
+                      key={preset.id}
+                      onPress={() => {
+                        haptics.light();
+                        setSelectedMediaId(isSelected ? null : preset.id);
+                        setCustomMediaUri(null);
+                        setCustomMediaType(null);
+                      }}
+                      style={{
+                        width: 120,
+                        height: 80,
+                        borderRadius: radius.md,
+                        overflow: 'hidden',
+                        borderWidth: 2,
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                        position: 'relative',
+                      }}
+                    >
+                      <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                      {isSelected ? (
+                        <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: colors.brandPrimary, borderRadius: 10, padding: 2 }}>
+                          <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
           </View>
 
           {/* Poll Attachment Hub */}

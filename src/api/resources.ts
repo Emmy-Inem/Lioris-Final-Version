@@ -166,7 +166,13 @@ export interface CreateResourcePayload {
 import { generateUUID } from '../utils/uuid';
 
 export async function createResource(
-  payload: CreateResourcePayload,
+  payload: Partial<Resource> & {
+    title: string;
+    courseCode: string;
+    category: Resource['category'];
+    fileSizeBytes?: number;
+    fileMimeType?: string;
+  },
   fileBlob?: Blob | ArrayBuffer,
 ): Promise<Resource> {
   const resourceId = generateUUID();
@@ -210,13 +216,22 @@ export async function createResource(
         campusCode = profile.campus_code;
       }
 
-      const fileExt = payload.fileType === 'ZIP' ? 'zip' : 'pdf';
+      let fileExt = 'pdf';
+      let mimeType = 'application/pdf';
+      const ft = (payload.fileType || '').toUpperCase();
+      if (ft === 'ZIP') { fileExt = 'zip'; mimeType = 'application/zip'; }
+      else if (ft === 'DOC') { fileExt = 'docx'; mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'; }
+      else if (ft === 'PPT') { fileExt = 'pptx'; mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'; }
+      else if (ft === 'XLS') { fileExt = 'xlsx'; mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; }
+      else if (ft === 'TXT') { fileExt = 'txt'; mimeType = 'text/plain'; }
+      else if (ft === 'IMG') { fileExt = 'jpg'; mimeType = 'image/jpeg'; }
+
       const storagePath = `${uploaderId}/${resourceId}.${fileExt}`;
 
       // If binary file blob is provided, upload directly to Supabase Storage
       if (fileBlob) {
         await supabase.storage.from('resources').upload(storagePath, fileBlob, {
-          contentType: payload.fileType === 'ZIP' ? 'application/zip' : 'application/pdf',
+          contentType: payload.fileMimeType || mimeType,
           upsert: true,
         });
       }
@@ -225,6 +240,10 @@ export async function createResource(
       const fileUrl = publicUrlData?.publicUrl || `https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/${storagePath}`;
 
       created.fileUrl = fileUrl;
+
+      const realSizeBytes = (fileBlob && typeof (fileBlob as any).size === 'number' ? (fileBlob as any).size : undefined)
+        || payload.fileSizeBytes
+        || 2500000;
 
       const { error } = await supabase.from('resources').insert({
         id: resourceId,
@@ -236,8 +255,8 @@ export async function createResource(
         description: payload.description || '',
         resource_type: mapCategoryToResourceType(payload.category),
         file_url: fileUrl,
-        file_size_bytes: 3565158,
-        file_mime_type: payload.fileType === 'ZIP' ? 'application/zip' : 'application/pdf',
+        file_size_bytes: realSizeBytes,
+        file_mime_type: payload.fileMimeType || mimeType,
         is_approved: true,
       });
       if (error) {

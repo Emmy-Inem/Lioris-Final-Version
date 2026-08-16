@@ -126,6 +126,27 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
   const postId = generateUUID();
   const now = new Date().toISOString();
 
+  let permanentImageUrl: string | undefined = payload.imageUrl;
+  let permanentVideoUrl: string | undefined = payload.videoUrl;
+
+  if (payload.imageUrl && !payload.imageUrl.startsWith('http://') && !payload.imageUrl.startsWith('https://') && !payload.imageUrl.startsWith('asset:')) {
+    try {
+      const { uploadMediaFile } = await import('./storage');
+      permanentImageUrl = await uploadMediaFile('campus-media', payload.imageUrl, 'feed');
+    } catch (uploadErr) {
+      console.warn('[Posts] Image upload warning:', uploadErr);
+    }
+  }
+
+  if (payload.videoUrl && !payload.videoUrl.startsWith('http://') && !payload.videoUrl.startsWith('https://')) {
+    try {
+      const { uploadMediaFile } = await import('./storage');
+      permanentVideoUrl = await uploadMediaFile('campus-media', payload.videoUrl, 'videos');
+    } catch (uploadErr) {
+      console.warn('[Posts] Video upload warning:', uploadErr);
+    }
+  }
+
   let authorId = 'me';
   let authorName = 'You';
   let authorRole = 'student';
@@ -159,6 +180,8 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
     scopeVisibility: scopeVisibility ?? 'campus',
     institutionCode: scopeVisibility === 'global' ? undefined : authorInstitutionCode,
     ...rest,
+    imageUrl: permanentImageUrl,
+    videoUrl: permanentVideoUrl,
   };
 
   postsState = [created, ...postsState];
@@ -175,7 +198,8 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
         content: payload.content,
         category: payload.category || 'General',
         visibility_scope: payload.visibilityScope || 'campus',
-        image_url: payload.imageUrl || null,
+        image_url: permanentImageUrl || null,
+        video_url: permanentVideoUrl || null,
       });
       if (error) {
         console.warn('[Posts] Supabase create post error:', error.message);

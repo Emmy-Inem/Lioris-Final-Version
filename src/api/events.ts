@@ -203,6 +203,16 @@ import { generateUUID } from '../utils/uuid';
 export async function createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
   const eventId = generateUUID();
 
+  let permanentImageUrl: string | null = payload.imageUrl || null;
+  if (payload.imageUrl && !payload.imageUrl.startsWith('http://') && !payload.imageUrl.startsWith('https://')) {
+    try {
+      const { uploadMediaFile } = await import('./storage');
+      permanentImageUrl = await uploadMediaFile('campus-media', payload.imageUrl, 'events');
+    } catch (uploadErr) {
+      console.warn('[Events] Banner upload warning:', uploadErr);
+    }
+  }
+
   let organizerId = 'me';
   try {
     const { data: authData } = await supabase.auth.getUser();
@@ -226,7 +236,7 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
     ...payload,
     category: (payload.category as any) || 'academic',
     visibilityScope: (payload.visibilityScope as any) || 'global',
-    coverImageUrl: payload.imageUrl,
+    coverImageUrl: permanentImageUrl,
   };
   eventsState = [created, ...eventsState];
 
@@ -245,7 +255,7 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
         visibility_scope: payload.visibilityScope || 'global',
         start_time: payload.startAt,
         end_time: payload.endAt,
-        banner_url: payload.imageUrl || null,
+        banner_url: permanentImageUrl,
         registered_count: 0,
       });
       if (error) {

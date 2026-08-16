@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
@@ -8,36 +8,30 @@ import { SolidCard } from '../SolidCard';
 import { Badge } from '../Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { haptics } from '@/utils/haptics';
+import {
+  PortalLink,
+  listPortalLinks,
+  createPortalLink,
+  updatePortalLink,
+  deletePortalLink,
+} from '@/api/portalLinks';
 
-export interface PortalLink {
-  id: string;
-  title: string;
-  url: string;
-  category: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  active: boolean;
-}
-
-const INITIAL_LINKS: PortalLink[] = [
-  { id: '1', title: 'Campus Student Portal', url: 'https://portal.unilag.edu.ng', category: 'Academic', icon: 'school-outline', active: true },
-  { id: '2', title: 'LMS e-Learning Classroom', url: 'https://lms.ui.edu.ng', category: 'Classes', icon: 'laptop-outline', active: true },
-  { id: '3', title: 'Main Library Digital Catalog', url: 'https://library.funaab.edu.ng', category: 'Library', icon: 'book-outline', active: true },
-  { id: '4', title: 'Bursary & Fee Payment', url: 'https://bursary.campus.edu.ng', category: 'Finance', icon: 'card-outline', active: true },
-  { id: '5', title: 'Hostels & Accommodation', url: 'https://hostels.campus.edu.ng', category: 'Housing', icon: 'home-outline', active: true },
-  { id: '6', title: 'University Health Center', url: 'https://health.campus.edu.ng', category: 'Health', icon: 'medkit-outline', active: true },
-];
+export { PortalLink };
 
 export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, spacing, radius, isDark } = useTheme();
-  const [links, setLinks] = useState<PortalLink[]>(INITIAL_LINKS);
+  const [links, setLinks] = useState<PortalLink[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Form states
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [category, setCategory] = useState('Academic');
+  const [campusCode, setCampusCode] = useState('GLOBAL');
   const [selectedIcon, setSelectedIcon] = useState<keyof typeof Ionicons.glyphMap>('link-outline');
 
   const ICON_CHOICES: (keyof typeof Ionicons.glyphMap)[] = [
@@ -53,12 +47,31 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
     'link-outline',
   ];
 
+  useEffect(() => {
+    if (visible) {
+      loadLinks();
+    }
+  }, [visible]);
+
+  async function loadLinks() {
+    setLoading(true);
+    try {
+      const data = await listPortalLinks();
+      setLinks(data);
+    } catch (err) {
+      console.warn('Failed to load portal links:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function startAdd() {
     haptics.light();
     setEditingId(null);
     setTitle('');
     setUrl('');
     setCategory('Academic');
+    setCampusCode('GLOBAL');
     setSelectedIcon('link-outline');
     setFormError(null);
     setAdding(true);
@@ -71,6 +84,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
     setTitle(link.title);
     setUrl(link.url);
     setCategory(link.category);
+    setCampusCode(link.campusCode || 'GLOBAL');
     setSelectedIcon(link.icon);
     setFormError(null);
   }
@@ -83,7 +97,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
     setFormError(null);
   }
 
-  function handleSave() {
+  async function handleSave() {
     setFormError(null);
     if (!title.trim()) {
       setFormError('Please enter a link title.');
@@ -95,38 +109,54 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
       haptics.error();
       return;
     }
-    haptics.success();
+    setSaving(true);
     const formattedUrl = url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`;
 
-    if (editingId) {
-      setLinks((prev) =>
-        prev.map((l) =>
-          l.id === editingId
-            ? { ...l, title: title.trim(), url: formattedUrl, category: category.trim() || 'General', icon: selectedIcon }
-            : l
-        )
-      );
-      Alert.alert('Link Updated', `"${title.trim()}" changes saved.`);
-    } else {
-      const created: PortalLink = {
-        id: String(Date.now()),
-        title: title.trim(),
-        url: formattedUrl,
-        category: category.trim() || 'General',
-        icon: selectedIcon,
-        active: true,
-      };
-      setLinks((prev) => [created, ...prev]);
-      Alert.alert('Link Published', `"${created.title}" is now available to students.`);
+    try {
+      if (editingId) {
+        const updated = await updatePortalLink(editingId, {
+          title: title.trim(),
+          url: formattedUrl,
+          category: category.trim() || 'Academic',
+          icon: selectedIcon,
+          campusCode,
+        });
+        setLinks((prev) => prev.map((l) => (l.id === editingId ? updated : l)));
+        haptics.success();
+        Alert.alert('Link Updated', `"${title.trim()}" changes saved.`);
+      } else {
+        const created = await createPortalLink({
+          title: title.trim(),
+          url: formattedUrl,
+          category: category.trim() || 'Academic',
+          icon: selectedIcon,
+          active: true,
+          campusCode,
+        });
+        setLinks((prev) => [created, ...prev]);
+        haptics.success();
+        Alert.alert('Link Published', `"${created.title}" is now available to students.`);
+      }
+      cancelForm();
+    } catch (err: any) {
+      setFormError(err?.message || 'Failed to save portal link.');
+      haptics.error();
+    } finally {
+      setSaving(false);
     }
-    cancelForm();
   }
 
-  function handleToggleActive(id: string) {
+  async function handleToggleActive(id: string) {
     haptics.light();
-    setLinks((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, active: !l.active } : l))
-    );
+    const current = links.find((l) => l.id === id);
+    if (!current) return;
+    const nextState = !current.active;
+    setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, active: nextState } : l)));
+    try {
+      await updatePortalLink(id, { active: nextState });
+    } catch (err) {
+      console.warn('Failed to toggle active status:', err);
+    }
   }
 
   function handleDeleteLink(id: string) {
@@ -136,9 +166,14 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
           setLinks((prev) => prev.filter((l) => l.id !== id));
           if (editingId === id) cancelForm();
+          try {
+            await deletePortalLink(id);
+          } catch (err) {
+            console.warn('Failed to delete portal link:', err);
+          }
         },
       },
     ]);

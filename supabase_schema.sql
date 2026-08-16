@@ -720,14 +720,78 @@ CREATE POLICY "Anyone can join waitlist" ON waitlist_entries FOR INSERT TO anon,
 CREATE POLICY "Admins can update waitlist" ON waitlist_entries FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
 -- ============================================================================
--- 15. REALTIME REPLICATION CONFIGURATION
+-- 15. CAMPUS PORTAL DIRECTORIES & SHORTCUTS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS portal_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campus_code TEXT REFERENCES campuses(code) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'Academic',
+    icon TEXT NOT NULL DEFAULT 'link-outline',
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_links_campus ON portal_links(campus_code);
+
+ALTER TABLE portal_links ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read portal_links" ON portal_links
+FOR SELECT USING (true);
+
+CREATE POLICY "Admins can manage portal_links" ON portal_links
+FOR ALL TO authenticated
+USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'))
+WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- Seed Real Portal Links for UNILAG, UI, FUNAAB and Global fallback
+INSERT INTO portal_links (campus_code, title, url, category, icon, display_order)
+VALUES
+    -- UNILAG
+    ('UNILAG', 'UNILAG Student Portal', 'https://studentportal.unilag.edu.ng/', 'Academic', 'school-outline', 1),
+    ('UNILAG', 'UNILAG e-Learning LMS', 'https://lms.unilag.edu.ng/', 'Classes', 'laptop-outline', 2),
+    ('UNILAG', 'Main Library Catalog & Archives', 'https://library.unilag.edu.ng/', 'Library', 'book-outline', 3),
+    ('UNILAG', 'Bursary & Payments (Remita)', 'https://payments.unilag.edu.ng/', 'Finance', 'card-outline', 4),
+    ('UNILAG', 'Hostel Accommodation Balloting', 'https://studentportal.unilag.edu.ng/hostel', 'Housing', 'home-outline', 5),
+    ('UNILAG', 'Medical Centre e-Services', 'https://medical.unilag.edu.ng/', 'Health', 'medkit-outline', 6),
+
+    -- UI (University of Ibadan)
+    ('UI', 'UI Undergraduate Portal', 'https://portal.ui.edu.ng/', 'Academic', 'school-outline', 1),
+    ('UI', 'UI DLC LMS & Virtual Classroom', 'https://dlc.ui.edu.ng/', 'Classes', 'laptop-outline', 2),
+    ('UI', 'Kenneth Dike Memorial Library', 'https://library.ui.edu.ng/', 'Library', 'book-outline', 3),
+    ('UI', 'University Bursary & Invoicing', 'https://bursary.ui.edu.ng/', 'Finance', 'card-outline', 4),
+    ('UI', 'Halls of Residence Allocation', 'https://portal.ui.edu.ng/hostels', 'Housing', 'home-outline', 5),
+    ('UI', 'Jaja Health Services Clinic', 'https://uhs.ui.edu.ng/', 'Health', 'medkit-outline', 6),
+
+    -- FUNAAB
+    ('FUNAAB', 'FUNAAB Student Portal', 'https://portal.unaab.edu.ng/', 'Academic', 'school-outline', 1),
+    ('FUNAAB', 'FUNAAB LMS e-Learning', 'https://lms.unaab.edu.ng/', 'Classes', 'laptop-outline', 2),
+    ('FUNAAB', 'Nimbe Adedipe Digital Library', 'https://library.unaab.edu.ng/', 'Library', 'book-outline', 3),
+    ('FUNAAB', 'Bursary & Student Billing', 'https://portal.unaab.edu.ng/payments', 'Finance', 'card-outline', 4),
+    ('FUNAAB', 'Hostel Accommodation System', 'https://portal.unaab.edu.ng/accommodation', 'Housing', 'home-outline', 5),
+    ('FUNAAB', 'Directorate of Health Services', 'https://healthservices.unaab.edu.ng/', 'Health', 'medkit-outline', 6),
+
+    -- GLOBAL fallback
+    ('GLOBAL', 'Campus Student Portal', 'https://studentportal.unilag.edu.ng/', 'Academic', 'school-outline', 1),
+    ('GLOBAL', 'LMS Virtual Classroom', 'https://lms.unilag.edu.ng/', 'Classes', 'laptop-outline', 2),
+    ('GLOBAL', 'Academic Library & Archives', 'https://library.unilag.edu.ng/', 'Library', 'book-outline', 3),
+    ('GLOBAL', 'Tuition & Bursary Services', 'https://payments.unilag.edu.ng/', 'Finance', 'card-outline', 4),
+    ('GLOBAL', 'Campus Accommodation Portal', 'https://studentportal.unilag.edu.ng/hostel', 'Housing', 'home-outline', 5),
+    ('GLOBAL', 'University Health Center', 'https://medical.unilag.edu.ng/', 'Health', 'medkit-outline', 6)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- 16. REALTIME REPLICATION CONFIGURATION
 -- ============================================================================
 DO $$ BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, post_comments, event_attendees, chat_messages, chat_channels, notifications, moderation_queue, verifications, connections, mentorships, marketplace_listings;
+    ALTER PUBLICATION supabase_realtime ADD TABLE posts, events, post_comments, event_attendees, chat_messages, chat_channels, notifications, moderation_queue, verifications, connections, mentorships, marketplace_listings, portal_links;
 EXCEPTION WHEN OTHERS THEN null; END $$;
 
 -- ============================================================================
--- 16. STORAGE BUCKETS & POLICIES (Academic Documents, Media & Private Verifications)
+-- 17. STORAGE BUCKETS & POLICIES (Academic Documents, Media & Private Verifications)
 -- ============================================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('resources', 'resources', true)
@@ -738,19 +802,23 @@ VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO storage.buckets (id, name, public)
+VALUES ('campus-media', 'campus-media', true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.buckets (id, name, public)
 VALUES ('verifications', 'verifications', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Public Storage RLS Policies (resources & avatars)
+-- Public Storage RLS Policies (resources, avatars & campus-media)
 CREATE POLICY "Public storage objects viewable by anyone" ON storage.objects
-FOR SELECT USING (bucket_id IN ('resources', 'avatars'));
+FOR SELECT USING (bucket_id IN ('resources', 'avatars', 'campus-media'));
 
 CREATE POLICY "Authenticated users can upload public storage objects" ON storage.objects
-FOR INSERT TO authenticated WITH CHECK (bucket_id IN ('resources', 'avatars'));
+FOR INSERT TO authenticated WITH CHECK (bucket_id IN ('resources', 'avatars', 'campus-media'));
 
 CREATE POLICY "Users and admins can update public storage objects" ON storage.objects
 FOR UPDATE TO authenticated USING (
-    bucket_id IN ('resources', 'avatars') AND (
+    bucket_id IN ('resources', 'avatars', 'campus-media') AND (
         auth.uid()::text = (storage.foldername(name))[1] OR 
         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
     )
@@ -758,7 +826,7 @@ FOR UPDATE TO authenticated USING (
 
 CREATE POLICY "Users and admins can delete public storage objects" ON storage.objects
 FOR DELETE TO authenticated USING (
-    bucket_id IN ('resources', 'avatars') AND (
+    bucket_id IN ('resources', 'avatars', 'campus-media') AND (
         auth.uid()::text = (storage.foldername(name))[1] OR 
         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
     )
@@ -794,6 +862,7 @@ FOR DELETE TO authenticated USING (
         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
     )
 );
+
 
 
 

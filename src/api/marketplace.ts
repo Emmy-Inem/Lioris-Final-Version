@@ -114,8 +114,19 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
   const listingId = generateUUID();
   let sellerId = 'me';
   let sellerName = 'You';
+  let permanentImageUrl: string | null = payload.imageUrl || null;
 
   try {
+    // Upload local device photo to Supabase Storage if present
+    if (payload.imageUrl && !payload.imageUrl.startsWith('http://') && !payload.imageUrl.startsWith('https://')) {
+      try {
+        const { uploadMediaFile } = await import('./storage');
+        permanentImageUrl = await uploadMediaFile('campus-media', payload.imageUrl, 'marketplace');
+      } catch (uploadErr) {
+        console.warn('[Marketplace] Storage upload failed, keeping original URL:', uploadErr);
+      }
+    }
+
     const { data: authData } = await supabase.auth.getUser();
     if (authData?.user?.id) {
       sellerId = authData.user.id;
@@ -140,7 +151,7 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
         currency: 'NGN',
         condition: payload.condition,
         category: payload.category,
-        image_url: payload.imageUrl || null,
+        image_url: permanentImageUrl,
         is_sold: false,
       });
       if (error) {
@@ -159,6 +170,7 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
     sellerTrustLevel: 1,
     createdAt: new Date().toISOString(),
     ...payload,
+    imageUrl: permanentImageUrl,
   };
 
   marketplaceListingsState = [created, ...marketplaceListingsState];

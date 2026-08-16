@@ -17,7 +17,9 @@ export interface UploadAcademicPayload {
   category: (typeof CATEGORIES)[number];
   fileBlob?: Blob;
   fileSize?: string;
-  fileType?: 'PDF' | 'ZIP' | 'EPUB';
+  fileSizeBytes?: number;
+  fileMimeType?: string;
+  fileType?: 'PDF' | 'ZIP' | 'EPUB' | 'DOC' | 'PPT' | 'XLS' | 'TXT' | 'IMG';
 }
 
 interface ShareAcademicFileModalProps {
@@ -61,7 +63,19 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
   async function handlePickFile() {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'application/zip', 'application/x-zip-compressed'],
+        type: [
+          'application/pdf',
+          'application/zip',
+          'application/x-zip-compressed',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'text/plain',
+          'image/*',
+        ],
         copyToCacheDirectory: true,
       });
 
@@ -78,8 +92,8 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
         }
         setSelectedFile({
           name: asset.name,
-          size: asset.size,
-          mimeType: asset.mimeType,
+          size: asset.size || fileBlob?.size,
+          mimeType: asset.mimeType || fileBlob?.type,
           file: fileBlob,
         });
         if (errorMessage) setErrorMessage(null);
@@ -102,11 +116,19 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
 
     setIsUploading(true);
 
-    const sizeFormatted = selectedFile?.size
-      ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`
-      : '2.4 MB';
+    const realBytes = selectedFile?.size || selectedFile?.file?.size || 1024 * 1024;
+    const sizeFormatted = realBytes > 1024 * 1024
+      ? `${(realBytes / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(realBytes / 1024)} KB`;
 
-    const fileType = selectedFile?.name?.toLowerCase().endsWith('.zip') ? 'ZIP' : 'PDF';
+    const fileNameLower = (selectedFile?.name || '').toLowerCase();
+    let fileType: 'PDF' | 'ZIP' | 'EPUB' | 'DOC' | 'PPT' | 'XLS' | 'TXT' | 'IMG' = 'PDF';
+    if (fileNameLower.endsWith('.zip') || fileNameLower.endsWith('.rar')) fileType = 'ZIP';
+    else if (fileNameLower.endsWith('.doc') || fileNameLower.endsWith('.docx')) fileType = 'DOC';
+    else if (fileNameLower.endsWith('.ppt') || fileNameLower.endsWith('.pptx')) fileType = 'PPT';
+    else if (fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.xlsx')) fileType = 'XLS';
+    else if (fileNameLower.endsWith('.txt')) fileType = 'TXT';
+    else if (fileNameLower.endsWith('.png') || fileNameLower.endsWith('.jpg') || fileNameLower.endsWith('.jpeg')) fileType = 'IMG';
 
     try {
       await onUpload({
@@ -116,6 +138,8 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
         category,
         fileBlob: selectedFile?.file,
         fileSize: sizeFormatted,
+        fileSizeBytes: realBytes,
+        fileMimeType: selectedFile?.mimeType,
         fileType,
       });
       setTitle('');

@@ -15,105 +15,43 @@ export interface RegisterPayload {
   userType: UserRole;
 }
 
-// POST /auth/login — Real Supabase Auth with Super Admin & Session Fallback
+// POST /auth/login — Strictly Real Supabase Authentication
 export async function login(payload: LoginPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim();
-  const lowerEmail = cleanEmail.toLowerCase();
 
-  try {
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password: payload.password,
-    });
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password: payload.password,
+  });
 
-    if (!signInError && signInData?.session && signInData?.user) {
-      // Fetch verified user profile from Supabase
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', signInData.user.id)
-        .maybeSingle();
-
-      const userRole = (profile?.role || signInData.user.user_metadata?.role || (lowerEmail.includes('inememmanuel') ? 'admin' : 'student')) as UserRole;
-      const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || (lowerEmail.includes('inememmanuel') ? 'Inem Emmanuel' : cleanEmail.split('@')[0]);
-
-      return {
-        accessToken: signInData.session.access_token,
-        refreshToken: signInData.session.refresh_token,
-        user: {
-          id: signInData.user.id,
-          fullName,
-          email: signInData.user.email || cleanEmail,
-          role: userRole,
-        },
-      };
+  if (signInError || !signInData?.session || !signInData?.user) {
+    const rawMsg = signInError?.message || 'Invalid email or password.';
+    if (rawMsg.toLowerCase().includes('email not confirmed')) {
+      throw new Error('Your email address is not verified yet. Please check your inbox for the confirmation link.');
     }
-  } catch (err) {
-    console.warn('[Auth] Supabase signInWithPassword exception:', err);
+    throw new Error(rawMsg);
   }
 
-  // Dedicated Super Admin Account (Inem Emmanuel)
-  if (lowerEmail === 'inememmanuel@gmail.com') {
-    if (payload.password === 'emma2013e' || payload.password.length >= 6) {
-      const adminSession: AuthSession = {
-        accessToken: `auth-token.admin.${Date.now()}`,
-        refreshToken: `refresh-token.admin.${Date.now()}`,
-        user: {
-          id: 'user-inememmanuel',
-          fullName: 'Inem Emmanuel',
-          email: 'inememmanuel@gmail.com',
-          role: 'admin',
-        },
-      };
-      supabase.from('profiles').upsert({
-        id: 'user-inememmanuel',
-        email: 'inememmanuel@gmail.com',
-        full_name: 'Inem Emmanuel',
-        username: 'inememmanuel',
-        role: 'admin',
-      }).then(() => {}, () => {});
-      return adminSession;
-    }
-  }
+  // Fetch verified user profile from Supabase profiles table
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', signInData.user.id)
+    .maybeSingle();
 
-  // Pre-seeded Admin & Demo Accounts Fallback
-  if (lowerEmail === 'admin@campus.edu.ng' || lowerEmail === 'admin@lioris.edu') {
-    return {
-      accessToken: `auth-token.admin.${Date.now()}`,
-      refreshToken: `refresh-token.admin.${Date.now()}`,
-      user: {
-        id: 'user-admin',
-        fullName: 'Campus Administrator',
-        email: cleanEmail,
-        role: 'admin',
-      },
-    };
-  }
+  const userRole = (profile?.role || signInData.user.user_metadata?.role || 'student') as UserRole;
+  const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
 
-  // Fallback for valid credentials where Supabase email confirmation is pending
-  if (payload.password && payload.password.length >= 6) {
-    let inferredRole: UserRole = 'student';
-    if (lowerEmail.includes('alumni')) inferredRole = 'alumni';
-    else if (lowerEmail.includes('staff') || lowerEmail.includes('faculty')) inferredRole = 'staff';
-    else if (lowerEmail.includes('admin') || lowerEmail.includes('inememmanuel')) inferredRole = 'admin';
-
-    const fallbackUserId = `user-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    const namePart = cleanEmail.split('@')[0].replace(/[._-]/g, ' ');
-    const fallbackName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-
-    return {
-      accessToken: `auth-token.${inferredRole}.${Date.now()}`,
-      refreshToken: `refresh-token.${inferredRole}.${Date.now()}`,
-      user: {
-        id: fallbackUserId,
-        fullName: fallbackName,
-        email: cleanEmail,
-        role: inferredRole,
-      },
-    };
-  }
-
-  throw new Error('Invalid email or password.');
+  return {
+    accessToken: signInData.session.access_token,
+    refreshToken: signInData.session.refresh_token,
+    user: {
+      id: signInData.user.id,
+      fullName,
+      email: signInData.user.email || cleanEmail,
+      role: userRole,
+    },
+  };
 }
 
 // POST /auth/register — Real Supabase Auth with Profile Provisioning (Student & Alumni only)

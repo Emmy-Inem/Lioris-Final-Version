@@ -8,64 +8,15 @@ import { AppText } from'@/components/AppText';
 import { SolidCard } from'@/components/SolidCard';
 import { Badge } from'@/components/Badge';
 import { ResourceCard } from'@/components/ResourceCard';
-import { ShareAcademicFileModal } from'@/components/ShareAcademicFileModal';
-import { LibraryFilterModal, LibraryFilters, DEFAULT_LIBRARY_FILTERS } from'@/components/LibraryFilterModal';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { listResources, createResource } from'@/api/resources';
-import { useDebouncedValue } from'@/hooks/useDebouncedValue';
-import { ManageResourcesModal } from'@/components/admin/ManageResourcesModal';
-
-const CAMPUS_PORTAL_DIRECTORIES = [
-  {
-    id: 'portal-1',
-    name: 'Student Academic Portal',
-    badge: 'Official',
-    icon: 'school-outline'as const,
-    url: 'https://portal.university.edu/student',
-    desc: 'Check course registration, semester GPA, and tuition receipt records.',
-  },
-  {
-    id: 'portal-2',
-    name: '2026 Academic Calendar',
-    badge: 'Senate',
-    icon: 'calendar-outline'as const,
-    url: 'https://portal.university.edu/calendar-2026',
-    desc: 'Official semester lecture routines, matriculation & Senate exam dates.',
-  },
-  {
-    id: 'portal-3',
-    name: 'E-Library & JSTOR Hub',
-    badge: 'Research',
-    icon: 'library-outline'as const,
-    url: 'https://elibrary.university.edu/jstor',
-    desc: 'Access verified peer-reviewed academic journals, e-books & past theses.',
-  },
-  {
-    id: 'portal-4',
-    name: 'Campus LMS & E-Classroom',
-    badge: 'Lectures',
-    icon: 'laptop-outline'as const,
-    url: 'https://lms.university.edu/courses',
-    desc: 'Submit weekly assignments, view faculty slides & join live lecture rooms.',
-  },
-  {
-    id: 'portal-5',
-    name: 'Hostel Allocation & Bedspace',
-    badge: 'Housing',
-    icon: 'home-outline'as const,
-    url: 'https://hostels.university.edu/apply',
-    desc: 'Apply for on-campus student halls, bedspace ballot & room clearances.',
-  },
-  {
-    id: 'portal-6',
-    name: 'University Health Center',
-    badge: 'Clinic',
-    icon: 'medkit-outline'as const,
-    url: 'https://health.university.edu/appointments',
-    desc: 'Book campus doctor appointments, medical clearance & clinic passes.',
-  },
-];
+import { ShareAcademicFileModal, UploadAcademicPayload } from '@/components/ShareAcademicFileModal';
+import { LibraryFilterModal, LibraryFilters, DEFAULT_LIBRARY_FILTERS } from '@/components/LibraryFilterModal';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { listResources, createResource } from '@/api/resources';
+import { listPortalLinks, PortalLink } from '@/api/portalLinks';
+import { getMyProfile } from '@/api/profile';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 
 const RESOURCE_CATEGORIES = [
   { id: 'all', label: 'All Files', filter: 'All Types' },
@@ -85,6 +36,19 @@ export default function ResourcesScreen() {
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
 
+  const { data: profile } = useQuery({
+    queryKey: ['myProfile', user?.id],
+    queryFn: () => getMyProfile(),
+    enabled: !!user?.id,
+  });
+
+  const campusCode = profile?.institutionCode || 'UNILAG';
+
+  const { data: portalLinks = [] } = useQuery({
+    queryKey: ['portalLinks', campusCode],
+    queryFn: () => listPortalLinks(campusCode),
+  });
+
   const { data: resources, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['resources', debouncedQuery, filters],
     queryFn: () =>
@@ -95,24 +59,16 @@ export default function ResourcesScreen() {
       }),
   });
 
-  async function handleUpload(payload: {
-    title: string;
-    courseCode: string;
-    description: string;
-    category: 'Notes' | 'Past Questions' | 'Projects';
-    fileBlob?: Blob;
-    fileSize?: string;
-    fileType?: 'PDF' | 'ZIP' | 'EPUB';
-  }) {
+  async function handleUpload(payload: UploadAcademicPayload) {
     const { fileBlob, ...rest } = payload;
     await createResource(rest, fileBlob);
     queryClient.invalidateQueries({ queryKey: ['resources'] });
   }
 
-  function handleLaunchPortal(portal: (typeof CAMPUS_PORTAL_DIRECTORIES)[0]) {
+  function handleLaunchPortal(portal: PortalLink) {
     Alert.alert(
       'Launch Campus Portal',
-      `Opening ${portal.name} (${portal.url}). Continue in browser?`,
+      `Opening ${portal.title} (${portal.url}). Continue in browser?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -188,11 +144,11 @@ export default function ResourcesScreen() {
       {/* Section 1: University Portal Directories */}
       <View style={{ marginBottom: spacing.lg }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-          <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
-            DIRECTORIES & PORTAL SHORTCUTS 
+          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+            DIRECTORIES & PORTAL SHORTCUTS ({campusCode})
           </AppText>
-          <AppText tone="secondary"variant="caption">
-            {CAMPUS_PORTAL_DIRECTORIES.length} active links
+          <AppText tone="secondary" variant="caption">
+            {portalLinks.filter((p) => p.active).length} active links
           </AppText>
         </View>
 
@@ -201,11 +157,12 @@ export default function ResourcesScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.xs }}
         >
-          {CAMPUS_PORTAL_DIRECTORIES.map((portal) => (
+          {portalLinks.filter((p) => p.active).map((portal) => (
             <Pressable
               key={portal.id}
               onPress={() => handleLaunchPortal(portal)}
-              accessibilityRole="button"accessibilityLabel={`Launch ${portal.name}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Launch ${portal.title}`}
             >
               <SolidCard
                 radius={20}
@@ -229,25 +186,25 @@ export default function ResourcesScreen() {
                       justifyContent: 'center',
                     }}
                   >
-                    <Ionicons name={portal.icon} size={18} color={colors.brandPrimary} />
+                    <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.brandPrimary} />
                   </View>
-                  <Badge label={portal.badge} tone="accent" />
+                  <Badge label={portal.category || 'Portal'} tone="accent" />
                 </View>
 
                 <View>
-                  <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
-                    {portal.name}
+                  <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    {portal.title}
                   </AppText>
-                  <AppText tone="secondary"variant="caption"numberOfLines={2} style={{ marginTop: 2, fontSize: 11, lineHeight: 14 }}>
-                    {portal.desc}
+                  <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ marginTop: 2, fontSize: 11, lineHeight: 14 }}>
+                    {portal.url.replace(/^https?:\/\//, '')}
                   </AppText>
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <AppText weight="bold"variant="caption"tone="brand"style={{ fontSize: 11 }}>
+                  <AppText weight="bold" variant="caption" tone="brand" style={{ fontSize: 11 }}>
                     Launch Portal
                   </AppText>
-                  <Ionicons name="open-outline"size={12} color={colors.brandPrimary} />
+                  <Ionicons name="open-outline" size={12} color={colors.brandPrimary} />
                 </View>
               </SolidCard>
             </Pressable>

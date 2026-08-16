@@ -75,15 +75,48 @@ function mockProfileFor(user: { id: string; fullName: string; role: UserRole; em
   return created;
 }
 
-export async function getMyProfile(user: {
+export async function getMyProfile(user?: {
   id: string;
-  fullName: string;
-  role: UserRole;
+  fullName?: string;
+  role?: UserRole;
   email?: string;
 }): Promise<UserProfile> {
-  const fallback = mockProfileFor(user);
+  let resolvedUser: { id: string; fullName: string; role: UserRole; email?: string } = {
+    id: 'me',
+    fullName: 'User',
+    role: 'student',
+  };
+
+  if (user) {
+    resolvedUser = {
+      id: user.id,
+      fullName: user.fullName || 'User',
+      role: (user.role || 'student') as UserRole,
+      email: user.email,
+    };
+  } else {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user) {
+      resolvedUser = {
+        id: authData.user.id,
+        fullName: authData.user.user_metadata?.full_name || 'User',
+        role: (authData.user.user_metadata?.role || 'student') as UserRole,
+        email: authData.user.email,
+      };
+    } else {
+      const stored = await getSessionUser();
+      resolvedUser = {
+        id: stored?.id || 'me',
+        fullName: stored?.fullName || 'User',
+        role: (stored?.role || 'student') as UserRole,
+        email: stored?.email,
+      };
+    }
+  }
+
+  const fallback = mockProfileFor(resolvedUser);
   try {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', resolvedUser.id).single();
     if (!error && data) {
       const isVerified = data.is_verified ?? (data.verification_status === 'verified');
       const verificationStatus = data.verification_status || (isVerified ? 'verified' : 'none');
@@ -108,7 +141,7 @@ export async function getMyProfile(user: {
         isVerified,
         verificationStatus,
       };
-      profileState.set(user.id, merged);
+      profileState.set(resolvedUser.id, merged);
       return merged;
     }
   } catch {
