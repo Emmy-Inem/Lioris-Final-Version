@@ -8,3 +8,10 @@ updates:
     labels:
       - "dependencies"
       - "security"
+    ignore:
+      - dependency-name: "react-native"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "expo"
+      - dependency-name: "react-native-reanimated"
+      - dependency-name: "react-native-screens"
