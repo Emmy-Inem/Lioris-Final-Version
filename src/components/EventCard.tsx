@@ -10,6 +10,7 @@ import { SolidCard } from'./SolidCard';
 import { AppText } from'./AppText';
 import { AppButton } from'./AppButton';
 import { Badge } from'./Badge';
+import { VisibilityBadge } from'./VisibilityBadge';
 import { ActionSheetModal } from'./ActionSheetModal';
 import { useTheme } from'@/theme/ThemeProvider';
 import { CampusEvent } from'@/api/types';
@@ -133,6 +134,12 @@ export function EventCard({ event }: { event: CampusEvent }) {
             style={{ width: '100%', height: 130, position: 'relative' }}
           >
             <Image source={eventImage} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
+              <VisibilityBadge
+                visibility={event.visibilityScope || 'campus'}
+                campusCode={event.campusCode}
+              />
+            </View>
             <View
               style={{
                 position: 'absolute',

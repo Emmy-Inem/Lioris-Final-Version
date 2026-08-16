@@ -132,6 +132,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
         isRsvpd: false,
         approvalStatus: row.status === 'cancelled' ? 'rejected' : 'approved',
         visibilityScope: (row.visibility_scope as any) || 'global',
+        campusCode: row.campus_code || 'GLOBAL',
         coverImageUrl: row.banner_url,
       }));
       // Merge unique
@@ -176,6 +177,7 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
         isRsvpd: false,
         approvalStatus: data.status === 'cancelled' ? 'rejected' : 'approved',
         visibilityScope: data.visibility_scope || 'global',
+        campusCode: data.campus_code || 'GLOBAL',
         coverImageUrl: data.banner_url,
       };
     }

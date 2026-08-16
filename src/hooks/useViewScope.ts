@@ -17,8 +17,8 @@ export function useViewScope() {
 
   const { data: activeCampusCode } = useQuery({
     queryKey: ACTIVE_CAMPUS_KEY,
-    queryFn: () => 'UI',
-    initialData: 'UI',
+    queryFn: () => undefined as string | undefined,
+    initialData: undefined as string | undefined,
     staleTime: Infinity,
   });
 
@@ -26,15 +26,15 @@ export function useViewScope() {
     queryClient.setQueryData(VIEW_SCOPE_KEY, nextScope);
   }
 
-  function setActiveCampusCode(campusCode: string) {
+  function setActiveCampusCode(campusCode?: string) {
     queryClient.setQueryData(ACTIVE_CAMPUS_KEY, campusCode);
-    queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus'as ViewScope);
+    queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
   }
 
   return {
     scope: scope ?? 'campus',
     setScope,
-    activeCampusCode: activeCampusCode ?? 'UI',
+    activeCampusCode,
     setActiveCampusCode,
   };
 }

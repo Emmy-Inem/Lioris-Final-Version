@@ -8,7 +8,7 @@ import { SolidCard } from'./SolidCard';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { useViewScope } from'@/hooks/useViewScope';
-import { LAUNCH_INSTITUTIONS } from'@/api/institutions';
+import { LAUNCH_INSTITUTIONS, createInstitution } from'@/api/institutions';
 
 interface ChangeWorkspaceScopeModalProps {
   visible: boolean;
@@ -30,12 +30,14 @@ export function ChangeWorkspaceScopeModal({
   const { colors, spacing, radius, setCustomAccent } = useTheme();
   const { user } = useAuth();
   const { activeCampusCode, setActiveCampusCode } = useViewScope();
-  const isAdmin = user?.role === 'admin' || (user as any)?.email?.toLowerCase().includes('inememmanuel');
-  const [guestWorkspaces, setGuestWorkspaces] = useState(() =>
+  const isAdmin = user?.role === 'admin';
+
+  // Guest explored workspaces list
+  const [guestWorkspaces, setGuestWorkspaces] = useState<{ code: string; name: string; description: string }[]>(
     LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== homeInstitutionCode).map((inst) => ({
       code: inst.code,
       name: inst.name,
-      description: `Explore ${inst.code} as a campus workspace`,
+      description: `${inst.shortName} Campus Community`,
     })),
   );
 
@@ -43,28 +45,43 @@ export function ChangeWorkspaceScopeModal({
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newCampusName, setNewCampusName] = useState('');
   const [newCampusCode, setNewCampusCode] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function removeGuest(code: string) {
     setGuestWorkspaces((prev) => prev.filter((w) => w.code !== code));
   }
 
-  function handleAddCustomWorkspace() {
+  async function handleAddCustomWorkspace() {
     if (!newCampusName.trim() || !newCampusCode.trim()) return;
     const code = newCampusCode.trim().toUpperCase();
-    const newWs = {
-      code,
-      name: newCampusName.trim(),
-      description: `Custom campus workspace for ${code}`,
-    };
-    setGuestWorkspaces((prev) => [...prev, newWs]);
-    setCreateModalOpen(false);
-    setNewCampusName('');
-    setNewCampusCode('');
-    Alert.alert('Workspace Added', `${newWs.name} (${newWs.code}) has been added to your campus explorer list.`);
+    const name = newCampusName.trim();
+    setIsSubmitting(true);
+    try {
+      await createInstitution({
+        code,
+        name,
+        shortName: code,
+        location: 'Nigeria',
+      });
+      const newWs = {
+        code,
+        name,
+        description: `Campus workspace for ${code}`,
+      };
+      setGuestWorkspaces((prev) => [...prev.filter((w) => w.code !== code), newWs]);
+      setCreateModalOpen(false);
+      setNewCampusName('');
+      setNewCampusCode('');
+      Alert.alert('Workspace Provisioned', `${name} (${code}) has been provisioned and added to your campus registry.`);
+    } catch (err: any) {
+      Alert.alert('Provisioning Failed', err?.message || 'Could not provision campus workspace.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} accessible={false} />
         <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
@@ -73,22 +90,24 @@ export function ChangeWorkspaceScopeModal({
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-            <Ionicons name="globe"size={20} color={colors.brandPrimary} />
-            <AppText variant="h2"weight="bold">
+            <Ionicons name="globe" size={20} color={colors.brandPrimary} />
+            <AppText variant="h2" weight="bold">
               Change Workspace Scope
             </AppText>
           </View>
-          <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>
+          <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
             Select your current viewing scope. Highlight regional cross-university feeds or
             filter strictly for your local campus.
           </AppText>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <ScopeOption
-              icon="school"title="My Campus Workspace"subtitle={`${homeInstitution} (${homeInstitutionCode})`}
-              selected={scope === 'campus' && activeCampusCode === homeInstitutionCode}
+              icon="school"
+              title="My Campus Workspace"
+              subtitle={`${homeInstitution} (${homeInstitutionCode})`}
+              selected={scope === 'campus' && (!activeCampusCode || activeCampusCode === homeInstitutionCode)}
               onPress={() => {
-                setActiveCampusCode(homeInstitutionCode);
+                setActiveCampusCode(undefined);
                 setCustomAccent(null);
                 onSelectScope('campus');
                 onClose();
@@ -205,7 +224,9 @@ export function ChangeWorkspaceScopeModal({
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
               <AppButton label="Cancel"variant="ghost"onPress={() => setCreateModalOpen(false)} />
               <AppButton
-                label="Add Workspace"disabled={!newCampusName.trim() || !newCampusCode.trim()}
+                label="Provision Workspace"
+                loading={isSubmitting}
+                disabled={!newCampusName.trim() || !newCampusCode.trim() || isSubmitting}
                 onPress={handleAddCustomWorkspace}
               />
             </View>

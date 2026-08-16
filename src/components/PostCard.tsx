@@ -14,6 +14,7 @@ import { AppButton } from'./AppButton';
 import { ActionSheetModal } from'./ActionSheetModal';
 import { ImageViewerModal } from'./ImageViewerModal';
 import { UserProfileModal } from'./UserProfileModal';
+import { VisibilityBadge } from'./VisibilityBadge';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { Post } from'@/api/types';
@@ -149,19 +150,10 @@ export function PostCard({ post }: { post: Post }) {
         </Pressable>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          {isGlobalPost ? (
-            <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3 }}>
-              <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 10 }}>
-                Global
-              </AppText>
-            </View>
-          ) : (
-            <View style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3 }}>
-              <AppText variant="caption"weight="bold"tone="secondary"style={{ fontSize: 10 }}>
-                {post.institutionCode ?? 'UI Campus'}
-              </AppText>
-            </View>
-          )}
+          <VisibilityBadge
+            visibility={isGlobalPost ? 'global' : 'campus'}
+            campusCode={post.institutionCode}
+          />
 
           <Pressable
             onPress={() => setMenuOpen(true)}

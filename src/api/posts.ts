@@ -59,21 +59,27 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     }
     const { data, error } = await dbQuery;
     if (!error && data && data.length > 0) {
-      const dbPosts: Post[] = data.map((row: any) => ({
-        id: row.id,
-        authorId: row.author_id,
-        authorName: row.author_name || 'Campus Student',
-        authorRole: (row.author_role as any) || 'student',
-        title: row.title,
-        content: row.content,
-        category: row.category || 'General',
-        visibilityScope: (row.visibility_scope as any) || 'campus',
-        likesCount: row.likes_count || 0,
-        commentsCount: row.comments_count || 0,
-        isLikedByMe: false,
-        createdAt: row.created_at,
-        imageUrl: row.image_url,
-      }));
+      const dbPosts: Post[] = data.map((row: any) => {
+        const isGlobal = row.visibility_scope === 'global' || row.campus_code === 'GLOBAL';
+        return {
+          id: row.id,
+          authorId: row.author_id,
+          authorName: row.author_name || 'Campus Student',
+          authorRole: (row.author_role as any) || 'student',
+          title: row.title,
+          content: row.content,
+          category: row.category || 'General',
+          visibilityScope: (row.visibility_scope as any) || 'campus',
+          scopeVisibility: isGlobal ? 'global' : 'campus',
+          institutionCode: isGlobal ? undefined : row.campus_code,
+          likesCount: row.likes_count || 0,
+          commentsCount: row.comments_count || 0,
+          isLikedByMe: false,
+          createdAt: row.created_at,
+          imageUrl: row.image_url,
+          videoUrl: row.video_url,
+        };
+      });
       // Merge unique with local posts
       const merged = [...dbPosts];
       for (const p of postsState) {
@@ -150,12 +156,22 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
   let authorId = 'me';
   let authorName = 'You';
   let authorRole = 'student';
+  let authorCampus = authorInstitutionCode;
+
   try {
     const { data: authData } = await supabase.auth.getUser();
     if (authData?.user?.id) {
       authorId = authData.user.id;
       authorName = authData.user.user_metadata?.full_name || 'Campus Student';
       authorRole = authData.user.user_metadata?.role || 'student';
+      if (!authorCampus) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('campus_code')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+        authorCampus = profile?.campus_code || 'GLOBAL';
+      }
     } else {
       const stored = await getSessionUser();
       if (stored?.id) {
@@ -168,6 +184,8 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
     // fallback
   }
 
+  const isExplicitlyGlobal = scopeVisibility === 'global' || payload.visibilityScope === 'global';
+
   const created: Post = {
     id: postId,
     authorId,
@@ -177,8 +195,8 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
     commentsCount: 0,
     isLikedByMe: false,
     createdAt: now,
-    scopeVisibility: scopeVisibility ?? 'campus',
-    institutionCode: scopeVisibility === 'global' ? undefined : authorInstitutionCode,
+    scopeVisibility: isExplicitlyGlobal ? 'global' : 'campus',
+    institutionCode: isExplicitlyGlobal ? undefined : authorCampus,
     ...rest,
     imageUrl: permanentImageUrl,
     videoUrl: permanentVideoUrl,
@@ -189,7 +207,9 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
   try {
     const { data: authData } = await supabase.auth.getUser();
     if (authData?.user?.id) {
-      const campusCode = authorInstitutionCode || 'UI';
+      const campusCode = authorCampus || 'GLOBAL';
+      const finalVisibilityScope = isExplicitlyGlobal ? 'global' : 'campus';
+
       const { error } = await supabase.from('posts').insert({
         id: postId,
         author_id: authData.user.id,
@@ -197,7 +217,7 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
         title: payload.title,
         content: payload.content,
         category: payload.category || 'General',
-        visibility_scope: payload.visibilityScope || 'campus',
+        visibility_scope: finalVisibilityScope,
         image_url: permanentImageUrl || null,
         video_url: permanentVideoUrl || null,
       });

@@ -29,11 +29,22 @@ const CONFIG: Record<Visibility, { label: string; lightBg: string; lightText: st
   },
 };
 
-export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
+export function VisibilityBadge({
+  visibility,
+  campusCode,
+}: {
+  visibility?: Visibility | string;
+  campusCode?: string | null;
+}) {
   const { isDark } = useTheme();
-  const config = CONFIG[visibility];
+  const visKey = (visibility === 'global' ? 'global' : visibility === 'private' ? 'private' : 'campus') as Visibility;
+  const config = CONFIG[visKey] || CONFIG.campus;
   const bg = isDark ? config.darkBg : config.lightBg;
   const text = isDark ? config.darkText : config.lightText;
+  const label =
+    visKey === 'campus' && campusCode && campusCode !== 'GLOBAL'
+      ? `${campusCode} 🏫`
+      : config.label;
 
   return (
     <View
@@ -47,8 +58,8 @@ export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
         alignSelf: 'flex-start',
       }}
     >
-      <AppText variant="caption"weight="bold"style={{ color: text, fontSize: 11 }}>
-        {config.label}
+      <AppText variant="caption" weight="bold" style={{ color: text, fontSize: 11 }}>
+        {label}
       </AppText>
     </View>
   );
