@@ -11,6 +11,7 @@ import { AppText } from'@/components/AppText';
 import { AppButton } from'@/components/AppButton';
 import { Avatar } from'@/components/Avatar';
 import { Badge } from'@/components/Badge';
+import { AnnouncementsWidget } from'@/components/AnnouncementsWidget';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -158,6 +159,9 @@ export default function StudentDashboard() {
             Search threads, past questions, events, portals...
           </AppText>
         </Pressable>
+
+        {/* Official Campus Announcements & Broadcasts */}
+        <AnnouncementsWidget scope="student" />
 
         {/* High-Utility Next Class Countdown Widget */}
         {isFeatureEnabled('utility_cards') && (

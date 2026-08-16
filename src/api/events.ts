@@ -243,7 +243,18 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
   try {
     const { data: authData } = await supabase.auth.getUser();
     if (authData?.user?.id) {
-      const campusCode = payload.campusCode || 'UI';
+      let campusCode = payload.campusCode;
+      if (!campusCode) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('campus_code')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+        campusCode = profile?.campus_code || 'GLOBAL';
+      }
+      if (!campusCode) campusCode = 'GLOBAL';
+      created.campusCode = campusCode;
+
       const { error } = await supabase.from('events').insert({
         id: eventId,
         creator_id: authData.user.id,

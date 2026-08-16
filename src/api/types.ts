@@ -129,6 +129,7 @@ export interface CampusEvent {
   speakers?: { name: string; title: string }[];
   targetCohort?: string;
   rsvpDeadline?: string;
+  campusCode?: string;
 }
 
 export type ConnectionStatus = 'none' | 'pending' | 'accepted' | 'declined' | 'blocked';
@@ -332,6 +333,7 @@ export interface StudyGroup {
   memberCount: number;
   isPublic: boolean;
   isJoined: boolean;
+  campusCode?: string;
   lastMessageAt?: string | null;
 }
 

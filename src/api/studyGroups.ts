@@ -35,10 +35,22 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
     }
 
     if (creatorId) {
+      let campusCode = payload.campusCode;
+      if (!campusCode) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('campus_code')
+          .eq('id', creatorId)
+          .maybeSingle();
+        campusCode = profile?.campus_code || 'GLOBAL';
+      }
+      if (!campusCode) campusCode = 'GLOBAL';
+      created.campusCode = campusCode;
+
       const { error } = await supabase.from('study_groups').insert({
         id: groupId,
         creator_id: creatorId,
-        campus_code: payload.campusCode || 'UI',
+        campus_code: campusCode,
         name: payload.name,
         course_code: payload.courseCode,
         description: payload.description,

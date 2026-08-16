@@ -743,7 +743,6 @@ CREATE TABLE IF NOT EXISTS marketplace_listings (
 );
 
 CREATE POLICY "Marketplace listings viewable by campus or global" ON marketplace_listings FOR SELECT TO authenticated USING (
-    campus_code IS NULL OR
     campus_code = 'GLOBAL' OR
     campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
     auth.uid() = seller_id OR

@@ -12,6 +12,7 @@ import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { PostCard } from'@/components/PostCard';
 import { EventCard } from'@/components/EventCard';
+import { AnnouncementsWidget } from'@/components/AnnouncementsWidget';
 import { Ionicons } from'@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
@@ -76,6 +77,9 @@ export default function AlumniDashboard() {
             </View>
           </View>
         </View>
+
+        {/* Official Campus Announcements & Broadcasts */}
+        <AnnouncementsWidget scope="alumni" />
 
         {/* Quick Alumni Action Grid */}
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>

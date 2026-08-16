@@ -13,6 +13,7 @@ import { PublishThreadModal } from './PublishThreadModal';
 import { DiscussionWorkspacesModal } from './DiscussionWorkspacesModal';
 import { HorizontalTrendsSlider } from './HorizontalTrendsSlider';
 import { ActionSheetModal } from './ActionSheetModal';
+import { AnnouncementsWidget } from './AnnouncementsWidget';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { listFeedPosts, createPost } from '@/api/posts';
@@ -243,6 +244,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </AppText>
         </Pressable>
       </View>
+
+      {/* Official Campus Announcements & Broadcasts */}
+      <AnnouncementsWidget scope={scope as any} compact={true} />
 
       {/* Horizontal Channel Filter Pills */}
       <ScrollView

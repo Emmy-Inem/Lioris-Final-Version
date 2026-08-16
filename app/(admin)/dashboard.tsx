@@ -12,6 +12,7 @@ import { AppButton } from'@/components/AppButton';
 import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { HealthMetricBar } from'@/components/HealthMetricBar';
+import { AnnouncementsWidget } from'@/components/AnnouncementsWidget';
 import { Ionicons } from'@expo/vector-icons';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
@@ -102,6 +103,9 @@ export default function AdminDashboard() {
             </SolidCard>
           ))}
         </View>
+
+        {/* Official Campus Announcements & Broadcasts */}
+        <AnnouncementsWidget scope="global" />
 
         {/* Academic & Platform Entity Management Hub */}
         <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.xs }}>

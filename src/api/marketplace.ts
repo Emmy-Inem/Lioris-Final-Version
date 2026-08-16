@@ -140,10 +140,22 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
     }
 
     if (sellerId && sellerId !== 'me') {
+      let campusCode = (payload as any).campusCode;
+      if (!campusCode) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('campus_code')
+          .eq('id', sellerId)
+          .maybeSingle();
+        campusCode = profile?.campus_code || 'GLOBAL';
+      }
+      if (!campusCode) campusCode = 'GLOBAL';
+
       const priceClean = Number(payload.price.replace(/[^0-9]/g, '')) || 5000;
       const { error } = await supabase.from('marketplace_listings').insert({
         id: listingId,
         seller_id: sellerId,
+        campus_code: campusCode,
         title: payload.title,
         description: payload.description,
         price_kobo: priceClean * 100,
