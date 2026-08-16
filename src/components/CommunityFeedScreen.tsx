@@ -9,16 +9,17 @@ import { AppText } from'./AppText';
 import { SolidCard } from'./SolidCard';
 import { Avatar } from'./Avatar';
 import { PostCard } from'./PostCard';
-import { PublishThreadModal } from'./PublishThreadModal';
-import { DiscussionWorkspacesModal } from'./DiscussionWorkspacesModal';
-import { ActionSheetModal } from'./ActionSheetModal';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { listFeedPosts, createPost } from'@/api/posts';
-import { getMyProfile } from'@/api/profile';
-import { useViewScope } from'@/hooks/useViewScope';
-import { useDebouncedValue } from'@/hooks/useDebouncedValue';
-import { PostVisibilityScope } from'@/api/types';
+import { PublishThreadModal } from './PublishThreadModal';
+import { DiscussionWorkspacesModal } from './DiscussionWorkspacesModal';
+import { HorizontalTrendsSlider } from './HorizontalTrendsSlider';
+import { ActionSheetModal } from './ActionSheetModal';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { listFeedPosts, createPost } from '@/api/posts';
+import { getMyProfile } from '@/api/profile';
+import { useViewScope } from '@/hooks/useViewScope';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { PostVisibilityScope } from '@/api/types';
 
 const CHANNELS = [
   { id: 'all', label: 'All Threads', category: null },
@@ -39,6 +40,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [workspacesOpen, setWorkspacesOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+  const [selectedTrend, setSelectedTrend] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const { scope: viewScope, setScope: setViewScope } = useViewScope();
@@ -65,6 +67,20 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   let posts = rawPosts ?? [];
   if (selectedChannel === 'Polls') {
     posts = posts.filter((p) => !!p.poll);
+  }
+  if (selectedTrend) {
+    const trendKeywords: Record<string, string[]> = {
+      CONVOCATION_2026: ['convocation', 'graduate', 'gown', 'ceremony'],
+      DEANS_CUP_FINALS: ["dean's cup", 'football', 'finals', 'match', 'sports'],
+      HOSTEL_TOWNHALL: ['hostel', 'townhall', 'accommodation', 'hall', 'room'],
+      CAMPUS_TECH_FEST: ['tech', 'hackathon', 'coding', 'ai', 'developer', 'demo'],
+      LIORIS_VIRAL: ['lioris', 'campus', 'launch', 'viral'],
+    };
+    const keywords = trendKeywords[selectedTrend] ?? [selectedTrend.toLowerCase()];
+    posts = posts.filter((p) => {
+      const targetText = `${p.title} ${p.content} ${p.category} ${p.courseTags ?? ''}`.toLowerCase();
+      return keywords.some((kw) => targetText.includes(kw));
+    });
   }
   posts = [...posts].sort((a, b) =>
     sortBy === 'popular' ? b.likesCount - a.likesCount : b.createdAt.localeCompare(a.createdAt),
@@ -261,6 +277,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           );
         })}
       </ScrollView>
+
+      {/* Trending Topics Slider */}
+      <HorizontalTrendsSlider selectedTrend={selectedTrend} onSelectTrend={setSelectedTrend} />
 
       {/* Interactive Quick Thread Composer Bar */}
       <Pressable
