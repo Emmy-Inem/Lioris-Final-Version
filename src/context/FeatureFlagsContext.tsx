@@ -241,9 +241,9 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
 
     const meta = FEATURE_CATALOG.find((f) => f.key === key);
     recordAuditLogEntry({
-      action: 'escrow_funds_released',
+      action: 'feature_flag_toggled',
       summary: `Admin Feature Toggle: "${meta?.label || key}" set to ${enabled ? 'ENABLED 🟢' : 'DISABLED 🔴'}`,
-      targetType: 'user',
+      targetType: 'platform_config',
       targetId: key,
       reason: 'Admin runtime modular feature flag mutation',
     }).catch(() => {});

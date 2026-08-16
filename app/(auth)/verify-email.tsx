@@ -144,20 +144,6 @@ export default function VerifyEmailScreen() {
             fullWidth
           />
 
-          <View style={{ marginTop: spacing.md }}>
-            <AppButton
-              label="Enter Workspace Directly →"
-              variant="secondary"
-              onPress={async () => {
-                try {
-                  await completeOnboarding();
-                } catch {}
-                router.replace('/');
-              }}
-              fullWidth
-            />
-          </View>
-
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg }}>
             <Pressable onPress={handleResendCode} hitSlop={8} disabled={resending}>
               <AppText tone="brand" variant="bodySmall" weight="semiBold">

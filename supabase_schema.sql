@@ -1236,6 +1236,88 @@ CREATE TRIGGER trigger_sync_event_rsvps
 AFTER INSERT OR DELETE ON public.event_rsvps
 FOR EACH ROW EXECUTE FUNCTION public.sync_event_rsvps_count();
 
+-- ==============================================================================
+-- JOBS & CAREER BOARD
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    poster_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    campus_code VARCHAR(32) DEFAULT 'GLOBAL',
+    title VARCHAR(255) NOT NULL,
+    company VARCHAR(255) NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'Full-time', -- 'Full-time' | 'Internship' | 'Part-time' | 'Contract'
+    is_remote BOOLEAN DEFAULT FALSE,
+    salary VARCHAR(100),
+    description TEXT,
+    apply_url TEXT NOT NULL,
+    posted_by_name VARCHAR(255),
+    is_approved BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_campus ON public.jobs(campus_code);
+CREATE INDEX IF NOT EXISTS idx_jobs_poster ON public.jobs(poster_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_type ON public.jobs(type);
+
+ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Jobs viewable by campus or global" ON public.jobs
+FOR SELECT TO authenticated
+USING (
+    campus_code = 'GLOBAL' OR
+    campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+);
+
+CREATE POLICY "Authenticated users can create jobs" ON public.jobs
+FOR INSERT TO authenticated
+WITH CHECK (
+    auth.uid() = poster_id AND
+    NOT (SELECT COALESCE(is_suspended, false) FROM profiles WHERE id = auth.uid())
+);
+
+CREATE POLICY "Posters, admins and staff can update jobs" ON public.jobs
+FOR UPDATE TO authenticated
+USING (
+    auth.uid() = poster_id OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = jobs.campus_code)))
+);
+
+CREATE POLICY "Posters, admins and staff can delete jobs" ON public.jobs
+FOR DELETE TO authenticated
+USING (
+    auth.uid() = poster_id OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = jobs.campus_code)))
+);
+
+-- Staff permissions for portal_links
+CREATE POLICY "Staff can manage portal_links for their campus" ON public.portal_links
+FOR ALL TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM profiles 
+        WHERE id = auth.uid() AND role = 'staff' AND (campus_code = portal_links.campus_code OR portal_links.campus_code = 'GLOBAL')
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM profiles 
+        WHERE id = auth.uid() AND role = 'staff' AND (campus_code = portal_links.campus_code OR portal_links.campus_code = 'GLOBAL')
+    )
+);
+
+-- Staff permissions for profiles (same campus verification & suspension)
+CREATE POLICY "Staff can update profiles for their campus" ON public.profiles
+FOR UPDATE TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM profiles 
+        WHERE id = auth.uid() AND role = 'staff' AND campus_code = profiles.campus_code
+    )
+);
+
 
 
 

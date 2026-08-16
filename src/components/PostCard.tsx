@@ -110,7 +110,7 @@ export function PostCard({ post }: { post: Post }) {
     ? STOCK_IMAGES[post.imageUrl] ?? (post.imageUrl.startsWith('http') ? { uri: post.imageUrl } : null)
     : null;
 
-  const isVideoPost = !!post.videoUrl || post.title.toLowerCase().includes('demo') || post.category === 'Tech Hub';
+  const isVideoPost = !!post.videoUrl;
 
   return (
     <SolidCard frosted radius={20} style={{ marginBottom: spacing.md }}>

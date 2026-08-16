@@ -8,13 +8,22 @@ export interface MarketplaceQuery {
   q?: string;
   category?: MarketplaceListing['category'] | 'All Categories' | 'Wishlist';
   condition?: MarketplaceListing['condition'] | 'All Conditions';
+  campusCode?: string;
 }
+
+import { isUserBlocked } from './connections';
 
 let wishlistIds = new Set<string>();
 let marketplaceListingsState = [...mockMarketplaceListings];
 
 function filterMockListings(query: MarketplaceQuery): MarketplaceListing[] {
-  let results = [...marketplaceListingsState];
+  let results = [...marketplaceListingsState].filter((item) => !isUserBlocked(item.sellerId));
+
+  if (query.campusCode && query.campusCode !== 'GLOBAL') {
+    results = results.filter(
+      (item) => !(item as any).campusCode || (item as any).campusCode === 'GLOBAL' || (item as any).campusCode === query.campusCode,
+    );
+  }
 
   if (query.category && query.category !== 'All Categories') {
     if (query.category === 'Wishlist') {
@@ -43,9 +52,16 @@ function filterMockListings(query: MarketplaceQuery): MarketplaceListing[] {
 
 export async function listMarketplaceListings(query: MarketplaceQuery = {}): Promise<MarketplaceListing[]> {
   try {
+    const { data: authData } = await supabase.auth.getUser();
+    let userCampus = query.campusCode;
+    if (!userCampus && authData?.user?.id) {
+      const { data: prof } = await supabase.from('profiles').select('campus_code').eq('id', authData.user.id).maybeSingle();
+      if (prof?.campus_code) userCampus = prof.campus_code;
+    }
+
     let req = supabase
       .from('marketplace_listings')
-      .select('*, seller:profiles(full_name, avatar_url, trust_score)')
+      .select('*, seller:profiles(full_name, avatar_url, trust_score, campus_code)')
       .eq('is_sold', false)
       .order('created_at', { ascending: false });
 
@@ -56,26 +72,30 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
     const { data, error } = await req;
 
     if (!error && data && data.length > 0) {
-      const dbListings: MarketplaceListing[] = data.map((row: any) => ({
-        id: row.id,
-        sellerId: row.seller_id,
-        sellerName: row.seller?.full_name || 'Campus Student',
-        sellerAvatarUrl: row.seller?.avatar_url || null,
-        sellerTrustLevel: Math.max(1, Math.round((row.seller?.trust_score || 80) / 20)),
-        title: row.title,
-        description: row.description || '',
-        price: row.price_display || `₦${(row.price_kobo / 100).toLocaleString()}`,
-        condition: row.condition as any,
-        category: row.category as any,
-        imageUrl: row.image_url,
-        createdAt: row.created_at,
-      }));
+      const dbListings: MarketplaceListing[] = data
+        .filter((row: any) => !isUserBlocked(row.seller_id))
+        .filter((row: any) => !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus)
+        .map((row: any) => ({
+          id: row.id,
+          sellerId: row.seller_id,
+          sellerName: row.seller?.full_name || 'Campus Student',
+          sellerAvatarUrl: row.seller?.avatar_url || null,
+          sellerTrustLevel: Math.max(1, Math.round((row.seller?.trust_score || 80) / 20)),
+          title: row.title,
+          description: row.description || '',
+          price: row.price_display || `₦${(row.price_kobo / 100).toLocaleString()}`,
+          condition: row.condition as any,
+          category: row.category as any,
+          imageUrl: row.image_url,
+          campusCode: row.campus_code || 'GLOBAL',
+          createdAt: row.created_at,
+        }));
 
       // Merge unique
-      const local = filterMockListings(query);
+      const local = filterMockListings({ ...query, campusCode: userCampus });
       const merged = [...dbListings];
       for (const item of local) {
-        if (!merged.some((m) => m.id === item.id)) {
+        if (!merged.some((m) => m.id === item.id) && !isUserBlocked(item.sellerId)) {
           merged.push(item);
         }
       }

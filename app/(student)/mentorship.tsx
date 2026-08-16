@@ -14,14 +14,16 @@ import { SolidCard } from'@/components/SolidCard';
 import { Badge } from'@/components/Badge';
 import { MentorCard } from'@/components/MentorCard';
 import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listMentorships, searchMentors } from'@/api/mentorship';
-import { useDebouncedValue } from'@/hooks/useDebouncedValue';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { listMentorships, searchMentors } from '@/api/mentorship';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 const EXPERTISE_CATEGORIES = ['All Fields', 'Software', 'Resume Prep', 'Finance', 'Research', 'Design'];
 
 export default function StudentMentorshipScreen() {
   const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState<'rep' | 'mentors'>('rep');
   const [query, setQuery] = useState('');
@@ -36,7 +38,7 @@ export default function StudentMentorshipScreen() {
     queryFn: () => searchMentors({ q: debouncedQuery || undefined, focusArea: expertise }),
   });
 
-  const myApplications = mentorships?.filter((m) => m.studentId === 'me') ?? [];
+  const myApplications = mentorships?.filter((m) => (user?.id && m.studentId === user.id) || m.studentId === 'me') ?? [];
 
   function handleSendMessage() {
     if (!messageText.trim()) return;

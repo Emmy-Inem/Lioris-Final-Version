@@ -72,10 +72,18 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
   return created;
 }
 
-export async function listStudyGroups(): Promise<StudyGroup[]> {
+import { isUserBlocked } from './connections';
+
+export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]> {
   try {
     const { data: authData } = await supabase.auth.getUser();
     const currentUserId = authData?.user?.id || (await getSessionUser())?.id;
+
+    let userCampus = campusCode;
+    if (!userCampus && currentUserId) {
+      const { data: prof } = await supabase.from('profiles').select('campus_code').eq('id', currentUserId).maybeSingle();
+      if (prof?.campus_code) userCampus = prof.campus_code;
+    }
 
     const { data, error } = await supabase
       .from('study_groups')
@@ -83,26 +91,32 @@ export async function listStudyGroups(): Promise<StudyGroup[]> {
       .order('created_at', { ascending: false });
 
     if (!error && data && data.length > 0) {
-      const dbGroups: StudyGroup[] = data.map((row: any) => {
-        const members = Array.isArray(row.study_group_members) ? row.study_group_members : [];
-        const isJoined = currentUserId ? members.some((m: any) => m.user_id === currentUserId) : false;
-        return {
-          id: row.id,
-          name: row.name,
-          courseCode: row.course_code || 'CSC 201',
-          description: row.description || '',
-          isPublic: !row.is_private,
-          memberCount: Math.max(1, members.length),
-          isJoined,
-          lastMessageAt: row.created_at,
-        };
-      });
+      const dbGroups: StudyGroup[] = data
+        .filter((row: any) => !isUserBlocked(row.creator_id))
+        .filter((row: any) => !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus)
+        .map((row: any) => {
+          const members = Array.isArray(row.study_group_members) ? row.study_group_members : [];
+          const isJoined = currentUserId ? members.some((m: any) => m.user_id === currentUserId) : false;
+          return {
+            id: row.id,
+            name: row.name,
+            courseCode: row.course_code || 'CSC 201',
+            description: row.description || '',
+            isPublic: !row.is_private,
+            memberCount: Math.max(1, members.length),
+            isJoined,
+            campusCode: row.campus_code || 'GLOBAL',
+            lastMessageAt: row.created_at,
+          };
+        });
 
       // Merge unique
       const merged = [...dbGroups];
       for (const g of studyGroupsState) {
-        if (!merged.some((m) => m.id === g.id)) {
-          merged.push(g);
+        if (!merged.some((m) => m.id === g.id) && !isUserBlocked((g as any).creatorId)) {
+          if (!userCampus || userCampus === 'GLOBAL' || !(g as any).campusCode || (g as any).campusCode === 'GLOBAL' || (g as any).campusCode === userCampus) {
+            merged.push(g);
+          }
         }
       }
       studyGroupsState = merged;
@@ -111,7 +125,7 @@ export async function listStudyGroups(): Promise<StudyGroup[]> {
   } catch {
     // Session fallback
   }
-  return studyGroupsState;
+  return studyGroupsState.filter((g) => !isUserBlocked((g as any).creatorId));
 }
 
 export async function joinStudyGroup(id: string): Promise<StudyGroup> {

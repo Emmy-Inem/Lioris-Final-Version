@@ -66,6 +66,7 @@ export interface EventsQuery {
   q?: string;
   sponsored?: boolean;
   approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
+  campusCode?: string;
 }
 
 import { isUserBlocked } from './connections';
@@ -77,6 +78,12 @@ function filterMockEvents(query: EventsQuery): CampusEvent[] {
     results = results.filter((e) => e.approvalStatus === query.approvalStatus);
   } else if (!query.approvalStatus) {
     results = results.filter((e) => e.approvalStatus !== 'rejected');
+  }
+
+  if (query.campusCode && query.campusCode !== 'GLOBAL') {
+    results = results.filter(
+      (e) => !e.campusCode || e.campusCode === 'GLOBAL' || e.campusCode === query.campusCode,
+    );
   }
 
   if (query.scope) {

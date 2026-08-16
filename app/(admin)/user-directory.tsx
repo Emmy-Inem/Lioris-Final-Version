@@ -226,13 +226,23 @@ export default function UserDirectoryScreen() {
 
     try {
       const { supabase } = await import('@/api/supabase');
-      await supabase.from('profiles').update({ is_suspended: nextSuspended }).eq('id', target.id);
+      if (nextSuspended) {
+        const { error } = await supabase.rpc('suspend_user_account', {
+          p_target_user_id: target.id,
+          p_reason: 'Administrative security suspension from User Directory',
+        });
+        if (error) {
+          await supabase.from('profiles').update({ is_suspended: true }).eq('id', target.id);
+        }
+      } else {
+        await supabase.from('profiles').update({ is_suspended: false }).eq('id', target.id);
+      }
     } catch (err) {
       console.warn('[UserDirectory] Supabase suspend error:', err);
     }
 
     recordAuditLogEntry({
-      action: 'escrow_funds_released',
+      action: nextSuspended ? 'user_suspended' : 'user_unsuspended',
       summary: `${nextSuspended ? 'Suspended' : 'Restored'} user account @${target.username} (${target.fullName})`,
       targetType: 'user',
       targetId: target.id,
@@ -259,7 +269,7 @@ export default function UserDirectoryScreen() {
     }
 
     recordAuditLogEntry({
-      action: 'verification_approved',
+      action: 'user_role_changed',
       summary: `Mutated role of ${target.fullName} from ${target.role} to ${targetRole}`,
       targetType: 'user',
       targetId: target.id,
@@ -275,7 +285,7 @@ export default function UserDirectoryScreen() {
     haptics.error();
     Alert.alert(
       'Wipe Account Permanently?',
-      `Are you sure you want to permanently delete all data, posts, and session tokens for ${target.fullName}? This cannot be undone.`,
+      `Are you sure you want to permanently delete all profile data for ${target.fullName}? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -290,15 +300,15 @@ export default function UserDirectoryScreen() {
               console.warn('[UserDirectory] Supabase wipe error:', err);
             }
             recordAuditLogEntry({
-              action: 'report_resolved',
-              summary: `Wiped all account data and sessions for ${target.fullName} (@${target.username})`,
+              action: 'user_account_deleted',
+              summary: `Wiped all account profile data and sessions for ${target.fullName} (@${target.username})`,
               targetType: 'user',
               targetId: target.id,
               institutionCode: target.campus,
               reason: 'GDPR / Right to be forgotten wipe request',
             });
             setSelectedUser(null);
-            Alert.alert('Account Wiped 🗑️', `${target.fullName}'s account was deleted from all campus nodes.`);
+            Alert.alert('Account Wiped 🗑️', `${target.fullName}'s profile was deleted from campus nodes.`);
           },
         },
       ],

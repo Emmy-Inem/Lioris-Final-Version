@@ -16,7 +16,7 @@ export default function StudyGroupsScreen() {
   const queryClient = useQueryClient();
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const { data: groups, isLoading } = useQuery({ queryKey: ['study-groups'], queryFn: listStudyGroups });
+  const { data: groups, isLoading } = useQuery({ queryKey: ['study-groups'], queryFn: () => listStudyGroups() });
 
   async function handleCreate(payload: Parameters<typeof createStudyGroup>[0]) {
     await createStudyGroup(payload);

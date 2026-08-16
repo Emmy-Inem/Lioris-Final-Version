@@ -228,9 +228,9 @@ export default function SuperAdminConfigScreen() {
               });
 
               await recordAuditLogEntry({
-                action: 'platform_config_updated' as any,
+                action: 'institution_provisioned',
                 summary: `Provisioned new university tenant partition for ${data.name} (${data.abbrev}) in ${data.region}`,
-                targetType: 'platform_config',
+                targetType: 'institution',
                 targetId: `univ-${data.abbrev.toLowerCase()}`,
               });
               setActiveModal(null);

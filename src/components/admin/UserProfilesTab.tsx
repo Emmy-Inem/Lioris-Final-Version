@@ -251,12 +251,28 @@ export function UserProfilesTab() {
     }
 
     recordAuditLogEntry({
-      action: 'verification_approved',
+      action: 'user_role_changed',
       summary: `Updated profile governance & role credentials for ${editName} (${editRole.toUpperCase()})`,
       targetType: 'user',
       targetId: selectedUser.id,
       reason: 'Administrative user governance action',
     });
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === selectedUser.id
+          ? {
+              ...u,
+              fullName: editName.trim() || u.fullName,
+              userType: editRole,
+              department: editDept.trim() || u.department,
+              isVerified: editVerified,
+              verificationStatus: editVerified ? 'verified' : 'none',
+              bio: editBio.trim() || u.bio,
+            }
+          : u,
+      ),
+    );
 
     setEditModalOpen(false);
     setSelectedUser(null);
@@ -276,18 +292,25 @@ export function UserProfilesTab() {
           onPress: async () => {
             try {
               const { supabase } = await import('@/api/supabase');
-              await supabase.from('profiles').update({ is_suspended: true }).eq('id', user.id);
+              const { error } = await supabase.rpc('suspend_user_account', {
+                p_target_user_id: user.id,
+                p_reason: 'Administrative security suspension from Admin Console',
+              });
+              if (error) {
+                await supabase.from('profiles').update({ is_suspended: true }).eq('id', user.id);
+              }
             } catch (err) {
               console.warn('[UserProfilesTab] Supabase suspend error:', err);
             }
             recordAuditLogEntry({
-              action: 'report_resolved',
+              action: 'user_suspended',
               summary: `Suspended account access for ${user.fullName} (${user.email})`,
               targetType: 'user',
               targetId: user.id,
               reason: 'Administrative security suspension',
             });
-            Alert.alert('Account Suspended', `${user.fullName}'s account has been restricted.`);
+            setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isSuspended: true } : u)));
+            Alert.alert('Account Suspended', `${user.fullName}'s access has been revoked.`);
           },
         },
       ],

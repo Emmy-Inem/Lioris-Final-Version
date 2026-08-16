@@ -93,33 +93,48 @@ function mapCategoryToResourceType(category?: Resource['category']): string {
   return 'lecture_note';
 }
 
+import { isUserBlocked } from './connections';
+
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
   try {
+    const { data: authData } = await supabase.auth.getUser();
+    let userCampus = (query as any).campusCode;
+    if (!userCampus && authData?.user?.id) {
+      const { data: prof } = await supabase.from('profiles').select('campus_code').eq('id', authData.user.id).maybeSingle();
+      if (prof?.campus_code) userCampus = prof.campus_code;
+    }
+
     const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
     if (!error && data && data.length > 0) {
-      const dbResources: Resource[] = data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        courseCode: row.course_code || 'GEN 101',
-        department: row.course_title || 'Academic Repository',
-        category: mapResourceTypeToCategory(row.resource_type),
-        description: row.description || '',
-        fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : '2.5 MB',
-        fileUrl: row.file_url || null,
-        authorName: 'Verified Student',
-        authorId: row.uploader_id,
-        authorRole: 'student',
-        likesCount: row.upvotes_count || 0,
-        downloadsCount: row.downloads_count || 0,
-        createdAt: row.created_at,
-        approvalStatus: row.is_approved ? 'approved' : 'pending',
-        fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
-      }));
+      const dbResources: Resource[] = data
+        .filter((row: any) => !isUserBlocked(row.uploader_id))
+        .filter((row: any) => !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus)
+        .map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          courseCode: row.course_code || 'GEN 101',
+          department: row.course_title || 'Academic Repository',
+          category: mapResourceTypeToCategory(row.resource_type),
+          description: row.description || '',
+          fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : '2.5 MB',
+          fileUrl: row.file_url || null,
+          authorName: 'Verified Student',
+          authorId: row.uploader_id,
+          authorRole: 'student',
+          likesCount: row.upvotes_count || 0,
+          downloadsCount: row.downloads_count || 0,
+          createdAt: row.created_at,
+          approvalStatus: row.is_approved ? 'approved' : 'pending',
+          fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
+          campusCode: row.campus_code || 'GLOBAL',
+        }));
       // Merge unique
       const merged = [...dbResources];
       for (const r of resourcesState) {
-        if (!merged.some((m) => m.id === r.id)) {
-          merged.push(r);
+        if (!merged.some((m) => m.id === r.id) && !isUserBlocked(r.authorId)) {
+          if (!userCampus || userCampus === 'GLOBAL' || !(r as any).campusCode || (r as any).campusCode === 'GLOBAL' || (r as any).campusCode === userCampus) {
+            merged.push(r);
+          }
         }
       }
       resourcesState = merged;

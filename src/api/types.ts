@@ -259,6 +259,16 @@ export type AuditLogAction =
   | 'escrow_funds_released'
   | 'impersonation_started'
   | 'user_blocked'
+  | 'user_suspended'
+  | 'user_unsuspended'
+  | 'user_role_changed'
+  | 'user_account_deleted'
+  | 'feature_flag_toggled'
+  | 'portal_link_created'
+  | 'portal_link_updated'
+  | 'portal_link_deleted'
+  | 'institution_provisioned'
+  | 'platform_config_updated'
   | 'domain_authority_updated'
   | 'tenant_toggles_updated'
   | 'xp_multiplier_updated'
@@ -276,7 +286,7 @@ export interface AuditLogEntry {
   actorRole: UserRole;
   action: AuditLogAction;
   summary: string;
-  targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'resource' | 'platform_config' | 'notifications';
+  targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution';
   targetId: string;
   reason?: string;
   institutionCode?: string;

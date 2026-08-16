@@ -96,16 +96,34 @@ export async function publishAnnouncement(
         published_at: created.publishedAt,
         expires_at: payload.expiresAt || null,
       });
+
+      // Target audience-scoped push notifications
+      let query = supabase.from('profiles').select('id');
+      if (userCampus && userCampus !== 'GLOBAL') {
+        query = query.or(`campus_code.eq.${userCampus},campus_code.eq.GLOBAL`);
+      }
+      if (payload.audienceScope === 'student') {
+        query = query.eq('role', 'student');
+      } else if (payload.audienceScope === 'alumni') {
+        query = query.eq('role', 'alumni');
+      } else if (payload.audienceScope === 'staff') {
+        query = query.eq('role', 'staff');
+      }
+      const { data: targetUsers } = await query.limit(200);
+      if (targetUsers && targetUsers.length > 0) {
+        const notifs = targetUsers.map((u: any) => ({
+          recipient_id: u.id,
+          type: 'announcement',
+          title: payload.priority === 'critical' ? `🚨 ${payload.title}` : payload.title,
+          body: payload.content,
+          is_read: false,
+        }));
+        await supabase.from('notifications').insert(notifs);
+      }
     }
   } catch (err) {
     console.warn('[Announcements] Database insert error:', err);
   }
-
-  createNotification({
-    type: 'announcement',
-    title: payload.priority === 'critical' ? `🚨 ${payload.title}` : payload.title,
-    body: payload.content,
-  }).catch(() => {});
 
   return created;
 }
