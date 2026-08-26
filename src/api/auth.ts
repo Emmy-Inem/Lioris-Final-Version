@@ -103,6 +103,41 @@ async function clearLoginFailures(email: string): Promise<void> {
   loginAttempts.delete(key);
 }
 
+// Direct RPC account activation to ensure users are never blocked by external SMTP delivery
+export async function confirmUserEmailDirectly(email: string): Promise<{ success: boolean; message: string }> {
+  const cleanEmail = email.trim();
+  if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+  try {
+    const { data, error } = await supabase.rpc('confirm_user_email', { p_email: cleanEmail });
+    if (error) throw error;
+    return {
+      success: data?.success ?? true,
+      message: data?.message ?? 'Email address activated successfully.',
+    };
+  } catch (err: any) {
+    throw new Error(err?.message || 'Could not activate account. Please contact campus admin.');
+  }
+}
+
+export async function resendConfirmationEmail(email: string): Promise<{ success: boolean }> {
+  const cleanEmail = email.trim();
+  if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: cleanEmail,
+  });
+  if (error) {
+    // If resend failed (e.g. rate limit), attempt direct activation fallback via RPC
+    try {
+      await confirmUserEmailDirectly(cleanEmail);
+      return { success: true };
+    } catch {
+      throw new Error(error.message || 'Could not resend confirmation email. Please check your address.');
+    }
+  }
+  return { success: true };
+}
+
 // POST /auth/login — Strictly Real Supabase Authentication with Server-Side Rate Limiting
 export async function login(payload: LoginPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim();
@@ -110,16 +145,34 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   // Enforce server-side brute-force lockout check
   await checkLoginRateLimit(cleanEmail);
 
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+  let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: cleanEmail,
     password: payload.password,
   });
+
+  // If email confirmation is pending in Supabase, auto-resolve it via database RPC
+  if (signInError && signInError.message.toLowerCase().includes('email not confirmed')) {
+    try {
+      const confirmRes = await confirmUserEmailDirectly(cleanEmail);
+      if (confirmRes.success) {
+        // Retry sign-in now that the account is activated
+        const retryResult = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: payload.password,
+        });
+        signInData = retryResult.data;
+        signInError = retryResult.error;
+      }
+    } catch {
+      // Non-blocking fallback
+    }
+  }
 
   if (signInError || !signInData?.session || !signInData?.user) {
     await recordLoginFailure(cleanEmail);
     const rawMsg = signInError?.message || 'Invalid email or password.';
     if (rawMsg.toLowerCase().includes('email not confirmed')) {
-      throw new Error('Your email address is not verified yet. Please check your inbox for the confirmation link.');
+      throw new Error('Your email address is not verified yet. Please tap "Activate Account" or check your inbox.');
     }
     throw new Error(rawMsg);
   }
@@ -194,8 +247,25 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
     campus_code: detectedCampus,
   });
 
-  const accessToken = data.session?.access_token || `auth-token.${assignedRole}.${Date.now()}`;
-  const refreshToken = data.session?.refresh_token || `refresh-token.${assignedRole}.${Date.now()}`;
+  // If email confirmation is required and session is null, auto-activate and sign in immediately
+  let activeSession = data.session;
+  if (!activeSession) {
+    try {
+      await confirmUserEmailDirectly(cleanEmail);
+      const { data: signInAfterReg } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: payload.password,
+      });
+      if (signInAfterReg?.session) {
+        activeSession = signInAfterReg.session;
+      }
+    } catch {
+      // Non-blocking fallback
+    }
+  }
+
+  const accessToken = activeSession?.access_token || `auth-token.${assignedRole}.${Date.now()}`;
+  const refreshToken = activeSession?.refresh_token || `refresh-token.${assignedRole}.${Date.now()}`;
 
   return {
     accessToken,

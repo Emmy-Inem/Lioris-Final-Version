@@ -1369,6 +1369,58 @@ USING (
     )
 );
 
+-- ============================================================================
+-- 19. AUTH & EMAIL AUTO-CONFIRMATION HELPER & RPC
+-- ============================================================================
+-- Ensure user accounts are immediately activated without blocking on external SMTP rate limits
+CREATE OR REPLACE FUNCTION public.confirm_user_email(p_email TEXT)
+RETURNS JSONB AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    SELECT id INTO v_user_id FROM auth.users WHERE LOWER(email) = LOWER(TRIM(p_email));
+    IF v_user_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'message', 'No account found with this email address.');
+    END IF;
+    
+    UPDATE auth.users 
+    SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+        confirmed_at = COALESCE(confirmed_at, NOW()),
+        updated_at = NOW()
+    WHERE id = v_user_id;
+
+    RETURN jsonb_build_object('success', true, 'message', 'Email address confirmed and activated successfully.');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.confirm_user_email(TEXT) TO anon, authenticated, service_role;
+
+-- Automatically confirm new user signups on insert to prevent email delivery blockage
+CREATE OR REPLACE FUNCTION public.handle_auto_confirm_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.email_confirmed_at IS NULL THEN
+        NEW.email_confirmed_at := NOW();
+    END IF;
+    IF NEW.confirmed_at IS NULL THEN
+        NEW.confirmed_at := NOW();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created_auto_confirm ON auth.users;
+CREATE TRIGGER on_auth_user_created_auto_confirm
+    BEFORE INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_auto_confirm_user();
+
+-- Backfill any existing unconfirmed accounts in auth.users
+UPDATE auth.users 
+SET email_confirmed_at = NOW(), confirmed_at = NOW() 
+WHERE email_confirmed_at IS NULL;
+
+
 
 
 

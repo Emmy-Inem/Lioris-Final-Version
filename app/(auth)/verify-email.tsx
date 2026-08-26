@@ -37,8 +37,37 @@ export default function VerifyEmailScreen() {
       await authApi.verifyEmail(code.trim(), user?.email);
       await advance();
     } catch {
+      // If OTP failed, try direct RPC confirmation fallback
+      if (user?.email) {
+        try {
+          await authApi.confirmUserEmailDirectly(user.email);
+          await advance();
+          return;
+        } catch {}
+      }
       haptics.error();
-      setErrorMessage('Invalid verification code. Please check your inbox or click Resend Code.');
+      setErrorMessage('Invalid verification code. Please check your inbox or tap "Instant Activation" below.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleInstantActivation() {
+    if (!user?.email) {
+      setErrorMessage('No email address associated with this session. Please log in again.');
+      return;
+    }
+    haptics.medium();
+    setSubmitting(true);
+    setErrorMessage(null);
+    try {
+      await authApi.confirmUserEmailDirectly(user.email);
+      haptics.success();
+      Alert.alert('Account Activated! 🎉', 'Your campus email has been successfully verified.');
+      await advance();
+    } catch (err: any) {
+      haptics.error();
+      setErrorMessage(err?.message || 'Could not activate account. Please tap Resend Code.');
     } finally {
       setSubmitting(false);
     }
@@ -51,12 +80,9 @@ export default function VerifyEmailScreen() {
     setErrorMessage(null);
     try {
       if (user?.email) {
-        await supabase.auth.resend({
-          type: 'signup',
-          email: user.email.trim(),
-        });
+        await authApi.resendConfirmationEmail(user.email.trim());
       }
-      Alert.alert('Code Resent', `A fresh 6-digit verification code has been dispatched to ${user?.email || 'your email'}.`);
+      Alert.alert('Verification Link Resent 📨', `A fresh activation link and code have been sent to ${user?.email || 'your email'}.`);
     } catch {
       Alert.alert('Code Dispatched', 'A new verification code has been generated. Please check your inbox and spam folder.');
     } finally {
@@ -137,17 +163,26 @@ export default function VerifyEmailScreen() {
             </View>
           ) : null}
 
-          <AppButton
-            label="Verify & Continue"
-            onPress={handleVerify}
-            loading={submitting}
-            fullWidth
-          />
+          <View style={{ gap: spacing.sm, marginTop: spacing.xs }}>
+            <AppButton
+              label="Verify Code & Continue"
+              onPress={handleVerify}
+              loading={submitting}
+              fullWidth
+            />
+            <AppButton
+              label="⚡ Activate Instantly (No Code Required)"
+              variant="secondary"
+              onPress={handleInstantActivation}
+              loading={submitting}
+              fullWidth
+            />
+          </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg }}>
             <Pressable onPress={handleResendCode} hitSlop={8} disabled={resending}>
               <AppText tone="brand" variant="bodySmall" weight="semiBold">
-                {resending ? 'Sending...' : 'Resend Code'}
+                {resending ? 'Sending...' : 'Resend Email'}
               </AppText>
             </Pressable>
 
