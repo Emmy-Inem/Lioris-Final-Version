@@ -1,20 +1,21 @@
-import React, { useState } from'react';
-import { ScrollView, View, Pressable, Alert, Modal } from'react-native';
-import { Image } from'expo-image';
-import { router } from'expo-router';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'@/components/ScreenContainer';
-import { AppHeader } from'@/components/AppHeader';
-import { SolidCard } from'@/components/SolidCard';
-import { AppText } from'@/components/AppText';
-import { AppButton } from'@/components/AppButton';
-import { Avatar } from'@/components/Avatar';
-import { Badge } from'@/components/Badge';
-import { AnnouncementsWidget } from'@/components/AnnouncementsWidget';
+import React, { useState } from 'react';
+import { ScrollView, View, Pressable, Alert, Modal } from 'react-native';
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '@/components/ScreenContainer';
+import { AppHeader } from '@/components/AppHeader';
+import { SolidCard } from '@/components/SolidCard';
+import { AppText } from '@/components/AppText';
+import { AppButton } from '@/components/AppButton';
+import { Avatar } from '@/components/Avatar';
+import { Badge } from '@/components/Badge';
+import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { getMyProfile, updateProfileImages } from '@/api/profile';
 import { listEvents } from '@/api/events';
 import { listDashboardShortcuts, DashboardShortcut } from '@/api/adminShortcuts';
@@ -28,18 +29,19 @@ const COVER_PRESETS = [
 ];
 
 const AVATAR_PRESETS = [
-  { id: 'avatar_male', label: 'Male Student 👨‍', src: require('../../assets/images/avatar_male.jpg') },
-  { id: 'avatar_female', label: 'Female Student 👩‍', src: require('../../assets/images/avatar_female.jpg') },
+  { id: 'avatar_male', label: 'Male Student 👨‍🎓', src: require('../../assets/images/avatar_male.jpg') },
+  { id: 'avatar_female', label: 'Female Student 👩‍🎓', src: require('../../assets/images/avatar_female.jpg') },
   { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
   { id: 'avatar_female_2', label: 'Honor Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
   { id: 'avatar_alumni_2', label: 'Alumni Founder', src: require('../../assets/images/avatar_alumni_2.jpg') },
-  { id: 'avatar_mentor', label: 'Faculty Advisor 🧑‍', src: require('../../assets/images/avatar_mentor.jpg') },
+  { id: 'avatar_mentor', label: 'Faculty Advisor 🧑‍🏫', src: require('../../assets/images/avatar_mentor.jpg') },
 ];
 
 export default function StudentDashboard() {
   const { colors, spacing, radius } = useTheme();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { isDesktop } = useResponsive();
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
 
   const { data: profile } = useQuery({
@@ -77,88 +79,93 @@ export default function StudentDashboard() {
 
   return (
     <ScreenContainer glow={true}>
-      <AppHeader />
+      {!isDesktop && <AppHeader />}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: 140 }}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 140, paddingTop: isDesktop ? spacing.md : 0 }}
       >
-        {/* Customizable Campus Cover Banner */}
-        <View
-          style={{
-            height: 140,
-            borderRadius: 20,
-            overflow: 'hidden',
-            marginTop: spacing.sm,
-            marginBottom: spacing.md,
-            position: 'relative',
-          }}
-        >
-          <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+        <View style={isDesktop ? { flexDirection: 'row', gap: 24, alignItems: 'flex-start' } : undefined}>
+          {/* Main Left/Center Column */}
+          <View style={isDesktop ? { flex: 1 } : undefined}>
+            {/* Customizable Campus Cover Banner */}
+            <View
+              style={{
+                height: isDesktop ? 180 : 140,
+                borderRadius: 20,
+                overflow: 'hidden',
+                marginTop: isDesktop ? 0 : spacing.sm,
+                marginBottom: spacing.md,
+                position: 'relative',
+              }}
+            >
+              <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
 
-          <View style={{ position: 'absolute', top: 12, left: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <View style={{ backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#48BB78' }} />
-              <AppText variant="caption"weight="bold"tone="inverse">
-                {profile?.institutionName ?? 'University of Ibadan'}
-              </AppText>
+              <View style={{ position: 'absolute', top: 12, left: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#48BB78' }} />
+                  <AppText variant="caption" weight="bold" tone="inverse">
+                    {profile?.institutionName ?? 'University of Ibadan'}
+                  </AppText>
+                </View>
+              </View>
+
+              {/* Change Photo Trigger */}
+              <Pressable
+                onPress={() => setPhotoPickerOpen(true)}
+                style={{
+                  position: 'absolute',
+                  top: 12,
+                  right: 12,
+                  backgroundColor: 'rgba(0,0,0,0.7)',
+                  borderRadius: radius.pill,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: 5,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <Ionicons name="camera" size={13} color="#FFFFFF" />
+                <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
+                  Customize
+                </AppText>
+              </Pressable>
+
+              <View style={{ position: 'absolute', bottom: 14, left: 16 }}>
+                <AppText variant="h2" weight="bold" tone="inverse">
+                  Hello {firstName} 👋
+                </AppText>
+                <AppText tone="inverse" variant="caption" style={{ opacity: 0.9 }}>
+                  {profile?.department ?? 'Computer Science & AI'} | Level {profile?.level ?? 4}
+                </AppText>
+              </View>
             </View>
-          </View>
 
-          {/* Change Photo Trigger */}
-          <Pressable
-            onPress={() => setPhotoPickerOpen(true)}
-            style={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              backgroundColor: 'rgba(0,0,0,0.7)',
-              borderRadius: radius.pill,
-              paddingHorizontal: spacing.sm,
-              paddingVertical: 5,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-            }}
-          >
-            <Ionicons name="camera"size={13} color="#FFFFFF" />
-            <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
-              Customize
-            </AppText>
-          </Pressable>
-
-          <View style={{ position: 'absolute', bottom: 12, left: 14 }}>
-            <AppText variant="h2"weight="bold"tone="inverse">
-              Hello {firstName}
-            </AppText>
-            <AppText tone="inverse"variant="caption"style={{ opacity: 0.9 }}>
-              {profile?.department ?? 'Computer Science & AI'} | Level {profile?.level ?? 4}
-            </AppText>
-          </View>
-        </View>
-
-        {/* Quick Search Bar Pill */}
-        <Pressable
-          onPress={() => router.push('/(student)/search')}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: colors.surface,
-            borderRadius: radius.pill,
-            paddingHorizontal: spacing.md,
-            paddingVertical: 10,
-            borderWidth: 1,
-            borderColor: colors.border,
-            gap: spacing.sm,
-            marginBottom: spacing.md,
-          }}
-        >
-          <Ionicons name="search"size={18} color={colors.textSecondary} />
-          <AppText tone="secondary"variant="bodySmall">
-            Search threads, past questions, events, portals...
-          </AppText>
-        </Pressable>
+            {!isDesktop && (
+              <Pressable
+                onPress={() => router.push('/(student)/search')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surface,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 10,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  gap: spacing.sm,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name="search" size={18} color={colors.textSecondary} />
+                <AppText tone="secondary" variant="bodySmall">
+                  Search threads, past questions, events, portals...
+                </AppText>
+              </Pressable>
+            )}
 
         {/* Official Campus Announcements & Broadcasts */}
         <AnnouncementsWidget scope="student" />
@@ -383,12 +390,130 @@ export default function StudentDashboard() {
                       RSVP
                     </AppText>
                   </Pressable>
+                  </View>
+                </SolidCard>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Right Sticky Column on Desktop */}
+        {isDesktop && (
+          <View style={{ width: 340, gap: spacing.md }}>
+            {/* Academic Standing & Semester KPI Card */}
+            <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Academic Standing 🎓
+                </AppText>
+                <Badge label="1st Class Track" tone="success" />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+                <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}>
+                  <AppText variant="caption" tone="secondary">CGPA</AppText>
+                  <AppText variant="h2" weight="bold" tone="brand">3.85</AppText>
+                  <AppText variant="caption" style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>↑ +0.12</AppText>
                 </View>
-              </SolidCard>
-            ))}
+                <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}>
+                  <AppText variant="caption" tone="secondary">Attendance</AppText>
+                  <AppText variant="h2" weight="bold" tone="brand">94%</AppText>
+                  <AppText variant="caption" style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>Eligible</AppText>
+                </View>
+              </View>
+
+              <View style={{ gap: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <AppText variant="caption" tone="secondary">Semester Progress</AppText>
+                  <AppText variant="caption" weight="bold">Week 8 of 14</AppText>
+                </View>
+                <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' }}>
+                  <View style={{ width: '57%', height: '100%', backgroundColor: colors.brandPrimary, borderRadius: 3 }} />
+                </View>
+              </View>
+            </SolidCard>
+
+            {/* Today's Timetable & Schedule */}
+            <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Today's Schedule 📅
+                </AppText>
+                <Pressable onPress={() => router.push('/(student)/calendar')}>
+                  <AppText variant="caption" weight="bold" tone="brand">Calendar →</AppText>
+                </Pressable>
+              </View>
+
+              <View style={{ gap: spacing.sm }}>
+                <View style={{ borderLeftWidth: 3, borderLeftColor: colors.brandPrimary, paddingLeft: spacing.sm }}>
+                  <AppText variant="bodySmall" weight="bold">CSC 301: Algorithms</AppText>
+                  <AppText variant="caption" tone="secondary">11:00 AM – 1:00 PM • Lecture Theater 2</AppText>
+                </View>
+                <View style={{ borderLeftWidth: 3, borderLeftColor: '#3B82F6', paddingLeft: spacing.sm }}>
+                  <AppText variant="bodySmall" weight="bold">MEE 305: Engineering Systems</AppText>
+                  <AppText variant="caption" tone="secondary">2:00 PM – 4:00 PM • Faculty Lab 1</AppText>
+                </View>
+                <View style={{ borderLeftWidth: 3, borderLeftColor: '#10B981', paddingLeft: spacing.sm }}>
+                  <AppText variant="bodySmall" weight="bold">Campus Tech Fest Meetup</AppText>
+                  <AppText variant="caption" tone="secondary">5:00 PM • Innovation Arena</AppText>
+                </View>
+              </View>
+            </SolidCard>
+
+            {/* Upcoming Deadlines Widget */}
+            <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Upcoming Deadlines ⏳
+                </AppText>
+                <Badge label="2 Due Soon" tone="warning" />
+              </View>
+
+              <View style={{ gap: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="semiBold">CSC 301 Lab 3 Submission</AppText>
+                    <AppText variant="caption" tone="secondary">Due in 2 days (Friday, 11:59 PM)</AppText>
+                  </View>
+                  <Ionicons name="alert-circle" size={18} color="#F59E0B" />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="semiBold">Course Registration Verification</AppText>
+                    <AppText variant="caption" tone="secondary">Due next Monday</AppText>
+                  </View>
+                  <Ionicons name="checkmark-circle-outline" size={18} color={colors.textSecondary} />
+                </View>
+              </View>
+            </SolidCard>
+
+            {/* Class Representative & Faculty Advisor */}
+            <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+                Department Reps & Support 🤝
+              </AppText>
+              <View style={{ gap: spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Avatar name="Tobi Alabi" size={32} />
+                    <View>
+                      <AppText variant="caption" weight="bold">Tobi Alabi (Class Rep)</AppText>
+                      <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>300L Computer Science</AppText>
+                    </View>
+                  </View>
+                  <Pressable
+                    onPress={() => router.push('/(student)/messages')}
+                    style={{ backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                  >
+                    <AppText variant="caption" weight="bold" tone="brand">Chat</AppText>
+                  </Pressable>
+                </View>
+              </View>
+            </SolidCard>
           </View>
         )}
-      </ScrollView>
+      </View>
+    </ScrollView>
 
       {/* Photo Picker Modal */}
       <Modal visible={photoPickerOpen} transparent animationType="slide"onRequestClose={() => setPhotoPickerOpen(false)}>

@@ -12,19 +12,21 @@ import { AppButton } from'@/components/AppButton';
 import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { HealthMetricBar } from'@/components/HealthMetricBar';
-import { AnnouncementsWidget } from'@/components/AnnouncementsWidget';
-import { Ionicons } from'@expo/vector-icons';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { getPlatformHealthSummary } from'@/api/analytics';
-import { listReports } from'@/api/moderation';
-import { ManageCoursesModal } from'@/components/admin/ManageCoursesModal';
-import { ManageResourcesModal } from'@/components/admin/ManageResourcesModal';
-import { ManageDirectoryModal } from'@/components/admin/ManageDirectoryModal';
-import { haptics } from'@/utils/haptics';
+import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
+import { getPlatformHealthSummary } from '@/api/analytics';
+import { listReports } from '@/api/moderation';
+import { ManageCoursesModal } from '@/components/admin/ManageCoursesModal';
+import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
+import { ManageDirectoryModal } from '@/components/admin/ManageDirectoryModal';
+import { haptics } from '@/utils/haptics';
 
 export default function AdminDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const { data: health } = useQuery({ queryKey: ['analytics', 'health'], queryFn: getPlatformHealthSummary });
   const { data: openReports } = useQuery({ queryKey: ['reports', 'open'], queryFn: () => listReports({ status: 'open' }) });
@@ -36,11 +38,12 @@ export default function AdminDashboard() {
 
   return (
     <ScreenContainer glow={true}>
-      <AppHeader />
+      {!isDesktop && <AppHeader />}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: 140 }}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 140, paddingTop: isDesktop ? spacing.md : 0 }}
       >
         {/* Admin Control Tower Banner Header */}
         <View style={{ marginTop: spacing.sm, marginBottom: spacing.md, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surface }}>

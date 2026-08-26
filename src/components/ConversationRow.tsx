@@ -13,19 +13,30 @@ interface ConversationRowProps {
   conversation: Conversation;
   /** PRD Section 8 gesture-interactions — when provided, swiping the row left reveals an archive action. */
   onArchive?: () => void;
+  onSelect?: (id: string) => void;
+  isSelected?: boolean;
 }
 
-export function ConversationRow({ conversation, onArchive }: ConversationRowProps) {
-  const { colors, spacing } = useTheme();
+export function ConversationRow({ conversation, onArchive, onSelect, isSelected }: ConversationRowProps) {
+  const { colors, spacing, isDark } = useTheme();
   const segments = useSegments();
   // segments[0] is the current role group, e.g. "(student)" — reused
   // across all four roles instead of a hardcoded basePath per screen.
   const roleGroup = segments[0];
 
+  const handlePress = () => {
+    if (onSelect) {
+      onSelect(conversation.id);
+    } else {
+      router.push(`/${roleGroup}/messages/${conversation.id}` as any);
+    }
+  };
+
   const row = (
     <Pressable
-      onPress={() => router.push(`/${roleGroup}/messages/${conversation.id}` as any)}
-      accessibilityRole="button"accessibilityLabel={`Conversation with ${conversation.participantName}${
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={`Conversation with ${conversation.participantName}${
         conversation.unreadCount > 0 ? `, ${conversation.unreadCount} unread` : ''
       }${conversation.isOnline ? ', online' : ''}`}
       accessibilityHint={conversation.lastMessagePreview ?? undefined}
@@ -34,8 +45,10 @@ export function ConversationRow({ conversation, onArchive }: ConversationRowProp
         alignItems: 'center',
         gap: spacing.md,
         paddingVertical: spacing.md,
-        paddingHorizontal: spacing.sm,
-        backgroundColor: colors.surface,
+        paddingHorizontal: spacing.md,
+        backgroundColor: isSelected
+          ? isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9'
+          : colors.surface,
         borderBottomWidth: 1,
         borderBottomColor: colors.divider,
       }}

@@ -13,9 +13,10 @@ import { Avatar } from'@/components/Avatar';
 import { PostCard } from'@/components/PostCard';
 import { EventCard } from'@/components/EventCard';
 import { AnnouncementsWidget } from'@/components/AnnouncementsWidget';
-import { Ionicons } from'@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
 import { listEvents } from '@/api/events';
@@ -25,6 +26,7 @@ import { haptics } from '@/utils/haptics';
 
 export default function AlumniDashboard() {
   const { colors, spacing, radius } = useTheme();
+  const { isDesktop } = useResponsive();
   const { user } = useAuth();
   useRealtimeChannel();
 
@@ -39,11 +41,12 @@ export default function AlumniDashboard() {
 
   return (
     <ScreenContainer glow={true}>
-      <AppHeader />
+      {!isDesktop && <AppHeader />}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: 140 }}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 140, paddingTop: isDesktop ? spacing.md : 0 }}
       >
         {/* Executive Alumni Banner Header */}
         <View style={{ marginTop: spacing.md, marginBottom: spacing.md, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.surface }}>

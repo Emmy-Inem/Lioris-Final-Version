@@ -12,6 +12,7 @@ import { ShareAcademicFileModal, UploadAcademicPayload } from '@/components/Shar
 import { LibraryFilterModal, LibraryFilters, DEFAULT_LIBRARY_FILTERS } from '@/components/LibraryFilterModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { listResources, createResource } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
 import { getMyProfile } from '@/api/profile';
@@ -19,15 +20,16 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 
 const RESOURCE_CATEGORIES = [
-  { id: 'all', label: 'All Files', filter: 'All Types' },
-  { id: 'past_questions', label: 'Past Questions', filter: 'Past Questions' },
-  { id: 'notes', label: 'Course Notes', filter: 'Notes' },
-  { id: 'projects', label: 'Projects & Code', filter: 'Projects' },
+  { id: 'all', label: 'All Files', filter: 'All Types', icon: 'document-text-outline' as const },
+  { id: 'past_questions', label: 'Past Questions', filter: 'Past Questions', icon: 'help-circle-outline' as const },
+  { id: 'notes', label: 'Course Notes', filter: 'Notes', icon: 'book-outline' as const },
+  { id: 'projects', label: 'Projects & Code', filter: 'Projects', icon: 'code-slash-outline' as const },
 ];
 
 export default function ResourcesScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
+  const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
@@ -302,44 +304,239 @@ export default function ResourcesScreen() {
 
   return (
     <ScreenContainer glow={true}>
-      {/* Single Unified FlatList for 100% smooth scrolling */}
-      <FlatList
-        data={resources ?? []}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        contentContainerStyle={{ paddingBottom: 130 }}
-        renderItem={({ item }) => <ResourceCard resource={item} />}
-        showsVerticalScrollIndicator={false}
-        onRefresh={refetch}
-        refreshing={isRefetching}
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
-              <View
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30 }}>
+          {/* Left Column: Filters, Portals & Upload */}
+          <View style={{ width: 280, gap: spacing.md }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.surface,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 10,
+                borderWidth: 1,
+                borderColor: colors.border,
+                gap: spacing.sm,
+              }}
+            >
+              <Ionicons name="search" size={18} color={colors.textSecondary} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search course code, notes..."
+                placeholderTextColor={colors.textSecondary}
+                style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <SolidCard radius={18} style={{ padding: spacing.md }}>
+              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+                Resource Type 📚
+              </AppText>
+              <View style={{ gap: 4 }}>
+                {RESOURCE_CATEGORIES.map((c) => {
+                  const selected = filters.resourceType === c.filter;
+                  return (
+                    <Pressable
+                      key={c.id}
+                      onPress={() => setFilters((prev) => ({ ...prev, resourceType: c.filter }))}
+                      style={({ hovered }: any) => [
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 10,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: radius.md,
+                          backgroundColor: selected
+                            ? colors.brandPrimary
+                            : hovered
+                              ? isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
+                              : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={c.icon}
+                        size={16}
+                        color={selected ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                      />
+                      <AppText
+                        variant="bodySmall"
+                        weight={selected ? 'bold' : 'medium'}
+                        style={{ color: selected ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B', flex: 1 }}
+                      >
+                        {c.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </SolidCard>
+
+            <Pressable
+              onPress={() => setUploadModalOpen(true)}
+              style={{
+                backgroundColor: colors.brandPrimary,
+                borderRadius: radius.md,
+                paddingVertical: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 8,
+              }}
+            >
+              <Ionicons name="cloud-upload" size={18} color="#FFFFFF" />
+              <AppText variant="bodySmall" weight="bold" tone="inverse">
+                Share Course Notes / PQ
+              </AppText>
+            </Pressable>
+
+            {/* Official Portals Quick Card */}
+            {portalLinks.length > 0 && (
+              <SolidCard radius={18} style={{ padding: spacing.md }}>
+                <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+                  Official Portals 🏛️
+                </AppText>
+                <View style={{ gap: 8 }}>
+                  {portalLinks.slice(0, 4).map((portal) => (
+                    <Pressable
+                      key={portal.id}
+                      onPress={() => handleLaunchPortal(portal)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <AppText variant="bodySmall" weight="semiBold" numberOfLines={1} style={{ flex: 1 }}>
+                        {portal.title}
+                      </AppText>
+                      <Ionicons name="open-outline" size={14} color={colors.brandPrimary} />
+                    </Pressable>
+                  ))}
+                </View>
+              </SolidCard>
+            )}
+          </View>
+
+          {/* Right Column: Multi-Column Resources Grid */}
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <AppText variant="h2" weight="bold">
+                Available Resources ({(resources ?? []).length})
+              </AppText>
+              <Pressable
+                onPress={() => setFilterModalOpen(true)}
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  backgroundColor: colors.pastelPrimaryBg,
+                  flexDirection: 'row',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: spacing.md,
+                  gap: 6,
+                  backgroundColor: colors.pastelPrimaryBg,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: colors.brandPrimary,
                 }}
               >
-                <Ionicons name="book-outline"size={32} color={colors.brandPrimary} />
-              </View>
-              <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.xs }}>
-                No Academic Resources Found
-              </AppText>
-              <AppText tone="secondary"variant="bodySmall"style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
-                Try searching for another course code or upload study materials for your peers.
-              </AppText>
+                <Ionicons name="options" size={16} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" tone="brand">
+                  Filter Department
+                </AppText>
+              </Pressable>
             </View>
-          ) : null
-        }
-      />
+
+            <FlatList
+              data={resources ?? []}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={{ gap: spacing.md }}
+              contentContainerStyle={{ paddingBottom: 40 }}
+              renderItem={({ item }) => (
+                <View style={{ flex: 1, minWidth: 0, marginBottom: spacing.md }}>
+                  <ResourceCard resource={item} />
+                </View>
+              )}
+              showsVerticalScrollIndicator={false}
+              onRefresh={refetch}
+              refreshing={isRefetching}
+              ListEmptyComponent={
+                !isLoading ? (
+                  <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+                    <View
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 32,
+                        backgroundColor: colors.pastelPrimaryBg,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: spacing.md,
+                      }}
+                    >
+                      <Ionicons name="book-outline" size={32} color={colors.brandPrimary} />
+                    </View>
+                    <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+                      No Academic Resources Found
+                    </AppText>
+                    <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+                      Try searching for another course code or upload study materials for your peers.
+                    </AppText>
+                  </View>
+                ) : null
+              }
+            />
+          </View>
+        </View>
+      ) : (
+        /* Mobile Single Column FlatList */
+        <FlatList
+          data={resources ?? []}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={renderHeader}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          contentContainerStyle={{ paddingBottom: 130 }}
+          renderItem={({ item }) => <ResourceCard resource={item} />}
+          showsVerticalScrollIndicator={false}
+          onRefresh={refetch}
+          refreshing={isRefetching}
+          ListEmptyComponent={
+            !isLoading ? (
+              <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+                <View
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    backgroundColor: colors.pastelPrimaryBg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: spacing.md,
+                  }}
+                >
+                  <Ionicons name="book-outline" size={32} color={colors.brandPrimary} />
+                </View>
+                <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+                  No Academic Resources Found
+                </AppText>
+                <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+                  Try searching for another course code or upload study materials for your peers.
+                </AppText>
+              </View>
+            ) : null
+          }
+        />
+      )}
 
       <ShareAcademicFileModal visible={uploadModalOpen} onClose={() => setUploadModalOpen(false)} onUpload={handleUpload} />
       <LibraryFilterModal visible={filterModalOpen} onClose={() => setFilterModalOpen(false)} filters={filters} onApply={setFilters} />

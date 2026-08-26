@@ -11,16 +11,18 @@ import { AppButton } from'@/components/AppButton';
 import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { AnnouncementCard } from'@/components/AnnouncementCard';
-import { ManagePortalLinksModal } from'@/components/admin/ManagePortalLinksModal';
-import { Ionicons } from'@expo/vector-icons';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { listAnnouncements } from'@/api/announcements';
-import { listEvents } from'@/api/events';
-import { haptics } from'@/utils/haptics';
+import { ManagePortalLinksModal } from '@/components/admin/ManagePortalLinksModal';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
+import { listAnnouncements } from '@/api/announcements';
+import { listEvents } from '@/api/events';
+import { haptics } from '@/utils/haptics';
 
 export default function StaffDashboard() {
   const { colors, spacing, radius } = useTheme();
+  const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const [portalModalOpen, setPortalModalOpen] = useState(false);
   const { data: announcements } = useQuery({ queryKey: ['announcements'], queryFn: listAnnouncements });
@@ -28,11 +30,12 @@ export default function StaffDashboard() {
 
   return (
     <ScreenContainer glow={true}>
-      <AppHeader />
+      {!isDesktop && <AppHeader />}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: 140 }}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 140, paddingTop: isDesktop ? spacing.md : 0 }}
       >
         {/* Staff Coordinator Banner Header */}
         <View style={{ marginTop: spacing.md, marginBottom: spacing.md, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.surface }}>

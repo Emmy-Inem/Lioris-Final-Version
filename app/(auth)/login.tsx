@@ -13,6 +13,7 @@ import { AuthHeroBackground } from '@/components/AuthHeroBackground';
 import { WaveCard } from '@/components/WaveCard';
 import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { joinWaitlist } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
 import {
@@ -41,6 +42,7 @@ const SLIDES = [
 
 export default function LoginScreen() {
   const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
+  const { isDesktop } = useResponsive();
   const { login } = useAuth();
   const [portal, setPortal] = useState<'student' | 'alumni'>('student');
   const [slide, setSlide] = useState(0);
@@ -204,260 +206,374 @@ export default function LoginScreen() {
     }
   }
 
-  return (
-    <ScreenContainer noPadding glow={false}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-        <View style={{ height: 230, position: 'relative', overflow: 'hidden' }}>
-          <Image
-            source={require('../../assets/images/campus_students_photo.jpg')}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-          />
-          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.48)' }} />
-          <View style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
+  const formContent = (
+    <>
+      <View
+        style={{
+          flexDirection: 'row',
+          backgroundColor: colors.divider,
+          borderRadius: radius.pill,
+          padding: 4,
+          marginBottom: spacing.lg,
+        }}
+      >
+        {(['student', 'alumni'] as const).map((p) => {
+          const selected = portal === p;
+          return (
             <Pressable
-              onPress={toggleTheme}
-              hitSlop={8}
+              key={p}
+              onPress={() => setPortal(p)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                backgroundColor: 'rgba(0,0,0,0.4)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#FFFFFF" />
-            </Pressable>
-          </View>
-          <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-            <LiorisLogo size={56} variant="symbol" />
-            <View style={{ marginTop: 8 }}>
-              <LiorisLogo size={32} variant="wordmark" />
-            </View>
-          </View>
-        </View>
-
-        <WaveCard>
-          <View
-            style={{
-              flexDirection: 'row',
-              backgroundColor: colors.divider,
-              borderRadius: radius.pill,
-              padding: 4,
-              marginBottom: spacing.lg,
-            }}
-          >
-            {(['student', 'alumni'] as const).map((p) => {
-              const selected = portal === p;
-              return (
-                <Pressable
-                  key={p}
-                  onPress={() => setPortal(p)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected }}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radius.pill,
-                    backgroundColor: selected ? colors.brandPrimary : 'transparent',
-                  }}
-                >
-                  <Ionicons
-                    name={p === 'student' ? 'school' : 'star'}
-                    size={14}
-                    color={selected ? '#FFFFFF' : colors.textSecondary}
-                  />
-                  <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
-                    {p === 'student' ? 'Student Portal' : 'Alumni Circle'}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <AppText variant="h2" weight="bold" style={{ marginBottom: spacing.xs }}>
-            {portal === 'student' ? "Verify & Let's Study!" : 'Welcome Back, Graduate!'}
-          </AppText>
-          <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
-            {portal === 'student'
-              ? 'Log into your secure, verified student space and connect with complete privacy.'
-              : 'Sign in to reconnect with classmates and give back to your campus community.'}
-          </AppText>
-
-          <AppTextField
-            label=""
-            placeholder="School Email (.edu / .edu.ng)"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (errorMessage) setErrorMessage(null);
-            }}
-          />
-          <AppTextField
-            label=""
-            placeholder="Password (Min 6 Characters)"
-            secureTextEntry
-            showPasswordToggle
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (errorMessage) setErrorMessage(null);
-            }}
-          />
-
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md, marginTop: -spacing.xs }}>
-            <Pressable onPress={() => { setForgotStep('request'); setForgotError(null); setForgotModalOpen(true); }}>
-              <AppText variant="caption" tone="brand" weight="semiBold">
-                Forgot Password?
-              </AppText>
-            </Pressable>
-          </View>
-
-          {errorMessage ? (
-            <View
-              style={{
+                flex: 1,
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 8,
-                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
-                borderColor: colors.critical,
-                borderWidth: 1,
-                borderRadius: radius.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                marginBottom: spacing.md,
-              }}
-            >
-              <Ionicons name="alert-circle" size={18} color={colors.critical} />
-              <AppText
-                variant="bodySmall"
-                weight="semiBold"
-                style={{ color: colors.critical, flex: 1 }}
-              >
-                {errorMessage}
-              </AppText>
-            </View>
-          ) : null}
-
-          <AppButton label="Secure Login" onPress={handleLogin} loading={submitting} disabled={!email || !password} fullWidth />
-
-          <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
-            <Link href="/(auth)/register">
-              <AppText tone="brand" weight="semiBold">
-                Don't see your account? Sign Up
-              </AppText>
-            </Link>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.lg }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
-            <AppText variant="caption" tone="secondary" weight="semiBold">
-              OR CONTINUE WITH
-            </AppText>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
-          </View>
-
-          <Pressable
-            onPress={handleGoogleSignIn}
-            disabled={googleSubmitting}
-            accessibilityRole="button"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              borderWidth: 1,
-              borderColor: colors.border,
-              borderRadius: radius.md,
-              paddingVertical: spacing.md,
-              backgroundColor: colors.surface,
-              opacity: googleSubmitting ? 0.7 : 1,
-            }}
-          >
-            <Ionicons name="logo-google" size={18} color="#EA4335" />
-            <AppText variant="bodySmall" weight="bold">
-              {googleSubmitting ? 'Connecting Google...' : 'Continue with Google'}
-            </AppText>
-          </Pressable>
-        </WaveCard>
-
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <SolidCard style={{ alignItems: 'center', marginTop: spacing.lg }}>
-            <View
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: radius.md,
-                backgroundColor: colors.divider,
-                alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: spacing.md,
+                gap: 6,
+                paddingVertical: spacing.sm,
+                borderRadius: radius.pill,
+                backgroundColor: selected ? colors.brandPrimary : 'transparent',
               }}
             >
-              <Ionicons name={SLIDES[slide].icon} size={24} color={colors.textSecondary} />
-            </View>
-            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
-              {SLIDES[slide].title}
-            </AppText>
-            <AppText tone="secondary" style={{ textAlign: 'center', marginBottom: spacing.md }}>
-              {SLIDES[slide].description}
-            </AppText>
-            <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.sm }}>
-              {SLIDES.map((_, i) => (
-                <View
-                  key={i}
-                  style={{
-                    width: i === slide ? 18 : 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: i === slide ? colors.brandPrimary : colors.border,
-                  }}
-                />
-              ))}
-            </View>
-            <AppText weight="semiBold" tone="brand" onPress={() => setSlide((s) => (s + 1) % SLIDES.length)}>
-              Next Slide
-            </AppText>
-          </SolidCard>
+              <Ionicons
+                name={p === 'student' ? 'school' : 'star'}
+                size={14}
+                color={selected ? '#FFFFFF' : colors.textSecondary}
+              />
+              <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                {p === 'student' ? 'Student Portal' : 'Alumni Circle'}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
 
-          <SolidCard style={{ marginTop: spacing.lg }}>
-            <AppText weight="bold" style={{ marginBottom: spacing.xs }}>
-              Don't see your school yet?
-            </AppText>
-            <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
-              We're live at UNILAG, UI, and FUNAAB at launch. Join the waitlist to fast-track your campus!
-            </AppText>
-            {waitlistSubmitted ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                <AppText weight="semiBold" style={{ color: colors.success }}>
-                  You're on the list — we'll email you when your campus goes live.
+      <AppText variant="h2" weight="bold" style={{ marginBottom: spacing.xs }}>
+        {portal === 'student' ? "Verify & Let's Study!" : 'Welcome Back, Graduate!'}
+      </AppText>
+      <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+        {portal === 'student'
+          ? 'Log into your secure, verified student space and connect with complete privacy.'
+          : 'Sign in to reconnect with classmates and give back to your campus community.'}
+      </AppText>
+
+      <AppTextField
+        label=""
+        placeholder="School Email (.edu / .edu.ng)"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={(text) => {
+          setEmail(text);
+          if (errorMessage) setErrorMessage(null);
+        }}
+      />
+      <AppTextField
+        label=""
+        placeholder="Password (Min 6 Characters)"
+        secureTextEntry
+        showPasswordToggle
+        value={password}
+        onChangeText={(text) => {
+          setPassword(text);
+          if (errorMessage) setErrorMessage(null);
+        }}
+      />
+
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md, marginTop: -spacing.xs }}>
+        <Pressable onPress={() => { setForgotStep('request'); setForgotError(null); setForgotModalOpen(true); }}>
+          <AppText variant="caption" tone="brand" weight="semiBold">
+            Forgot Password?
+          </AppText>
+        </Pressable>
+      </View>
+
+      {errorMessage ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+            borderColor: colors.critical,
+            borderWidth: 1,
+            borderRadius: radius.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            marginBottom: spacing.md,
+          }}
+        >
+          <Ionicons name="alert-circle" size={18} color={colors.critical} />
+          <AppText
+            variant="bodySmall"
+            weight="semiBold"
+            style={{ color: colors.critical, flex: 1 }}
+          >
+            {errorMessage}
+          </AppText>
+        </View>
+      ) : null}
+
+      <AppButton label="Secure Login" onPress={handleLogin} loading={submitting} disabled={!email || !password} fullWidth />
+
+      <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
+        <Link href="/(auth)/register">
+          <AppText tone="brand" weight="semiBold">
+            Don't have an account? Sign Up
+          </AppText>
+        </Link>
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.lg }}>
+        <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
+        <AppText variant="caption" tone="secondary" weight="semiBold">
+          OR CONTINUE WITH
+        </AppText>
+        <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
+      </View>
+
+      <Pressable
+        onPress={handleGoogleSignIn}
+        disabled={googleSubmitting}
+        accessibilityRole="button"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          borderWidth: 1,
+          borderColor: colors.border,
+          borderRadius: radius.md,
+          paddingVertical: spacing.md,
+          backgroundColor: colors.surface,
+          opacity: googleSubmitting ? 0.7 : 1,
+        }}
+      >
+        <Ionicons name="logo-google" size={18} color="#EA4335" />
+        <AppText variant="bodySmall" weight="bold">
+          {googleSubmitting ? 'Connecting Google...' : 'Continue with Google'}
+        </AppText>
+      </Pressable>
+    </>
+  );
+
+  return (
+    <ScreenContainer noPadding glow={false}>
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', flex: 1, minHeight: '100vh' as any }}>
+          {/* Left Hero Pane */}
+          <View style={{ flex: 1.1, position: 'relative', overflow: 'hidden', backgroundColor: '#0F172A', padding: spacing.xxl, justifyContent: 'space-between' }}>
+            <Image
+              source={require('../../assets/images/campus_students_photo.jpg')}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 }}
+              contentFit="cover"
+            />
+            <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)' }} />
+
+            {/* Logo */}
+            <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <LiorisLogo size={44} variant="symbol" />
+              <LiorisLogo size={28} variant="wordmark" />
+            </View>
+
+            {/* Hero Value Props */}
+            <View style={{ zIndex: 10, maxWidth: 540, gap: spacing.lg }}>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, alignSelf: 'flex-start' }}>
+                <AppText variant="caption" weight="bold" tone="inverse">
+                  ✨ The Super-App for University Life
                 </AppText>
               </View>
-            ) : (
-              <>
-                <AppTextField label="" placeholder="Email Address" value={waitlistEmail} onChangeText={setWaitlistEmail} autoCapitalize="none" keyboardType="email-address" />
-                <AppTextField label="" placeholder="University Name" value={waitlistSchool} onChangeText={setWaitlistSchool} />
-                <AppButton
-                  label="Join Waitlist"
-                  variant="accent"
-                  onPress={handleJoinWaitlist}
-                  loading={submittingWaitlist}
-                  disabled={!waitlistEmail.trim() || !waitlistSchool.trim()}
-                  fullWidth
-                />
-              </>
-            )}
-          </SolidCard>
+              <AppText variant="h1" weight="bold" tone="inverse" style={{ fontSize: 36, lineHeight: 44 }}>
+                Connect, study, and thrive within your verified campus community.
+              </AppText>
+              <AppText tone="inverse" variant="body" style={{ opacity: 0.85, fontSize: 16 }}>
+                Real-time lecture schedules, verified past questions library, student escrow marketplace, and faculty mentorship in one unified hub.
+              </AppText>
+
+              {/* Badges */}
+              <View style={{ flexDirection: 'row', gap: 16, marginTop: spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="shield-checkmark" size={20} color="#48BB78" />
+                  <AppText variant="caption" weight="bold" tone="inverse">100% Verified Campus ID</AppText>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="lock-closed" size={20} color="#48BB78" />
+                  <AppText variant="caption" weight="bold" tone="inverse">Encrypted Privacy</AppText>
+                </View>
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View style={{ zIndex: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <AppText variant="caption" tone="inverse" style={{ opacity: 0.7 }}>
+                © 2026 Lioris Campus Inc. All rights reserved.
+              </AppText>
+              <Pressable
+                onPress={toggleTheme}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#FFFFFF" />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Right Form Pane */}
+          <View style={{ width: 540, backgroundColor: colors.background, overflow: 'scroll' as any, padding: spacing.xxl, justifyContent: 'center' }}>
+            <View style={{ maxWidth: 440, width: '100%', alignSelf: 'center' }}>
+              {formContent}
+
+              {/* Demo Accounts List */}
+              <SolidCard style={{ marginTop: spacing.xl, padding: spacing.md }}>
+                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, letterSpacing: 1 }}>
+                  QUICK 1-CLICK DEMO ACCOUNTS
+                </AppText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {[
+                    { label: 'Student', email: 'diana.prince@ui.edu.ng' },
+                    { label: 'Staff', email: 'dr.adeyemi@ui.edu.ng' },
+                    { label: 'Admin', email: 'admin@ui.edu.ng' },
+                    { label: 'Alumni', email: 'alumni.adeola@ui.edu.ng' },
+                  ].map((demo) => (
+                    <Pressable
+                      key={demo.label}
+                      onPress={() => {
+                        setEmail(demo.email);
+                        setPassword('password123');
+                      }}
+                      style={{
+                        backgroundColor: colors.pastelPrimaryBg,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: radius.pill,
+                      }}
+                    >
+                      <AppText variant="caption" weight="bold" tone="brand">
+                        {demo.label}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              </SolidCard>
+            </View>
+          </View>
         </View>
-      </ScrollView>
+      ) : (
+        /* Mobile View */
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+          <View style={{ height: 230, position: 'relative', overflow: 'hidden' }}>
+            <Image
+              source={require('../../assets/images/campus_students_photo.jpg')}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="cover"
+            />
+            <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.48)' }} />
+            <View style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
+              <Pressable
+                onPress={toggleTheme}
+                hitSlop={8}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: 'rgba(0,0,0,0.4)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name={isDark ? 'sunny' : 'moon'} size={18} color="#FFFFFF" />
+              </Pressable>
+            </View>
+            <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+              <LiorisLogo size={56} variant="symbol" />
+              <View style={{ marginTop: 8 }}>
+                <LiorisLogo size={32} variant="wordmark" />
+              </View>
+            </View>
+          </View>
+
+          <WaveCard>
+            {formContent}
+          </WaveCard>
+
+          <View style={{ paddingHorizontal: spacing.lg }}>
+            <SolidCard style={{ alignItems: 'center', marginTop: spacing.lg }}>
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: radius.md,
+                  backgroundColor: colors.divider,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name={SLIDES[slide].icon} size={24} color={colors.textSecondary} />
+              </View>
+              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+                {SLIDES[slide].title}
+              </AppText>
+              <AppText tone="secondary" style={{ textAlign: 'center', marginBottom: spacing.md }}>
+                {SLIDES[slide].description}
+              </AppText>
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.sm }}>
+                {SLIDES.map((_, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      width: i === slide ? 18 : 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: i === slide ? colors.brandPrimary : colors.border,
+                    }}
+                  />
+                ))}
+              </View>
+              <AppText weight="semiBold" tone="brand" onPress={() => setSlide((s) => (s + 1) % SLIDES.length)}>
+                Next Slide
+              </AppText>
+            </SolidCard>
+
+            <SolidCard style={{ marginTop: spacing.lg }}>
+              <AppText weight="bold" style={{ marginBottom: spacing.xs }}>
+                Don't see your school yet?
+              </AppText>
+              <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+                We're live at UNILAG, UI, and FUNAAB at launch. Join the waitlist to fast-track your campus!
+              </AppText>
+              {waitlistSubmitted ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                  <AppText weight="semiBold" style={{ color: colors.success }}>
+                    You're on the list — we'll email you when your campus goes live.
+                  </AppText>
+                </View>
+              ) : (
+                <>
+                  <AppTextField label="" placeholder="Email Address" value={waitlistEmail} onChangeText={setWaitlistEmail} autoCapitalize="none" keyboardType="email-address" />
+                  <AppTextField label="" placeholder="University Name" value={waitlistSchool} onChangeText={setWaitlistSchool} />
+                  <AppButton
+                    label="Join Waitlist"
+                    variant="accent"
+                    onPress={handleJoinWaitlist}
+                    loading={submittingWaitlist}
+                    disabled={!waitlistEmail.trim() || !waitlistSchool.trim()}
+                    fullWidth
+                  />
+                </>
+              )}
+            </SolidCard>
+          </View>
+        </ScrollView>
+      )}
 
       {/* Forgot Password Modal */}
       <Modal visible={forgotModalOpen} transparent animationType="fade" onRequestClose={() => setForgotModalOpen(false)}>
