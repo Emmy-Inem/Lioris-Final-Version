@@ -133,9 +133,9 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
  />
 
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginBottom: spacing.lg }}>
- <Ionicons name="sparkles"size={12} color={colors.brandPrimary} />
+ <Ionicons name="bulb-outline"size={12} color={colors.brandPrimary} />
  <AppText variant="caption"weight="semiBold"tone="brand">
- Auto-generate with Gemini AI
+ Auto-suggest details
  </AppText>
  </View>
 

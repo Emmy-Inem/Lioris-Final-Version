@@ -330,7 +330,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  <View style={{ width: 240, gap: spacing.md }}>
  <SolidCard radius={18} style={{ padding: spacing.md }}>
  <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Channels 
+ Channels
  </AppText>
  <View style={{ gap: 4 }}>
  {CHANNELS.map((ch) => {
@@ -375,7 +375,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
  <SolidCard radius={18} style={{ padding: spacing.md }}>
  <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Sort Feed ⚡
+ Sort Feed
  </AppText>
  <View style={{ gap: 6 }}>
  {(['latest', 'popular'] as const).map((opt) => (
@@ -500,7 +500,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  <SolidCard radius={18} style={{ padding: spacing.md }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
  <AppText variant="h3" weight="bold">
- Discussion Hubs 
+ Discussion Hubs
  </AppText>
  <Pressable onPress={() => setWorkspacesOpen(true)}>
  <AppText variant="caption" weight="bold" tone="brand">Explore →</AppText>

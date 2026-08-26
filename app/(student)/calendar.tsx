@@ -26,7 +26,7 @@ export default function CalendarScreen() {
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
  <View>
  <AppText variant="h1" weight="bold">
- Campus Calendar & Timetable 
+ Campus Calendar & Timetable
  </AppText>
  <AppText tone="secondary" variant="bodySmall">
  Class lectures, continuous assessment tests, submission deadlines & campus events

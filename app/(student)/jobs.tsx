@@ -182,7 +182,7 @@ export default function JobsScreen() {
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
  <View style={{ flex: 1, marginRight: spacing.sm }}>
  <AppText variant="h1" weight="bold">
- Career & Internships 
+ Career & Internships
  </AppText>
  <AppText tone="secondary" variant="bodySmall">
  Verified student roles, alumni referrals & industry gigs

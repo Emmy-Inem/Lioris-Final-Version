@@ -32,7 +32,7 @@ const NOTIFICATION_ICONS: Record<
  event: { icon: 'calendar-outline', bg: '#E6F4EA', color: '#137333' },
  message: { icon: 'chatbubble-outline', bg: '#E8F0FE', color: '#1A73E8' },
  moderation: { icon: 'shield-checkmark-outline', bg: '#FCE8E6', color: '#C5221F' },
- system: { icon: 'sparkles-outline', bg: '#F3E8FD', color: '#7C3AED' },
+ system: { icon: 'information-circle-outline', bg: '#F3E8FD', color: '#7C3AED' },
 };
 
 function formatNotificationTime(iso?: string) {

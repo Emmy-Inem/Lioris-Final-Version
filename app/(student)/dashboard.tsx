@@ -183,340 +183,340 @@ export default function StudentDashboard() {
  </AppText>
  </Pressable>
 
- <View style={{ position: 'absolute', bottom: 14, left: 16 }}>
- <AppText variant="h2" weight="bold" tone="inverse">
- Hello {firstName} 
- </AppText>
- <AppText tone="inverse" variant="caption" style={{ opacity: 0.9 }}>
- {profile?.department ?? 'Computer Science & AI'} | Level {profile?.level ?? 4}
- </AppText>
- </View>
- </View>
+            <View style={{ position: 'absolute', bottom: 14, left: 16 }}>
+              <AppText variant="h2" weight="bold" tone="inverse">
+                Hello {firstName}
+              </AppText>
+              <AppText tone="inverse" variant="caption" style={{ opacity: 0.9 }}>
+                {profile?.department ?? 'Computer Science & AI'} | Level {profile?.level ?? 4}
+              </AppText>
+            </View>
+          </View>
 
- {!isDesktop && (
- <Pressable
- onPress={() => router.push('/(student)/search')}
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- backgroundColor: colors.surface,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.md,
- paddingVertical: 10,
- borderWidth: 1,
- borderColor: colors.border,
- gap: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="search" size={18} color={colors.textSecondary} />
- <AppText tone="secondary" variant="bodySmall">
- Search threads, past questions, events, portals...
- </AppText>
- </Pressable>
- )}
+          {!isDesktop && (
+            <Pressable
+              onPress={() => router.push('/(student)/search')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.surface,
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 10,
+                borderWidth: 1,
+                borderColor: colors.border,
+                gap: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="search" size={18} color={colors.textSecondary} />
+              <AppText tone="secondary" variant="bodySmall">
+                Search threads, past questions, events, portals...
+              </AppText>
+            </Pressable>
+          )}
 
- {/* Official Campus Announcements & Broadcasts */}
- <AnnouncementsWidget scope="student" />
+          {/* Official Campus Announcements & Broadcasts */}
+          <AnnouncementsWidget scope="student" />
 
- {/* High-Utility Next Class Countdown Widget */}
- {isFeatureEnabled('utility_cards') && (
- <SolidCard radius={20} backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <Ionicons name="time"size={16} color={colors.brandPrimary} />
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
- NEXT LECTURE TODAY • IN 42 MINS
- </AppText>
- </View>
- <Badge label="LT 2 Main"tone="brand" />
- </View>
+          {/* High-Utility Next Class Countdown Widget */}
+          {isFeatureEnabled('utility_cards') && (
+            <SolidCard radius={20} backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="time" size={16} color={colors.brandPrimary} />
+                  <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+                    NEXT LECTURE TODAY • IN 42 MINS
+                  </AppText>
+                </View>
+                <Badge label="LT 2 Main" tone="brand" />
+              </View>
 
- <AppText variant="h3"weight="bold"style={{ marginBottom: 2 }}>
- CSC 301: Advanced Algorithms & Data Structures
- </AppText>
- <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
- 11:00 AM - 1:00 PM • Prof. O. Adeyemi • Topic: Dynamic Programming & Graphs
- </AppText>
+              <AppText variant="h3" weight="bold" style={{ marginBottom: 2 }}>
+                CSC 301: Advanced Algorithms & Data Structures
+              </AppText>
+              <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
+                11:00 AM - 1:00 PM • Prof. O. Adeyemi • Topic: Dynamic Programming & Graphs
+              </AppText>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm }}>
- <Pressable
- onPress={() => router.push('/(student)/resources')}
- style={{
- flex: 1,
- backgroundColor: colors.surface,
- borderRadius: radius.pill,
- paddingVertical: 7,
- alignItems: 'center',
- borderWidth: 1,
- borderColor: colors.border,
- }}
- >
- <AppText variant="caption"weight="bold"tone="brand">
- Course Notes & Solved PQs
- </AppText>
- </Pressable>
- <Pressable
- onPress={() => router.push('/(student)/calendar')}
- style={{
- flex: 1,
- backgroundColor: colors.brandPrimary,
- borderRadius: radius.pill,
- paddingVertical: 7,
- alignItems: 'center',
- }}
- >
- <AppText variant="caption"weight="bold"tone="inverse">
- Full Timetable →
- </AppText>
- </Pressable>
- </View>
- </SolidCard>
- )}
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <Pressable
+                  onPress={() => router.push('/(student)/resources')}
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.surface,
+                    borderRadius: radius.pill,
+                    paddingVertical: 7,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="brand">
+                    Course Notes & Solved PQs
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/(student)/calendar')}
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.brandPrimary,
+                    borderRadius: radius.pill,
+                    paddingVertical: 7,
+                    alignItems: 'center',
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="inverse">
+                    Full Timetable →
+                  </AppText>
+                </Pressable>
+              </View>
+            </SolidCard>
+          )}
 
- {/* Live Study Squads & Campus Hub Activity */}
- {isFeatureEnabled('study_groups') && (
- <View style={{ marginBottom: spacing.lg }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <AppText variant="h3"weight="bold">
- Live Study Squads & Hubs 
- </AppText>
- <Badge label="2 Active Now"tone="success" />
- </View>
+          {/* Live Study Squads & Campus Hub Activity */}
+          {isFeatureEnabled('study_groups') && (
+            <View style={{ marginBottom: spacing.lg }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Live Study Squads & Hubs
+                </AppText>
+                <Badge label="2 Active Now" tone="success" />
+              </View>
 
- <View style={{ gap: spacing.sm }}>
- <SolidCard radius={16}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
- <Ionicons name="location"size={14} color={colors.brandPrimary} />
- <AppText weight="bold"variant="bodySmall">
- Senate E-Library (2nd Floor Quiet Zone)
- </AppText>
- </View>
- <AppText tone="secondary"variant="caption">
- 28 students • CSC 301 & MEE 305 peer revision sprint
- </AppText>
- </View>
- <Pressable
- onPress={() => router.push('/(student)/feed')}
- style={{
- backgroundColor: colors.pastelPrimaryBg,
- paddingHorizontal: spacing.sm,
- paddingVertical: 4,
- borderRadius: radius.pill,
- }}
- >
- <AppText variant="caption"weight="bold"tone="brand">
- Join Squad 
- </AppText>
- </Pressable>
- </View>
- </SolidCard>
+              <View style={{ gap: spacing.sm }}>
+                <SolidCard radius={16}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Ionicons name="location" size={14} color={colors.brandPrimary} />
+                        <AppText weight="bold" variant="bodySmall">
+                          Senate E-Library (2nd Floor Quiet Zone)
+                        </AppText>
+                      </View>
+                      <AppText tone="secondary" variant="caption">
+                        28 students • CSC 301 & MEE 305 peer revision sprint
+                      </AppText>
+                    </View>
+                    <Pressable
+                      onPress={() => router.push('/(student)/feed')}
+                      style={{
+                        backgroundColor: colors.pastelPrimaryBg,
+                        paddingHorizontal: spacing.sm,
+                        paddingVertical: 4,
+                        borderRadius: radius.pill,
+                      }}
+                    >
+                      <AppText variant="caption" weight="bold" tone="brand">
+                        Join Squad
+                      </AppText>
+                    </Pressable>
+                  </View>
+                </SolidCard>
 
- <SolidCard radius={16}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
- <Ionicons name="code-slash"size={14} color={colors.brandPrimary} />
- <AppText weight="bold"variant="bodySmall">
- Tech Hub / Hackfest Arena (Faculty Hall)
- </AppText>
- </View>
- <AppText tone="secondary"variant="caption">
- 14 students • Team Aqua demo rehearsal & mobile UI testing
- </AppText>
- </View>
- <Pressable
- onPress={() => router.push('/(student)/feed')}
- style={{
- backgroundColor: colors.pastelPrimaryBg,
- paddingHorizontal: spacing.sm,
- paddingVertical: 4,
- borderRadius: radius.pill,
- }}
- >
- <AppText variant="caption"weight="bold"tone="brand">
- View Demo 
- </AppText>
- </Pressable>
- </View>
- </SolidCard>
- </View>
- </View>
- )}
+                <SolidCard radius={16}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Ionicons name="code-slash" size={14} color={colors.brandPrimary} />
+                        <AppText weight="bold" variant="bodySmall">
+                          Tech Hub / Hackfest Arena (Faculty Hall)
+                        </AppText>
+                      </View>
+                      <AppText tone="secondary" variant="caption">
+                        14 students • Team Aqua demo rehearsal & mobile UI testing
+                      </AppText>
+                    </View>
+                    <Pressable
+                      onPress={() => router.push('/(student)/feed')}
+                      style={{
+                        backgroundColor: colors.pastelPrimaryBg,
+                        paddingHorizontal: spacing.sm,
+                        paddingVertical: 4,
+                        borderRadius: radius.pill,
+                      }}
+                    >
+                      <AppText variant="caption" weight="bold" tone="brand">
+                        View Demo
+                      </AppText>
+                    </Pressable>
+                  </View>
+                </SolidCard>
+              </View>
+            </View>
+          )}
 
- {/* Dynamic Campus Utilities & Portal Grid */}
- {isFeatureEnabled('utility_cards') && (
- <View style={{ marginBottom: spacing.lg }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <AppText variant="h3"weight="bold">
- Campus Utilities & Portals 
- </AppText>
- <Pressable onPress={() => router.push('/(student)/resources')}>
- <AppText tone="brand"variant="bodySmall"weight="bold">
- View All →
- </AppText>
- </Pressable>
- </View>
+          {/* Dynamic Campus Utilities & Portal Grid */}
+          {isFeatureEnabled('utility_cards') && (
+            <View style={{ marginBottom: spacing.lg }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Campus Utilities & Portals
+                </AppText>
+                <Pressable onPress={() => router.push('/(student)/resources')}>
+                  <AppText tone="brand" variant="bodySmall" weight="bold">
+                    View All →
+                  </AppText>
+                </Pressable>
+              </View>
 
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
- {shortcuts?.map((item) => {
- const colorInfo = SHORTCUT_COLOR_MAP[item.iconColor] ?? SHORTCUT_COLOR_MAP.sage;
- const route = resolveShortcutRoute(item.internalAction);
- return (
- <ShortcutTile
- key={item.id}
- icon={item.icon as any}
- bg={colors[colorInfo.bgKey]}
- iconColor={colors[colorInfo.textKey]}
- title={item.title}
- subtitle={item.description}
- subtitleColor={colors[colorInfo.textKey]}
- onPress={() => {
- if (route) {
- router.push(route as any);
- } else {
- Alert.alert(item.title, item.description);
- }
- }}
- />
- );
- })}
- </View>
- </View>
- )}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                {shortcuts?.map((item) => {
+                  const colorInfo = SHORTCUT_COLOR_MAP[item.iconColor] ?? SHORTCUT_COLOR_MAP.sage;
+                  const route = resolveShortcutRoute(item.internalAction);
+                  return (
+                    <ShortcutTile
+                      key={item.id}
+                      icon={item.icon as any}
+                      bg={colors[colorInfo.bgKey]}
+                      iconColor={colors[colorInfo.textKey]}
+                      title={item.title}
+                      subtitle={item.description}
+                      subtitleColor={colors[colorInfo.textKey]}
+                      onPress={() => {
+                        if (route) {
+                          router.push(route as any);
+                        } else {
+                          Alert.alert(item.title, item.description);
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          )}
 
- {/* Featured Campus Events Preview */}
- {isFeatureEnabled('campus_events') && (
- <View style={{ marginBottom: spacing.lg }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <AppText variant="h3"weight="bold">
- Featured Campus Events 
- </AppText>
- <Pressable onPress={() => router.push('/(student)/events-list')}>
- <AppText tone="brand"variant="bodySmall"weight="bold">
- See All ({events?.length ?? 0}) →
- </AppText>
- </Pressable>
- </View>
+          {/* Featured Campus Events Preview */}
+          {isFeatureEnabled('campus_events') && (
+            <View style={{ marginBottom: spacing.lg }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Featured Campus Events
+                </AppText>
+                <Pressable onPress={() => router.push('/(student)/events-list')}>
+                  <AppText tone="brand" variant="bodySmall" weight="bold">
+                    See All ({events?.length ?? 0}) →
+                  </AppText>
+                </Pressable>
+              </View>
 
- {events?.slice(0, 2).map((evt) => (
- <SolidCard key={evt.id} radius={18} style={{ marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
- <View
- style={{
- width: 50,
- height: 50,
- borderRadius: radius.md,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- borderWidth: 1,
- borderColor: colors.brandPrimary,
- }}
- >
- <Ionicons name="calendar"size={22} color={colors.brandPrimary} />
- </View>
- <View style={{ flex: 1 }}>
- <AppText weight="bold"variant="bodySmall">
- {evt.title}
- </AppText>
- <AppText tone="secondary"variant="caption">
- {evt.location} • {evt.rsvpCount} RSVPs
- </AppText>
- </View>
- <Pressable
- onPress={() => router.push('/(student)/events-list')}
- style={{
- backgroundColor: colors.brandPrimary,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.md,
- paddingVertical: 6,
- }}
- >
- <AppText variant="caption"weight="bold"tone="inverse">
- RSVP
- </AppText>
- </Pressable>
- </View>
- </SolidCard>
- ))}
- </View>
- )}
- </View>
+              {events?.slice(0, 2).map((evt) => (
+                <SolidCard key={evt.id} radius={18} style={{ marginBottom: spacing.sm }}>
+                  <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+                    <View
+                      style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: radius.md,
+                        backgroundColor: colors.pastelPrimaryBg,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1,
+                        borderColor: colors.brandPrimary,
+                      }}
+                    >
+                      <Ionicons name="calendar" size={22} color={colors.brandPrimary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppText weight="bold" variant="bodySmall">
+                        {evt.title}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption">
+                        {evt.location} • {evt.rsvpCount} RSVPs
+                      </AppText>
+                    </View>
+                    <Pressable
+                      onPress={() => router.push('/(student)/events-list')}
+                      style={{
+                        backgroundColor: colors.brandPrimary,
+                        borderRadius: radius.pill,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <AppText variant="caption" weight="bold" tone="inverse">
+                        RSVP
+                      </AppText>
+                    </Pressable>
+                  </View>
+                </SolidCard>
+              ))}
+            </View>
+          )}
+        </View>
 
- {/* Right Sticky Column on Desktop */}
- {isDesktop && (
- <View style={{ width: 340, gap: spacing.md }}>
- {/* Academic Standing & Semester KPI Card */}
- <SolidCard radius={20} style={{ padding: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <AppText variant="h3" weight="bold">
- Academic Standing 
- </AppText>
- <Badge label="1st Class Track" tone="success" />
- </View>
+        {/* Right Sticky Column on Desktop */}
+        {isDesktop && (
+          <View style={{ width: 360, gap: spacing.md }}>
+            {/* Academic Standing & Semester KPI Card */}
+            <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Academic Standing
+                </AppText>
+                <Badge label="1st Class Track" tone="success" />
+              </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
- <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}>
- <AppText variant="caption" tone="secondary">CGPA</AppText>
- <AppText variant="h2" weight="bold" tone="brand">3.85</AppText>
- <AppText variant="caption" style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>↑ +0.12</AppText>
- </View>
- <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}>
- <AppText variant="caption" tone="secondary">Attendance</AppText>
- <AppText variant="h2" weight="bold" tone="brand">94%</AppText>
- <AppText variant="caption" style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>Eligible</AppText>
- </View>
- </View>
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+                <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}>
+                  <AppText variant="caption" tone="secondary">CGPA</AppText>
+                  <AppText variant="h2" weight="bold" tone="brand">3.85</AppText>
+                  <AppText variant="caption" style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>↑ +0.12</AppText>
+                </View>
+                <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}>
+                  <AppText variant="caption" tone="secondary">Attendance</AppText>
+                  <AppText variant="h2" weight="bold" tone="brand">94%</AppText>
+                  <AppText variant="caption" style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>Eligible</AppText>
+                </View>
+              </View>
 
- <View style={{ gap: 8 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
- <AppText variant="caption" tone="secondary">Semester Progress</AppText>
- <AppText variant="caption" weight="bold">Week 8 of 14</AppText>
- </View>
- <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' }}>
- <View style={{ width: '57%', height: '100%', backgroundColor: colors.brandPrimary, borderRadius: 3 }} />
- </View>
- </View>
- </SolidCard>
+              <View style={{ gap: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <AppText variant="caption" tone="secondary">Semester Progress</AppText>
+                  <AppText variant="caption" weight="bold">Week 8 of 14</AppText>
+                </View>
+                <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' }}>
+                  <View style={{ width: '57%', height: '100%', backgroundColor: colors.brandPrimary, borderRadius: 3 }} />
+                </View>
+              </View>
+            </SolidCard>
 
- {/* Today's Timetable & Schedule */}
- <SolidCard radius={20} style={{ padding: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <AppText variant="h3" weight="bold">
- Today's Schedule 
- </AppText>
- <Pressable onPress={() => router.push('/(student)/calendar')}>
- <AppText variant="caption" weight="bold" tone="brand">Calendar →</AppText>
- </Pressable>
- </View>
+            {/* Today's Timetable & Schedule */}
+            <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Today's Schedule
+                </AppText>
+                <Pressable onPress={() => router.push('/(student)/calendar')}>
+                  <AppText variant="caption" weight="bold" tone="brand">Calendar →</AppText>
+                </Pressable>
+              </View>
 
- <View style={{ gap: spacing.sm }}>
- <View style={{ borderLeftWidth: 3, borderLeftColor: colors.brandPrimary, paddingLeft: spacing.sm }}>
- <AppText variant="bodySmall" weight="bold">CSC 301: Algorithms</AppText>
- <AppText variant="caption" tone="secondary">11:00 AM - 1:00 PM • Lecture Theater 2</AppText>
- </View>
- <View style={{ borderLeftWidth: 3, borderLeftColor: '#3B82F6', paddingLeft: spacing.sm }}>
- <AppText variant="bodySmall" weight="bold">MEE 305: Engineering Systems</AppText>
- <AppText variant="caption" tone="secondary">2:00 PM - 4:00 PM • Faculty Lab 1</AppText>
- </View>
- <View style={{ borderLeftWidth: 3, borderLeftColor: '#10B981', paddingLeft: spacing.sm }}>
- <AppText variant="bodySmall" weight="bold">Campus Tech Fest Meetup</AppText>
- <AppText variant="caption" tone="secondary">5:00 PM • Innovation Arena</AppText>
- </View>
- </View>
- </SolidCard>
+              <View style={{ gap: spacing.sm }}>
+                <View style={{ borderLeftWidth: 3, borderLeftColor: colors.brandPrimary, paddingLeft: spacing.sm }}>
+                  <AppText variant="bodySmall" weight="bold">CSC 301: Algorithms</AppText>
+                  <AppText variant="caption" tone="secondary">11:00 AM - 1:00 PM • Lecture Theater 2</AppText>
+                </View>
+                <View style={{ borderLeftWidth: 3, borderLeftColor: '#3B82F6', paddingLeft: spacing.sm }}>
+                  <AppText variant="bodySmall" weight="bold">MEE 305: Engineering Systems</AppText>
+                  <AppText variant="caption" tone="secondary">2:00 PM - 4:00 PM • Faculty Lab 1</AppText>
+                </View>
+                <View style={{ borderLeftWidth: 3, borderLeftColor: '#10B981', paddingLeft: spacing.sm }}>
+                  <AppText variant="bodySmall" weight="bold">Campus Tech Fest Meetup</AppText>
+                  <AppText variant="caption" tone="secondary">5:00 PM • Innovation Arena</AppText>
+                </View>
+              </View>
+            </SolidCard>
 
- {/* Upcoming Deadlines Widget */}
- <SolidCard radius={20} style={{ padding: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <AppText variant="h3" weight="bold">
- Upcoming Deadlines 
- </AppText>
- <Badge label="2 Due Soon" tone="warning" />
- </View>
+            {/* Upcoming Deadlines Widget */}
+            <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Upcoming Deadlines
+                </AppText>
+                <Badge label="2 Due Soon" tone="warning" />
+              </View>
 
  <View style={{ gap: 10 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
