@@ -516,9 +516,28 @@ export default function StudentDashboard() {
     </ScrollView>
 
       {/* Photo Picker Modal */}
-      <Modal visible={photoPickerOpen} transparent animationType="slide"onRequestClose={() => setPhotoPickerOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
+      <Modal visible={photoPickerOpen} transparent animationType="fade" onRequestClose={() => setPhotoPickerOpen(false)}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: isDesktop ? 'center' : 'flex-end',
+            alignItems: isDesktop ? 'center' : 'stretch',
+            padding: isDesktop ? spacing.lg : 0,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: isDesktop ? 24 : undefined,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing.lg,
+              maxHeight: isDesktop ? '85%' : '80%',
+              maxWidth: isDesktop ? 540 : undefined,
+              width: isDesktop ? '100%' : undefined,
+            }}
+          >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Ionicons name="images"size={20} color={colors.brandPrimary} />

@@ -9,6 +9,7 @@ import { AppButton } from './AppButton';
 import { Badge } from './Badge';
 import { SolidCard } from './SolidCard';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 
 const CHANNELS = ['Tech Hub', 'Academic', 'Polls', 'Housing', 'Social', 'Lost & Found'] as const;
@@ -42,6 +43,7 @@ interface PublishThreadModalProps {
 
 export function PublishThreadModal({ visible, onClose, onPublish }: PublishThreadModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
   const [mode, setMode] = useState<'Thread' | 'Rapid-Fire Conversation'>('Thread');
   const [topic, setTopic] = useState('');
   const [courseTags, setCourseTags] = useState('');
@@ -125,7 +127,13 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
 
   function handleAddPollOption() {
     if (pollOptions.length >= 4) return;
-    setPollOptions([...pollOptions, `Option ${String.fromCharCode(65 + pollOptions.length)}`]);
+    setPollOptions([...pollOptions, '']);
+  }
+
+  function handlePollOptionChange(text: string, index: number) {
+    const updated = [...pollOptions];
+    updated[index] = text;
+    setPollOptions(updated);
   }
 
   function handleRemovePollOption(index: number) {
@@ -176,12 +184,37 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   }
 
   return (
-    <Modal visible={visible} animationType="slide"onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 52, paddingHorizontal: spacing.lg }}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"contentContainerStyle={{ paddingBottom: 100 }}
+    <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
+          justifyContent: isDesktop ? 'center' : 'flex-start',
+          alignItems: isDesktop ? 'center' : 'stretch',
+          paddingTop: isDesktop ? spacing.lg : 52,
+          paddingHorizontal: spacing.lg,
+          paddingBottom: isDesktop ? spacing.lg : 0,
+        }}
+      >
+        <View
+          style={{
+            flex: isDesktop ? undefined : 1,
+            backgroundColor: colors.background,
+            width: isDesktop ? '100%' : undefined,
+            maxWidth: isDesktop ? 680 : undefined,
+            maxHeight: isDesktop ? '90%' : undefined,
+            borderRadius: isDesktop ? 24 : 0,
+            padding: isDesktop ? spacing.xl : 0,
+            borderWidth: isDesktop ? 1 : 0,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden',
+          }}
         >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 100 }}
+          >
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -550,6 +583,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
             label="Publish Thread"
             onPress={handlePublish}
           />
+        </View>
         </View>
       </View>
     </Modal>

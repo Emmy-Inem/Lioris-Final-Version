@@ -7,6 +7,7 @@ import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const CATEGORIES = ['Notes', 'Past Questions', 'Projects'] as const;
 
@@ -155,12 +156,14 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
     }
   }
 
+  const { isDesktop } = useResponsive();
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <View style={{ flex: 1, justifyContent: isDesktop ? 'center' : 'flex-end', alignItems: isDesktop ? 'center' : 'stretch', padding: isDesktop ? spacing.lg : 0 }}>
         <Animated.View
           style={[
-            { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
+            { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
             backdropStyle,
           ]}
         />
@@ -168,10 +171,13 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
           style={[
             {
               backgroundColor: colors.background,
+              borderRadius: isDesktop ? 24 : 0,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               padding: spacing.lg,
               maxHeight: '90%',
+              maxWidth: isDesktop ? 580 : undefined,
+              width: isDesktop ? '100%' : undefined,
             },
             sheetStyle,
           ]}

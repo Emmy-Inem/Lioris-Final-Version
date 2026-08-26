@@ -7,6 +7,7 @@ import { AppText } from'./AppText';
 import { AppTextField } from'./AppTextField';
 import { AppButton } from'./AppButton';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { createEvent } from'@/api/events';
 import { EventCategory } from'@/api/types';
 import { haptics } from'@/utils/haptics';
@@ -27,6 +28,7 @@ interface PublishEventModalProps {
 
 export function PublishEventModal({ visible, onClose, onPublish }: PublishEventModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventType, setEventType] = useState<(typeof EVENT_TYPES)[number]>('Lioris Live Event (In-App)');
@@ -58,25 +60,24 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
     haptics.medium();
     setSubmitting(true);
     try {
-      const startAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3);
-      const endAt = new Date(startAt.getTime() + 1000 * 60 * 90);
+      const startAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString();
+      const endAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3 + 1000 * 60 * 90).toISOString();
       await createEvent({
         title: title.trim(),
         description: description.trim() || 'No description provided.',
         category: CATEGORY_LABELS[category],
         location: eventType === 'Lioris Live Event (In-App)' ? 'Lioris Live (In-App)' : 'Campus Main Hall',
         visibilityScope: 'campus',
-        startAt: startAt.toISOString(),
-        endAt: endAt.toISOString(),
-        imageUrl: bannerUri,
+        startAt,
+        endAt,
         sponsored,
+        imageUrl: bannerUri || null,
       });
       onPublish();
       onClose();
       setTitle('');
       setDescription('');
       setBannerUri(null);
-      setSponsored(false);
       setErrorMessage(null);
     } catch (err: any) {
       haptics.error();
@@ -87,12 +88,41 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
   }
 
   return (
-    <Modal visible={visible} animationType="slide"onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 56, paddingHorizontal: spacing.lg }}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <AppText variant="h1"weight="bold"style={{ marginBottom: spacing.lg }}>
-            Publish Event
-          </AppText>
+    <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
+          justifyContent: isDesktop ? 'center' : 'flex-start',
+          alignItems: isDesktop ? 'center' : 'stretch',
+          paddingTop: isDesktop ? spacing.lg : 56,
+          paddingHorizontal: spacing.lg,
+          paddingBottom: isDesktop ? spacing.lg : 0,
+        }}
+      >
+        <View
+          style={{
+            flex: isDesktop ? undefined : 1,
+            backgroundColor: colors.background,
+            width: isDesktop ? '100%' : undefined,
+            maxWidth: isDesktop ? 620 : undefined,
+            maxHeight: isDesktop ? '90%' : undefined,
+            borderRadius: isDesktop ? 24 : 0,
+            padding: isDesktop ? spacing.xl : 0,
+            borderWidth: isDesktop ? 1 : 0,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden',
+          }}
+        >
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
+              <AppText variant="h1" weight="bold">
+                Publish Event
+              </AppText>
+              <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
+              </Pressable>
+            </View>
 
           <AppTextField label=""placeholder="Event Title"value={title} onChangeText={setTitle} />
           <AppTextField
@@ -250,6 +280,7 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
         <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingVertical: spacing.md }}>
           <AppButton label="Cancel" variant="ghost" onPress={onClose} />
           <AppButton label="Host Event" onPress={handleHost} loading={submitting} />
+        </View>
         </View>
       </View>
     </Modal>

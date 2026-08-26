@@ -5,6 +5,7 @@ import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { createJob } from '@/api/jobs';
 import { haptics } from '@/utils/haptics';
 
@@ -17,7 +18,8 @@ interface CreateJobModalProps {
 const JOB_TYPES = ['Full-time', 'Internship', 'Part-time', 'Contract'] as const;
 
 export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
   const [location, setLocation] = useState('');
@@ -59,7 +61,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
       return;
     }
     if (!applyUrl.trim()) {
-      setErrorMessage('Please provide an application link or email.');
+      setErrorMessage('Please provide an application URL or email.');
       haptics.error();
       return;
     }
@@ -93,22 +95,46 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 56, paddingHorizontal: spacing.lg }}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 60 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
-            <View>
-              <AppText variant="h1" weight="bold">
-                Post Opportunity 💼
-              </AppText>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                Share internships, graduate roles & referrals
-              </AppText>
+    <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
+          justifyContent: isDesktop ? 'center' : 'flex-start',
+          alignItems: isDesktop ? 'center' : 'stretch',
+          paddingTop: isDesktop ? spacing.lg : 56,
+          paddingHorizontal: spacing.lg,
+          paddingBottom: isDesktop ? spacing.lg : 0,
+        }}
+      >
+        <View
+          style={{
+            flex: isDesktop ? undefined : 1,
+            backgroundColor: colors.background,
+            width: isDesktop ? '100%' : undefined,
+            maxWidth: isDesktop ? 620 : undefined,
+            maxHeight: isDesktop ? '90%' : undefined,
+            borderRadius: isDesktop ? 24 : 0,
+            padding: isDesktop ? spacing.xl : 0,
+            borderWidth: isDesktop ? 1 : 0,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden',
+          }}
+        >
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
+              <View>
+                <AppText variant="h1" weight="bold">
+                  Post Opportunity 💼
+                </AppText>
+                <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                  Share internships, graduate roles & referrals
+                </AppText>
+              </View>
+              <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
+              </Pressable>
             </View>
-            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </Pressable>
-          </View>
 
           {errorMessage ? (
             <View
@@ -240,14 +266,15 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
             multiline
           />
 
-          <View style={{ marginTop: spacing.lg }}>
-            <AppButton
-              label={submitting ? 'Publishing...' : 'Publish Opening 🚀'}
-              onPress={handleSubmit}
-              disabled={submitting}
-            />
-          </View>
-        </ScrollView>
+            <View style={{ marginTop: spacing.lg }}>
+              <AppButton
+                label={submitting ? 'Publishing...' : 'Publish Opening 🚀'}
+                onPress={handleSubmit}
+                disabled={submitting}
+              />
+            </View>
+          </ScrollView>
+        </View>
       </View>
     </Modal>
   );

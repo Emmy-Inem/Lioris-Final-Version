@@ -10,6 +10,7 @@ import { UserTypeBadge } from './UserTypeBadge';
 import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { sendConnectionRequest, checkConnectionStatus, deleteConnection } from '@/api/connections';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { UserRole } from '@/api/types';
@@ -117,19 +118,33 @@ export function UserProfileModal({
     }
   }
 
+  const { isDesktop } = useResponsive();
+
   return (
-    <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.72)',
+          justifyContent: isDesktop ? 'center' : 'flex-end',
+          alignItems: isDesktop ? 'center' : 'stretch',
+          padding: isDesktop ? spacing.lg : 0,
+        }}
+      >
+        <Pressable style={{ position: 'absolute', inset: 0 }} onPress={onClose} />
         <View
           style={{
             backgroundColor: colors.surface,
+            borderRadius: isDesktop ? 28 : undefined,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             borderTopWidth: 1,
             borderColor: colors.border,
             overflow: 'hidden',
             maxHeight: '90%',
+            maxWidth: isDesktop ? 540 : undefined,
+            width: isDesktop ? '100%' : undefined,
+            alignSelf: 'center',
             position: 'relative',
           }}
         >

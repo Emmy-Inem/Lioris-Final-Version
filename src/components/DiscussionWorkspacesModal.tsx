@@ -49,11 +49,11 @@ export function DiscussionWorkspacesModal({ visible, onClose }: DiscussionWorksp
   }));
 
   return (
-    <Modal visible={visible} transparent animationType="fade"onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: spacing.lg }}>
-        <Animated.View style={[{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, maxHeight: '80%' }, animatedStyle]}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+        <Animated.View style={[{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, maxHeight: '80%', width: '100%', maxWidth: 520 }, animatedStyle]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-            <AppText variant="h2"weight="bold">
+            <AppText variant="h2" weight="bold">
               Discussion Workspaces
             </AppText>
             <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button"accessibilityLabel="Close">

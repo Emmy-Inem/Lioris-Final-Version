@@ -8,6 +8,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
+import { LiorisLogo } from '@/components/LiorisLogo';
 import { getMyProfile } from '@/api/profile';
 import { listConversations } from '@/api/messaging';
 import { listNotifications } from '@/api/notifications';
@@ -133,16 +134,10 @@ export function DesktopSidebar() {
       {/* Brand & Logo Header */}
       <View style={styles.brandHeader}>
         <View style={styles.logoRow}>
-          <Image
-            source={require('../../../assets/images/lioris_logo_orange.png')}
-            style={styles.logoImage}
-            contentFit="contain"
-          />
+          <LiorisLogo size={36} variant="symbol" />
           <View>
-            <AppText variant="h3" weight="bold" style={{ letterSpacing: 0.5 }}>
-              LIORIS
-            </AppText>
-            <AppText variant="caption" tone="secondary" style={{ marginTop: -2 }}>
+            <LiorisLogo size={18} variant="wordmark" />
+            <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>
               Campus Workspace
             </AppText>
           </View>

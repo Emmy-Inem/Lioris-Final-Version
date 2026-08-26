@@ -7,6 +7,7 @@ import { AppButton } from'./AppButton';
 import { SolidCard } from'./SolidCard';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useViewScope } from'@/hooks/useViewScope';
 import { LAUNCH_INSTITUTIONS, createInstitution } from'@/api/institutions';
 
@@ -28,6 +29,7 @@ export function ChangeWorkspaceScopeModal({
   onSelectScope,
 }: ChangeWorkspaceScopeModalProps) {
   const { colors, spacing, radius, setCustomAccent } = useTheme();
+  const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const { activeCampusCode, setActiveCampusCode } = useViewScope();
   const isAdmin = user?.role === 'admin';
@@ -62,29 +64,45 @@ export function ChangeWorkspaceScopeModal({
         name,
         shortName: code,
         location: 'Nigeria',
+        domain: `${code.toLowerCase()}.edu.ng`,
       });
-      const newWs = {
-        code,
-        name,
-        description: `Campus workspace for ${code}`,
-      };
-      setGuestWorkspaces((prev) => [...prev.filter((w) => w.code !== code), newWs]);
-      setCreateModalOpen(false);
+      setGuestWorkspaces((prev) => [...prev, { code, name, description: `${code} Campus Community` }]);
       setNewCampusName('');
       setNewCampusCode('');
-      Alert.alert('Workspace Provisioned', `${name} (${code}) has been provisioned and added to your campus registry.`);
+      setCreateModalOpen(false);
+      Alert.alert('Campus Node Added', `Successfully added ${name} (${code}) to available workspaces.`);
     } catch (err: any) {
-      Alert.alert('Provisioning Failed', err?.message || 'Could not provision campus workspace.');
+      Alert.alert('Error', err.message || 'Failed to add institution node.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} accessible={false} />
-        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          justifyContent: isDesktop ? 'center' : 'flex-end',
+          alignItems: isDesktop ? 'center' : 'stretch',
+          padding: isDesktop ? spacing.lg : 0,
+        }}
+      >
+        <Pressable style={{ position: 'absolute', inset: 0 }} onPress={onClose} accessible={false} />
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: isDesktop ? 24 : undefined,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            padding: spacing.lg,
+            maxHeight: '85%',
+            maxWidth: isDesktop ? 560 : undefined,
+            width: isDesktop ? '100%' : undefined,
+            alignSelf: 'center',
+          }}
+        >
           <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
           </View>
