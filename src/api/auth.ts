@@ -4,436 +4,436 @@ import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
 
 export interface LoginPayload {
-  email: string;
-  password: string;
+ email: string;
+ password: string;
 }
 
 export interface RegisterPayload {
-  fullName: string;
-  username: string;
-  email: string;
-  password: string;
-  userType: UserRole;
-  campusCode?: string;
-  botField?: string;
+ fullName: string;
+ username: string;
+ email: string;
+ password: string;
+ userType: UserRole;
+ campusCode?: string;
+ botField?: string;
 }
 
 // Server & Client hybrid rate limiting and brute force protection
 interface LoginAttemptRecord {
-  failures: number;
-  lockedUntil?: number;
-  lastAttempt: number;
+ failures: number;
+ lockedUntil?: number;
+ lastAttempt: number;
 }
 
 const loginAttempts = new Map<string, LoginAttemptRecord>();
 
 async function checkLoginRateLimit(email: string): Promise<void> {
-  const clean = email.toLowerCase().trim();
+ const clean = email.toLowerCase().trim();
 
-  // 1. Check server-side Postgres rate limiting via RPC (authoritative)
-  try {
-    const { data, error } = await supabase.rpc('check_auth_rate_limit', {
-      p_identifier: clean,
-    });
-    if (!error && data && data.allowed === false) {
-      const retrySec = data.retry_after_seconds || 60;
-      throw new Error(data.message || `Too many failed login attempts. Temporarily locked for ${retrySec}s.`);
-    }
-  } catch (err: any) {
-    if (err.message && err.message.includes('Too many failed login attempts')) {
-      throw err;
-    }
-    // If RPC is unavailable (e.g. offline/network), fall through to local client tracking
-  }
+ // 1. Check server-side Postgres rate limiting via RPC (authoritative)
+ try {
+ const { data, error } = await supabase.rpc('check_auth_rate_limit', {
+ p_identifier: clean,
+ });
+ if (!error && data && data.allowed === false) {
+ const retrySec = data.retry_after_seconds || 60;
+ throw new Error(data.message || `Too many failed login attempts. Temporarily locked for ${retrySec}s.`);
+ }
+ } catch (err: any) {
+ if (err.message && err.message.includes('Too many failed login attempts')) {
+ throw err;
+ }
+ // If RPC is unavailable (e.g. offline/network), fall through to local client tracking
+ }
 
-  // 2. Client-side memory check
-  const record = loginAttempts.get(clean);
-  if (!record) return;
-  const now = Date.now();
-  if (record.lockedUntil && now < record.lockedUntil) {
-    const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
-    throw new Error(`Too many failed login attempts. Account temporarily locked for security. Please try again in ${remainingSec}s.`);
-  }
-  if (now - record.lastAttempt > 15 * 60 * 1000) {
-    loginAttempts.delete(clean);
-  }
+ // 2. Client-side memory check
+ const record = loginAttempts.get(clean);
+ if (!record) return;
+ const now = Date.now();
+ if (record.lockedUntil && now < record.lockedUntil) {
+ const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
+ throw new Error(`Too many failed login attempts. Account temporarily locked for security. Please try again in ${remainingSec}s.`);
+ }
+ if (now - record.lastAttempt > 15 * 60 * 1000) {
+ loginAttempts.delete(clean);
+ }
 }
 
 async function recordLoginFailure(email: string): Promise<void> {
-  const key = email.toLowerCase().trim();
-  const now = Date.now();
+ const key = email.toLowerCase().trim();
+ const now = Date.now();
 
-  // 1. Record on server-side Postgres
-  try {
-    await supabase.rpc('record_auth_attempt', {
-      p_identifier: key,
-      p_success: false,
-    });
-  } catch {
-    // Non-blocking fallback
-  }
+ // 1. Record on server-side Postgres
+ try {
+ await supabase.rpc('record_auth_attempt', {
+ p_identifier: key,
+ p_success: false,
+ });
+ } catch {
+ // Non-blocking fallback
+ }
 
-  // 2. Record locally
-  const existing = loginAttempts.get(key) || { failures: 0, lastAttempt: now };
-  const failures = existing.failures + 1;
-  let lockedUntil: number | undefined;
+ // 2. Record locally
+ const existing = loginAttempts.get(key) || { failures: 0, lastAttempt: now };
+ const failures = existing.failures + 1;
+ let lockedUntil: number | undefined;
 
-  if (failures >= 5) {
-    const lockoutDurationSec = Math.min(300, 60 * (failures - 4));
-    lockedUntil = now + lockoutDurationSec * 1000;
-  }
+ if (failures >= 5) {
+ const lockoutDurationSec = Math.min(300, 60 * (failures - 4));
+ lockedUntil = now + lockoutDurationSec * 1000;
+ }
 
-  loginAttempts.set(key, {
-    failures,
-    lockedUntil,
-    lastAttempt: now,
-  });
+ loginAttempts.set(key, {
+ failures,
+ lockedUntil,
+ lastAttempt: now,
+ });
 }
 
 async function clearLoginFailures(email: string): Promise<void> {
-  const key = email.toLowerCase().trim();
-  try {
-    await supabase.rpc('record_auth_attempt', {
-      p_identifier: key,
-      p_success: true,
-    });
-  } catch {
-    // Non-blocking
-  }
-  loginAttempts.delete(key);
+ const key = email.toLowerCase().trim();
+ try {
+ await supabase.rpc('record_auth_attempt', {
+ p_identifier: key,
+ p_success: true,
+ });
+ } catch {
+ // Non-blocking
+ }
+ loginAttempts.delete(key);
 }
 
 // Direct RPC account activation to ensure users are never blocked by external SMTP delivery
 export async function confirmUserEmailDirectly(email: string): Promise<{ success: boolean; message: string }> {
-  const cleanEmail = email.trim();
-  if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
-  try {
-    const { data, error } = await supabase.rpc('confirm_user_email', { p_email: cleanEmail });
-    if (error) throw error;
-    return {
-      success: data?.success ?? true,
-      message: data?.message ?? 'Email address activated successfully.',
-    };
-  } catch (err: any) {
-    throw new Error(err?.message || 'Could not activate account. Please contact campus admin.');
-  }
+ const cleanEmail = email.trim();
+ if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+ try {
+ const { data, error } = await supabase.rpc('confirm_user_email', { p_email: cleanEmail });
+ if (error) throw error;
+ return {
+ success: data?.success ?? true,
+ message: data?.message ?? 'Email address activated successfully.',
+ };
+ } catch (err: any) {
+ throw new Error(err?.message || 'Could not activate account. Please contact campus admin.');
+ }
 }
 
 export async function resendConfirmationEmail(email: string): Promise<{ success: boolean }> {
-  const cleanEmail = email.trim();
-  if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
-  const { error } = await supabase.auth.resend({
-    type: 'signup',
-    email: cleanEmail,
-  });
-  if (error) {
-    // If resend failed (e.g. rate limit), attempt direct activation fallback via RPC
-    try {
-      await confirmUserEmailDirectly(cleanEmail);
-      return { success: true };
-    } catch {
-      throw new Error(error.message || 'Could not resend confirmation email. Please check your address.');
-    }
-  }
-  return { success: true };
+ const cleanEmail = email.trim();
+ if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+ const { error } = await supabase.auth.resend({
+ type: 'signup',
+ email: cleanEmail,
+ });
+ if (error) {
+ // If resend failed (e.g. rate limit), attempt direct activation fallback via RPC
+ try {
+ await confirmUserEmailDirectly(cleanEmail);
+ return { success: true };
+ } catch {
+ throw new Error(error.message || 'Could not resend confirmation email. Please check your address.');
+ }
+ }
+ return { success: true };
 }
 
-// POST /auth/login — Strictly Real Supabase Authentication with Server-Side Rate Limiting
+// POST /auth/login - Strictly Real Supabase Authentication with Server-Side Rate Limiting
 export async function login(payload: LoginPayload): Promise<AuthSession> {
-  const cleanEmail = payload.email.trim();
+ const cleanEmail = payload.email.trim();
 
-  // Enforce server-side brute-force lockout check
-  await checkLoginRateLimit(cleanEmail);
+ // Enforce server-side brute-force lockout check
+ await checkLoginRateLimit(cleanEmail);
 
-  let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-    email: cleanEmail,
-    password: payload.password,
-  });
+ let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+ email: cleanEmail,
+ password: payload.password,
+ });
 
-  // If email confirmation is required or pending in Supabase, auto-resolve it immediately
-  if (signInError && (signInError.message.toLowerCase().includes('email') || signInError.message.toLowerCase().includes('confirm'))) {
-    try {
-      await confirmUserEmailDirectly(cleanEmail);
-      // Retry sign-in now that the account is activated
-      const retryResult = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: payload.password,
-      });
-      signInData = retryResult.data;
-      signInError = retryResult.error;
-    } catch {
-      // Non-blocking fallback
-    }
-  }
+ // If email confirmation is required or pending in Supabase, auto-resolve it immediately
+ if (signInError && (signInError.message.toLowerCase().includes('email') || signInError.message.toLowerCase().includes('confirm'))) {
+ try {
+ await confirmUserEmailDirectly(cleanEmail);
+ // Retry sign-in now that the account is activated
+ const retryResult = await supabase.auth.signInWithPassword({
+ email: cleanEmail,
+ password: payload.password,
+ });
+ signInData = retryResult.data;
+ signInError = retryResult.error;
+ } catch {
+ // Non-blocking fallback
+ }
+ }
 
-  if (signInError || !signInData?.session || !signInData?.user) {
-    await recordLoginFailure(cleanEmail);
-    throw new Error('Invalid email or password. Please verify your credentials and try again.');
-  }
+ if (signInError || !signInData?.session || !signInData?.user) {
+ await recordLoginFailure(cleanEmail);
+ throw new Error('Invalid email or password. Please verify your credentials and try again.');
+ }
 
-  // Clear failures upon successful authentication
-  await clearLoginFailures(cleanEmail);
+ // Clear failures upon successful authentication
+ await clearLoginFailures(cleanEmail);
 
-  // Fetch verified user profile from Supabase profiles table with targeted column projection
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, full_name, username, role, campus_code, is_suspended')
-    .eq('id', signInData.user.id)
-    .maybeSingle();
+ // Fetch verified user profile from Supabase profiles table with targeted column projection
+ const { data: profile } = await supabase
+ .from('profiles')
+ .select('id, full_name, username, role, campus_code, is_suspended')
+ .eq('id', signInData.user.id)
+ .maybeSingle();
 
-  // Enforce server-side account suspension check
-  if (profile?.is_suspended) {
-    await supabase.auth.signOut();
-    throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
-  }
+ // Enforce server-side account suspension check
+ if (profile?.is_suspended) {
+ await supabase.auth.signOut();
+ throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
+ }
 
-  const userRole = (profile?.role || signInData.user.user_metadata?.role || 'student') as UserRole;
-  const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
+ const userRole = (profile?.role || signInData.user.user_metadata?.role || 'student') as UserRole;
+ const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
 
-  return {
-    accessToken: signInData.session.access_token,
-    refreshToken: signInData.session.refresh_token,
-    user: {
-      id: signInData.user.id,
-      fullName,
-      email: signInData.user.email || cleanEmail,
-      role: userRole,
-    },
-  };
+ return {
+ accessToken: signInData.session.access_token,
+ refreshToken: signInData.session.refresh_token,
+ user: {
+ id: signInData.user.id,
+ fullName,
+ email: signInData.user.email || cleanEmail,
+ role: userRole,
+ },
+ };
 }
 
-// POST /auth/register — Real Supabase Auth with Profile Provisioning (Student & Alumni only)
+// POST /auth/register - Real Supabase Auth with Profile Provisioning (Student & Alumni only)
 export async function register(payload: RegisterPayload): Promise<AuthSession> {
-  // Anti-bot honeypot protection
-  if (payload.botField && payload.botField.trim().length > 0) {
-    throw new Error('Registration verification failed. Please try again.');
-  }
+ // Anti-bot honeypot protection
+ if (payload.botField && payload.botField.trim().length > 0) {
+ throw new Error('Registration verification failed. Please try again.');
+ }
 
-  const cleanEmail = payload.email.trim();
-  // Ensure self-registration can only produce student or alumni accounts
-  const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
-  const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || 'GLOBAL';
+ const cleanEmail = payload.email.trim();
+ // Ensure self-registration can only produce student or alumni accounts
+ const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
+ const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || 'GLOBAL';
 
-  const { data, error } = await supabase.auth.signUp({
-    email: cleanEmail,
-    password: payload.password,
-    options: {
-      data: {
-        full_name: payload.fullName,
-        username: payload.username,
-        role: assignedRole,
-        campus_code: detectedCampus,
-      },
-    },
-  });
+ const { data, error } = await supabase.auth.signUp({
+ email: cleanEmail,
+ password: payload.password,
+ options: {
+ data: {
+ full_name: payload.fullName,
+ username: payload.username,
+ role: assignedRole,
+ campus_code: detectedCampus,
+ },
+ },
+ });
 
-  if (error || !data?.user) {
-    throw new Error(error?.message || 'Unable to register account. Please check your details.');
-  }
+ if (error || !data?.user) {
+ throw new Error(error?.message || 'Unable to register account. Please check your details.');
+ }
 
-  // Upsert profile in Supabase profiles table with campus_code
-  await supabase.from('profiles').upsert({
-    id: data.user.id,
-    email: cleanEmail,
-    full_name: payload.fullName,
-    username: payload.username,
-    role: assignedRole,
-    campus_code: detectedCampus,
-  });
+ // Upsert profile in Supabase profiles table with campus_code
+ await supabase.from('profiles').upsert({
+ id: data.user.id,
+ email: cleanEmail,
+ full_name: payload.fullName,
+ username: payload.username,
+ role: assignedRole,
+ campus_code: detectedCampus,
+ });
 
-  // If email confirmation is required and session is null, auto-activate and sign in immediately
-  let activeSession = data.session;
-  if (!activeSession) {
-    try {
-      await confirmUserEmailDirectly(cleanEmail);
-      const { data: signInAfterReg } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: payload.password,
-      });
-      if (signInAfterReg?.session) {
-        activeSession = signInAfterReg.session;
-      }
-    } catch {
-      // Non-blocking fallback
-    }
-  }
+ // If email confirmation is required and session is null, auto-activate and sign in immediately
+ let activeSession = data.session;
+ if (!activeSession) {
+ try {
+ await confirmUserEmailDirectly(cleanEmail);
+ const { data: signInAfterReg } = await supabase.auth.signInWithPassword({
+ email: cleanEmail,
+ password: payload.password,
+ });
+ if (signInAfterReg?.session) {
+ activeSession = signInAfterReg.session;
+ }
+ } catch {
+ // Non-blocking fallback
+ }
+ }
 
-  const accessToken = activeSession?.access_token || `auth-token.${assignedRole}.${Date.now()}`;
-  const refreshToken = activeSession?.refresh_token || `refresh-token.${assignedRole}.${Date.now()}`;
+ const accessToken = activeSession?.access_token || `auth-token.${assignedRole}.${Date.now()}`;
+ const refreshToken = activeSession?.refresh_token || `refresh-token.${assignedRole}.${Date.now()}`;
 
-  return {
-    accessToken,
-    refreshToken,
-    user: {
-      id: data.user.id,
-      fullName: payload.fullName,
-      email: cleanEmail,
-      role: assignedRole,
-    },
-  };
+ return {
+ accessToken,
+ refreshToken,
+ user: {
+ id: data.user.id,
+ fullName: payload.fullName,
+ email: cleanEmail,
+ role: assignedRole,
+ },
+ };
 }
 
 export async function sendPasswordResetEmail(email: string): Promise<{ success: boolean }> {
-  const cleanEmail = email.trim();
-  if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
-  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
-  if (error) {
-    throw new Error(error.message || 'Could not send recovery email. Please check your email.');
-  }
-  return { success: true };
+ const cleanEmail = email.trim();
+ if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+ const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
+ if (error) {
+ throw new Error(error.message || 'Could not send recovery email. Please check your email.');
+ }
+ return { success: true };
 }
 
 export async function verifyPasswordResetOtpAndSetPassword(
-  email: string,
-  token: string,
-  newPassword: string,
+ email: string,
+ token: string,
+ newPassword: string,
 ): Promise<{ success: boolean }> {
-  const cleanEmail = email.trim();
-  const cleanToken = token.trim();
-  if (!cleanToken) throw new Error('Recovery code is required.');
-  if (!newPassword || newPassword.length < 8) {
-    throw new Error('New password must be at least 8 characters long.');
-  }
+ const cleanEmail = email.trim();
+ const cleanToken = token.trim();
+ if (!cleanToken) throw new Error('Recovery code is required.');
+ if (!newPassword || newPassword.length < 8) {
+ throw new Error('New password must be at least 8 characters long.');
+ }
 
-  const { data, error } = await supabase.auth.verifyOtp({
-    email: cleanEmail,
-    token: cleanToken,
-    type: 'recovery',
-  });
+ const { data, error } = await supabase.auth.verifyOtp({
+ email: cleanEmail,
+ token: cleanToken,
+ type: 'recovery',
+ });
 
-  if (error || !data.session) {
-    throw new Error(error?.message || 'Invalid or expired recovery code.');
-  }
+ if (error || !data.session) {
+ throw new Error(error?.message || 'Invalid or expired recovery code.');
+ }
 
-  const { error: updateError } = await supabase.auth.updateUser({
-    password: newPassword,
-  });
+ const { error: updateError } = await supabase.auth.updateUser({
+ password: newPassword,
+ });
 
-  if (updateError) {
-    throw new Error(updateError.message || 'Failed to update password.');
-  }
+ if (updateError) {
+ throw new Error(updateError.message || 'Failed to update password.');
+ }
 
-  return { success: true };
+ return { success: true };
 }
 
 export async function verifyEmail(code: string, email?: string): Promise<{ verified: boolean }> {
-  const cleanCode = code.trim();
-  if (!cleanCode) throw new Error('Verification code is required.');
-  if (email) {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: cleanCode,
-      type: 'signup',
-    });
-    if (!error && data?.session) {
-      return { verified: true };
-    }
-    // Also try 'email' type
-    const { data: emailData, error: emailError } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: cleanCode,
-      type: 'email',
-    });
-    if (!emailError && emailData?.session) {
-      return { verified: true };
-    }
-    if (error) {
-      throw new Error(error.message || 'Invalid verification code. Please check your email.');
-    }
-  }
+ const cleanCode = code.trim();
+ if (!cleanCode) throw new Error('Verification code is required.');
+ if (email) {
+ const { data, error } = await supabase.auth.verifyOtp({
+ email: email.trim(),
+ token: cleanCode,
+ type: 'signup',
+ });
+ if (!error && data?.session) {
+ return { verified: true };
+ }
+ // Also try 'email' type
+ const { data: emailData, error: emailError } = await supabase.auth.verifyOtp({
+ email: email.trim(),
+ token: cleanCode,
+ type: 'email',
+ });
+ if (!emailError && emailData?.session) {
+ return { verified: true };
+ }
+ if (error) {
+ throw new Error(error.message || 'Invalid verification code. Please check your email.');
+ }
+ }
 
-  try {
-    const { data } = await api.post('/auth/verify-email', { code: cleanCode, email });
-    return data;
-  } catch (err: any) {
-    throw new Error(err?.response?.data?.message || err?.message || 'Email verification failed.');
-  }
+ try {
+ const { data } = await api.post('/auth/verify-email', { code: cleanCode, email });
+ return data;
+ } catch (err: any) {
+ throw new Error(err?.response?.data?.message || err?.message || 'Email verification failed.');
+ }
 }
 
 export async function verifySchool(schoolId: string): Promise<{ status: string }> {
-  if (!schoolId.trim()) throw new Error('Valid Student / Staff ID is required.');
-  try {
-    const { data } = await api.post('/auth/verify-school', { schoolId });
-    return data;
-  } catch (err: any) {
-    throw new Error(err?.response?.data?.message || err?.message || 'School verification failed.');
-  }
+ if (!schoolId.trim()) throw new Error('Valid Student / Staff ID is required.');
+ try {
+ const { data } = await api.post('/auth/verify-school', { schoolId });
+ return data;
+ } catch (err: any) {
+ throw new Error(err?.response?.data?.message || err?.message || 'School verification failed.');
+ }
 }
 
 export async function verifyAlumniStatus(payload: {
-  graduationYear: number;
-  studentId?: string;
+ graduationYear: number;
+ studentId?: string;
 }): Promise<{ status: string }> {
-  if (!payload.graduationYear || payload.graduationYear < 1960 || payload.graduationYear > new Date().getFullYear()) {
-    throw new Error('Please provide a valid graduation year.');
-  }
-  try {
-    const { data } = await api.post('/auth/verify-alumni', payload);
-    return data;
-  } catch (err: any) {
-    throw new Error(err?.response?.data?.message || err?.message || 'Alumni status verification failed.');
-  }
+ if (!payload.graduationYear || payload.graduationYear < 1960 || payload.graduationYear > new Date().getFullYear()) {
+ throw new Error('Please provide a valid graduation year.');
+ }
+ try {
+ const { data } = await api.post('/auth/verify-alumni', payload);
+ return data;
+ } catch (err: any) {
+ throw new Error(err?.response?.data?.message || err?.message || 'Alumni status verification failed.');
+ }
 }
 
 // POST /auth/mfa/verify
 export async function verifyMfaCode(code: string): Promise<{ verified: boolean }> {
-  const cleanCode = code.trim();
-  if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
-    throw new Error('Please enter a valid 6-digit numeric security code.');
-  }
+ const cleanCode = code.trim();
+ if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
+ throw new Error('Please enter a valid 6-digit numeric security code.');
+ }
 
-  // Check Supabase MFA factors if enrolled
-  try {
-    const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-    if (!factorsError && factors?.totp && factors.totp.length > 0) {
-      const activeFactor = factors.totp[0];
-      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
-        factorId: activeFactor.id,
-      });
-      if (!challengeError && challenge) {
-        const { error: verifyError } = await supabase.auth.mfa.verify({
-          factorId: activeFactor.id,
-          challengeId: challenge.id,
-          code: cleanCode,
-        });
-        if (verifyError) {
-          throw new Error('Invalid MFA 2FA verification code. Please check your authenticator app.');
-        }
-        return { verified: true };
-      }
-    }
-  } catch (err: any) {
-    if (err?.message?.includes('Invalid MFA')) throw err;
-  }
+ // Check Supabase MFA factors if enrolled
+ try {
+ const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+ if (!factorsError && factors?.totp && factors.totp.length > 0) {
+ const activeFactor = factors.totp[0];
+ const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
+ factorId: activeFactor.id,
+ });
+ if (!challengeError && challenge) {
+ const { error: verifyError } = await supabase.auth.mfa.verify({
+ factorId: activeFactor.id,
+ challengeId: challenge.id,
+ code: cleanCode,
+ });
+ if (verifyError) {
+ throw new Error('Invalid MFA 2FA verification code. Please check your authenticator app.');
+ }
+ return { verified: true };
+ }
+ }
+ } catch (err: any) {
+ if (err?.message?.includes('Invalid MFA')) throw err;
+ }
 
-  try {
-    const { data } = await api.post('/auth/mfa/verify', { code: cleanCode });
-    return data;
-  } catch (err: any) {
-    throw new Error(err?.response?.data?.message || err?.message || 'Invalid MFA 2FA verification code.');
-  }
+ try {
+ const { data } = await api.post('/auth/mfa/verify', { code: cleanCode });
+ return data;
+ } catch (err: any) {
+ throw new Error(err?.response?.data?.message || err?.message || 'Invalid MFA 2FA verification code.');
+ }
 }
 
 // POST /auth/mfa/resend
 export async function resendMfaCode(): Promise<{ sent: boolean }> {
-  try {
-    const { data } = await api.post('/auth/mfa/resend');
-    return data;
-  } catch {
-    return { sent: true };
-  }
+ try {
+ const { data } = await api.post('/auth/mfa/resend');
+ return data;
+ } catch {
+ return { sent: true };
+ }
 }
 
-// POST /auth/refresh — PRD Section 15.1.
+// POST /auth/refresh - PRD Section 15.1.
 export async function refresh(refreshToken: string) {
-  const { data } = await api.post<{ accessToken: string; refreshToken: string }>(
-    '/auth/refresh',
-    { refreshToken },
-  );
-  return data;
+ const { data } = await api.post<{ accessToken: string; refreshToken: string }>(
+ '/auth/refresh',
+ { refreshToken },
+ );
+ return data;
 }
 
 export async function logout() {
-  await supabase.auth.signOut().catch(() => {});
-  await api.post('/auth/logout').catch(() => {});
+ await supabase.auth.signOut().catch(() => {});
+ await api.post('/auth/logout').catch(() => {});
 }

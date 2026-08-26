@@ -19,105 +19,105 @@ import { useDebouncedValue } from'@/hooks/useDebouncedValue';
 type SearchTab = 'posts' | 'events' | 'resources';
 
 export function SearchScreen() {
-  const { colors, spacing, radius } = useTheme();
-  const [query, setQuery] = useState('');
-  const [tab, setTab] = useState<SearchTab>('posts');
-  const trimmed = query.trim();
-  const debouncedTrimmed = useDebouncedValue(trimmed);
+ const { colors, spacing, radius } = useTheme();
+ const [query, setQuery] = useState('');
+ const [tab, setTab] = useState<SearchTab>('posts');
+ const trimmed = query.trim();
+ const debouncedTrimmed = useDebouncedValue(trimmed);
 
-  const { data: posts, isLoading: postsLoading } = useQuery({
-    queryKey: ['search', 'posts', debouncedTrimmed],
-    queryFn: () => listFeedPosts({ q: debouncedTrimmed }),
-    enabled: tab === 'posts' && debouncedTrimmed.length > 0,
-  });
+ const { data: posts, isLoading: postsLoading } = useQuery({
+ queryKey: ['search', 'posts', debouncedTrimmed],
+ queryFn: () => listFeedPosts({ q: debouncedTrimmed }),
+ enabled: tab === 'posts' && debouncedTrimmed.length > 0,
+ });
 
-  const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ['search', 'events', debouncedTrimmed],
-    queryFn: () => listEvents({ q: debouncedTrimmed }),
-    enabled: tab === 'events' && debouncedTrimmed.length > 0,
-  });
+ const { data: events, isLoading: eventsLoading } = useQuery({
+ queryKey: ['search', 'events', debouncedTrimmed],
+ queryFn: () => listEvents({ q: debouncedTrimmed }),
+ enabled: tab === 'events' && debouncedTrimmed.length > 0,
+ });
 
-  const { data: resources, isLoading: resourcesLoading } = useQuery({
-    queryKey: ['search', 'resources', debouncedTrimmed],
-    queryFn: () => listResources({ q: debouncedTrimmed }),
-    enabled: tab === 'resources' && debouncedTrimmed.length > 0,
-  });
+ const { data: resources, isLoading: resourcesLoading } = useQuery({
+ queryKey: ['search', 'resources', debouncedTrimmed],
+ queryFn: () => listResources({ q: debouncedTrimmed }),
+ enabled: tab === 'resources' && debouncedTrimmed.length > 0,
+ });
 
-  const isLoading = tab === 'posts' ? postsLoading : tab === 'events' ? eventsLoading : resourcesLoading;
+ const isLoading = tab === 'posts' ? postsLoading : tab === 'events' ? eventsLoading : resourcesLoading;
 
-  return (
-    <ScreenContainer glow={false}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.lg, marginBottom: spacing.md }}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"accessibilityLabel="Close search"
-        >
-          <Ionicons name="arrow-back"size={22} color={colors.textPrimary} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <AppTextField
-            label=""placeholder="Search threads, events, study resources..."value={query}
-            onChangeText={setQuery}
-            autoFocus
-          />
-        </View>
-      </View>
+ return (
+ <ScreenContainer glow={false}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.lg, marginBottom: spacing.md }}>
+ <Pressable
+ onPress={() => router.back()}
+ hitSlop={8}
+ accessibilityRole="button"accessibilityLabel="Close search"
+ >
+ <Ionicons name="arrow-back"size={22} color={colors.textPrimary} />
+ </Pressable>
+ <View style={{ flex: 1 }}>
+ <AppTextField
+ label=""placeholder="Search threads, events, study resources..."value={query}
+ onChangeText={setQuery}
+ autoFocus
+ />
+ </View>
+ </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-        {(['posts', 'events', 'resources'] as const).map((t) => {
-          const selected = tab === t;
-          const label = t === 'posts' ? 'Threads' : t === 'events' ? 'Events' : 'Resources';
-          return (
-            <Pressable
-              key={t}
-              onPress={() => setTab(t)}
-              accessibilityRole="tab"accessibilityState={{ selected }}
-              accessibilityLabel={label}
-              style={{
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                borderRadius: radius.pill,
-                backgroundColor: selected ? colors.brandPrimary : colors.surface,
-                borderWidth: 1,
-                borderColor: selected ? colors.brandPrimary : colors.border,
-              }}
-            >
-              <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'inverse' : 'secondary'}>
-                {label}
-              </AppText>
-            </Pressable>
-          );
-        })}
-      </View>
+ <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+ {(['posts', 'events', 'resources'] as const).map((t) => {
+ const selected = tab === t;
+ const label = t === 'posts' ? 'Threads' : t === 'events' ? 'Events' : 'Resources';
+ return (
+ <Pressable
+ key={t}
+ onPress={() => setTab(t)}
+ accessibilityRole="tab"accessibilityState={{ selected }}
+ accessibilityLabel={label}
+ style={{
+ paddingHorizontal: spacing.md,
+ paddingVertical: spacing.sm,
+ borderRadius: radius.pill,
+ backgroundColor: selected ? colors.brandPrimary : colors.surface,
+ borderWidth: 1,
+ borderColor: selected ? colors.brandPrimary : colors.border,
+ }}
+ >
+ <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'inverse' : 'secondary'}>
+ {label}
+ </AppText>
+ </Pressable>
+ );
+ })}
+ </View>
 
-      {trimmed.length === 0 ? (
-        <EmptyState title="Search Campus Knowledge"description="Find forum threads, campus events, and academic past questions." />
-      ) : tab === 'posts' ? (
-        <FlatList
-          data={posts ?? []}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 130 }}
-          renderItem={({ item }) => <PostCard post={item} />}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No posts found"description={`No results for"${debouncedTrimmed}".`} /> : null}
-        />
-      ) : tab === 'events' ? (
-        <FlatList
-          data={events ?? []}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 130 }}
-          renderItem={({ item }) => <EventCard event={item} />}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No events found"description={`No results for"${debouncedTrimmed}".`} /> : null}
-        />
-      ) : (
-        <FlatList
-          data={resources ?? []}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 130 }}
-          renderItem={({ item }) => <ResourceCard resource={item} />}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No resources found"description={`No results for"${debouncedTrimmed}".`} /> : null}
-        />
-      )}
-    </ScreenContainer>
-  );
+ {trimmed.length === 0 ? (
+ <EmptyState title="Search Campus Knowledge"description="Find forum threads, campus events, and academic past questions." />
+ ) : tab === 'posts' ? (
+ <FlatList
+ data={posts ?? []}
+ keyExtractor={(item) => item.id}
+ contentContainerStyle={{ paddingBottom: 130 }}
+ renderItem={({ item }) => <PostCard post={item} />}
+ ListEmptyComponent={!isLoading ? <EmptyState title="No posts found"description={`No results for"${debouncedTrimmed}".`} /> : null}
+ />
+ ) : tab === 'events' ? (
+ <FlatList
+ data={events ?? []}
+ keyExtractor={(item) => item.id}
+ contentContainerStyle={{ paddingBottom: 130 }}
+ renderItem={({ item }) => <EventCard event={item} />}
+ ListEmptyComponent={!isLoading ? <EmptyState title="No events found"description={`No results for"${debouncedTrimmed}".`} /> : null}
+ />
+ ) : (
+ <FlatList
+ data={resources ?? []}
+ keyExtractor={(item) => item.id}
+ contentContainerStyle={{ paddingBottom: 130 }}
+ renderItem={({ item }) => <ResourceCard resource={item} />}
+ ListEmptyComponent={!isLoading ? <EmptyState title="No resources found"description={`No results for"${debouncedTrimmed}".`} /> : null}
+ />
+ )}
+ </ScreenContainer>
+ );
 }

@@ -4,10 +4,10 @@ import { ScreenContainer } from'@/components/ScreenContainer';
 import { ChatThread } from'@/components/ChatThread';
 
 export default function AlumniChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  return (
-    <ScreenContainer edges={['bottom']}>
-      <ChatThread conversationId={id} />
-    </ScreenContainer>
-  );
+ const { id } = useLocalSearchParams<{ id: string }>();
+ return (
+ <ScreenContainer edges={['bottom']}>
+ <ChatThread conversationId={id} />
+ </ScreenContainer>
+ );
 }

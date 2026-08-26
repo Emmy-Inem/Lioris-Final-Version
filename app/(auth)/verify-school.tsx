@@ -12,118 +12,118 @@ import * as authApi from'@/api/auth';
 import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
 
 export default function VerifySchoolScreen() {
-  const { spacing, colors, radius, isDark } = useTheme();
-  const advance = useAdvanceOnboarding('/(auth)/verify-school');
-  const [schoolId, setSchoolId] = useState('');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+ const { spacing, colors, radius, isDark } = useTheme();
+ const advance = useAdvanceOnboarding('/(auth)/verify-school');
+ const [schoolId, setSchoolId] = useState('');
+ const [errorMessage, setErrorMessage] = useState<string | null>(null);
+ const [submitting, setSubmitting] = useState(false);
 
-  async function handleVerify() {
-    setErrorMessage(null);
-    if (!schoolId.trim()) {
-      setErrorMessage('Please enter your student ID or matric number.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const result = await authApi.verifySchool(schoolId.trim());
-      if (result.status === 'pending') {
-        Alert.alert(
-          'Verification pending',
-          'We couldn’t confirm your school ID automatically. Your account is under manual review — you can continue with limited access in the meantime.',
-        );
-      }
-      await advance();
-    } catch {
-      setErrorMessage('Verification failed. Please check your school ID and try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
+ async function handleVerify() {
+ setErrorMessage(null);
+ if (!schoolId.trim()) {
+ setErrorMessage('Please enter your student ID or matric number.');
+ return;
+ }
+ setSubmitting(true);
+ try {
+ const result = await authApi.verifySchool(schoolId.trim());
+ if (result.status === 'pending') {
+ Alert.alert(
+ 'Verification pending',
+ 'We couldn’t confirm your school ID automatically. Your account is under manual review - you can continue with limited access in the meantime.',
+ );
+ }
+ await advance();
+ } catch {
+ setErrorMessage('Verification failed. Please check your school ID and try again.');
+ } finally {
+ setSubmitting(false);
+ }
+ }
 
-  return (
-    <ScreenContainer noPadding glow={false}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
-        <AuthHeroBackground height={160}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <View
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: 'rgba(255,255,255,0.18)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: spacing.md,
-              }}
-            >
-              <Ionicons name="school" size={26} color="#FFFFFF" />
-            </View>
-            <AppText variant="h1" weight="bold" tone="inverse">
-              Verify your school
-            </AppText>
-          </View>
-        </AuthHeroBackground>
+ return (
+ <ScreenContainer noPadding glow={false}>
+ <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
+ <AuthHeroBackground height={160}>
+ <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+ <View
+ style={{
+ width: 56,
+ height: 56,
+ borderRadius: 28,
+ backgroundColor: 'rgba(255,255,255,0.18)',
+ alignItems: 'center',
+ justifyContent: 'center',
+ marginBottom: spacing.md,
+ }}
+ >
+ <Ionicons name="school" size={26} color="#FFFFFF" />
+ </View>
+ <AppText variant="h1" weight="bold" tone="inverse">
+ Verify your school
+ </AppText>
+ </View>
+ </AuthHeroBackground>
 
-        <WaveCard>
-          <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
-            Enter your student ID so we can confirm your enrollment and unlock the full
-            student experience.
-          </AppText>
+ <WaveCard>
+ <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
+ Enter your student ID so we can confirm your enrollment and unlock the full
+ student experience.
+ </AppText>
 
-          <AppTextField
-            label="Student ID"
-            value={schoolId}
-            onChangeText={(t) => { setSchoolId(t); if (errorMessage) setErrorMessage(null); }}
-            placeholder="e.g. S00123456"
-            autoCapitalize="characters"
-          />
+ <AppTextField
+ label="Student ID"
+ value={schoolId}
+ onChangeText={(t) => { setSchoolId(t); if (errorMessage) setErrorMessage(null); }}
+ placeholder="e.g. S00123456"
+ autoCapitalize="characters"
+ />
 
-          {errorMessage ? (
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
-                borderColor: colors.critical,
-                borderWidth: 1,
-                borderRadius: radius.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                marginBottom: spacing.md,
-              }}
-            >
-              <Ionicons name="alert-circle" size={18} color={colors.critical} />
-              <AppText
-                variant="bodySmall"
-                weight="semiBold"
-                style={{ color: colors.critical, flex: 1 }}
-              >
-                {errorMessage}
-              </AppText>
-            </View>
-          ) : null}
+ {errorMessage ? (
+ <View
+ style={{
+ flexDirection: 'row',
+ alignItems: 'center',
+ gap: 8,
+ backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+ borderColor: colors.critical,
+ borderWidth: 1,
+ borderRadius: radius.md,
+ paddingHorizontal: spacing.md,
+ paddingVertical: spacing.sm,
+ marginBottom: spacing.md,
+ }}
+ >
+ <Ionicons name="alert-circle" size={18} color={colors.critical} />
+ <AppText
+ variant="bodySmall"
+ weight="semiBold"
+ style={{ color: colors.critical, flex: 1 }}
+ >
+ {errorMessage}
+ </AppText>
+ </View>
+ ) : null}
 
-          <AppButton
-            label="Verify enrollment"
-            onPress={handleVerify}
-            loading={submitting}
-            fullWidth
-          />
+ <AppButton
+ label="Verify enrollment"
+ onPress={handleVerify}
+ loading={submitting}
+ fullWidth
+ />
 
-          <View style={{ marginTop: spacing.md }}>
-            <AppButton
-              label="Skip & Enter Workspace →"
-              variant="secondary"
-              onPress={async () => {
-                await advance();
-              }}
-              fullWidth
-            />
-          </View>
-        </WaveCard>
-      </ScrollView>
-    </ScreenContainer>
-  );
+ <View style={{ marginTop: spacing.md }}>
+ <AppButton
+ label="Skip & Enter Workspace →"
+ variant="secondary"
+ onPress={async () => {
+ await advance();
+ }}
+ fullWidth
+ />
+ </View>
+ </WaveCard>
+ </ScrollView>
+ </ScreenContainer>
+ );
 }

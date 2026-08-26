@@ -8,11 +8,11 @@ import { useTheme } from'@/theme/ThemeProvider';
  * Apple/Linear-grade neutral surfaces for maximum legibility and elegance.
  */
 export function ScreenGlowBackground({ children }: { children: React.ReactNode }) {
-  const { colors } = useTheme();
+ const { colors } = useTheme();
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ flex: 1 }}>{children}</View>
-    </View>
-  );
+ return (
+ <View style={{ flex: 1, backgroundColor: colors.background }}>
+ <View style={{ flex: 1 }}>{children}</View>
+ </View>
+ );
 }

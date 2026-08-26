@@ -1,23 +1,27 @@
-import React from'react';
-import { View } from'react-native';
-import { LinearGradient } from'expo-linear-gradient';
+import React from 'react';
+import { View } from 'react-native';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface GradientProgressBarProps {
   progress: number; // 0-1
   height?: number;
+  color?: string;
 }
 
-/** Ported from ProfileScreen's XP bar: a horizontal blue -> purple -> orange gradient fill. */
-export function GradientProgressBar({ progress, height = 6 }: GradientProgressBarProps) {
+/** Clean, solid progress bar for academic XP and course milestones. */
+export function GradientProgressBar({ progress, height = 6, color }: GradientProgressBarProps) {
+  const { colors } = useTheme();
   const clamped = Math.max(0, Math.min(1, progress));
 
   return (
-    <View style={{ height, borderRadius: height / 2, overflow: 'hidden', backgroundColor: 'rgba(128,128,128,0.2)' }}>
-      <LinearGradient
-        colors={['#3B82F6', '#8B5CF6', '#F97316']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={{ width: `${clamped * 100}%`, height: '100%' }}
+    <View style={{ height, borderRadius: height / 2, overflow: 'hidden', backgroundColor: colors.border }}>
+      <View
+        style={{
+          width: `${clamped * 100}%`,
+          height: '100%',
+          backgroundColor: color || colors.brandPrimary,
+          borderRadius: height / 2,
+        }}
       />
     </View>
   );

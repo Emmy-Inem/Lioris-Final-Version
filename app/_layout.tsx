@@ -20,64 +20,64 @@ import { loadBlockedUserIds } from '@/api/connections';
 import { FeatureFlagsProvider } from '@/context/FeatureFlagsContext';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
-  // No-op: harmless if called more than once (e.g. fast refresh in dev).
+ // No-op: harmless if called more than once (e.g. fast refresh in dev).
 });
 
 setupNetworkAwareQueries();
 
 export default function RootLayout() {
-  const { fontsLoaded, fontError } = useLoadFonts();
+ const { fontsLoaded, fontError } = useLoadFonts();
 
-  const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded || fontError) {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+ const onLayoutRootView = useCallback(async () => {
+ if (fontsLoaded || fontError) {
+ await SplashScreen.hideAsync();
+ }
+ }, [fontsLoaded, fontError]);
 
-  useEffect(() => {
-    onLayoutRootView();
-    loadBlockedUserIds().catch(() => {
-      // background load
-    });
-    if (typeof document !== 'undefined') {
-      document.title = 'Lioris';
-    }
-  }, [onLayoutRootView]);
+ useEffect(() => {
+ onLayoutRootView();
+ loadBlockedUserIds().catch(() => {
+ // background load
+ });
+ if (typeof document !== 'undefined') {
+ document.title = 'Lioris';
+ }
+ }, [onLayoutRootView]);
 
-  useEffect(() => {
-    const subscription = addNotificationResponseListener((path) => {
-      router.push(path as any);
-    });
-    return () => subscription.remove();
-  }, []);
+ useEffect(() => {
+ const subscription = addNotificationResponseListener((path) => {
+ router.push(path as any);
+ });
+ return () => subscription.remove();
+ }, []);
 
-  if (!fontsLoaded && !fontError) {
-    // Splash screen is still showing — render nothing underneath it.
-    return null;
-  }
+ if (!fontsLoaded && !fontError) {
+ // Splash screen is still showing - render nothing underneath it.
+ return null;
+ }
 
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <ThemeProvider>
-              <FeatureFlagsProvider>
-                <StatusBarForTheme />
-                <OfflineBanner />
-                <ErrorBoundary>
-                  <Slot />
-                </ErrorBoundary>
-              </FeatureFlagsProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
-  );
+ return (
+ <GestureHandlerRootView style={{ flex: 1 }}>
+ <SafeAreaProvider>
+ <QueryClientProvider client={queryClient}>
+ <AuthProvider>
+ <ThemeProvider>
+ <FeatureFlagsProvider>
+ <StatusBarForTheme />
+ <OfflineBanner />
+ <ErrorBoundary>
+ <Slot />
+ </ErrorBoundary>
+ </FeatureFlagsProvider>
+ </ThemeProvider>
+ </AuthProvider>
+ </QueryClientProvider>
+ </SafeAreaProvider>
+ </GestureHandlerRootView>
+ );
 }
 
 function StatusBarForTheme() {
-  const { isDark } = useTheme();
-  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+ const { isDark } = useTheme();
+ return <StatusBar style={isDark ? 'light' : 'dark'} />;
 }

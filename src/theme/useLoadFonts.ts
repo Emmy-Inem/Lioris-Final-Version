@@ -1,9 +1,9 @@
 import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
+ useFonts,
+ Inter_400Regular,
+ Inter_500Medium,
+ Inter_600SemiBold,
+ Inter_700Bold,
 } from'@expo-google-fonts/inter';
 
 /**
@@ -17,12 +17,12 @@ import {
  * the system default.
  */
 export function useLoadFonts() {
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
+ const [fontsLoaded, fontError] = useFonts({
+ Inter_400Regular,
+ Inter_500Medium,
+ Inter_600SemiBold,
+ Inter_700Bold,
+ });
 
-  return { fontsLoaded, fontError };
+ return { fontsLoaded, fontError };
 }

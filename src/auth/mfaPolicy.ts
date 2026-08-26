@@ -7,5 +7,5 @@ import { UserRole } from '@/api/types';
  * admin and staff login lockouts.
  */
 export function roleRequiresMfa(_role: UserRole): boolean {
-  return false;
+ return false;
 }

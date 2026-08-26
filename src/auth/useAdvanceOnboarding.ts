@@ -10,17 +10,17 @@ import { nextOnboardingStep } from'./onboardingSteps';
  * sends the user to the resolver (which routes to their dashboard).
  */
 export function useAdvanceOnboarding(currentPath: string) {
-  const { user, setOnboardingStep, completeOnboarding } = useAuth();
+ const { user, setOnboardingStep, completeOnboarding } = useAuth();
 
-  return async function advance() {
-    const userRole = user?.role || 'student';
-    const next = nextOnboardingStep(userRole, currentPath);
-    if (next && user && user.onboardingComplete === false) {
-      await setOnboardingStep(next);
-      router.replace(next as any);
-    } else {
-      await completeOnboarding();
-      router.replace('/');
-    }
-  };
+ return async function advance() {
+ const userRole = user?.role || 'student';
+ const next = nextOnboardingStep(userRole, currentPath);
+ if (next && user && user.onboardingComplete === false) {
+ await setOnboardingStep(next);
+ router.replace(next as any);
+ } else {
+ await completeOnboarding();
+ router.replace('/');
+ }
+ };
 }

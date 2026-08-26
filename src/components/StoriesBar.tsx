@@ -11,57 +11,57 @@ const MOCK_STORIES = ['Tunde', 'Chioma', 'Sade', 'Adebayo', 'Sithole'];
 
 /** Ported from StoriesBar (DashboardAndProfile.kt): "My Story" add bubble + friends' story avatars in a ring border. */
 export function StoriesBar() {
-  const { colors, spacing } = useTheme();
-  const { isFeatureEnabled } = useFeatureFlags();
+ const { colors, spacing } = useTheme();
+ const { isFeatureEnabled } = useFeatureFlags();
 
-  if (!isFeatureEnabled('stories_bar')) {
-    return null;
-  }
+ if (!isFeatureEnabled('stories_bar')) {
+ return null;
+ }
 
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.sm }}
-    >
-      <View style={{ alignItems: 'center', width: 64 }}>
-        <View
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: 30,
-            backgroundColor: `${colors.brandPrimary}18`,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 4,
-          }}
-        >
-          <Ionicons name="add"size={22} color={colors.brandPrimary} />
-        </View>
-        <AppText variant="caption">My Story</AppText>
-      </View>
+ return (
+ <ScrollView
+ horizontal
+ showsHorizontalScrollIndicator={false}
+ contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.sm }}
+ >
+ <View style={{ alignItems: 'center', width: 64 }}>
+ <View
+ style={{
+ width: 60,
+ height: 60,
+ borderRadius: 30,
+ backgroundColor: `${colors.brandPrimary}18`,
+ alignItems: 'center',
+ justifyContent: 'center',
+ marginBottom: 4,
+ }}
+ >
+ <Ionicons name="add"size={22} color={colors.brandPrimary} />
+ </View>
+ <AppText variant="caption">My Story</AppText>
+ </View>
 
-      {MOCK_STORIES.map((name) => (
-        <View key={name} style={{ alignItems: 'center', width: 64 }}>
-          <View
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              borderWidth: 2,
-              borderColor: colors.brandPrimary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 4,
-            }}
-          >
-            <Avatar name={name} size={54} />
-          </View>
-          <AppText variant="caption"numberOfLines={1}>
-            {name}
-          </AppText>
-        </View>
-      ))}
-    </ScrollView>
-  );
+ {MOCK_STORIES.map((name) => (
+ <View key={name} style={{ alignItems: 'center', width: 64 }}>
+ <View
+ style={{
+ width: 60,
+ height: 60,
+ borderRadius: 30,
+ borderWidth: 2,
+ borderColor: colors.brandPrimary,
+ alignItems: 'center',
+ justifyContent: 'center',
+ marginBottom: 4,
+ }}
+ >
+ <Avatar name={name} size={54} />
+ </View>
+ <AppText variant="caption"numberOfLines={1}>
+ {name}
+ </AppText>
+ </View>
+ ))}
+ </ScrollView>
+ );
 }
