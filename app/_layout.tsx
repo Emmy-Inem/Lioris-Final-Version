@@ -41,6 +41,34 @@ export default function RootLayout() {
  });
  if (typeof document !== 'undefined') {
  document.title = 'Lioris';
+
+ const styleId = 'lioris-desktop-scrollbars';
+ if (!document.getElementById(styleId)) {
+ const style = document.createElement('style');
+ style.id = styleId;
+ style.textContent = `
+ /* Desktop visible sleek scrollbars */
+ ::-webkit-scrollbar {
+ width: 8px;
+ height: 8px;
+ }
+ ::-webkit-scrollbar-track {
+ background: transparent;
+ }
+ ::-webkit-scrollbar-thumb {
+ background-color: rgba(148, 163, 184, 0.4);
+ border-radius: 4px;
+ }
+ ::-webkit-scrollbar-thumb:hover {
+ background-color: rgba(148, 163, 184, 0.7);
+ }
+ * {
+ scrollbar-width: thin;
+ scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+ }
+ `;
+ document.head.appendChild(style);
+ }
  }
  }, [onLayoutRootView]);
 

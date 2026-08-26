@@ -7,7 +7,7 @@ type Visibility = 'campus' | 'global' | 'private';
 
 const CONFIG: Record<Visibility, { label: string; lightBg: string; lightText: string; darkBg: string; darkText: string }> = {
  global: {
- label: 'Global �',
+ label: 'Global ',
  lightBg: '#EFF6FF',
  lightText: '#1D4ED8',
  darkBg: 'rgba(96,165,250,0.18)',
@@ -43,7 +43,7 @@ export function VisibilityBadge({
  const text = isDark ? config.darkText : config.lightText;
  const label =
  visKey === 'campus' && campusCode && campusCode !== 'GLOBAL'
- ? `${campusCode} �`
+ ? `${campusCode} `
  : config.label;
 
  return (

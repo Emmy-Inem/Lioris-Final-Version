@@ -112,7 +112,7 @@ export default function VerificationRequestsScreen() {
  <ScreenContainer glow={true}>
  <AppHeader />
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: 150 }}
  >
@@ -160,7 +160,7 @@ export default function VerificationRequestsScreen() {
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs, flexWrap: 'wrap' }}>
  <View style={{ flex: 1, minWidth: 100 }}>
  <AppButton
- label="Inspect �"
+ label="Inspect "
  variant="ghost"
  onPress={() => setInspectDocRequest(req)}
  />
@@ -197,7 +197,7 @@ export default function VerificationRequestsScreen() {
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
  <Ionicons name="document-text"size={20} color={colors.brandPrimary} />
  <AppText variant="h2"weight="bold">
- Credential Verification �
+ Credential Verification 
  </AppText>
  </View>
  <Pressable onPress={() => setInspectDocRequest(null)} hitSlop={8}>

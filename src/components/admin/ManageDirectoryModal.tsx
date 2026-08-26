@@ -185,7 +185,7 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
  </View>
 
  {isCreating || editingEntry ? (
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h3"weight="bold">
  {editingEntry ? `Edit Member: ${editingEntry.fullName}` : 'Add Directory Member'}
@@ -291,7 +291,7 @@ export function ManageDirectoryModal({ visible, onClose }: ManageDirectoryModalP
  <FlatList
  data={filteredDirectory}
  keyExtractor={(item) => item.id}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  contentContainerStyle={{ paddingBottom: 60 }}
  renderItem={({ item }) => {
  return (

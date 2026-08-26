@@ -49,7 +49,7 @@ export function ScreenContainer({
 
  const inner = scrollable ? (
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
  contentContainerStyle={[

@@ -14,7 +14,7 @@ export default function AdminReportsScreen() {
  <AppHeader />
  <View style={{ paddingTop: spacing.md, marginBottom: spacing.sm }}>
  <AppText variant="h1"weight="bold">
- Incident Reports & Safety �
+ Incident Reports & Safety 
  </AppText>
  <AppText tone="secondary">
  Review community flagged threads, chat harassment, and policy violations

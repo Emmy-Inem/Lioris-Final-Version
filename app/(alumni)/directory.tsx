@@ -121,7 +121,7 @@ export default function AlumniDirectoryScreen() {
  <DirectoryCard entry={item} />
  </View>
  )}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  refreshing={isRefetching}
  onRefresh={refetch}
  ListEmptyComponent={

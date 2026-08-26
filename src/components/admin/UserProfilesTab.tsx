@@ -335,7 +335,7 @@ export function UserProfilesTab() {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={false}>
+ <ScrollView showsVerticalScrollIndicator={true}>
  <AppTextField label="Full Name"value={editName} onChangeText={setEditName} />
  <AppTextField label="Academic Department"value={editDept} onChangeText={setEditDept} />
 

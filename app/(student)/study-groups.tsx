@@ -52,7 +52,7 @@ export default function StudyGroupsScreen() {
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
  <View>
  <AppText variant="h1" weight="bold">
- Study Pods 
+ Study Pods
  </AppText>
  <AppText tone="secondary" variant="bodySmall">
  Collaborative course squads, exam revision circles, and weekly peer sprints

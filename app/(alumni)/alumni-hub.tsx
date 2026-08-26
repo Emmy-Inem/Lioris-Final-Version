@@ -20,72 +20,72 @@ import { getMyProfile } from'@/api/profile';
 import { useDebouncedValue } from'@/hooks/useDebouncedValue';
 import { haptics } from'@/utils/haptics';
 
-const TABS = ['Overview Hub �', 'Member Search', 'Legacy & Giving'] as const;
+const TABS = ['Overview Hub', 'Member Search', 'Legacy & Giving'] as const;
 const DEPARTMENTS = ['All Departments', 'Computer Science', 'Mathematics', 'Electrical Engineering'];
 const GRAD_YEARS = ['All Years', '2012', '2015', '2018', '2020', '2022'];
 
 const UPCOMING_MASTERCLASSES = [
- {
- id: 'mc-1',
- title: 'AI & Global Tech Leadership in 2026',
- speaker: 'Priya Nair \'18',
- role: 'Staff ML Engineer, Google',
- date: 'Aug 20, 2026',
- time: '5:00 PM GMT',
- registered: 142,
- tag: 'Webinar',
- },
- {
- id: 'mc-2',
- title: 'From Campus Founder to Series A Fintech',
- speaker: 'Marcus Webb \'15',
- role: 'Co-Founder & CEO, Lightbeam',
- date: 'Aug 26, 2026',
- time: '6:30 PM GMT',
- registered: 98,
- tag: 'Masterclass',
- },
+  {
+    id: 'mc-1',
+    title: 'AI & Global Tech Leadership in 2026',
+    speaker: 'Priya Nair \'18',
+    role: 'Staff ML Engineer, Google',
+    date: 'Aug 20, 2026',
+    time: '5:00 PM GMT',
+    registered: 142,
+    tag: 'Webinar',
+  },
+  {
+    id: 'mc-2',
+    title: 'From Campus Founder to Series A Fintech',
+    speaker: 'Marcus Webb \'15',
+    role: 'Co-Founder & CEO, Lightbeam',
+    date: 'Aug 26, 2026',
+    time: '6:30 PM GMT',
+    registered: 98,
+    tag: 'Masterclass',
+  },
 ];
 
 const LEGACY_CAMPAIGNS = [
- {
- id: 'leg-1',
- title: 'STEM Lab High-Perf Computing & Laptop Grant',
- raised: 11400,
- target: 15000,
- donors: 38,
- category: 'Hardware & Labs',
- desc: 'Funding 25 high-performance laptops and server hardware for underprivileged final-year computing students.',
- },
- {
- id: 'leg-2',
- title: 'Need-Based Tuition Relief & Student Emergency Fund',
- raised: 19800,
- target: 25000,
- donors: 62,
- category: 'Scholarship',
- desc: 'Covering final semester clearance fees for 15 graduating students facing sudden financial hardship.',
- },
- {
- id: 'leg-3',
- title: 'Undergrad Renewable Energy & Clean Tech Fellowship',
- raised: 8500,
- target: 10000,
- donors: 29,
- category: 'Research',
- desc: 'Providing seed research grants and mentoring for innovative green campus engineering projects.',
- },
+  {
+    id: 'leg-1',
+    title: 'STEM Lab High-Perf Computing & Laptop Grant',
+    raised: 11400,
+    target: 15000,
+    donors: 38,
+    category: 'Hardware & Labs',
+    desc: 'Funding 25 high-performance laptops and server hardware for underprivileged final-year computing students.',
+  },
+  {
+    id: 'leg-2',
+    title: 'Need-Based Tuition Relief & Student Emergency Fund',
+    raised: 19800,
+    target: 25000,
+    donors: 62,
+    category: 'Scholarship',
+    desc: 'Covering final semester clearance fees for 15 graduating students facing sudden financial hardship.',
+  },
+  {
+    id: 'leg-3',
+    title: 'Undergrad Renewable Energy & Clean Tech Fellowship',
+    raised: 8500,
+    target: 10000,
+    donors: 29,
+    category: 'Research',
+    desc: 'Providing seed research grants and mentoring for innovative green campus engineering projects.',
+  },
 ];
 
 export default function AlumniHubScreen() {
- const { colors, spacing, radius } = useTheme();
- const { user } = useAuth();
- const [tab, setTab] = useState<(typeof TABS)[number]>('Overview Hub �');
- const { data: profile } = useQuery({
- queryKey: ['profile', 'me', user?.id],
- queryFn: () => getMyProfile(user!),
- enabled: !!user,
- });
+  const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
+  const [tab, setTab] = useState<(typeof TABS)[number]>('Overview Hub');
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
 
  return (
  <ScreenContainer glow={true}>
@@ -153,7 +153,7 @@ export default function AlumniHubScreen() {
  })}
  </ScrollView>
 
- {tab === 'Overview Hub �' ? <OverviewHubTab /> : null}
+ {tab === 'Overview Hub' ? <OverviewHubTab /> : null}
  {tab === 'Member Search' ? <MemberSearchTab /> : null}
  {tab === 'Legacy & Giving' ? <LegacyGivingTab /> : null}
  </ScreenContainer>
@@ -211,12 +211,12 @@ function OverviewHubTab() {
  }
 
  return (
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 130 }}>
  {/* Live Masterclasses & Webinars Spotlight */}
  <View style={{ marginBottom: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
- UPCOMING ALUMNI WEBINARS �
+ UPCOMING ALUMNI WEBINARS 
  </AppText>
  <Badge label="Live Panels"tone="accent" />
  </View>
@@ -324,7 +324,7 @@ function MemberSearchTab() {
  });
 
  return (
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 130 }}>
  <AppTextField
  label=""placeholder="Search alumni by name, company, industry..."value={query}
  onChangeText={setQuery}
@@ -428,7 +428,7 @@ function LegacyGivingTab() {
  }
 
  return (
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 130 }}>
  <SolidCard radius={20} backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.brandPrimary }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
  <Ionicons name="trophy"size={24} color={colors.brandPrimary} />
@@ -479,7 +479,7 @@ function LegacyGivingTab() {
  </View>
 
  <AppButton
- label={isPledged ? 'Pledged $100 ✓ (Sponsor Badge Earned)' : 'Pledge / Donate �'}
+ label={isPledged ? 'Pledged $100 ✓ (Sponsor Badge Earned)' : 'Pledge / Donate '}
  variant={isPledged ? 'secondary' : 'primary'}
  onPress={() => setPledgeModalCampaign(c)}
  fullWidth

@@ -211,7 +211,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  }}
  >
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 100 }}
  >
@@ -367,7 +367,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  )}
  <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
  <AppText variant="caption" weight="bold" tone="inverse">
- {customMediaType === 'video' ? '� Video' : ' Image'}
+ {customMediaType === 'video' ? ' Video' : ' Image'}
  </AppText>
  </View>
  </View>
@@ -519,7 +519,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  }}
  >
  <AppText variant="bodySmall"weight={selected ? 'bold' : 'medium'} tone={selected ? 'brand' : 'secondary'}>
- {v === 'Campus Only' ? 'My Campus Only' : '� Global University Network'}
+ {v === 'Campus Only' ? 'My Campus Only' : ' Global University Network'}
  </AppText>
  </Pressable>
  );

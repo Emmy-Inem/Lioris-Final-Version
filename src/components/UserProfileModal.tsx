@@ -171,7 +171,7 @@ export function UserProfileModal({
  </Pressable>
 
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: 50 }}
  >

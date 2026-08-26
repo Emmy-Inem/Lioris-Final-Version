@@ -23,12 +23,12 @@ import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 
 const AVATAR_PRESETS = [
- { id: 'avatar_male', label: 'Male Student �‍', src: require('../../assets/images/avatar_male.jpg') },
- { id: 'avatar_female', label: 'Female Student �‍', src: require('../../assets/images/avatar_female.jpg') },
+ { id: 'avatar_male', label: 'Male Student ‍', src: require('../../assets/images/avatar_male.jpg') },
+ { id: 'avatar_female', label: 'Female Student ‍', src: require('../../assets/images/avatar_female.jpg') },
  { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
  { id: 'avatar_female_2', label: 'Honor Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
  { id: 'avatar_alumni_2', label: 'Alumni Founder', src: require('../../assets/images/avatar_alumni_2.jpg') },
- { id: 'avatar_mentor', label: 'Faculty & Mentor �‍', src: require('../../assets/images/avatar_mentor.jpg') },
+ { id: 'avatar_mentor', label: 'Faculty & Mentor ‍', src: require('../../assets/images/avatar_mentor.jpg') },
 ];
 
 const COVER_PRESETS = [
@@ -215,7 +215,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </View>
  )}
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140 }}
@@ -494,7 +494,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={false}>
+ <ScrollView showsVerticalScrollIndicator={true}>
  {/* Custom Photo Upload */}
  <View style={{ marginBottom: spacing.md }}>
  <AppButton
@@ -591,7 +591,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
+ <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: 380 }}>
  <AppTextField label="Full Name"value={editName} onChangeText={setEditName} />
  <AppTextField label="Department"value={editDepartment} onChangeText={setEditDepartment} />
  <AppTextField label="Graduation Year"value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />

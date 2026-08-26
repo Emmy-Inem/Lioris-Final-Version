@@ -29,7 +29,7 @@ export default function AdminFeatureControlsScreen() {
  <ScreenContainer glow={true}>
  <AppHeader />
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: 150 }}
@@ -37,7 +37,7 @@ export default function AdminFeatureControlsScreen() {
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: spacing.md, marginBottom: spacing.xs }}>
  <View style={{ flex: 1, paddingRight: spacing.sm }}>
  <AppText variant="h1" weight="bold">
- Feature Controls �
+ Feature Controls 
  </AppText>
  <AppText tone="secondary" variant="caption">
  Temporarily enable or disable any non-major feature across campus

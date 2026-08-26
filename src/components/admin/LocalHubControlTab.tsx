@@ -120,7 +120,7 @@ export function LocalHubControlTab() {
  Active Listings ({shortcuts?.length ?? 0})
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
- <AppButton label="� Manage Portals" variant="secondary" onPress={() => setPortalModalOpen(true)} />
+ <AppButton label=" Manage Portals" variant="secondary" onPress={() => setPortalModalOpen(true)} />
  <AppButton label="+ Add Option" onPress={openAdd} />
  </View>
  </View>

@@ -15,51 +15,51 @@ import { listAuditLog } from'@/api/auditLog';
 import { AuditLogAction, AuditLogEntry } from'@/api/types';
 import { haptics } from'@/utils/haptics';
 
-const CATEGORY_FILTERS = ['All Events', 'Moderation', 'Security & Keys �', 'Verification �', 'Escrow & Finance'];
+const CATEGORY_FILTERS = ['All Events', 'Moderation', 'Security & Keys', 'Verification', 'Escrow & Finance'];
 
 const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | 'brand' | 'neutral'> = {
- report_resolved: 'success',
- report_dismissed: 'neutral',
- event_approval_revoked: 'warning',
- event_purged: 'critical',
- verification_approved: 'success',
- verification_rejected: 'neutral',
- escrow_funds_released: 'critical',
- impersonation_started: 'critical',
- user_blocked: 'warning',
- user_suspended: 'critical',
- user_unsuspended: 'success',
- user_role_changed: 'warning',
- user_account_deleted: 'critical',
- feature_flag_toggled: 'warning',
- portal_link_created: 'success',
- portal_link_updated: 'brand',
- portal_link_deleted: 'critical',
- institution_provisioned: 'success',
- platform_config_updated: 'brand',
- domain_authority_updated: 'brand',
- tenant_toggles_updated: 'brand',
- xp_multiplier_updated: 'brand',
- level_badges_updated: 'brand',
- seasonal_leaderboard_deployed: 'success',
- escrow_config_updated: 'brand',
- toxicity_thresholds_deployed: 'warning',
- storage_quotas_enforced: 'warning',
- global_push_broadcast: 'critical',
+  report_resolved: 'success',
+  report_dismissed: 'neutral',
+  event_approval_revoked: 'warning',
+  event_purged: 'critical',
+  verification_approved: 'success',
+  verification_rejected: 'neutral',
+  escrow_funds_released: 'critical',
+  impersonation_started: 'critical',
+  user_blocked: 'warning',
+  user_suspended: 'critical',
+  user_unsuspended: 'success',
+  user_role_changed: 'warning',
+  user_account_deleted: 'critical',
+  feature_flag_toggled: 'warning',
+  portal_link_created: 'success',
+  portal_link_updated: 'brand',
+  portal_link_deleted: 'critical',
+  institution_provisioned: 'success',
+  platform_config_updated: 'brand',
+  domain_authority_updated: 'brand',
+  tenant_toggles_updated: 'brand',
+  xp_multiplier_updated: 'brand',
+  level_badges_updated: 'brand',
+  seasonal_leaderboard_deployed: 'success',
+  escrow_config_updated: 'brand',
+  toxicity_thresholds_deployed: 'warning',
+  storage_quotas_enforced: 'warning',
+  global_push_broadcast: 'critical',
 };
 
 export default function AuditLogsScreen() {
- const { colors, spacing, radius } = useTheme();
- const [filter, setFilter] = useState('All Events');
- const { data: entries, isLoading } = useQuery({ queryKey: ['audit-log', 'global'], queryFn: () => listAuditLog() });
+  const { colors, spacing, radius } = useTheme();
+  const [filter, setFilter] = useState('All Events');
+  const { data: entries, isLoading } = useQuery({ queryKey: ['audit-log', 'global'], queryFn: () => listAuditLog() });
 
- const filtered = (entries ?? []).filter((e) => {
- if (filter === 'Moderation') return e.action.includes('report') || e.action.includes('event');
- if (filter === 'Verification �') return e.action.includes('verification');
- if (filter === 'Escrow & Finance') return e.action.includes('escrow');
- if (filter === 'Security & Keys �') return e.action.includes('impersonation');
- return true;
- });
+  const filtered = (entries ?? []).filter((e) => {
+    if (filter === 'Moderation') return e.action.includes('report') || e.action.includes('event');
+    if (filter === 'Verification') return e.action.includes('verification');
+    if (filter === 'Escrow & Finance') return e.action.includes('escrow');
+    if (filter === 'Security & Keys') return e.action.includes('impersonation');
+    return true;
+  });
 
  async function handleExportCsv() {
  haptics.medium();
@@ -79,7 +79,7 @@ export default function AuditLogsScreen() {
  document.body.appendChild(link);
  link.click();
  document.body.removeChild(link);
- Alert.alert('Audit Ledger Exported �', 'Compliance CSV download has been initiated.');
+ Alert.alert('Audit Ledger Exported ', 'Compliance CSV download has been initiated.');
  } else {
  try {
  const { File, Paths } = await import('expo-file-system');
@@ -125,7 +125,7 @@ export default function AuditLogsScreen() {
  </AppText>
  <AppText tone="secondary">Immutable ledger of administrative and security events</AppText>
  </View>
- <AppButton label="Export CSV �"variant="secondary"onPress={handleExportCsv} />
+ <AppButton label="Export CSV "variant="secondary"onPress={handleExportCsv} />
  </View>
 
  <View style={{ marginVertical: spacing.md }}>
@@ -135,7 +135,7 @@ export default function AuditLogsScreen() {
  <FlatList
  data={filtered}
  keyExtractor={(item) => item.id}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  contentContainerStyle={{ paddingBottom: 150 }}
  renderItem={({ item }) => (
  <SolidCard radius={18} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border }}>

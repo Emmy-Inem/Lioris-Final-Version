@@ -204,7 +204,7 @@ export function PostDetailScreen() {
  </View>
 
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"contentContainerStyle={{ paddingBottom: 120 }}
  >
  {/* Full-Screen Master Thread Card */}

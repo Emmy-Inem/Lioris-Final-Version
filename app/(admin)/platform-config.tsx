@@ -82,7 +82,7 @@ export default function PlatformConfigScreen() {
 
  {/* Unified Main ScrollView for entire Admin Desk */}
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: 150 }}
  >
@@ -220,7 +220,7 @@ export default function PlatformConfigScreen() {
  </View>
  <View style={{ flex: 1 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches �</AppText>
+ <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches </AppText>
  <Badge label="Runtime Modular" tone="brand" />
  </View>
  <AppText tone="secondary" variant="caption">
@@ -347,7 +347,7 @@ export default function PlatformConfigScreen() {
  Immediately delivers a high-priority push notification and sticky banner across the selected student network.
  </AppText>
 
- <ScrollView showsVerticalScrollIndicator={false}>
+ <ScrollView showsVerticalScrollIndicator={true}>
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
  TARGET AUDIENCE
  </AppText>

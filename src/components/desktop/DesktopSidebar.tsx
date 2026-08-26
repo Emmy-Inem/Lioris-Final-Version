@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
+import { useViewScope } from '@/hooks/useViewScope';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { LiorisLogo } from '@/components/LiorisLogo';
@@ -24,6 +25,7 @@ interface NavItem {
 export function DesktopSidebar() {
  const { colors, isDark, toggleTheme, spacing, radius } = useTheme();
  const { user, logout } = useAuth();
+ const { scope: viewScope, setScope: setViewScope } = useViewScope();
  const pathname = usePathname();
  const [collapsed, setCollapsed] = useState(false);
 
@@ -172,28 +174,85 @@ export function DesktopSidebar() {
  </Pressable>
  </View>
 
- {/* Active Campus Scope Pill */}
+ {/* Active Campus Scope Pill & Scope Switcher */}
  {!collapsed && (
+ <View style={{ gap: 6, marginTop: 4 }}>
  <View
  style={[
  styles.campusPill,
  {
- backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
- borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
+ borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
  },
  ]}
  >
  <View style={styles.activeDot} />
- <AppText variant="caption" weight="semiBold" numberOfLines={1} style={{ flex: 1 }}>
+ <AppText variant="caption" weight="semiBold" numberOfLines={1} style={{ flex: 1, fontSize: 11 }}>
  {campusName}
  </AppText>
+ </View>
+
+ {/* Scope Segment */}
+ <View
+ style={{
+ flexDirection: 'row',
+ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F1F5F9',
+ borderRadius: 6,
+ padding: 2,
+ borderWidth: 1,
+ borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#E2E8F0',
+ }}
+ >
+ <Pressable
+ onPress={() => setViewScope('campus')}
+ style={{
+ flex: 1,
+ paddingVertical: 3,
+ alignItems: 'center',
+ borderRadius: 4,
+ backgroundColor: viewScope === 'campus' ? colors.brandPrimary : 'transparent',
+ }}
+ >
+ <AppText
+ variant="caption"
+ weight={viewScope === 'campus' ? 'bold' : 'medium'}
+ style={{
+ fontSize: 10,
+ color: viewScope === 'campus' ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
+ }}
+ >
+ My Campus
+ </AppText>
+ </Pressable>
+ <Pressable
+ onPress={() => setViewScope('global')}
+ style={{
+ flex: 1,
+ paddingVertical: 3,
+ alignItems: 'center',
+ borderRadius: 4,
+ backgroundColor: viewScope === 'global' ? colors.brandPrimary : 'transparent',
+ }}
+ >
+ <AppText
+ variant="caption"
+ weight={viewScope === 'global' ? 'bold' : 'medium'}
+ style={{
+ fontSize: 10,
+ color: viewScope === 'global' ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
+ }}
+ >
+ Global Feed
+ </AppText>
+ </Pressable>
+ </View>
  </View>
  )}
  </View>
 
  {/* Navigation List */}
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  contentContainerStyle={{ paddingVertical: spacing.sm, paddingHorizontal: collapsed ? 8 : spacing.sm }}
  style={{ flex: 1 }}
  >

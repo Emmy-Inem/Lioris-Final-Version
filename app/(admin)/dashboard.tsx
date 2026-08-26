@@ -40,7 +40,7 @@ export default function AdminDashboard() {
  <ScreenContainer glow={true}>
  {!isDesktop && <AppHeader />}
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 140, paddingTop: isDesktop ? spacing.md : 0 }}

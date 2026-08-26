@@ -45,7 +45,7 @@ export default function StaffAnnouncementsScreen() {
  return (
  <ScreenContainer glow={false}>
  <AppHeader />
- <ScrollView showsVerticalScrollIndicator={false}>
+ <ScrollView showsVerticalScrollIndicator={true}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg }}>
  <AppText variant="h1"weight="bold">
  Announcements

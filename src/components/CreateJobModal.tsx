@@ -82,7 +82,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  });
 
  haptics.success();
- Alert.alert('Opening Published �', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
+ Alert.alert('Opening Published ', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
  reset();
  onCreated();
  onClose();
@@ -121,11 +121,11 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  overflow: 'hidden',
  }}
  >
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
  <View>
  <AppText variant="h1" weight="bold">
- Post Opportunity �
+ Post Opportunity 
  </AppText>
  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
  Share internships, graduate roles & referrals
@@ -227,7 +227,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  >
  <View style={{ flex: 1 }}>
  <AppText weight="bold" variant="bodySmall">
- Remote Friendly �
+ Remote Friendly 
  </AppText>
  <AppText tone="secondary" variant="caption">
  Can applicants work 100% remotely from anywhere?

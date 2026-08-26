@@ -76,7 +76,7 @@ export default function JobsScreen() {
 
  <SolidCard radius={18} style={{ padding: spacing.md }}>
  <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Job Type �
+ Job Type
  </AppText>
  <View style={{ gap: 4 }}>
  {JOB_FILTERS.map((f) => {
@@ -170,7 +170,7 @@ export default function JobsScreen() {
  <JobCard job={item} />
  </View>
  )}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found" description="Try a different search or filter." /> : null}
  />
  </View>
@@ -182,7 +182,7 @@ export default function JobsScreen() {
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
  <View style={{ flex: 1, marginRight: spacing.sm }}>
  <AppText variant="h1" weight="bold">
- Career & Internships �
+ Career & Internships 
  </AppText>
  <AppText tone="secondary" variant="bodySmall">
  Verified student roles, alumni referrals & industry gigs
@@ -271,7 +271,7 @@ export default function JobsScreen() {
  keyExtractor={(item) => item.id}
  contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
  renderItem={({ item }) => <JobCard job={item} />}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found" description="Try a different search or filter." /> : null}
  />
  </>

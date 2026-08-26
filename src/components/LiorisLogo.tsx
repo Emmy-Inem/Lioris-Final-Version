@@ -36,54 +36,54 @@ export function LiorisLogo({ size = 48, tintColor, variant = 'symbol' }: LiorisL
  const activeColor = tintColor || (isDark ? '#38BDF8' : colors.brandPrimary);
  const accentColor = tintColor || (isDark ? '#60A5FA' : colors.brandAccent || '#0284C7');
 
-  if (variant === 'wordmark') {
-    const height = size;
-    const width = Math.round(size * 3.6);
-    return (
-      <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
-        <Svg width={width} height={height} viewBox="0 0 180 50">
-          <SvgText
-            fill={activeColor}
-            fontSize="40"
-            fontWeight="900"
-            letterSpacing="3.5"
-            x="0"
-            y="38"
-          >
-            LIORIS
-          </SvgText>
-        </Svg>
-      </View>
-    );
-  }
+ if (variant === 'wordmark') {
+ const height = size;
+ const width = Math.round(size * 3.6);
+ return (
+ <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
+ <Svg width={width} height={height} viewBox="0 0 180 50">
+ <SvgText
+ fill={activeColor}
+ fontSize="40"
+ fontWeight="900"
+ letterSpacing="3.5"
+ x="0"
+ y="38"
+ >
+ LIORIS
+ </SvgText>
+ </Svg>
+ </View>
+ );
+ }
 
-  // Full variant: Crest symbol + Clean Wordmark
-  const gap = Math.max(8, Math.round(size * 0.2));
-  const wmHeight = Math.round(size * 0.7);
-  const wmWidth = Math.round(wmHeight * 3.6);
+ // Full variant: Crest symbol + Clean Wordmark
+ const gap = Math.max(8, Math.round(size * 0.2));
+ const wmHeight = Math.round(size * 0.7);
+ const wmWidth = Math.round(wmHeight * 3.6);
 
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>
-      <Image
-        source={EMBLEM_ASSET}
-        style={{ width: size, height: size }}
-        contentFit="contain"
-        transition={200}
-      />
-      <View style={{ width: wmWidth, height: wmHeight, justifyContent: 'center' }}>
-        <Svg width={wmWidth} height={wmHeight} viewBox="0 0 180 50">
-          <SvgText
-            fill={activeColor}
-            fontSize="40"
-            fontWeight="900"
-            letterSpacing="3.5"
-            x="0"
-            y="38"
-          >
-            LIORIS
-          </SvgText>
-        </Svg>
-      </View>
-    </View>
-  );
+ return (
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>
+ <Image
+ source={EMBLEM_ASSET}
+ style={{ width: size, height: size }}
+ contentFit="contain"
+ transition={200}
+ />
+ <View style={{ width: wmWidth, height: wmHeight, justifyContent: 'center' }}>
+ <Svg width={wmWidth} height={wmHeight} viewBox="0 0 180 50">
+ <SvgText
+ fill={activeColor}
+ fontSize="40"
+ fontWeight="900"
+ letterSpacing="3.5"
+ x="0"
+ y="38"
+ >
+ LIORIS
+ </SvgText>
+ </Svg>
+ </View>
+ </View>
+ );
 }

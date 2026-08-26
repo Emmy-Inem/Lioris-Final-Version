@@ -186,7 +186,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  </View>
 
  {isCreating || editingResource ? (
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h3"weight="bold">
  {editingResource ? `Edit Resource: ${editingResource.title}` : 'Add Academic Resource'}
@@ -361,7 +361,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  <FlatList
  data={filteredResources}
  keyExtractor={(item) => item.id}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  contentContainerStyle={{ paddingBottom: 60 }}
  renderItem={({ item }) => {
  return (

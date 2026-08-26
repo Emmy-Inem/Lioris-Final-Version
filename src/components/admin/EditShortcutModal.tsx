@@ -90,7 +90,7 @@ export function EditShortcutModal({ visible, onClose, hubType, initial, onSave }
  <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }}>
  {initial ? 'Edit Option' : 'Add Option'}
  </AppText>
- <ScrollView showsVerticalScrollIndicator={false}>
+ <ScrollView showsVerticalScrollIndicator={true}>
  <AppTextField label="Title"value={title} onChangeText={setTitle} placeholder="e.g. Timetable" />
  <AppTextField label="Description"value={description} onChangeText={setDescription} multiline numberOfLines={2} />
  <AppTextField label="Internal Action key"value={internalAction} onChangeText={setInternalAction} placeholder="e.g. timetable" />

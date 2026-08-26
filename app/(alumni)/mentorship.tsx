@@ -91,7 +91,7 @@ export default function AlumniMentorshipScreen() {
  return (
  <ScreenContainer glow={false}>
  <AppHeader />
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 130 }}>
  <View style={{ paddingTop: spacing.md, marginBottom: spacing.md }}>
  <AppText variant="h1" weight="bold">
  Alumni Mentorship Desk 

@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Pressable, TextInput, StyleSheet, Modal, ScrollView } from 'react-native';
-import { router, usePathname } from 'expo-router';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
-import { useViewScope } from '@/hooks/useViewScope';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
-import { Avatar } from '@/components/Avatar';
-import { Badge } from '@/components/Badge';
 import { PublishThreadModal } from '@/components/PublishThreadModal';
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications';
 import { createPost } from '@/api/posts';
@@ -26,11 +23,9 @@ const QUICK_COMMANDS = [
 ];
 
 export function DesktopTopBar() {
- const { colors, isDark, radius, toggleTheme } = useTheme();
+ const { colors, isDark } = useTheme();
  const { user, switchRole } = useAuth();
- const pathname = usePathname();
  const queryClient = useQueryClient();
- const { scope: viewScope, setScope: setViewScope } = useViewScope();
  const [composerOpen, setComposerOpen] = useState(false);
  const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
@@ -66,28 +61,6 @@ export function DesktopTopBar() {
  }
  }, []);
 
- const getPageTitle = () => {
- if (pathname.includes('/dashboard')) return 'Dashboard Overview';
- if (pathname.includes('/feed') || pathname.includes('/forum')) return 'Campus Forum';
- if (pathname.includes('/events')) return 'Events & Activities';
- if (pathname.includes('/resources')) return 'Academic Library';
- if (pathname.includes('/marketplace')) return 'Student Marketplace';
- if (pathname.includes('/jobs')) return 'Jobs & Internships';
- if (pathname.includes('/mentorship')) return 'Mentorship Hub';
- if (pathname.includes('/study-groups')) return 'Study Groups';
- if (pathname.includes('/messages')) return 'Direct Messages';
- if (pathname.includes('/notifications')) return 'Notifications & Alerts';
- if (pathname.includes('/profile')) return 'Academic Profile';
- if (pathname.includes('/settings')) return 'Settings & Privacy';
- if (pathname.includes('/user-directory')) return 'User Directory';
- if (pathname.includes('/verification-requests')) return 'Verification Requests';
- if (pathname.includes('/moderation')) return 'Moderation Desk';
- if (pathname.includes('/platform-config')) return 'Platform Configuration';
- if (pathname.includes('/alumni-hub')) return 'Alumni Network Hub';
- if (pathname.includes('/directory')) return 'Alumni Directory';
- return 'Lioris Campus';
- };
-
  const handleSearchSubmit = () => {
  if (searchQuery.trim()) {
  router.push({
@@ -110,113 +83,52 @@ export function DesktopTopBar() {
  style={[
  styles.topBar,
  {
- backgroundColor: isDark ? 'rgba(10, 19, 38, 0.85)' : 'rgba(255, 255, 255, 0.9)',
- borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+ backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : '#FFFFFF',
+ borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.07)',
  },
  ]}
  >
-      {/* Section Title */}
-      <View style={styles.leftSection}>
-        <AppText variant="h2" weight="bold" numberOfLines={1}>
-          {getPageTitle()}
-        </AppText>
-      </View>
+ {/* Left: Global Search Bar (with Command+K hint) */}
+ <Pressable
+ onPress={() => setCommandPaletteOpen(true)}
+ style={[
+ styles.searchBar,
+ {
+ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
+ borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+ },
+ ]}
+ >
+ <Ionicons name="search" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+ <TextInput
+ placeholder="Search campus discussions, courses, events, past questions... (⌘K)"
+ placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+ value={searchQuery}
+ onChangeText={setSearchQuery}
+ onSubmitEditing={handleSearchSubmit}
+ style={[
+ styles.searchInput,
+ {
+ color: isDark ? '#F8FAFC' : '#0172A',
+ },
+ ]}
+ />
+ <View
+ style={[
+ styles.shortcutBadge,
+ {
+ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+ },
+ ]}
+ >
+ <AppText variant="caption" style={{ fontSize: 10, color: isDark ? '#94A3B8' : '#64748B', fontWeight: 'bold' }}>
+ ⌘K
+ </AppText>
+ </View>
+ </Pressable>
 
-      {/* Global Search Bar (with Command+K hint) */}
-      <Pressable
-        onPress={() => setCommandPaletteOpen(true)}
-        style={[
-          styles.searchBar,
-          {
-            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
-          },
-        ]}
-      >
-        <Ionicons name="search" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
-        <TextInput
-          placeholder="Search campus discussions, courses, events, past questions... (⌘K)"
-          placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearchSubmit}
-          style={[
-            styles.searchInput,
-            {
-              color: isDark ? '#F8FAFC' : '#0F172A',
-            },
-          ]}
-        />
-        <View
-          style={[
-            styles.shortcutBadge,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
-            },
-          ]}
-        >
-          <AppText variant="caption" style={{ fontSize: 10, color: isDark ? '#94A3B8' : '#64748B', fontWeight: 'bold' }}>
-            ⌘K
-          </AppText>
-        </View>
-      </Pressable>
-
-      {/* Right Controls */}
-      <View style={styles.rightSection}>
-        {/* Scope Pill Toggle */}
-        <View
-          style={[
-            styles.scopeContainer,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
-              borderWidth: 1,
-            },
-          ]}
-        >
-          <Pressable
-            onPress={() => setViewScope('campus')}
-            style={[
-              styles.scopeTab,
-              viewScope === 'campus' && {
-                backgroundColor: colors.brandPrimary,
-                borderRadius: 6,
-              },
-            ]}
-          >
-            <AppText
-              variant="caption"
-              weight={viewScope === 'campus' ? 'bold' : 'medium'}
-              style={{
-                color: viewScope === 'campus' ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
-                fontSize: 11,
-              }}
-            >
-              My Campus
-            </AppText>
-          </Pressable>
-          <Pressable
-            onPress={() => setViewScope('global')}
-            style={[
-              styles.scopeTab,
-              viewScope === 'global' && {
-                backgroundColor: colors.brandPrimary,
-                borderRadius: 6,
-              },
-            ]}
-          >
-            <AppText
-              variant="caption"
-              weight={viewScope === 'global' ? 'bold' : 'medium'}
-              style={{
-                color: viewScope === 'global' ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
-                fontSize: 11,
-              }}
-            >
-              Inter-Campus
-            </AppText>
-          </Pressable>
-        </View>
+ {/* Right Controls */}
+ <View style={styles.rightSection}>
 
  {/* Role Switcher Dropdown */}
  {(role === 'admin' || role === 'staff') && (
@@ -334,7 +246,7 @@ export function DesktopTopBar() {
  )}
  </View>
 
- <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+ <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={true}>
  {(notifications ?? []).slice(0, 5).map((n: any) => (
  <Pressable
  key={n.id}
@@ -436,7 +348,7 @@ export function DesktopTopBar() {
  </View>
 
  {/* Quick Actions List */}
- <ScrollView style={{ maxHeight: 380, padding: 8 }} showsVerticalScrollIndicator={false}>
+ <ScrollView style={{ maxHeight: 380, padding: 8 }} showsVerticalScrollIndicator={true}>
  <AppText variant="caption" tone="secondary" weight="bold" style={{ paddingHorizontal: 12, paddingVertical: 6, textTransform: 'uppercase', fontSize: 10 }}>
  Quick Navigation & Workspaces
  </AppText>
@@ -521,51 +433,39 @@ export function DesktopTopBar() {
 const styles = StyleSheet.create({
  topBar: {
  height: 64,
- paddingHorizontal: 24,
+ paddingHorizontal: 28,
  borderBottomWidth: 1,
  flexDirection: 'row',
  alignItems: 'center',
  justifyContent: 'space-between',
- gap: 16,
+ gap: 20,
  zIndex: 20,
- },
- leftSection: {
- minWidth: 160,
  },
  searchBar: {
  flex: 1,
- maxWidth: 480,
- height: 38,
- borderRadius: 8,
+ maxWidth: 560,
+ height: 42,
+ borderRadius: 10,
  borderWidth: 1,
  flexDirection: 'row',
  alignItems: 'center',
- paddingHorizontal: 12,
- gap: 8,
+ paddingHorizontal: 14,
+ gap: 10,
  },
  searchInput: {
  flex: 1,
- fontSize: 13,
+ fontSize: 14,
  outlineStyle: 'none' as any,
  },
  shortcutBadge: {
- paddingHorizontal: 6,
+ paddingHorizontal: 7,
  paddingVertical: 2,
- borderRadius: 4,
+ borderRadius: 6,
  },
  rightSection: {
  flexDirection: 'row',
  alignItems: 'center',
- gap: 12,
- },
- scopeContainer: {
- flexDirection: 'row',
- padding: 3,
- borderRadius: 8,
- },
- scopeTab: {
- paddingHorizontal: 10,
- paddingVertical: 5,
+ gap: 16,
  },
  roleSwitchBtn: {
  flexDirection: 'row',

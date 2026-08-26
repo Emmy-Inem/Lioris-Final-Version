@@ -76,7 +76,7 @@ export default function MarketplaceScreen() {
 
  <SolidCard radius={18} style={{ padding: spacing.md }}>
  <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Categories �
+ Categories
  </AppText>
  <View style={{ gap: 4 }}>
  {CATEGORIES.map((cat) => {
@@ -167,7 +167,7 @@ export default function MarketplaceScreen() {
  <MarketplaceItemCard item={item} />
  </View>
  )}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  ListEmptyComponent={!isLoading ? <EmptyState title="No listings found" description="Try a different search or filter." /> : null}
  />
  </View>
@@ -245,7 +245,7 @@ export default function MarketplaceScreen() {
  columnWrapperStyle={{ gap: spacing.md }}
  contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
  renderItem={({ item }) => <MarketplaceItemCard item={item} />}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  initialNumToRender={10}
  maxToRenderPerBatch={10}
  windowSize={7}

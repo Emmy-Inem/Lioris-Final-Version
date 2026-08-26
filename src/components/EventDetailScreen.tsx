@@ -198,7 +198,7 @@ export function EventDetailScreen() {
  return (
  <ScreenContainer glow={true} style={{ paddingHorizontal: 0 }}>
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: 140 }}
  >
@@ -237,7 +237,7 @@ export function EventDetailScreen() {
  onPress={() => {
  haptics.light();
  setBookmarked((b) => !b);
- Alert.alert(bookmarked ? 'Removed Bookmark' : 'Event Saved �', 'Added to your saved calendar events.');
+ Alert.alert(bookmarked ? 'Removed Bookmark' : 'Event Saved ', 'Added to your saved calendar events.');
  }}
  style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
  >

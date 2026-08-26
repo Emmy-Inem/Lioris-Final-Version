@@ -403,7 +403,7 @@ export default function ResourcesScreen() {
  {portalLinks.length > 0 && (
  <SolidCard radius={18} style={{ padding: spacing.md }}>
  <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Official Portals �
+ Official Portals
  </AppText>
  <View style={{ gap: 8 }}>
  {portalLinks.slice(0, 4).map((portal) => (
@@ -466,7 +466,7 @@ export default function ResourcesScreen() {
  <ResourceCard resource={item} />
  </View>
  )}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  onRefresh={refetch}
  refreshing={isRefetching}
  ListEmptyComponent={
@@ -507,7 +507,7 @@ export default function ResourcesScreen() {
  maxToRenderPerBatch={8}
  contentContainerStyle={{ paddingBottom: 130 }}
  renderItem={({ item }) => <ResourceCard resource={item} />}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  onRefresh={refetch}
  refreshing={isRefetching}
  ListEmptyComponent={

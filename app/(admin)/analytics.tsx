@@ -30,7 +30,7 @@ export default function AdminAnalyticsScreen() {
  <ScreenContainer glow={true}>
  <AppHeader />
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: 150 }}
  >

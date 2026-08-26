@@ -29,12 +29,12 @@ const COVER_PRESETS = [
 ];
 
 const AVATAR_PRESETS = [
- { id: 'avatar_male', label: 'Male Student �‍', src: require('../../assets/images/avatar_male.jpg') },
- { id: 'avatar_female', label: 'Female Student �‍', src: require('../../assets/images/avatar_female.jpg') },
+ { id: 'avatar_male', label: 'Male Student ‍', src: require('../../assets/images/avatar_male.jpg') },
+ { id: 'avatar_female', label: 'Female Student ‍', src: require('../../assets/images/avatar_female.jpg') },
  { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
  { id: 'avatar_female_2', label: 'Honor Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
  { id: 'avatar_alumni_2', label: 'Alumni Founder', src: require('../../assets/images/avatar_alumni_2.jpg') },
- { id: 'avatar_mentor', label: 'Faculty Advisor �‍�', src: require('../../assets/images/avatar_mentor.jpg') },
+ { id: 'avatar_mentor', label: 'Faculty Advisor ‍', src: require('../../assets/images/avatar_mentor.jpg') },
 ];
 
 export default function StudentDashboard() {
@@ -81,7 +81,7 @@ export default function StudentDashboard() {
  <ScreenContainer glow={true}>
  {!isDesktop && <AppHeader />}
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 140, paddingTop: isDesktop ? spacing.md : 0 }}
@@ -599,7 +599,7 @@ export default function StudentDashboard() {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={false}>
+ <ScrollView showsVerticalScrollIndicator={true}>
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
  CHOOSE AVATAR PHOTO
  </AppText>

@@ -88,7 +88,7 @@ export default function SuperAdminConfigScreen() {
  </AppText>
 
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: 150 }}
  >
@@ -141,7 +141,7 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
- <Section number={5} title="Third-Party API & Integration"emoji="�">
+ <Section number={5} title="Third-Party API & Integration"emoji="">
  <Row
  title="WebRTC/Video SDK Keys"description="ZegoCloud/Agora Audio/Video Call provider keys."actionLabel="Manage"onPress={() => setActiveModal('webrtcKeys')}
  />
@@ -174,7 +174,7 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
- <Section number={8} title="Developer, QA, & Maintenance" emoji="�">
+ <Section number={8} title="Developer, QA, & Maintenance" emoji="">
  <Row
  title="Feature Controls & Kill Switches"
  description="Toggle runtime modules (XP, careers, marketplace, utilities, events, mentorship)."
@@ -204,7 +204,7 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
- <Section number={9} title="Global Communications"emoji="�">
+ <Section number={9} title="Global Communications"emoji="">
  <Row
  title="Global Push Notifications"description="Send mandatory, un-dismissible full-screen alerts to ALL users."actionLabel="Broadcast"tone="critical"onPress={() => setActiveModal('globalPush')}
  last

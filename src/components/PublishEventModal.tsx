@@ -114,7 +114,7 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
  overflow: 'hidden',
  }}
  >
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
  <AppText variant="h1" weight="bold">
  Publish Event

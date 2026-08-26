@@ -129,13 +129,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  <AppHeader />
 
  {/* Screen Title & Workspace Selector */}
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.md }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
  <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
  <AppText variant="h1" weight="bold">
- Campus Forum 
+ Campus Forum
  </AppText>
  <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ fontSize: 12 }}>
- Trending discussions, polls, and academic threads
+ Trending discussions, academic queries, and cohort threads
  </AppText>
  </View>
 
@@ -146,28 +146,29 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  style={{
  flexDirection: 'row',
  alignItems: 'center',
- gap: 4,
+ gap: 6,
  backgroundColor: colors.pastelPrimaryBg,
  borderRadius: radius.pill,
- paddingHorizontal: spacing.sm,
+ paddingHorizontal: spacing.md,
  paddingVertical: 7,
  flexShrink: 0,
  }}
  >
  <Ionicons name="chatbubbles" size={15} color={colors.brandPrimary} />
  <AppText weight="bold" tone="brand" variant="caption">
- Channels
+ All Channels
  </AppText>
  </Pressable>
  </View>
 
- {/* Scope Switcher: My Campus vs. Global */}
+ {/* Scope Switcher: Mobile Only (Desktop has it in sidebar) */}
+ {!isDesktop && (
  <View
  style={{
  flexDirection: 'row',
  backgroundColor: colors.surface,
  borderRadius: radius.pill,
- padding: 4,
+ padding: 3,
  marginBottom: spacing.md,
  borderWidth: 1,
  borderColor: colors.border,
@@ -179,23 +180,25 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  <Pressable
  key={s}
  onPress={() => setViewScope(s)}
- accessibilityRole="tab"accessibilityState={{ selected }}
+ accessibilityRole="tab"
+ accessibilityState={{ selected }}
  accessibilityLabel={s === 'campus' ? 'My Campus Feed' : 'Global Network Feed'}
  style={{
  flex: 1,
- paddingVertical: 8,
+ paddingVertical: 7,
  borderRadius: radius.pill,
  backgroundColor: selected ? colors.brandPrimary : 'transparent',
  alignItems: 'center',
  }}
  >
- <AppText variant="bodySmall"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
- {s === 'campus' ? 'My Campus' : '� Global Network'}
+ <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+ {s === 'campus' ? 'My Campus' : 'Global Network'}
  </AppText>
  </Pressable>
  );
  })}
  </View>
+ )}
 
  {/* Quick Search & Sort Bar */}
  <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
@@ -461,7 +464,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  <PostCard post={item} />
  </Animated.View>
  )}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  onRefresh={refetch}
  refreshing={isRefetching}
  ListEmptyComponent={
@@ -524,7 +527,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
  <SolidCard radius={18} style={{ padding: spacing.md }}>
  <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
- Community Rules �
+ Community Rules 
  </AppText>
  <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
  Lioris is a verified academic community. Keep discussions constructive, helpful, and respectful.
@@ -553,7 +556,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  <PostCard post={item} />
  </Animated.View>
  )}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  onRefresh={refetch}
  refreshing={isRefetching}
  ListEmptyComponent={

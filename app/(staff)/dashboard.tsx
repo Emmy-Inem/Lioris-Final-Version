@@ -32,7 +32,7 @@ export default function StaffDashboard() {
  <ScreenContainer glow={true}>
  {!isDesktop && <AppHeader />}
  <ScrollView
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 140, paddingTop: isDesktop ? spacing.md : 0 }}
@@ -60,7 +60,7 @@ export default function StaffDashboard() {
  </AppText>
  </View>
  <AppText variant="h1"weight="bold"tone="inverse"numberOfLines={1} style={{ fontSize: 22 }}>
- Welcome, {user?.fullName?.split(' ')[0] ?? 'Prof'} �‍
+ Welcome, {user?.fullName?.split(' ')[0] ?? 'Prof'} ‍
  </AppText>
  <AppText variant="caption"tone="inverse"style={{ opacity: 0.85, marginTop: 2 }}>
  Semester Term: Harmattan 2026 • UI Node
@@ -128,7 +128,7 @@ export default function StaffDashboard() {
  {/* Live Announcements */}
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
  <AppText variant="h3"weight="bold">
- Recent Faculty Notices �
+ Recent Faculty Notices 
  </AppText>
  <AppText tone="brand"weight="bold"variant="bodySmall"onPress={() => router.push('/(staff)/announcements')}>
  Manage

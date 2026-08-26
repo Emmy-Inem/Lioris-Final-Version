@@ -114,7 +114,7 @@ export async function publishAnnouncement(
  const notifs = targetUsers.map((u: any) => ({
  recipient_id: u.id,
  type: 'announcement',
- title: payload.priority === 'critical' ? `� ${payload.title}` : payload.title,
+ title: payload.priority === 'critical' ? ` ${payload.title}` : payload.title,
  body: payload.content,
  is_read: false,
  }));

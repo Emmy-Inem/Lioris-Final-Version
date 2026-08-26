@@ -297,7 +297,7 @@ export default function UserDirectoryScreen() {
  reason: 'GDPR / Right to be forgotten wipe request',
  });
  setSelectedUser(null);
- Alert.alert('Account Wiped �', `${target.fullName}'s profile was deleted from campus nodes.`);
+ Alert.alert('Account Wiped ', `${target.fullName}'s profile was deleted from campus nodes.`);
  },
  },
  ],
@@ -339,7 +339,7 @@ export default function UserDirectoryScreen() {
  <FlatList
  data={filtered}
  keyExtractor={(item) => item.id}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  contentContainerStyle={{ paddingBottom: 150 }}
  renderItem={({ item }) => (
  <SolidCard radius={18} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: item.suspended ? `${colors.critical}50` : colors.border }}>
@@ -367,7 +367,7 @@ export default function UserDirectoryScreen() {
  </AppText>
  {item.suspended && (
  <View style={{ marginTop: 4 }}>
- <Badge label="� Suspended"tone="critical" />
+ <Badge label=" Suspended"tone="critical" />
  </View>
  )}
  </View>
@@ -428,7 +428,7 @@ export default function UserDirectoryScreen() {
  onPress={() => handleMutateRole(selectedUser, 'Staff')}
  >
  <Ionicons name="briefcase-outline"size={18} color={colors.textPrimary} />
- <AppText>�‍ Promote to Faculty Staff / Advisor</AppText>
+ <AppText>‍ Promote to Faculty Staff / Advisor</AppText>
  </Pressable>
  )}
 
@@ -438,7 +438,7 @@ export default function UserDirectoryScreen() {
  >
  <Ionicons name={selectedUser.suspended ? 'checkmark-circle-outline' : 'ban-outline'} size={18} color={selectedUser.suspended ? colors.success : colors.critical} />
  <AppText style={{ color: selectedUser.suspended ? colors.success : colors.critical }}>
- {selectedUser.suspended ? 'Revoke Suspension & Reactivate' : '� Shadow-Ban / Suspend User'}
+ {selectedUser.suspended ? 'Revoke Suspension & Reactivate' : ' Shadow-Ban / Suspend User'}
  </AppText>
  </Pressable>
 
@@ -447,7 +447,7 @@ export default function UserDirectoryScreen() {
  onPress={() => handleWipeAccount(selectedUser)}
  >
  <Ionicons name="trash-outline"size={18} color={colors.critical} />
- <AppText tone="critical">� Wipe All Account Records & Sessions</AppText>
+ <AppText tone="critical"> Wipe All Account Records & Sessions</AppText>
  </Pressable>
  </View>
  )}
@@ -460,7 +460,7 @@ export default function UserDirectoryScreen() {
  <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h2"weight="bold">
- Identity Record �
+ Identity Record 
  </AppText>
  <Pressable onPress={() => setDetailModalUser(null)} hitSlop={8}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
@@ -524,7 +524,7 @@ export default function UserDirectoryScreen() {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
+ <ScrollView showsVerticalScrollIndicator={true} style={{ marginBottom: spacing.md }}>
  <AppTextField
  label="Full Legal Name"placeholder="e.g. Samuel Adeyinka"value={newFullName}
  onChangeText={setNewFullName}

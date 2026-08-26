@@ -53,7 +53,7 @@ export default function StaffModerationScreen() {
  }}
  >
  <AppText weight="bold" variant="bodySmall" tone={activeTab === 'reports' ? 'inverse' : 'secondary'}>
- Reports Queue �
+ Reports Queue 
  </AppText>
  </Pressable>
 

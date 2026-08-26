@@ -63,7 +63,7 @@ export default function VerifyEmailScreen() {
  try {
  await authApi.confirmUserEmailDirectly(user.email);
  haptics.success();
- Alert.alert('Account Activated! �', 'Your campus email has been successfully verified.');
+ Alert.alert('Account Activated! ', 'Your campus email has been successfully verified.');
  await advance();
  } catch (err: any) {
  haptics.error();
@@ -82,7 +82,7 @@ export default function VerifyEmailScreen() {
  if (user?.email) {
  await authApi.resendConfirmationEmail(user.email.trim());
  }
- Alert.alert('Verification Link Resent �', `A fresh activation link and code have been sent to ${user?.email || 'your email'}.`);
+ Alert.alert('Verification Link Resent ', `A fresh activation link and code have been sent to ${user?.email || 'your email'}.`);
  } catch {
  Alert.alert('Code Dispatched', 'A new verification code has been generated. Please check your inbox and spam folder.');
  } finally {

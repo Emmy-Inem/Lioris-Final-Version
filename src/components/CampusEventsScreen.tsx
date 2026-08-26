@@ -230,7 +230,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
  <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
  <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Filter By �
+ Filter Events
  </AppText>
  <View style={{ gap: 4 }}>
  {EVENT_FILTERS.map((f) => {
@@ -315,7 +315,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  )}
  refreshing={isRefetching}
  onRefresh={refetch}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  contentContainerStyle={{ paddingBottom: 40 }}
  ListEmptyComponent={
  !isLoading ? (
@@ -346,7 +346,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  ListHeaderComponent={renderHeader}
  refreshing={isRefetching}
  onRefresh={refetch}
- showsVerticalScrollIndicator={false}
+ showsVerticalScrollIndicator={true}
  contentContainerStyle={{ paddingBottom: 80 }}
  ListEmptyComponent={
  !isLoading ? (

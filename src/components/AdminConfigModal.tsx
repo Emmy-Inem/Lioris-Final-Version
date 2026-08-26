@@ -61,7 +61,7 @@ export function AdminConfigModal({
  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
  <Animated.View style={[{ width: '100%', maxHeight: '85%' }, animatedStyle]}>
  <SolidCard radius={20} style={{ width: '100%', maxHeight: '85%' }}>
- <ScrollView showsVerticalScrollIndicator={false}>
+ <ScrollView showsVerticalScrollIndicator={true}>
  <AppText variant="h3"weight="bold"style={{ marginBottom: description ? spacing.xs : spacing.md }}>
  {title}
  </AppText>

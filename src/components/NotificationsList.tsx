@@ -279,7 +279,7 @@ export function NotificationsScreen() {
  </View>
  )}
 
- <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+ <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 130 }}>
  {isDesktop ? (
  <View style={{ flexDirection: 'row', gap: 28, alignItems: 'flex-start' }}>
  {/* Left Column: Alerts Feed */}

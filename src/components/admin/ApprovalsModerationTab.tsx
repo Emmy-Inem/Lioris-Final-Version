@@ -317,7 +317,7 @@ export function ApprovalsModerationTab() {
  </View>
 
  {previewResource ? (
- <ScrollView showsVerticalScrollIndicator={false}>
+ <ScrollView showsVerticalScrollIndicator={true}>
  <AppText variant="body"weight="bold"style={{ marginBottom: 4 }}>
  {previewResource.title}
  </AppText>
