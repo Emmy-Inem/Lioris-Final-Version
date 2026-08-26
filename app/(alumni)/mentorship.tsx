@@ -12,154 +12,165 @@ import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { AppButton } from'@/components/AppButton';
 import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listMentorships, respondToMentorshipRequest } from'@/api/mentorship';
-import { createNotification } from'@/api/notifications';
-import { getOrCreateConversationWithUser } from'@/api/messaging';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { listMentorships, respondToMentorshipRequest } from '@/api/mentorship';
+import { createNotification } from '@/api/notifications';
+import { getOrCreateConversationWithUser } from '@/api/messaging';
 
 const STATUS_TONE = {
- pending: 'warning',
- active: 'success',
- completed: 'neutral',
- declined: 'critical',
+  pending: 'warning',
+  active: 'success',
+  completed: 'neutral',
+  declined: 'critical',
 } as const;
 
 export default function AlumniMentorshipScreen() {
- const { colors, spacing, radius } = useTheme();
- const queryClient = useQueryClient();
- const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const queryClient = useQueryClient();
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
- // Video call scheduler modal state
- const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
- const [selectedMentee, setSelectedMentee] = useState<{ id: string; name: string } | null>(null);
- const [sessionTopic, setSessionTopic] = useState('Career Prep & System Design Review');
- const [sessionDate, setSessionDate] = useState('This Saturday, 4:00 PM (GMT+1)');
+  // Video call scheduler modal state
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [selectedMentee, setSelectedMentee] = useState<{ id: string; name: string } | null>(null);
+  const [sessionTopic, setSessionTopic] = useState('Career Prep & System Design Review');
+  const [sessionDate, setSessionDate] = useState('This Saturday, 4:00 PM (GMT+1)');
 
- const { data: mentorships, isLoading } = useQuery({
- queryKey: ['mentorships'],
- queryFn: listMentorships,
- });
+  const { data: mentorships, isLoading } = useQuery({
+    queryKey: ['mentorships'],
+    queryFn: listMentorships,
+  });
 
- async function respond(id: string, action: 'accept' | 'decline') {
- setSubmittingId(id);
- try {
- await respondToMentorshipRequest(id, action);
- queryClient.invalidateQueries({ queryKey: ['mentorships'] });
- queryClient.invalidateQueries({ queryKey: ['notifications'] });
- Alert.alert(
- action === 'accept' ? 'Mentorship Accepted ' : 'Request Declined',
- action === 'accept'
- ? 'You are now mentoring this student. You can schedule 1-on-1 video calls and chat directly.'
- : 'The mentorship application was declined.',
- );
- } finally {
- setSubmittingId(null);
- }
- }
+  async function respond(id: string, action: 'accept' | 'decline') {
+    setSubmittingId(id);
+    try {
+      await respondToMentorshipRequest(id, action);
+      queryClient.invalidateQueries({ queryKey: ['mentorships'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      Alert.alert(
+        action === 'accept' ? 'Mentorship Accepted' : 'Request Declined',
+        action === 'accept'
+          ? 'You are now mentoring this student. You can schedule 1-on-1 video calls and chat directly.'
+          : 'The mentorship application was declined.',
+      );
+    } finally {
+      setSubmittingId(null);
+    }
+  }
 
- function handleOpenScheduler(mentee: { id: string; name: string }) {
- setSelectedMentee(mentee);
- setScheduleModalOpen(true);
- }
+  function handleOpenScheduler(mentee: { id: string; name: string }) {
+    setSelectedMentee(mentee);
+    setScheduleModalOpen(true);
+  }
 
- function handleConfirmVideoSession() {
- if (!selectedMentee) return;
- const meetUrl = `https://meet.google.com/lio-${Math.random().toString(36).substring(2, 6)}-${Math.random().toString(36).substring(2, 6)}`;
- createNotification({
- type: 'event',
- recipientId: selectedMentee.id,
- title: 'Mentorship Video Call Scheduled',
- body: `Your 1-on-1 session on "${sessionTopic}" is scheduled for ${sessionDate}. Link: ${meetUrl}`,
- deepLinkPath: '/(student)/mentorship',
- });
- setScheduleModalOpen(false);
- Alert.alert(
- 'Session Scheduled',
- `Google Meet session created for ${sessionDate}.\n\nMeeting URL: ${meetUrl}\n\nCalendar invite and notification sent to ${selectedMentee.name}.`,
- );
- }
+  function handleConfirmVideoSession() {
+    if (!selectedMentee) return;
+    const meetUrl = `https://meet.google.com/lio-${Math.random().toString(36).substring(2, 6)}-${Math.random().toString(36).substring(2, 6)}`;
+    createNotification({
+      type: 'event',
+      recipientId: selectedMentee.id,
+      title: 'Mentorship Video Call Scheduled',
+      body: `Your 1-on-1 session on "${sessionTopic}" is scheduled for ${sessionDate}. Link: ${meetUrl}`,
+      deepLinkPath: '/(student)/mentorship',
+    });
+    setScheduleModalOpen(false);
+    Alert.alert(
+      'Session Scheduled',
+      `Google Meet session created for ${sessionDate}.\n\nMeeting URL: ${meetUrl}\n\nCalendar invite and notification sent to ${selectedMentee.name}.`,
+    );
+  }
 
- async function handleOpenChat(menteeId: string, menteeName: string) {
- try {
- const conv = await getOrCreateConversationWithUser(menteeId, menteeName, 'avatar_male');
- router.push(`/(alumni)/messages/${conv.id}` as any);
- } catch {
- Alert.alert('Chat Initiated', `Opening chat thread with ${menteeName}`);
- }
- }
+  async function handleOpenChat(menteeId: string, menteeName: string) {
+    try {
+      const conv = await getOrCreateConversationWithUser(menteeId, menteeName, 'avatar_male');
+      router.push(`/(alumni)/messages/${conv.id}` as any);
+    } catch {
+      Alert.alert('Chat Initiated', `Opening chat thread with ${menteeName}`);
+    }
+  }
 
- return (
- <ScreenContainer glow={false}>
- <AppHeader />
- <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 130 }}>
- <View style={{ paddingTop: spacing.md, marginBottom: spacing.md }}>
- <AppText variant="h1" weight="bold">
- Alumni Mentorship Desk 
- </AppText>
- <AppText tone="secondary" variant="bodySmall">
- Guide university students, review portfolio code, and conduct 1-on-1 video calls.
- </AppText>
- </View>
+  return (
+    <ScreenContainer glow={false}>
+      {!isDesktop && <AppHeader />}
+      <ScrollView
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 130 }}
+      >
+        <View style={{ paddingTop: spacing.md, marginBottom: spacing.md }}>
+          <AppText variant="h1" weight="bold">
+            Alumni Mentorship Desk
+          </AppText>
+          <AppText tone="secondary" variant="bodySmall">
+            Guide university students, review portfolio code, and conduct 1-on-1 video calls.
+          </AppText>
+        </View>
 
- {/* Overview Stats */}
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
- <StatBox label="Active Mentees" value={mentorships?.filter((m) => m.status === 'active').length ?? 0} icon="people" />
- <StatBox label="Pending Requests" value={mentorships?.filter((m) => m.status === 'pending').length ?? 0} icon="time" />
- <StatBox label="Sessions Done" value={mentorships?.filter((m) => m.status === 'completed').length ?? 0} icon="videocam" />
- </View>
+        {/* Overview Stats */}
+        <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
+          <StatBox label="Active Mentees" value={mentorships?.filter((m) => m.status === 'active').length ?? 0} icon="people" />
+          <StatBox label="Pending Requests" value={mentorships?.filter((m) => m.status === 'pending').length ?? 0} icon="time" />
+          <StatBox label="Sessions Done" value={mentorships?.filter((m) => m.status === 'completed').length ?? 0} icon="videocam" />
+        </View>
 
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Student Mentorship Inquiries ({mentorships?.length ?? 0})
- </AppText>
+        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+          Student Mentorship Inquiries ({mentorships?.length ?? 0})
+        </AppText>
 
- {mentorships?.map((m) => {
- const studentName = m.studentName || 'Student Mentee';
- return (
- <SolidCard key={m.id} radius={18} style={{ marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
- <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
- <Avatar name={studentName} size={42} />
- <View>
- <AppText variant="bodySmall"weight="bold">
- {studentName}
- </AppText>
- <AppText tone="secondary"variant="caption">
- University of Ibadan • GPA 4.7 / 5.0
- </AppText>
- </View>
- </View>
- <Badge label={m.status.toUpperCase()} tone={STATUS_TONE[m.status]} />
- </View>
+        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+          {mentorships?.map((m) => {
+            const studentName = m.studentName || 'Student Mentee';
+            return (
+              <SolidCard key={m.id} radius={18} style={isDesktop ? { width: 'calc(50% - 8px)' as any, marginBottom: spacing.md } : { marginBottom: spacing.md }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+                    <Avatar name={studentName} size={42} />
+                    <View>
+                      <AppText variant="bodySmall" weight="bold">
+                        {studentName}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption">
+                        University of Ibadan • GPA 4.7 / 5.0
+                      </AppText>
+                    </View>
+                  </View>
+                  <Badge label={m.status.toUpperCase()} tone={STATUS_TONE[m.status]} />
+                </View>
 
- {m.focusArea ? (
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, marginVertical: spacing.sm }}>
- <AppText variant="caption"weight="bold"tone="brand">
- REQUESTED FOCUS:
- </AppText>
- <AppText variant="bodySmall"weight="medium"style={{ marginTop: 2 }}>
- {m.focusArea}
- </AppText>
- </View>
- ) : null}
+                {m.focusArea ? (
+                  <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, marginVertical: spacing.sm }}>
+                    <AppText variant="caption" weight="bold" tone="brand">
+                      REQUESTED FOCUS:
+                    </AppText>
+                    <AppText variant="bodySmall" weight="medium" style={{ marginTop: 2 }}>
+                      {m.focusArea}
+                    </AppText>
+                  </View>
+                ) : null}
 
- {m.status === 'pending' ? (
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
- <AppButton label="Accept Mentee "onPress={() => respond(m.id, 'accept')} loading={submittingId === m.id} />
- <AppButton label="Decline"variant="secondary"onPress={() => respond(m.id, 'decline')} />
- </View>
- ) : m.status === 'active' ? (
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
- <AppButton
- label="Schedule Video Call"onPress={() => handleOpenScheduler({ id: m.studentId, name: studentName })}
- />
- <AppButton
- label="Message"variant="secondary"onPress={() => handleOpenChat(m.studentId, studentName)}
- />
- </View>
- ) : null}
- </SolidCard>
- );
- })}
+                {m.status === 'pending' ? (
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                    <AppButton label="Accept Mentee" onPress={() => respond(m.id, 'accept')} loading={submittingId === m.id} />
+                    <AppButton label="Decline" variant="secondary" onPress={() => respond(m.id, 'decline')} />
+                  </View>
+                ) : m.status === 'active' ? (
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                    <AppButton
+                      label="Schedule Video Call"
+                      onPress={() => handleOpenScheduler({ id: m.studentId, name: studentName })}
+                    />
+                    <AppButton
+                      label="Message"
+                      variant="secondary"
+                      onPress={() => handleOpenChat(m.studentId, studentName)}
+                    />
+                  </View>
+                ) : null}
+              </SolidCard>
+            );
+          })}
+        </View>
 
  {!isLoading && (mentorships?.length ?? 0) === 0 ? (
  <EmptyState title="No mentorship activity"description="Incoming requests from students will appear here." />

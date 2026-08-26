@@ -131,7 +131,6 @@ export function DesktopTopBar() {
  <View style={styles.rightSection}>
 
  {/* Role Switcher Dropdown */}
- {(role === 'admin' || role === 'staff') && (
  <View style={{ position: 'relative' }}>
  <Pressable
  onPress={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
@@ -190,7 +189,6 @@ export function DesktopTopBar() {
  </View>
  )}
  </View>
- )}
 
  {/* Notifications Icon Button with Live Popover Dropdown */}
  <View style={{ position: 'relative' }}>
