@@ -11,193 +11,200 @@ import { AppButton } from'@/components/AppButton';
 import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listVerificationRequests, respondToVerificationRequest, VerificationRequest } from'@/api/verification';
-import { grantVerification, markVerificationRejected } from'@/api/profile';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { createNotification } from'@/api/notifications';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { listVerificationRequests, respondToVerificationRequest, VerificationRequest } from '@/api/verification';
+import { grantVerification, markVerificationRejected } from '@/api/profile';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { createNotification } from '@/api/notifications';
+import { haptics } from '@/utils/haptics';
 
 const REJECTION_REASONS = [
- 'Document photo is blurry / unreadable',
- 'Matriculation number does not match university database',
- 'Expired student identity card',
- 'Name does not match academic registrar records',
- 'Invalid document type submitted',
+  'Document photo is blurry / unreadable',
+  'Matriculation number does not match university database',
+  'Expired student identity card',
+  'Name does not match academic registrar records',
+  'Invalid document type submitted',
 ];
 
 export default function VerificationRequestsScreen() {
- const { colors, spacing, radius } = useTheme();
- const queryClient = useQueryClient();
- const { data: requests, isLoading } = useQuery({ queryKey: ['verification-requests'], queryFn: listVerificationRequests });
+  const { colors, spacing, radius } = useTheme();
+  const { isDesktop } = useResponsive();
+  const queryClient = useQueryClient();
+  const { data: requests, isLoading } = useQuery({ queryKey: ['verification-requests'], queryFn: listVerificationRequests });
 
- const [inspectDocRequest, setInspectDocRequest] = useState<VerificationRequest | null>(null);
- const [rejectModalRequest, setRejectModalRequest] = useState<VerificationRequest | null>(null);
- const [selectedRejectReason, setSelectedRejectReason] = useState(REJECTION_REASONS[0]);
- const [customRejectNote, setCustomRejectNote] = useState('');
- const [processingId, setProcessingId] = useState<string | null>(null);
+  const [inspectDocRequest, setInspectDocRequest] = useState<VerificationRequest | null>(null);
+  const [rejectModalRequest, setRejectModalRequest] = useState<VerificationRequest | null>(null);
+  const [selectedRejectReason, setSelectedRejectReason] = useState(REJECTION_REASONS[0]);
+  const [customRejectNote, setCustomRejectNote] = useState('');
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
- async function handleApprove(req: VerificationRequest) {
- haptics.medium();
- setProcessingId(req.id);
- try {
- await respondToVerificationRequest(req.id, 'approved');
- grantVerification(req.userId);
+  async function handleApprove(req: VerificationRequest) {
+    haptics.medium();
+    setProcessingId(req.id);
+    try {
+      await respondToVerificationRequest(req.id, 'approved');
+      grantVerification(req.userId);
 
- recordAuditLogEntry({
- action: 'verification_approved',
- summary: `Approved verified badge for ${req.applicantName} (${req.institutionClaimed} - ${req.documentReference})`,
- targetType: 'verification_request',
- targetId: req.id,
- institutionCode: req.institutionClaimed,
- reason: 'Document verified against registrar criteria',
- });
+      recordAuditLogEntry({
+        action: 'verification_approved',
+        summary: `Approved verified badge for ${req.applicantName} (${req.institutionClaimed} - ${req.documentReference})`,
+        targetType: 'verification_request',
+        targetId: req.id,
+        institutionCode: req.institutionClaimed,
+        reason: 'Document verified against registrar criteria',
+      });
 
- createNotification({
- recipientId: req.userId,
- type: 'system',
- title: 'Campus Verification Approved!',
- body: 'Congratulations! Your identity has been verified. The official verified badge is now active on your profile.',
- deepLinkPath: '/(student)/profile',
- });
+      createNotification({
+        recipientId: req.userId,
+        type: 'system',
+        title: 'Campus Verification Approved',
+        body: 'Congratulations! Your identity has been verified. The official verified badge is now active on your profile.',
+        deepLinkPath: '/(student)/profile',
+      });
 
- queryClient.invalidateQueries({ queryKey: ['verification-requests'] });
- queryClient.invalidateQueries({ queryKey: ['profile'] });
- queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['verification-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
- Alert.alert('Verification Granted', `${req.applicantName}'s verified identity badge has been activated.`);
- } finally {
- setProcessingId(null);
- }
- }
+      Alert.alert('Verification Granted', `${req.applicantName}'s verified identity badge has been activated.`);
+    } finally {
+      setProcessingId(null);
+    }
+  }
 
- async function handleConfirmReject() {
- if (!rejectModalRequest) return;
- haptics.medium();
- const req = rejectModalRequest;
- const finalReason = customRejectNote.trim() ? `${selectedRejectReason}: ${customRejectNote.trim()}` : selectedRejectReason;
+  async function handleConfirmReject() {
+    if (!rejectModalRequest) return;
+    haptics.medium();
+    const req = rejectModalRequest;
+    const finalReason = customRejectNote.trim() ? `${selectedRejectReason}: ${customRejectNote.trim()}` : selectedRejectReason;
 
- try {
- await respondToVerificationRequest(req.id, 'rejected');
- markVerificationRejected(req.userId);
+    try {
+      await respondToVerificationRequest(req.id, 'rejected');
+      markVerificationRejected(req.userId);
 
- recordAuditLogEntry({
- action: 'verification_rejected',
- summary: `Rejected verification for ${req.applicantName} (${req.institutionClaimed}): ${finalReason}`,
- targetType: 'verification_request',
- targetId: req.id,
- institutionCode: req.institutionClaimed,
- reason: finalReason,
- });
+      recordAuditLogEntry({
+        action: 'verification_rejected',
+        summary: `Rejected verification for ${req.applicantName} (${req.institutionClaimed}): ${finalReason}`,
+        targetType: 'verification_request',
+        targetId: req.id,
+        institutionCode: req.institutionClaimed,
+        reason: finalReason,
+      });
 
- createNotification({
- recipientId: req.userId,
- type: 'system',
- title: 'Verification Request Update',
- body: `Your verification submission was not approved: ${finalReason}. You may re-apply with clear documentation.`,
- deepLinkPath: '/(student)/profile',
- });
+      createNotification({
+        recipientId: req.userId,
+        type: 'system',
+        title: 'Verification Request Update',
+        body: `Your verification submission was not approved: ${finalReason}. You may re-apply with clear documentation.`,
+        deepLinkPath: '/(student)/profile',
+      });
 
- queryClient.invalidateQueries({ queryKey: ['verification-requests'] });
- queryClient.invalidateQueries({ queryKey: ['profile'] });
- queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['verification-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
- setRejectModalRequest(null);
- setCustomRejectNote('');
- Alert.alert('Request Rejected', `Rejection notice dispatched to ${req.applicantName}.`);
- } catch {}
- }
+      setRejectModalRequest(null);
+      setCustomRejectNote('');
+      Alert.alert('Request Rejected', `Rejection notice dispatched to ${req.applicantName}.`);
+    } catch {}
+  }
 
- return (
- <ScreenContainer glow={true}>
- <AppHeader />
- <ScrollView
- showsVerticalScrollIndicator={true}
- keyboardShouldPersistTaps="handled"nestedScrollEnabled
- contentContainerStyle={{ paddingBottom: 150 }}
- >
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: spacing.md, marginBottom: spacing.xs }}>
- <View>
- <AppText variant="h1"weight="bold">
- Verify Credentials 
- </AppText>
- <AppText tone="secondary">Review student matriculation records & government ID certificates</AppText>
- </View>
- <Badge label={`${requests?.length ?? 0} Pending`} tone="brand" />
- </View>
+  return (
+    <ScreenContainer glow={true}>
+      {!isDesktop && <AppHeader />}
+      <ScrollView
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
+          <View>
+            <AppText variant="h1" weight="bold">
+              Verify Credentials
+            </AppText>
+            <AppText tone="secondary">Review student matriculation records & government ID certificates</AppText>
+          </View>
+          <Badge label={`${requests?.length ?? 0} Pending`} tone="brand" />
+        </View>
 
- <View style={{ height: spacing.md }} />
+        <View style={{ height: spacing.md }} />
 
- {requests?.map((req) => (
- <SolidCard key={req.id} radius={20} style={{ marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
- <Avatar name={req.applicantName} size={42} role="student" />
- <View>
- <AppText weight="bold"variant="bodySmall">
- {req.applicantName}
- </AppText>
- <AppText tone="secondary"variant="caption">
- Institution Claimed: {req.institutionClaimed}
- </AppText>
- </View>
- </View>
- <Badge label={req.documentType.toUpperCase()} tone="accent" />
- </View>
+        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+          {requests?.map((req) => (
+            <View key={req.id} style={isDesktop ? { width: '48.5%' } : undefined}>
+              <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Avatar name={req.applicantName} size={42} role="student" />
+                    <View>
+                      <AppText weight="bold" variant="bodySmall">
+                        {req.applicantName}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption">
+                        Institution: {req.institutionClaimed}
+                      </AppText>
+                    </View>
+                  </View>
+                  <Badge label={req.documentType.toUpperCase()} tone="accent" />
+                </View>
 
- {/* Document Reference Box */}
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
- <AppText variant="caption"tone="secondary">Matric / Certificate Ref</AppText>
- <AppText variant="caption"weight="bold"tone="brand">{req.documentReference}</AppText>
- </View>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
- <AppText variant="caption"tone="secondary">Status</AppText>
- <AppText variant="caption"weight="bold">Awaiting Admin Verification</AppText>
- </View>
- </View>
+                {/* Document Reference Box */}
+                <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <AppText variant="caption" tone="secondary">Matric / Certificate Ref</AppText>
+                    <AppText variant="caption" weight="bold" tone="brand">{req.documentReference}</AppText>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <AppText variant="caption" tone="secondary">Status</AppText>
+                    <AppText variant="caption" weight="bold">Awaiting Admin Verification</AppText>
+                  </View>
+                </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs, flexWrap: 'wrap' }}>
- <View style={{ flex: 1, minWidth: 100 }}>
- <AppButton
- label="Inspect "
- variant="ghost"
- onPress={() => setInspectDocRequest(req)}
- />
- </View>
- <View style={{ flex: 1, minWidth: 90 }}>
- <AppButton
- label="Approve ✓"
- loading={processingId === req.id}
- onPress={() => handleApprove(req)}
- />
- </View>
- <View style={{ flex: 1, minWidth: 80 }}>
- <AppButton
- label="Reject ✕"
- variant="secondary"
- onPress={() => setRejectModalRequest(req)}
- />
- </View>
- </View>
- </SolidCard>
- ))}
+                <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs, flexWrap: 'wrap' }}>
+                  <View style={{ flex: 1, minWidth: 100 }}>
+                    <AppButton
+                      label="Inspect"
+                      variant="ghost"
+                      onPress={() => setInspectDocRequest(req)}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 90 }}>
+                    <AppButton
+                      label="Approve"
+                      loading={processingId === req.id}
+                      onPress={() => handleApprove(req)}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 80 }}>
+                    <AppButton
+                      label="Reject"
+                      variant="secondary"
+                      onPress={() => setRejectModalRequest(req)}
+                    />
+                  </View>
+                </View>
+              </SolidCard>
+            </View>
+          ))}
+        </View>
 
- {!isLoading && (requests?.length ?? 0) === 0 ? (
- <EmptyState title="All applications reviewed"description="There are no pending identity verification requests right now." />
- ) : null}
- </ScrollView>
+        {!isLoading && (requests?.length ?? 0) === 0 ? (
+          <EmptyState title="All applications reviewed" description="There are no pending identity verification requests right now." />
+        ) : null}
+      </ScrollView>
 
- {/* Inspect ID Card Modal */}
- <Modal visible={!!inspectDocRequest} transparent animationType="fade"onRequestClose={() => setInspectDocRequest(null)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
- {inspectDocRequest && (
- <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="document-text"size={20} color={colors.brandPrimary} />
- <AppText variant="h2"weight="bold">
- Credential Verification 
+      {/* Inspect ID Card Modal */}
+      <Modal visible={!!inspectDocRequest} transparent animationType="fade" onRequestClose={() => setInspectDocRequest(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          {inspectDocRequest && (
+            <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                  <Ionicons name="document-text" size={20} color={colors.brandPrimary} />
+                  <AppText variant="h2" weight="bold">
+                    Credential Verification
  </AppText>
  </View>
  <Pressable onPress={() => setInspectDocRequest(null)} hitSlop={8}>

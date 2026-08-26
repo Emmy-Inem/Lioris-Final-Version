@@ -23,20 +23,20 @@ import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 
 const AVATAR_PRESETS = [
- { id: 'avatar_male', label: 'Male Student ‍', src: require('../../assets/images/avatar_male.jpg') },
- { id: 'avatar_female', label: 'Female Student ‍', src: require('../../assets/images/avatar_female.jpg') },
- { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
- { id: 'avatar_female_2', label: 'Honor Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
- { id: 'avatar_alumni_2', label: 'Alumni Founder', src: require('../../assets/images/avatar_alumni_2.jpg') },
- { id: 'avatar_mentor', label: 'Faculty & Mentor ‍', src: require('../../assets/images/avatar_mentor.jpg') },
+  { id: 'avatar_male', label: 'Male Student', src: require('../../assets/images/avatar_male.jpg') },
+  { id: 'avatar_female', label: 'Female Student', src: require('../../assets/images/avatar_female.jpg') },
+  { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
+  { id: 'avatar_female_2', label: 'Honor Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
+  { id: 'avatar_alumni_2', label: 'Alumni Founder', src: require('../../assets/images/avatar_alumni_2.jpg') },
+  { id: 'avatar_mentor', label: 'Faculty & Mentor', src: require('../../assets/images/avatar_mentor.jpg') },
 ];
 
 const COVER_PRESETS = [
- { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
- { id: 'campus_library_study', label: 'University Library', src: require('../../assets/images/campus_library_study.jpg') },
- { id: 'student_rep_group', label: 'Student Senate ', src: require('../../assets/images/student_rep_group.jpg') },
- { id: 'event_tech_hackathon', label: 'Hackfest Arena', src: require('../../assets/images/event_tech_hackathon.jpg') },
- { id: 'hero_student_3d', label: 'Futuristic Studio', src: require('../../assets/images/hero_student_3d.jpg') },
+  { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
+  { id: 'campus_library_study', label: 'University Library', src: require('../../assets/images/campus_library_study.jpg') },
+  { id: 'student_rep_group', label: 'Student Senate', src: require('../../assets/images/student_rep_group.jpg') },
+  { id: 'event_tech_hackathon', label: 'Hackfest Arena', src: require('../../assets/images/event_tech_hackathon.jpg') },
+  { id: 'hero_student_3d', label: 'Futuristic Studio', src: require('../../assets/images/hero_student_3d.jpg') },
 ];
 
 const PROFILE_TABS = ['Posts & Activity', 'Academic & Credentials'] as const;

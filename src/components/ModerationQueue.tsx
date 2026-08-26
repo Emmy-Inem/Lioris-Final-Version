@@ -9,12 +9,13 @@ import { AppButton } from'./AppButton';
 import { AppTextField } from'./AppTextField';
 import { ChipSelect } from'./ChipSelect';
 import { EmptyState } from'./EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listReports, resolveReport } from'@/api/moderation';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { deletePost } from'@/api/posts';
-import { Report } from'@/api/types';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { listReports, resolveReport } from '@/api/moderation';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { deletePost } from '@/api/posts';
+import { Report } from '@/api/types';
+import { haptics } from '@/utils/haptics';
 
 const STATUS_TONE: Record<Report['status'], 'warning' | 'brand' | 'success' | 'neutral'> = {
  open: 'warning',
@@ -32,6 +33,7 @@ interface ModerationQueueProps {
 
 export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear' }: ModerationQueueProps) {
  const { colors, spacing, radius } = useTheme();
+ const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
  const [submittingId, setSubmittingId] = useState<string | null>(null);
  const [filterType, setFilterType] = useState('All Flags');
@@ -78,44 +80,17 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  if (!actionModalReport) return;
  haptics.medium();
  const report = actionModalReport;
- const actionLabel =
- punishmentType === 'warn'
- ? 'Warning Issued & Content Flagged'
- : punishmentType === 'takedown'
- ? 'Content Purged & Author Warned'
- : punishmentType === 'shadowban'
- ? 'Content Purged & 7-Day Shadowban Imposed'
- : 'Permanent Campus Account Ban Imposed';
+ let actionLabel = 'Content removed and warning issued';
+ let targetUserId = report.reporterId;
 
  try {
- await resolveReport(report.id, 'resolved');
- 
  const { supabase } = await import('@/api/supabase');
 
- // Resolve author profile ID if target was content (post, event, resource, comment, message)
- let targetUserId = report.targetId;
- if (report.targetType === 'post') {
- const { data: postData } = await supabase.from('posts').select('author_id').eq('id', report.targetId).maybeSingle();
- if (postData?.author_id) targetUserId = postData.author_id;
+ // Execute targeted removal if post
+ if (report.targetType === 'post' && report.targetId) {
+ if (punishmentType === 'takedown' || punishmentType === 'permaban') {
  await deletePost(report.targetId);
- queryClient.invalidateQueries({ queryKey: ['feed'] });
- } else if (report.targetType === 'event') {
- const { data: eventData } = await supabase.from('events').select('creator_id').eq('id', report.targetId).maybeSingle();
- if (eventData?.creator_id) targetUserId = eventData.creator_id;
- } else if ((report.targetType as string) === 'resource') {
- const { data: resData } = await supabase.from('resources').select('uploader_id').eq('id', report.targetId).maybeSingle();
- if (resData?.uploader_id) targetUserId = resData.uploader_id;
- } else if ((report.targetType as string) === 'comment') {
- const { data: cData } = await supabase.from('post_comments').select('author_id').eq('id', report.targetId).maybeSingle();
- if (cData?.author_id) targetUserId = cData.author_id;
- if (punishmentType !== 'warn') {
- await supabase.from('post_comments').delete().eq('id', report.targetId);
- }
- } else if ((report.targetType as string) === 'message') {
- const { data: msgData } = await supabase.from('chat_messages').select('sender_id').eq('id', report.targetId).maybeSingle();
- if (msgData?.sender_id) targetUserId = msgData.sender_id;
- if (punishmentType !== 'warn') {
- await supabase.from('chat_messages').delete().eq('id', report.targetId);
+ actionLabel = 'Post purged from campus feed';
  }
  }
 
@@ -128,8 +103,9 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  });
  }
  }
+      await resolveReport(report.id, 'resolved');
 
- recordAuditLogEntry({
+      recordAuditLogEntry({
  action: 'report_resolved',
  summary: `Moderation Action on #${report.id.substring(0, 8)} (${report.targetType}): ${actionLabel}`,
  targetType: 'report',
@@ -156,23 +132,28 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  <FlatList
  data={filteredReports}
  keyExtractor={(item) => item.id}
- contentContainerStyle={{ paddingBottom: 130 }}
+ key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
+ numColumns={isDesktop ? 2 : 1}
+ columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
+ showsVerticalScrollIndicator={true}
+ contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.sm }}
  renderItem={({ item }) => (
+ <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>
  <SolidCard radius={20} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}40` }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
  <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
  <Badge label={item.targetType.toUpperCase()} tone="critical" />
- {item.institutionCode ? <Badge label={` ${item.institutionCode}`} tone="brand" /> : null}
+ {item.institutionCode ? <Badge label={item.institutionCode} tone="brand" /> : null}
  </View>
  <Badge label={item.status.replace('_', ' ')} tone={STATUS_TONE[item.status]} />
  </View>
 
  {/* Violation Reason Box */}
  <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: 2 }}>
+ <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 2 }}>
  FLAGGED REASON & POLICY VIOLATION:
  </AppText>
- <AppText weight="bold"tone="primary"variant="bodySmall">
+ <AppText weight="bold" tone="primary" variant="bodySmall">
  "{item.reason}"
  </AppText>
  </View>
@@ -180,10 +161,10 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  {/* Simulated Content Snippet */}
  <View style={{ backgroundColor: colors.surface, padding: spacing.md, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
- <AppText variant="caption"tone="secondary">Target ID: {item.targetId}</AppText>
- <AppText variant="caption"tone="secondary">Filed: {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</AppText>
+ <AppText variant="caption" tone="secondary">Target ID: {item.targetId}</AppText>
+ <AppText variant="caption" tone="secondary">Filed: {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</AppText>
  </View>
- <AppText variant="bodySmall"tone="secondary"style={{ fontStyle: 'italic' }}>
+ <AppText variant="bodySmall" tone="secondary" style={{ fontStyle: 'italic' }}>
  Content: "Reported item flagged by community members for policy violation."
  </AppText>
  </View>
@@ -192,17 +173,21 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
  <View style={{ flex: 2 }}>
  <AppButton
- label="Enforce Takedown / Ban"onPress={() => setActionModalReport(item)}
+ label="Enforce Takedown / Ban"
+ onPress={() => setActionModalReport(item)}
  />
  </View>
  <View style={{ flex: 1 }}>
  <AppButton
- label="Dismiss ✕"variant="secondary"onPress={() => handleDismiss(item)}
+ label="Dismiss"
+ variant="secondary"
+ onPress={() => handleDismiss(item)}
  loading={submittingId === item.id}
  />
  </View>
  </View>
  </SolidCard>
+ </View>
  )}
  ListEmptyComponent={
  !isLoading ? <EmptyState title={emptyTitle} description="No open reports matching this filter right now." /> : null

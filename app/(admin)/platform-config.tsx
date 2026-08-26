@@ -20,80 +20,83 @@ import { UserProfilesTab } from'@/components/admin/UserProfilesTab';
 import { ResourcesModerationTab } from'@/components/admin/ResourcesModerationTab';
 import { ApprovalsModerationTab } from'@/components/admin/ApprovalsModerationTab';
 import { ManagePortalLinksModal } from'@/components/admin/ManagePortalLinksModal';
-import { useTheme } from'@/theme/ThemeProvider';
-import { LAUNCH_INSTITUTIONS } from'@/api/institutions';
-import { listReports } from'@/api/moderation';
-import { listVerificationRequests } from'@/api/verification';
-import { createNotification } from'@/api/notifications';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import { listReports } from '@/api/moderation';
+import { listVerificationRequests } from '@/api/verification';
+import { createNotification } from '@/api/notifications';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { haptics } from '@/utils/haptics';
 
 const WORKDESK_TABS = ['Analytics', 'Flags', 'User Profiles', 'Utility Hub', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
 const PREVIEW_ROLES = ['Default (Admin)', 'Student', 'Staff', 'Alumni', 'Admin'];
 const SCOPE_OPTIONS = ['All Campuses', ...LAUNCH_INSTITUTIONS.map((inst) => inst.name)];
 
 export default function PlatformConfigScreen() {
- const { colors, spacing, radius, isDark } = useTheme();
- const queryClient = useQueryClient();
- const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Analytics');
- const [institution, setInstitution] = useState(SCOPE_OPTIONS[0]);
- const [institutionPickerOpen, setInstitutionPickerOpen] = useState(false);
- const [portalLinksModalOpen, setPortalLinksModalOpen] = useState(false);
- const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Analytics');
+  const [institution, setInstitution] = useState(SCOPE_OPTIONS[0]);
+  const [institutionPickerOpen, setInstitutionPickerOpen] = useState(false);
+  const [portalLinksModalOpen, setPortalLinksModalOpen] = useState(false);
+  const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
 
- // Broadcast Alert Form State
- const [broadcastTitle, setBroadcastTitle] = useState('');
- const [broadcastBody, setBroadcastBody] = useState('');
- const [broadcastTarget, setBroadcastTarget] = useState<'all' | 'ui' | 'unilag' | 'cs_department'>('all');
- const [broadcastPriority, setBroadcastPriority] = useState<'high' | 'critical' | 'normal'>('high');
+  // Broadcast Alert Form State
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [broadcastTarget, setBroadcastTarget] = useState<'all' | 'ui' | 'unilag' | 'cs_department'>('all');
+  const [broadcastPriority, setBroadcastPriority] = useState<'high' | 'critical' | 'normal'>('high');
 
- const { data: openReports } = useQuery({ queryKey: ['reports', 'open', 'all'], queryFn: () => listReports({ status: 'open' }) });
- const { data: pendingVerifications } = useQuery({ queryKey: ['verification-requests'], queryFn: listVerificationRequests });
+  const { data: openReports } = useQuery({ queryKey: ['reports', 'open', 'all'], queryFn: () => listReports({ status: 'open' }) });
+  const { data: pendingVerifications } = useQuery({ queryKey: ['verification-requests'], queryFn: listVerificationRequests });
 
- function handleSendBroadcast() {
- if (!broadcastTitle.trim() || !broadcastBody.trim()) return;
- haptics.medium();
+  function handleSendBroadcast() {
+    if (!broadcastTitle.trim() || !broadcastBody.trim()) return;
+    haptics.medium();
 
- createNotification({
- type: 'announcement',
- title: ` ${broadcastTitle.trim()}`,
- body: broadcastBody.trim(),
- deepLinkPath: '/(student)/dashboard',
- });
+    createNotification({
+      type: 'announcement',
+      title: broadcastTitle.trim(),
+      body: broadcastBody.trim(),
+      deepLinkPath: '/(student)/dashboard',
+    });
 
- recordAuditLogEntry({
- action: 'escrow_funds_released',
- summary: `Broadcast Flash Alert sent: "${broadcastTitle}"to ${broadcastTarget.toUpperCase()}`,
- targetType: 'user',
- targetId: 'broadcast-flash',
- reason: `Audience: ${broadcastTarget}, Priority: ${broadcastPriority}`,
- });
+    recordAuditLogEntry({
+      action: 'escrow_funds_released',
+      summary: `Broadcast Flash Alert sent: "${broadcastTitle}" to ${broadcastTarget.toUpperCase()}`,
+      targetType: 'user',
+      targetId: 'broadcast-flash',
+      reason: `Audience: ${broadcastTarget}, Priority: ${broadcastPriority}`,
+    });
 
- queryClient.invalidateQueries({ queryKey: ['notifications'] });
- setBroadcastModalOpen(false);
- setBroadcastTitle('');
- setBroadcastBody('');
- Alert.alert('Broadcast Dispatched', 'Push notification and in-app flash banner delivered to campus network.');
- }
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    setBroadcastModalOpen(false);
+    setBroadcastTitle('');
+    setBroadcastBody('');
+    Alert.alert('Broadcast Dispatched', 'Push notification and in-app flash banner delivered to campus network.');
+  }
 
- return (
- <ScreenContainer glow={true}>
- <AppHeader />
+  return (
+    <ScreenContainer glow={true}>
+      {!isDesktop && <AppHeader />}
 
- {/* Unified Main ScrollView for entire Admin Desk */}
- <ScrollView
- showsVerticalScrollIndicator={true}
- keyboardShouldPersistTaps="handled"nestedScrollEnabled
- contentContainerStyle={{ paddingBottom: 150 }}
- >
- {/* Page Title & Badges */}
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: spacing.md, marginBottom: spacing.md }}>
- <View style={{ flex: 1 }}>
- <AppText variant="h1"weight="bold">
- Staff & Admin Workdesk
- </AppText>
- <AppText tone="secondary">Centralized university moderation, live nodes & control tower</AppText>
- </View>
+      {/* Unified Main ScrollView for entire Admin Desk */}
+      <ScrollView
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
+      >
+        {/* Page Title & Badges */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md }}>
+          <View style={{ flex: 1 }}>
+            <AppText variant="h1" weight="bold">
+              Staff & Admin Workdesk
+            </AppText>
+            <AppText tone="secondary">Centralized university moderation, live nodes & control tower</AppText>
+          </View>
  <Badge label="Lioris Root Admin"tone="critical" />
  </View>
 

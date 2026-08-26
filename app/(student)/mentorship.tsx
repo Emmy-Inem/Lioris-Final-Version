@@ -56,7 +56,7 @@ export default function StudentMentorshipScreen() {
  {/* Top Header & Intro */}
  <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
  <AppText variant="h1" weight="bold">
- Connect & Leadership 
+ Connect & Leadership
  </AppText>
  <AppText tone="secondary" variant="bodySmall">
  Stay connected with your class representative, department leaders, and verified alumni mentors.
@@ -91,7 +91,7 @@ export default function StudentMentorshipScreen() {
  variant="bodySmall"
  tone={activeSection === 'rep' ? 'inverse' : 'secondary'}
  >
- Class Representative 
+ Class Representative
  </AppText>
  </Pressable>
  <Pressable
@@ -109,7 +109,7 @@ export default function StudentMentorshipScreen() {
  variant="bodySmall"
  tone={activeSection === 'mentors' ? 'inverse' : 'secondary'}
  >
- Alumni Mentors 
+ Alumni Mentors
  </AppText>
  </Pressable>
  </View>
@@ -185,7 +185,7 @@ export default function StudentMentorshipScreen() {
 
  {/* Achievements & Highlights */}
  <AppText variant="bodySmall" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
- ACHIEVEMENTS & HIGHLIGHTS 
+ ACHIEVEMENTS & HIGHLIGHTS
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.lg }}>
  <AchievementBox icon="trophy-outline" title="Tech Fest" subtitle="Annual Hackathon" />
@@ -195,7 +195,7 @@ export default function StudentMentorshipScreen() {
 
  {/* Responsibilities Checklist */}
  <AppText variant="bodySmall" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
- CORE RESPONSIBILITIES 
+ CORE RESPONSIBILITIES
  </AppText>
  <View style={{ gap: spacing.xs, marginBottom: spacing.lg }}>
  <CheckItem text="Voice student concerns and academic suggestions" />
@@ -206,7 +206,7 @@ export default function StudentMentorshipScreen() {
 
  {/* Full Width Primary Message Button */}
  <AppButton
- label="Message Representative "
+ label="Message Representative"
  onPress={() => setMessageModalOpen(true)}
  fullWidth
  />
@@ -217,7 +217,7 @@ export default function StudentMentorshipScreen() {
  <SolidCard style={{ marginBottom: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
  <AppText weight="bold" tone="brand">
- My Sent Applications 
+ My Sent Applications
  </AppText>
  <Badge label={`${myApplications.length} pending`} tone="brand" />
  </View>
@@ -260,7 +260,7 @@ export default function StudentMentorshipScreen() {
  <SolidCard style={{ marginBottom: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
  <AppText weight="bold" tone="brand">
- My Sent Applications 
+ My Sent Applications
  </AppText>
  <Badge label={`${myApplications.length} pending`} tone="brand" />
  </View>
@@ -282,7 +282,7 @@ export default function StudentMentorshipScreen() {
  ) : null}
 
  <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
- Verified Alumni Mentors 
+ Verified Alumni Mentors
  </AppText>
  <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
  {mentors?.map((mentor) => (

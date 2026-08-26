@@ -214,15 +214,15 @@ export function SettingsScreen() {
  router.replace('/(auth)/login');
  }
 
- async function handlePurgeCache() {
- haptics.medium();
- setPurging(true);
- await new Promise((resolve) => setTimeout(resolve, 500));
- setCacheSizeMb(0);
- setPurging(false);
- queryClient.clear();
- Alert.alert('Cache Cleared ', 'Offline temporary assets, image caches, and cached queries flushed.');
- }
+  async function handlePurgeCache() {
+    haptics.medium();
+    setPurging(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setCacheSizeMb(0);
+    setPurging(false);
+    queryClient.clear();
+    Alert.alert('Cache Cleared', 'Offline temporary assets, image caches, and cached queries flushed.');
+  }
 
  async function handleRevokeSession(sessionId: string) {
  haptics.medium();
@@ -345,13 +345,15 @@ export function SettingsScreen() {
  2
  );
 
- return (
- <ScreenContainer noPadding glow={true}>
- <View style={{ paddingHorizontal: spacing.lg }}>
- <AppHeader />
- </View>
+  return (
+    <ScreenContainer noPadding glow={true}>
+      {!isDesktop && (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <AppHeader />
+        </View>
+      )}
 
- <AuthHeroBackground height={96}>
+      <AuthHeroBackground height={96}>
  <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: spacing.lg }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
  <Ionicons name="settings-outline"size={24} color="#FFFFFF" />

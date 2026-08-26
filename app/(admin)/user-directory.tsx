@@ -13,9 +13,10 @@ import { Avatar } from'@/components/Avatar';
 import { UserTypeBadge } from'@/components/UserTypeBadge';
 import { ActionSheetModal } from'@/components/ActionSheetModal';
 import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { haptics } from '@/utils/haptics';
 
 interface DirectoryUser {
  id: string;
@@ -37,6 +38,7 @@ const CAMPUS_FILTERS = ['All Campuses', 'UI', 'UNILAG', 'OAU', 'FUNAAB'];
 
 export default function UserDirectoryScreen() {
  const { colors, spacing, radius } = useTheme();
+ const { isDesktop } = useResponsive();
  const [query, setQuery] = useState('');
  const [role, setRole] = useState('All Roles');
  const [campus, setCampus] = useState('All Campuses');
@@ -304,164 +306,310 @@ export default function UserDirectoryScreen() {
  );
  }
 
- return (
- <ScreenContainer glow={true}>
- <AppHeader />
+  return (
+    <ScreenContainer glow={true}>
+      {!isDesktop && <AppHeader />}
 
- {/* Header & Quick Action Row */}
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.md }}>
- <View>
- <AppText variant="h1"weight="bold">
- User Directory 
- </AppText>
- <AppText tone="secondary">Manage identities, matric records & role privileges</AppText>
- </View>
- <AppButton
- label="+ Provision User"onPress={() => setCreateModalOpen(true)}
- />
- </View>
+      {/* Header & Quick Action Row */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md }}>
+        <View>
+          <AppText variant="h1" weight="bold">
+            User Directory
+          </AppText>
+          <AppText tone="secondary">Manage identities, matric records & role privileges</AppText>
+        </View>
+        <AppButton
+          label="+ Provision User"
+          onPress={() => setCreateModalOpen(true)}
+        />
+      </View>
 
- {/* Search Input Field */}
- <AppTextField
- label=""placeholder="Search by name, @handle, matriculation number, or email..."value={query}
- onChangeText={setQuery}
- />
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: 24, flex: 1, alignItems: 'flex-start' }}>
+          {/* Left Column: Search & Filters Rail */}
+          <View style={{ width: 280, gap: spacing.md }}>
+            <SolidCard radius={20} style={{ padding: spacing.md, gap: spacing.sm }}>
+              <AppText variant="bodySmall" weight="bold">
+                Search Members
+              </AppText>
+              <AppTextField
+                label=""
+                placeholder="Name, @handle, matric..."
+                value={query}
+                onChangeText={setQuery}
+              />
 
- {/* Filter Chips */}
- <View style={{ marginBottom: spacing.xs }}>
- <ChipSelect options={ROLE_FILTERS} selected={[role]} onToggle={setRole} />
- </View>
- <View style={{ marginBottom: spacing.md }}>
- <ChipSelect options={CAMPUS_FILTERS} selected={[campus]} onToggle={setCampus} />
- </View>
+              <AppText variant="caption" tone="secondary" weight="bold" style={{ textTransform: 'uppercase', marginTop: spacing.xs, fontSize: 10 }}>
+                Filter by Role
+              </AppText>
+              <View style={{ gap: 4 }}>
+                {ROLE_FILTERS.map((r) => {
+                  const selected = role === r;
+                  return (
+                    <Pressable
+                      key={r}
+                      onPress={() => setRole(r)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: radius.md,
+                        backgroundColor: selected ? colors.brandPrimary : colors.surface,
+                        borderWidth: 1,
+                        borderColor: selected ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'primary'}>
+                        {r}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
- {/* Directory FlatList */}
- <FlatList
- data={filtered}
- keyExtractor={(item) => item.id}
- showsVerticalScrollIndicator={true}
- contentContainerStyle={{ paddingBottom: 150 }}
- renderItem={({ item }) => (
- <SolidCard radius={18} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: item.suspended ? `${colors.critical}50` : colors.border }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
- <Pressable
- onPress={() => setDetailModalUser(item)}
- style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
- >
- <Avatar name={item.fullName} size={44} role={item.role.toLowerCase() as any} />
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
- <AppText weight="bold"variant="bodySmall">
- {item.fullName}
- </AppText>
- <UserTypeBadge role={item.role.toLowerCase() as any} />
- {item.isVerified && (
- <Ionicons name="checkmark-circle"size={14} color={colors.brandPrimary} />
- )}
- </View>
- <AppText tone="secondary"variant="caption">
- @{item.username} • {item.matricNo}
- </AppText>
- <AppText tone="secondary"variant="caption">
- {item.campus} • {item.department}
- </AppText>
- {item.suspended && (
- <View style={{ marginTop: 4 }}>
- <Badge label=" Suspended"tone="critical" />
- </View>
- )}
- </View>
- </Pressable>
+              <AppText variant="caption" tone="secondary" weight="bold" style={{ textTransform: 'uppercase', marginTop: spacing.xs, fontSize: 10 }}>
+                Campus Node
+              </AppText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {CAMPUS_FILTERS.map((c) => {
+                  const selected = campus === c;
+                  return (
+                    <Pressable
+                      key={c}
+                      onPress={() => setCampus(c)}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: radius.pill,
+                        backgroundColor: selected ? colors.brandPrimary : colors.surface,
+                        borderWidth: 1,
+                        borderColor: selected ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <AppText variant="caption" weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'secondary'}>
+                        {c}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </SolidCard>
 
- <Pressable
- onPress={() => setSelectedUser(item)}
- hitSlop={12}
- accessibilityRole="button"accessibilityLabel={`Manage ${item.fullName}`}
- style={{ padding: spacing.xs, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill }}
- >
- <Ionicons name="ellipsis-horizontal"size={18} color={colors.brandPrimary} />
- </Pressable>
- </View>
- </SolidCard>
- )}
- ListEmptyComponent={<EmptyState title="No matching campus users"description="Try clearing your filters or search terms." />}
- />
+            <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <AppText variant="caption" tone="secondary">Total Filtered</AppText>
+                <Badge label={`${filtered.length} Users`} tone="brand" />
+              </View>
+              <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                Live synchronized with multi-campus profiles table.
+              </AppText>
+            </SolidCard>
+          </View>
 
- {/* User Actions Sheet Modal */}
- <ActionSheetModal visible={!!selectedUser} onClose={() => setSelectedUser(null)}>
- {selectedUser && (
- <View>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.divider, paddingBottom: spacing.sm }}>
- <Avatar name={selectedUser.fullName} size={40} role={selectedUser.role.toLowerCase() as any} />
- <View>
- <AppText weight="bold">{selectedUser.fullName}</AppText>
- <AppText tone="secondary"variant="caption">
- {selectedUser.matricNo} • {selectedUser.email}
- </AppText>
- </View>
- </View>
+          {/* Right Column: User Cards Grid */}
+          <View style={{ flex: 1 }}>
+            <FlatList
+              data={filtered}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={{ gap: spacing.md }}
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{ paddingBottom: 100, gap: spacing.sm }}
+              renderItem={({ item }) => (
+                <View style={{ flex: 1, minWidth: 0, marginBottom: spacing.xs }}>
+                  <SolidCard radius={18} style={{ borderWidth: 1, borderColor: item.suspended ? `${colors.critical}50` : colors.border }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Pressable
+                        onPress={() => setDetailModalUser(item)}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
+                      >
+                        <Avatar name={item.fullName} size={44} role={item.role.toLowerCase() as any} />
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <AppText weight="bold" variant="bodySmall">
+                              {item.fullName}
+                            </AppText>
+                            <UserTypeBadge role={item.role.toLowerCase() as any} />
+                            {item.isVerified && (
+                              <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} />
+                            )}
+                          </View>
+                          <AppText tone="secondary" variant="caption">
+                            @{item.username} • {item.matricNo}
+                          </AppText>
+                          <AppText tone="secondary" variant="caption">
+                            {item.campus} • {item.department}
+                          </AppText>
+                          {item.suspended && (
+                            <View style={{ marginTop: 4 }}>
+                              <Badge label="Suspended" tone="critical" />
+                            </View>
+                          )}
+                        </View>
+                      </Pressable>
 
- <Pressable
- style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
- onPress={() => {
- setDetailModalUser(selectedUser);
- setSelectedUser(null);
- }}
- >
- <Ionicons name="information-circle-outline"size={18} color={colors.brandPrimary} />
- <AppText tone="brand"weight="bold">View Full Profile & Identity Record</AppText>
- </Pressable>
+                      <Pressable
+                        onPress={() => setSelectedUser(item)}
+                        hitSlop={12}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Manage ${item.fullName}`}
+                        style={{ padding: spacing.xs, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill }}
+                      >
+                        <Ionicons name="ellipsis-horizontal" size={18} color={colors.brandPrimary} />
+                      </Pressable>
+                    </View>
+                  </SolidCard>
+                </View>
+              )}
+              ListEmptyComponent={<EmptyState title="No matching campus users" description="Try clearing your filters or search terms." />}
+            />
+          </View>
+        </View>
+      ) : (
+        /* Mobile Layout */
+        <>
+          <AppTextField
+            label=""
+            placeholder="Search by name, @handle, matric, or email..."
+            value={query}
+            onChangeText={setQuery}
+          />
 
- {selectedUser.role !== 'Alumni' && (
- <Pressable
- style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
- onPress={() => handleMutateRole(selectedUser, 'Alumni')}
- >
- <Ionicons name="school-outline"size={18} color={colors.textPrimary} />
- <AppText> Promote / Mutate role to Alumni</AppText>
- </Pressable>
- )}
+          <View style={{ marginBottom: spacing.xs }}>
+            <ChipSelect options={ROLE_FILTERS} selected={[role]} onToggle={setRole} />
+          </View>
+          <View style={{ marginBottom: spacing.md }}>
+            <ChipSelect options={CAMPUS_FILTERS} selected={[campus]} onToggle={setCampus} />
+          </View>
 
- {selectedUser.role !== 'Staff' && (
- <Pressable
- style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
- onPress={() => handleMutateRole(selectedUser, 'Staff')}
- >
- <Ionicons name="briefcase-outline"size={18} color={colors.textPrimary} />
- <AppText>‍ Promote to Faculty Staff / Advisor</AppText>
- </Pressable>
- )}
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={{ paddingBottom: 150 }}
+            renderItem={({ item }) => (
+              <SolidCard radius={18} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: item.suspended ? `${colors.critical}50` : colors.border }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Pressable
+                    onPress={() => setDetailModalUser(item)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
+                  >
+                    <Avatar name={item.fullName} size={44} role={item.role.toLowerCase() as any} />
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <AppText weight="bold" variant="bodySmall">
+                          {item.fullName}
+                        </AppText>
+                        <UserTypeBadge role={item.role.toLowerCase() as any} />
+                        {item.isVerified && (
+                          <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} />
+                        )}
+                      </View>
+                      <AppText tone="secondary" variant="caption">
+                        @{item.username} • {item.matricNo}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption">
+                        {item.campus} • {item.department}
+                      </AppText>
+                      {item.suspended && (
+                        <View style={{ marginTop: 4 }}>
+                          <Badge label="Suspended" tone="critical" />
+                        </View>
+                      )}
+                    </View>
+                  </Pressable>
 
- <Pressable
- style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
- onPress={() => handleToggleSuspend(selectedUser)}
- >
- <Ionicons name={selectedUser.suspended ? 'checkmark-circle-outline' : 'ban-outline'} size={18} color={selectedUser.suspended ? colors.success : colors.critical} />
- <AppText style={{ color: selectedUser.suspended ? colors.success : colors.critical }}>
- {selectedUser.suspended ? 'Revoke Suspension & Reactivate' : ' Shadow-Ban / Suspend User'}
- </AppText>
- </Pressable>
+                  <Pressable
+                    onPress={() => setSelectedUser(item)}
+                    hitSlop={12}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Manage ${item.fullName}`}
+                    style={{ padding: spacing.xs, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill }}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.brandPrimary} />
+                  </Pressable>
+                </View>
+              </SolidCard>
+            )}
+            ListEmptyComponent={<EmptyState title="No matching campus users" description="Try clearing your filters or search terms." />}
+          />
+        </>
+      )}
 
- <Pressable
- style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
- onPress={() => handleWipeAccount(selectedUser)}
- >
- <Ionicons name="trash-outline"size={18} color={colors.critical} />
- <AppText tone="critical"> Wipe All Account Records & Sessions</AppText>
- </Pressable>
- </View>
- )}
- </ActionSheetModal>
+      {/* User Actions Sheet Modal */}
+      <ActionSheetModal visible={!!selectedUser} onClose={() => setSelectedUser(null)}>
+        {selectedUser && (
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.divider, paddingBottom: spacing.sm }}>
+              <Avatar name={selectedUser.fullName} size={40} role={selectedUser.role.toLowerCase() as any} />
+              <View>
+                <AppText weight="bold">{selectedUser.fullName}</AppText>
+                <AppText tone="secondary" variant="caption">
+                  {selectedUser.matricNo} • {selectedUser.email}
+                </AppText>
+              </View>
+            </View>
 
- {/* User Inspect Details Modal */}
- <Modal visible={!!detailModalUser} transparent animationType="fade"onRequestClose={() => setDetailModalUser(null)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
- {detailModalUser && (
- <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <AppText variant="h2"weight="bold">
- Identity Record 
- </AppText>
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+              onPress={() => {
+                setDetailModalUser(selectedUser);
+                setSelectedUser(null);
+              }}
+            >
+              <Ionicons name="information-circle-outline" size={18} color={colors.brandPrimary} />
+              <AppText tone="brand" weight="bold">View Full Profile & Identity Record</AppText>
+            </Pressable>
+
+            {selectedUser.role !== 'Alumni' && (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+                onPress={() => handleMutateRole(selectedUser, 'Alumni')}
+              >
+                <Ionicons name="school-outline" size={18} color={colors.textPrimary} />
+                <AppText>Promote / Mutate role to Alumni</AppText>
+              </Pressable>
+            )}
+
+            {selectedUser.role !== 'Staff' && (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+                onPress={() => handleMutateRole(selectedUser, 'Staff')}
+              >
+                <Ionicons name="briefcase-outline" size={18} color={colors.textPrimary} />
+                <AppText>Promote to Faculty Staff / Advisor</AppText>
+              </Pressable>
+            )}
+
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+              onPress={() => handleToggleSuspend(selectedUser)}
+            >
+              <Ionicons name={selectedUser.suspended ? 'checkmark-circle-outline' : 'ban-outline'} size={18} color={selectedUser.suspended ? colors.success : colors.critical} />
+              <AppText style={{ color: selectedUser.suspended ? colors.success : colors.critical }}>
+                {selectedUser.suspended ? 'Revoke Suspension & Reactivate' : 'Shadow-Ban / Suspend User'}
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+              onPress={() => handleWipeAccount(selectedUser)}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.critical} />
+              <AppText tone="critical">Wipe All Account Records & Sessions</AppText>
+            </Pressable>
+          </View>
+        )}
+      </ActionSheetModal>
+
+      {/* User Inspect Details Modal */}
+      <Modal visible={!!detailModalUser} transparent animationType="fade" onRequestClose={() => setDetailModalUser(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          {detailModalUser && (
+            <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                <AppText variant="h2" weight="bold">
+                  Identity Record
+                </AppText>
  <Pressable onPress={() => setDetailModalUser(null)} hitSlop={8}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
  </Pressable>

@@ -8,50 +8,52 @@ import { AppTextField } from'@/components/AppTextField';
 import { AppButton } from'@/components/AppButton';
 import { AnnouncementCard } from'@/components/AnnouncementCard';
 import { SolidCard } from'@/components/SolidCard';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listAnnouncements, publishAnnouncement, PublishAnnouncementPayload } from'@/api/announcements';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { listAnnouncements, publishAnnouncement, PublishAnnouncementPayload } from '@/api/announcements';
+import { haptics } from '@/utils/haptics';
 
 const AUDIENCES: PublishAnnouncementPayload['audienceScope'][] = ['student', 'alumni', 'staff', 'global'];
 const PRIORITIES: PublishAnnouncementPayload['priority'][] = ['normal', 'high', 'critical'];
 
 export default function StaffAnnouncementsScreen() {
- const { colors, spacing, radius } = useTheme();
- const queryClient = useQueryClient();
- const [composing, setComposing] = useState(false);
- const [title, setTitle] = useState('');
- const [content, setContent] = useState('');
- const [audience, setAudience] = useState<PublishAnnouncementPayload['audienceScope']>('student');
- const [priority, setPriority] = useState<PublishAnnouncementPayload['priority']>('normal');
- const [submitting, setSubmitting] = useState(false);
+  const { colors, spacing, radius } = useTheme();
+  const { isDesktop } = useResponsive();
+  const queryClient = useQueryClient();
+  const [composing, setComposing] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [audience, setAudience] = useState<PublishAnnouncementPayload['audienceScope']>('student');
+  const [priority, setPriority] = useState<PublishAnnouncementPayload['priority']>('normal');
+  const [submitting, setSubmitting] = useState(false);
 
- const { data: announcements, isLoading } = useQuery({ queryKey: ['announcements'], queryFn: listAnnouncements });
+  const { data: announcements, isLoading } = useQuery({ queryKey: ['announcements'], queryFn: listAnnouncements });
 
- async function handlePublish() {
- haptics.medium();
- setSubmitting(true);
- try {
- await publishAnnouncement({ title, content, audienceScope: audience, priority });
- queryClient.invalidateQueries({ queryKey: ['announcements'] });
- queryClient.invalidateQueries({ queryKey: ['notifications'] });
- setTitle('');
- setContent('');
- setComposing(false);
- } finally {
- setSubmitting(false);
- }
- }
+  async function handlePublish() {
+    haptics.medium();
+    setSubmitting(true);
+    try {
+      await publishAnnouncement({ title, content, audienceScope: audience, priority });
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      setTitle('');
+      setContent('');
+      setComposing(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
- return (
- <ScreenContainer glow={false}>
- <AppHeader />
- <ScrollView showsVerticalScrollIndicator={true}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg }}>
- <AppText variant="h1"weight="bold">
- Announcements
- </AppText>
- <AppButton label={composing ? 'Cancel' : 'New'} variant={composing ? 'ghost' : 'primary'} onPress={() => setComposing((v) => !v)} />
- </View>
+  return (
+    <ScreenContainer glow={false}>
+      {!isDesktop && <AppHeader />}
+      <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
+          <AppText variant="h1" weight="bold">
+            Announcements
+          </AppText>
+          <AppButton label={composing ? 'Cancel' : 'New'} variant={composing ? 'ghost' : 'primary'} onPress={() => setComposing((v) => !v)} />
+        </View>
 
  {composing ? (
  <SolidCard style={{ marginBottom: spacing.lg }}>
