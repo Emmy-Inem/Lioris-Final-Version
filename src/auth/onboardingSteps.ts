@@ -8,7 +8,6 @@ import { UserRole } from'@/api/types';
  */
 export const ONBOARDING_STEPS: Record<Extract<UserRole, 'student' | 'alumni'>, string[]> = {
   student: [
-    '/(auth)/verify-email',
     '/(auth)/verify-school',
     '/(auth)/onboarding/choose-department',
     '/(auth)/onboarding/select-interests',
@@ -18,7 +17,6 @@ export const ONBOARDING_STEPS: Record<Extract<UserRole, 'student' | 'alumni'>, s
     '/(auth)/onboarding/join-community',
   ],
   alumni: [
-    '/(auth)/verify-email',
     '/(auth)/verify-alumni',
     '/(auth)/onboarding/complete-profile',
     '/(auth)/onboarding/select-interests',
@@ -34,7 +32,7 @@ export function firstOnboardingStep(role: UserRole): string {
   // Staff/admin accounts are provisioned by invite (PRD Sections 5.3/5.4)
   // and don't self-register through this flow, so they have no
   // onboarding chain here.
-  return'/(auth)/verify-email';
+  return '/(auth)/verify-school';
 }
 
 export function nextOnboardingStep(role: UserRole, currentPath: string): string | null {

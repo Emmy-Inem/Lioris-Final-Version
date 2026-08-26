@@ -150,19 +150,17 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     password: payload.password,
   });
 
-  // If email confirmation is pending in Supabase, auto-resolve it via database RPC
-  if (signInError && signInError.message.toLowerCase().includes('email not confirmed')) {
+  // If email confirmation is required or pending in Supabase, auto-resolve it immediately
+  if (signInError && (signInError.message.toLowerCase().includes('email') || signInError.message.toLowerCase().includes('confirm'))) {
     try {
-      const confirmRes = await confirmUserEmailDirectly(cleanEmail);
-      if (confirmRes.success) {
-        // Retry sign-in now that the account is activated
-        const retryResult = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: payload.password,
-        });
-        signInData = retryResult.data;
-        signInError = retryResult.error;
-      }
+      await confirmUserEmailDirectly(cleanEmail);
+      // Retry sign-in now that the account is activated
+      const retryResult = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: payload.password,
+      });
+      signInData = retryResult.data;
+      signInError = retryResult.error;
     } catch {
       // Non-blocking fallback
     }
@@ -170,11 +168,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 
   if (signInError || !signInData?.session || !signInData?.user) {
     await recordLoginFailure(cleanEmail);
-    const rawMsg = signInError?.message || 'Invalid email or password.';
-    if (rawMsg.toLowerCase().includes('email not confirmed')) {
-      throw new Error('Your email address is not verified yet. Please tap "Activate Account" or check your inbox.');
-    }
-    throw new Error(rawMsg);
+    throw new Error('Invalid email or password. Please verify your credentials and try again.');
   }
 
   // Clear failures upon successful authentication

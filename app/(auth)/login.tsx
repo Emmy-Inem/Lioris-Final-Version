@@ -18,9 +18,6 @@ import { supabase } from '@/api/supabase';
 import {
   sendPasswordResetEmail,
   verifyPasswordResetOtpAndSetPassword,
-  confirmUserEmailDirectly,
-  resendConfirmationEmail,
-  verifyEmail,
 } from '@/api/auth';
 import { haptics } from '@/utils/haptics';
 
@@ -65,74 +62,6 @@ export default function LoginScreen() {
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotStep, setForgotStep] = useState<'request' | 'sent'>('request');
   const [submittingForgot, setSubmittingForgot] = useState(false);
-
-  // Email verification / account activation modal state
-  const [activationModalOpen, setActivationModalOpen] = useState(false);
-  const [activationEmail, setActivationEmail] = useState('');
-  const [activationOtp, setActivationOtp] = useState('');
-  const [activationError, setActivationError] = useState<string | null>(null);
-  const [activating, setActivating] = useState(false);
-  const [resendingEmail, setResendingEmail] = useState(false);
-
-  async function handleDirectActivate(targetEmail?: string) {
-    const clean = (targetEmail || activationEmail || email).trim();
-    if (!clean) {
-      setActivationError('Please enter your campus email address.');
-      haptics.error();
-      return;
-    }
-    setActivationError(null);
-    setActivating(true);
-    haptics.medium();
-    try {
-      if (activationOtp.trim()) {
-        await verifyEmail(activationOtp.trim(), clean);
-      } else {
-        await confirmUserEmailDirectly(clean);
-      }
-      haptics.success();
-      Alert.alert(
-        'Account Activated! 🎉',
-        'Your email address is verified. Signing you into your campus workspace...',
-      );
-      setActivationModalOpen(false);
-      setErrorMessage(null);
-      if (password) {
-        await login(clean, password);
-        router.replace('/');
-      }
-    } catch (err: any) {
-      haptics.error();
-      setActivationError(err?.message || 'Could not activate account. Please check your details.');
-    } finally {
-      setActivating(false);
-    }
-  }
-
-  async function handleResendConfirmation(targetEmail?: string) {
-    const clean = (targetEmail || activationEmail || email).trim();
-    if (!clean) {
-      setActivationError('Please enter your campus email address.');
-      haptics.error();
-      return;
-    }
-    setActivationError(null);
-    setResendingEmail(true);
-    haptics.light();
-    try {
-      await resendConfirmationEmail(clean);
-      haptics.success();
-      Alert.alert(
-        'Verification Dispatched 📨',
-        `A fresh confirmation link and activation code have been sent to ${clean}. If you do not see it in 1 minute, tap "Instant One-Tap Activation".`,
-      );
-    } catch (err: any) {
-      haptics.error();
-      setActivationError(err?.message || 'Could not resend email. Please try instant activation.');
-    } finally {
-      setResendingEmail(false);
-    }
-  }
 
   async function handleSendRecoveryCode() {
     setForgotError(null);
@@ -403,7 +332,7 @@ export default function LoginScreen() {
                 borderRadius: radius.md,
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
-                marginBottom: spacing.sm,
+                marginBottom: spacing.md,
               }}
             >
               <Ionicons name="alert-circle" size={18} color={colors.critical} />
@@ -414,38 +343,6 @@ export default function LoginScreen() {
               >
                 {errorMessage}
               </AppText>
-            </View>
-          ) : null}
-
-          {errorMessage && (errorMessage.toLowerCase().includes('verified') || errorMessage.toLowerCase().includes('confirmation') || errorMessage.toLowerCase().includes('activate')) ? (
-            <View style={{ gap: spacing.xs, marginBottom: spacing.md }}>
-              <AppButton
-                label="⚡ Activate Account Instantly"
-                onPress={() => handleDirectActivate(email)}
-                loading={activating}
-                variant="secondary"
-              />
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <View style={{ flex: 1 }}>
-                  <AppButton
-                    label="Resend Link"
-                    onPress={() => handleResendConfirmation(email)}
-                    loading={resendingEmail}
-                    variant="ghost"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppButton
-                    label="Enter Code"
-                    onPress={() => {
-                      setActivationEmail(email.trim());
-                      setActivationError(null);
-                      setActivationModalOpen(true);
-                    }}
-                    variant="ghost"
-                  />
-                </View>
-              </View>
             </View>
           ) : null}
 
@@ -673,123 +570,6 @@ export default function LoginScreen() {
                 </View>
               </>
             )}
-          </SolidCard>
-        </View>
-      </Modal>
-
-      {/* Account Activation & Email Verification Modal */}
-      <Modal
-        visible={activationModalOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setActivationModalOpen(false)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: spacing.lg,
-          }}
-        >
-          <SolidCard style={{ width: '100%', maxWidth: 440, padding: spacing.lg }}>
-            <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
-              <View
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  backgroundColor: colors.pastelPrimaryBg,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: spacing.xs,
-                }}
-              >
-                <Ionicons name="mail-open" size={26} color={colors.brandPrimary} />
-              </View>
-              <AppText weight="bold" variant="h3">
-                Activate Your Account
-              </AppText>
-              <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 4 }}>
-                Verify your campus email address to access your academic workspace.
-              </AppText>
-            </View>
-
-            {activationError ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
-                  borderColor: colors.critical,
-                  borderWidth: 1,
-                  borderRadius: radius.md,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  marginBottom: spacing.md,
-                }}
-              >
-                <Ionicons name="alert-circle" size={18} color={colors.critical} />
-                <AppText
-                  variant="bodySmall"
-                  weight="semiBold"
-                  style={{ color: colors.critical, flex: 1 }}
-                >
-                  {activationError}
-                </AppText>
-              </View>
-            ) : null}
-
-            <AppTextField
-              label="Campus Email Address"
-              placeholder="your.name@student.unilag.edu.ng"
-              value={activationEmail}
-              onChangeText={(text) => {
-                setActivationEmail(text);
-                if (activationError) setActivationError(null);
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-
-            <AppTextField
-              label="Verification Code (Optional if activating directly)"
-              placeholder="123456 (Leave blank for 1-tap activation)"
-              value={activationOtp}
-              onChangeText={(text) => {
-                setActivationOtp(text);
-                if (activationError) setActivationError(null);
-              }}
-              keyboardType="number-pad"
-              maxLength={6}
-            />
-
-            <View style={{ gap: spacing.xs, marginTop: spacing.md }}>
-              <AppButton
-                label="⚡ Activate Instantly"
-                loading={activating}
-                onPress={() => handleDirectActivate()}
-              />
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <View style={{ flex: 1 }}>
-                  <AppButton
-                    label="Resend Email"
-                    variant="secondary"
-                    loading={resendingEmail}
-                    onPress={() => handleResendConfirmation()}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppButton
-                    label="Close"
-                    variant="ghost"
-                    onPress={() => setActivationModalOpen(false)}
-                  />
-                </View>
-              </View>
-            </View>
           </SolidCard>
         </View>
       </Modal>
