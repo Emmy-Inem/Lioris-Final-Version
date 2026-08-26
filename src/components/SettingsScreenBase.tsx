@@ -12,10 +12,11 @@ import { SolidCard } from'./SolidCard';
 import { GlassCard } from'./GlassCard';
 import { AppButton } from'./AppButton';
 import { Avatar } from'./Avatar';
-import { Badge } from'./Badge';
-import { AuthHeroBackground } from'./AuthHeroBackground';
-import { useTheme } from'@/theme/ThemeProvider';
+import { Badge } from './Badge';
+import { AuthHeroBackground } from './AuthHeroBackground';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { getMyProfile, deleteMyAccount } from '@/api/profile';
 import { supabase } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
@@ -185,6 +186,9 @@ export function SettingsScreen() {
   // Data Export modal state
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [copiedExport, setCopiedExport] = useState(false);
+
+  const { isDesktop } = useResponsive();
+  const [activeCategory, setActiveCategory] = useState<'all' | 'profile' | 'security' | 'appearance' | 'notifications' | 'sessions' | 'legal' | 'danger'>('all');
 
   // Legal Modal State
   const [activeLegalKey, setActiveLegalKey] = useState<string | null>(null);
@@ -363,13 +367,72 @@ export function SettingsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"nestedScrollEnabled
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 150 }}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingHorizontal: isDesktop ? 32 : spacing.lg, paddingBottom: 150, paddingTop: spacing.md }}
       >
-        <View style={{ height: spacing.md }} />
+        <View style={isDesktop ? { flexDirection: 'row', gap: 32, alignItems: 'flex-start', maxWidth: 1200, marginHorizontal: 'auto', width: '100%' } : undefined}>
+          {isDesktop && (
+            <View style={{ width: 260 }}>
+              <SolidCard radius={20} style={{ padding: spacing.sm }}>
+                <AppText variant="caption" tone="secondary" weight="bold" style={{ paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, textTransform: 'uppercase', fontSize: 10 }}>
+                  Settings Menu
+                </AppText>
+                {[
+                  { id: 'all', label: 'All Settings', icon: 'grid-outline' },
+                  { id: 'profile', label: 'Identity & Bio', icon: 'person-outline' },
+                  { id: 'security', label: 'Security & 2FA', icon: 'shield-checkmark-outline' },
+                  { id: 'appearance', label: 'Theme & Display', icon: 'color-palette-outline' },
+                  { id: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
+                  { id: 'sessions', label: 'Active Devices', icon: 'laptop-outline' },
+                  { id: 'legal', label: 'Honor Code & Terms', icon: 'document-text-outline' },
+                  { id: 'danger', label: 'Data & Account Actions', icon: 'trash-outline' },
+                ].map((cat) => {
+                  const isSelected = activeCategory === cat.id;
+                  return (
+                    <Pressable
+                      key={cat.id}
+                      onPress={() => setActiveCategory(cat.id as any)}
+                      style={({ hovered }: any) => [
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 10,
+                          paddingHorizontal: 12,
+                          paddingVertical: 10,
+                          borderRadius: radius.md,
+                          backgroundColor: isSelected
+                            ? colors.brandPrimary
+                            : hovered
+                              ? colors.pastelPrimaryBg
+                              : 'transparent',
+                          marginVertical: 2,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={cat.icon as any}
+                        size={18}
+                        color={isSelected ? '#FFFFFF' : colors.textPrimary}
+                      />
+                      <AppText
+                        variant="bodySmall"
+                        weight={isSelected ? 'bold' : 'medium'}
+                        tone={isSelected ? 'inverse' : 'primary'}
+                        style={{ flex: 1 }}
+                      >
+                        {cat.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </SolidCard>
+            </View>
+          )}
 
-        {/* My Profile Quick Summary Card */}
-        <SolidCard frosted style={{ marginBottom: spacing.md }}>
+          <View style={isDesktop ? { flex: 1, maxWidth: 840 } : undefined}>
+            {/* My Profile Quick Summary Card */}
+            <SolidCard frosted style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm }}>
             <AppText tone="brand"weight="bold"variant="bodySmall">
               AUTHENTICATED IDENTITY
@@ -854,8 +917,10 @@ export function SettingsScreen() {
           <AppButton label="Erase Account & Profile Permanently 🗑️"variant="accent"onPress={() => setEraseModalOpen(true)} fullWidth />
         </SolidCard>
 
-        {/* Sign Out Button */}
-        <AppButton label="Sign Out 🚪"variant="secondary"onPress={handleLogout} fullWidth />
+            {/* Sign Out Button */}
+            <AppButton label="Sign Out 🚪" variant="secondary" onPress={handleLogout} fullWidth />
+          </View>
+        </View>
       </ScrollView>
 
       {/* Active Device Sessions Modal */}

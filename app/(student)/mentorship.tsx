@@ -16,6 +16,7 @@ import { MentorCard } from'@/components/MentorCard';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { listMentorships, searchMentors } from '@/api/mentorship';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
@@ -24,6 +25,7 @@ const EXPERTISE_CATEGORIES = ['All Fields', 'Software', 'Resume Prep', 'Finance'
 export default function StudentMentorshipScreen() {
   const { colors, spacing, radius } = useTheme();
   const { user } = useAuth();
+  const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState<'rep' | 'mentors'>('rep');
   const [query, setQuery] = useState('');
@@ -49,249 +51,318 @@ export default function StudentMentorshipScreen() {
 
   return (
     <ScreenContainer glow={false}>
-      <AppHeader />
+      {!isDesktop && <AppHeader />}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
         {/* Top Header & Intro */}
-        <View style={{ paddingTop: spacing.sm, marginBottom: spacing.md }}>
-          <AppText variant="h1"weight="bold">
-            Connect & Leadership 
+        <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
+          <AppText variant="h1" weight="bold">
+            Connect & Leadership 🤝
           </AppText>
-          <AppText tone="secondary"variant="bodySmall">
-            Stay connected with your class representative, department leaders, and mentors.
+          <AppText tone="secondary" variant="bodySmall">
+            Stay connected with your class representative, department leaders, and verified alumni mentors.
           </AppText>
         </View>
 
-        {/* Tab Switcher: Class Rep vs Mentors */}
-        <View
-          style={{
-            flexDirection: 'row',
-            backgroundColor: colors.surface,
-            borderRadius: radius.pill,
-            padding: 4,
-            marginBottom: spacing.lg,
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}
-        >
-          <Pressable
-            onPress={() => setActiveSection('rep')}
+        {/* Tab Switcher on Mobile Only */}
+        {!isDesktop && (
+          <View
             style={{
-              flex: 1,
-              paddingVertical: 8,
+              flexDirection: 'row',
+              backgroundColor: colors.surface,
               borderRadius: radius.pill,
-              backgroundColor: activeSection === 'rep' ? colors.brandPrimary : 'transparent',
-              alignItems: 'center',
+              padding: 4,
+              marginBottom: spacing.lg,
+              borderWidth: 1,
+              borderColor: colors.border,
             }}
           >
-            <AppText
-              weight="bold"variant="bodySmall"tone={activeSection === 'rep' ? 'inverse' : 'secondary'}
+            <Pressable
+              onPress={() => setActiveSection('rep')}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: radius.pill,
+                backgroundColor: activeSection === 'rep' ? colors.brandPrimary : 'transparent',
+                alignItems: 'center',
+              }}
             >
-              Class Representative 
-            </AppText>
-          </Pressable>
-          <Pressable
-            onPress={() => setActiveSection('mentors')}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: radius.pill,
-              backgroundColor: activeSection === 'mentors' ? colors.brandPrimary : 'transparent',
-              alignItems: 'center',
-            }}
-          >
-            <AppText
-              weight="bold"variant="bodySmall"tone={activeSection === 'mentors' ? 'inverse' : 'secondary'}
-            >
-              Alumni Mentors 
-            </AppText>
-          </Pressable>
-        </View>
-
-        {activeSection === 'rep' ? (
-          <View>
-            {/* Representative Spotlight Card */}
-            <SolidCard radius={24} style={{ marginBottom: spacing.lg }}>
-              {/* Profile Top */}
-              <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
-                <View
-                  style={{
-                    width: 96,
-                    height: 96,
-                    borderRadius: 48,
-                    padding: 3,
-                    backgroundColor: colors.pastelPrimaryBg,
-                    borderWidth: 2,
-                    borderColor: colors.brandPrimary,
-                    marginBottom: spacing.xs,
-                  }}
-                >
-                  <Image
-                    source={require('@/../assets/images/class_rep_portrait.jpg')}
-                    style={{ width: '100%', height: '100%', borderRadius: 45 }}
-                    contentFit="cover"
-                  />
-                </View>
-                <AppText variant="h2"weight="bold">
-                  Tara Vaishnavi
-                </AppText>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 4,
-                    backgroundColor: colors.pastelPrimaryBg,
-                    borderRadius: radius.pill,
-                    paddingHorizontal: 10,
-                    paddingVertical: 3,
-                    marginTop: 4,
-                    marginBottom: 4,
-                  }}
-                >
-                  <Ionicons name="school"size={12} color={colors.brandPrimary} />
-                  <AppText variant="caption"weight="bold"tone="brand">
-                    Class Representative
-                  </AppText>
-                </View>
-                <AppText tone="secondary"variant="bodySmall">
-                  III B.Sc Computer Science - Cohort A
-                </AppText>
-              </View>
-
-              {/* Quote Block */}
-              <View
-                style={{
-                  backgroundColor: colors.pastelPrimaryBg,
-                  borderRadius: radius.md,
-                  padding: spacing.md,
-                  marginBottom: spacing.lg,
-                  borderLeftWidth: 3,
-                  borderLeftColor: colors.brandPrimary,
-                }}
+              <AppText
+                weight="bold"
+                variant="bodySmall"
+                tone={activeSection === 'rep' ? 'inverse' : 'secondary'}
               >
-                <AppText variant="bodySmall"style={{ fontStyle: 'italic', color: colors.sectionLabel }}>
-                  "Let's grow together, support each other, and make our class the best it can be."
-                </AppText>
-              </View>
-
-              {/* Achievements & Highlights */}
-              <AppText variant="bodySmall"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
-                ACHIEVEMENTS & HIGHLIGHTS 
+                Class Representative 👑
               </AppText>
-              <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.lg }}>
-                <AchievementBox icon="trophy-outline"title="Tech Fest Winner"subtitle="Annual Hackathon" />
-                <AchievementBox icon="ribbon-outline"title="Class Topper"subtitle="GPA 4.8 / 5.0" />
-                <AchievementBox icon="medal-outline"title="Debate Finalist"subtitle="Inter-Campus Cup" />
-              </View>
-
-              {/* Responsibilities Checklist */}
-              <AppText variant="bodySmall"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
-                CORE RESPONSIBILITIES 📋
+            </Pressable>
+            <Pressable
+              onPress={() => setActiveSection('mentors')}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: radius.pill,
+                backgroundColor: activeSection === 'mentors' ? colors.brandPrimary : 'transparent',
+                alignItems: 'center',
+              }}
+            >
+              <AppText
+                weight="bold"
+                variant="bodySmall"
+                tone={activeSection === 'mentors' ? 'inverse' : 'secondary'}
+              >
+                Alumni Mentors 🎓
               </AppText>
-              <View style={{ gap: spacing.xs, marginBottom: spacing.lg }}>
-                <CheckItem text="Voice student concerns and academic suggestions" />
-                <CheckItem text="Communicate lecture schedule updates & notices" />
-                <CheckItem text="Represent cohort in Faculty & Senate meetings" />
-                <CheckItem text="Coordinate exam study circles & project teams" />
-              </View>
-
-              {/* Full Width Primary Message Button */}
-              <AppButton
-                label="Message Representative"onPress={() => setMessageModalOpen(true)}
-                fullWidth
-              />
-            </SolidCard>
+            </Pressable>
           </View>
-        ) : (
-          <View>
-            <AppTextField
-              label=""placeholder="Search mentors by name, company, or skills..."value={query}
-              onChangeText={setQuery}
-            />
+        )}
 
-            <View style={{ marginBottom: spacing.lg }}>
-              <ChipSelect
-                options={EXPERTISE_CATEGORIES}
-                selected={[expertise]}
-                onToggle={(value) => setExpertise(value)}
-              />
-            </View>
-
-            {myApplications.length > 0 ? (
-              <SolidCard style={{ marginBottom: spacing.lg }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                  <AppText weight="bold"tone="brand">
-                    My Sent Applications 🤝
+        <View style={isDesktop ? { flexDirection: 'row', gap: 28, alignItems: 'flex-start' } : undefined}>
+          {/* Left Column (Desktop) or Rep Tab (Mobile) */}
+          {(isDesktop || activeSection === 'rep') && (
+            <View style={isDesktop ? { width: 380 } : undefined}>
+              {/* Representative Spotlight Card */}
+              <SolidCard radius={24} style={{ marginBottom: spacing.lg }}>
+                {/* Profile Top */}
+                <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
+                  <View
+                    style={{
+                      width: 96,
+                      height: 96,
+                      borderRadius: 48,
+                      padding: 3,
+                      backgroundColor: colors.pastelPrimaryBg,
+                      borderWidth: 2,
+                      borderColor: colors.brandPrimary,
+                      marginBottom: spacing.xs,
+                    }}
+                  >
+                    <Image
+                      source={require('@/../assets/images/class_rep_portrait.jpg')}
+                      style={{ width: '100%', height: '100%', borderRadius: 45 }}
+                      contentFit="cover"
+                    />
+                  </View>
+                  <AppText variant="h2" weight="bold">
+                    Tara Vaishnavi
                   </AppText>
-                  <Badge label={`${myApplications.length} pending`} tone="brand" />
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      backgroundColor: colors.pastelPrimaryBg,
+                      borderRadius: radius.pill,
+                      paddingHorizontal: 10,
+                      paddingVertical: 3,
+                      marginTop: 4,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Ionicons name="school" size={12} color={colors.brandPrimary} />
+                    <AppText variant="caption" weight="bold" tone="brand">
+                      Class Representative
+                    </AppText>
+                  </View>
+                  <AppText tone="secondary" variant="bodySmall">
+                    III B.Sc Computer Science - Cohort A
+                  </AppText>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+
+                {/* Quote Block */}
+                <View
+                  style={{
+                    backgroundColor: colors.pastelPrimaryBg,
+                    borderRadius: radius.md,
+                    padding: spacing.md,
+                    marginBottom: spacing.lg,
+                    borderLeftWidth: 3,
+                    borderLeftColor: colors.brandPrimary,
+                  }}
+                >
+                  <AppText variant="bodySmall" style={{ fontStyle: 'italic', color: colors.sectionLabel }}>
+                    "Let's grow together, support each other, and make our class the best it can be."
+                  </AppText>
+                </View>
+
+                {/* Achievements & Highlights */}
+                <AppText variant="bodySmall" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
+                  ACHIEVEMENTS & HIGHLIGHTS 🏆
+                </AppText>
+                <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.lg }}>
+                  <AchievementBox icon="trophy-outline" title="Tech Fest" subtitle="Annual Hackathon" />
+                  <AchievementBox icon="ribbon-outline" title="Class Topper" subtitle="GPA 4.8 / 5.0" />
+                  <AchievementBox icon="medal-outline" title="Debate Final" subtitle="Campus Cup" />
+                </View>
+
+                {/* Responsibilities Checklist */}
+                <AppText variant="bodySmall" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
+                  CORE RESPONSIBILITIES 📋
+                </AppText>
+                <View style={{ gap: spacing.xs, marginBottom: spacing.lg }}>
+                  <CheckItem text="Voice student concerns and academic suggestions" />
+                  <CheckItem text="Communicate lecture schedule updates & notices" />
+                  <CheckItem text="Represent cohort in Faculty & Senate meetings" />
+                  <CheckItem text="Coordinate exam study circles & project teams" />
+                </View>
+
+                {/* Full Width Primary Message Button */}
+                <AppButton
+                  label="Message Representative 💬"
+                  onPress={() => setMessageModalOpen(true)}
+                  fullWidth
+                />
+              </SolidCard>
+
+              {/* My Sent Applications (Desktop view) */}
+              {isDesktop && myApplications.length > 0 ? (
+                <SolidCard style={{ marginBottom: spacing.lg }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                    <AppText weight="bold" tone="brand">
+                      My Sent Applications 🤝
+                    </AppText>
+                    <Badge label={`${myApplications.length} pending`} tone="brand" />
+                  </View>
                   {myApplications.map((app) => (
-                    <SolidCard key={app.id} radius={12} style={{ width: 200 }}>
-                      <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
+                    <View key={app.id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.divider }}>
+                      <AppText weight="bold" variant="bodySmall">
                         {app.mentorName}
                       </AppText>
                       {app.focusArea ? (
-                        <AppText tone="secondary"variant="caption"numberOfLines={1} style={{ marginTop: 2 }}>
+                        <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
                           Focus: {app.focusArea}
                         </AppText>
                       ) : null}
-                    </SolidCard>
+                    </View>
                   ))}
-                </ScrollView>
-              </SolidCard>
-            ) : null}
+                </SolidCard>
+              ) : null}
+            </View>
+          )}
 
-            <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }}>
-              Verified Alumni Mentors 
-            </AppText>
-            {mentors?.map((mentor) => (
-              <MentorCard
-                key={mentor.id}
-                mentor={mentor}
-                onRequested={() => queryClient.invalidateQueries({ queryKey: ['mentorships'] })}
+          {/* Right Column (Desktop) or Mentors Tab (Mobile) */}
+          {(isDesktop || activeSection === 'mentors') && (
+            <View style={isDesktop ? { flex: 1 } : undefined}>
+              <AppTextField
+                label=""
+                placeholder="Search mentors by name, company, or skills..."
+                value={query}
+                onChangeText={setQuery}
               />
-            ))}
-            {!isLoading && (mentors?.length ?? 0) === 0 ? (
-              <EmptyState title="No mentors found"description="Try a different search term or category." />
-            ) : null}
-          </View>
-        )}
+
+              <View style={{ marginBottom: spacing.lg }}>
+                <ChipSelect
+                  options={EXPERTISE_CATEGORIES}
+                  selected={[expertise]}
+                  onToggle={(value) => setExpertise(value)}
+                />
+              </View>
+
+              {!isDesktop && myApplications.length > 0 ? (
+                <SolidCard style={{ marginBottom: spacing.lg }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                    <AppText weight="bold" tone="brand">
+                      My Sent Applications 🤝
+                    </AppText>
+                    <Badge label={`${myApplications.length} pending`} tone="brand" />
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+                    {myApplications.map((app) => (
+                      <SolidCard key={app.id} radius={12} style={{ width: 200 }}>
+                        <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                          {app.mentorName}
+                        </AppText>
+                        {app.focusArea ? (
+                          <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                            Focus: {app.focusArea}
+                          </AppText>
+                        ) : null}
+                      </SolidCard>
+                    ))}
+                  </ScrollView>
+                </SolidCard>
+              ) : null}
+
+              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
+                Verified Alumni Mentors 🎓
+              </AppText>
+              <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+                {mentors?.map((mentor) => (
+                  <View key={mentor.id} style={isDesktop ? { width: '48.5%' } : undefined}>
+                    <MentorCard
+                      mentor={mentor}
+                      onRequested={() => queryClient.invalidateQueries({ queryKey: ['mentorships'] })}
+                    />
+                  </View>
+                ))}
+              </View>
+              {!isLoading && (mentors?.length ?? 0) === 0 ? (
+                <EmptyState title="No mentors found" description="Try a different search term or category." />
+              ) : null}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* Direct Message to Rep Modal */}
-      <Modal visible={messageModalOpen} transparent animationType="slide"onRequestClose={() => setMessageModalOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <Pressable style={{ flex: 1 }} onPress={() => setMessageModalOpen(false)} accessible={false} />
-          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
-            <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
-            </View>
+      <Modal visible={messageModalOpen} transparent animationType="fade" onRequestClose={() => setMessageModalOpen(false)}>
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            justifyContent: isDesktop ? 'center' : 'flex-end',
+            alignItems: isDesktop ? 'center' : 'stretch',
+            padding: isDesktop ? 20 : 0,
+          }}
+          onPress={() => setMessageModalOpen(false)}
+        >
+          <Pressable
+            style={{
+              backgroundColor: colors.background,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              borderRadius: isDesktop ? 24 : undefined,
+              maxWidth: isDesktop ? 520 : undefined,
+              width: '100%',
+              padding: spacing.lg,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.25,
+              shadowRadius: 24,
+            }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {!isDesktop && (
+              <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
+                <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+              </View>
+            )}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="chatbubble-ellipses"size={20} color={colors.brandPrimary} />
-                <AppText variant="h3"weight="bold">
+                <Ionicons name="chatbubble-ellipses" size={20} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold">
                   Message Class Representative
                 </AppText>
               </View>
               <Pressable onPress={() => setMessageModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close"size={22} color={colors.textSecondary} />
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
-            <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
+            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
               Your message goes directly to Tara Vaishnavi. For urgent timetable inquiries, please include your matric number.
             </AppText>
             <AppTextField
-              label="Message"placeholder="Hi Tara, I have a question regarding the updated semester timetable..."value={messageText}
+              label="Message"
+              placeholder="Hi Tara, I have a question regarding the updated semester timetable..."
+              value={messageText}
               onChangeText={setMessageText}
               multiline
               numberOfLines={4}
             />
             <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-              <AppButton label="Cancel"variant="ghost"onPress={() => setMessageModalOpen(false)} />
-              <AppButton label="Send Message"disabled={!messageText.trim()} onPress={handleSendMessage} />
+              <AppButton label="Cancel" variant="ghost" onPress={() => setMessageModalOpen(false)} />
+              <AppButton label="Send Message" disabled={!messageText.trim()} onPress={handleSendMessage} />
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </ScreenContainer>
   );

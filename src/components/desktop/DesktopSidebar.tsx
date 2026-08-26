@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router, usePathname } from 'expo-router';
@@ -25,6 +25,7 @@ export function DesktopSidebar() {
   const { colors, isDark, toggleTheme, spacing, radius } = useTheme();
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -126,54 +127,86 @@ export function DesktopSidebar() {
       style={[
         styles.sidebar,
         {
+          width: collapsed ? 74 : 260,
           backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : '#FFFFFF',
           borderRightColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
         },
       ]}
     >
       {/* Brand & Logo Header */}
-      <View style={styles.brandHeader}>
-        <View style={styles.logoRow}>
-          <LiorisLogo size={36} variant="symbol" />
-          <View>
-            <LiorisLogo size={18} variant="wordmark" />
-            <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>
-              Campus Workspace
-            </AppText>
-          </View>
+      <View style={[styles.brandHeader, { paddingHorizontal: collapsed ? 12 : 16 }]}>
+        <View style={[styles.logoRow, { justifyContent: collapsed ? 'center' : 'space-between' }]}>
+          <Pressable
+            onPress={() => router.push(`/${role}/dashboard` as any)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+          >
+            <LiorisLogo size={36} variant="symbol" />
+            {!collapsed && (
+              <View>
+                <LiorisLogo size={18} variant="wordmark" />
+                <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>
+                  Campus Workspace
+                </AppText>
+              </View>
+            )}
+          </Pressable>
+
+          <Pressable
+            onPress={() => setCollapsed(!collapsed)}
+            accessibilityRole="button"
+            accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={({ hovered }: any) => [
+              styles.collapseBtn,
+              {
+                backgroundColor: hovered
+                  ? isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
+                  : 'transparent',
+              },
+            ]}
+          >
+            <Ionicons
+              name={collapsed ? 'chevron-forward' : 'chevron-back'}
+              size={18}
+              color={isDark ? '#94A3B8' : '#64748B'}
+            />
+          </Pressable>
         </View>
 
         {/* Active Campus Scope Pill */}
-        <View
-          style={[
-            styles.campusPill,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-            },
-          ]}
-        >
-          <View style={styles.activeDot} />
-          <AppText variant="caption" weight="semiBold" numberOfLines={1} style={{ flex: 1 }}>
-            {campusName}
-          </AppText>
-        </View>
+        {!collapsed && (
+          <View
+            style={[
+              styles.campusPill,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+              },
+            ]}
+          >
+            <View style={styles.activeDot} />
+            <AppText variant="caption" weight="semiBold" numberOfLines={1} style={{ flex: 1 }}>
+              {campusName}
+            </AppText>
+          </View>
+        )}
       </View>
 
       {/* Navigation List */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingVertical: spacing.sm, paddingHorizontal: spacing.sm }}
+        contentContainerStyle={{ paddingVertical: spacing.sm, paddingHorizontal: collapsed ? 8 : spacing.sm }}
         style={{ flex: 1 }}
       >
-        <AppText
-          variant="caption"
-          weight="bold"
-          tone="secondary"
-          style={{ paddingHorizontal: spacing.sm, marginBottom: spacing.xs, textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.8 }}
-        >
-          Navigation
-        </AppText>
+        {!collapsed && (
+          <AppText
+            variant="caption"
+            weight="bold"
+            tone="secondary"
+            style={{ paddingHorizontal: spacing.sm, marginBottom: spacing.xs, textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.8 }}
+          >
+            Navigation
+          </AppText>
+        )}
 
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== `/${role}/dashboard` && pathname.startsWith(item.href));
@@ -181,9 +214,14 @@ export function DesktopSidebar() {
             <Pressable
               key={item.id}
               onPress={() => router.push(item.href as any)}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
               style={({ hovered }: any) => [
                 styles.navButton,
                 {
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  paddingHorizontal: collapsed ? 0 : 12,
+                  paddingVertical: collapsed ? 12 : 9,
                   backgroundColor: isActive
                     ? colors.brandPrimary
                     : hovered
@@ -195,23 +233,31 @@ export function DesktopSidebar() {
                 },
               ]}
             >
-              <Ionicons
-                name={item.icon}
-                size={19}
-                color={isActive ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
-              />
-              <AppText
-                variant="bodySmall"
-                weight={isActive ? 'bold' : 'medium'}
-                style={{
-                  flex: 1,
-                  color: isActive ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B',
-                }}
-              >
-                {item.label}
-              </AppText>
+              <View style={{ position: 'relative' }}>
+                <Ionicons
+                  name={item.icon}
+                  size={19}
+                  color={isActive ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                />
+                {collapsed && item.badgeCount && item.badgeCount > 0 ? (
+                  <View style={styles.miniBadgeDot} />
+                ) : null}
+              </View>
 
-              {item.badgeCount && item.badgeCount > 0 ? (
+              {!collapsed && (
+                <AppText
+                  variant="bodySmall"
+                  weight={isActive ? 'bold' : 'medium'}
+                  style={{
+                    flex: 1,
+                    color: isActive ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B',
+                  }}
+                >
+                  {item.label}
+                </AppText>
+              )}
+
+              {!collapsed && item.badgeCount && item.badgeCount > 0 ? (
                 <View
                   style={[
                     styles.badge,
@@ -242,51 +288,59 @@ export function DesktopSidebar() {
         style={[
           styles.footer,
           {
+            flexDirection: collapsed ? 'column' : 'row',
+            alignItems: 'center',
+            gap: collapsed ? 10 : 0,
+            padding: collapsed ? 10 : 12,
             borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
           },
         ]}
       >
         <Pressable
           onPress={() => router.push(`/${role}/profile` as any)}
-          style={styles.userCard}
+          style={[styles.userCard, { justifyContent: collapsed ? 'center' : 'flex-start' }]}
         >
           <Avatar
             name={user?.fullName || 'User'}
             uri={profile?.avatarUrl}
-            size={38}
+            size={collapsed ? 34 : 38}
           />
-          <View style={{ flex: 1, marginLeft: spacing.xs }}>
-            <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
-              {user?.fullName || 'Campus Member'}
-            </AppText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <View
-                style={{
-                  paddingHorizontal: 6,
-                  paddingVertical: 1,
-                  borderRadius: 4,
-                  backgroundColor: colors.pastelPrimaryBg,
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  weight="bold"
-                  tone="brand"
-                  style={{ fontSize: 9, textTransform: 'capitalize' }}
+          {!collapsed && (
+            <View style={{ flex: 1, marginLeft: spacing.xs }}>
+              <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                {user?.fullName || 'Campus Member'}
+              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View
+                  style={{
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
+                    borderRadius: 4,
+                    backgroundColor: colors.pastelPrimaryBg,
+                  }}
                 >
-                  {role}
+                  <AppText
+                    variant="caption"
+                    weight="bold"
+                    tone="brand"
+                    style={{ fontSize: 9, textTransform: 'capitalize' }}
+                  >
+                    {role}
+                  </AppText>
+                </View>
+                <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
+                  {profile?.department || 'Member'}
                 </AppText>
               </View>
-              <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
-                {profile?.department || 'Member'}
-              </AppText>
             </View>
-          </View>
+          )}
         </Pressable>
 
-        <View style={styles.footerControls}>
+        <View style={[styles.footerControls, { flexDirection: collapsed ? 'column' : 'row' }]}>
           <Pressable
             onPress={toggleTheme}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle Theme"
             style={({ hovered }: any) => [
               styles.iconBtn,
               {
@@ -310,6 +364,8 @@ export function DesktopSidebar() {
               await logout();
               router.replace('/(auth)/login');
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
             style={({ hovered }: any) => [
               styles.iconBtn,
               {
@@ -329,26 +385,29 @@ export function DesktopSidebar() {
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 260,
     height: '100%',
     borderRightWidth: 1,
     display: 'flex',
     flexDirection: 'column',
+    transitionProperty: 'width' as any,
+    transitionDuration: '200ms' as any,
   },
   brandHeader: {
-    padding: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(150, 150, 150, 0.12)',
   },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  logoImage: {
-    width: 32,
-    height: 32,
+  collapseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   campusPill: {
     flexDirection: 'row',
@@ -358,6 +417,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
+    marginTop: 4,
   },
   activeDot: {
     width: 7,
@@ -369,8 +429,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
     marginVertical: 2,
   },
   badge: {
@@ -381,20 +439,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 18,
   },
+  miniBadgeDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
   footer: {
-    padding: 12,
     borderTopWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
   },
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   footerControls: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
   },

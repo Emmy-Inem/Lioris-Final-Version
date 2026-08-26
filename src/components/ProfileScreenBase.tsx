@@ -16,6 +16,7 @@ import { PostCard } from './PostCard';
 import { Badge } from './Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { getMyProfile, markVerificationPending, updateMyProfile, updateProfileImages, uploadAvatarImage } from '@/api/profile';
 import { listMyPosts } from '@/api/posts';
 import { submitVerificationRequest } from '@/api/verification';
@@ -43,6 +44,7 @@ const PROFILE_TABS = ['Posts & Activity', 'Academic & Credentials'] as const;
 export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const { colors, spacing, radius } = useTheme();
   const { user } = useAuth();
+  const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<(typeof PROFILE_TABS)[number]>('Posts & Activity');
@@ -99,11 +101,35 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
       setEditModalOpen(false);
-      Alert.alert('Profile Updated ✍️', 'Your profile details have been saved.');
-    } catch {
-      Alert.alert('Error', 'Could not update profile.');
+      Alert.alert('Profile Saved', 'Your public academic profile details have been updated.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not update profile details.');
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function handleSelectPresetAvatar(presetId: string) {
+    if (!user) return;
+    try {
+      await updateProfileImages(user.id, { avatarUrl: presetId });
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setPhotoPickerOpen(false);
+      Alert.alert('Avatar Updated', 'New profile avatar applied.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not apply avatar.');
+    }
+  }
+
+  async function handleSelectPresetCover(presetId: string) {
+    if (!user) return;
+    try {
+      await updateProfileImages(user.id, { coverUrl: presetId });
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setPhotoPickerOpen(false);
+      Alert.alert('Campus Banner Updated', 'New cover banner applied.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not apply cover.');
     }
   }
 
@@ -111,46 +137,37 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
   async function handlePickCustomAvatar() {
     if (!user) return;
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]?.uri) {
-        setUploadingAvatar(true);
-        const uri = result.assets[0].uri;
-        const res = await fetch(uri);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please grant photo library access to upload a profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      setUploadingAvatar(true);
+      try {
+        const res = await fetch(result.assets[0].uri);
         const blob = await res.blob();
-        await uploadAvatarImage(user.id, blob, 'jpg');
+        const publicUrl = await uploadAvatarImage(user.id, blob, 'jpg');
+        await updateProfileImages(user.id, { avatarUrl: publicUrl });
         await queryClient.invalidateQueries({ queryKey: ['profile'] });
         setPhotoPickerOpen(false);
-        Alert.alert('Avatar Uploaded 📸', 'Your real photo has been uploaded and set as your campus avatar.');
+        Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
+      } catch (err: any) {
+        Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
+      } finally {
+        setUploadingAvatar(false);
       }
-    } catch (err: any) {
-      Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
-    } finally {
-      setUploadingAvatar(false);
     }
   }
 
-  async function handleSelectAvatar(presetId: string) {
-    if (!user) return;
-    await updateProfileImages(user.id, { avatarUrl: presetId });
-    await queryClient.invalidateQueries({ queryKey: ['profile'] });
-    setPhotoPickerOpen(false);
-    Alert.alert('Avatar Updated', 'New profile avatar applied.');
-  }
-
-  async function handleSelectCover(presetId: string) {
-    if (!user) return;
-    await updateProfileImages(user.id, { coverUrl: presetId });
-    await queryClient.invalidateQueries({ queryKey: ['profile'] });
-    setPhotoPickerOpen(false);
-    Alert.alert('Campus Banner Updated', 'New cover header applied.');
-  }
+  const handleSelectAvatar = handleSelectPresetAvatar;
+  const handleSelectCover = handleSelectPresetCover;
 
   async function handleSubmitVerification(data: {
     institutionClaimed: string;
@@ -192,16 +209,19 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
   return (
     <ScreenContainer noPadding glow={true}>
-      <View style={{ paddingHorizontal: spacing.lg }}>
-        <AppHeader />
-      </View>
+      {!isDesktop && (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <AppHeader />
+        </View>
+      )}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: 140 }}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140 }}
       >
         {/* Cover Photo Header */}
-        <View style={{ height: 180, position: 'relative', width: '100%', overflow: 'hidden' }}>
+        <View style={{ height: isDesktop ? 220 : 180, position: 'relative', width: '100%', overflow: 'hidden' }}>
           <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' }} />
 
@@ -221,212 +241,240 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
               gap: 6,
             }}
           >
-            <Ionicons name="camera"size={14} color="#FFFFFF" />
-            <AppText variant="caption"weight="bold"tone="inverse">
+            <Ionicons name="camera" size={14} color="#FFFFFF" />
+            <AppText variant="caption" weight="bold" tone="inverse">
               Change Photos
             </AppText>
           </Pressable>
         </View>
 
-        {/* Profile Card Header */}
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: -45 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <Pressable onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
-              <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={92} />
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 2,
-                  right: 2,
-                  backgroundColor: colors.brandPrimary,
-                  borderRadius: 12,
-                  width: 24,
-                  height: 24,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 2,
-                  borderColor: '#FFFFFF',
-                }}
-              >
-                <Ionicons name="pencil"size={12} color="#FFFFFF" />
-              </View>
-            </Pressable>
-
-            <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
-              <Pressable
-                onPress={() => router.push('./settings'as any)}
-                hitSlop={8}
-                accessibilityRole="button"accessibilityLabel="Open settings"style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 21,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  backgroundColor: colors.surface,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="settings-outline"size={20} color={colors.textPrimary} />
-              </Pressable>
-              <AppButton
-                label="Edit Profile ✍️"variant="secondary"onPress={handleOpenEdit}
-              />
-            </View>
-          </View>
-
-          <View style={{ marginTop: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <AppText variant="h2"weight="bold">
-                {profile.fullName}
-              </AppText>
-              {profile.verificationStatus === 'verified' ? (
-                <Ionicons name="checkmark-circle"size={18} color={colors.brandPrimary} />
-              ) : null}
-            </View>
-            <AppText tone="brand"weight="semiBold"variant="bodySmall">
-              @{profile.username} • {profile.department ?? 'Computer Science'}
-            </AppText>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-            <Ionicons name="school-outline"size={14} color={colors.textSecondary} />
-            <AppText tone="secondary"variant="bodySmall">
-              {profile.institutionName ?? 'University of Ibadan'} (Class of {profile.graduationYear ?? 2026})
-            </AppText>
-          </View>
-
-          {profile.bio ? (
-            <AppText style={{ marginTop: spacing.sm, lineHeight: 20 }}>
-              {profile.bio}
-            </AppText>
-          ) : null}
-
-          {/* Quick Metrics Bar */}
-          <View style={{ flexDirection: 'row', gap: spacing.sm, marginVertical: spacing.md }}>
-            <StatChip label="Authored Posts"value={myPosts?.length ?? profile.postsCount} />
-            <StatChip label="Connections"value={profile.connectionsCount} />
-            <StatChip label="Reputation XP"value={profile.reputationScore} />
-          </View>
-
-          {/* Verification Callout if not verified */}
-          {profile.verificationStatus === 'pending' ? (
-            <SolidCard style={{ marginBottom: spacing.md, backgroundColor: colors.pastelPrimaryBg }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name="time-outline"size={18} color={colors.brandPrimary} />
-                <View style={{ flex: 1 }}>
-                  <AppText weight="bold"variant="bodySmall"style={{ color: colors.brandPrimary }}>
-                    Verification Pending Review 
-                  </AppText>
-                  <AppText tone="secondary"variant="caption">
-                    Your institutional student ID is being verified by campus moderators.
-                  </AppText>
-                </View>
-              </View>
-            </SolidCard>
-          ) : profile.verificationStatus !== 'verified' ? (
-            <SolidCard style={{ marginBottom: spacing.md, backgroundColor: colors.pastelPrimaryBg }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1, marginRight: spacing.sm }}>
-                  <AppText weight="bold"variant="bodySmall"style={{ color: colors.brandPrimary }}>
-                    Verify Student Identity 
-                  </AppText>
-                  <AppText tone="secondary"variant="caption">
-                    Unlock verified campus badge, voting in student polls, and alumni fast-track.
-                  </AppText>
-                </View>
-                <AppButton label="Verify"onPress={() => setVerificationModalOpen(true)} />
-              </View>
-            </SolidCard>
-          ) : null}
-
-          {/* Interactive Profile Tabs */}
-          <View style={{ flexDirection: 'row', gap: spacing.xs, marginVertical: spacing.sm }}>
-            {PROFILE_TABS.map((tab) => {
-              const selected = activeTab === tab;
-              return (
-                <Pressable
-                  key={tab}
-                  onPress={() => setActiveTab(tab)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 9,
-                    borderRadius: radius.pill,
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: selected ? colors.brandPrimary : colors.border,
-                    backgroundColor: selected ? colors.brandPrimary : colors.surface,
-                  }}
-                >
-                  <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
-                    {tab}
-                  </AppText>
+        {/* Responsive Content Container */}
+        <View
+          style={
+            isDesktop
+              ? { flexDirection: 'row', gap: 28, paddingHorizontal: 32, marginTop: -60, alignItems: 'flex-start' }
+              : { paddingHorizontal: spacing.lg, marginTop: -45 }
+          }
+        >
+          {/* Left Column: Identity & Bio Card */}
+          <View style={isDesktop ? { width: 380, gap: spacing.md } : undefined}>
+            <SolidCard radius={22} style={{ padding: spacing.lg, position: 'relative' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.sm }}>
+                <Pressable onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
+                  <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={isDesktop ? 96 : 88} />
+                  <View
+                    style={{
+                      position: 'absolute',
+                      bottom: 2,
+                      right: 2,
+                      backgroundColor: colors.brandPrimary,
+                      borderRadius: 12,
+                      width: 24,
+                      height: 24,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 2,
+                      borderColor: '#FFFFFF',
+                    }}
+                  >
+                    <Ionicons name="pencil" size={12} color="#FFFFFF" />
+                  </View>
                 </Pressable>
-              );
-            })}
-          </View>
 
-          {/* Tab Content 1: Posts & Activity */}
-          {activeTab === 'Posts & Activity' ? (
-            <View style={{ marginTop: spacing.sm }}>
-              {postsLoading ? (
-                <AppText tone="secondary" style={{ textAlign: 'center', padding: spacing.lg }}>Loading your posts...</AppText>
-              ) : myPosts && myPosts.length > 0 ? (
-                myPosts.map((p) => <PostCard key={p.id} post={p} />)
-              ) : (
-                <SolidCard style={{ alignItems: 'center', padding: spacing.xl }}>
-                  <Ionicons name="chatbubbles-outline" size={32} color={colors.textSecondary} style={{ marginBottom: spacing.sm }} />
-                  <AppText weight="bold" style={{ marginBottom: 4 }}>No Threads Published Yet</AppText>
-                  <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md }}>
-                    Share study questions, poll your cohort, or showcase projects on the Campus Forum!
-                  </AppText>
-                  <AppButton label="Publish First Thread" onPress={() => router.push('./feed' as any)} />
-                </SolidCard>
-              )}
-            </View>
-          ) : null}
-
-          {/* Tab Content 2: Academic & Credentials */}
-          {activeTab === 'Academic & Credentials' ? (
-            <View style={{ marginTop: spacing.sm, gap: spacing.md }}>
-              <SolidCard>
-                <AppText weight="bold" variant="bodySmall" tone="brand" style={{ marginBottom: spacing.sm }}>
-                  Academic Credentials
-                </AppText>
-                <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                  <DetailColumn label="Department" value={profile.department ?? 'Computer Science'} icon="book-outline" />
-                  <DetailColumn label="Grad Class" value={profile.graduationYear ? String(profile.graduationYear) : '2026'} icon="school-outline" />
+                <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+                  <Pressable
+                    onPress={() => router.push('./settings' as any)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open settings"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="settings-outline" size={18} color={colors.textPrimary} />
+                  </Pressable>
+                  <AppButton
+                    label="Edit Profile ✍️"
+                    variant="secondary"
+                    onPress={handleOpenEdit}
+                  />
                 </View>
-              </SolidCard>
+              </View>
+
+              <View style={{ marginTop: spacing.xs }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <AppText variant="h2" weight="bold">
+                    {profile.fullName}
+                  </AppText>
+                  {profile.verificationStatus === 'verified' ? (
+                    <Ionicons name="checkmark-circle" size={18} color={colors.brandPrimary} />
+                  ) : null}
+                </View>
+                <AppText tone="brand" weight="semiBold" variant="bodySmall">
+                  @{profile.username} • {profile.department ?? 'Computer Science'}
+                </AppText>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <Ionicons name="school-outline" size={14} color={colors.textSecondary} />
+                <AppText tone="secondary" variant="bodySmall">
+                  {profile.institutionName ?? 'University of Ibadan'} (Class of {profile.graduationYear ?? 2026})
+                </AppText>
+              </View>
+
+              {profile.bio ? (
+                <AppText style={{ marginTop: spacing.sm, lineHeight: 20 }}>
+                  {profile.bio}
+                </AppText>
+              ) : null}
+
+              {/* Quick Metrics Bar */}
+              <View style={{ flexDirection: 'row', gap: spacing.xs, marginVertical: spacing.md }}>
+                <StatChip label="Authored" value={myPosts?.length ?? profile.postsCount} />
+                <StatChip label="Connections" value={profile.connectionsCount} />
+                <StatChip label="Reputation" value={profile.reputationScore} />
+              </View>
+
+              {/* Verification Callout if not verified */}
+              {profile.verificationStatus === 'pending' ? (
+                <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.pastelPrimaryBg, marginBottom: spacing.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Ionicons name="time-outline" size={18} color={colors.brandPrimary} />
+                    <View style={{ flex: 1 }}>
+                      <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
+                        Verification Pending Review 
+                      </AppText>
+                      <AppText tone="secondary" variant="caption">
+                        Your student ID is being verified by campus moderators.
+                      </AppText>
+                    </View>
+                  </View>
+                </View>
+              ) : profile.verificationStatus !== 'verified' ? (
+                <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.pastelPrimaryBg, marginBottom: spacing.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flex: 1, marginRight: spacing.sm }}>
+                      <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
+                        Verify Student Identity 
+                      </AppText>
+                      <AppText tone="secondary" variant="caption">
+                        Unlock verified badge & voting in student polls.
+                      </AppText>
+                    </View>
+                    <AppButton label="Verify" onPress={() => setVerificationModalOpen(true)} />
+                  </View>
+                </View>
+              ) : null}
 
               {profile.interests && profile.interests.length > 0 ? (
-                <SolidCard>
-                  <AppText weight="bold" variant="bodySmall" tone="brand" style={{ marginBottom: spacing.sm }}>
-                    Skills & Areas of Interest
+                <View style={{ marginTop: spacing.sm }}>
+                  <AppText weight="bold" variant="caption" tone="secondary" style={{ marginBottom: 6, textTransform: 'uppercase' }}>
+                    Interests & Skills
                   </AppText>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {profile.interests.map((interest) => (
                       <View
                         key={interest}
                         style={{
-                          paddingHorizontal: spacing.sm,
-                          paddingVertical: 5,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
                           backgroundColor: colors.pastelPrimaryBg,
                           borderRadius: radius.pill,
                         }}
                       >
-                        <AppText variant="caption" weight="semiBold" style={{ color: colors.brandPrimary }}>
+                        <AppText variant="caption" weight="semiBold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
                           {interest}
                         </AppText>
                       </View>
                     ))}
                   </View>
-                </SolidCard>
+                </View>
               ) : null}
-            </View>
-          ) : null}
+            </SolidCard>
+          </View>
 
-          {extraRows}
+          {/* Right Column: Tabbed Activity Stream */}
+          <View style={isDesktop ? { flex: 1, marginTop: 60 } : { marginTop: spacing.md }}>
+            {/* Interactive Profile Tabs */}
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: spacing.xs,
+                marginBottom: spacing.md,
+                backgroundColor: colors.surface,
+                padding: 4,
+                borderRadius: radius.pill,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              {PROFILE_TABS.map((tab) => {
+                const selected = activeTab === tab;
+                return (
+                  <Pressable
+                    key={tab}
+                    onPress={() => setActiveTab(tab)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 8,
+                      borderRadius: radius.pill,
+                      alignItems: 'center',
+                      backgroundColor: selected ? colors.brandPrimary : 'transparent',
+                    }}
+                  >
+                    <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                      {tab}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Tab Content 1: Posts & Activity */}
+            {activeTab === 'Posts & Activity' ? (
+              <View style={{ gap: spacing.sm }}>
+                {postsLoading ? (
+                  <AppText tone="secondary" style={{ textAlign: 'center', padding: spacing.lg }}>Loading your posts...</AppText>
+                ) : myPosts && myPosts.length > 0 ? (
+                  myPosts.map((p) => <PostCard key={p.id} post={p} />)
+                ) : (
+                  <SolidCard radius={20} style={{ alignItems: 'center', padding: spacing.xxl }}>
+                    <Ionicons name="chatbubbles-outline" size={36} color={colors.textSecondary} style={{ marginBottom: spacing.sm }} />
+                    <AppText variant="h3" weight="bold" style={{ marginBottom: 4 }}>No Threads Published Yet</AppText>
+                    <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md, maxWidth: 360 }}>
+                      Share study questions, poll your cohort, or showcase projects on the Campus Forum!
+                    </AppText>
+                    <AppButton label="Publish First Thread" onPress={() => router.push('./feed' as any)} />
+                  </SolidCard>
+                )}
+              </View>
+            ) : null}
+
+            {/* Tab Content 2: Academic & Credentials */}
+            {activeTab === 'Academic & Credentials' ? (
+              <View style={{ gap: spacing.md }}>
+                <SolidCard radius={20}>
+                  <AppText weight="bold" variant="h3" tone="brand" style={{ marginBottom: spacing.md }}>
+                    Academic Identity & Cohort
+                  </AppText>
+                  <View style={{ flexDirection: 'row', gap: spacing.md, flexWrap: 'wrap' }}>
+                    <DetailColumn label="Department" value={profile.department ?? 'Computer Science'} icon="book-outline" />
+                    <DetailColumn label="Grad Class" value={profile.graduationYear ? String(profile.graduationYear) : '2026'} icon="school-outline" />
+                    <DetailColumn label="Campus Node" value={profile.institutionName ?? 'University of Ibadan'} icon="business-outline" />
+                  </View>
+                </SolidCard>
+              </View>
+            ) : null}
+
+            {extraRows}
+          </View>
         </View>
       </ScrollView>
 
