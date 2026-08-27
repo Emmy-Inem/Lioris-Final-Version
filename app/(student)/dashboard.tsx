@@ -653,11 +653,11 @@ export default function StudentDashboard() {
  <AppText variant="bodySmall"weight="bold"tone="inverse">
  {preset.label}
  </AppText>
- {isSelected ? (
- <AppText variant="caption"weight="bold"tone="brand"style={{ color: '#68D391' }}>
- ✓ Active Banner
- </AppText>
- ) : null}
+                  {isSelected ? (
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ color: '#68D391' }}>
+                      Active Banner
+                    </AppText>
+                  ) : null}
  </View>
  </Pressable>
  );

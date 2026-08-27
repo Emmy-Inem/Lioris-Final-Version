@@ -87,10 +87,10 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
  const renderHeader = () => (
  <View style={{ marginBottom: spacing.sm }}>
- <AppHeader />
+ {!isDesktop && <AppHeader />}
 
  {/* Screen Title & Post Event Button */}
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.md }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
  <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
  <AppText variant="h1" weight="bold">
  Events

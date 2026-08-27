@@ -8,9 +8,10 @@ import { AppText } from'@/components/AppText';
 import { SolidCard } from'@/components/SolidCard';
 import { Badge } from'@/components/Badge';
 import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listAuditLog } from'@/api/auditLog';
-import { AuditLogAction, AuditLogEntry } from'@/api/types';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { listAuditLog } from '@/api/auditLog';
+import { AuditLogAction, AuditLogEntry } from '@/api/types';
 
 // PRD Section 14 (AuditLog model) / Section 6.2's acceptance criteria
 // ("moderation decisions must be audit-logged"). This is the real
@@ -104,6 +105,7 @@ function formatTimestamp(iso: string) {
 
 export default function ModerationAuditLogScreen() {
  const { colors, spacing, radius } = useTheme();
+ const { isDesktop } = useResponsive();
  const [filterIndex, setFilterIndex] = useState(0);
  const activeFilter = FILTERS[filterIndex];
 
@@ -120,8 +122,8 @@ export default function ModerationAuditLogScreen() {
 
  return (
  <ScreenContainer glow={false}>
- <AppHeader />
- <AppText variant="h1"weight="bold"style={{ paddingTop: spacing.lg, marginBottom: spacing.xs }}>
+ {!isDesktop && <AppHeader />}
+ <AppText variant="h1"weight="bold"style={{ paddingTop: isDesktop ? spacing.xs : spacing.lg, marginBottom: spacing.xs }}>
  Moderation & Admin Action Log
  </AppText>
  <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>

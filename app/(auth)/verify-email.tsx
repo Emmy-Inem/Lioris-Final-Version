@@ -170,13 +170,13 @@ export default function VerifyEmailScreen() {
  loading={submitting}
  fullWidth
  />
- <AppButton
- label="⚡ Activate Instantly (No Code Required)"
- variant="secondary"
- onPress={handleInstantActivation}
- loading={submitting}
- fullWidth
- />
+          <AppButton
+            label="Activate Instantly (Demo Bypass)"
+            variant="secondary"
+            onPress={handleInstantActivation}
+            loading={submitting}
+            fullWidth
+          />
  </View>
 
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg }}>

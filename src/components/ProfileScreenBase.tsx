@@ -563,7 +563,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                       </AppText>
                       {isSelected ? (
                         <AppText variant="caption" weight="bold" tone="brand" style={{ color: '#68D391' }}>
-                          ✓ Active Cover
+                          Active Cover
                         </AppText>
                       ) : null}
                     </View>

@@ -383,9 +383,9 @@ export function UserProfilesTab() {
  backgroundColor: editVerified ? colors.pastelPrimaryBg : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={editVerified ? 'brand' : 'secondary'}>
- {editVerified ? 'Verified ✓' : 'Unverified'}
- </AppText>
+            <AppText variant="caption" weight="bold" tone={editVerified ? 'brand' : 'secondary'}>
+              {editVerified ? 'Verified' : 'Unverified'}
+            </AppText>
  </Pressable>
  </View>
 

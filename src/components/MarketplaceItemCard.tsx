@@ -277,11 +277,11 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
  <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
  <AppButton label="Cancel" variant="ghost" onPress={() => setCheckoutModalOpen(false)} />
- <AppButton
- label={orderComplete ? 'Request Sent! ✓' : processingOrder ? 'Sending Request...' : `Reserve & Request Meetup`}
- loading={processingOrder}
- onPress={handleConfirmEscrowOrder}
- />
+          <AppButton
+            label={orderComplete ? 'Request Sent' : processingOrder ? 'Sending Request...' : 'Reserve & Request Meetup'}
+            loading={processingOrder}
+            onPress={handleConfirmEscrowOrder}
+          />
  </View>
  </SolidCard>
  </View>

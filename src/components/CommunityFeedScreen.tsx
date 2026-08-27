@@ -126,7 +126,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
  const renderHeader = () => (
  <View style={{ marginBottom: spacing.sm }}>
- <AppHeader />
+ {!isDesktop && <AppHeader />}
 
  {/* Screen Title & Workspace Selector */}
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>

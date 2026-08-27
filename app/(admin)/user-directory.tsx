@@ -661,12 +661,12 @@ export default function UserDirectoryScreen() {
  <Pressable style={{ flex: 1 }} onPress={() => setCreateModalOpen(false)} />
  <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="person-add"size={20} color={colors.brandPrimary} />
- <AppText variant="h2"weight="bold">
- Provision New Campus User ➕
- </AppText>
- </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Ionicons name="person-add" size={20} color={colors.brandPrimary} />
+                <AppText variant="h2" weight="bold">
+                  Provision New Campus User
+                </AppText>
+              </View>
  <Pressable onPress={() => setCreateModalOpen(false)} hitSlop={8}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
  </Pressable>

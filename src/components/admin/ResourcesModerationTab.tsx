@@ -402,16 +402,20 @@ export function ResourcesModerationTab() {
  {isPending ? (
  <View style={{ flexDirection: 'row', gap: spacing.xs }}>
  <View style={{ flex: 1 }}>
- <AppButton
- label="Approve & Index ✓"variant="primary"loading={actingId === resource.id}
- onPress={() => handleApprove(resource)}
- />
- </View>
- <View style={{ flex: 1 }}>
- <AppButton
- label="Reject File ✕"variant="secondary"loading={actingId === resource.id}
- onPress={() => handleRejectConfirm(resource)}
- />
+                <AppButton
+                  label="Approve & Index"
+                  variant="primary"
+                  loading={actingId === resource.id}
+                  onPress={() => handleApprove(resource)}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label="Reject File"
+                  variant="secondary"
+                  loading={actingId === resource.id}
+                  onPress={() => handleRejectConfirm(resource)}
+                />
  </View>
  <Pressable
  onPress={() => setPreviewModalResource(resource)}

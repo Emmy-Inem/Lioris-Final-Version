@@ -289,9 +289,9 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  }}
  hitSlop={8}
  >
- <AppText variant="caption" weight="bold" tone="critical">
- ✕ Remove Attachment
- </AppText>
+              <AppText variant="caption" weight="bold" tone="critical">
+                Remove Attachment
+              </AppText>
  </Pressable>
  ) : null}
  </View>

@@ -20,90 +20,102 @@ import {
 } from'@/components/admin/ConfigModals';
 import { PaymentGatewayModalContent, WebrtcKeysModalContent, AiKeysModalContent } from'@/components/admin/SecureConfigModals';
 import { LegacyVaultModalContent, ImpersonatorModalContent } from'@/components/admin/HighRiskModals';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { useTheme } from'@/theme/ThemeProvider';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type ModalKey =
- | 'addUniversity'
- | 'domainAuthority'
- | 'tenantToggles'
- | 'xpMultiplier'
- | 'levelBadges'
- | 'seasonalLeaderboards'
- | 'paymentGateway'
- | 'escrowConfig'
- | 'legacyVault'
- | 'webrtcKeys'
- | 'aiKeys'
- | 'toxicityThresholds'
- | 'cloudStorage'
- | 'globalPush'
- | 'impersonator'
- | null;
+  | 'addUniversity'
+  | 'domainAuthority'
+  | 'tenantToggles'
+  | 'xpMultiplier'
+  | 'levelBadges'
+  | 'seasonalLeaderboards'
+  | 'paymentGateway'
+  | 'escrowConfig'
+  | 'legacyVault'
+  | 'webrtcKeys'
+  | 'aiKeys'
+  | 'toxicityThresholds'
+  | 'cloudStorage'
+  | 'globalPush'
+  | 'impersonator'
+  | null;
 
 export default function SuperAdminConfigScreen() {
- const { colors, spacing } = useTheme();
- const [activeModal, setActiveModal] = useState<ModalKey>(null);
- const [gamificationEnabled, setGamificationEnabled] = useState(true);
- const [maintenanceMode, setMaintenanceMode] = useState(false);
- const [mockDataVisible, setMockDataVisible] = useState(true);
+  const { colors, spacing, radius } = useTheme();
+  const { isDesktop } = useResponsive();
+  const [activeModal, setActiveModal] = useState<ModalKey>(null);
+  const [gamificationEnabled, setGamificationEnabled] = useState(true);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [mockDataVisible, setMockDataVisible] = useState(true);
 
- // Lifted form states for configuration modals
- const [domainAuthorityInput, setDomainAuthorityInput] = useState('@ui.edu.ng, @student.ui.edu.ng, @unilag.edu.ng, @oau.edu.ng, @funaab.edu.ng');
- const [xpMultiplierVal, setXpMultiplierVal] = useState(1.5);
- const [seasonNameVal, setSeasonNameVal] = useState('Semester 1 2025/2026');
- const [seasonAutoReset, setSeasonAutoReset] = useState(true);
- const [escrowHoldHours, setEscrowHoldHours] = useState('48');
- const [escrowFeePercent, setEscrowFeePercent] = useState('1.5');
- const [escrowAutoRefund, setEscrowAutoRefund] = useState(true);
- const [toxicityScoreLimit, setToxicityScoreLimit] = useState(80);
- const [cloudStorageImgMb, setCloudStorageImgMb] = useState('5');
- const [cloudStoragePdfMb, setCloudStoragePdfMb] = useState('25');
- const [pushTitle, setPushTitle] = useState('');
- const [pushBody, setPushBody] = useState('');
+  // Lifted form states for configuration modals
+  const [domainAuthorityInput, setDomainAuthorityInput] = useState('@ui.edu.ng, @student.ui.edu.ng, @unilag.edu.ng, @oau.edu.ng, @funaab.edu.ng');
+  const [xpMultiplierVal, setXpMultiplierVal] = useState(1.5);
+  const [seasonNameVal, setSeasonNameVal] = useState('Semester 1 2025/2026');
+  const [seasonAutoReset, setSeasonAutoReset] = useState(true);
+  const [escrowHoldHours, setEscrowHoldHours] = useState('48');
+  const [escrowFeePercent, setEscrowFeePercent] = useState('1.5');
+  const [escrowAutoRefund, setEscrowAutoRefund] = useState(true);
+  const [toxicityScoreLimit, setToxicityScoreLimit] = useState(80);
+  const [cloudStorageImgMb, setCloudStorageImgMb] = useState('5');
+  const [cloudStoragePdfMb, setCloudStoragePdfMb] = useState('25');
+  const [pushTitle, setPushTitle] = useState('');
+  const [pushBody, setPushBody] = useState('');
 
- function confirmMaintenanceMode(next: boolean) {
- if (!next) {
- setMaintenanceMode(false);
- return;
- }
- Alert.alert(
- 'Enable Maintenance Mode?',
- 'This forces the entire platform offline and disables all database writes for every user, immediately. This is not reversible without another manual toggle.',
- [
- { text: 'Cancel', style: 'cancel' },
- { text: 'Enable', style: 'destructive', onPress: () => setMaintenanceMode(true) },
- ],
- );
- }
+  function confirmMaintenanceMode(next: boolean) {
+    if (!next) {
+      setMaintenanceMode(false);
+      return;
+    }
+    Alert.alert(
+      'Enable Maintenance Mode?',
+      'This forces the entire platform offline and disables all database writes for every user, immediately. This is not reversible without another manual toggle.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Enable', style: 'destructive', onPress: () => setMaintenanceMode(true) },
+      ],
+    );
+  }
 
- return (
- <ScreenContainer glow={true}>
- <AppHeader />
- <AppText variant="h1"weight="bold"style={{ marginTop: spacing.md, marginBottom: spacing.xs }}>
- Super Admin Configuration 
- </AppText>
- <AppText tone="secondary"style={{ marginBottom: spacing.md }}>
- Root-level platform parameters - changes here apply across every campus workspace.
- </AppText>
+  return (
+    <ScreenContainer glow={true}>
+      {!isDesktop && <AppHeader />}
+      <AppText variant="h1" weight="bold" style={{ marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
+        Super Admin Configuration
+      </AppText>
+      <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
+        Root-level platform parameters - changes here apply across every campus workspace.
+      </AppText>
 
- <ScrollView
- showsVerticalScrollIndicator={true}
- keyboardShouldPersistTaps="handled"nestedScrollEnabled
- contentContainerStyle={{ paddingBottom: 150 }}
- >
- <Section number={1} title="Multi-Tenant & University Management"emoji="">
- <Row
- title="Add/Register New University"description="Setup wizard to create new campus instances."actionLabel="New Node"onPress={() => setActiveModal('addUniversity')}
- />
- <Row
- title="Domain Authority Binding"description="Whitelist official email domains (e.g. @ui.edu.ng) for verification."actionLabel="Manage"onPress={() => setActiveModal('domainAuthority')}
- />
- <Row
- title="Tenant Feature Toggles"description="Enable/disable modules per university."actionLabel="Configure"onPress={() => setActiveModal('tenantToggles')}
- last
- />
- </Section>
+      <ScrollView
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
+      >
+        <Section number={1} title="Multi-Tenant & University Management" emoji="">
+          <Row
+            title="Add/Register New University"
+            description="Setup wizard to create new campus instances."
+            actionLabel="New Node"
+            onPress={() => setActiveModal('addUniversity')}
+          />
+          <Row
+            title="Domain Authority Binding"
+            description="Whitelist official email domains (e.g. @ui.edu.ng) for verification."
+            actionLabel="Manage"
+            onPress={() => setActiveModal('domainAuthority')}
+          />
+          <Row
+            title="Tenant Feature Toggles"
+            description="Enable/disable modules per university."
+            actionLabel="Configure"
+            onPress={() => setActiveModal('tenantToggles')}
+            last
+          />
+        </Section>
 
  <Section number={2} title="Global Identity & Role Access"emoji="">
  <Row

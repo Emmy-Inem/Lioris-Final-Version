@@ -85,12 +85,12 @@ export default function ResourcesScreen() {
  );
  }
 
- const renderHeader = () => (
- <View style={{ marginBottom: spacing.md }}>
- <AppHeader />
+  const renderHeader = () => (
+    <View style={{ marginBottom: spacing.md }}>
+      {!isDesktop && <AppHeader />}
 
- {/* Screen Title */}
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.md }}>
+      {/* Screen Title */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
  <View>
  <AppText variant="h1"weight="bold">
  Campus Resources

@@ -1177,9 +1177,9 @@ export function SettingsScreen() {
  {exportDataJson}
  </AppText>
  </ScrollView>
- <AppButton
- label={copiedExport ? 'Export Downloaded ✓' : 'Download JSON Data File'}
- onPress={() => {
+            <AppButton
+              label={copiedExport ? 'Export Downloaded' : 'Download JSON Data File'}
+              onPress={() => {
  haptics.medium();
  if (Platform.OS === 'web' && typeof document !== 'undefined') {
  const blob = new Blob([exportDataJson], { type: 'application/json' });

@@ -60,14 +60,14 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
  {group.description}
  </AppText>
 
- <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
- <AppButton
- label={joined ? 'Member ✓' : 'Join Pod'}
- variant={joined ? 'secondary' : 'primary'}
- onPress={handleJoin}
- loading={submitting}
- />
- </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+        <AppButton
+          label={joined ? 'Member' : 'Join Pod'}
+          variant={joined ? 'secondary' : 'primary'}
+          onPress={handleJoin}
+          loading={submitting}
+        />
+      </View>
  </SolidCard>
  );
 }
