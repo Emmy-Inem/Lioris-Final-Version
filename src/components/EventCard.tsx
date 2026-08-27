@@ -194,18 +194,30 @@ export function EventCard({ event }: { event: CampusEvent }) {
  </AppText>
  </Pressable>
 
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Pressable onPress={handleToggleReminder} hitSlop={8} style={{ padding: 2 }}>
- <Ionicons
- name={reminderOn ? 'notifications' : 'notifications-outline'}
- size={18}
- color={reminderOn ? colors.brandPrimary : colors.textSecondary}
- />
- </Pressable>
- <Pressable onPress={() => setMenuOpen(true)} hitSlop={8} style={{ padding: 2 }}>
- <Ionicons name="ellipsis-horizontal"size={18} color={colors.textSecondary} />
- </Pressable>
- </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                  <Pressable
+                    onPress={handleToggleReminder}
+                    hitSlop={8}
+                    style={{ padding: 2 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={reminderOn ? `Cancel reminder for ${event.title}` : `Set reminder for ${event.title}`}
+                  >
+                    <Ionicons
+                      name={reminderOn ? 'notifications' : 'notifications-outline'}
+                      size={18}
+                      color={reminderOn ? colors.brandPrimary : colors.textSecondary}
+                    />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setMenuOpen(true)}
+                    hitSlop={8}
+                    style={{ padding: 2 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Event options menu"
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
  </View>
 
  <Pressable onPress={handleOpenEvent} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>

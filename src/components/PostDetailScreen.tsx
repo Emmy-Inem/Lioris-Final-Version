@@ -194,13 +194,20 @@ export function PostDetailScreen() {
  <Pressable
  onPress={() => router.back()}
  hitSlop={8}
+ accessibilityRole="button"
+ accessibilityLabel="Back to community feed"
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 }}
  >
  <Ionicons name="arrow-back"size={22} color={colors.textPrimary} />
  <AppText variant="h3"weight="bold">Thread</AppText>
  </Pressable>
 
- <Pressable onPress={() => setMenuOpen(true)} hitSlop={8}>
+ <Pressable 
+ onPress={() => setMenuOpen(true)} 
+ hitSlop={8}
+ accessibilityRole="button"
+ accessibilityLabel="Thread options menu"
+ >
  <Ionicons name="ellipsis-horizontal"size={20} color={colors.textSecondary} />
  </Pressable>
  </View>
@@ -218,6 +225,8 @@ export function PostDetailScreen() {
  haptics.light();
  setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl });
  }}
+ accessibilityRole="button"
+ accessibilityLabel={`View ${post.authorName}'s profile`}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}
  >
  <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={50} role={post.authorRole} />
@@ -254,6 +263,8 @@ export function PostDetailScreen() {
  setLightboxCaption(post.title);
  setLightboxOpen(true);
  }}
+ accessibilityRole="button"
+ accessibilityLabel="Enlarge post image"
  style={{ width: '100%', height: 240, borderRadius: 20, overflow: 'hidden', marginBottom: spacing.md, position: 'relative' }}
  >
  <Image source={postImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
