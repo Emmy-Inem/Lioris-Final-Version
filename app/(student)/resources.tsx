@@ -378,45 +378,47 @@ export default function ResourcesScreen() {
               </AppText>
             </View>
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               {portalLinks.filter((p) => p.active).map((portal) => (
                 <Pressable
                   key={portal.id}
                   onPress={() => handleLaunchPortal(portal)}
-                  style={{ width: 'calc(25% - 11px)' as any, minWidth: 220 }}
+                  style={{ width: 'calc(33.333% - 8px)' as any, minWidth: 240 }}
                 >
                   <SolidCard
-                    radius={18}
+                    radius={16}
                     style={{
-                      height: 135,
-                      justifyContent: 'space-between',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
                       borderWidth: 1,
                       borderColor: colors.border,
-                      padding: spacing.md,
+                      padding: 12,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: colors.pastelPrimaryBg,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.brandPrimary} />
-                      </View>
-                      <Badge label={portal.category || 'Portal'} tone="accent" />
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: colors.pastelPrimaryBg,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Ionicons name={portal.icon || 'link-outline'} size={20} color={colors.brandPrimary} />
                     </View>
 
-                    <View>
-                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
-                        {portal.title}
-                      </AppText>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                        <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flex: 1 }}>
+                          {portal.title}
+                        </AppText>
+                        <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
+                      </View>
                       <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 11 }}>
-                        {portal.description}
+                        {portal.description || portal.category || 'Portal Link'}
                       </AppText>
                     </View>
                   </SolidCard>
