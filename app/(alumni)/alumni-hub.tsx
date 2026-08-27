@@ -228,7 +228,7 @@ function OverviewHubTab() {
           {UPCOMING_MASTERCLASSES.map((mc) => {
             const isRegistered = registeredList.includes(mc.id);
             return (
-              <View key={mc.id} style={isDesktop ? { width: '48.5%' } : undefined}>
+              <View key={mc.id} style={isDesktop ? { flex: 1, minWidth: 320 } : undefined}>
                 <SolidCard radius={20} style={{ marginBottom: spacing.sm }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
                     <Badge label={mc.tag} tone="brand" />
@@ -278,7 +278,7 @@ function OverviewHubTab() {
       </AppText>
       <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
         {utilities.map((u) => (
-          <View key={u.title} style={isDesktop ? { width: '48.5%' } : undefined}>
+          <View key={u.title} style={isDesktop ? { flex: 1, minWidth: 320 } : undefined}>
             <Pressable
               onPress={u.onPress}
               accessibilityRole="button"
@@ -352,7 +352,7 @@ function MemberSearchTab() {
 
       <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
         {members?.map((m) => (
-          <View key={m.id} style={isDesktop ? { width: '48.5%' } : undefined}>
+          <View key={m.id} style={isDesktop ? { flex: 1, minWidth: 320 } : undefined}>
             <MemberRow
               key={m.id}
               id={m.id}
@@ -469,7 +469,7 @@ function LegacyGivingTab() {
           const isPledged = pledgedList.includes(c.id);
           const percent = Math.min(100, Math.round((c.raised / c.target) * 100));
           return (
-            <View key={c.id} style={isDesktop ? { width: '48.5%' } : undefined}>
+            <View key={c.id} style={isDesktop ? { flex: 1, minWidth: 320 } : undefined}>
               <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
                   <Badge label={c.category} tone="accent" />

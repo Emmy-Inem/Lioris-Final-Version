@@ -322,225 +322,257 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  </View>
  );
 
- return (
- <ScreenContainer glow={true}>
- {isDesktop ? (
- <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30 }}>
- {/* Left Column: Channels & Filters */}
- <View style={{ width: 240, gap: spacing.md }}>
- <SolidCard radius={18} style={{ padding: spacing.md }}>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Channels
- </AppText>
- <View style={{ gap: 4 }}>
- {CHANNELS.map((ch) => {
- const isSelected = selectedChannel === ch.category || (ch.id === 'all' && selectedChannel === null);
- return (
- <Pressable
- key={ch.id}
- onPress={() => setSelectedChannel(ch.category)}
- style={({ hovered }: any) => [
- {
- flexDirection: 'row',
- alignItems: 'center',
- gap: 10,
- paddingHorizontal: 12,
- paddingVertical: 8,
- borderRadius: radius.md,
- backgroundColor: isSelected
- ? colors.brandPrimary
- : hovered
- ? isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
- : 'transparent',
- },
- ]}
- >
- <Ionicons
- name={ch.icon}
- size={16}
- color={isSelected ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
- />
- <AppText
- variant="bodySmall"
- weight={isSelected ? 'bold' : 'medium'}
- style={{ color: isSelected ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B', flex: 1 }}
- >
- {ch.label}
- </AppText>
- </Pressable>
- );
- })}
- </View>
- </SolidCard>
+  return (
+    <ScreenContainer glow={true}>
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30, alignItems: 'flex-start' }}>
+          {/* Main Feed Column */}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            {/* Desktop Channel Pills & Sort Bar */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: spacing.sm }}>
+                {CHANNELS.map((ch) => {
+                  const isSelected = selectedChannel === ch.category || (ch.id === 'all' && selectedChannel === null);
+                  return (
+                    <Pressable
+                      key={ch.id}
+                      onPress={() => setSelectedChannel(ch.category)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: radius.pill,
+                        backgroundColor: isSelected ? colors.brandPrimary : colors.surface,
+                        borderWidth: 1,
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <Ionicons
+                        name={ch.icon}
+                        size={14}
+                        color={isSelected ? '#FFFFFF' : colors.textSecondary}
+                      />
+                      <AppText
+                        variant="bodySmall"
+                        weight={isSelected ? 'bold' : 'medium'}
+                        style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 12 }}
+                      >
+                        {ch.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
 
- <SolidCard radius={18} style={{ padding: spacing.md }}>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Sort Feed
- </AppText>
- <View style={{ gap: 6 }}>
- {(['latest', 'popular'] as const).map((opt) => (
- <Pressable
- key={opt}
- onPress={() => setSortBy(opt)}
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 8,
- paddingVertical: 6,
- }}
- >
- <Ionicons
- name={sortBy === opt ? 'radio-button-on' : 'radio-button-off'}
- size={16}
- color={sortBy === opt ? colors.brandPrimary : colors.textSecondary}
- />
- <AppText
- variant="bodySmall"
- weight={sortBy === opt ? 'bold' : 'regular'}
- tone={sortBy === opt ? 'brand' : 'primary'}
- >
- {opt === 'latest' ? 'Latest First' : 'Most Upvoted'}
- </AppText>
- </Pressable>
- ))}
- </View>
- </SolidCard>
- </View>
-
- {/* Center Column: Feed Stream */}
- <View style={{ flex: 1 }}>
- {/* Quick Desktop Composer Box */}
- <SolidCard radius={18} style={{ padding: spacing.md, marginBottom: spacing.md }}>
- <Pressable
- onPress={() => setComposerOpen(true)}
- style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
- >
- <Avatar name={user?.fullName || 'User'} uri={profile?.avatarUrl} size={40} />
- <View
- style={{
- flex: 1,
- backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
- borderRadius: radius.pill,
- paddingHorizontal: 16,
- paddingVertical: 10,
- }}
- >
- <AppText tone="secondary" variant="bodySmall">
- What's on your mind? Share an update or start a thread...
- </AppText>
- </View>
- <View
- style={{
- backgroundColor: colors.brandPrimary,
- paddingHorizontal: 14,
- paddingVertical: 8,
- borderRadius: radius.pill,
- }}
- >
- <AppText variant="caption" weight="bold" tone="inverse">
- + Post
- </AppText>
- </View>
- </Pressable>
- </SolidCard>
-
- <View style={{ marginBottom: spacing.sm }}>
- <HorizontalTrendsSlider
- selectedTrend={selectedTrend}
- onSelectTrend={(trend) => setSelectedTrend(selectedTrend === trend ? null : trend)}
- />
- </View>
-
- <FlatList
- data={posts}
- keyExtractor={(item) => item.id}
- initialNumToRender={8}
- maxToRenderPerBatch={8}
- windowSize={7}
- removeClippedSubviews
- contentContainerStyle={{ paddingBottom: 40 }}
- renderItem={({ item, index }) => (
- <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
- <PostCard post={item} />
- </Animated.View>
- )}
- showsVerticalScrollIndicator={true}
- onRefresh={refetch}
- refreshing={isRefetching}
- ListEmptyComponent={
- !isLoading ? (
- <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
- <View
- style={{
- width: 64,
- height: 64,
- borderRadius: 32,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
- </View>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
- No Threads in this Channel Yet
- </AppText>
- <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
- Be the first to share an academic question or start a discussion for your cohort.
- </AppText>
- </View>
- ) : null
- }
- />
- </View>
-
- {/* Right Column: Workspaces & Guidelines */}
- <View style={{ width: 280, gap: spacing.md }}>
- <SolidCard radius={18} style={{ padding: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <AppText variant="h3" weight="bold">
- Discussion Hubs
- </AppText>
- <Pressable onPress={() => setWorkspacesOpen(true)}>
- <AppText variant="caption" weight="bold" tone="brand">Explore →</AppText>
- </Pressable>
- </View>
- <View style={{ gap: 8 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
- <Ionicons name="code-slash-outline" size={16} color={colors.brandPrimary} />
- <AppText variant="bodySmall" weight="semiBold" style={{ flex: 1 }}>Tech Hackathon 2026</AppText>
- <Badge label="Active" tone="brand" />
- </View>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
- <Ionicons name="book-outline" size={16} color="#3B82F6" />
- <AppText variant="bodySmall" weight="semiBold" style={{ flex: 1 }}>Finals Revision Squad</AppText>
- <Badge label="Hot" tone="warning" />
- </View>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
- <Ionicons name="briefcase-outline" size={16} color="#10B981" />
- <AppText variant="bodySmall" weight="semiBold" style={{ flex: 1 }}>Internship Hub</AppText>
- <Badge label="12 New" tone="success" />
- </View>
- </View>
- </SolidCard>
-
-          <SolidCard radius={18} style={{ padding: spacing.md }}>
-            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
-              Community Rules
-            </AppText>
-            <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
-              Lioris is a verified academic community. Keep discussions constructive, helpful, and respectful.
-            </AppText>
-            <View style={{ gap: 4 }}>
-              <AppText variant="caption" tone="secondary">• Be helpful & respectful</AppText>
-              <AppText variant="caption" tone="secondary">• No academic dishonesty</AppText>
-              <AppText variant="caption" tone="secondary">• Report spam to Campus Staff</AppText>
+              {/* Sort Pill */}
+              <Pressable
+                onPress={() => setSortBy(sortBy === 'latest' ? 'popular' : 'latest')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: radius.pill,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  flexShrink: 0,
+                }}
+              >
+                <Ionicons name="swap-vertical" size={14} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" tone="brand">
+                  {sortBy === 'latest' ? 'Latest' : 'Top Upvoted'}
+                </AppText>
+              </Pressable>
             </View>
-          </SolidCard>
+
+            {/* Quick Desktop Composer Box */}
+            <SolidCard radius={18} style={{ padding: spacing.md, marginBottom: spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: spacing.sm }}>
+                <Avatar name={user?.fullName || 'User'} uri={profile?.avatarUrl} size={42} />
+                <Pressable
+                  onPress={() => setComposerOpen(true)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                    borderRadius: radius.pill,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                  }}
+                >
+                  <AppText tone="secondary" variant="bodySmall">
+                    What's on your mind? Share an update or start a thread...
+                  </AppText>
+                </Pressable>
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.divider }}>
+                <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                  <Pressable
+                    onPress={() => setComposerOpen(true)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  >
+                    <Ionicons name="image-outline" size={16} color={colors.brandPrimary} />
+                    <AppText variant="caption" weight="semiBold" tone="secondary">Photo / Media</AppText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setComposerOpen(true)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  >
+                    <Ionicons name="stats-chart-outline" size={16} color="#10B981" />
+                    <AppText variant="caption" weight="semiBold" tone="secondary">Create Poll</AppText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setComposerOpen(true)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  >
+                    <Ionicons name="pricetag-outline" size={16} color="#F59E0B" />
+                    <AppText variant="caption" weight="semiBold" tone="secondary">Topic Hub</AppText>
+                  </Pressable>
+                </View>
+
+                <Pressable
+                  onPress={() => setComposerOpen(true)}
+                  style={{
+                    backgroundColor: colors.brandPrimary,
+                    paddingHorizontal: 16,
+                    paddingVertical: 7,
+                    borderRadius: radius.pill,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="inverse">
+                    + Post Thread
+                  </AppText>
+                </Pressable>
+              </View>
+            </SolidCard>
+
+            {/* Trending Hot Topics */}
+            <View style={{ marginBottom: spacing.md }}>
+              <HorizontalTrendsSlider
+                selectedTrend={selectedTrend}
+                onSelectTrend={(trend) => setSelectedTrend(selectedTrend === trend ? null : trend)}
+              />
+            </View>
+
+            {/* Posts Feed Stream */}
+            <FlatList
+              data={posts}
+              keyExtractor={(item) => item.id}
+              initialNumToRender={8}
+              maxToRenderPerBatch={8}
+              windowSize={7}
+              removeClippedSubviews
+              contentContainerStyle={{ paddingBottom: 40 }}
+              renderItem={({ item, index }) => (
+                <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
+                  <PostCard post={item} />
+                </Animated.View>
+              )}
+              showsVerticalScrollIndicator={true}
+              onRefresh={refetch}
+              refreshing={isRefetching}
+              ListEmptyComponent={
+                !isLoading ? (
+                  <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+                    <View
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 32,
+                        backgroundColor: colors.pastelPrimaryBg,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: spacing.md,
+                      }}
+                    >
+                      <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+                    </View>
+                    <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+                      No Threads in this Channel Yet
+                    </AppText>
+                    <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+                      Be the first to share an academic question or start a discussion for your cohort.
+                    </AppText>
+                  </View>
+                ) : null
+              }
+            />
+          </View>
+
+          {/* Right Sidebar: Hubs, Mentors & Guidelines */}
+          <View style={{ width: 320, gap: spacing.md }}>
+            <SolidCard radius={18} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Discussion Hubs
+                </AppText>
+                <Pressable onPress={() => setWorkspacesOpen(true)}>
+                  <AppText variant="caption" weight="bold" tone="brand">Explore →</AppText>
+                </Pressable>
+              </View>
+              <View style={{ gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="code-slash" size={16} color={colors.brandPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="bold">Tech Hackathon 2026</AppText>
+                    <AppText variant="caption" tone="secondary">48 active builders</AppText>
+                  </View>
+                  <Badge label="Active" tone="brand" />
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="book" size={16} color="#3B82F6" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="bold">Finals Revision Squad</AppText>
+                    <AppText variant="caption" tone="secondary">112 students enrolled</AppText>
+                  </View>
+                  <Badge label="Hot" tone="warning" />
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="briefcase" size={16} color="#10B981" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="bold">Internship Hub</AppText>
+                    <AppText variant="caption" tone="secondary">12 verified openings</AppText>
+                  </View>
+                  <Badge label="12 New" tone="success" />
+                </View>
+              </View>
+            </SolidCard>
+
+            <SolidCard radius={18} style={{ padding: spacing.md }}>
+              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+                Community Rules
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
+                Lioris is a verified academic community. Keep discussions constructive, helpful, and respectful.
+              </AppText>
+              <View style={{ gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
+                  <AppText variant="caption" tone="secondary">Be helpful & respectful</AppText>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
+                  <AppText variant="caption" tone="secondary">No academic dishonesty</AppText>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
+                  <AppText variant="caption" tone="secondary">Report spam to Campus Staff</AppText>
+                </View>
+              </View>
+            </SolidCard>
+          </View>
         </View>
-      </View>
-    ) : (
+      ) : (
       /* Mobile Single Column FlatList */
       <FlatList
         data={posts}
