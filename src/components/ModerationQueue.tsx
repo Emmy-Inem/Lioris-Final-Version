@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { Alert, FlatList, Modal, Pressable, View } from'react-native';
+import { Alert, FlatList, Modal, Pressable, ScrollView, View } from'react-native';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
 import { SolidCard } from'./SolidCard';
