@@ -38,7 +38,7 @@ export function ScreenContainer({
  width: '100%',
  alignSelf: 'center',
  },
- Platform.OS === 'web' && { minHeight: '100%' },
+ Platform.OS === 'web' && { flex: 1, minHeight: 0 },
  style,
  ]}
  {...rest}

@@ -11,8 +11,8 @@ export function ScreenGlowBackground({ children }: { children: React.ReactNode }
  const { colors } = useTheme();
 
  return (
- <View style={{ flex: 1, backgroundColor: colors.background }}>
- <View style={{ flex: 1 }}>{children}</View>
+ <View style={{ flex: 1, minHeight: 0, height: '100%', backgroundColor: colors.background }}>
+ <View style={{ flex: 1, minHeight: 0, height: '100%' }}>{children}</View>
  </View>
  );
 }

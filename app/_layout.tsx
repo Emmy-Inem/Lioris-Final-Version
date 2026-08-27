@@ -105,24 +105,26 @@ export default function RootLayout() {
           return;
         }
 
-        // Find the top-most active scroll container in the viewport
-        const scrollContainers = Array.from(
-          document.querySelectorAll('div[style*="overflow-y: auto"], div[style*="overflow-y: scroll"], div[style*="overflow: auto"], div[style*="overflow: scroll"], .r-overflowY-156q2ks, .r-overflow-1udh08x')
-        ) as HTMLElement[];
+        // Find best scroll container
+        let targetContainer: HTMLElement | null = null;
+        const allScrollables = Array.from(document.querySelectorAll('*')).filter((el) => {
+          const htmlEl = el as HTMLElement;
+          const style = window.getComputedStyle(htmlEl);
+          return (
+            (style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflow === 'auto' || style.overflow === 'scroll') &&
+            htmlEl.scrollHeight > htmlEl.clientHeight &&
+            htmlEl.clientHeight > 150
+          );
+        }) as HTMLElement[];
 
-        // Pick the largest visible scrollable element
-        const targetContainer = scrollContainers.find((el) => {
-          const rect = el.getBoundingClientRect();
-          return rect.height > 200 && el.scrollHeight > el.clientHeight;
-        }) || scrollContainers[scrollContainers.length - 1];
-
+        targetContainer = allScrollables[allScrollables.length - 1] || null;
         if (!targetContainer) return;
 
         let deltaY = 0;
-        if (e.key === 'ArrowDown') deltaY = 100;
-        else if (e.key === 'ArrowUp') deltaY = -100;
-        else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey) || (e.key === 'Space' && !e.shiftKey)) deltaY = targetContainer.clientHeight * 0.8;
-        else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey) || (e.key === 'Space' && e.shiftKey)) deltaY = -targetContainer.clientHeight * 0.8;
+        if (e.key === 'ArrowDown') deltaY = 120;
+        else if (e.key === 'ArrowUp') deltaY = -120;
+        else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey) || (e.key === 'Space' && !e.shiftKey)) deltaY = targetContainer.clientHeight * 0.85;
+        else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey) || (e.key === 'Space' && e.shiftKey)) deltaY = -targetContainer.clientHeight * 0.85;
         else if (e.key === 'Home') {
           e.preventDefault();
           targetContainer.scrollTo({ top: 0, behavior: 'smooth' });
@@ -139,8 +141,41 @@ export default function RootLayout() {
         }
       };
 
+      const handleGlobalWheel = (e: WheelEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target) return;
+        let el: HTMLElement | null = target;
+        let canScroll = false;
+        while (el && el !== document.body && el !== document.documentElement) {
+          const style = window.getComputedStyle(el);
+          if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+            canScroll = true;
+            break;
+          }
+          el = el.parentElement;
+        }
+        if (!canScroll) {
+          const mainScrollable = Array.from(document.querySelectorAll('*')).find((el) => {
+            const htmlEl = el as HTMLElement;
+            const style = window.getComputedStyle(htmlEl);
+            return (
+              (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+              htmlEl.scrollHeight > htmlEl.clientHeight &&
+              htmlEl.clientHeight > 250
+            );
+          }) as HTMLElement;
+          if (mainScrollable) {
+            mainScrollable.scrollTop += e.deltaY;
+          }
+        }
+      };
+
       window.addEventListener('keydown', handleGlobalKeyboardScroll, { passive: false });
-      return () => window.removeEventListener('keydown', handleGlobalKeyboardScroll);
+      window.addEventListener('wheel', handleGlobalWheel, { passive: true });
+      return () => {
+        window.removeEventListener('keydown', handleGlobalKeyboardScroll);
+        window.removeEventListener('wheel', handleGlobalWheel);
+      };
     }
  }, [onLayoutRootView]);
 
