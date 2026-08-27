@@ -134,11 +134,14 @@ export function EventCard({ event }: { event: CampusEvent }) {
  style={{ width: '100%', height: 130, position: 'relative' }}
  >
  <Image source={eventImage} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
+ <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm, flexDirection: 'row', gap: 6 }}>
  <VisibilityBadge
  visibility={event.visibilityScope || 'campus'}
  campusCode={event.campusCode}
  />
+ {event.sponsored ? (
+ <Badge label="SPONSORED" tone="brand" />
+ ) : null}
  </View>
  <View
  style={{

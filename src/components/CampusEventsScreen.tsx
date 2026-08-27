@@ -238,6 +238,13 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
             </Pressable>
           </View>
 
+          {/* Section: Featured & Sponsored Events Spotlight Carousel */}
+          {filter === 'all' && !searchQuery && carouselData.length > 0 ? (
+            <View style={{ marginBottom: spacing.sm }}>
+              <SpotlightEventsCarousel events={carouselData} roleGroup={roleGroup} />
+            </View>
+          ) : null}
+
           {/* Filter & Search Toolbar */}
           <SolidCard radius={18} style={{ padding: spacing.md, marginBottom: spacing.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
