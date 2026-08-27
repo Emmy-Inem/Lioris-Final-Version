@@ -233,10 +233,10 @@ export default function VerificationRequestsScreen() {
  </View>
  </View>
 
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.xs }}>
- <AppText tone="secondary"style={{ fontSize: 10 }}>Valid Through: 2026/2027 Session</AppText>
- <AppText tone="brand"weight="bold"style={{ fontSize: 10 }}>SECURE EMBED ✓</AppText>
- </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.xs }}>
+                    <AppText tone="secondary" style={{ fontSize: 10 }}>Valid Through: 2026/2027 Session</AppText>
+                    <AppText tone="brand" weight="bold" style={{ fontSize: 10 }}>SECURE EMBED</AppText>
+                  </View>
  </View>
 
  <View style={{ flexDirection: 'row', gap: spacing.sm }}>

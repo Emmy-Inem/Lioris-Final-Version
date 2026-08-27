@@ -185,19 +185,23 @@ export function ApprovalsModerationTab() {
  </AppText>
  </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm }}>
- <View style={{ flex: 1 }}>
- <AppButton
- label="Approve & Index ✓"variant="primary"loading={actingId === res.id}
- onPress={() => handleApproveResource(res)}
- />
- </View>
- <View style={{ flex: 1 }}>
- <AppButton
- label="Decline ✕"variant="secondary"loading={actingId === res.id}
- onPress={() => handleRejectResource(res)}
- />
- </View>
+            <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label="Approve & Index"
+                  variant="primary"
+                  loading={actingId === res.id}
+                  onPress={() => handleApproveResource(res)}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label="Decline"
+                  variant="secondary"
+                  loading={actingId === res.id}
+                  onPress={() => handleRejectResource(res)}
+                />
+              </View>
  <Pressable
  onPress={() => setPreviewResource(res)}
  hitSlop={8}

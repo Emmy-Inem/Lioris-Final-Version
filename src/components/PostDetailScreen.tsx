@@ -16,39 +16,41 @@ import { AppButton } from'./AppButton';
 import { ImageViewerModal } from'./ImageViewerModal';
 import { UserProfileModal } from'./UserProfileModal';
 import { ActionSheetModal } from'./ActionSheetModal';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
-import { listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
-import { submitReport } from'@/api/moderation';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
+import { listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
+import { submitReport } from '@/api/moderation';
+import { haptics } from '@/utils/haptics';
 
 const STOCK_IMAGES: Record<string, any> = {
- event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
- event_academic_symposium: require('../../assets/images/event_academic_symposium.jpg'),
- campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
- campus_library_study: require('../../assets/images/campus_library_study.jpg'),
- student_rep_group: require('../../assets/images/student_rep_group.jpg'),
- hero_student_3d: require('../../assets/images/hero_student_3d.jpg'),
+  event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
+  event_academic_symposium: require('../../assets/images/event_academic_symposium.jpg'),
+  campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
+  campus_library_study: require('../../assets/images/campus_library_study.jpg'),
+  student_rep_group: require('../../assets/images/student_rep_group.jpg'),
+  hero_student_3d: require('../../assets/images/hero_student_3d.jpg'),
 };
 
 const COMMENT_MEDIA_PRESETS = [
- { id: 'campus_library_study', label: 'Study Notes', src: require('../../assets/images/campus_library_study.jpg') },
- { id: 'event_tech_hackathon', label: 'Code Demo', src: require('../../assets/images/event_tech_hackathon.jpg') },
+  { id: 'campus_library_study', label: 'Study Notes', src: require('../../assets/images/campus_library_study.jpg') },
+  { id: 'event_tech_hackathon', label: 'Code Demo', src: require('../../assets/images/event_tech_hackathon.jpg') },
 ];
 
 function timeAgo(iso: string) {
- const diffMs = Date.now() - new Date(iso).getTime();
- const hours = Math.floor(diffMs / (1000 * 60 * 60));
- if (hours < 1) return'Just now';
- if (hours < 24) return `${hours}h ago`;
- return `${Math.floor(hours / 24)}d ago`;
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 1) return 'Just now';
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export function PostDetailScreen() {
- const { id } = useLocalSearchParams<{ id: string }>();
- const { colors, spacing, radius, isDark } = useTheme();
- const { user } = useAuth();
- const queryClient = useQueryClient();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop, contentMaxWidth } = useResponsive();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
  const { data: posts } = useQuery({
  queryKey: ['feed'],
@@ -530,61 +532,77 @@ export function PostDetailScreen() {
  )}
  </ScrollView>
 
- {/* Sticky Bottom Reply Composer Bar (Mobile Optimized) */}
- <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: isDark ? 'rgba(10, 19, 38, 0.96)' : 'rgba(255, 255, 255, 0.98)', borderTopWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, zIndex: 20 }}>
- {replyingToAuthor ? (
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
- <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToAuthor}</AppText>
- <Pressable onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
- <Ionicons name="close" size={14} color={colors.brandPrimary} />
- </Pressable>
- </View>
- ) : null}
+      {/* Sticky Bottom Reply Composer Bar */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: isDark ? 'rgba(10, 19, 38, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+          borderTopWidth: 1,
+          borderColor: colors.border,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          zIndex: 20,
+          alignItems: 'center',
+        }}
+      >
+        <View style={{ width: '100%', maxWidth: isDesktop ? 800 : undefined }}>
+          {replyingToAuthor ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
+              <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToAuthor}</AppText>
+              <Pressable onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
+                <Ionicons name="close" size={14} color={colors.brandPrimary} />
+              </Pressable>
+            </View>
+          ) : null}
 
- <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
- <Avatar name={user?.fullName ?? 'You'} size={32} role={user?.role} />
+          <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+            <Avatar name={user?.fullName ?? 'You'} size={32} role={user?.role} />
 
- <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 4 }}>
- <TextInput
- placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Write a reply..."}
- placeholderTextColor={colors.textSecondary}
- value={newReply}
- onChangeText={setNewReply}
- multiline
- style={{ flex: 1, color: colors.textPrimary, fontSize: 13, maxHeight: 72, paddingVertical: 2 }}
- />
+            <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 4 }}>
+              <TextInput
+                placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Write a reply..."}
+                placeholderTextColor={colors.textSecondary}
+                value={newReply}
+                onChangeText={setNewReply}
+                multiline
+                style={{ flex: 1, color: colors.textPrimary, fontSize: 13, maxHeight: 72, paddingVertical: 2 }}
+              />
 
- <Pressable
- onPress={() => {
- haptics.light();
- setAttachedReplyMedia(attachedReplyMedia ? null : COMMENT_MEDIA_PRESETS[0].id);
- }}
- hitSlop={6}
- style={{ padding: 4 }}
- >
- <Ionicons name={attachedReplyMedia ? "image" : "image-outline"} size={18} color={attachedReplyMedia ? colors.brandPrimary : colors.textSecondary} />
- </Pressable>
- </View>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setAttachedReplyMedia(attachedReplyMedia ? null : COMMENT_MEDIA_PRESETS[0].id);
+                }}
+                hitSlop={6}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name={attachedReplyMedia ? "image" : "image-outline"} size={18} color={attachedReplyMedia ? colors.brandPrimary : colors.textSecondary} />
+              </Pressable>
+            </View>
 
- <Pressable
- onPress={handleAddReply}
- disabled={submittingReply || (!newReply.trim() && !attachedReplyMedia)}
- style={{
- backgroundColor: (!newReply.trim() && !attachedReplyMedia) ? colors.border : colors.brandPrimary,
- borderRadius: radius.pill,
- paddingHorizontal: 14,
- height: 36,
- alignItems: 'center',
- justifyContent: 'center',
- flexShrink: 0,
- }}
- >
- <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'inverse'}>
- {submittingReply ? '...' : 'Reply'}
- </AppText>
- </Pressable>
- </View>
- </View>
+            <Pressable
+              onPress={handleAddReply}
+              disabled={submittingReply || (!newReply.trim() && !attachedReplyMedia)}
+              style={{
+                backgroundColor: (!newReply.trim() && !attachedReplyMedia) ? colors.border : colors.brandPrimary,
+                borderRadius: radius.pill,
+                paddingHorizontal: 14,
+                height: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'inverse'}>
+                {submittingReply ? '...' : 'Reply'}
+              </AppText>
+            </Pressable>
+          </View>
+        </View>
+      </View>
 
  {/* User Profile Modal Inspector */}
  {inspectUser ? (

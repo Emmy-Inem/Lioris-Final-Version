@@ -11,81 +11,83 @@ import { AppButton } from'./AppButton';
 import { Badge } from'./Badge';
 import { Avatar } from'./Avatar';
 import { ImageViewerModal } from'./ImageViewerModal';
-import { useTheme } from'@/theme/ThemeProvider';
-import { getEvent, rsvpToEvent } from'@/api/events';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { getEvent, rsvpToEvent } from '@/api/events';
+import { haptics } from '@/utils/haptics';
 
 const EVENT_MEDIA_MAP: Record<string, any> = {
- event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
- event_academic_symposium: require('../../assets/images/event_academic_symposium.jpg'),
- campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
- campus_library_study: require('../../assets/images/campus_library_study.jpg'),
- student_rep_group: require('../../assets/images/student_rep_group.jpg'),
- hero_student_3d: require('../../assets/images/hero_student_3d.jpg'),
+  event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
+  event_academic_symposium: require('../../assets/images/event_academic_symposium.jpg'),
+  campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
+  campus_library_study: require('../../assets/images/campus_library_study.jpg'),
+  student_rep_group: require('../../assets/images/student_rep_group.jpg'),
+  hero_student_3d: require('../../assets/images/hero_student_3d.jpg'),
 };
 
 export function EventDetailScreen() {
- const { colors, spacing, radius } = useTheme();
- const { id } = useLocalSearchParams<{ id: string }>();
- const queryClient = useQueryClient();
+  const { colors, spacing, radius } = useTheme();
+  const { isDesktop, contentMaxWidth } = useResponsive();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const queryClient = useQueryClient();
 
- const [rsvpd, setRsvpdState] = useState<boolean | null>(null);
- const [submittingRsvp, setSubmittingRsvp] = useState(false);
- const [bookmarked, setBookmarked] = useState(false);
- const [activeTab, setActiveTab] = useState<'overview' | 'agenda' | 'map'>('overview');
+  const [rsvpd, setRsvpdState] = useState<boolean | null>(null);
+  const [submittingRsvp, setSubmittingRsvp] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'agenda' | 'map'>('overview');
 
- // Map & Navigation state
- const [zoomLevel, setZoomLevel] = useState(1);
- const [selectedWaypoint, setSelectedWaypoint] = useState<string>('Destination Venue');
- const [isSpeaking, setIsSpeaking] = useState(false);
- const [voiceStep, setVoiceStep] = useState(0);
+  // Map & Navigation state
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [selectedWaypoint, setSelectedWaypoint] = useState<string>('Destination Venue');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceStep, setVoiceStep] = useState(0);
 
- // Fullscreen Image Lightbox
- const [lightboxOpen, setLightboxOpen] = useState(false);
+  // Fullscreen Image Lightbox
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
- // Calendar sync feedback
- const [icsExported, setIcsExported] = useState(false);
+  // Calendar sync feedback
+  const [icsExported, setIcsExported] = useState(false);
 
- const { data: event, isLoading } = useQuery({
- queryKey: ['events', 'detail', id],
- queryFn: () => getEvent(id),
- enabled: !!id,
- });
+  const { data: event, isLoading } = useQuery({
+    queryKey: ['events', 'detail', id],
+    queryFn: () => getEvent(id),
+    enabled: !!id,
+  });
 
- const isRsvpd = rsvpd !== null ? rsvpd : !!event?.isRsvpd;
- const currentRsvpCount = (event?.rsvpCount ?? 34) + (rsvpd === true && !event?.isRsvpd ? 1 : rsvpd === false && event?.isRsvpd ? -1 : 0);
- const capacity = event?.capacity ?? 150;
- const remainingSpots = Math.max(0, capacity - currentRsvpCount);
+  const isRsvpd = rsvpd !== null ? rsvpd : !!event?.isRsvpd;
+  const currentRsvpCount = (event?.rsvpCount ?? 34) + (rsvpd === true && !event?.isRsvpd ? 1 : rsvpd === false && event?.isRsvpd ? -1 : 0);
+  const capacity = event?.capacity ?? 150;
+  const remainingSpots = Math.max(0, capacity - currentRsvpCount);
 
- const walkingSteps = [
- 'Start at the University Main Gate / Senate Bus Terminus.',
- 'Walk straight North along Academic Palm Walk (120m).',
- 'Pass Faculty of Science Courtyard and ICT Innovation Center.',
- `Arrive at ${event?.location ?? 'Venue Hall'} on your right (Ground Floor Auditorium).`,
- ];
+  const walkingSteps = [
+    'Start at the University Main Gate / Senate Bus Terminus.',
+    'Walk straight North along Academic Palm Walk (120m).',
+    'Pass Faculty of Science Courtyard and ICT Innovation Center.',
+    `Arrive at ${event?.location ?? 'Venue Hall'} on your right (Ground Floor Auditorium).`,
+  ];
 
- async function handleToggleRsvp() {
- if (!event) return;
- haptics.medium();
- setSubmittingRsvp(true);
- try {
- const action = isRsvpd ? 'cancel' : 'rsvp';
- await rsvpToEvent(event.id, action);
- setRsvpdState(!isRsvpd);
- queryClient.invalidateQueries({ queryKey: ['events'] });
- haptics.success();
- Alert.alert(
- !isRsvpd ? 'RSVP Confirmed! ' : 'RSVP Cancelled',
- !isRsvpd
- ? `You have secured a seat for"${event.title}". An in-app calendar reminder has been set.`
- : 'Your seat has been released for another student.',
- );
- } catch {
- Alert.alert('Error', 'Could not update RSVP status.');
- } finally {
- setSubmittingRsvp(false);
- }
- }
+  async function handleToggleRsvp() {
+    if (!event) return;
+    haptics.medium();
+    setSubmittingRsvp(true);
+    try {
+      const action = isRsvpd ? 'cancel' : 'rsvp';
+      await rsvpToEvent(event.id, action);
+      setRsvpdState(!isRsvpd);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      haptics.success();
+      Alert.alert(
+        !isRsvpd ? 'RSVP Confirmed' : 'RSVP Cancelled',
+        !isRsvpd
+          ? `You have secured a seat for "${event.title}". An in-app calendar reminder has been set.`
+          : 'Your seat has been released for another student.',
+      );
+    } catch {
+      Alert.alert('Error', 'Could not update RSVP status.');
+    } finally {
+      setSubmittingRsvp(false);
+    }
+  }
 
  function handleLaunchMaps() {
  if (!event) return;
@@ -233,51 +235,51 @@ export function EventDetailScreen() {
  </Pressable>
 
  <View style={{ flexDirection: 'row', gap: 10 }}>
- <Pressable
- onPress={() => {
- haptics.light();
- setBookmarked((b) => !b);
- Alert.alert(bookmarked ? 'Removed Bookmark' : 'Event Saved ', 'Added to your saved calendar events.');
- }}
- style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
- >
- <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : '#FFFFFF'} />
- </Pressable>
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setBookmarked((b) => !b);
+                Alert.alert(bookmarked ? 'Removed Bookmark' : 'Event Saved', 'Added to your saved calendar events.');
+              }}
+              style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : '#FFFFFF'} />
+            </Pressable>
 
- <Pressable
- onPress={() => setLightboxOpen(true)}
- style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
- >
- <Ionicons name="expand-outline"size={20} color="#FFFFFF" />
- </Pressable>
- </View>
- </View>
+            <Pressable
+              onPress={() => setLightboxOpen(true)}
+              style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="expand-outline" size={20} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </View>
 
- {/* Banner Badges */}
- <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
- <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
- <View style={{ backgroundColor: colors.brandPrimary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
- <AppText variant="caption"weight="bold"tone="inverse"style={{ textTransform: 'uppercase' }}>
- {event.category}
- </AppText>
- </View>
- {event.sponsored ? <Badge label="Featured"tone="accent" /> : null}
- </View>
+        {/* Banner Badges */}
+        <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <View style={{ backgroundColor: colors.brandPrimary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
+              <AppText variant="caption" weight="bold" tone="inverse" style={{ textTransform: 'uppercase' }}>
+                {event.category}
+              </AppText>
+            </View>
+            {event.sponsored ? <Badge label="Featured" tone="accent" /> : null}
+          </View>
 
- <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
- <AppText variant="caption"weight="bold"tone="inverse">
- {currentRsvpCount} / {capacity} Registered
- </AppText>
- </View>
- </View>
- </View>
+          <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
+            <AppText variant="caption" weight="bold" tone="inverse">
+              {currentRsvpCount} / {capacity} Registered
+            </AppText>
+          </View>
+        </View>
+      </View>
 
- {/* Content Body Container */}
- <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
- {/* Event Title */}
- <AppText variant="h1"weight="bold"style={{ fontSize: 24, lineHeight: 30, marginBottom: spacing.xs }}>
- {event.title}
- </AppText>
+      {/* Content Body Container */}
+      <View style={{ paddingHorizontal: isDesktop ? 32 : spacing.lg, paddingTop: spacing.md, maxWidth: isDesktop ? 1000 : undefined, alignSelf: 'center', width: '100%' }}>
+        {/* Event Title */}
+        <AppText variant="h1" weight="bold" style={{ fontSize: 24, lineHeight: 30, marginBottom: spacing.xs }}>
+          {event.title}
+        </AppText>
 
  {/* Date & Location Pill Highlights */}
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap', marginBottom: spacing.md }}>
