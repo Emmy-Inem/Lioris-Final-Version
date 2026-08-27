@@ -39,37 +39,58 @@ export default function RootLayout() {
  loadBlockedUserIds().catch(() => {
  // background load
  });
- if (typeof document !== 'undefined') {
- document.title = 'Lioris';
+    if (typeof document !== 'undefined') {
+      document.title = 'Lioris';
 
- const styleId = 'lioris-desktop-scrollbars';
- if (!document.getElementById(styleId)) {
- const style = document.createElement('style');
- style.id = styleId;
- style.textContent = `
- /* Desktop visible sleek scrollbars */
- ::-webkit-scrollbar {
- width: 8px;
- height: 8px;
- }
- ::-webkit-scrollbar-track {
- background: transparent;
- }
- ::-webkit-scrollbar-thumb {
- background-color: rgba(148, 163, 184, 0.4);
- border-radius: 4px;
- }
- ::-webkit-scrollbar-thumb:hover {
- background-color: rgba(148, 163, 184, 0.7);
- }
- * {
- scrollbar-width: thin;
- scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
- }
- `;
- document.head.appendChild(style);
- }
- }
+      const styleId = 'lioris-desktop-scrollbars';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+          /* Universal Desktop Smooth Mouse Wheel Scrolling & Scrollbars */
+          html, body, #root {
+            height: 100% !important;
+            width: 100% !important;
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+          }
+
+          /* Enable smooth mouse wheel scrolling across all React Native Web scroll containers */
+          div[style*="overflow-y: auto"],
+          div[style*="overflow-y: scroll"],
+          div[style*="overflow: auto"],
+          div[style*="overflow: scroll"],
+          .r-overflowY-156q2ks,
+          .r-overflow-1udh08x {
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-y: contain !important;
+            touch-action: pan-y !important;
+          }
+
+          /* Desktop visible sleek scrollbars */
+          ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+          }
+          ::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          ::-webkit-scrollbar-thumb {
+            background-color: rgba(148, 163, 184, 0.4);
+            border-radius: 4px;
+          }
+          ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(148, 163, 184, 0.7);
+          }
+          * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+            box-sizing: border-box;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
  }, [onLayoutRootView]);
 
  useEffect(() => {

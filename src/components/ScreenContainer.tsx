@@ -78,6 +78,8 @@ const styles = StyleSheet.create({
  flex: {
  flex: 1,
  width: '100%',
+ minHeight: 0,
+ minWidth: 0,
  ...(Platform.OS === 'web' ? { height: '100%' } : {}),
  },
 });

@@ -41,6 +41,8 @@ const styles = StyleSheet.create({
  mainArea: {
  flex: 1,
  height: '100%',
+ minHeight: 0,
+ minWidth: 0,
  display: 'flex',
  flexDirection: 'column',
  overflow: 'hidden',
@@ -48,6 +50,8 @@ const styles = StyleSheet.create({
  contentView: {
  flex: 1,
  height: '100%',
+ minHeight: 0,
+ minWidth: 0,
  width: '100%',
  overflow: 'hidden',
  },
