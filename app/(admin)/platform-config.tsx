@@ -494,8 +494,9 @@ function EcosystemTile({
  haptics.light();
  onPress();
  }}
- accessibilityRole="button"accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
- style={{ flex: 1, minWidth: '47%' }}
+ accessibilityRole="button"
+ accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
+ style={{ width: isDesktop ? ('calc(33.333% - 11px)' as any) : ('calc(50% - 6px)' as any), minWidth: 220 }}
  >
  <SolidCard radius={18} frosted style={{ minHeight: 110, justifyContent: 'space-between' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>

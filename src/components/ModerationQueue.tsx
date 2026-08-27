@@ -122,77 +122,134 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  } catch {}
  }
 
- return (
- <View>
- {/* Target Type Filter Bar */}
- <View style={{ marginBottom: spacing.md }}>
- <ChipSelect options={TARGET_FILTERS} selected={[filterType]} onToggle={setFilterType} />
- </View>
+  return (
+    <View>
+      {/* Target Type Filter Bar */}
+      <View style={{ marginBottom: spacing.md }}>
+        <ChipSelect options={TARGET_FILTERS} selected={[filterType]} onToggle={setFilterType} />
+      </View>
 
- <FlatList
- data={filteredReports}
- keyExtractor={(item) => item.id}
- key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
- numColumns={isDesktop ? 2 : 1}
- columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
- showsVerticalScrollIndicator={true}
- contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.sm }}
- renderItem={({ item }) => (
- <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>
- <SolidCard radius={20} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}40` }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
- <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
- <Badge label={item.targetType.toUpperCase()} tone="critical" />
- {item.institutionCode ? <Badge label={item.institutionCode} tone="brand" /> : null}
- </View>
- <Badge label={item.status.replace('_', ' ')} tone={STATUS_TONE[item.status]} />
- </View>
+      {isDesktop ? (
+        <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 60 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+            {filteredReports.map((item) => (
+              <View key={item.id} style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 }}>
+                <SolidCard radius={20} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}40` }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                    <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+                      <Badge label={item.targetType.toUpperCase()} tone="critical" />
+                      {item.institutionCode ? <Badge label={item.institutionCode} tone="brand" /> : null}
+                    </View>
+                    <Badge label={item.status.replace('_', ' ')} tone={STATUS_TONE[item.status]} />
+                  </View>
 
- {/* Violation Reason Box */}
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
- <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 2 }}>
- FLAGGED REASON & POLICY VIOLATION:
- </AppText>
- <AppText weight="bold" tone="primary" variant="bodySmall">
- "{item.reason}"
- </AppText>
- </View>
+                  {/* Violation Reason Box */}
+                  <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 2 }}>
+                      FLAGGED REASON & POLICY VIOLATION:
+                    </AppText>
+                    <AppText weight="bold" tone="primary" variant="bodySmall">
+                      "{item.reason}"
+                    </AppText>
+                  </View>
 
- {/* Simulated Content Snippet */}
- <View style={{ backgroundColor: colors.surface, padding: spacing.md, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
- <AppText variant="caption" tone="secondary">Target ID: {item.targetId}</AppText>
- <AppText variant="caption" tone="secondary">Filed: {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</AppText>
- </View>
- <AppText variant="bodySmall" tone="secondary" style={{ fontStyle: 'italic' }}>
- Content: "Reported item flagged by community members for policy violation."
- </AppText>
- </View>
+                  {/* Simulated Content Snippet */}
+                  <View style={{ backgroundColor: colors.surface, padding: spacing.md, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <AppText variant="caption" tone="secondary">Target ID: {item.targetId}</AppText>
+                      <AppText variant="caption" tone="secondary">Filed: {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</AppText>
+                    </View>
+                    <AppText variant="bodySmall" tone="secondary" style={{ fontStyle: 'italic' }}>
+                      Content: "Reported item flagged by community members for policy violation."
+                    </AppText>
+                  </View>
 
- {/* Action Buttons */}
- <View style={{ flexDirection: 'row', gap: spacing.sm }}>
- <View style={{ flex: 2 }}>
- <AppButton
- label="Enforce Takedown / Ban"
- onPress={() => setActionModalReport(item)}
- />
- </View>
- <View style={{ flex: 1 }}>
- <AppButton
- label="Dismiss"
- variant="secondary"
- onPress={() => handleDismiss(item)}
- loading={submittingId === item.id}
- />
- </View>
- </View>
- </SolidCard>
- </View>
- )}
- ListEmptyComponent={
- !isLoading ? <EmptyState title={emptyTitle} description="No open reports matching this filter right now." /> : null
- }
- />
+                  {/* Action Buttons */}
+                  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                    <View style={{ flex: 2 }}>
+                      <AppButton
+                        label="Enforce Takedown / Ban"
+                        onPress={() => setActionModalReport(item)}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppButton
+                        label="Dismiss"
+                        variant="secondary"
+                        onPress={() => handleDismiss(item)}
+                        loading={submittingId === item.id}
+                      />
+                    </View>
+                  </View>
+                </SolidCard>
+              </View>
+            ))}
+          </View>
+          {filteredReports.length === 0 && !isLoading ? (
+            <EmptyState title={emptyTitle} description="No open reports matching this filter right now." />
+          ) : null}
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={filteredReports}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={true}
+          contentContainerStyle={{ paddingBottom: 130, gap: spacing.sm }}
+          renderItem={({ item }) => (
+            <SolidCard radius={20} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}40` }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+                  <Badge label={item.targetType.toUpperCase()} tone="critical" />
+                  {item.institutionCode ? <Badge label={item.institutionCode} tone="brand" /> : null}
+                </View>
+                <Badge label={item.status.replace('_', ' ')} tone={STATUS_TONE[item.status]} />
+              </View>
+
+              {/* Violation Reason Box */}
+              <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 2 }}>
+                  FLAGGED REASON & POLICY VIOLATION:
+                </AppText>
+                <AppText weight="bold" tone="primary" variant="bodySmall">
+                  "{item.reason}"
+                </AppText>
+              </View>
+
+              {/* Simulated Content Snippet */}
+              <View style={{ backgroundColor: colors.surface, padding: spacing.md, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <AppText variant="caption" tone="secondary">Target ID: {item.targetId}</AppText>
+                  <AppText variant="caption" tone="secondary">Filed: {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</AppText>
+                </View>
+                <AppText variant="bodySmall" tone="secondary" style={{ fontStyle: 'italic' }}>
+                  Content: "Reported item flagged by community members for policy violation."
+                </AppText>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <View style={{ flex: 2 }}>
+                  <AppButton
+                    label="Enforce Takedown / Ban"
+                    onPress={() => setActionModalReport(item)}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppButton
+                    label="Dismiss"
+                    variant="secondary"
+                    onPress={() => handleDismiss(item)}
+                    loading={submittingId === item.id}
+                  />
+                </View>
+              </View>
+            </SolidCard>
+          )}
+          ListEmptyComponent={
+            !isLoading ? <EmptyState title={emptyTitle} description="No open reports matching this filter right now." /> : null
+          }
+        />
+      )}
 
  {/* Enforcement & Strike Modal */}
  <Modal visible={!!actionModalReport} transparent animationType="slide"onRequestClose={() => setActionModalReport(null)}>

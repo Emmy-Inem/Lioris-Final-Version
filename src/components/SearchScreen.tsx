@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,37 +111,31 @@ export function SearchScreen() {
           ListEmptyComponent={!isLoading ? <EmptyState title="No posts found" description={`No results for "${debouncedTrimmed}".`} /> : null}
         />
       ) : tab === 'events' ? (
-        <FlatList
-          data={events ?? []}
-          keyExtractor={(item) => item.id}
-          key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
-          numColumns={isDesktop ? 2 : 1}
-          columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
-          showsVerticalScrollIndicator={true}
-          contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.sm }}
-          renderItem={({ item }) => (
-            <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>
-              <EventCard event={item} />
-            </View>
-          )}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No events found" description={`No results for "${debouncedTrimmed}".`} /> : null}
-        />
+        <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+          <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+            {(events ?? []).map((item) => (
+              <View key={item.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 } : { marginBottom: spacing.sm }}>
+                <EventCard event={item} />
+              </View>
+            ))}
+          </View>
+          {(events ?? []).length === 0 && !isLoading ? (
+            <EmptyState title="No events found" description={`No results for "${debouncedTrimmed}".`} />
+          ) : null}
+        </ScrollView>
       ) : (
-        <FlatList
-          data={resources ?? []}
-          keyExtractor={(item) => item.id}
-          key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
-          numColumns={isDesktop ? 2 : 1}
-          columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
-          showsVerticalScrollIndicator={true}
-          contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.sm }}
-          renderItem={({ item }) => (
-            <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>
-              <ResourceCard resource={item} />
-            </View>
-          )}
-          ListEmptyComponent={!isLoading ? <EmptyState title="No resources found" description={`No results for "${debouncedTrimmed}".`} /> : null}
-        />
+        <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+          <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+            {(resources ?? []).map((item) => (
+              <View key={item.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 } : { marginBottom: spacing.sm }}>
+                <ResourceCard resource={item} />
+              </View>
+            ))}
+          </View>
+          {(resources ?? []).length === 0 && !isLoading ? (
+            <EmptyState title="No resources found" description={`No results for "${debouncedTrimmed}".`} />
+          ) : null}
+        </ScrollView>
       )}
     </ScreenContainer>
   );

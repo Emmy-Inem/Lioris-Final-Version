@@ -55,42 +55,46 @@ export default function StaffAnnouncementsScreen() {
           <AppButton label={composing ? 'Cancel' : 'New'} variant={composing ? 'ghost' : 'primary'} onPress={() => setComposing((v) => !v)} />
         </View>
 
- {composing ? (
- <SolidCard style={{ marginBottom: spacing.lg }}>
- <AppTextField label="Title"value={title} onChangeText={setTitle} placeholder="Midterm Advising Week" />
- <AppTextField
- label="Content"value={content}
- onChangeText={setContent}
- placeholder="Details for your audience..."multiline
- numberOfLines={4}
- />
+        {composing ? (
+          <SolidCard style={{ marginBottom: spacing.lg }}>
+            <AppTextField label="Title" value={title} onChangeText={setTitle} placeholder="Midterm Advising Week" />
+            <AppTextField
+              label="Content" value={content}
+              onChangeText={setContent}
+              placeholder="Details for your audience..." multiline
+              numberOfLines={4}
+            />
 
- <AppText variant="bodySmall"weight="medium"tone="secondary"style={{ marginBottom: spacing.sm }}>
- Audience
- </AppText>
- <ChipRow options={AUDIENCES} selected={audience} onSelect={setAudience} />
+            <AppText variant="bodySmall" weight="medium" tone="secondary" style={{ marginBottom: spacing.sm }}>
+              Audience
+            </AppText>
+            <ChipRow options={AUDIENCES} selected={audience} onSelect={setAudience} />
 
- <AppText variant="bodySmall"weight="medium"tone="secondary"style={{ marginVertical: spacing.sm }}>
- Priority
- </AppText>
- <ChipRow options={PRIORITIES} selected={priority} onSelect={setPriority} />
+            <AppText variant="bodySmall" weight="medium" tone="secondary" style={{ marginVertical: spacing.sm }}>
+              Priority
+            </AppText>
+            <ChipRow options={PRIORITIES} selected={priority} onSelect={setPriority} />
 
- <View style={{ marginTop: spacing.lg }}>
- <AppButton
- label="Publish"onPress={handlePublish}
- loading={submitting}
- disabled={!title || !content}
- fullWidth
- />
- </View>
- </SolidCard>
- ) : null}
+            <View style={{ marginTop: spacing.lg }}>
+              <AppButton
+                label="Publish" onPress={handlePublish}
+                loading={submitting}
+                disabled={!title || !content}
+                fullWidth
+              />
+            </View>
+          </SolidCard>
+        ) : null}
 
- {announcements?.map((a) => (
- <AnnouncementCard key={a.id} announcement={a} />
- ))}
- </ScrollView>
- </ScreenContainer>
+        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+          {announcements?.map((a) => (
+            <View key={a.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 } : undefined}>
+              <AnnouncementCard announcement={a} />
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </ScreenContainer>
  );
 }
 
