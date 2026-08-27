@@ -39,45 +39,45 @@ export default function StaffModerationScreen() {
 
  {/* Tab Switcher */}
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
- <Pressable
- onPress={() => {
- haptics.light();
- setActiveTab('reports');
- }}
- style={{
- flex: 1,
- paddingVertical: 10,
- borderRadius: radius.pill,
- alignItems: 'center',
- backgroundColor: activeTab === 'reports' ? colors.brandPrimary : colors.surface,
- borderWidth: 1,
- borderColor: activeTab === 'reports' ? colors.brandPrimary : colors.border,
- }}
- >
- <AppText weight="bold" variant="bodySmall" tone={activeTab === 'reports' ? 'inverse' : 'secondary'}>
- Reports Queue 
- </AppText>
- </Pressable>
+      <Pressable
+        onPress={() => {
+          haptics.light();
+          setActiveTab('reports');
+        }}
+        style={{
+          flex: 1,
+          paddingVertical: 10,
+          borderRadius: radius.pill,
+          alignItems: 'center',
+          backgroundColor: activeTab === 'reports' ? colors.brandPrimary : colors.surface,
+          borderWidth: 1,
+          borderColor: activeTab === 'reports' ? colors.brandPrimary : colors.border,
+        }}
+      >
+        <AppText weight="bold" variant="bodySmall" tone={activeTab === 'reports' ? 'inverse' : 'secondary'}>
+          Reports Queue
+        </AppText>
+      </Pressable>
 
- <Pressable
- onPress={() => {
- haptics.light();
- setActiveTab('approvals');
- }}
- style={{
- flex: 1,
- paddingVertical: 10,
- borderRadius: radius.pill,
- alignItems: 'center',
- backgroundColor: activeTab === 'approvals' ? colors.brandPrimary : colors.surface,
- borderWidth: 1,
- borderColor: activeTab === 'approvals' ? colors.brandPrimary : colors.border,
- }}
- >
- <AppText weight="bold" variant="bodySmall" tone={activeTab === 'approvals' ? 'inverse' : 'secondary'}>
- Verifications & Approvals 
- </AppText>
- </Pressable>
+      <Pressable
+        onPress={() => {
+          haptics.light();
+          setActiveTab('approvals');
+        }}
+        style={{
+          flex: 1,
+          paddingVertical: 10,
+          borderRadius: radius.pill,
+          alignItems: 'center',
+          backgroundColor: activeTab === 'approvals' ? colors.brandPrimary : colors.surface,
+          borderWidth: 1,
+          borderColor: activeTab === 'approvals' ? colors.brandPrimary : colors.border,
+        }}
+      >
+        <AppText weight="bold" variant="bodySmall" tone={activeTab === 'approvals' ? 'inverse' : 'secondary'}>
+          Verifications & Approvals
+        </AppText>
+      </Pressable>
  </View>
 
  {activeTab === 'reports' ? (

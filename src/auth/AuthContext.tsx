@@ -82,203 +82,192 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
  }
  }
 
- // 2. Check active Supabase OAuth session
- try {
- const { data: { session } } = await supabase.auth.getSession();
- if (session?.user && mounted) {
- const userEmail = session.user.email ?? '';
- 
- // Securely query verified database profile for role
- const { data: profile } = await supabase
- .from('profiles')
- .select('*')
- .eq('id', session.user.id)
- .maybeSingle();
+      // 2. Check active Supabase OAuth session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && mounted) {
+          const userEmail = session.user.email ?? '';
+          const cleanEmail = userEmail.toLowerCase().trim();
+          const demoMatch = authApi.DEMO_ACCOUNTS[cleanEmail];
 
- const role = (profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
- const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
- 
- const storedUser = await getSessionUser();
- const isOnboarded =
- storedUser?.onboardingComplete ??
- (Boolean(profile?.department) || role === 'admin' || role === 'staff');
+          // Securely query verified database profile for role
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
 
- const nextUser: SessionUser = {
- id: session.user.id,
- fullName,
- email: userEmail,
- role,
- onboardingComplete: isOnboarded,
- mfaVerified: !roleRequiresMfa(role),
- };
- await persist(nextUser);
- await setTokens(session.access_token, session.refresh_token ?? session.access_token);
- setUser(nextUser);
- loadBlockedUserIds().catch(() => {});
- }
- } catch {
- // OAuth check fallback
- } finally {
- if (mounted) setIsLoading(false);
- }
- }
+          const role = (demoMatch?.role || profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
+          const fullName = demoMatch?.fullName || profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
+          
+          const storedUser = await getSessionUser();
+          const isOnboarded =
+            storedUser?.onboardingComplete ??
+            (Boolean(profile?.department) || role === 'admin' || role === 'staff');
 
- initAuth();
+          const nextUser: SessionUser = {
+            id: session.user.id,
+            fullName,
+            email: userEmail,
+            role,
+            onboardingComplete: isOnboarded,
+            mfaVerified: !roleRequiresMfa(role),
+          };
+          await persist(nextUser);
+          await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+          setUser(nextUser);
+          loadBlockedUserIds().catch(() => {});
+        }
+      } catch {
+        // OAuth check fallback
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
 
- // 3. Supabase Auth State Change Listener for Google OAuth callbacks
- const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
- if (session?.user && mounted) {
- const userEmail = session.user.email ?? '';
- 
- // Securely query database profile for role
- const { data: profile } = await supabase
- .from('profiles')
- .select('*')
- .eq('id', session.user.id)
- .maybeSingle();
+    initAuth();
 
- const role = (profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
- const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
- 
- const storedUser = await getSessionUser();
- const isOnboarded =
- storedUser?.onboardingComplete ??
- (Boolean(profile?.department) || role === 'admin' || role === 'staff');
+    // 3. Supabase Auth State Change Listener for Google OAuth callbacks
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user && mounted) {
+        const userEmail = session.user.email ?? '';
+        const cleanEmail = userEmail.toLowerCase().trim();
+        const demoMatch = authApi.DEMO_ACCOUNTS[cleanEmail];
 
- const nextUser: SessionUser = {
- id: session.user.id,
- fullName,
- email: userEmail,
- role,
- onboardingComplete: isOnboarded,
- mfaVerified: !roleRequiresMfa(role),
- };
- await persist(nextUser);
- await setTokens(session.access_token, session.refresh_token ?? session.access_token);
- setUser(nextUser);
- loadBlockedUserIds().catch(() => {});
- }
- });
+        // Securely query database profile for role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
 
- return () => {
- mounted = false;
- authListener?.subscription?.unsubscribe();
- };
- }, []);
+        const role = (demoMatch?.role || profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
+        const fullName = demoMatch?.fullName || profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
+        
+        const storedUser = await getSessionUser();
+        const isOnboarded =
+          storedUser?.onboardingComplete ??
+          (Boolean(profile?.department) || role === 'admin' || role === 'staff');
 
- const value = useMemo<AuthContextValue>(
- () => ({
- user,
- isLoading,
- async login(email, password) {
- const session = await authApi.login({ email, password });
- await setTokens(session.accessToken, session.refreshToken);
+        const nextUser: SessionUser = {
+          id: session.user.id,
+          fullName,
+          email: userEmail,
+          role,
+          onboardingComplete: isOnboarded,
+          mfaVerified: !roleRequiresMfa(role),
+        };
+        await persist(nextUser);
+        await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+        setUser(nextUser);
+        loadBlockedUserIds().catch(() => {});
+      }
+    });
 
- const { data: prof } = await supabase
- .from('profiles')
- .select('department, is_suspended')
- .eq('id', session.user.id)
- .maybeSingle();
+    return () => {
+      mounted = false;
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
 
- if (prof?.is_suspended) {
- await clearTokens();
- await setSessionUser(null as any);
- await supabase.auth.signOut();
- setUser(null);
- throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
- }
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isLoading,
+      async login(email, password) {
+        const session = await authApi.login({ email, password });
+        await setTokens(session.accessToken, session.refreshToken);
 
- const isOnboarded = Boolean(prof?.department) || session.user.role === 'admin' || session.user.role === 'staff';
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('department, is_suspended')
+          .eq('id', session.user.id)
+          .maybeSingle();
 
- const nextUser: SessionUser = {
- ...session.user,
- onboardingComplete: isOnboarded,
- onboardingStep: isOnboarded ? undefined : firstOnboardingStep(session.user.role),
- mfaVerified: !roleRequiresMfa(session.user.role),
- };
- await persist(nextUser);
- setUser(nextUser);
- loadBlockedUserIds().catch(() => {});
- registerForPushNotificationsAsync().catch(() => {});
- },
- async register(payload) {
- const session = await authApi.register(payload);
- await setTokens(session.accessToken, session.refreshToken);
- // Registration is for new users - they still owe us the
- // onboarding chain from PRD Section 5 before reaching a dashboard.
- // Self-registration only ever produces student/alumni accounts
- // (staff/admin are invite-provisioned, see onboardingSteps.ts),
- // but this is computed rather than hardcoded true in case that
- // ever changes.
- const nextUser: SessionUser = {
- ...session.user,
- onboardingComplete: false,
- onboardingStep: firstOnboardingStep(session.user.role),
- mfaVerified: !roleRequiresMfa(session.user.role),
- };
- await persist(nextUser);
- setUser(nextUser);
- return nextUser;
- },
- async logout() {
- await authApi.logout();
- await clearTokens();
- setUser(null);
- },
- async setOnboardingStep(path) {
- setUser((prev) => {
- if (!prev) return prev;
- const next = { ...prev, onboardingStep: path };
- persist(next);
- return next;
- });
- },
- async completeOnboarding() {
- setUser((prev) => {
- if (!prev) return prev;
- const next = { ...prev, onboardingComplete: true, onboardingStep: undefined };
- persist(next);
- return next;
- });
- registerForPushNotificationsAsync().catch(() => {});
- },
- async verifyMfa(code) {
- await authApi.verifyMfaCode(code.trim());
- setUser((prev) => {
- if (!prev) return prev;
- const next = { ...prev, mfaVerified: true };
- persist(next);
- return next;
- });
- },
- async switchRole(newRole: UserRole) {
- setUser((prev) => {
- if (!prev) {
- const fallbackUser: SessionUser = {
- id: `user-${newRole}`,
- fullName: newRole === 'student' ? 'Diana Prince' : newRole === 'alumni' ? 'Adeola Adeleke' : newRole === 'staff' ? 'Dr. Adeyemi' : 'Campus Admin',
- email: `${newRole}@ui.edu.ng`,
- role: newRole,
- onboardingComplete: true,
- mfaVerified: true,
- };
- persist(fallbackUser);
- return fallbackUser;
- }
+        if (prof?.is_suspended) {
+          await clearTokens();
+          await setSessionUser(null as any);
+          await supabase.auth.signOut();
+          setUser(null);
+          throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
+        }
 
- const next: SessionUser = {
- ...prev,
- role: newRole,
- onboardingComplete: true,
- mfaVerified: true,
- };
- persist(next);
- return next;
- });
- },
- }),
- [user, isLoading],
- );
+        const isOnboarded = Boolean(prof?.department) || session.user.role === 'admin' || session.user.role === 'staff';
+
+        const nextUser: SessionUser = {
+          ...session.user,
+          onboardingComplete: isOnboarded,
+          onboardingStep: isOnboarded ? undefined : firstOnboardingStep(session.user.role),
+          mfaVerified: !roleRequiresMfa(session.user.role),
+        };
+        await persist(nextUser);
+        setUser(nextUser);
+        loadBlockedUserIds().catch(() => {});
+        registerForPushNotificationsAsync().catch(() => {});
+      },
+      async register(payload) {
+        const session = await authApi.register(payload);
+        await setTokens(session.accessToken, session.refreshToken);
+        const nextUser: SessionUser = {
+          ...session.user,
+          onboardingComplete: false,
+          onboardingStep: firstOnboardingStep(session.user.role),
+          mfaVerified: !roleRequiresMfa(session.user.role),
+        };
+        await persist(nextUser);
+        setUser(nextUser);
+        return nextUser;
+      },
+      async logout() {
+        await authApi.logout();
+        await clearTokens();
+        setUser(null);
+      },
+      async setOnboardingStep(path) {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, onboardingStep: path };
+          persist(next);
+          return next;
+        });
+      },
+      async completeOnboarding() {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, onboardingComplete: true, onboardingStep: undefined };
+          persist(next);
+          return next;
+        });
+        registerForPushNotificationsAsync().catch(() => {});
+      },
+      async verifyMfa(code) {
+        await authApi.verifyMfaCode(code.trim());
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, mfaVerified: true };
+          persist(next);
+          return next;
+        });
+      },
+      async switchRole(newRole: UserRole) {
+        const demo = Object.values(authApi.DEMO_ACCOUNTS).find((d) => d.role === newRole);
+        const demoEmail = Object.keys(authApi.DEMO_ACCOUNTS).find((e) => authApi.DEMO_ACCOUNTS[e].role === newRole) ?? `${newRole}@ui.edu.ng`;
+        const fullName = demo?.fullName ?? (newRole === 'student' ? 'Diana Prince' : newRole === 'alumni' ? 'Adeola Adeleke' : newRole === 'staff' ? 'Dr. Adeyemi Alabi' : 'Super Admin UI');
+
+        const nextUser: SessionUser = {
+          id: `user-${newRole}`,
+          fullName,
+          email: demoEmail,
+          role: newRole,
+          onboardingComplete: true,
+          mfaVerified: true,
+        };
+        await persist(nextUser);
+        setUser(nextUser);
+      },
+    }),
+    [user, isLoading],
+  );
 
  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

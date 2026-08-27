@@ -22,6 +22,7 @@ import { ApprovalsModerationTab } from'@/components/admin/ApprovalsModerationTab
 import { ManagePortalLinksModal } from'@/components/admin/ManagePortalLinksModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
 import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { listReports } from '@/api/moderation';
 import { listVerificationRequests } from '@/api/verification';
@@ -30,12 +31,12 @@ import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 
 const WORKDESK_TABS = ['Analytics', 'Flags', 'User Profiles', 'Utility Hub', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
-const PREVIEW_ROLES = ['Default (Admin)', 'Student', 'Staff', 'Alumni', 'Admin'];
 const SCOPE_OPTIONS = ['All Campuses', ...LAUNCH_INSTITUTIONS.map((inst) => inst.name)];
 
 export default function PlatformConfigScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user, switchRole } = useAuth();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Analytics');
   const [institution, setInstitution] = useState(SCOPE_OPTIONS[0]);
@@ -97,75 +98,141 @@ export default function PlatformConfigScreen() {
             </AppText>
             <AppText tone="secondary">Centralized university moderation, live nodes & control tower</AppText>
           </View>
- <Badge label="Lioris Root Admin"tone="critical" />
- </View>
+          <Badge label="Lioris Root Admin" tone="critical" />
+        </View>
 
- {/* Active Workspace Scope Frosted Card */}
- <SolidCard
- frosted
- style={{
- marginBottom: spacing.lg,
- backgroundColor: colors.pastelPrimaryBg,
- borderColor: `${colors.brandPrimary}30`,
- }}
- >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
- <Ionicons name="school-outline"size={16} color={colors.brandPrimary} />
- <AppText weight="bold"tone="brand">
- Active Campus Workspace Scope
- </AppText>
- </View>
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
- Configures which university network data you view, edit, and moderate globally.
- </AppText>
- <Pressable
- onPress={() => setInstitutionPickerOpen((v) => !v)}
- accessibilityRole="button"accessibilityLabel={`Campus workspace scope: ${institution}`}
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- justifyContent: 'space-between',
- backgroundColor: colors.surface,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.md,
- borderWidth: 1,
- borderColor: colors.border,
- }}
- >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
- <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brandPrimary }} />
- <AppText weight="semiBold">{institution}</AppText>
- </View>
- <Ionicons name="chevron-down"size={16} color={colors.textSecondary} />
- </Pressable>
- {institutionPickerOpen ? (
- <View style={{ marginTop: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
- {SCOPE_OPTIONS.map((inst) => (
- <Pressable
- key={inst}
- onPress={() => {
- setInstitution(inst);
- setInstitutionPickerOpen(false);
- haptics.light();
- }}
- accessibilityRole="radio"accessibilityState={{ checked: inst === institution }}
- accessibilityLabel={inst}
- style={{
- paddingVertical: spacing.sm,
- paddingHorizontal: spacing.sm,
- borderRadius: radius.sm,
- backgroundColor: inst === institution ? colors.pastelPrimaryBg : 'transparent',
- }}
- >
- <AppText weight={inst === institution ? 'bold' : 'regular'} tone={inst === institution ? 'brand' : 'primary'}>
- {inst}
- </AppText>
- </Pressable>
- ))}
- </View>
- ) : null}
- </SolidCard>
+        {/* Preview Workspace As Role Switcher */}
+        <SolidCard
+          frosted
+          radius={20}
+          style={{
+            marginBottom: spacing.md,
+            backgroundColor: colors.pastelPrimaryBg,
+            borderColor: `${colors.brandPrimary}40`,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Ionicons name="eye-outline" size={16} color={colors.brandPrimary} />
+              <AppText weight="bold" tone="brand">
+                Preview Workspace As Role
+              </AppText>
+            </View>
+            <Badge label={`Current: ${user?.role?.toUpperCase() || 'ADMIN'}`} tone="brand" />
+          </View>
+          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+            Jump into any user perspective to inspect features, student workflows, and faculty desks.
+          </AppText>
+
+          <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
+            {[
+              { role: 'student', label: 'Student Portal', path: '/(student)/dashboard' },
+              { role: 'staff', label: 'Faculty Staff', path: '/(staff)/dashboard' },
+              { role: 'alumni', label: 'Alumni Fellow', path: '/(alumni)/dashboard' },
+              { role: 'admin', label: 'Root Admin', path: '/(admin)/platform-config' },
+            ].map((r) => {
+              const active = user?.role === r.role;
+              return (
+                <Pressable
+                  key={r.role}
+                  onPress={async () => {
+                    haptics.medium();
+                    await switchRole(r.role as any);
+                    queryClient.clear();
+                    router.replace(r.path as any);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Switch to ${r.label}`}
+                  style={{
+                    flex: 1,
+                    minWidth: '47%',
+                    backgroundColor: active ? colors.brandPrimary : colors.surface,
+                    borderRadius: radius.md,
+                    paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.sm,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: active ? colors.brandPrimary : colors.border,
+                    marginBottom: 4,
+                  }}
+                >
+                  <AppText variant="bodySmall" weight="bold" tone={active ? 'inverse' : 'brand'}>
+                    {r.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </SolidCard>
+
+        {/* Active Workspace Scope Frosted Card */}
+        <SolidCard
+          frosted
+          style={{
+            marginBottom: spacing.lg,
+            backgroundColor: colors.pastelPrimaryBg,
+            borderColor: `${colors.brandPrimary}30`,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
+            <Ionicons name="school-outline" size={16} color={colors.brandPrimary} />
+            <AppText weight="bold" tone="brand">
+              Active Campus Workspace Scope
+            </AppText>
+          </View>
+          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            Configures which university network data you view, edit, and moderate globally.
+          </AppText>
+          <Pressable
+            onPress={() => setInstitutionPickerOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={`Campus workspace scope: ${institution}`}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: colors.surface,
+              borderRadius: radius.md,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brandPrimary }} />
+              <AppText weight="semiBold">{institution}</AppText>
+            </View>
+            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+          </Pressable>
+          {institutionPickerOpen ? (
+            <View style={{ marginTop: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
+              {SCOPE_OPTIONS.map((inst) => (
+                <Pressable
+                  key={inst}
+                  onPress={() => {
+                    setInstitution(inst);
+                    setInstitutionPickerOpen(false);
+                    haptics.light();
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: inst === institution }}
+                  accessibilityLabel={inst}
+                  style={{
+                    paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.sm,
+                    borderRadius: radius.sm,
+                    backgroundColor: inst === institution ? colors.pastelPrimaryBg : 'transparent',
+                  }}
+                >
+                  <AppText weight={inst === institution ? 'bold' : 'regular'} tone={inst === institution ? 'brand' : 'primary'}>
+                    {inst}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </SolidCard>
 
  {/* Quick Ecosystem Action Tiles */}
  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -222,10 +289,10 @@ export default function PlatformConfigScreen() {
  <Ionicons name="options-outline" size={22} color={colors.brandPrimary} />
  </View>
  <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches </AppText>
- <Badge label="Runtime Modular" tone="brand" />
- </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches</AppText>
+                    <Badge label="Runtime Modular" tone="brand" />
+                  </View>
  <AppText tone="secondary" variant="caption">
  Temporarily toggle XP gamification, career page, marketplace, utility cards & more
  </AppText>

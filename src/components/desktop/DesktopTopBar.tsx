@@ -64,7 +64,7 @@ export function DesktopTopBar() {
  const handleSearchSubmit = () => {
  if (searchQuery.trim()) {
  router.push({
- pathname: `/${role}/search` as any,
+ pathname: `/(${role})/search` as any,
  params: { q: searchQuery.trim() },
  });
  } else {
@@ -159,142 +159,143 @@ export function DesktopTopBar() {
  },
  ]}
  >
- {(['student', 'alumni', 'staff', 'admin'] as const).map((r) => (
- <Pressable
- key={r}
- onPress={async () => {
- setRoleSwitcherOpen(false);
- await switchRole(r);
- router.replace(`/${r}/dashboard` as any);
- }}
- style={({ hovered }: any) => [
- styles.dropdownItem,
- hovered && {
- backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9',
- },
- ]}
- >
- <AppText
- variant="bodySmall"
- weight={role === r ? 'bold' : 'regular'}
- style={{
- color: role === r ? colors.brandPrimary : isDark ? '#E2E8F0' : '#1E293B',
- textTransform: 'capitalize',
- }}
- >
- {r} View
- </AppText>
- </Pressable>
- ))}
- </View>
- )}
- </View>
+              {(['student', 'alumni', 'staff', 'admin'] as const).map((r) => (
+                <Pressable
+                  key={r}
+                  onPress={async () => {
+                    setRoleSwitcherOpen(false);
+                    await switchRole(r);
+                    const targetDashboard = r === 'admin' ? '/(admin)/platform-config' : `/(${r})/dashboard`;
+                    router.replace(targetDashboard as any);
+                  }}
+                  style={({ hovered }: any) => [
+                    styles.dropdownItem,
+                    hovered && {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9',
+                    },
+                  ]}
+                >
+                  <AppText
+                    variant="bodySmall"
+                    weight={role === r ? 'bold' : 'regular'}
+                    style={{
+                      color: role === r ? colors.brandPrimary : isDark ? '#E2E8F0' : '#1E293B',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {r} View
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
 
- {/* Notifications Icon Button with Live Popover Dropdown */}
- <View style={{ position: 'relative' }}>
- <Pressable
- onPress={() => setNotifDropdownOpen(!notifDropdownOpen)}
- style={({ hovered }: any) => [
- styles.iconButton,
- {
- backgroundColor: hovered || notifDropdownOpen
- ? isDark
- ? 'rgba(255, 255, 255, 0.08)'
- : 'rgba(0, 0, 0, 0.05)'
- : 'transparent',
- },
- ]}
- >
- <Ionicons
- name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
- size={20}
- color={unreadCount > 0 ? colors.brandPrimary : isDark ? '#E2E8F0' : '#1E293B'}
- />
- {unreadCount > 0 && (
- <View style={[styles.notifBadge, { backgroundColor: colors.brandPrimary }]}>
- <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF', fontSize: 9 }}>
- {unreadCount > 9 ? '9+' : unreadCount}
- </AppText>
- </View>
- )}
- </Pressable>
+        {/* Notifications Icon Button with Live Popover Dropdown */}
+        <View style={{ position: 'relative' }}>
+          <Pressable
+            onPress={() => setNotifDropdownOpen(!notifDropdownOpen)}
+            style={({ hovered }: any) => [
+              styles.iconButton,
+              {
+                backgroundColor: hovered || notifDropdownOpen
+                  ? isDark
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.05)'
+                  : 'transparent',
+              },
+            ]}
+          >
+            <Ionicons
+              name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+              size={20}
+              color={unreadCount > 0 ? colors.brandPrimary : isDark ? '#E2E8F0' : '#1E293B'}
+            />
+            {unreadCount > 0 && (
+              <View style={[styles.notifBadge, { backgroundColor: colors.brandPrimary }]}>
+                <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF', fontSize: 9 }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </AppText>
+              </View>
+            )}
+          </Pressable>
 
- {/* Quick Notifications Popover */}
- {notifDropdownOpen && (
- <View
- style={[
- styles.notifDropdown,
- {
- backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
- borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0',
- },
- ]}
- >
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9' }}>
- <AppText variant="bodySmall" weight="bold">Notifications</AppText>
- {unreadCount > 0 && (
- <Pressable
- onPress={async () => {
- await markAllNotificationsRead();
- queryClient.invalidateQueries({ queryKey: ['notifications'] });
- }}
- >
- <AppText variant="caption" tone="brand" weight="semiBold">Mark all read</AppText>
- </Pressable>
- )}
- </View>
+          {/* Quick Notifications Popover */}
+          {notifDropdownOpen && (
+            <View
+              style={[
+                styles.notifDropdown,
+                {
+                  backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0',
+                },
+              ]}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9' }}>
+                <AppText variant="bodySmall" weight="bold">Notifications</AppText>
+                {unreadCount > 0 && (
+                  <Pressable
+                    onPress={async () => {
+                      await markAllNotificationsRead();
+                      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                    }}
+                  >
+                    <AppText variant="caption" tone="brand" weight="semiBold">Mark all read</AppText>
+                  </Pressable>
+                )}
+              </View>
 
- <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={true}>
- {(notifications ?? []).slice(0, 5).map((n: any) => (
- <Pressable
- key={n.id}
- onPress={async () => {
- setNotifDropdownOpen(false);
- if (!n.openedAt) {
- await markNotificationRead(n.id);
- queryClient.invalidateQueries({ queryKey: ['notifications'] });
- }
- if (n.deepLinkPath) {
- router.push(n.deepLinkPath as any);
- } else {
- router.push(`/${role}/notifications` as any);
- }
- }}
- style={({ hovered }: any) => [
- styles.notifItem,
- {
- backgroundColor: !n.openedAt
- ? isDark ? 'rgba(30, 136, 229, 0.08)' : 'rgba(30, 136, 229, 0.05)'
- : hovered
- ? isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC'
- : 'transparent',
- },
- ]}
- >
- <View style={{ flex: 1 }}>
- <AppText variant="bodySmall" weight={!n.openedAt ? 'bold' : 'medium'} numberOfLines={1}>
- {n.title}
- </AppText>
- <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ marginTop: 2 }}>
- {n.message || n.body}
- </AppText>
- </View>
- {!n.openedAt && <View style={styles.unreadDot} />}
- </Pressable>
- ))}
- </ScrollView>
+              <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={true}>
+                {(notifications ?? []).slice(0, 5).map((n: any) => (
+                  <Pressable
+                    key={n.id}
+                    onPress={async () => {
+                      setNotifDropdownOpen(false);
+                      if (!n.openedAt) {
+                        await markNotificationRead(n.id);
+                        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                      }
+                      if (n.deepLinkPath) {
+                        router.push(n.deepLinkPath as any);
+                      } else {
+                        router.push(`/(${role})/notifications` as any);
+                      }
+                    }}
+                    style={({ hovered }: any) => [
+                      styles.notifItem,
+                      {
+                        backgroundColor: !n.openedAt
+                          ? isDark ? 'rgba(30, 136, 229, 0.08)' : 'rgba(30, 136, 229, 0.05)'
+                          : hovered
+                          ? isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC'
+                          : 'transparent',
+                      },
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="bodySmall" weight={!n.openedAt ? 'bold' : 'medium'} numberOfLines={1}>
+                        {n.title}
+                      </AppText>
+                      <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ marginTop: 2 }}>
+                        {n.message || n.body}
+                      </AppText>
+                    </View>
+                    {!n.openedAt && <View style={styles.unreadDot} />}
+                  </Pressable>
+                ))}
+              </ScrollView>
 
- <Pressable
- onPress={() => {
- setNotifDropdownOpen(false);
- router.push(`/${role}/notifications` as any);
- }}
- style={{ paddingVertical: 10, alignItems: 'center', borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9' }}
- >
- <AppText variant="caption" weight="bold" tone="brand">
- View All Notifications →
- </AppText>
- </Pressable>
+              <Pressable
+                onPress={() => {
+                  setNotifDropdownOpen(false);
+                  router.push(`/(${role})/notifications` as any);
+                }}
+                style={{ paddingVertical: 10, alignItems: 'center', borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9' }}
+              >
+                <AppText variant="caption" weight="bold" tone="brand">
+                  View All Notifications →
+                </AppText>
+              </Pressable>
  </View>
  )}
  </View>

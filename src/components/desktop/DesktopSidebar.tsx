@@ -140,10 +140,10 @@ export function DesktopSidebar() {
  {/* Brand & Logo Header */}
  <View style={[styles.brandHeader, { paddingHorizontal: collapsed ? 12 : 16 }]}>
  <View style={[styles.logoRow, { justifyContent: collapsed ? 'center' : 'space-between' }]}>
- <Pressable
- onPress={() => router.push(`/${role}/dashboard` as any)}
- style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
- >
+        <Pressable
+          onPress={() => router.push(role === 'admin' ? ('/(admin)/platform-config' as any) : (`/(${role})/dashboard` as any))}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+        >
  <LiorisLogo size={36} variant="symbol" />
  {!collapsed && (
  <View>
@@ -269,98 +269,98 @@ export function DesktopSidebar() {
  </AppText>
  )}
 
- {navItems.map((item) => {
- const isActive = pathname === item.href || (item.href !== `/${role}/dashboard` && pathname.startsWith(item.href));
- return (
- <Pressable
- key={item.id}
- onPress={() => router.push(item.href as any)}
- accessibilityRole="button"
- accessibilityLabel={item.label}
- style={({ hovered }: any) => [
- styles.navButton,
- {
- justifyContent: collapsed ? 'center' : 'flex-start',
- paddingHorizontal: collapsed ? 0 : 12,
- paddingVertical: collapsed ? 12 : 9,
- backgroundColor: isActive
- ? colors.brandPrimary
- : hovered
- ? isDark
- ? 'rgba(255, 255, 255, 0.08)'
- : 'rgba(0, 0, 0, 0.05)'
- : 'transparent',
- borderRadius: radius.md,
- },
- ]}
- >
- <View style={{ position: 'relative' }}>
- <Ionicons
- name={item.icon}
- size={19}
- color={isActive ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
- />
- {collapsed && item.badgeCount && item.badgeCount > 0 ? (
- <View style={styles.miniBadgeDot} />
- ) : null}
- </View>
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== `/(${role})/dashboard` && item.href !== '/(admin)/platform-config' && pathname.startsWith(item.href));
+          return (
+            <Pressable
+              key={item.id}
+              onPress={() => router.push(item.href as any)}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              style={({ hovered }: any) => [
+                styles.navButton,
+                {
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  paddingHorizontal: collapsed ? 0 : 12,
+                  paddingVertical: collapsed ? 12 : 9,
+                  backgroundColor: isActive
+                    ? colors.brandPrimary
+                    : hovered
+                    ? isDark
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.05)'
+                    : 'transparent',
+                  borderRadius: radius.md,
+                },
+              ]}
+            >
+              <View style={{ position: 'relative' }}>
+                <Ionicons
+                  name={item.icon}
+                  size={19}
+                  color={isActive ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                />
+                {collapsed && item.badgeCount && item.badgeCount > 0 ? (
+                  <View style={styles.miniBadgeDot} />
+                ) : null}
+              </View>
 
- {!collapsed && (
- <AppText
- variant="bodySmall"
- weight={isActive ? 'bold' : 'medium'}
- style={{
- flex: 1,
- color: isActive ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B',
- }}
- >
- {item.label}
- </AppText>
- )}
+              {!collapsed && (
+                <AppText
+                  variant="bodySmall"
+                  weight={isActive ? 'bold' : 'medium'}
+                  style={{
+                    flex: 1,
+                    color: isActive ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B',
+                  }}
+                >
+                  {item.label}
+                </AppText>
+              )}
 
- {!collapsed && item.badgeCount && item.badgeCount > 0 ? (
- <View
- style={[
- styles.badge,
- {
- backgroundColor: isActive ? '#FFFFFF' : colors.brandPrimary,
- },
- ]}
- >
- <AppText
- variant="caption"
- weight="bold"
- style={{
- color: isActive ? colors.brandPrimary : '#FFFFFF',
- fontSize: 10,
- }}
- >
- {item.badgeCount > 99 ? '99+' : item.badgeCount}
- </AppText>
- </View>
- ) : null}
- </Pressable>
- );
- })}
- </ScrollView>
+              {!collapsed && item.badgeCount && item.badgeCount > 0 ? (
+                <View
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor: isActive ? '#FFFFFF' : colors.brandPrimary,
+                    },
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    weight="bold"
+                    style={{
+                      color: isActive ? colors.brandPrimary : '#FFFFFF',
+                      fontSize: 10,
+                    }}
+                  >
+                    {item.badgeCount > 99 ? '99+' : item.badgeCount}
+                  </AppText>
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
- {/* User Profile Footer */}
- <View
- style={[
- styles.footer,
- {
- flexDirection: collapsed ? 'column' : 'row',
- alignItems: 'center',
- gap: collapsed ? 10 : 0,
- padding: collapsed ? 10 : 12,
- borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
- },
- ]}
- >
- <Pressable
- onPress={() => router.push(`/${role}/profile` as any)}
- style={[styles.userCard, { justifyContent: collapsed ? 'center' : 'flex-start' }]}
- >
+      {/* User Profile Footer */}
+      <View
+        style={[
+          styles.footer,
+          {
+            flexDirection: collapsed ? 'column' : 'row',
+            alignItems: 'center',
+            gap: collapsed ? 10 : 0,
+            padding: collapsed ? 10 : 12,
+            borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+          },
+        ]}
+      >
+        <Pressable
+          onPress={() => router.push(`/(${role})/profile` as any)}
+          style={[styles.userCard, { justifyContent: collapsed ? 'center' : 'flex-start' }]}
+        >
  <Avatar
  name={user?.fullName || 'User'}
  uri={profile?.avatarUrl}

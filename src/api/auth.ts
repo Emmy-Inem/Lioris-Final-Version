@@ -138,7 +138,7 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
  return { success: true };
 }
 
-const DEMO_ACCOUNTS: Record<string, { role: UserRole; fullName: string; username: string }> = {
+export const DEMO_ACCOUNTS: Record<string, { role: UserRole; fullName: string; username: string }> = {
   'diana.prince@ui.edu.ng': { role: 'student', fullName: 'Diana Prince', username: 'diana_prince' },
   'alumni.adeola@ui.edu.ng': { role: 'alumni', fullName: 'Adeola Adeleke', username: 'adeola_alumni' },
   'dr.adeyemi@ui.edu.ng': { role: 'staff', fullName: 'Dr. Adeyemi Alabi', username: 'dr_adeyemi' },
@@ -248,8 +248,14 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
   }
 
-  const userRole = (profile?.role || signInData.user.user_metadata?.role || 'student') as UserRole;
-  const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
+  const demoMatch = DEMO_ACCOUNTS[cleanEmail];
+  const userRole = (demoMatch?.role || profile?.role || signInData.user.user_metadata?.role || 'student') as UserRole;
+  const fullName = demoMatch?.fullName || profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
+
+  // If demo role differs from profile role in DB, quietly sync the profile
+  if (demoMatch && profile && profile.role !== demoMatch.role) {
+    supabase.from('profiles').update({ role: demoMatch.role }).eq('id', signInData.user.id).catch(() => {});
+  }
 
   return {
     accessToken: signInData.session.access_token,
