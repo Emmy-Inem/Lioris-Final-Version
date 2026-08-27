@@ -91,6 +91,57 @@ export default function RootLayout() {
         document.head.appendChild(style);
       }
     }
+    if (typeof window !== 'undefined') {
+      const handleGlobalKeyboardScroll = (e: KeyboardEvent) => {
+        // Do not intercept if user is typing in an input, textarea, or contentEditable
+        const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+        const isEditable = (document.activeElement as HTMLElement)?.isContentEditable;
+        if (['input', 'textarea', 'select'].includes(activeTag) || isEditable) {
+          return;
+        }
+
+        const scrollKeys = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Space', ' ', 'Home', 'End'];
+        if (!scrollKeys.includes(e.key)) {
+          return;
+        }
+
+        // Find the top-most active scroll container in the viewport
+        const scrollContainers = Array.from(
+          document.querySelectorAll('div[style*="overflow-y: auto"], div[style*="overflow-y: scroll"], div[style*="overflow: auto"], div[style*="overflow: scroll"], .r-overflowY-156q2ks, .r-overflow-1udh08x')
+        ) as HTMLElement[];
+
+        // Pick the largest visible scrollable element
+        const targetContainer = scrollContainers.find((el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.height > 200 && el.scrollHeight > el.clientHeight;
+        }) || scrollContainers[scrollContainers.length - 1];
+
+        if (!targetContainer) return;
+
+        let deltaY = 0;
+        if (e.key === 'ArrowDown') deltaY = 100;
+        else if (e.key === 'ArrowUp') deltaY = -100;
+        else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey) || (e.key === 'Space' && !e.shiftKey)) deltaY = targetContainer.clientHeight * 0.8;
+        else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey) || (e.key === 'Space' && e.shiftKey)) deltaY = -targetContainer.clientHeight * 0.8;
+        else if (e.key === 'Home') {
+          e.preventDefault();
+          targetContainer.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          targetContainer.scrollTo({ top: targetContainer.scrollHeight, behavior: 'smooth' });
+          return;
+        }
+
+        if (deltaY !== 0) {
+          e.preventDefault();
+          targetContainer.scrollBy({ top: deltaY, behavior: 'smooth' });
+        }
+      };
+
+      window.addEventListener('keydown', handleGlobalKeyboardScroll, { passive: false });
+      return () => window.removeEventListener('keydown', handleGlobalKeyboardScroll);
+    }
  }, [onLayoutRootView]);
 
  useEffect(() => {

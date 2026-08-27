@@ -268,9 +268,9 @@ export function EventDetailScreen() {
       >
         {isDesktop ? (
           /* DESKTOP 2-COLUMN BALANCED LAYOUT */
-          <View style={{ flexDirection: 'row', gap: 28, alignItems: 'flex-start', maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', maxWidth: 1040, width: '100%', alignSelf: 'center' }}>
             {/* Left Column: Cover Image, Title, Description, Agenda & Map */}
-            <View style={{ flex: 1.3, minWidth: 0 }}>
+            <View style={{ flex: 1, minWidth: 320, maxWidth: 660 }}>
               {/* Event Cover Image Card */}
               <Pressable
                 onPress={() => setLightboxOpen(true)}
@@ -497,7 +497,7 @@ export function EventDetailScreen() {
             </View>
 
             {/* Right Column: Sticky Action & Ticket Registration Card */}
-            <View style={{ flex: 0.9, minWidth: 320, maxWidth: 380 }}>
+            <View style={{ width: 330, minWidth: 280, flexShrink: 0 }}>
               <SolidCard radius={20} style={{ padding: spacing.lg, marginBottom: spacing.lg }}>
                 {/* RSVP / Registration Status Header */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
