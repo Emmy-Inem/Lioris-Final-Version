@@ -38,7 +38,7 @@ const AVATAR_PRESETS = [
 ];
 
 export default function StudentDashboard() {
- const { colors, spacing, radius } = useTheme();
+ const { colors, spacing, radius, isDark } = useTheme();
  const { user } = useAuth();
  const queryClient = useQueryClient();
  const { isDesktop } = useResponsive();
