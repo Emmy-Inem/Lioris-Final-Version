@@ -109,27 +109,35 @@ export default function AlumniDirectoryScreen() {
  value={query}
  onChangeText={setQuery}
  />
- <FlatList
- data={entries ?? []}
- keyExtractor={(item) => item.id}
- key={isDesktop ? 'desktop-3-col' : 'mobile-1-col'}
- numColumns={isDesktop ? 3 : 1}
- columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
- contentContainerStyle={{ gap: spacing.md, paddingBottom: isDesktop ? 40 : 130 }}
- renderItem={({ item }) => (
- <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>
- <DirectoryCard entry={item} />
- </View>
- )}
- showsVerticalScrollIndicator={true}
- refreshing={isRefetching}
- onRefresh={refetch}
- ListEmptyComponent={
- !isLoading ? (
- <EmptyState title="No alumni found" description="Try a different search query." />
- ) : null
- }
- />
+      {isDesktop ? (
+        <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 60 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+            {(entries ?? []).map((item) => (
+              <View key={item.id} style={{ width: 'calc(33.333% - 11px)' as any, minWidth: 280, maxWidth: 420 }}>
+                <DirectoryCard entry={item} />
+              </View>
+            ))}
+          </View>
+          {(entries ?? []).length === 0 && !isLoading ? (
+            <EmptyState title="No alumni found" description="Try a different search query." />
+          ) : null}
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={entries ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
+          renderItem={({ item }) => <DirectoryCard entry={item} />}
+          showsVerticalScrollIndicator={true}
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          ListEmptyComponent={
+            !isLoading ? (
+              <EmptyState title="No alumni found" description="Try a different search query." />
+            ) : null
+          }
+        />
+      )}
 
  <ManageDirectoryModal visible={adminManageOpen} onClose={() => setAdminManageOpen(false)} />
  </ScreenContainer>

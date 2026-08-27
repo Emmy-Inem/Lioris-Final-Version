@@ -248,16 +248,16 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </Pressable>
  </View>
 
- {/* Responsive Content Container */}
- <View
- style={
- isDesktop
- ? { flexDirection: 'row', gap: 28, paddingHorizontal: 32, marginTop: -60, alignItems: 'flex-start' }
- : { paddingHorizontal: spacing.lg, marginTop: -45 }
- }
- >
- {/* Left Column: Identity & Bio Card */}
- <View style={isDesktop ? { width: 380, gap: spacing.md } : undefined}>
+        {/* Responsive Content Container */}
+        <View
+          style={
+            isDesktop
+              ? { flexDirection: 'row', gap: 28, paddingHorizontal: 32, alignItems: 'flex-start' }
+              : { paddingHorizontal: spacing.lg, marginTop: -45 }
+          }
+        >
+          {/* Left Column: Identity & Bio Card */}
+          <View style={isDesktop ? { width: 360, gap: spacing.md, marginTop: -60 } : undefined}>
  <SolidCard radius={22} style={{ padding: spacing.lg, position: 'relative' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.sm }}>
  <Pressable onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
@@ -401,7 +401,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </View>
 
  {/* Right Column: Tabbed Activity Stream */}
- <View style={isDesktop ? { flex: 1, marginTop: 60 } : { marginTop: spacing.md }}>
+ <View style={isDesktop ? { flex: 1, paddingTop: spacing.md } : { marginTop: spacing.md }}>
  {/* Interactive Profile Tabs */}
  <View
  style={{

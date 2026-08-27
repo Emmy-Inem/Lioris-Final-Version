@@ -45,137 +45,147 @@ export default function JobsScreen() {
  return true;
  });
 
- return (
- <ScreenContainer glow={false}>
- {isDesktop ? (
- <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30 }}>
- {/* Left Column: Filters & CTA */}
- <View style={{ width: 260, gap: spacing.md }}>
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- backgroundColor: colors.surface,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: 10,
- borderWidth: 1,
- borderColor: colors.border,
- gap: spacing.sm,
- }}
- >
- <Ionicons name="search" size={18} color={colors.textSecondary} />
- <TextInput
- value={query}
- onChangeText={setQuery}
- placeholder="Search jobs, company..."
- placeholderTextColor={colors.textSecondary}
- style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
- />
- </View>
+  return (
+    <ScreenContainer glow={false}>
+      {isDesktop ? (
+        <ScrollView
+          showsVerticalScrollIndicator={true}
+          contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60 }}
+        >
+          {/* Top Header Bar */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+            <View>
+              <AppText variant="h1" weight="bold">
+                Career & Internships
+              </AppText>
+              <AppText tone="secondary" variant="bodySmall">
+                Verified student internships, alumni referrals, and graduate associate roles
+              </AppText>
+            </View>
 
- <SolidCard radius={18} style={{ padding: spacing.md }}>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Job Type
- </AppText>
- <View style={{ gap: 4 }}>
- {JOB_FILTERS.map((f) => {
- const isSelected = selectedFilter === f.id;
- return (
- <Pressable
- key={f.id}
- onPress={() => setSelectedFilter(f.id)}
- style={({ hovered }: any) => [
- {
- flexDirection: 'row',
- alignItems: 'center',
- gap: 10,
- paddingHorizontal: 12,
- paddingVertical: 8,
- borderRadius: radius.md,
- backgroundColor: isSelected
- ? colors.brandPrimary
- : hovered
- ? isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
- : 'transparent',
- },
- ]}
- >
- <Ionicons
- name={f.icon}
- size={16}
- color={isSelected ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
- />
- <AppText
- variant="bodySmall"
- weight={isSelected ? 'bold' : 'medium'}
- style={{ color: isSelected ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B', flex: 1 }}
- >
- {f.label}
- </AppText>
- </Pressable>
- );
- })}
- </View>
- </SolidCard>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill }}>
+                <Ionicons name="shield-checkmark" size={16} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" tone="brand">Alumni Verified Roles</AppText>
+              </View>
 
- <Pressable
- onPress={() => {
- haptics.light();
- setCreateModalOpen(true);
- }}
- style={{
- backgroundColor: colors.brandPrimary,
- borderRadius: radius.md,
- paddingVertical: 12,
- alignItems: 'center',
- justifyContent: 'center',
- flexDirection: 'row',
- gap: 8,
- }}
- >
- <Ionicons name="add-circle" size={18} color="#FFFFFF" />
- <AppText variant="bodySmall" weight="bold" tone="inverse">
- Post an Opportunity
- </AppText>
- </Pressable>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setCreateModalOpen(true);
+                }}
+                style={{
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <Ionicons name="add" size={18} color="#FFFFFF" />
+                <AppText variant="bodySmall" weight="bold" tone="inverse">
+                  Post Opportunity
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
 
- <SolidCard radius={18} style={{ padding: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
- <Ionicons name="people" size={16} color={colors.brandPrimary} />
- <AppText variant="bodySmall" weight="bold">Alumni Referrals</AppText>
- </View>
- <AppText variant="caption" tone="secondary">
- Connect with verified alumni mentors for internal job referrals and interview prep.
- </AppText>
- </SolidCard>
- </View>
+          {/* Filter & Search Toolbar */}
+          <SolidCard radius={18} style={{ padding: spacing.md, marginBottom: spacing.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
+              {/* Search Input */}
+              <View
+                style={{
+                  flex: 1,
+                  minWidth: 260,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.background,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: spacing.md,
+                  height: 40,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  gap: spacing.sm,
+                }}
+              >
+                <Ionicons name="search" size={16} color={colors.textSecondary} />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search by job title, company, skills..."
+                  placeholderTextColor={colors.textSecondary}
+                  style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
+                />
+                {query ? (
+                  <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                    <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                  </Pressable>
+                ) : null}
+              </View>
 
- {/* Right Column: Multi-Column Jobs Grid */}
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <AppText variant="h2" weight="bold">
- Career Openings ({filteredJobs.length})
- </AppText>
- </View>
+              {/* Filter Pills */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {JOB_FILTERS.map((f) => {
+                  const isSelected = selectedFilter === f.id;
+                  return (
+                    <Pressable
+                      key={f.id}
+                      onPress={() => setSelectedFilter(f.id)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: radius.pill,
+                        backgroundColor: isSelected ? colors.brandPrimary : colors.background,
+                        borderWidth: 1,
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <Ionicons
+                        name={f.icon}
+                        size={14}
+                        color={isSelected ? '#FFFFFF' : colors.textSecondary}
+                      />
+                      <AppText
+                        variant="bodySmall"
+                        weight={isSelected ? 'bold' : 'medium'}
+                        style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 12 }}
+                      >
+                        {f.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </SolidCard>
 
- <FlatList
- data={filteredJobs}
- keyExtractor={(item) => item.id}
- numColumns={2}
- columnWrapperStyle={{ gap: spacing.md }}
- contentContainerStyle={{ gap: spacing.md, paddingBottom: 40 }}
- renderItem={({ item }) => (
- <View style={{ flex: 1, minWidth: 0, marginBottom: spacing.md }}>
- <JobCard job={item} />
- </View>
- )}
- showsVerticalScrollIndicator={true}
- ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found" description="Try a different search or filter." /> : null}
- />
- </View>
- </View>
- ) : (
+          {/* Jobs Count */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+            <AppText variant="h3" weight="bold">
+              Available Positions ({filteredJobs.length})
+            </AppText>
+          </View>
+
+          {/* Multi-Column Responsive Grid with Non-Stretching Cards */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+            {filteredJobs.map((item) => (
+              <View key={item.id} style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 560 }}>
+                <JobCard job={item} />
+              </View>
+            ))}
+          </View>
+
+          {filteredJobs.length === 0 && !isLoading ? (
+            <EmptyState title="No positions found" description="Try adjusting your search keywords or filter category." />
+          ) : null}
+        </ScrollView>
+      ) : (
  /* Mobile Layout */
  <>
  <AppHeader />

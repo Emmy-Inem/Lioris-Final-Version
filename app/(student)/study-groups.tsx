@@ -70,70 +70,94 @@ export default function StudyGroupsScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}
       >
-        <View style={isDesktop ? { flexDirection: 'row', gap: 24, alignItems: 'flex-start' } : undefined}>
-          {/* Left Filter Rail (Desktop) / Horizontal Scroll (Mobile) */}
-          {isDesktop ? (
-            <View style={{ width: 260 }}>
-              <SolidCard radius={20} style={{ padding: spacing.md, gap: spacing.sm }}>
-                <AppText variant="bodySmall" weight="bold">Search Pods</AppText>
+        {isDesktop ? (
+          <>
+            {/* Filter & Search Toolbar */}
+            <SolidCard radius={18} style={{ padding: spacing.md, marginBottom: spacing.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
+                {/* Search Input */}
                 <View
                   style={{
+                    flex: 1,
+                    minWidth: 260,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 8,
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
-                    borderRadius: radius.md,
+                    backgroundColor: colors.background,
+                    borderRadius: radius.pill,
+                    paddingHorizontal: spacing.md,
+                    height: 40,
                     borderWidth: 1,
                     borderColor: colors.border,
-                    paddingHorizontal: spacing.sm,
-                    height: 38,
+                    gap: spacing.sm,
                   }}
                 >
                   <Ionicons name="search" size={16} color={colors.textSecondary} />
                   <TextInput
                     value={searchQuery}
                     onChangeText={setSearchQuery}
-                    placeholder="Filter course or topic..."
+                    placeholder="Search by course code, topic, or study pod..."
                     placeholderTextColor={colors.textSecondary}
                     style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                   />
+                  {searchQuery ? (
+                    <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                      <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                    </Pressable>
+                  ) : null}
                 </View>
 
-                <AppText variant="caption" tone="secondary" weight="bold" style={{ textTransform: 'uppercase', marginTop: spacing.xs, fontSize: 10 }}>
-                  Course Cohorts
-                </AppText>
-                {COURSE_FILTERS.map((f) => {
-                  const isSelected = selectedFilter === f;
-                  return (
-                    <Pressable
-                      key={f}
-                      onPress={() => setSelectedFilter(f)}
-                      style={({ hovered }: any) => [
-                        {
-                          paddingHorizontal: 12,
+                {/* Course Cohort Pills */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {COURSE_FILTERS.map((f) => {
+                    const isSelected = selectedFilter === f;
+                    return (
+                      <Pressable
+                        key={f}
+                        onPress={() => setSelectedFilter(f)}
+                        style={{
+                          paddingHorizontal: 14,
                           paddingVertical: 8,
-                          borderRadius: radius.md,
-                          backgroundColor: isSelected
-                            ? colors.brandPrimary
-                            : hovered
-                            ? colors.pastelPrimaryBg
-                            : 'transparent',
-                        },
-                      ]}
-                    >
-                      <AppText
-                        variant="bodySmall"
-                        weight={isSelected ? 'bold' : 'medium'}
-                        tone={isSelected ? 'inverse' : 'primary'}
+                          borderRadius: radius.pill,
+                          backgroundColor: isSelected ? colors.brandPrimary : colors.background,
+                          borderWidth: 1,
+                          borderColor: isSelected ? colors.brandPrimary : colors.border,
+                        }}
                       >
-                        {f}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </SolidCard>
+                        <AppText
+                          variant="bodySmall"
+                          weight={isSelected ? 'bold' : 'medium'}
+                          style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 12 }}
+                        >
+                          {f}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </SolidCard>
+
+            {/* Pods Grid */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+              {filteredGroups.map((item) => (
+                <View key={item.id} style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 560 }}>
+                  <StudyGroupCard
+                    group={item}
+                    onJoined={() => queryClient.invalidateQueries({ queryKey: ['study-groups'] })}
+                  />
+                </View>
+              ))}
             </View>
-          ) : (
+
+            {filteredGroups.length === 0 && !isLoading ? (
+              <EmptyState
+                title="No study groups found"
+                description="Start a collaborative pod for your course and invite classmates to join."
+              />
+            ) : null}
+          </>
+        ) : (
+          <>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: spacing.md }}>
               {COURSE_FILTERS.map((f) => (
                 <Pressable
@@ -154,29 +178,26 @@ export default function StudyGroupsScreen() {
                 </Pressable>
               ))}
             </ScrollView>
-          )}
 
-          {/* Right Pods Grid */}
-          <View style={{ flex: 1 }}>
-            {filteredGroups.length === 0 && !isLoading ? (
-              <EmptyState
-                title="No study groups found"
-                description="Start a collaborative pod for your course and invite classmates to join."
-              />
-            ) : (
-              <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
-                {filteredGroups.map((item) => (
-                  <View key={item.id} style={isDesktop ? { width: '48.5%' } : { marginBottom: spacing.sm }}>
+            <View>
+              {filteredGroups.length === 0 && !isLoading ? (
+                <EmptyState
+                  title="No study groups found"
+                  description="Start a collaborative pod for your course and invite classmates to join."
+                />
+              ) : (
+                filteredGroups.map((item) => (
+                  <View key={item.id} style={{ marginBottom: spacing.sm }}>
                     <StudyGroupCard
                       group={item}
                       onJoined={() => queryClient.invalidateQueries({ queryKey: ['study-groups'] })}
                     />
                   </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
+                ))
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <CreateStudyGroupModal
