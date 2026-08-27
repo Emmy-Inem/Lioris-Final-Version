@@ -31,7 +31,7 @@ export default function StaffDashboard() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
-      <ScrollView
+      <ScrollView style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled

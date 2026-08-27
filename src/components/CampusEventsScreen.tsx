@@ -204,7 +204,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  return (
     <ScreenContainer glow={false}>
       {isDesktop ? (
-        <ScrollView
+        <ScrollView style={{ flex: 1, width: '100%' }}
           showsVerticalScrollIndicator={true}
           contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60 }}
         >

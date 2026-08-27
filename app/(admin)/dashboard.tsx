@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
-      <ScrollView
+      <ScrollView style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled

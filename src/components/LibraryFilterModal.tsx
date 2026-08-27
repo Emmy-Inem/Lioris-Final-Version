@@ -61,7 +61,7 @@ export function LibraryFilterModal({ visible, onClose, filters, onApply }: Libra
  </AppText>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
  <FilterSection
  label="Resource Type"options={RESOURCE_TYPES}
  selected={draft.resourceType}

@@ -47,7 +47,7 @@ export default function StaffAnnouncementsScreen() {
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
-      <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+      <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
           <AppText variant="h1" weight="bold">
             Announcements

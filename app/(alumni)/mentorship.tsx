@@ -93,7 +93,7 @@ export default function AlumniMentorshipScreen() {
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
-      <ScrollView
+      <ScrollView style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 130 }}

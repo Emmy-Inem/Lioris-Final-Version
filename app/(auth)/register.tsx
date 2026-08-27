@@ -354,7 +354,7 @@ export default function RegisterScreen() {
  </View>
  ) : (
  /* Mobile Layout */
- <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
  <AuthHeroBackground height={140} fromColor={heroFromColor} toColor={heroToColor}>
  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: spacing.lg }}>
  <AppText variant="h1" weight="bold" tone="inverse">

@@ -203,7 +203,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
 
  {/* Form Modal Sub-view (Add / Edit) */}
  {isCreating || editingCourse ? (
- <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: spacing.lg }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h3"weight="bold">
  {editingCourse ? `Edit Course: ${editingCourse.courseCode}` : 'Add New Course'}

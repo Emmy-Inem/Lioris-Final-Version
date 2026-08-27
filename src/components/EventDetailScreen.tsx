@@ -260,7 +260,7 @@ export function EventDetailScreen() {
         </View>
       ) : null}
 
-      <ScrollView
+      <ScrollView style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled

@@ -89,7 +89,7 @@ export default function SuperAdminConfigScreen() {
         Root-level platform parameters - changes here apply across every campus workspace.
       </AppText>
 
-      <ScrollView
+      <ScrollView style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled

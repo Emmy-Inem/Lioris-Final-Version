@@ -214,7 +214,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  <AppHeader />
  </View>
  )}
- <ScrollView
+ <ScrollView style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
@@ -494,7 +494,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </Pressable>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={true}>
+          <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
             {/* Custom Photo Upload */}
             <View style={{ marginBottom: spacing.md }}>
               <AppButton
@@ -591,7 +591,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: 380 }}>
+ <ScrollView showsVerticalScrollIndicator={true} style={{ flex: 1, width: '100%',  maxHeight: 380 }}>
  <AppTextField label="Full Name"value={editName} onChangeText={setEditName} />
  <AppTextField label="Department"value={editDepartment} onChangeText={setEditDepartment} />
  <AppTextField label="Graduation Year"value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />

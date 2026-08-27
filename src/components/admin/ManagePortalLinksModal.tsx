@@ -240,7 +240,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  Publish, edit, reorder, and configure verified campus bookmarks and school portals displayed to students.
  </AppText>
 
- <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: spacing.xl }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: spacing.xl }}>
  {/* Add / Edit Form Drawer */}
  {(adding || editingId) ? (
  <SolidCard style={{ marginBottom: spacing.lg, borderWidth: 2, borderColor: colors.brandPrimary }}>

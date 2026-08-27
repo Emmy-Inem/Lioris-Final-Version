@@ -130,7 +130,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
       </View>
 
       {isDesktop ? (
-        <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 60 }}>
+        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {filteredReports.map((item) => (
               <View key={item.id} style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 }}>

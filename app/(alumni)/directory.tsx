@@ -110,7 +110,7 @@ export default function AlumniDirectoryScreen() {
  onChangeText={setQuery}
  />
       {isDesktop ? (
-        <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 60 }}>
+        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {(entries ?? []).map((item) => (
               <View key={item.id} style={{ width: 'calc(33.333% - 11px)' as any, minWidth: 280, maxWidth: 420 }}>

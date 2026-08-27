@@ -170,7 +170,7 @@ export function UserProfileModal({
  <Ionicons name="close"size={20} color="#FFFFFF" />
  </Pressable>
 
- <ScrollView
+ <ScrollView style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={true}
  nestedScrollEnabled
  contentContainerStyle={{ paddingBottom: 50 }}

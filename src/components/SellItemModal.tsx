@@ -121,7 +121,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
  overflow: 'hidden',
  }}
  >
- <ScrollView
+ <ScrollView style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={true}
  contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}
  >

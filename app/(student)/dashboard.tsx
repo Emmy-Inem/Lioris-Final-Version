@@ -80,7 +80,7 @@ export default function StudentDashboard() {
  return (
  <ScreenContainer glow={true}>
  {!isDesktop && <AppHeader />}
- <ScrollView
+ <ScrollView style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
@@ -599,7 +599,7 @@ export default function StudentDashboard() {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
  CHOOSE AVATAR PHOTO
  </AppText>

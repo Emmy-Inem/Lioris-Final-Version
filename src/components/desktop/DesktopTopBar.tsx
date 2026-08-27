@@ -245,7 +245,7 @@ export function DesktopTopBar() {
                 )}
               </View>
 
-              <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={true}>
+              <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 280 }} showsVerticalScrollIndicator={true}>
                 {(notifications ?? []).slice(0, 5).map((n: any) => (
                   <Pressable
                     key={n.id}
@@ -347,7 +347,7 @@ export function DesktopTopBar() {
  </View>
 
  {/* Quick Actions List */}
- <ScrollView style={{ maxHeight: 380, padding: 8 }} showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 380, padding: 8 }} showsVerticalScrollIndicator={true}>
  <AppText variant="caption" tone="secondary" weight="bold" style={{ paddingHorizontal: 12, paddingVertical: 6, textTransform: 'uppercase', fontSize: 10 }}>
  Quick Navigation & Workspaces
  </AppText>

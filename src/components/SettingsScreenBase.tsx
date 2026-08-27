@@ -367,7 +367,7 @@ export function SettingsScreen() {
  </View>
  </AuthHeroBackground>
 
- <ScrollView
+ <ScrollView style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
@@ -942,7 +942,7 @@ export function SettingsScreen() {
               Devices currently authorized to access your campus account.
             </AppText>
 
-            <ScrollView showsVerticalScrollIndicator={true}>
+            <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
               {sessions.map((session) => (
                 <SolidCard key={session.id} radius={16} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: session.isCurrent ? colors.brandPrimary : colors.border }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1081,7 +1081,7 @@ export function SettingsScreen() {
                   {LEGAL_DOCUMENTS[activeLegalKey]?.subtitle}
                 </AppText>
 
-                <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: 380, backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16 }}>
+                <ScrollView showsVerticalScrollIndicator={true} style={{ flex: 1, width: '100%',  maxHeight: 380, backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16 }}>
                   <AppText variant="bodySmall" tone="primary" style={{ lineHeight: 22 }}>
                     {LEGAL_DOCUMENTS[activeLegalKey]?.content}
                   </AppText>
@@ -1172,7 +1172,7 @@ export function SettingsScreen() {
  <Ionicons name="close" size={20} color={colors.textSecondary} />
  </Pressable>
  </View>
- <ScrollView style={{ maxHeight: 220, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
+ <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 220, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
  <AppText tone="secondary" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 10 }}>
  {exportDataJson}
  </AppText>

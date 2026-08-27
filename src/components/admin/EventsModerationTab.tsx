@@ -491,7 +491,7 @@ export function EventsModerationTab() {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
  <AppTextField
  label="Event Title"placeholder="e.g. Annual Faculty Hackathon & Symposium"value={formTitle}
  onChangeText={setFormTitle}
@@ -644,7 +644,7 @@ export function EventsModerationTab() {
  </View>
 
  {rosterEvent ? (
- <ScrollView showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
  <AppText variant="body"weight="bold"style={{ marginBottom: 2 }}>
  {rosterEvent.title}
  </AppText>

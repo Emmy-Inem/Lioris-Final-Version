@@ -467,7 +467,7 @@ export default function LoginScreen() {
  </View>
  ) : (
  /* Mobile View */
- <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
  <View style={{ height: 230, position: 'relative', overflow: 'hidden' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}

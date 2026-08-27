@@ -205,7 +205,7 @@ export function PostDetailScreen() {
  </Pressable>
  </View>
 
- <ScrollView
+ <ScrollView style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
  contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120, maxWidth: isDesktop ? 820 : undefined, width: '100%', alignSelf: 'center' }}

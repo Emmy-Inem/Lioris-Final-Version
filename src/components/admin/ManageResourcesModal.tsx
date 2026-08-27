@@ -186,7 +186,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  </View>
 
  {isCreating || editingResource ? (
- <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: spacing.lg }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h3"weight="bold">
  {editingResource ? `Edit Resource: ${editingResource.title}` : 'Add Academic Resource'}

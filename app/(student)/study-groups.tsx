@@ -65,7 +65,7 @@ export default function StudyGroupsScreen() {
         />
       </View>
 
-      <ScrollView
+      <ScrollView style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}

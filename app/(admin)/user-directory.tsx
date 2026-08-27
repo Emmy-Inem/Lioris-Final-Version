@@ -672,7 +672,7 @@ export default function UserDirectoryScreen() {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={true} style={{ marginBottom: spacing.md }}>
+ <ScrollView showsVerticalScrollIndicator={true} style={{ flex: 1, width: '100%',  marginBottom: spacing.md }}>
  <AppTextField
  label="Full Legal Name"placeholder="e.g. Samuel Adeyinka"value={newFullName}
  onChangeText={setNewFullName}
