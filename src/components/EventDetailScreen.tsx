@@ -384,7 +384,10 @@ export function EventDetailScreen() {
                       <AppButton
                         label="Contact Organizer"
                         variant="ghost"
-                        onPress={() => Alert.alert('Contact Organizer', `Sending message to ${event.organizerName ?? 'Organizer'}`)}
+                        onPress={() => {
+                          haptics.light();
+                          router.push(`/${roleGroup}/messages/conv-1` as any);
+                        }}
                       />
                     </View>
                   </SolidCard>
@@ -762,7 +765,10 @@ export function EventDetailScreen() {
                       <AppButton
                         label="Contact"
                         variant="ghost"
-                        onPress={() => Alert.alert('Contact Organizer', `Sending query to ${event.organizerName ?? 'Organizer'}`)}
+                        onPress={() => {
+                          haptics.light();
+                          router.push(`/${roleGroup}/messages/conv-1` as any);
+                        }}
                       />
                     </View>
                   </SolidCard>

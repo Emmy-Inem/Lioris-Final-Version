@@ -143,47 +143,56 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  );
  }
 
- return (
- <Modal visible={visible} transparent animationType="slide"onRequestClose={onClose}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.70)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={onClose} />
- <View
- style={{
- backgroundColor: colors.surface,
- borderTopLeftRadius: 28,
- borderTopRightRadius: 28,
- borderTopWidth: 1,
- borderColor: colors.border,
- maxHeight: '92%',
- paddingBottom: 30,
- }}
- >
- {/* Header Bar */}
- <View
- style={{
- flexDirection: 'row',
- justifyContent: 'space-between',
- alignItems: 'center',
- paddingHorizontal: spacing.lg,
- paddingTop: spacing.md,
- paddingBottom: spacing.sm,
- borderBottomWidth: 1,
- borderBottomColor: colors.divider,
- }}
- >
- <View>
- <AppText variant="h2"weight="bold">
- Manage Academic Library
- </AppText>
- <AppText tone="secondary"variant="caption">
- Admin resource files, documents & past questions
- </AppText>
- </View>
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.70)', justifyContent: 'flex-end' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            borderTopWidth: 1,
+            borderColor: colors.border,
+            maxHeight: '92%',
+            paddingBottom: 30,
+          }}
+        >
+          {/* Header Bar */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.md,
+              paddingBottom: spacing.sm,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.divider,
+            }}
+          >
+            <View>
+              <AppText variant="h2" weight="bold">
+                Manage Academic Library
+              </AppText>
+              <AppText tone="secondary" variant="caption">
+                Admin resource files, documents & past questions
+              </AppText>
+            </View>
 
- <Pressable onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
- <Ionicons name="close"size={24} color={colors.textPrimary} />
- </Pressable>
- </View>
+            <Pressable
+              onPress={onClose}
+              hitSlop={10}
+              style={{ padding: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel="Close resources management modal"
+            >
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </Pressable>
+          </View>
 
  {isCreating || editingResource ? (
  <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: spacing.lg }}>
@@ -416,8 +425,8 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  />
  </View>
  )}
- </View>
- </View>
- </Modal>
- );
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>
+);
 }

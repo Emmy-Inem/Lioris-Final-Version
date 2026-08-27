@@ -99,41 +99,40 @@ export default function StudentDashboard() {
  <AppText variant="caption" tone="brand" weight="semiBold" style={{ fontSize: 10 }}>First Class Honors</AppText>
  </View>
  </SolidCard>
+            <SolidCard radius={16} style={{ flex: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#E0F2FE', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="book-outline" size={22} color='#0284C7' />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase', fontSize: 10 }}>Semester Enrolled</AppText>
+                <AppText variant="body" weight="bold">21 Units • 6 Courses</AppText>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>All cleared for exams</AppText>
+              </View>
+            </SolidCard>
 
- <SolidCard radius={16} style={{ flex: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
- <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#E0F2FE', alignItems: 'center', justifyContent: 'center' }}>
- <Ionicons name="book-outline" size={22} color="#0284C7" />
- </View>
- <View style={{ flex: 1 }}>
- <AppText variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase', fontSize: 10 }}>Semester Enrolled</AppText>
- <AppText variant="body" weight="bold">21 Units • 6 Courses</AppText>
- <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>All cleared for exams</AppText>
- </View>
- </SolidCard>
+            <SolidCard radius={16} style={{ flex: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: isDark ? 'rgba(217, 119, 6, 0.2)' : '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="trophy-outline" size={22} color={isDark ? '#FBBF24' : '#D97706'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase', fontSize: 10 }}>Cohort Reputation</AppText>
+                <AppText variant="body" weight="bold">1,420 XP • #4 Rank</AppText>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>Top 5% in 400L CSC</AppText>
+              </View>
+            </SolidCard>
 
- <SolidCard radius={16} style={{ flex: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
- <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
- <Ionicons name="trophy-outline" size={22} color="#D97706" />
- </View>
- <View style={{ flex: 1 }}>
- <AppText variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase', fontSize: 10 }}>Cohort Reputation</AppText>
- <AppText variant="body" weight="bold">1,420 XP • #4 Rank</AppText>
- <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>Top 5% in 400L CSC</AppText>
- </View>
- </SolidCard>
-
- <SolidCard radius={16} style={{ flex: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
- <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center' }}>
- <Ionicons name="school-outline" size={22} color="#16A34A" />
- </View>
- <View style={{ flex: 1 }}>
- <AppText variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase', fontSize: 10 }}>Active Study Pods</AppText>
- <AppText variant="body" weight="bold">3 Study Circles</AppText>
- <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>2 Live Sessions Today</AppText>
- </View>
- </SolidCard>
- </View>
- )}
+            <SolidCard radius={16} style={{ flex: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: isDark ? 'rgba(22, 163, 74, 0.2)' : '#DCFCE7', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="school-outline" size={22} color={isDark ? '#4ADE80' : '#16A34A'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase', fontSize: 10 }}>Active Study Pods</AppText>
+                <AppText variant="body" weight="bold">3 Study Circles</AppText>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>2 Live Sessions Today</AppText>
+              </View>
+            </SolidCard>
+          </View>
+        )}
 
  <View style={isDesktop ? { flexDirection: 'row', gap: 24, alignItems: 'flex-start' } : undefined}>
  {/* Main Left/Center Column */}

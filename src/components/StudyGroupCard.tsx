@@ -60,7 +60,47 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
  {group.description}
  </AppText>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xs }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {['Ad', 'Ch', 'Em'].slice(0, Math.min(3, group.memberCount || 1)).map((initials, idx) => (
+            <View
+              key={idx}
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 13,
+                backgroundColor: colors.pastelPrimaryBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: idx === 0 ? 0 : -6,
+                borderWidth: 1.5,
+                borderColor: colors.surface,
+              }}
+            >
+              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9 }}>
+                {initials}
+              </AppText>
+            </View>
+          ))}
+          {group.memberCount > 3 ? (
+            <View
+              style={{
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: radius.pill,
+                backgroundColor: colors.background,
+                marginLeft: 4,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption" tone="secondary" style={{ fontSize: 9 }}>
+                +{group.memberCount - 3} more
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+
         <AppButton
           label={joined ? 'Member' : 'Join Pod'}
           variant={joined ? 'secondary' : 'primary'}
@@ -68,6 +108,6 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
           loading={submitting}
         />
       </View>
- </SolidCard>
- );
+    </SolidCard>
+  );
 }

@@ -124,26 +124,36 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
  </View>
  </View>
 
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
- <Pressable
- hitSlop={8}
- onPress={() => {
- haptics.light();
- Alert.alert('Encrypted Call', `Calling ${partnerName} via encrypted peer-to-peer audio...`);
- }}
- >
- <Ionicons name="call-outline"size={20} color={colors.brandPrimary} />
- </Pressable>
- <Pressable
- hitSlop={8}
- onPress={() => {
- haptics.light();
- Alert.alert('Video Mentorship', `Launching video room with ${partnerName}...`);
- }}
- >
- <Ionicons name="videocam-outline"size={20} color={colors.brandPrimary} />
- </Pressable>
- </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Start audio call with ${partnerName}`}
+            onPress={() => {
+              haptics.light();
+              Alert.alert('Encrypted Campus Call', `Calling ${partnerName} via peer-to-peer campus audio...`, [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Join Call', onPress: () => Alert.alert('Connected', `Audio call connected with ${partnerName}`) }
+              ]);
+            }}
+          >
+            <Ionicons name="call-outline" size={20} color={colors.brandPrimary} />
+          </Pressable>
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Start video session with ${partnerName}`}
+            onPress={() => {
+              haptics.light();
+              Alert.alert('Video Mentorship Room', `Launching high-definition video room with ${partnerName}...`, [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Start Video', onPress: () => Alert.alert('Room Active', `Video session active with ${partnerName}`) }
+              ]);
+            }}
+          >
+            <Ionicons name="videocam-outline" size={20} color={colors.brandPrimary} />
+          </Pressable>
+        </View>
  </View>
 
  {/* Messages List */}
