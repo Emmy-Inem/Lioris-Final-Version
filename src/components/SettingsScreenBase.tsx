@@ -673,25 +673,25 @@ export function SettingsScreen() {
  <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
  </Pressable>
 
- {/* 2FA Setup Row */}
- <Pressable
- onPress={() => {
- haptics.light();
- setTwoFactorModalOpen(true);
- }}
- style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm }}
- >
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <AppText weight="bold"variant="bodySmall">Two-Factor Authentication (2FA)</AppText>
- <Badge label={twoFactorEnabled ? 'Enabled ' : 'Disabled ⚪'} tone={twoFactorEnabled ? 'success' : 'neutral'} />
- </View>
- <AppText tone="secondary"variant="caption">
- TOTP Authenticator app verification codes
- </AppText>
- </View>
- <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
- </Pressable>
+            {/* 2FA Setup Row */}
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setTwoFactorModalOpen(true);
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm }}
+            >
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <AppText weight="bold" variant="bodySmall">Two-Factor Authentication (2FA)</AppText>
+                  <Badge label={twoFactorEnabled ? 'Enabled' : 'Disabled'} tone={twoFactorEnabled ? 'success' : 'neutral'} />
+                </View>
+                <AppText tone="secondary" variant="caption">
+                  TOTP Authenticator app verification codes
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            </Pressable>
 
  {/* E2EE Cryptography Fingerprint Row */}
  <Pressable
@@ -905,267 +905,269 @@ export function SettingsScreen() {
  </View>
  </SolidCard>
 
- {/* Account Credentials & Export */}
- <SolidCard frosted style={{ marginBottom: spacing.lg }}>
- <AppText tone="brand"weight="bold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
- Account Credentials & GDPR Export
- </AppText>
- <AppButton label="Change Password"variant="secondary"onPress={() => setPasswordModalOpen(true)} fullWidth />
- <View style={{ height: spacing.sm }} />
- <AppButton label="Export My Academic Archive (JSON) "variant="secondary"onPress={() => setExportModalOpen(true)} fullWidth />
- <View style={{ height: spacing.sm }} />
- <AppButton label="Erase Account & Profile Permanently "variant="accent"onPress={() => setEraseModalOpen(true)} fullWidth />
- </SolidCard>
+          {/* Account Credentials & Export */}
+          <SolidCard frosted style={{ marginBottom: spacing.lg }}>
+            <AppText tone="brand" weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+              Account Credentials & GDPR Export
+            </AppText>
+            <AppButton label="Change Password" variant="secondary" onPress={() => setPasswordModalOpen(true)} fullWidth />
+            <View style={{ height: spacing.sm }} />
+            <AppButton label="Export My Academic Archive (JSON)" variant="secondary" onPress={() => setExportModalOpen(true)} fullWidth />
+            <View style={{ height: spacing.sm }} />
+            <AppButton label="Erase Account & Profile Permanently" variant="accent" onPress={() => setEraseModalOpen(true)} fullWidth />
+          </SolidCard>
 
- {/* Sign Out Button */}
- <AppButton label="Sign Out " variant="secondary" onPress={handleLogout} fullWidth />
- </View>
- </View>
- </ScrollView>
+          {/* Sign Out Button */}
+          <AppButton label="Sign Out" variant="secondary" onPress={handleLogout} fullWidth />
+        </View>
+      </View>
+      </ScrollView>
 
- {/* Active Device Sessions Modal */}
- <Modal visible={sessionsModalOpen} transparent animationType="slide"onRequestClose={() => setSessionsModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={() => setSessionsModalOpen(false)} />
- <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="phone-portrait"size={20} color={colors.brandPrimary} />
- <AppText variant="h2"weight="bold">Active Device Sessions </AppText>
- </View>
- <Pressable onPress={() => setSessionsModalOpen(false)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+      {/* Active Device Sessions Modal */}
+      <Modal visible={sessionsModalOpen} transparent animationType="slide" onRequestClose={() => setSessionsModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setSessionsModalOpen(false)} />
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Ionicons name="phone-portrait" size={20} color={colors.brandPrimary} />
+                <AppText variant="h2" weight="bold">Active Device Sessions</AppText>
+              </View>
+              <Pressable onPress={() => setSessionsModalOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
 
- <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.md }}>
- Devices currently authorized to access your campus account.
- </AppText>
+            <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
+              Devices currently authorized to access your campus account.
+            </AppText>
 
- <ScrollView showsVerticalScrollIndicator={true}>
- {sessions.map((session) => (
- <SolidCard key={session.id} radius={16} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: session.isCurrent ? colors.brandPrimary : colors.border }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <Ionicons name={session.type === 'mobile' ? 'phone-portrait-outline' : 'laptop-outline'} size={18} color={colors.brandPrimary} />
- <AppText weight="bold"variant="bodySmall">{session.deviceName}</AppText>
- </View>
- <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
- {session.location} • IP: {session.ipAddress}
- </AppText>
- <AppText tone="brand"variant="caption"weight="bold"style={{ marginTop: 2 }}>
- Status: {session.lastActive}
- </AppText>
- </View>
+            <ScrollView showsVerticalScrollIndicator={true}>
+              {sessions.map((session) => (
+                <SolidCard key={session.id} radius={16} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: session.isCurrent ? colors.brandPrimary : colors.border }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={session.type === 'mobile' ? 'phone-portrait-outline' : 'laptop-outline'} size={18} color={colors.brandPrimary} />
+                        <AppText weight="bold" variant="bodySmall">{session.deviceName}</AppText>
+                      </View>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                        {session.location} • IP: {session.ipAddress}
+                      </AppText>
+                      <AppText tone="brand" variant="caption" weight="bold" style={{ marginTop: 2 }}>
+                        Status: {session.lastActive}
+                      </AppText>
+                    </View>
 
- {session.isCurrent ? (
- <Badge label="THIS DEVICE"tone="success" />
- ) : (
- <AppButton label="Revoke"variant="ghost"onPress={() => handleRevokeSession(session.id)} />
- )}
- </View>
- </SolidCard>
- ))}
- </ScrollView>
+                    {session.isCurrent ? (
+                      <Badge label="THIS DEVICE" tone="success" />
+                    ) : (
+                      <AppButton label="Revoke" variant="ghost" onPress={() => handleRevokeSession(session.id)} />
+                    )}
+                  </View>
+                </SolidCard>
+              ))}
+            </ScrollView>
 
- <View style={{ marginTop: spacing.md }}>
- <AppButton label="Revoke All Other Sessions "variant="accent"onPress={handleRevokeAllOtherSessions} fullWidth />
- </View>
- </View>
- </View>
- </Modal>
+            <View style={{ marginTop: spacing.md }}>
+              <AppButton label="Revoke All Other Sessions" variant="accent" onPress={handleRevokeAllOtherSessions} fullWidth />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
- {/* Two-Factor Authentication Modal */}
- <Modal visible={twoFactorModalOpen} transparent animationType="slide"onRequestClose={() => setTwoFactorModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={() => setTwoFactorModalOpen(false)} />
- <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="shield-checkmark"size={20} color={colors.brandPrimary} />
- <AppText variant="h2"weight="bold">Two-Factor Authentication (2FA) </AppText>
- </View>
- <Pressable onPress={() => setTwoFactorModalOpen(false)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+      {/* Two-Factor Authentication Modal */}
+      <Modal visible={twoFactorModalOpen} transparent animationType="slide" onRequestClose={() => setTwoFactorModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setTwoFactorModalOpen(false)} />
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Ionicons name="shield-checkmark" size={20} color={colors.brandPrimary} />
+                <AppText variant="h2" weight="bold">Two-Factor Authentication (2FA)</AppText>
+              </View>
+              <Pressable onPress={() => setTwoFactorModalOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
 
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
- Scan the setup QR code in Google Authenticator, Authy, or 1Password, then enter the 6-digit confirmation code below:
- </AppText>
+            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+              Scan the setup QR code in Google Authenticator, Authy, or 1Password, then enter the 6-digit confirmation code below:
+            </AppText>
 
- {/* Simulated Authenticator Secret Key Box */}
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md, alignItems: 'center' }}>
- <AppText variant="caption"tone="secondary"style={{ marginBottom: 4 }}>AUTHENTICATOR SECRET KEY</AppText>
- <AppText variant="bodySmall"weight="bold"tone="brand"style={{ letterSpacing: 2 }}>
- LIORIS-AUTH-8924-X99Q
- </AppText>
- </View>
+            {/* Simulated Authenticator Secret Key Box */}
+            <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md, alignItems: 'center' }}>
+              <AppText variant="caption" tone="secondary" style={{ marginBottom: 4 }}>AUTHENTICATOR SECRET KEY</AppText>
+              <AppText variant="bodySmall" weight="bold" tone="brand" style={{ letterSpacing: 2 }}>
+                LIORIS-AUTH-8924-X99Q
+              </AppText>
+            </View>
 
- <AppTextField
- label="6-Digit Verification Code"placeholder="e.g. 492104"value={totpCode}
- onChangeText={setTotpCode}
- keyboardType="number-pad"
- />
+            <AppTextField
+              label="6-Digit Verification Code"
+              placeholder="e.g. 492104"
+              value={totpCode}
+              onChangeText={setTotpCode}
+              keyboardType="number-pad"
+            />
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
- <View style={{ flex: 1 }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setTwoFactorModalOpen(false)} fullWidth />
- </View>
- <View style={{ flex: 2 }}>
- <AppButton label="Activate 2FA"onPress={handleEnable2FA} fullWidth />
- </View>
- </View>
- </View>
- </View>
- </Modal>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Cancel" variant="ghost" onPress={() => setTwoFactorModalOpen(false)} fullWidth />
+              </View>
+              <View style={{ flex: 2 }}>
+                <AppButton label="Activate 2FA" onPress={handleEnable2FA} fullWidth />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
- {/* E2EE Cryptography Details Modal */}
- <Modal visible={e2eeModalOpen} transparent animationType="fade"onRequestClose={() => setE2eeModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
- <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="key"size={20} color={colors.brandPrimary} />
- <AppText variant="h2"weight="bold">E2EE Cryptography </AppText>
- </View>
- <Pressable onPress={() => setE2eeModalOpen(false)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+      {/* E2EE Cryptography Details Modal */}
+      <Modal visible={e2eeModalOpen} transparent animationType="fade" onRequestClose={() => setE2eeModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Ionicons name="key" size={20} color={colors.brandPrimary} />
+                <AppText variant="h2" weight="bold">E2EE Cryptography</AppText>
+              </View>
+              <Pressable onPress={() => setE2eeModalOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
 
- <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.md }}>
- Your device encryption identity fingerprint used for end-to-end encrypted direct messaging:
- </AppText>
+            <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
+              Your device encryption identity fingerprint used for end-to-end encrypted direct messaging:
+            </AppText>
 
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md }}>
- <AppText variant="caption"tone="secondary"style={{ marginBottom: 4 }}>DEVICE PUBLIC KEY FINGERPRINT</AppText>
- <AppText variant="caption"weight="bold"tone="brand"style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11 }}>
- SHA-256: 8F:4A:91:2C:B3:01:DF:77:E5:60:88:19:AC:EE:44:90
- </AppText>
- </View>
+            <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md }}>
+              <AppText variant="caption" tone="secondary" style={{ marginBottom: 4 }}>DEVICE PUBLIC KEY FINGERPRINT</AppText>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11 }}>
+                SHA-256: 8F:4A:91:2C:B3:01:DF:77:E5:60:88:19:AC:EE:44:90
+              </AppText>
+            </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm }}>
- <View style={{ flex: 1 }}>
- <AppButton label="Rotate Session Key"variant="secondary"onPress={handleRotateE2eeKeys} fullWidth />
- </View>
- <View style={{ flex: 1 }}>
- <AppButton label="Close"onPress={() => setE2eeModalOpen(false)} fullWidth />
- </View>
- </View>
- </SolidCard>
- </View>
- </Modal>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Rotate Session Key" variant="secondary" onPress={handleRotateE2eeKeys} fullWidth />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Close" onPress={() => setE2eeModalOpen(false)} fullWidth />
+              </View>
+            </View>
+          </SolidCard>
+        </View>
+      </Modal>
 
- {/* Comprehensive Legal Documents Reader Modal */}
- <Modal visible={!!activeLegalKey} transparent animationType="slide"onRequestClose={() => setActiveLegalKey(null)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={() => setActiveLegalKey(null)} />
- <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
- {activeLegalKey && (
- <>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name={LEGAL_DOCUMENTS[activeLegalKey]?.icon as any} size={22} color={colors.brandPrimary} />
- <AppText variant="h2"weight="bold">{activeLegalKey}</AppText>
- </View>
- <Pressable onPress={() => setActiveLegalKey(null)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+      {/* Comprehensive Legal Documents Reader Modal */}
+      <Modal visible={!!activeLegalKey} transparent animationType="slide" onRequestClose={() => setActiveLegalKey(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setActiveLegalKey(null)} />
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
+            {activeLegalKey && (
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                    <Ionicons name={LEGAL_DOCUMENTS[activeLegalKey]?.icon as any} size={22} color={colors.brandPrimary} />
+                    <AppText variant="h2" weight="bold">{activeLegalKey}</AppText>
+                  </View>
+                  <Pressable onPress={() => setActiveLegalKey(null)} hitSlop={8}>
+                    <Ionicons name="close" size={22} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
 
- <AppText tone="brand"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
- {LEGAL_DOCUMENTS[activeLegalKey]?.subtitle}
- </AppText>
+                <AppText tone="brand" variant="caption" weight="bold" style={{ marginBottom: spacing.md }}>
+                  {LEGAL_DOCUMENTS[activeLegalKey]?.subtitle}
+                </AppText>
 
- <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: 380, backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16 }}>
- <AppText variant="bodySmall"tone="primary"style={{ lineHeight: 22 }}>
- {LEGAL_DOCUMENTS[activeLegalKey]?.content}
- </AppText>
- </ScrollView>
+                <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: 380, backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16 }}>
+                  <AppText variant="bodySmall" tone="primary" style={{ lineHeight: 22 }}>
+                    {LEGAL_DOCUMENTS[activeLegalKey]?.content}
+                  </AppText>
+                </ScrollView>
 
- <View style={{ marginTop: spacing.md }}>
- <AppButton label="Understood & Accept"onPress={() => setActiveLegalKey(null)} fullWidth />
- </View>
- </>
- )}
- </View>
- </View>
- </Modal>
+                <View style={{ marginTop: spacing.md }}>
+                  <AppButton label="Understood & Accept" onPress={() => setActiveLegalKey(null)} fullWidth />
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
- {/* Change Password Modal */}
- <Modal visible={passwordModalOpen} transparent animationType="fade" onRequestClose={() => setPasswordModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
- <SolidCard style={{ width: '100%', maxWidth: 420 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
- <AppText variant="h3" weight="bold">Change Password</AppText>
- <Pressable onPress={() => { setPasswordModalOpen(false); setPasswordError(null); }} hitSlop={8}>
- <Ionicons name="close" size={20} color={colors.textSecondary} />
- </Pressable>
- </View>
+      {/* Change Password Modal */}
+      <Modal visible={passwordModalOpen} transparent animationType="fade" onRequestClose={() => setPasswordModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
+          <SolidCard style={{ width: '100%', maxWidth: 420 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+              <AppText variant="h3" weight="bold">Change Password</AppText>
+              <Pressable onPress={() => { setPasswordModalOpen(false); setPasswordError(null); }} hitSlop={8}>
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </Pressable>
+            </View>
 
- {passwordError ? (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 8,
- backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
- borderColor: colors.critical,
- borderWidth: 1,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="alert-circle" size={18} color={colors.critical} />
- <AppText
- variant="bodySmall"
- weight="semiBold"
- style={{ color: colors.critical, flex: 1 }}
- >
- {passwordError}
- </AppText>
- </View>
- ) : null}
+            {passwordError ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                  borderColor: colors.critical,
+                  borderWidth: 1,
+                  borderRadius: radius.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name="alert-circle" size={18} color={colors.critical} />
+                <AppText
+                  variant="bodySmall"
+                  weight="semiBold"
+                  style={{ color: colors.critical, flex: 1 }}
+                >
+                  {passwordError}
+                </AppText>
+              </View>
+            ) : null}
 
- <AppTextField
- label="Current Password"
- placeholder="Enter current password"
- secureTextEntry
- value={oldPassword}
- onChangeText={(t) => { setOldPassword(t); if (passwordError) setPasswordError(null); }}
- />
- <AppTextField
- label="New Password"
- placeholder="At least 8 characters"
- secureTextEntry
- value={newPassword}
- onChangeText={(t) => { setNewPassword(t); if (passwordError) setPasswordError(null); }}
- />
- <AppTextField
- label="Confirm New Password"
- placeholder="Re-enter new password"
- secureTextEntry
- value={confirmPassword}
- onChangeText={(t) => { setConfirmPassword(t); if (passwordError) setPasswordError(null); }}
- />
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel" variant="ghost" onPress={() => { setPasswordModalOpen(false); setPasswordError(null); }} />
- <AppButton label="Update Password" loading={passwordSaved} onPress={handleSavePassword} />
- </View>
- </SolidCard>
- </View>
- </Modal>
+            <AppTextField
+              label="Current Password"
+              placeholder="Enter current password"
+              secureTextEntry
+              value={oldPassword}
+              onChangeText={(t) => { setOldPassword(t); if (passwordError) setPasswordError(null); }}
+            />
+            <AppTextField
+              label="New Password"
+              placeholder="At least 8 characters"
+              secureTextEntry
+              value={newPassword}
+              onChangeText={(t) => { setNewPassword(t); if (passwordError) setPasswordError(null); }}
+            />
+            <AppTextField
+              label="Confirm New Password"
+              placeholder="Re-enter new password"
+              secureTextEntry
+              value={confirmPassword}
+              onChangeText={(t) => { setConfirmPassword(t); if (passwordError) setPasswordError(null); }}
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+              <AppButton label="Cancel" variant="ghost" onPress={() => { setPasswordModalOpen(false); setPasswordError(null); }} />
+              <AppButton label="Update Password" loading={passwordSaved} onPress={handleSavePassword} />
+            </View>
+          </SolidCard>
+        </View>
+      </Modal>
 
- {/* Export Data Modal */}
- <Modal visible={exportModalOpen} transparent animationType="fade" onRequestClose={() => setExportModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
- <SolidCard style={{ width: '100%', maxWidth: 440 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
- <AppText variant="h3" weight="bold">Academic Archive Export </AppText>
+      {/* Export Data Modal */}
+      <Modal visible={exportModalOpen} transparent animationType="fade" onRequestClose={() => setExportModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
+          <SolidCard style={{ width: '100%', maxWidth: 440 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+              <AppText variant="h3" weight="bold">Academic Archive Export</AppText>
  <Pressable onPress={() => setExportModalOpen(false)} hitSlop={8}>
  <Ionicons name="close" size={20} color={colors.textSecondary} />
  </Pressable>

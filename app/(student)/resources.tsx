@@ -214,132 +214,136 @@ export default function ResourcesScreen() {
  </ScrollView>
  </View>
 
- {/* Section 2: Academic Repository Header & Filters */}
- <View style={{ marginBottom: spacing.xs }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
- ACADEMIC REPOSITORY & STUDY FILES 
- </AppText>
+      {/* Section 2: Academic Repository Header & Filters */}
+      <View style={{ marginBottom: spacing.xs }}>
+        <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+          ACADEMIC REPOSITORY & STUDY FILES
+        </AppText>
 
- {/* Search Bar Pill & Department Filter Button */}
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
- <View
- style={{
- flex: 1,
- flexDirection: 'row',
- alignItems: 'center',
- gap: spacing.sm,
- backgroundColor: colors.surface,
- borderRadius: radius.pill,
- borderWidth: 1,
- borderColor: colors.border,
- paddingHorizontal: spacing.md,
- height: 42,
- }}
- >
- <Ionicons name="search"size={16} color={colors.textSecondary} />
- <TextInput
- value={query}
- onChangeText={setQuery}
- placeholder="Search course code, notes, topics..."placeholderTextColor={colors.textSecondary}
- style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
- />
- {query ? (
- <Pressable onPress={() => setQuery('')} hitSlop={8}>
- <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
- </Pressable>
- ) : null}
- </View>
+        {/* Search Bar Pill & Department Filter Button */}
+        <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
+          <View
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.sm,
+              backgroundColor: colors.surface,
+              borderRadius: radius.pill,
+              borderWidth: 1,
+              borderColor: colors.border,
+              paddingHorizontal: spacing.md,
+              height: 42,
+            }}
+          >
+            <Ionicons name="search" size={16} color={colors.textSecondary} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search course code, notes, topics..."
+              placeholderTextColor={colors.textSecondary}
+              style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
+            />
+            {query ? (
+              <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+              </Pressable>
+            ) : null}
+          </View>
 
- <Pressable
- onPress={() => setFilterModalOpen(true)}
- accessibilityRole="button"accessibilityLabel="Filter resources"style={{
- width: 42,
- height: 42,
- borderRadius: 21,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- borderWidth: 1,
- borderColor: colors.brandPrimary,
- }}
- >
- <Ionicons name="options"size={18} color={colors.brandPrimary} />
- </Pressable>
- </View>
+          <Pressable
+            onPress={() => setFilterModalOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Filter resources"
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              backgroundColor: colors.pastelPrimaryBg,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: colors.brandPrimary,
+            }}
+          >
+            <Ionicons name="options" size={18} color={colors.brandPrimary} />
+          </Pressable>
+        </View>
 
- {/* Category Filter Chips */}
- <ScrollView
- horizontal
- showsHorizontalScrollIndicator={false}
- contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.xs }}
- >
- {RESOURCE_CATEGORIES.map((c) => {
- const selected = filters.resourceType === c.filter;
- return (
- <Pressable
- key={c.id}
- onPress={() => setFilters((prev) => ({ ...prev, resourceType: c.filter }))}
- style={{
- backgroundColor: selected ? colors.brandPrimary : colors.surface,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.md,
- paddingVertical: 7,
- borderWidth: 1,
- borderColor: selected ? colors.brandPrimary : colors.border,
- }}
- >
- <AppText
- variant="caption"weight={selected ? 'bold' : 'medium'}
- tone={selected ? 'inverse' : 'secondary'}
- >
- {c.label}
- </AppText>
- </Pressable>
- );
- })}
- </ScrollView>
- </View>
- </View>
- );
+        {/* Category Filter Chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.xs }}
+        >
+          {RESOURCE_CATEGORIES.map((c) => {
+            const selected = filters.resourceType === c.filter;
+            return (
+              <Pressable
+                key={c.id}
+                onPress={() => setFilters((prev) => ({ ...prev, resourceType: c.filter }))}
+                style={{
+                  backgroundColor: selected ? colors.brandPrimary : colors.surface,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 7,
+                  borderWidth: 1,
+                  borderColor: selected ? colors.brandPrimary : colors.border,
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  weight={selected ? 'bold' : 'medium'}
+                  tone={selected ? 'inverse' : 'secondary'}
+                >
+                  {c.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </View>
+  );
 
- return (
- <ScreenContainer glow={true}>
- {isDesktop ? (
- <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30 }}>
- {/* Left Column: Filters, Portals & Upload */}
- <View style={{ width: 280, gap: spacing.md }}>
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- backgroundColor: colors.surface,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: 10,
- borderWidth: 1,
- borderColor: colors.border,
- gap: spacing.sm,
- }}
- >
- <Ionicons name="search" size={18} color={colors.textSecondary} />
- <TextInput
- value={query}
- onChangeText={setQuery}
- placeholder="Search course code, notes..."
- placeholderTextColor={colors.textSecondary}
- style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
- />
- {query ? (
- <Pressable onPress={() => setQuery('')} hitSlop={8}>
- <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
- </Pressable>
- ) : null}
- </View>
+  return (
+    <ScreenContainer glow={true}>
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30 }}>
+          {/* Left Column: Filters, Portals & Upload */}
+          <View style={{ width: 280, gap: spacing.md }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.surface,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 10,
+                borderWidth: 1,
+                borderColor: colors.border,
+                gap: spacing.sm,
+              }}
+            >
+              <Ionicons name="search" size={18} color={colors.textSecondary} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search course code, notes..."
+                placeholderTextColor={colors.textSecondary}
+                style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                </Pressable>
+              ) : null}
+            </View>
 
- <SolidCard radius={18} style={{ padding: spacing.md }}>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Resource Type 
- </AppText>
+            <SolidCard radius={18} style={{ padding: spacing.md }}>
+              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+                Resource Type
+              </AppText>
  <View style={{ gap: 4 }}>
  {RESOURCE_CATEGORIES.map((c) => {
  const selected = filters.resourceType === c.filter;

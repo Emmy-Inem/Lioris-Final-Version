@@ -525,73 +525,73 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  </View>
  </SolidCard>
 
- <SolidCard radius={18} style={{ padding: spacing.md }}>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
- Community Rules 
- </AppText>
- <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
- Lioris is a verified academic community. Keep discussions constructive, helpful, and respectful.
- </AppText>
- <View style={{ gap: 4 }}>
- <AppText variant="caption" tone="secondary">• Be helpful & respectful</AppText>
- <AppText variant="caption" tone="secondary">• No academic dishonesty</AppText>
- <AppText variant="caption" tone="secondary">• Report spam to Campus Staff</AppText>
- </View>
- </SolidCard>
- </View>
- </View>
- ) : (
- /* Mobile Single Column FlatList */
- <FlatList
- data={posts}
- keyExtractor={(item) => item.id}
- ListHeaderComponent={renderHeader}
- initialNumToRender={8}
- maxToRenderPerBatch={8}
- windowSize={7}
- removeClippedSubviews
- contentContainerStyle={{ paddingBottom: 130 }}
- renderItem={({ item, index }) => (
- <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
- <PostCard post={item} />
- </Animated.View>
- )}
- showsVerticalScrollIndicator={true}
- onRefresh={refetch}
- refreshing={isRefetching}
- ListEmptyComponent={
- !isLoading ? (
- <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
- <View
- style={{
- width: 64,
- height: 64,
- borderRadius: 32,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
- </View>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
- No Threads in this Channel Yet
- </AppText>
- <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
- Be the first to share an academic question or start a discussion for your cohort.
- </AppText>
- </View>
- ) : null
- }
- />
- )}
+          <SolidCard radius={18} style={{ padding: spacing.md }}>
+            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+              Community Rules
+            </AppText>
+            <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
+              Lioris is a verified academic community. Keep discussions constructive, helpful, and respectful.
+            </AppText>
+            <View style={{ gap: 4 }}>
+              <AppText variant="caption" tone="secondary">• Be helpful & respectful</AppText>
+              <AppText variant="caption" tone="secondary">• No academic dishonesty</AppText>
+              <AppText variant="caption" tone="secondary">• Report spam to Campus Staff</AppText>
+            </View>
+          </SolidCard>
+        </View>
+      </View>
+    ) : (
+      /* Mobile Single Column FlatList */
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
+        contentContainerStyle={{ paddingBottom: 130 }}
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
+            <PostCard post={item} />
+          </Animated.View>
+        )}
+        showsVerticalScrollIndicator={true}
+        onRefresh={refetch}
+        refreshing={isRefetching}
+        ListEmptyComponent={
+          !isLoading ? (
+            <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: colors.pastelPrimaryBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+              </View>
+              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+                No Threads in this Channel Yet
+              </AppText>
+              <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+                Be the first to share an academic question or start a discussion for your cohort.
+              </AppText>
+            </View>
+          ) : null
+        }
+      />
+    )}
 
- {/* Sort Options Modal */}
- <ActionSheetModal visible={sortModalOpen} onClose={() => setSortModalOpen(false)}>
- <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }}>
- Sort Threads By 
- </AppText>
+    {/* Sort Options Modal */}
+    <ActionSheetModal visible={sortModalOpen} onClose={() => setSortModalOpen(false)}>
+      <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
+        Sort Threads By
+      </AppText>
  {(['latest', 'popular'] as const).map((option) => {
  const selected = sortBy === option;
  return (

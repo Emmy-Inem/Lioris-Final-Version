@@ -179,105 +179,105 @@ export function NotificationsScreen() {
  );
 
  const renderConnectionsSection = () => (
- <View style={{ flex: 1 }}>
- <SolidCard style={{ marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
- <View
- style={{
- width: 44,
- height: 44,
- borderRadius: 22,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- }}
- >
- <Ionicons name="git-network" size={20} color={colors.brandPrimary} />
- </View>
- <View style={{ flex: 1 }}>
- <AppText weight="bold">Campus Network Directory </AppText>
- <AppText tone="secondary" variant="caption">
- Connect with coursemates, find project partners, and message alumni advisors.
- </AppText>
- </View>
- </View>
- </SolidCard>
+    <View style={{ flex: 1 }}>
+      <SolidCard style={{ marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: colors.pastelPrimaryBg,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="git-network" size={20} color={colors.brandPrimary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText weight="bold">Campus Network Directory</AppText>
+            <AppText tone="secondary" variant="caption">
+              Connect with coursemates, find project partners, and message alumni advisors.
+            </AppText>
+          </View>
+        </View>
+      </SolidCard>
 
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
- People you may know at the University
- </AppText>
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
- {suggestions?.map((person, index) => (
- <View key={person.id} style={isDesktop ? { width: '48.5%' } : { width: '100%', marginBottom: spacing.xs }}>
- <SuggestedConnectionCard person={person} index={index} />
- </View>
- ))}
- </View>
- </View>
- );
+      <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
+        People you may know at the University
+      </AppText>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+        {suggestions?.map((person, index) => (
+          <View key={person.id} style={isDesktop ? { width: '48.5%' } : { width: '100%', marginBottom: spacing.xs }}>
+            <SuggestedConnectionCard person={person} index={index} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 
- return (
- <ScreenContainer glow={false}>
- {!isDesktop && <AppHeader />}
+  return (
+    <ScreenContainer glow={false}>
+      {!isDesktop && <AppHeader />}
 
- {/* Screen Title & Actions */}
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
- <View>
- <AppText variant="h1" weight="bold">
- Notifications & Network 
- </AppText>
- <AppText tone="secondary" variant="bodySmall">
- {unreadCount > 0 ? `${unreadCount} unread campus updates` : 'All caught up'}
- </AppText>
- </View>
- <View style={{ flexDirection: 'row', gap: spacing.sm }}>
- {unreadCount > 0 && (
- <AppButton
- label="Mark all read"
- variant="secondary"
- onPress={handleReadAll}
- />
- )}
- </View>
- </View>
+      {/* Screen Title & Actions */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
+        <View>
+          <AppText variant="h1" weight="bold">
+            Notifications & Network
+          </AppText>
+          <AppText tone="secondary" variant="bodySmall">
+            {unreadCount > 0 ? `${unreadCount} unread campus updates` : 'All caught up'}
+          </AppText>
+        </View>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {unreadCount > 0 && (
+            <AppButton
+              label="Mark all read"
+              variant="secondary"
+              onPress={handleReadAll}
+            />
+          )}
+        </View>
+      </View>
 
- {/* Mobile Tab Switcher */}
- {!isDesktop && (
- <View
- style={{
- flexDirection: 'row',
- backgroundColor: colors.surface,
- borderRadius: radius.pill,
- padding: 4,
- marginBottom: spacing.md,
- borderWidth: 1,
- borderColor: colors.border,
- }}
- >
- {(['Alerts', 'Connections'] as const).map((t) => {
- const selected = tab === t;
- return (
- <Pressable
- key={t}
- onPress={() => setTab(t)}
- accessibilityRole="tab"
- accessibilityState={{ selected }}
- style={{
- flex: 1,
- paddingVertical: 8,
- borderRadius: radius.pill,
- alignItems: 'center',
- backgroundColor: selected ? colors.brandPrimary : 'transparent',
- }}
- >
- <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
- {t === 'Alerts' ? 'Alerts' : 'Connections '}
- </AppText>
- </Pressable>
- );
- })}
- </View>
- )}
+      {/* Mobile Tab Switcher */}
+      {!isDesktop && (
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: colors.surface,
+            borderRadius: radius.pill,
+            padding: 4,
+            marginBottom: spacing.md,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          {(['Alerts', 'Connections'] as const).map((t) => {
+            const selected = tab === t;
+            return (
+              <Pressable
+                key={t}
+                onPress={() => setTab(t)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: radius.pill,
+                  alignItems: 'center',
+                  backgroundColor: selected ? colors.brandPrimary : 'transparent',
+                }}
+              >
+                <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                  {t}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
  <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 130 }}>
  {isDesktop ? (

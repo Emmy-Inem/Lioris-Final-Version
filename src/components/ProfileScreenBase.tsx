@@ -300,78 +300,78 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  >
  <Ionicons name="settings-outline" size={18} color={colors.textPrimary} />
  </Pressable>
- <AppButton
- label="Edit Profile ✍"
- variant="secondary"
- onPress={handleOpenEdit}
- />
- </View>
- </View>
+            <AppButton
+              label="Edit Profile"
+              variant="secondary"
+              onPress={handleOpenEdit}
+            />
+          </View>
+        </View>
 
- <View style={{ marginTop: spacing.xs }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <AppText variant="h2" weight="bold">
- {profile.fullName}
- </AppText>
- {profile.verificationStatus === 'verified' ? (
- <Ionicons name="checkmark-circle" size={18} color={colors.brandPrimary} />
- ) : null}
- </View>
- <AppText tone="brand" weight="semiBold" variant="bodySmall">
- @{profile.username} • {profile.department ?? 'Computer Science'}
- </AppText>
- </View>
+        <View style={{ marginTop: spacing.xs }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppText variant="h2" weight="bold">
+              {profile.fullName}
+            </AppText>
+            {profile.verificationStatus === 'verified' ? (
+              <Ionicons name="checkmark-circle" size={18} color={colors.brandPrimary} />
+            ) : null}
+          </View>
+          <AppText tone="brand" weight="semiBold" variant="bodySmall">
+            @{profile.username} • {profile.department ?? 'Computer Science'}
+          </AppText>
+        </View>
 
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
- <Ionicons name="school-outline" size={14} color={colors.textSecondary} />
- <AppText tone="secondary" variant="bodySmall">
- {profile.institutionName ?? 'University of Ibadan'} (Class of {profile.graduationYear ?? 2026})
- </AppText>
- </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+          <Ionicons name="school-outline" size={14} color={colors.textSecondary} />
+          <AppText tone="secondary" variant="bodySmall">
+            {profile.institutionName ?? 'University of Ibadan'} (Class of {profile.graduationYear ?? 2026})
+          </AppText>
+        </View>
 
- {profile.bio ? (
- <AppText style={{ marginTop: spacing.sm, lineHeight: 20 }}>
- {profile.bio}
- </AppText>
- ) : null}
+        {profile.bio ? (
+          <AppText style={{ marginTop: spacing.sm, lineHeight: 20 }}>
+            {profile.bio}
+          </AppText>
+        ) : null}
 
- {/* Quick Metrics Bar */}
- <View style={{ flexDirection: 'row', gap: spacing.xs, marginVertical: spacing.md }}>
- <StatChip label="Authored" value={myPosts?.length ?? profile.postsCount} />
- <StatChip label="Connections" value={profile.connectionsCount} />
- <StatChip label="Reputation" value={profile.reputationScore} />
- </View>
+        {/* Quick Metrics Bar */}
+        <View style={{ flexDirection: 'row', gap: spacing.xs, marginVertical: spacing.md }}>
+          <StatChip label="Authored" value={myPosts?.length ?? profile.postsCount} />
+          <StatChip label="Connections" value={profile.connectionsCount} />
+          <StatChip label="Reputation" value={profile.reputationScore} />
+        </View>
 
- {/* Verification Callout if not verified */}
- {profile.verificationStatus === 'pending' ? (
- <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.pastelPrimaryBg, marginBottom: spacing.xs }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
- <Ionicons name="time-outline" size={18} color={colors.brandPrimary} />
- <View style={{ flex: 1 }}>
- <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
- Verification Pending Review 
- </AppText>
- <AppText tone="secondary" variant="caption">
- Your student ID is being verified by campus moderators.
- </AppText>
- </View>
- </View>
- </View>
- ) : profile.verificationStatus !== 'verified' ? (
- <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.pastelPrimaryBg, marginBottom: spacing.xs }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
- <View style={{ flex: 1, marginRight: spacing.sm }}>
- <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
- Verify Student Identity 
- </AppText>
- <AppText tone="secondary" variant="caption">
- Unlock verified badge & voting in student polls.
- </AppText>
- </View>
- <AppButton label="Verify" onPress={() => setVerificationModalOpen(true)} />
- </View>
- </View>
- ) : null}
+        {/* Verification Callout if not verified */}
+        {profile.verificationStatus === 'pending' ? (
+          <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.pastelPrimaryBg, marginBottom: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Ionicons name="time-outline" size={18} color={colors.brandPrimary} />
+              <View style={{ flex: 1 }}>
+                <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
+                  Verification Pending Review
+                </AppText>
+                <AppText tone="secondary" variant="caption">
+                  Your student ID is being verified by campus moderators.
+                </AppText>
+              </View>
+            </View>
+          </View>
+        ) : profile.verificationStatus !== 'verified' ? (
+          <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.pastelPrimaryBg, marginBottom: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
+                <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
+                  Verify Student Identity
+                </AppText>
+                <AppText tone="secondary" variant="caption">
+                  Unlock verified badge & voting in student polls.
+                </AppText>
+              </View>
+              <AppButton label="Verify" onPress={() => setVerificationModalOpen(true)} />
+            </View>
+          </View>
+        ) : null}
 
  {profile.interests && profile.interests.length > 0 ? (
  <View style={{ marginTop: spacing.sm }}>
@@ -481,111 +481,111 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  {/* Photo & Cover Customizer Modal */}
  <Modal visible={photoPickerOpen} transparent animationType="slide"onRequestClose={() => setPhotoPickerOpen(false)}>
  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
- <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
- <Ionicons name="images"size={20} color={colors.brandPrimary} />
- <AppText variant="h3"weight="bold">
- Customize Photos 
- </AppText>
- </View>
- <Pressable onPress={() => setPhotoPickerOpen(false)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Ionicons name="images" size={20} color={colors.brandPrimary} />
+              <AppText variant="h3" weight="bold">
+                Customize Photos
+              </AppText>
+            </View>
+            <Pressable onPress={() => setPhotoPickerOpen(false)} hitSlop={8}>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </Pressable>
+          </View>
 
- <ScrollView showsVerticalScrollIndicator={true}>
- {/* Custom Photo Upload */}
- <View style={{ marginBottom: spacing.md }}>
- <AppButton
- label="Upload Custom Photo "
- variant="secondary"
- onPress={handlePickCustomAvatar}
- loading={uploadingAvatar}
- fullWidth
- />
- </View>
+          <ScrollView showsVerticalScrollIndicator={true}>
+            {/* Custom Photo Upload */}
+            <View style={{ marginBottom: spacing.md }}>
+              <AppButton
+                label="Upload Custom Photo"
+                variant="secondary"
+                onPress={handlePickCustomAvatar}
+                loading={uploadingAvatar}
+                fullWidth
+              />
+            </View>
 
- {/* Avatar Selector */}
- <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
- OR CHOOSE AVATAR PRESET
- </AppText>
- <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
- {AVATAR_PRESETS.map((preset) => {
- const isSelected = profile.avatarUrl === preset.id;
- return (
- <Pressable
- key={preset.id}
- onPress={() => handleSelectAvatar(preset.id)}
- style={{
- flex: 1,
- alignItems: 'center',
- padding: spacing.sm,
- borderRadius: radius.md,
- borderWidth: 2,
- borderColor: isSelected ? colors.brandPrimary : colors.border,
- backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.background,
- }}
- >
- <Image source={preset.src} style={{ width: 56, height: 56, borderRadius: 28, marginBottom: 4 }} />
- <AppText variant="caption"weight="bold"numberOfLines={1}>
- {preset.label}
- </AppText>
- </Pressable>
- );
- })}
- </View>
+            {/* Avatar Selector */}
+            <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+              OR CHOOSE AVATAR PRESET
+            </AppText>
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
+              {AVATAR_PRESETS.map((preset) => {
+                const isSelected = profile.avatarUrl === preset.id;
+                return (
+                  <Pressable
+                    key={preset.id}
+                    onPress={() => handleSelectAvatar(preset.id)}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      padding: spacing.sm,
+                      borderRadius: radius.md,
+                      borderWidth: 2,
+                      borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.background,
+                    }}
+                  >
+                    <Image source={preset.src} style={{ width: 56, height: 56, borderRadius: 28, marginBottom: 4 }} />
+                    <AppText variant="caption" weight="bold" numberOfLines={1}>
+                      {preset.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
 
- {/* Cover Banner Selector */}
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
- CHOOSE CAMPUS BANNER
- </AppText>
- <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
- {COVER_PRESETS.map((preset) => {
- const isSelected = profile.coverUrl === preset.id;
- return (
- <Pressable
- key={preset.id}
- onPress={() => handleSelectCover(preset.id)}
- style={{
- height: 75,
- borderRadius: radius.md,
- overflow: 'hidden',
- position: 'relative',
- borderWidth: 2,
- borderColor: isSelected ? colors.brandPrimary : colors.border,
- }}
- >
- <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingLeft: spacing.md }}>
- <AppText variant="bodySmall"weight="bold"tone="inverse">
- {preset.label}
- </AppText>
- {isSelected ? (
- <AppText variant="caption"weight="bold"tone="brand"style={{ color: '#68D391' }}>
- ✓ Active Cover
- </AppText>
- ) : null}
- </View>
- </Pressable>
- );
- })}
- </View>
- </ScrollView>
+            {/* Cover Banner Selector */}
+            <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+              CHOOSE CAMPUS BANNER
+            </AppText>
+            <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+              {COVER_PRESETS.map((preset) => {
+                const isSelected = profile.coverUrl === preset.id;
+                return (
+                  <Pressable
+                    key={preset.id}
+                    onPress={() => handleSelectCover(preset.id)}
+                    style={{
+                      height: 75,
+                      borderRadius: radius.md,
+                      overflow: 'hidden',
+                      position: 'relative',
+                      borderWidth: 2,
+                      borderColor: isSelected ? colors.brandPrimary : colors.border,
+                    }}
+                  >
+                    <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingLeft: spacing.md }}>
+                      <AppText variant="bodySmall" weight="bold" tone="inverse">
+                        {preset.label}
+                      </AppText>
+                      {isSelected ? (
+                        <AppText variant="caption" weight="bold" tone="brand" style={{ color: '#68D391' }}>
+                          ✓ Active Cover
+                        </AppText>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
 
- <AppButton label="Done"onPress={() => setPhotoPickerOpen(false)} />
- </View>
- </View>
- </Modal>
+          <AppButton label="Done" onPress={() => setPhotoPickerOpen(false)} />
+        </View>
+      </View>
+    </Modal>
 
- {/* Edit Profile Details Modal */}
- <Modal visible={editModalOpen} transparent animationType="fade"onRequestClose={() => setEditModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
- <SolidCard style={{ width: '100%', maxWidth: 440, maxHeight: '85%' }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
- <AppText variant="h3"weight="bold">
- Edit Profile ✍
- </AppText>
+    {/* Edit Profile Details Modal */}
+    <Modal visible={editModalOpen} transparent animationType="fade" onRequestClose={() => setEditModalOpen(false)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
+        <SolidCard style={{ width: '100%', maxWidth: 440, maxHeight: '85%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+            <AppText variant="h3" weight="bold">
+              Edit Profile
+            </AppText>
  <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
  <Ionicons name="close"size={20} color={colors.textSecondary} />
  </Pressable>
