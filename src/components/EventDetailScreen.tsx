@@ -268,7 +268,8 @@ export function EventDetailScreen() {
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140 }}
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120,
+    paddingHorizontal: isDesktop ? spacing.lg : 14 }}
       >
         {isDesktop ? (
           /* DESKTOP 2-COLUMN BALANCED LAYOUT */

@@ -215,7 +215,8 @@ export function PostDetailScreen() {
  <ScrollView style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={true}
  keyboardShouldPersistTaps="handled"
- contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120, maxWidth: isDesktop ? 820 : undefined, width: '100%', alignSelf: 'center' }}
+ contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120,
+    paddingHorizontal: isDesktop ? spacing.lg : 14, maxWidth: isDesktop ? 820 : undefined, width: '100%', alignSelf: 'center' }}
  >
  {/* Full-Screen Master Thread Card */}
  <SolidCard frosted radius={24} style={{ marginBottom: spacing.md }}>

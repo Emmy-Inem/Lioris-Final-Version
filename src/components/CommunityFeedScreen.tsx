@@ -588,7 +588,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         maxToRenderPerBatch={8}
         windowSize={7}
         removeClippedSubviews
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: isDesktop ? spacing.lg : 14 }}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
             <PostCard post={item} />

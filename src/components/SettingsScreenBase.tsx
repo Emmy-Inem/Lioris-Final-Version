@@ -86,9 +86,9 @@ export function SettingsScreen() {
           maxWidth: 1120,
           alignSelf: 'center',
           width: '100%',
-          paddingHorizontal: isDesktop ? spacing.lg : spacing.md,
+          paddingHorizontal: isDesktop ? spacing.lg : 14,
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
-          paddingBottom: 80,
+          paddingBottom: isDesktop ? 80 : 120,
           gap: spacing.lg,
         }}
       >

@@ -362,7 +362,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  refreshing={isRefetching}
  onRefresh={refetch}
  showsVerticalScrollIndicator={true}
- contentContainerStyle={{ paddingBottom: 120 }}
+ contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: isDesktop ? spacing.lg : 14 }}
  ListEmptyComponent={
  !isLoading ? (
  <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
