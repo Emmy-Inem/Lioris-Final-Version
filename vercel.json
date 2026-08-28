@@ -8,13 +8,17 @@
   "env": {
     "APP_ENV": "production",
     "API_BASE_URL": "https://api.lioris.app",
-    "WS_BASE_URL": "wss://api.lioris.app/realtime"
+    "WS_BASE_URL": "wss://api.lioris.app/realtime",
+    "EXPO_PUBLIC_SUPABASE_URL": "https://fdtnbluslkabwsmspbem.supabase.co",
+    "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF"
   },
   "build": {
     "env": {
       "APP_ENV": "production",
       "API_BASE_URL": "https://api.lioris.app",
-      "WS_BASE_URL": "wss://api.lioris.app/realtime"
+      "WS_BASE_URL": "wss://api.lioris.app/realtime",
+      "EXPO_PUBLIC_SUPABASE_URL": "https://fdtnbluslkabwsmspbem.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF"
     }
   },
   "rewrites": [
@@ -55,39 +59,6 @@
         {
           "key": "Expires",
           "value": "0"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Strict-Transport-Security",
-          "value": "max-age=63072000; includeSubDomains; preload"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://fdtnbluslkabwsmspbem.supabase.co https://*.supabase.co https://images.unsplash.com; media-src 'self' data: blob: https://fdtnbluslkabwsmspbem.supabase.co https://*.supabase.co; connect-src 'self' https://fdtnbluslkabwsmspbem.supabase.co wss://fdtnbluslkabwsmspbem.supabase.co https://*.supabase.co wss://*.supabase.co https://api.lioris.app wss://api.lioris.app https://fonts.googleapis.com https://fonts.gstatic.com; frame-src 'self' https://maps.google.com https://www.google.com; frame-ancestors 'none';"
         }
       ]
     },
