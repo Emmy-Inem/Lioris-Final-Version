@@ -34,16 +34,19 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
         style={[
           styles.glassPill,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.40)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.90)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.22)' : 'rgba(255, 255, 255, 0.18)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.32)' : 'rgba(255, 255, 255, 0.88)',
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(36px) saturate(220%) contrast(108%) brightness(110%)',
-              WebkitBackdropFilter: 'blur(36px) saturate(220%) contrast(108%) brightness(110%)',
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(15, 23, 42, 0.20) 50%, rgba(30, 41, 59, 0.25) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.25) 100%)',
+              backdropFilter: 'blur(40px) saturate(240%) brightness(115%) contrast(110%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(240%) brightness(115%) contrast(110%)',
               boxShadow: isDark
-                ? '0 24px 50px rgba(0, 0, 0, 0.75), inset 0 1.5px 2px rgba(255, 255, 255, 0.40)'
-                : '0 24px 50px rgba(15, 23, 42, 0.16), inset 0 1.5px 2px rgba(255, 255, 255, 1), 0 0 0 1px rgba(255, 255, 255, 0.60)',
+                ? '0 28px 60px -10px rgba(0, 0, 0, 0.85), inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.60), inset 0 -1.5px 2px 0 rgba(255, 255, 255, 0.18), inset 0 0 20px 2px rgba(255, 255, 255, 0.12)'
+                : '0 28px 60px -10px rgba(15, 23, 42, 0.20), inset 0 1.5px 2.5px 0 rgba(255, 255, 255, 1), inset 0 -1.5px 2px 0 rgba(255, 255, 255, 0.40), inset 0 0 20px 2px rgba(255, 255, 255, 0.35)',
             } as any),
         ]}
       >

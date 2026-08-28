@@ -71,12 +71,12 @@ export default function RootLayout() {
         style.id = styleId;
         style.textContent = `
           
-          /* Hardware-accelerated true liquid glass refraction for floating nav */
+          /* Hardware-accelerated true iPhone liquid glass refraction for floating nav */
           [data-component="floating-liquid-glass-bar"] {
-            backdrop-filter: blur(36px) saturate(220%) contrast(108%) brightness(110%) !important;
-            -webkit-backdrop-filter: blur(36px) saturate(220%) contrast(108%) brightness(110%) !important;
+            backdrop-filter: blur(40px) saturate(240%) brightness(115%) contrast(110%) !important;
+            -webkit-backdrop-filter: blur(40px) saturate(240%) brightness(115%) contrast(110%) !important;
             transform: translate3d(0, 0, 0) !important;
-            will-change: backdrop-filter, -webkit-backdrop-filter;
+            will-change: backdrop-filter, -webkit-backdrop-filter !important;
           }
 
           /* Universal Clean Layout & Mobile Touch Optimization */
