@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useViewScope } from '@/hooks/useViewScope';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { LiorisLogo } from '@/components/LiorisLogo';
@@ -57,36 +58,41 @@ export function DesktopSidebar() {
 
  const role = user?.role || 'student';
 
-  const studentNavItems: NavItem[] = [
+  const { flags } = useFeatureFlags();
+
+  const rawStudentNavItems: (NavItem & { flagKey?: string })[] = [
     { id: 'home', label: 'Dashboard', href: '/(student)/dashboard', icon: 'home' },
     { id: 'forum', label: 'Campus Forum', href: '/(student)/feed', icon: 'chatbubbles' },
-    { id: 'events', label: 'Events Hub', href: '/(student)/events-list', icon: 'calendar' },
-    { id: 'resources', label: 'Resources Library', href: '/(student)/resources', icon: 'folder-open' },
-    { id: 'marketplace', label: 'Marketplace', href: '/(student)/marketplace', icon: 'cart' },
-    { id: 'jobs', label: 'Opportunities', href: '/(student)/jobs', icon: 'briefcase' },
-    { id: 'mentorship', label: 'Mentorship Hub', href: '/(student)/mentorship', icon: 'people' },
-    { id: 'study-groups', label: 'Study Groups', href: '/(student)/study-groups', icon: 'school' },
-    { id: 'calendar', label: 'Calendar & Schedule', href: '/(student)/calendar', icon: 'calendar-outline' },
+    { id: 'events', label: 'Events Hub', href: '/(student)/events-list', icon: 'calendar', flagKey: 'campus_events' },
+    { id: 'resources', label: 'Resources Library', href: '/(student)/resources', icon: 'folder-open', flagKey: 'academic_resources' },
+    { id: 'marketplace', label: 'Marketplace', href: '/(student)/marketplace', icon: 'cart', flagKey: 'marketplace' },
+    { id: 'jobs', label: 'Opportunities', href: '/(student)/jobs', icon: 'briefcase', flagKey: 'career_page' },
+    { id: 'mentorship', label: 'Mentorship Hub', href: '/(student)/mentorship', icon: 'people', flagKey: 'alumni_mentorship' },
+    { id: 'study-groups', label: 'Study Groups', href: '/(student)/study-groups', icon: 'school', flagKey: 'study_groups' },
+    { id: 'calendar', label: 'Calendar & Schedule', href: '/(student)/calendar', icon: 'calendar-outline', flagKey: 'utility_cards' },
     { id: 'messages', label: 'Messages', href: '/(student)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount },
     { id: 'notifications', label: 'Notifications', href: '/(student)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
     { id: 'profile', label: 'My Academic Profile', href: '/(student)/profile', icon: 'person' },
     { id: 'settings', label: 'Settings & Security', href: '/(student)/settings', icon: 'settings' },
   ];
 
-  const alumniNavItems: NavItem[] = [
+  const rawAlumniNavItems: (NavItem & { flagKey?: string })[] = [
     { id: 'home', label: 'Alumni Home', href: '/(alumni)/dashboard', icon: 'home' },
     { id: 'forum', label: 'Global Forum', href: '/(alumni)/forum', icon: 'chatbubbles' },
-    { id: 'hub', label: 'Alumni Network Hub', href: '/(alumni)/alumni-hub', icon: 'school' },
+    { id: 'hub', label: 'Alumni Network Hub', href: '/(alumni)/alumni-hub', icon: 'school', flagKey: 'alumni_mentorship' },
     { id: 'directory', label: 'Alumni Directory', href: '/(alumni)/directory', icon: 'book' },
-    { id: 'events', label: 'Alumni Events', href: '/(alumni)/events', icon: 'calendar' },
-    { id: 'mentorship', label: 'Mentor Students', href: '/(alumni)/mentorship', icon: 'ribbon' },
-    { id: 'marketplace', label: 'Marketplace', href: '/(alumni)/marketplace', icon: 'cart' },
-    { id: 'jobs', label: 'Post / Find Jobs', href: '/(alumni)/jobs', icon: 'briefcase' },
+    { id: 'events', label: 'Alumni Events', href: '/(alumni)/events', icon: 'calendar', flagKey: 'campus_events' },
+    { id: 'mentorship', label: 'Mentor Students', href: '/(alumni)/mentorship', icon: 'ribbon', flagKey: 'alumni_mentorship' },
+    { id: 'marketplace', label: 'Marketplace', href: '/(alumni)/marketplace', icon: 'cart', flagKey: 'marketplace' },
+    { id: 'jobs', label: 'Post / Find Jobs', href: '/(alumni)/jobs', icon: 'briefcase', flagKey: 'career_page' },
     { id: 'messages', label: 'Messages', href: '/(alumni)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount },
     { id: 'notifications', label: 'Notifications', href: '/(alumni)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
     { id: 'profile', label: 'My Alumni Profile', href: '/(alumni)/profile', icon: 'person' },
     { id: 'settings', label: 'Settings', href: '/(alumni)/settings', icon: 'settings' },
   ];
+
+  const studentNavItems = rawStudentNavItems.filter((item) => !item.flagKey || flags[item.flagKey as any] !== false);
+  const alumniNavItems = rawAlumniNavItems.filter((item) => !item.flagKey || flags[item.flagKey as any] !== false);
 
  const staffNavItems: NavItem[] = [
  { id: 'home', label: 'Staff Console', href: '/(staff)/dashboard', icon: 'home' },
