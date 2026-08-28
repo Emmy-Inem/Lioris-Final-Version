@@ -33,8 +33,8 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
  label: 'XP Gamification & Streaks',
  category: 'Engagement & XP',
  tier: 'P1',
- description: 'Awards XP points, streak counters, badges, and leaderboard rankings across campus feeds.',
- defaultOn: true,
+ description: 'Awards streak counters, badges, and leaderboard rankings across campus feeds.',
+ defaultOn: false,
  },
  {
  key: 'career_page',
@@ -57,7 +57,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
  label: 'Utility Cards & Quick Portals',
  category: 'Campus Life',
  tier: 'P1',
- description: 'Shows lecture countdowns, timetable shortcuts, GPA calculators, and university portal tiles.',
+ description: 'Shows lecture countdowns, timetable shortcuts, and university portal tiles.',
  defaultOn: true,
  },
  {
