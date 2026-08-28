@@ -216,7 +216,7 @@ export function PostDetailScreen() {
  showsVerticalScrollIndicator={false}
  keyboardShouldPersistTaps="handled"
  contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120,
-    paddingHorizontal: isDesktop ? spacing.lg : 14, maxWidth: isDesktop ? 820 : undefined, width: '100%', alignSelf: 'center' }}
+    maxWidth: isDesktop ? 820 : undefined, width: '100%', alignSelf: 'center' }}
  >
  {/* Full-Screen Master Thread Card */}
  <SolidCard frosted radius={24} style={{ marginBottom: spacing.md }}>

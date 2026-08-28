@@ -269,7 +269,7 @@ export function EventDetailScreen() {
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120,
-    paddingHorizontal: isDesktop ? spacing.lg : 14 }}
+    paddingHorizontal: isDesktop ? spacing.lg : 16 }}
       >
         {isDesktop ? (
           /* DESKTOP 2-COLUMN BALANCED LAYOUT */

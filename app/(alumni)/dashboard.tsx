@@ -50,7 +50,6 @@ export default function AlumniDashboard() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          paddingHorizontal: isDesktop ? 0 : spacing.md,
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
           paddingBottom: 80,
           gap: spacing.lg,

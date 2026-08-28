@@ -89,7 +89,6 @@ export function SettingsScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          paddingHorizontal: isDesktop ? 0 : 14,
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
           paddingBottom: isDesktop ? 80 : 120,
           gap: spacing.lg,
