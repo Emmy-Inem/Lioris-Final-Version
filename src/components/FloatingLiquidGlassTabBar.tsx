@@ -33,16 +33,16 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
         style={[
           styles.glassPill,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.92)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.55)' : 'rgba(255, 255, 255, 0.45)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.75)',
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(32px)',
-              WebkitBackdropFilter: 'blur(32px)',
+              backdropFilter: 'blur(30px) saturate(200%) brightness(108%)',
+              WebkitBackdropFilter: 'blur(30px) saturate(200%) brightness(108%)',
               boxShadow: isDark
-                ? '0 20px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25)'
-                : '0 20px 40px rgba(15, 23, 42, 0.2), inset 0 1px 1px rgba(255, 255, 255, 1)',
+                ? '0 16px 40px rgba(0, 0, 0, 0.65), inset 0 1px 1.5px rgba(255, 255, 255, 0.35)'
+                : '0 16px 40px rgba(15, 23, 42, 0.18), inset 0 1px 1.5px rgba(255, 255, 255, 0.95)',
             } as any),
         ]}
       >
@@ -97,13 +97,14 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
                 styles.tabItem,
                 isFocused && {
                   backgroundColor: colors.brandPrimary,
-                  borderRadius: 22,
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
+                  borderRadius: 24,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
                   shadowColor: colors.brandPrimary,
                   shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 8,
+                  shadowOpacity: 0.45,
+                  shadowRadius: 10,
+                  elevation: 6,
                 },
               ]}
               accessibilityRole="tab"
@@ -113,15 +114,15 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
               <Ionicons
                 name={iconName}
                 size={18}
-                color={isFocused ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                color={isFocused ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B'}
               />
               <AppText
                 variant="caption"
-                weight={isFocused ? 'bold' : 'medium'}
+                weight={isFocused ? 'bold' : 'semiBold'}
                 style={{
                   fontSize: 10,
                   marginTop: 2,
-                  color: isFocused ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
+                  color: isFocused ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B',
                 }}
               >
                 {typeof label === 'string' ? label : route.name}
@@ -136,13 +137,13 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
 
 const styles = StyleSheet.create({
   floatingWrapper: {
-    position: 'absolute',
+    position: (Platform.OS === 'web' ? 'fixed' : 'absolute') as any,
     bottom: Platform.OS === 'web' ? 18 : 22,
     left: 0,
     right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 9999,
+    zIndex: 99999,
   },
   glassPill: {
     flexDirection: 'row',
