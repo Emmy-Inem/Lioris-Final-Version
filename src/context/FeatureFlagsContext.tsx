@@ -74,7 +74,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Campus Life',
     tier: 'P0',
     description: 'Highlights university symposiums, hackathons, seminars, and calendar sync.',
-    defaultOn: false,
+    defaultOn: true,
   },
   {
     key: 'academic_resources',
@@ -82,7 +82,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Campus Life',
     tier: 'P0',
     description: 'Academic file repository, lecture slide downloads, and verified department notes.',
-    defaultOn: false,
+    defaultOn: true,
   },
   {
     key: 'alumni_mentorship',
@@ -130,7 +130,7 @@ export const DEFAULT_FLAGS: Record<FeatureKey, boolean> = Object.fromEntries(
   FEATURE_CATALOG.map((f) => [f.key, f.defaultOn]),
 ) as Record<FeatureKey, boolean>;
 
-const STORAGE_KEY = 'lioris_runtime_feature_flags_v5';
+const STORAGE_KEY = 'lioris_runtime_feature_flags_v6';
 const isWeb = Platform.OS === 'web';
 
 async function getStoredFlags(): Promise<string | null> {
