@@ -434,84 +434,35 @@ export default function StudentDashboard() {
             </SolidCard>
 
             {/* Today's Timetable & Schedule */}
-            <SolidCard radius={20} style={{ padding: spacing.md }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                <AppText variant="h3" weight="bold">
-                  Today's Schedule
-                </AppText>
-                <Pressable onPress={() => router.push('/(student)/calendar')}>
-                  <AppText variant="caption" weight="bold" tone="brand">Calendar →</AppText>
-                </Pressable>
-              </View>
-
-              <View style={{ gap: spacing.sm }}>
-                <View style={{ borderLeftWidth: 3, borderLeftColor: colors.brandPrimary, paddingLeft: spacing.sm }}>
-                  <AppText variant="bodySmall" weight="bold">CSC 301: Algorithms</AppText>
-                  <AppText variant="caption" tone="secondary">11:00 AM - 1:00 PM • Lecture Theater 2</AppText>
+            {isFeatureEnabled('utility_cards') && (
+              <SolidCard radius={20} style={{ padding: spacing.md }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                  <AppText variant="h3" weight="bold">
+                    Today's Schedule
+                  </AppText>
+                  <Pressable onPress={() => router.push('/(student)/calendar')}>
+                    <AppText variant="caption" weight="bold" tone="brand">Calendar →</AppText>
+                  </Pressable>
                 </View>
-                <View style={{ borderLeftWidth: 3, borderLeftColor: '#3B82F6', paddingLeft: spacing.sm }}>
-                  <AppText variant="bodySmall" weight="bold">MEE 305: Engineering Systems</AppText>
-                  <AppText variant="caption" tone="secondary">2:00 PM - 4:00 PM • Faculty Lab 1</AppText>
+
+                <View style={{ gap: spacing.sm }}>
+                  <View style={{ borderLeftWidth: 3, borderLeftColor: colors.brandPrimary, paddingLeft: spacing.sm }}>
+                    <AppText variant="bodySmall" weight="bold">CSC 301: Algorithms</AppText>
+                    <AppText variant="caption" tone="secondary">11:00 AM - 1:00 PM • Lecture Theater 2</AppText>
+                  </View>
+                  <View style={{ borderLeftWidth: 3, borderLeftColor: '#3B82F6', paddingLeft: spacing.sm }}>
+                    <AppText variant="bodySmall" weight="bold">MEE 305: Engineering Systems</AppText>
+                    <AppText variant="caption" tone="secondary">2:00 PM - 4:00 PM • Faculty Lab 1</AppText>
+                  </View>
+                  <View style={{ borderLeftWidth: 3, borderLeftColor: '#10B981', paddingLeft: spacing.sm }}>
+                    <AppText variant="bodySmall" weight="bold">Campus Tech Fest Meetup</AppText>
+                    <AppText variant="caption" tone="secondary">5:00 PM • Innovation Arena</AppText>
+                  </View>
                 </View>
-                <View style={{ borderLeftWidth: 3, borderLeftColor: '#10B981', paddingLeft: spacing.sm }}>
-                  <AppText variant="bodySmall" weight="bold">Campus Tech Fest Meetup</AppText>
-                  <AppText variant="caption" tone="secondary">5:00 PM • Innovation Arena</AppText>
-                </View>
-              </View>
-            </SolidCard>
-
-            {/* Upcoming Deadlines Widget */}
-            <SolidCard radius={20} style={{ padding: spacing.md }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                <AppText variant="h3" weight="bold">
-                  Upcoming Deadlines
-                </AppText>
-                <Badge label="2 Due Soon" tone="warning" />
-              </View>
-
- <View style={{ gap: 10 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
- <View style={{ flex: 1 }}>
- <AppText variant="bodySmall" weight="semiBold">CSC 301 Lab 3 Submission</AppText>
- <AppText variant="caption" tone="secondary">Due in 2 days (Friday, 11:59 PM)</AppText>
- </View>
- <Ionicons name="alert-circle" size={18} color="#F59E0B" />
- </View>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
- <View style={{ flex: 1 }}>
- <AppText variant="bodySmall" weight="semiBold">Course Registration Verification</AppText>
- <AppText variant="caption" tone="secondary">Due next Monday</AppText>
- </View>
- <Ionicons name="checkmark-circle-outline" size={18} color={colors.textSecondary} />
- </View>
- </View>
- </SolidCard>
-
- {/* Class Representative & Faculty Advisor */}
- <SolidCard radius={20} style={{ padding: spacing.md }}>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
- Department Reps & Support 
- </AppText>
- <View style={{ gap: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
- <Avatar name="Tobi Alabi" size={32} />
- <View>
- <AppText variant="caption" weight="bold">Tobi Alabi (Class Rep)</AppText>
- <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>300L Computer Science</AppText>
- </View>
- </View>
- <Pressable
- onPress={() => router.push('/(student)/messages')}
- style={{ backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
- >
- <AppText variant="caption" weight="bold" tone="brand">Chat</AppText>
- </Pressable>
- </View>
- </View>
- </SolidCard>
- </View>
- )}
+              </SolidCard>
+            )}
+          </View>
+        )}
  </View>
  </ScrollView>
 

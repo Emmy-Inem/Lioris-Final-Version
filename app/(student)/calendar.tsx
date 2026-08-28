@@ -7,8 +7,10 @@ import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
 import { MonthCalendarGrid } from '@/components/MonthCalendarGrid';
 import { AgendaList } from '@/components/AgendaList';
+import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { listEvents } from '@/api/events';
 
 const TABS = ['Monthly Grid', 'Agenda'] as const;
@@ -16,9 +18,25 @@ const TABS = ['Monthly Grid', 'Agenda'] as const;
 export default function CalendarScreen() {
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
+ const { isFeatureEnabled } = useFeatureFlags();
  const [tab, setTab] = useState<(typeof TABS)[number]>('Monthly Grid');
 
  const { data: events } = useQuery({ queryKey: ['events', 'student', 'calendar'], queryFn: () => listEvents({ scope: 'student' }) });
+
+ if (!isFeatureEnabled('utility_cards')) {
+  return (
+    <ScreenContainer glow={false}>
+      {!isDesktop && <AppHeader />}
+      <View style={{ paddingTop: spacing.xl, alignItems: 'center' }}>
+        <EmptyState
+          icon="calendar-outline"
+          title="Calendar & Timetable Inactive"
+          description="Campus timetable and schedule modules have been temporarily hidden by campus administration."
+        />
+      </View>
+    </ScreenContainer>
+  );
+ }
 
  return (
  <ScreenContainer glow={false}>

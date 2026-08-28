@@ -54,11 +54,11 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
  },
  {
  key: 'utility_cards',
- label: 'Utility Cards & Quick Portals',
+ label: 'Campus Calendar, Timetable & Utility Cards',
  category: 'Campus Life',
  tier: 'P1',
  description: 'Shows lecture countdowns, timetable shortcuts, and university portal tiles.',
- defaultOn: true,
+ defaultOn: false,
  },
  {
  key: 'study_groups',
@@ -66,7 +66,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
  category: 'Campus Life',
  tier: 'P1',
  description: 'Enables Senate E-Library check-ins, study circles, and peer revision squad activity.',
- defaultOn: true,
+ defaultOn: false,
  },
  {
  key: 'campus_events',
