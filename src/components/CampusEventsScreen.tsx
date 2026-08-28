@@ -208,7 +208,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
     <ScreenContainer glow={false}>
       {isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{ maxWidth: 1120, alignSelf: 'center', width: '100%', paddingHorizontal: isDesktop ? spacing.lg : spacing.md, paddingTop: spacing.lg, paddingBottom: 60 }}
         >
           {/* Top Header Bar */}
@@ -362,7 +362,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  refreshing={isRefetching}
  onRefresh={refetch}
  showsVerticalScrollIndicator={true}
- contentContainerStyle={{ paddingBottom: 80 }}
+ contentContainerStyle={{ paddingBottom: 120 }}
  ListEmptyComponent={
  !isLoading ? (
  <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>

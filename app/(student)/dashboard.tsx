@@ -164,7 +164,7 @@ export default function StudentDashboard() {
             </Pressable>
           </View>
 
-          <View style={{ padding: spacing.lg, backgroundColor: colors.surface }}>
+          <View style={{ padding: isDesktop ? spacing.lg : spacing.md, backgroundColor: colors.surface }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: isDesktop ? spacing.md : 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <Avatar name={profile?.fullName ?? user?.fullName ?? 'Diana Prince'} size={52} />
@@ -176,7 +176,7 @@ export default function StudentDashboard() {
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
                   </View>
                   <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
-                    {profile?.department ?? 'Computer Science & AI'} • Level {profile?.level ?? 400} • {profile?.email ?? 'diana.prince@ui.edu.ng'}
+                    {profile?.department ?? 'Computer Science & AI'} • Level {profile?.level ?? 400}
                   </AppText>
                 </View>
               </View>

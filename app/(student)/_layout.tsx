@@ -6,6 +6,7 @@ import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
+import { FloatingLiquidGlassTabBar } from '@/components/FloatingLiquidGlassTabBar';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 export default function StudentLayout() {

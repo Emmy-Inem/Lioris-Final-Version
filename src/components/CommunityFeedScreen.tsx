@@ -478,7 +478,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   <PostCard post={item} />
                 </Animated.View>
               )}
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator={false}
               onRefresh={refetch}
               refreshing={isRefetching}
               ListEmptyComponent={
@@ -588,7 +588,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         maxToRenderPerBatch={8}
         windowSize={7}
         removeClippedSubviews
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
             <PostCard post={item} />
