@@ -412,7 +412,7 @@ export default function UserDirectoryScreen() {
               keyExtractor={(item) => item.id}
               numColumns={2}
               columnWrapperStyle={{ gap: spacing.md }}
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100, gap: spacing.sm }}
               renderItem={({ item }) => (
                 <View style={{ flex: 1, minWidth: 0, marginBottom: spacing.xs }}>
@@ -484,7 +484,7 @@ export default function UserDirectoryScreen() {
           <FlatList
             data={filtered}
             keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={true}
+            showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 150 }}
             renderItem={({ item }) => (
               <SolidCard radius={18} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: item.suspended ? `${colors.critical}50` : colors.border }}>
@@ -672,7 +672,7 @@ export default function UserDirectoryScreen() {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={true} style={{ flex: 1, width: '100%',  marginBottom: spacing.md }}>
+ <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, width: '100%',  marginBottom: spacing.md }}>
  <AppTextField
  label="Full Legal Name"placeholder="e.g. Samuel Adeyinka"value={newFullName}
  onChangeText={setNewFullName}

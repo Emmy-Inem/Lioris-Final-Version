@@ -476,7 +476,7 @@ export default function StudentDashboard() {
               </Pressable>
             </View>
 
-            <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
+            <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
               <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
                 CHOOSE AVATAR PHOTO
               </AppText>

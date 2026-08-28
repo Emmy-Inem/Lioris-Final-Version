@@ -361,7 +361,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  ListHeaderComponent={renderHeader}
  refreshing={isRefetching}
  onRefresh={refetch}
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: isDesktop ? spacing.lg : 14 }}
  ListEmptyComponent={
  !isLoading ? (

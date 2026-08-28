@@ -140,7 +140,7 @@ export default function AuditLogsScreen() {
         key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
         numColumns={isDesktop ? 2 : 1}
         columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.sm }}
         renderItem={({ item }) => (
           <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>

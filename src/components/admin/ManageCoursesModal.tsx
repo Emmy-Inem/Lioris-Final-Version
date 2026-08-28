@@ -212,7 +212,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
 
  {/* Form Modal Sub-view (Add / Edit) */}
  {isCreating || editingCourse ? (
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ padding: spacing.lg }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h3"weight="bold">
  {editingCourse ? `Edit Course: ${editingCourse.courseCode}` : 'Add New Course'}
@@ -347,7 +347,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
  <FlatList
  data={filteredCourses}
  keyExtractor={(item) => item.id}
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  contentContainerStyle={{ paddingBottom: 60 }}
  renderItem={({ item }) => {
  const coverPreset = COURSE_COVER_PRESETS.find((p) => p.id === item.coverImageUrl)?.src ?? COURSE_COVER_PRESETS[0].src;

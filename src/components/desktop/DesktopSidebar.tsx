@@ -262,7 +262,7 @@ export function DesktopSidebar() {
 
  {/* Navigation List */}
  <ScrollView
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  contentContainerStyle={{ paddingVertical: spacing.sm, paddingHorizontal: collapsed ? 8 : spacing.sm }}
  style={{ flex: 1 }}
  >

@@ -489,7 +489,7 @@ export function ResourcesModerationTab() {
  </Pressable>
  </View>
 
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
  <AppTextField
  label="Resource Title"placeholder="e.g. CSC 301 Operating Systems Past Questions 2024"value={formTitle}
  onChangeText={setFormTitle}
@@ -626,7 +626,7 @@ export function ResourcesModerationTab() {
  </View>
 
  {previewModalResource ? (
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
  <AppText variant="body"weight="bold"style={{ marginBottom: 4 }}>
  {previewModalResource.title}
  </AppText>

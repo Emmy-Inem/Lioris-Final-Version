@@ -86,7 +86,7 @@ export default function PlatformConfigScreen() {
 
       {/* Unified Main ScrollView for entire Admin Desk */}
       <ScrollView style={{ flex: 1, width: '100%' }}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
@@ -413,7 +413,7 @@ export default function PlatformConfigScreen() {
  Immediately delivers a high-priority push notification and sticky banner across the selected student network.
  </AppText>
 
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
  TARGET AUDIENCE
  </AppText>

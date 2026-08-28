@@ -213,7 +213,7 @@ export function PostDetailScreen() {
  </View>
 
  <ScrollView style={{ flex: 1, width: '100%' }}
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  keyboardShouldPersistTaps="handled"
  contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120,
     paddingHorizontal: isDesktop ? spacing.lg : 14, maxWidth: isDesktop ? 820 : undefined, width: '100%', alignSelf: 'center' }}

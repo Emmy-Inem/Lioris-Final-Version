@@ -310,7 +310,7 @@ export default function ResourcesScreen() {
     <ScreenContainer glow={true}>
       {isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60 }}
         >
           {/* Top Header Bar */}
@@ -551,7 +551,7 @@ export default function ResourcesScreen() {
           maxToRenderPerBatch={8}
           contentContainerStyle={{ paddingBottom: 130 }}
           renderItem={({ item }) => <ResourceCard resource={item} />}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           onRefresh={refetch}
           refreshing={isRefetching}
           ListEmptyComponent={

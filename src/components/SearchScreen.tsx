@@ -105,13 +105,13 @@ export function SearchScreen() {
         <FlatList
           data={posts ?? []}
           keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}
           renderItem={({ item }) => <PostCard post={item} />}
           ListEmptyComponent={!isLoading ? <EmptyState title="No posts found" description={`No results for "${debouncedTrimmed}".`} /> : null}
         />
       ) : tab === 'events' ? (
-        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
             {(events ?? []).map((item) => (
               <View key={item.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 } : { marginBottom: spacing.sm }}>
@@ -124,7 +124,7 @@ export function SearchScreen() {
           ) : null}
         </ScrollView>
       ) : (
-        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
             {(resources ?? []).map((item) => (
               <View key={item.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 } : { marginBottom: spacing.sm }}>

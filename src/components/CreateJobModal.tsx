@@ -121,7 +121,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  overflow: 'hidden',
  }}
  >
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
  <View>
  <AppText variant="h1" weight="bold">

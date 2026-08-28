@@ -118,7 +118,7 @@ export function ChangeWorkspaceScopeModal({
  filter strictly for your local campus.
  </AppText>
 
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
  <ScopeOption
  icon="school"
  title="My Campus Workspace"

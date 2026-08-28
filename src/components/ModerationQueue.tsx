@@ -130,7 +130,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
       </View>
 
       {isDesktop ? (
-        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 60 }}>
+        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {filteredReports.map((item) => (
               <View key={item.id} style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 }}>
@@ -193,7 +193,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         <FlatList
           data={filteredReports}
           keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 130, gap: spacing.sm }}
           renderItem={({ item }) => (
             <SolidCard radius={20} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}40` }}>

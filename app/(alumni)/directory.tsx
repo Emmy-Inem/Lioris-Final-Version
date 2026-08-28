@@ -110,7 +110,7 @@ export default function AlumniDirectoryScreen() {
  onChangeText={setQuery}
  />
       {isDesktop ? (
-        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 60 }}>
+        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {(entries ?? []).map((item) => (
               <View key={item.id} style={{ width: 'calc(33.333% - 11px)' as any, minWidth: 280, maxWidth: 420 }}>
@@ -128,7 +128,7 @@ export default function AlumniDirectoryScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
           renderItem={({ item }) => <DirectoryCard entry={item} />}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           refreshing={isRefetching}
           onRefresh={refetch}
           ListEmptyComponent={

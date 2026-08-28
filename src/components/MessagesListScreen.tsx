@@ -102,7 +102,7 @@ export function MessagesListScreen() {
             <FlatList
               data={filtered}
               keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator={false}
               initialNumToRender={10}
               maxToRenderPerBatch={10}
               renderItem={({ item }) => (
@@ -248,7 +248,7 @@ export function MessagesListScreen() {
             <FlatList
               data={filtered}
               keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator={false}
               initialNumToRender={10}
               maxToRenderPerBatch={10}
               contentContainerStyle={{ paddingBottom: 130 }}

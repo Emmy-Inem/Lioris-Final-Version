@@ -214,7 +214,7 @@ function OverviewHubTab() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+    <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
       {/* Live Masterclasses & Webinars Spotlight */}
       <View style={{ marginBottom: spacing.lg }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
@@ -336,7 +336,7 @@ function MemberSearchTab() {
   });
 
   return (
-    <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+    <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
       <AppTextField
         label=""
         placeholder="Search alumni by name, company, industry..."
@@ -447,7 +447,7 @@ function LegacyGivingTab() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
+    <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
       <SolidCard radius={20} backgroundColor={colors.pastelPrimaryBg} style={{ marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.brandPrimary }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
           <Ionicons name="trophy" size={24} color={colors.brandPrimary} />

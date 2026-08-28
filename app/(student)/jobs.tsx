@@ -49,7 +49,7 @@ export default function JobsScreen() {
     <ScreenContainer glow={false}>
       {isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60 }}
         >
           {/* Top Header Bar */}
@@ -281,7 +281,7 @@ export default function JobsScreen() {
  keyExtractor={(item) => item.id}
  contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
  renderItem={({ item }) => <JobCard job={item} />}
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found" description="Try a different search or filter." /> : null}
  />
  </>

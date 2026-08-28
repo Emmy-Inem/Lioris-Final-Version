@@ -161,7 +161,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
  data={allMessages}
  keyExtractor={(item) => item.id}
  contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, flexGrow: 1 }}
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  renderItem={({ item }) => {
  const isMe = item.senderId === 'me' || (!!user?.id && item.senderId === user.id);
  return (

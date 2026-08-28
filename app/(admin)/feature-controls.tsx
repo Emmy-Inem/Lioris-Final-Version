@@ -31,7 +31,7 @@ export default function AdminFeatureControlsScreen() {
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
       <ScrollView style={{ flex: 1, width: '100%' }}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}

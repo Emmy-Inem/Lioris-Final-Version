@@ -594,7 +594,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             <PostCard post={item} />
           </Animated.View>
         )}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         onRefresh={refetch}
         refreshing={isRefetching}
         ListEmptyComponent={

@@ -54,7 +54,7 @@ export default function StudentMentorshipScreen() {
  return (
  <ScreenContainer glow={false}>
  {!isDesktop && <AppHeader />}
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 130 }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
  {/* Top Header & Intro */}
  <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
  <AppText variant="h1" weight="bold">

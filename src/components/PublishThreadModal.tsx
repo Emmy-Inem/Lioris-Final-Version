@@ -211,7 +211,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  }}
  >
  <ScrollView style={{ flex: 1, width: '100%' }}
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  keyboardShouldPersistTaps="handled"
  contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 100 }}
  >

@@ -122,7 +122,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
  }}
  >
  <ScrollView style={{ flex: 1, width: '100%' }}
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}
  >
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>

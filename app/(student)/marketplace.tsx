@@ -52,7 +52,7 @@ export default function MarketplaceScreen() {
     <ScreenContainer glow={false}>
       {isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60 }}
         >
           {/* Top Header Bar */}
@@ -258,7 +258,7 @@ export default function MarketplaceScreen() {
  columnWrapperStyle={{ gap: spacing.md }}
  contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
  renderItem={({ item }) => <MarketplaceItemCard item={item} />}
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  initialNumToRender={10}
  maxToRenderPerBatch={10}
  windowSize={7}

@@ -90,7 +90,7 @@ export default function SuperAdminConfigScreen() {
       </AppText>
 
       <ScrollView style={{ flex: 1, width: '100%' }}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
