@@ -469,7 +469,7 @@ export default function ResourcesScreen() {
                 <Pressable
                   key={portal.id}
                   onPress={() => handleLaunchPortal(portal)}
-                  style={{ width: 'calc(33.333% - 8px)' as any, minWidth: 240 }}
+                  style={{ flexGrow: 1, flexBasis: 0, minWidth: 240 }}
                 >
                   <SolidCard
                     radius={16}
@@ -617,7 +617,7 @@ export default function ResourcesScreen() {
           {/* Multi-Column Responsive Grid with Non-Stretching Cards */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {(resources ?? []).map((res) => (
-              <View key={res.id} style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 560 }}>
+              <View key={res.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
                 <ResourceCard resource={res} />
               </View>
             ))}

@@ -48,7 +48,13 @@ export function HorizontalTrendsSlider({ selectedTrend, onSelectTrend }: Horizon
  ) : null}
  </View>
 
- <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: spacing.sm }}>
+ <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingRight: 24, paddingBottom: 6 }}
+        style={{ width: '100%', flexGrow: 0 }}
+        {...({ dataSet: { horizontalScroll: 'true' } } as any)}
+      >
  {TRENDS.map((trend) => {
  const selected = selectedTrend === trend.tag;
  return (

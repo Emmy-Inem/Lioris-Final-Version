@@ -171,11 +171,12 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
  {/* Filter Chips Bar */}
  <ScrollView
- horizontal
- showsHorizontalScrollIndicator={false}
- contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.sm }}
- style={{ flex: 1, minWidth: 0 }}
- >
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingRight: 24, paddingBottom: 6 }}
+        style={{ width: '100%', flexGrow: 0 }}
+        {...({ dataSet: { horizontalScroll: 'true' } } as any)}
+      >
  {EVENT_FILTERS.map((f) => {
  const active = filter === f.key;
  return (
@@ -340,7 +341,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               <Animated.View
                 key={item.id}
                 entering={FadeInUp.delay(index * 30).duration(200)}
-                style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 560 }}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}
               >
                 <EventCard event={item} />
               </Animated.View>

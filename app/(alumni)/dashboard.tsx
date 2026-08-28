@@ -10,6 +10,7 @@ import { AppText } from '@/components/AppText';
 import { Badge } from '@/components/Badge';
 import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
+import { EmptyState } from '@/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
@@ -100,11 +101,11 @@ export default function AlumniDashboard() {
 
           <View style={{ padding: spacing.lg, backgroundColor: colors.surface }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 1, minWidth: 0 }}>
                 <Avatar name={fullName} size={52} role="alumni" />
-                <View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <AppText variant="h2" weight="bold">
+                <View style={{ flexShrink: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <AppText variant="h2" weight="bold" style={{ flexShrink: 1 }}>
                       Welcome, {fullName}
                     </AppText>
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
@@ -131,7 +132,7 @@ export default function AlumniDashboard() {
         {/* 3. 3-KPI Executive Metrics Grid */}
         {mockDataVisible && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}>
+          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -148,7 +149,7 @@ export default function AlumniDashboard() {
             </SolidCard>
           </View>
 
-          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}>
+          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -165,7 +166,7 @@ export default function AlumniDashboard() {
             </SolidCard>
           </View>
 
-          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}>
+          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -198,6 +199,17 @@ export default function AlumniDashboard() {
           </View>
 
           <View style={{ gap: spacing.sm }}>
+            {(posts ?? []).length === 0 ? (
+              <SolidCard radius={18} style={{ padding: 0 }}>
+                <EmptyState
+                  icon="chatbubbles-outline"
+                  title="No discussions yet"
+                  description="Be the first to start a conversation on the global forum."
+                  actionLabel="Open Forum"
+                  onAction={() => router.push('/(alumni)/forum')}
+                />
+              </SolidCard>
+            ) : null}
             {(posts ?? []).slice(0, 3).map((post: any) => (
               <Pressable
                 key={post.id}

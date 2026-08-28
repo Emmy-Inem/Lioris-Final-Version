@@ -145,7 +145,7 @@ export default function StudyGroupsScreen() {
             {/* Pods Grid */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
               {filteredGroups.map((item) => (
-                <View key={item.id} style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 560 }}>
+                <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
                   <StudyGroupCard
                     group={item}
                     onJoined={() => queryClient.invalidateQueries({ queryKey: ['study-groups'] })}

@@ -177,7 +177,7 @@ export default function JobsScreen() {
           {/* Multi-Column Responsive Grid with Non-Stretching Cards */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {filteredJobs.map((item) => (
-              <View key={item.id} style={{ width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 560 }}>
+              <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
                 <JobCard job={item} />
               </View>
             ))}

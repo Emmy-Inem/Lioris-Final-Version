@@ -208,7 +208,7 @@ export function NotificationsScreen() {
       </AppText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
         {suggestions?.map((person, index) => (
-          <View key={person.id} style={isDesktop ? { width: 'calc(50% - 6px)' as any, minWidth: 200 } : { width: '100%', marginBottom: spacing.xs }}>
+          <View key={person.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 200 } : { width: '100%', marginBottom: spacing.xs }}>
             <SuggestedConnectionCard person={person} index={index} />
           </View>
         ))}

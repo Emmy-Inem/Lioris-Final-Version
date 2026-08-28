@@ -77,15 +77,18 @@ const styles = StyleSheet.create({
   shadowWrapper: Platform.select({
     ios: {
       shadowColor: '#0A1326',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.08,
-      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
     },
     android: {
-      elevation: 3,
+      // Android's elevation shadow renders much darker/harder than iOS's
+      // shadowOpacity for the same nominal "level" - keep this low so cards
+      // don't look like they have a heavy drop-shadow on phones.
+      elevation: 1.5,
     },
     web: {
-      boxShadow: '0 8px 28px -4px rgba(0, 0, 0, 0.07), 0 2px 6px -1px rgba(0, 0, 0, 0.04)',
+      boxShadow: '0 6px 20px -6px rgba(0, 0, 0, 0.05), 0 1px 4px -1px rgba(0, 0, 0, 0.03)',
     } as any,
     default: {},
   }),

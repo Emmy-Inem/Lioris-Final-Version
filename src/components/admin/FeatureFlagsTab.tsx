@@ -52,7 +52,7 @@ export function FeatureFlagsTab() {
         {FEATURE_CATALOG.map((flag) => {
           const isEnabled = flags[flag.key] !== false;
           return (
-            <View key={flag.key} style={isDesktop ? { width: 'calc(50% - 7px)' as any } : undefined}>
+            <View key={flag.key} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 260 } : undefined}>
               <SolidCard
                 radius={16}
                 style={{

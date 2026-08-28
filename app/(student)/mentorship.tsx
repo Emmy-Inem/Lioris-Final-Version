@@ -288,7 +288,7 @@ export default function StudentMentorshipScreen() {
  </AppText>
  <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
  {mentors?.map((mentor) => (
- <View key={mentor.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 300 } : undefined}>
+ <View key={mentor.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 300 } : undefined}>
  <MentorCard
  mentor={mentor}
  onRequested={() => queryClient.invalidateQueries({ queryKey: ['mentorships'] })}

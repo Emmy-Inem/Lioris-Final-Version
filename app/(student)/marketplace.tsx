@@ -177,7 +177,7 @@ export default function MarketplaceScreen() {
           {/* Multi-Column Responsive Grid with Non-Stretching Items */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {(listings ?? []).map((item) => (
-              <View key={item.id} style={{ width: 'calc(33.333% - 11px)' as any, minWidth: 280, maxWidth: 380 }}>
+              <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 280, maxWidth: 380 }}>
                 <MarketplaceItemCard item={item} />
               </View>
             ))}

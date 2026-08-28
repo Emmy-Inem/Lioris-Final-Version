@@ -111,7 +111,7 @@ export default function StaffDashboard() {
 
         {/* 3. 3-KPI Executive Metrics Grid */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}>
+          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -128,7 +128,7 @@ export default function StaffDashboard() {
             </SolidCard>
           </View>
 
-          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}>
+          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -145,7 +145,7 @@ export default function StaffDashboard() {
             </SolidCard>
           </View>
 
-          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}>
+          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">

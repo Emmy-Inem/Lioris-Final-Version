@@ -247,8 +247,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 6, paddingBottom: spacing.xs }}
-        style={{ marginBottom: spacing.xs, flex: 1, minWidth: 0 }}
+        contentContainerStyle={{ gap: 8, paddingRight: 24, paddingBottom: 6 }}
+        style={{ width: '100%', flexGrow: 0, marginBottom: spacing.xs }}
+        {...({ dataSet: { horizontalScroll: 'true' } } as any)}
       >
         {CHANNELS.map((ch) => {
           const selected = selectedChannel === ch.category;

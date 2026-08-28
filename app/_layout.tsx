@@ -87,16 +87,25 @@ export default function RootLayout() {
             overscroll-behavior: none !important;
           }
 
-          /* Enable smooth scrolling across all scroll containers */
+          /* Vertical scroll containers: smooth touch scroll & vertical pan */
           div[style*="overflow-y: auto"],
           div[style*="overflow-y: scroll"],
-          div[style*="overflow: auto"],
-          div[style*="overflow: scroll"],
-          .r-overflowY-156q2ks,
-          .r-overflow-1udh08x {
+          .r-overflowY-156q2ks {
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-y: contain !important;
             touch-action: pan-y !important;
+          }
+
+          /* Horizontal scroll containers: smooth touch scroll & horizontal pan */
+          div[style*="overflow-x: auto"],
+          div[style*="overflow-x: scroll"],
+          .r-overflowX-156q2ks,
+          .r-overflowX-1udh08x,
+          [data-horizontal-scroll="true"] {
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-x: contain !important;
+            touch-action: pan-x !important;
+            display: flex !important;
           }
 
           /* Hide physical scrollbars everywhere on mobile viewports (< 1024px) */

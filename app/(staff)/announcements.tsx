@@ -95,7 +95,7 @@ export default function StaffAnnouncementsScreen() {
         ) : announcements && announcements.length > 0 ? (
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
             {announcements.map((a) => (
-              <View key={a.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 } : undefined}>
+              <View key={a.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : undefined}>
                 <AnnouncementCard announcement={a} />
               </View>
             ))}

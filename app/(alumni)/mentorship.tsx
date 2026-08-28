@@ -122,7 +122,7 @@ export default function AlumniMentorshipScreen() {
           {mentorships?.map((m) => {
             const studentName = m.studentName || 'Student Mentee';
             return (
-              <SolidCard key={m.id} radius={18} style={isDesktop ? { width: 'calc(50% - 8px)' as any, marginBottom: spacing.md } : { marginBottom: spacing.md }}>
+              <SolidCard key={m.id} radius={18} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 300, marginBottom: spacing.md } : { marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
                   <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
                     <Avatar name={studentName} size={42} />

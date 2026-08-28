@@ -117,7 +117,7 @@ export default function AlumniDirectoryScreen() {
         <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {(entries ?? []).map((item) => (
-              <View key={item.id} style={{ width: 'calc(33.333% - 11px)' as any, minWidth: 280, maxWidth: 420 }}>
+              <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 280, maxWidth: 420 }}>
                 <DirectoryCard entry={item} />
               </View>
             ))}
