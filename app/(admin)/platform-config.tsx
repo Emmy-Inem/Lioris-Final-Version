@@ -19,6 +19,7 @@ import { LocalHubControlTab } from'@/components/admin/LocalHubControlTab';
 import { UserProfilesTab } from'@/components/admin/UserProfilesTab';
 import { ResourcesModerationTab } from'@/components/admin/ResourcesModerationTab';
 import { ApprovalsModerationTab } from'@/components/admin/ApprovalsModerationTab';
+import { FeatureFlagsTab } from '@/components/admin/FeatureFlagsTab';
 import { ManagePortalLinksModal } from'@/components/admin/ManagePortalLinksModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -372,16 +373,11 @@ export default function PlatformConfigScreen() {
  })}
  </ScrollView>
 
- {/* Active Tab Content (Rendered directly in unified scroll flow) */}
- <View style={{ minHeight: 200 }}>
- {tab === 'Analytics' ? <AnalyticsTab /> : null}
- {tab === 'Flags' ? (
- <ModerationQueue
- institutionCode={institution === 'All Campuses' ? undefined : LAUNCH_INSTITUTIONS.find((i) => i.name === institution)?.code}
- emptyTitle={institution === 'All Campuses' ? 'Queue is clear' : `${institution} queue is clear`}
- />
- ) : null}
- {tab === 'User Profiles' ? <UserProfilesTab /> : null}
+        {/* Active Tab Content (Rendered directly in unified scroll flow) */}
+        <View style={{ minHeight: 200 }}>
+          {tab === 'Analytics' ? <AnalyticsTab /> : null}
+          {tab === 'Flags' ? <FeatureFlagsTab /> : null}
+          {tab === 'User Profiles' ? <UserProfilesTab /> : null}
  {tab === 'Utility Hub' ? <LocalHubControlTab /> : null}
  {tab === 'Forums' ? <ForumsModerationTab /> : null}
  {tab === 'Events' ? <EventsModerationTab /> : null}
