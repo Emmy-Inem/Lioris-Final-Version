@@ -48,7 +48,7 @@ export default function RootLayout() {
         const style = document.createElement('style');
         style.id = styleId;
         style.textContent = `
-          /* Universal Desktop Smooth Mouse Wheel Scrolling & Scrollbars */
+          /* Universal Clean Layout & Mobile Touch Optimization */
           html, body, #root {
             height: 100% !important;
             width: 100% !important;
@@ -56,7 +56,7 @@ export default function RootLayout() {
             overscroll-behavior: none !important;
           }
 
-          /* Enable smooth mouse wheel scrolling across all React Native Web scroll containers */
+          /* Enable smooth scrolling across all scroll containers */
           div[style*="overflow-y: auto"],
           div[style*="overflow-y: scroll"],
           div[style*="overflow: auto"],
@@ -68,25 +68,40 @@ export default function RootLayout() {
             touch-action: pan-y !important;
           }
 
-          /* Desktop visible sleek scrollbars */
-          ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+          /* Hide physical scrollbars everywhere on mobile viewports (< 1024px) */
+          @media (max-width: 1024px) {
+            ::-webkit-scrollbar {
+              display: none !important;
+              width: 0px !important;
+              height: 0px !important;
+            }
+            * {
+              -ms-overflow-style: none !important;
+              scrollbar-width: none !important;
+            }
           }
-          ::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          ::-webkit-scrollbar-thumb {
-            background-color: rgba(148, 163, 184, 0.4);
-            border-radius: 4px;
-          }
-          ::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(148, 163, 184, 0.7);
-          }
-          * {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
-            box-sizing: border-box;
+
+          /* On wide desktop, show a subtle translucent scrollbar */
+          @media (min-width: 1025px) {
+            ::-webkit-scrollbar {
+              width: 6px;
+              height: 6px;
+            }
+            ::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+              background-color: rgba(148, 163, 184, 0.3);
+              border-radius: 3px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+              background-color: rgba(148, 163, 184, 0.6);
+            }
+            * {
+              scrollbar-width: thin;
+              scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+              box-sizing: border-box;
+            }
           }
         `;
         document.head.appendChild(style);

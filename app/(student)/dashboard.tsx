@@ -165,7 +165,7 @@ export default function StudentDashboard() {
           </View>
 
           <View style={{ padding: spacing.lg, backgroundColor: colors.surface }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: isDesktop ? spacing.md : 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <Avatar name={profile?.fullName ?? user?.fullName ?? 'Diana Prince'} size={52} />
                 <View>
@@ -194,7 +194,7 @@ export default function StudentDashboard() {
 
         {/* 3. Balanced 4-KPI Academic Overview Grid */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-          <View style={{ flex: 1, minWidth: isDesktop ? 220 : '47%' }}>
+          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 220 : undefined }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -211,7 +211,7 @@ export default function StudentDashboard() {
             </SolidCard>
           </View>
 
-          <View style={{ flex: 1, minWidth: isDesktop ? 220 : '47%' }}>
+          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 220 : undefined }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -228,7 +228,7 @@ export default function StudentDashboard() {
             </SolidCard>
           </View>
 
-          <View style={{ flex: 1, minWidth: isDesktop ? 220 : '47%' }}>
+          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 220 : undefined }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -245,7 +245,7 @@ export default function StudentDashboard() {
             </SolidCard>
           </View>
 
-          <View style={{ flex: 1, minWidth: isDesktop ? 220 : '47%' }}>
+          <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 220 : undefined }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <AppText variant="caption" tone="secondary" weight="bold">
@@ -274,7 +274,7 @@ export default function StudentDashboard() {
               {isFeatureEnabled('academic_resources') && (
                 <Pressable
                   onPress={() => router.push('/(student)/resources')}
-                  style={{ flex: 1, minWidth: isDesktop ? 240 : '47%' }}
+                  style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}
                 >
                   <SolidCard radius={18} style={{ padding: spacing.md, height: '100%' }}>
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
@@ -291,7 +291,7 @@ export default function StudentDashboard() {
               {isFeatureEnabled('career_page') && (
                 <Pressable
                   onPress={() => router.push('/(student)/jobs')}
-                  style={{ flex: 1, minWidth: isDesktop ? 240 : '47%' }}
+                  style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}
                 >
                   <SolidCard radius={18} style={{ padding: spacing.md, height: '100%' }}>
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, borderWidth: 1, borderColor: '#10B981' }}>
@@ -308,7 +308,7 @@ export default function StudentDashboard() {
               {isFeatureEnabled('marketplace') && (
                 <Pressable
                   onPress={() => router.push('/(student)/marketplace')}
-                  style={{ flex: 1, minWidth: isDesktop ? 240 : '47%' }}
+                  style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}
                 >
                   <SolidCard radius={18} style={{ padding: spacing.md, height: '100%' }}>
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, borderWidth: 1, borderColor: '#EC4899' }}>
@@ -325,7 +325,7 @@ export default function StudentDashboard() {
               {isFeatureEnabled('campus_events') && (
                 <Pressable
                   onPress={() => router.push('/(student)/events-list')}
-                  style={{ flex: 1, minWidth: isDesktop ? 240 : '47%' }}
+                  style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}
                 >
                   <SolidCard radius={18} style={{ padding: spacing.md, height: '100%' }}>
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, borderWidth: 1, borderColor: '#3B82F6' }}>

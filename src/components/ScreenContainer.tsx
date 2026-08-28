@@ -32,7 +32,7 @@ export function ScreenContainer({
  <View
  style={[
  styles.flex,
- !noPadding && { paddingHorizontal: isDesktop ? containerPadding : spacing.lg },
+ !noPadding && { paddingHorizontal: isDesktop ? containerPadding : 0 },
  isDesktop && !fluidWidth && {
  maxWidth: contentMaxWidth,
  width: '100%',
@@ -49,7 +49,7 @@ export function ScreenContainer({
 
  const inner = scrollable ? (
  <ScrollView
- showsVerticalScrollIndicator={true}
+ showsVerticalScrollIndicator={false}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
  contentContainerStyle={[

@@ -43,7 +43,7 @@ export function SolidCard({
  {
  borderRadius: cornerRadius,
  backgroundColor: defaultBg,
- borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.75)',
+ borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : (colors.border || 'rgba(0, 0, 0, 0.08)'),
  borderWidth: 1,
  overflow: 'hidden',
  },
