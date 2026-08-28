@@ -2,13 +2,21 @@ import { api } from'./client';
 import { AlumniDirectoryEntry, Connection, IncomingConnectionRequest } from'./types';
 import { mockDirectory, mockIncomingConnectionRequests } from'./mockData';
 import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
+import { isMockDataVisible } from'./mockDataSettings';
 import { createNotification } from'./notifications';
 import { supabase } from './supabase';
 
 // Mutable in-memory copy so accept/decline visibly removes a request
 // from the inbox within a session, without needing a real backend.
-let incomingRequestsState = [...mockIncomingConnectionRequests];
+// Seeded fresh from the mock fixture each time it's read (rather than once
+// at module load) so the mock-data toggle actually controls whether these
+// demo requests appear at all.
+const resolvedSeedRequestIds = new Set<string>();
+
+function getIncomingRequestsState(): IncomingConnectionRequest[] {
+ if (!isMockDataVisible()) return [];
+ return mockIncomingConnectionRequests.filter((r) => !resolvedSeedRequestIds.has(r.id));
+}
 
 export interface DirectorySearchQuery {
  q?: string;
@@ -22,7 +30,7 @@ export interface DirectorySearchQuery {
 // partial match on name/company/industry, exact-match ranked first) - 
 // used only while there's no real backend to search against.
 function filterMockDirectory(query: DirectorySearchQuery): AlumniDirectoryEntry[] {
- let results = [...mockDirectory];
+ let results = isMockDataVisible() ? [...mockDirectory] : [];
 
  if (query.graduationYear) {
  results = results.filter((e) => e.graduationYear === query.graduationYear);
@@ -124,8 +132,8 @@ export async function respondToConnectionRequest(
  connectionId: string,
  action: 'accept' | 'decline',
 ): Promise<Connection> {
- const target = incomingRequestsState.find((r) => r.id === connectionId);
- incomingRequestsState = incomingRequestsState.filter((r) => r.id !== connectionId);
+ const target = getIncomingRequestsState().find((r) => r.id === connectionId);
+ resolvedSeedRequestIds.add(connectionId);
 
  let realRequesterId = target?.requesterId;
  let responderName = 'A colleague';
@@ -206,7 +214,7 @@ export async function listIncomingConnectionRequests(): Promise<IncomingConnecti
  // fallback
  }
 
- return incomingRequestsState;
+ return getIncomingRequestsState();
 }
 
 export interface SuggestedConnection {

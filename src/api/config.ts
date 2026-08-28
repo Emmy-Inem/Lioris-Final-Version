@@ -11,3 +11,13 @@ const { appEnv } = (Constants.expoConfig?.extra ?? {}) as { appEnv?: string };
  * you want failures to surface instead of silently falling back.
  */
 export const FALL_BACK_TO_MOCKS = appEnv !== 'production';
+
+/**
+ * True for any non-production build. Used to hard-gate dev/demo-only
+ * affordances - most importantly the Settings "Role Switcher" and the
+ * desktop top-bar "View: <ROLE>" dropdown, which let anyone impersonate
+ * Root Admin/Staff/Alumni without real authentication. Both the UI that
+ * renders those controls and AuthContext.switchRole itself check this,
+ * so the feature is gone (not just hidden) once appEnv is 'production'.
+ */
+export const IS_DEV_BUILD = appEnv !== 'production';

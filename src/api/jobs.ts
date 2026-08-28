@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { isUserBlocked } from './connections';
+import { isMockDataVisible } from './mockDataSettings';
 
 export interface JobsQuery {
  q?: string;
@@ -11,11 +12,22 @@ export interface JobsQuery {
  campusCode?: string;
 }
 
-let jobsState: JobListing[] = [...mockJobListings];
+// Jobs this session has *successfully* written to Supabase, kept here only
+// so they render instantly before the next refetch. Never mixed with
+// mockData.ts fixtures - those only come from getLocalPool() below, and
+// only while the admin's "Mock Data Visibility" toggle is on.
+let locallyCreatedJobs: JobListing[] = [];
 
-function filterMockJobs(query: JobsQuery): JobListing[] {
- let results = [...jobsState].filter((j) => !isUserBlocked((j as any).posterId));
+function getLocalPool(): JobListing[] {
+ return [...locallyCreatedJobs, ...(isMockDataVisible() ? mockJobListings : [])];
+}
+
+function filterJobs(pool: JobListing[], query: JobsQuery): JobListing[] {
+ let results = pool.filter((j) => !isUserBlocked((j as any).posterId));
  if (query.type) results = results.filter((j) => j.type === query.type);
+ if (query.campusCode && query.campusCode !== 'GLOBAL') {
+ results = results.filter((j) => !j.campusCode || j.campusCode === 'GLOBAL' || j.campusCode === query.campusCode);
+ }
  if (query.q) {
  const q = query.q.toLowerCase();
  results = results.filter(
@@ -31,6 +43,18 @@ function filterMockJobs(query: JobsQuery): JobListing[] {
 
 export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  try {
+ const { data: authData } = await supabase.auth.getUser();
+ let userCampus = query.campusCode;
+ let userRole = 'student';
+
+ if (authData?.user?.id) {
+ const { data: prof } = await supabase.from('profiles').select('campus_code, role').eq('id', authData.user.id).maybeSingle();
+ if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
+ if (prof?.role) userRole = prof.role;
+ }
+
+ const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
+
  let req = supabase
  .from('jobs')
  .select('*, poster:profiles!jobs_poster_id_fkey(full_name, role, avatar_url, campus_code)')
@@ -42,10 +66,14 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  }
 
  const { data, error } = await req;
+ if (error) throw error;
 
- if (!error && data && data.length > 0) {
- const dbJobs: JobListing[] = data
+ const dbJobs: JobListing[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.poster_id))
+ .filter((row: any) => {
+ if (isStaffOrAdmin && !query.campusCode) return true;
+ return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
+ })
  .map((row: any) => ({
  id: row.id,
  title: row.title,
@@ -58,23 +86,24 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  createdAt: row.created_at,
  description: row.description || '',
  salary: row.salary || undefined,
+ campusCode: row.campus_code || 'GLOBAL',
  }));
 
- // Merge unique
+ // Merge unique - local pool only ever contributes this session's own
+ // just-created jobs (always) plus seed fixtures (only when the admin
+ // mock-data toggle is on).
  const merged = [...dbJobs];
- for (const item of jobsState) {
+ const scopedQuery = { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus };
+ for (const item of getLocalPool()) {
  if (!merged.some((j) => j.id === item.id) && !isUserBlocked((item as any).posterId)) {
  merged.push(item);
  }
  }
- jobsState = merged;
- return filterMockJobs(query);
- }
+ return filterJobs(merged, scopedQuery);
  } catch (err) {
- console.warn('[Jobs] Supabase listJobs error:', err);
+ console.warn('[Jobs] Supabase listJobs error, showing local pool only:', err);
+ return filterJobs(getLocalPool(), query);
  }
-
- return filterMockJobs(query);
 }
 
 export interface CreateJobPayload {
@@ -89,32 +118,27 @@ export interface CreateJobPayload {
  campusCode?: string;
 }
 
+/**
+ * Throws if the Supabase insert fails or there's no authenticated poster,
+ * instead of quietly returning a fabricated "success" job. Callers must
+ * catch this and show a real error - see CreateJobModal.
+ */
 export async function createJob(payload: CreateJobPayload): Promise<JobListing> {
  const jobId = generateUUID();
+ const { data: authData } = await supabase.auth.getUser();
+ let realPosterId = authData?.user?.id;
  const sessionUser = await getSessionUser();
- const posterId = sessionUser?.id || 'me';
- const posterName = sessionUser?.fullName || 'Alumni Member';
+ const posterName = sessionUser?.fullName || authData?.user?.user_metadata?.full_name || 'Alumni Member';
  const campusCode = payload.campusCode || (sessionUser as any)?.campusCode || 'GLOBAL';
 
- const created: JobListing = {
- id: jobId,
- title: payload.title,
- company: payload.company,
- location: payload.location,
- type: payload.type,
- remote: payload.remote ?? false,
- applyUrl: payload.applyUrl,
- postedByName: posterName,
- createdAt: new Date().toISOString(),
- };
+ if (!realPosterId && sessionUser?.id) {
+ realPosterId = sessionUser.id;
+ }
 
- jobsState = [created, ...jobsState];
+ if (!realPosterId) {
+ throw new Error('You need to be signed in to post an opportunity.');
+ }
 
- try {
- const { data: authData } = await supabase.auth.getUser();
- const realPosterId = authData?.user?.id;
-
- if (realPosterId) {
  const { error } = await supabase.from('jobs').insert({
  id: jobId,
  poster_id: realPosterId,
@@ -129,14 +153,24 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
  description: payload.description || null,
  posted_by_name: posterName,
  });
+
  if (error) {
- throw error;
- }
- }
- } catch (err) {
- console.warn('[Jobs] Supabase insert error:', err);
- throw err;
+ console.warn('[Jobs] Supabase insert error:', error.message);
+ throw new Error('Could not publish this opportunity. Please try again.');
  }
 
+ const created: JobListing = {
+ id: jobId,
+ title: payload.title,
+ company: payload.company,
+ location: payload.location,
+ type: payload.type,
+ remote: payload.remote ?? false,
+ applyUrl: payload.applyUrl,
+ postedByName: posterName,
+ createdAt: new Date().toISOString(),
+ };
+
+ locallyCreatedJobs = [created, ...locallyCreatedJobs];
  return created;
 }

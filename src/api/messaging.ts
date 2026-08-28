@@ -1,10 +1,24 @@
 import { supabase } from './supabase';
 import { Conversation, Message } from './types';
 import { mockConversations, mockMessages } from './mockData';
+import { generateUUID } from '../utils/uuid';
+import { getSessionUser } from '../auth/tokenStorage';
+import { isMockDataVisible } from './mockDataSettings';
 
-// In-memory state synchronized across the active session
-let conversationsState: Conversation[] = [...mockConversations];
-const messagesState: Record<string, Message[]> = { ...mockMessages };
+// Real conversations/messages only (db-fetched or locally created) - never
+// seeded with mockData.ts fixtures. Fixtures only ever come from
+// getMockConversations()/getMockMessagesFor() below, and only while the
+// admin's "Mock Data Visibility" toggle is on.
+let localConversations: Conversation[] = [];
+const localMessages: Record<string, Message[]> = {};
+
+function getMockConversations(): Conversation[] {
+ return isMockDataVisible() ? mockConversations : [];
+}
+
+function getMockMessagesFor(conversationId: string): Message[] {
+ return isMockDataVisible() ? mockMessages[conversationId] ?? [] : [];
+}
 
 export async function listConversations(): Promise<Conversation[]> {
  try {
@@ -13,8 +27,9 @@ export async function listConversations(): Promise<Conversation[]> {
  .select('*')
  .order('updated_at', { ascending: false });
 
- if (!error && data && data.length > 0) {
- const dbConvs: Conversation[] = data.map((row: any) => ({
+ if (error) throw error;
+
+ const dbConvs: Conversation[] = (data ?? []).map((row: any) => ({
  id: row.id,
  participantId: row.created_by || 'peer-user',
  participantName: row.name || 'Campus Student',
@@ -24,20 +39,20 @@ export async function listConversations(): Promise<Conversation[]> {
  lastMessagePreview: row.description || 'Active chat channel',
  unreadCount: 0,
  }));
- // Merge unique
+ // Merge unique real conversations only; cache them for the
+ // existing-conversation lookup in getOrCreateConversationWithUser.
  const merged = [...dbConvs];
- for (const c of conversationsState) {
+ for (const c of localConversations) {
  if (!merged.some((m) => m.id === c.id)) {
  merged.push(c);
  }
  }
- conversationsState = merged;
- return merged;
+ localConversations = merged;
+ return [...merged, ...getMockConversations()];
+ } catch (err) {
+ console.warn('[Messaging] listConversations failed, showing local pool only:', err);
+ return [...localConversations, ...getMockConversations()];
  }
- } catch {
- // Fallback to local session
- }
- return conversationsState;
 }
 
 export async function archiveConversation(id: string): Promise<void> {
@@ -46,18 +61,16 @@ export async function archiveConversation(id: string): Promise<void> {
  } catch {
  // Session fallback
  }
- conversationsState = conversationsState.filter((c) => c.id !== id);
- delete messagesState[id];
+ localConversations = localConversations.filter((c) => c.id !== id);
+ delete localMessages[id];
 }
-
-import { generateUUID } from '../utils/uuid';
 
 export async function getOrCreateConversationWithUser(
  userId: string,
  userName: string,
  avatarUrl?: string | null,
 ): Promise<Conversation> {
- const existing = conversationsState.find((c) => c.participantId === userId || c.id === userId);
+ const existing = localConversations.find((c) => c.participantId === userId || c.id === userId);
  if (existing) return existing;
 
  const convId = generateUUID();
@@ -101,20 +114,7 @@ export async function getOrCreateConversationWithUser(
  console.warn('[Messaging] Local fallback for channel creation:', err);
  }
 
- conversationsState = [created, ...conversationsState];
- if (!messagesState[convId]) {
- messagesState[convId] = [
- {
- id: generateUUID(),
- conversationId: convId,
- senderId: userId,
- content: `Hi there! I am ${userName}. Feel free to ask anything about courses, events, or listings.`,
- messageType: 'text',
- status: 'read',
- sentAt: new Date().toISOString(),
- },
- ];
- }
+ localConversations = [created, ...localConversations];
  return created;
 }
 
@@ -129,7 +129,9 @@ export async function listMessages(
  .eq('channel_id', conversationId)
  .order('created_at', { ascending: true });
 
- if (!error && data && data.length > 0) {
+ if (error) throw error;
+
+ if (data && data.length > 0) {
  const dbMsgs: Message[] = data.map((row: any) => ({
  id: row.id,
  conversationId: row.channel_id,
@@ -140,40 +142,30 @@ export async function listMessages(
  sentAt: row.created_at,
  }));
 
- // Merge with local state
- const local = messagesState[conversationId] ?? [];
+ // Merge with local (real, non-mock) state
+ const local = localMessages[conversationId] ?? [];
  const combined = [...dbMsgs];
  for (const m of local) {
  if (!combined.some((c) => c.id === m.id)) {
  combined.push(m);
  }
  }
- messagesState[conversationId] = combined;
- return { items: combined };
+ localMessages[conversationId] = combined;
+ return { items: [...combined, ...getMockMessagesFor(conversationId)] };
  }
- } catch {
- // Fallback to local session
- }
-
- if (!messagesState[conversationId]) {
- messagesState[conversationId] = [
- {
- id: `init-${Date.now()}`,
- conversationId,
- senderId: 'peer',
- content: 'Hey! Glad we connected on Lioris.',
- messageType: 'text',
- status: 'read',
- sentAt: new Date(Date.now() - 3600000).toISOString(),
- },
- ];
+ } catch (err) {
+ console.warn('[Messaging] listMessages failed, showing local pool only:', err);
  }
 
- return { items: messagesState[conversationId] };
+ return { items: [...(localMessages[conversationId] ?? []), ...getMockMessagesFor(conversationId)] };
 }
 
-import { getSessionUser } from '../auth/tokenStorage';
-
+/**
+ * Throws if the message can't actually be persisted for a signed-in user,
+ * instead of quietly reporting "sent" for a message the recipient will
+ * never see. ChatThread already has retry/failed-state handling that
+ * depends on this rejecting.
+ */
 export async function sendMessage(
  conversationId: string,
  content: string,
@@ -182,74 +174,59 @@ export async function sendMessage(
  const now = new Date().toISOString();
 
  // Resolve authentic sender identity
- let currentSenderId = 'me';
- try {
  const { data: authData } = await supabase.auth.getUser();
- if (authData?.user?.id) {
- currentSenderId = authData.user.id;
- } else {
+ let currentSenderId = authData?.user?.id;
+ if (!currentSenderId) {
  const stored = await getSessionUser();
  if (stored?.id) currentSenderId = stored.id;
- }
- } catch {
- // fallback
  }
 
  const newMessage: Message = {
  id: msgId,
  conversationId,
- senderId: currentSenderId,
+ senderId: currentSenderId || 'me',
  content,
  messageType: 'text',
  status: 'sent',
  sentAt: now,
  };
 
- // 1. Immediately store in local memory state for responsive UI
- if (!messagesState[conversationId]) {
- messagesState[conversationId] = [];
- }
- messagesState[conversationId].push(newMessage);
-
- // 2. Update conversation preview
- conversationsState = conversationsState.map((c) =>
- c.id === conversationId
- ? { ...c, lastMessagePreview: content, lastMessageAt: now }
- : c,
- );
-
- // 3. Persist into Supabase chat_messages table with valid sender_id & ensured membership
- try {
- const { data: authData } = await supabase.auth.getUser();
- const authUid = authData?.user?.id;
-
- if (authUid) {
+ if (currentSenderId) {
  // Ensure sender is registered in chat_channel_members so RLS permits insert
  await supabase
  .from('chat_channel_members')
  .upsert(
- { channel_id: conversationId, user_id: authUid },
+ { channel_id: conversationId, user_id: currentSenderId },
  { onConflict: 'channel_id,user_id', ignoreDuplicates: true },
  );
 
  const { error } = await supabase.from('chat_messages').insert({
  id: msgId,
  channel_id: conversationId,
- sender_id: authUid,
+ sender_id: currentSenderId,
  content,
  });
+
  if (error) {
  console.warn('[Messaging] Supabase persistence error:', error.message);
+ throw new Error('Message could not be sent. Check your connection and try again.');
  }
  } else {
- // Local session message
  console.log('[Messaging] Message stored in local active session (unauthenticated guest mode)');
  }
- } catch (err) {
- console.warn('[Messaging] Failed to reach Supabase backend:', err);
+
+ // Only reaches here once the message is actually persisted (or we're in
+ // the explicit unauthenticated-guest fallback) - never on a failed send.
+ if (!localMessages[conversationId]) {
+ localMessages[conversationId] = [];
  }
+ localMessages[conversationId].push(newMessage);
+
+ localConversations = localConversations.map((c) =>
+ c.id === conversationId
+ ? { ...c, lastMessagePreview: content, lastMessageAt: now }
+ : c,
+ );
 
  return newMessage;
 }
-
-

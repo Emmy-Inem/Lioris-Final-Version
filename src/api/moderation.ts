@@ -5,8 +5,17 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { recordAuditLogEntry } from './auditLog';
 import { createNotification } from './notifications';
 import { generateUUID } from '../utils/uuid';
+import { isMockDataVisible } from './mockDataSettings';
 
-let reportsState = [...mockReports];
+// Reports this session has *successfully* written to Supabase, kept here
+// only so they render instantly before the next refetch. Never mixed with
+// mockData.ts fixtures - those only come from getMockPool() below, and
+// only while the admin's "Mock Data Visibility" toggle is on.
+let locallyCreatedReports: Report[] = [];
+
+function getMockPool(): Report[] {
+ return isMockDataVisible() ? mockReports : [];
+}
 
 export interface ReportsQuery {
  status?: Report['status'];
@@ -38,9 +47,9 @@ export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
  }
 
  const { data, error } = await queryBuilder;
+ if (error) throw error;
 
- if (!error && data && data.length > 0) {
- const dbReports: Report[] = data.map((row: any) => ({
+ const dbReports: Report[] = (data ?? []).map((row: any) => ({
  id: row.id,
  reporterId: row.reporter_id || 'unknown',
  targetType: (row.item_type === 'comment' ? 'message' : row.item_type) as Report['targetType'],
@@ -52,25 +61,24 @@ export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
  institutionCode: row.campus_code,
  }));
 
- // Merge with memory reports
+ // Merge unique - local pool only ever contributes this session's own
+ // just-submitted reports (always) plus seed fixtures (only when the
+ // admin mock-data toggle is on).
  const merged = [...dbReports];
- for (const m of reportsState) {
+ for (const m of [...locallyCreatedReports, ...getMockPool()]) {
  if (!merged.some((r) => r.id === m.id)) {
  merged.push(m);
  }
  }
- reportsState = merged;
  return merged;
- }
  } catch (err) {
- console.warn('[Moderation] Failed to list from supabase:', err);
- }
-
- let results = [...reportsState];
+ console.warn('[Moderation] Failed to list from supabase, showing local pool only:', err);
+ let results = [...locallyCreatedReports, ...getMockPool()];
  if (query.status) results = results.filter((r) => r.status === query.status);
  if (query.targetType) results = results.filter((r) => r.targetType === query.targetType);
  if (query.institutionCode) results = results.filter((r) => r.institutionCode === query.institutionCode);
  return results;
+ }
 }
 
 // PATCH /reports/{id}
@@ -104,18 +112,20 @@ export async function resolveReport(
  const { data: authData } = await supabase.auth.getUser();
  const adminId = authData?.user?.id || (await getSessionUser())?.id;
 
- await supabase.from('moderation_queue').update({
+ const { error } = await supabase.from('moderation_queue').update({
  status: dbStatus,
  assigned_admin_id: adminId || null,
  action_taken: notes || action,
  resolved_at: new Date().toISOString(),
  }).eq('id', id);
+ if (error) throw error;
  } catch (err) {
  console.warn('[Moderation] Failed to update supabase report:', err);
+ throw new Error('Could not save this moderation decision. Please try again.');
  }
 
  let updated: Report | undefined;
- reportsState = reportsState.map((r) => {
+ locallyCreatedReports = locallyCreatedReports.map((r) => {
  if (r.id !== id) return r;
  updated = { ...r, status: action };
  return updated;
@@ -135,7 +145,11 @@ export async function resolveReport(
  return result;
 }
 
-// Submits a new report
+/**
+ * Throws if there's no identifiable reporter or the Supabase insert fails,
+ * instead of quietly returning a fabricated "submitted" report - a report
+ * moderators never actually see is worse than an obvious error.
+ */
 export async function submitReport(payload: {
  targetType: Report['targetType'];
  targetId: string;
@@ -143,23 +157,22 @@ export async function submitReport(payload: {
  institutionCode?: string;
 }): Promise<Report> {
  const reportId = generateUUID();
- const created: Report = {
- id: reportId,
- reporterId: 'me',
- status: 'open',
- createdAt: new Date().toISOString(),
- ...payload,
- };
 
- reportsState = [created, ...reportsState];
-
- try {
  const { data: authData } = await supabase.auth.getUser();
- const reporterId = authData?.user?.id || (await getSessionUser())?.id;
+ let reporterId = authData?.user?.id;
+ if (!reporterId) {
+ const stored = await getSessionUser();
+ if (stored?.id) reporterId = stored.id;
+ }
+
+ if (!reporterId) {
+ throw new Error('You need to be signed in to submit a report.');
+ }
+
  const itemType = payload.targetType === 'message' ? 'comment' : payload.targetType;
 
  let targetCampus = payload.institutionCode;
- if (!targetCampus && reporterId) {
+ if (!targetCampus) {
  const { data: profile } = await supabase
  .from('profiles')
  .select('campus_code')
@@ -169,18 +182,29 @@ export async function submitReport(payload: {
  }
  if (!targetCampus) targetCampus = 'GLOBAL';
 
- await supabase.from('moderation_queue').insert({
+ const { error } = await supabase.from('moderation_queue').insert({
  id: reportId,
  item_type: itemType,
  item_id: payload.targetId,
- reporter_id: reporterId || null,
+ reporter_id: reporterId,
  campus_code: targetCampus,
  reason: payload.reason,
  status: 'pending',
  });
- } catch (err) {
- console.warn('[Moderation] Failed to insert supabase report:', err);
+
+ if (error) {
+ console.warn('[Moderation] Failed to insert supabase report:', error.message);
+ throw new Error('Could not submit your report. Please try again.');
  }
 
+ const created: Report = {
+ id: reportId,
+ reporterId,
+ status: 'open',
+ createdAt: new Date().toISOString(),
+ ...payload,
+ };
+
+ locallyCreatedReports = [created, ...locallyCreatedReports];
  return created;
 }

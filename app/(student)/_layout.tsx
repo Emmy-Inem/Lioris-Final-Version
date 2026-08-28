@@ -84,7 +84,6 @@ export default function StudentLayout() {
  <Tabs.Screen name="settings"options={{ href: null }} />
  <Tabs.Screen name="messages"options={{ href: null }} />
  <Tabs.Screen name="post/[id]" options={{ href: null }} />
- <Tabs.Screen name="post" options={{ href: null }} />
  </Tabs>
  );
 

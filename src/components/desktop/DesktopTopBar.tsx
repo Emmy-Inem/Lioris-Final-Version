@@ -43,6 +43,7 @@ export function DesktopTopBar() {
  const unreadNotifications = (notifications ?? []).filter((n: any) => !n.isRead && !n.read);
  const unreadCount = unreadNotifications.length;
  const role = user?.role || 'student';
+ const isSuperAdmin = user?.actualRole === 'admin';
 
  // Listen for global Cmd+K / Ctrl+K keyboard shortcut on web
  useEffect(() => {
@@ -132,7 +133,8 @@ export function DesktopTopBar() {
  {/* Right Controls */}
  <View style={styles.rightSection}>
 
- {/* Role Switcher Dropdown */}
+ {/* Role Switcher Dropdown - Root Admins only, see isSuperAdmin above */}
+ {isSuperAdmin && (
  <View style={{ position: 'relative' }}>
  <Pressable
  onPress={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
@@ -193,7 +195,9 @@ export function DesktopTopBar() {
           )}
         </View>
 
-        {/* Notifications Icon Button with Live Popover Dropdown */}
+        )}
+
+ {/* Notifications Icon Button with Live Popover Dropdown */}
         <View style={{ position: 'relative' }}>
           <Pressable
             onPress={() => setNotifDropdownOpen(!notifDropdownOpen)}

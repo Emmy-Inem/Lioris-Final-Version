@@ -87,7 +87,6 @@ export default function AdminLayout() {
  <Tabs.Screen name="events" options={{ href: null }} />
  <Tabs.Screen name="events/[id]" options={{ href: null }} />
  <Tabs.Screen name="post/[id]" options={{ href: null }} />
- <Tabs.Screen name="post" options={{ href: null }} />
  </Tabs>
  );
 

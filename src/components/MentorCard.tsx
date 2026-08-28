@@ -45,6 +45,8 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
  setModalOpen(false);
  onRequested?.();
     toast.success('Mentorship session requested with ' + mentor.fullName + '!');
+ } catch (err: any) {
+ toast.error(err?.message || 'Could not send this mentorship request. Please try again.');
  } finally {
  setSubmitting(false);
  }

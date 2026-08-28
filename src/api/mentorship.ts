@@ -4,8 +4,17 @@ import { createNotification } from './notifications';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
+import { isMockDataVisible } from './mockDataSettings';
 
-let mentorshipsState = [...mockMentorships];
+// Mentorships this session has *successfully* written to Supabase, kept
+// here only so they render instantly before the next refetch. Never mixed
+// with mockData.ts fixtures - those only come from getMockPool() below,
+// and only while the admin's "Mock Data Visibility" toggle is on.
+let locallyCreatedMentorships: Mentorship[] = [];
+
+function getMockMentorshipsPool(): Mentorship[] {
+ return isMockDataVisible() ? mockMentorships : [];
+}
 
 export async function listMentorships(): Promise<Mentorship[]> {
  try {
@@ -16,15 +25,17 @@ export async function listMentorships(): Promise<Mentorship[]> {
  if (stored?.id) currentUserId = stored.id;
  }
 
- if (currentUserId) {
+ if (!currentUserId) throw new Error('Not signed in');
+
  const { data, error } = await supabase
  .from('mentorships')
  .select('*, mentor:profiles!mentorships_mentor_id_fkey(full_name, role, department, avatar_url), student:profiles!mentorships_student_id_fkey(full_name, role, department, avatar_url)')
  .or(`student_id.eq.${currentUserId},mentor_id.eq.${currentUserId}`)
  .order('created_at', { ascending: false });
 
- if (!error && data && data.length > 0) {
- const dbMentorships: Mentorship[] = data.map((row: any) => ({
+ if (error) throw error;
+
+ const dbMentorships: Mentorship[] = (data ?? []).map((row: any) => ({
  id: row.id,
  studentId: row.student_id,
  studentName: row.student?.full_name || 'Student Mentee',
@@ -36,19 +47,16 @@ export async function listMentorships(): Promise<Mentorship[]> {
  }));
 
  const merged = [...dbMentorships];
- for (const item of mentorshipsState) {
+ for (const item of [...locallyCreatedMentorships, ...getMockMentorshipsPool()]) {
  if (!merged.some((m) => m.id === item.id)) {
  merged.push(item);
  }
  }
  return merged;
+ } catch (err) {
+ console.warn('[Mentorship] listMentorships failed, showing local pool only:', err);
+ return [...locallyCreatedMentorships, ...getMockMentorshipsPool()];
  }
- }
- } catch {
- // fallback
- }
-
- return mentorshipsState;
 }
 
 export interface MentorSearchQuery {
@@ -57,7 +65,7 @@ export interface MentorSearchQuery {
 }
 
 function filterMockMentors(query: MentorSearchQuery): MentorProfile[] {
- let results = [...mockMentorProfiles];
+ let results = isMockDataVisible() ? [...mockMentorProfiles] : [];
 
  if (query.focusArea && query.focusArea !== 'All Fields') {
  results = results.filter((m) =>
@@ -86,8 +94,9 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
  .select('id, full_name, bio, role, department, avatar_url, campus_code')
  .in('role', ['staff', 'alumni', 'admin']);
 
- if (!error && data && data.length > 0) {
- const dbMentors: MentorProfile[] = data.map((row: any) => ({
+ if (error) throw error;
+
+ const dbMentors: MentorProfile[] = (data ?? []).map((row: any) => ({
  id: row.id,
  fullName: row.full_name,
  department: row.department || 'Academic Department',
@@ -98,7 +107,8 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
  availableSlots: 4,
  }));
 
- // Merge unique
+ // Merge unique - mock fixtures only ever show up here when the admin
+ // mock-data toggle is on.
  const local = filterMockMentors(query);
  const merged = [...dbMentors];
  for (const item of local) {
@@ -107,31 +117,34 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
  }
  }
  return merged;
- }
- } catch {
- // fallback
- }
-
+ } catch (err) {
+ console.warn('[Mentorship] searchMentors failed, showing mock pool only:', err);
  return filterMockMentors(query);
+ }
 }
 
+/**
+ * Throws if there's no authenticated student or the Supabase insert fails,
+ * instead of quietly returning a fabricated "pending" request. Callers
+ * must catch this and show a real error.
+ */
 export async function requestMentorship(
  mentorId: string,
  focusArea?: string,
 ): Promise<Mentorship> {
  const reqId = generateUUID();
- let studentId = 'me';
 
- try {
  const { data: authData } = await supabase.auth.getUser();
- if (authData?.user?.id) {
- studentId = authData.user.id;
- } else {
+ let studentId = authData?.user?.id;
+ if (!studentId) {
  const stored = await getSessionUser();
  if (stored?.id) studentId = stored.id;
  }
 
- if (studentId && studentId !== 'me') {
+ if (!studentId) {
+ throw new Error('You need to be signed in to request a mentor.');
+ }
+
  const { error } = await supabase.from('mentorships').insert({
  id: reqId,
  student_id: studentId,
@@ -139,12 +152,10 @@ export async function requestMentorship(
  status: 'pending',
  focus_area: focusArea || 'Academic Guidance',
  });
+
  if (error) {
  console.warn('[Mentorship] Request mentorship Supabase error:', error.message);
- }
- }
- } catch (err) {
- console.warn('[Mentorship] Request exception:', err);
+ throw new Error('Could not send this mentorship request. Please try again.');
  }
 
  const mentor = mockMentorProfiles.find((m) => m.id === mentorId);
@@ -157,7 +168,7 @@ export async function requestMentorship(
  focusArea,
  };
 
- mentorshipsState = [...mentorshipsState, created];
+ locallyCreatedMentorships = [...locallyCreatedMentorships, created];
  return created;
 }
 
@@ -195,7 +206,7 @@ export async function respondToMentorshipRequest(
  console.warn('[Mentorship] Update exception:', err);
  }
 
- mentorshipsState = mentorshipsState.map((m) => {
+ locallyCreatedMentorships = locallyCreatedMentorships.map((m) => {
  if (m.id !== mentorshipId) return m;
  updated = { ...m, status: newStatus };
  return updated;

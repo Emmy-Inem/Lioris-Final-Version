@@ -21,12 +21,14 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts, createPost } from '@/api/posts';
 import { getMyProfile } from '@/api/profile';
 import { useViewScope } from '@/hooks/useViewScope';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
 import { ShimmerCardList } from './ShimmerSkeleton';
 import { UserProfileQuickViewModal, QuickViewUser } from './UserProfileQuickViewModal';
 import { EmptyState } from './EmptyState';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
+import { useMockDataVisible } from '@/api/mockDataSettings';
 
 const CHANNELS = [
  { id: 'all', label: 'All Threads', category: null, icon: 'chatbubbles' as const },
@@ -43,6 +45,11 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  const { user } = useAuth();
  const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
+ // "Discussion Hubs" below has no real workspace-membership backend behind
+ // its numbers (active builders / students enrolled / verified openings) -
+ // it was hardcoded placeholder content shown on every forum view. Gate it
+ // behind the same Mock Data Visibility toggle as everything else.
+ const mockDataVisible = useMockDataVisible();
   const toast = useToast();
   const [quickViewUser, setQuickViewUser] = useState<QuickViewUser | null>(null);
  const [query, setQuery] = useState('');
@@ -54,13 +61,17 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
  const [sortModalOpen, setSortModalOpen] = useState(false);
  const { scope: viewScope, setScope: setViewScope } = useViewScope();
+ // activeCampusCode lets an admin's "Explore Other Campus Workspaces" pick
+ // (Settings/Workdesk -> Change Workspace Scope) actually change which
+ // campus's threads show here too, not just their own home campus.
+ const { activeCampusCode } = useCampusScope();
 
  const { data: profile } = useQuery({
  queryKey: ['profile', 'me', user?.id],
  queryFn: () => getMyProfile(user!),
  enabled: !!user,
  });
- const viewerInstitutionCode = profile?.institutionCode;
+ const viewerInstitutionCode = activeCampusCode || profile?.institutionCode;
 
  const { data: rawPosts, isLoading, refetch, isRefetching } = useQuery({
  queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel],
@@ -135,8 +146,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       {!isDesktop && <AppHeader />}
 
       {/* Screen Title & Scope Switcher in 1 Unified Clean Row */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
-        <View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
+        <View style={{ flexShrink: 1, minWidth: 0 }}>
           <AppText variant="h1" weight="bold">
             Campus Forum
           </AppText>
@@ -146,6 +157,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           <View
             style={{
               flexDirection: 'row',
+              flexShrink: 0,
               backgroundColor: colors.surface,
               borderRadius: radius.pill,
               padding: 2,
@@ -236,7 +248,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 6, paddingBottom: spacing.xs }}
-        style={{ marginBottom: spacing.xs }}
+        style={{ marginBottom: spacing.xs, flex: 1, minWidth: 0 }}
       >
         {CHANNELS.map((ch) => {
           const selected = selectedChannel === ch.category;
@@ -309,7 +321,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           <View style={{ flex: 1, minWidth: 0 }}>
             {/* Desktop Channel Pills & Sort Bar */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: spacing.sm }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8, paddingRight: spacing.sm }}>
                 {CHANNELS.map((ch) => {
                   const isSelected = selectedChannel === ch.category || (ch.id === 'all' && selectedChannel === null);
                   return (
@@ -484,6 +496,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
           {/* Right Sidebar: Hubs, Mentors & Guidelines */}
           <View style={{ width: 320, gap: spacing.md }}>
+            {mockDataVisible ? (
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                 <AppText variant="h3" weight="bold">
@@ -526,6 +539,21 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </View>
               </View>
             </SolidCard>
+            ) : (
+            <SolidCard radius={18} style={{ padding: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <AppText variant="h3" weight="bold">
+                  Discussion Hubs
+                </AppText>
+                <Pressable onPress={() => setWorkspacesOpen(true)}>
+                  <AppText variant="caption" weight="bold" tone="brand">Explore →</AppText>
+                </Pressable>
+              </View>
+              <AppText tone="secondary" variant="caption">
+                No active discussion hubs for this workspace yet.
+              </AppText>
+            </SolidCard>
+            )}
 
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>

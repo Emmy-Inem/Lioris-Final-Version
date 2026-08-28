@@ -3,8 +3,18 @@ import { StudyGroup } from './types';
 import { mockStudyGroups } from './mockData';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
+import { isUserBlocked } from './connections';
+import { isMockDataVisible } from './mockDataSettings';
 
-let studyGroupsState: StudyGroup[] = [...mockStudyGroups];
+// Groups this session has *successfully* written to Supabase, kept here
+// only so they render instantly before the next refetch. Never mixed with
+// mockData.ts fixtures - those only come from getLocalPool() below, and
+// only while the admin's "Mock Data Visibility" toggle is on.
+let locallyCreatedGroups: StudyGroup[] = [];
+
+function getLocalPool(): StudyGroup[] {
+ return [...locallyCreatedGroups, ...(isMockDataVisible() ? mockStudyGroups : [])];
+}
 
 export interface CreateStudyGroupPayload {
  name: string;
@@ -14,19 +24,14 @@ export interface CreateStudyGroupPayload {
  campusCode?: string;
 }
 
+/**
+ * Throws if the Supabase insert fails or there's no authenticated creator,
+ * instead of quietly returning a fabricated "success" group. Callers must
+ * catch this and show a real error - see CreateStudyGroupModal.
+ */
 export async function createStudyGroup(payload: CreateStudyGroupPayload): Promise<StudyGroup> {
  const groupId = generateUUID();
- const created: StudyGroup = {
- id: groupId,
- memberCount: 1,
- isJoined: true,
- lastMessageAt: new Date().toISOString(),
- ...payload,
- };
 
- studyGroupsState = [created, ...studyGroupsState];
-
- try {
  const { data: authData } = await supabase.auth.getUser();
  let creatorId: string | null = authData?.user?.id || null;
  if (!creatorId) {
@@ -34,7 +39,10 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
  if (stored?.id) creatorId = stored.id;
  }
 
- if (creatorId) {
+ if (!creatorId) {
+ throw new Error('You need to be signed in to create a study pod.');
+ }
+
  let campusCode = payload.campusCode;
  if (!campusCode) {
  const { data: profile } = await supabase
@@ -45,7 +53,6 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
  campusCode = profile?.campus_code || 'GLOBAL';
  }
  if (!campusCode) campusCode = 'GLOBAL';
- created.campusCode = campusCode;
 
  const { error } = await supabase.from('study_groups').insert({
  id: groupId,
@@ -56,23 +63,32 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
  description: payload.description,
  is_private: !payload.isPublic,
  });
+
  if (error) {
  console.warn('[StudyGroups] Create group error:', error.message);
- } else {
- await supabase.from('study_group_members').insert({
+ throw new Error('Could not create this study pod. Please try again.');
+ }
+
+ const { error: memberError } = await supabase.from('study_group_members').insert({
  group_id: groupId,
  user_id: creatorId,
  });
- }
- }
- } catch (err) {
- console.warn('[StudyGroups] Backend create error:', err);
+ if (memberError) {
+ console.warn('[StudyGroups] Auto-join creator error:', memberError.message);
  }
 
+ const created: StudyGroup = {
+ id: groupId,
+ memberCount: 1,
+ isJoined: true,
+ lastMessageAt: new Date().toISOString(),
+ ...payload,
+ campusCode,
+ };
+
+ locallyCreatedGroups = [created, ...locallyCreatedGroups];
  return created;
 }
-
-import { isUserBlocked } from './connections';
 
 export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]> {
  try {
@@ -94,8 +110,9 @@ export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]
  .select('*, study_group_members(user_id)')
  .order('created_at', { ascending: false });
 
- if (!error && data && data.length > 0) {
- const dbGroups: StudyGroup[] = data
+ if (error) throw error;
+
+ const dbGroups: StudyGroup[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.creator_id))
  .filter((row: any) => {
  if (isStaffOrAdmin && !campusCode) return true;
@@ -117,9 +134,11 @@ export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]
  };
  });
 
- // Merge unique
+ // Merge unique - local pool only ever contributes this session's own
+ // just-created groups (always) plus seed fixtures (only when the admin
+ // mock-data toggle is on).
  const merged = [...dbGroups];
- for (const g of studyGroupsState) {
+ for (const g of getLocalPool()) {
  if (!merged.some((m) => m.id === g.id) && !isUserBlocked((g as any).creatorId)) {
  if (isStaffOrAdmin && !campusCode) {
  merged.push(g);
@@ -128,18 +147,16 @@ export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]
  }
  }
  }
- studyGroupsState = merged;
  return merged;
+ } catch (err) {
+ console.warn('[StudyGroups] listStudyGroups failed, showing local pool only:', err);
+ return getLocalPool().filter((g) => !isUserBlocked((g as any).creatorId));
  }
- } catch {
- // Session fallback
- }
- return studyGroupsState.filter((g) => !isUserBlocked((g as any).creatorId));
 }
 
 export async function joinStudyGroup(id: string): Promise<StudyGroup> {
  let updated: StudyGroup | undefined;
- studyGroupsState = studyGroupsState.map((g) => {
+ locallyCreatedGroups = locallyCreatedGroups.map((g) => {
  if (g.id !== id) return g;
  updated = { ...g, isJoined: true, memberCount: g.memberCount + 1 };
  return updated;
@@ -179,7 +196,7 @@ export async function joinStudyGroup(id: string): Promise<StudyGroup> {
 
 export async function leaveStudyGroup(id: string): Promise<StudyGroup> {
  let updated: StudyGroup | undefined;
- studyGroupsState = studyGroupsState.map((g) => {
+ locallyCreatedGroups = locallyCreatedGroups.map((g) => {
  if (g.id !== id) return g;
  updated = { ...g, isJoined: false, memberCount: Math.max(1, g.memberCount - 1) };
  return updated;

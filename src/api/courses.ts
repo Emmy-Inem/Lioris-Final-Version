@@ -1,6 +1,6 @@
 import { api } from'./client';
 import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
+import { isMockDataVisible } from'./mockDataSettings';
 
 export interface Course {
  id: string;
@@ -76,13 +76,25 @@ export const INITIAL_COURSES: Course[] = [
  },
 ];
 
-let coursesState = [...INITIAL_COURSES];
+// Courses created/edited via the admin Manage Courses modal this session.
+// Always shown, regardless of the mock-data toggle.
+let locallyCreatedCourses: Course[] = [];
+const deletedSeedIds = new Set<string>();
+
+function getSeedCourses(): Course[] {
+ if (!isMockDataVisible()) return [];
+ return INITIAL_COURSES.filter((c) => !deletedSeedIds.has(c.id));
+}
+
+function getPool(): Course[] {
+ return [...locallyCreatedCourses, ...getSeedCourses()];
+}
 
 export async function listCourses(department?: string): Promise<Course[]> {
  return withMockFallback(async () => {
  const { data } = await api.get<{ items: Course[] }>('/courses', { params: { department } });
  return data.items;
- }, department ? coursesState.filter((c) => c.department === department) : coursesState);
+ }, department ? getPool().filter((c) => c.department === department) : getPool());
 }
 
 export async function createCourse(payload: Omit<Course, 'id' | 'enrolledStudentsCount' | 'resourcesCount'>): Promise<Course> {
@@ -92,24 +104,32 @@ export async function createCourse(payload: Omit<Course, 'id' | 'enrolledStudent
  enrolledStudentsCount: 0,
  resourcesCount: 0,
  };
- coursesState = [newCourse, ...coursesState];
+ locallyCreatedCourses = [newCourse, ...locallyCreatedCourses];
  return newCourse;
 }
 
 export async function updateCourse(id: string, payload: Partial<Course>): Promise<Course> {
  let updated: Course | undefined;
- coursesState = coursesState.map((c) => {
+ locallyCreatedCourses = locallyCreatedCourses.map((c) => {
  if (c.id === id) {
  updated = { ...c, ...payload };
  return updated;
  }
  return c;
  });
+ if (!updated) {
+ const seedMatch = getSeedCourses().find((c) => c.id === id);
+ if (seedMatch) {
+ updated = { ...seedMatch, ...payload };
+ locallyCreatedCourses = [updated, ...locallyCreatedCourses];
+ }
+ }
  if (!updated) throw new Error('Course not found');
  return updated;
 }
 
 export async function deleteCourse(id: string): Promise<boolean> {
- coursesState = coursesState.filter((c) => c.id !== id);
+ locallyCreatedCourses = locallyCreatedCourses.filter((c) => c.id !== id);
+ deletedSeedIds.add(id);
  return true;
 }

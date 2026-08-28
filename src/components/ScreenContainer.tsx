@@ -32,7 +32,7 @@ export function ScreenContainer({
  <View
  style={[
  styles.flex,
- !noPadding && { paddingHorizontal: isDesktop ? containerPadding : 0 },
+ !noPadding && { paddingHorizontal: containerPadding },
  isDesktop && !fluidWidth && {
  maxWidth: contentMaxWidth,
  width: '100%',

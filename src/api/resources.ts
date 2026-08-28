@@ -1,12 +1,12 @@
-import { api } from './client';
 import { Resource } from './types';
 import { mockResources } from './mockData';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
+import { isUserBlocked } from './connections';
+import { generateUUID } from '../utils/uuid';
+import { isMockDataVisible } from './mockDataSettings';
 
-const INITIAL_RESOURCES: Resource[] = [
+const SEED_RESOURCES: Resource[] = [
  ...mockResources.map((r) => ({ ...r, approvalStatus: 'approved' as const })),
  {
  id: 'res-sub-1',
@@ -50,17 +50,28 @@ const INITIAL_RESOURCES: Resource[] = [
  },
 ];
 
-let resourcesState: Resource[] = [...INITIAL_RESOURCES];
+// Resources this session has *successfully* written to Supabase, kept
+// here only so they render instantly before the next refetch (and so
+// approve/reject/update/delete on this session's own uploads can find
+// them locally). Never seeded with fixtures - those only come from
+// getSeedResources() below, and only while the admin's "Mock Data
+// Visibility" toggle is on.
+let locallyCreatedResources: Resource[] = [];
+
+function getSeedResources(): Resource[] {
+ return isMockDataVisible() ? SEED_RESOURCES : [];
+}
 
 export interface ResourcesQuery {
  q?: string;
  category?: Resource['category'];
  department?: string;
  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
+ campusCode?: string;
 }
 
-function filterMockResources(query: ResourcesQuery): Resource[] {
- let results = [...resourcesState];
+function filterResources(pool: Resource[], query: ResourcesQuery): Resource[] {
+ let results = [...pool];
  if (query.approvalStatus && query.approvalStatus !== 'all') {
  results = results.filter((r) => r.approvalStatus === query.approvalStatus);
  } else if (!query.approvalStatus) {
@@ -93,8 +104,6 @@ function mapCategoryToResourceType(category?: Resource['category']): string {
  return 'lecture_note';
 }
 
-import { isUserBlocked } from './connections';
-
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
  try {
  const { data: authData } = await supabase.auth.getUser();
@@ -109,8 +118,9 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
  const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
- if (!error && data && data.length > 0) {
- const dbResources: Resource[] = data
+ if (error) throw error;
+
+ const dbResources: Resource[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.uploader_id))
  .filter((row: any) => {
  if (isStaffOrAdmin && !(query as any).campusCode) return true;
@@ -135,9 +145,13 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
  fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
  campusCode: row.campus_code || 'GLOBAL',
  }));
- // Merge unique
+
+ // Merge unique - local pool only ever contributes this session's own
+ // just-created resources (always) plus seed fixtures (only when the
+ // admin mock-data toggle is on).
+ const pool = [...locallyCreatedResources, ...getSeedResources()];
  const merged = [...dbResources];
- for (const r of resourcesState) {
+ for (const r of pool) {
  if (!merged.some((m) => m.id === r.id) && !isUserBlocked(r.authorId)) {
  if (isStaffOrAdmin && !(query as any).campusCode) {
  merged.push(r);
@@ -146,13 +160,11 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
  }
  }
  }
- resourcesState = merged;
- return filterMockResources(query);
+ return filterResources(merged, query);
+ } catch (err) {
+ console.warn('[Resources] listResources failed, showing local pool only:', err);
+ return filterResources([...locallyCreatedResources, ...getSeedResources()], query);
  }
- } catch {
- // Fallback
- }
- return filterMockResources(query);
 }
 
 export async function listPendingResources(): Promise<Resource[]> {
@@ -161,18 +173,22 @@ export async function listPendingResources(): Promise<Resource[]> {
 
 export async function approveResource(id: string): Promise<Resource> {
  try {
- await supabase.from('resources').update({ is_approved: true, approved_at: new Date().toISOString() }).eq('id', id);
+ const { error } = await supabase.from('resources').update({ is_approved: true, approved_at: new Date().toISOString() }).eq('id', id);
+ if (error) throw error;
  } catch (err) {
  console.warn('[Resources] Approve error:', err);
+ throw new Error('Could not approve this resource. Please try again.');
  }
  return updateResource(id, { approvalStatus: 'approved', rejectionReason: null });
 }
 
 export async function rejectResource(id: string, reason?: string): Promise<Resource> {
  try {
- await supabase.from('resources').update({ is_approved: false }).eq('id', id);
+ const { error } = await supabase.from('resources').update({ is_approved: false }).eq('id', id);
+ if (error) throw error;
  } catch (err) {
  console.warn('[Resources] Reject error:', err);
+ throw new Error('Could not reject this resource. Please try again.');
  }
  return updateResource(id, { approvalStatus: 'rejected', rejectionReason: reason || 'File did not meet quality or syllabus standards.' });
 }
@@ -188,8 +204,11 @@ export interface CreateResourcePayload {
  academicLevel?: Resource['academicLevel'];
 }
 
-import { generateUUID } from '../utils/uuid';
-
+/**
+ * Throws if there's no identifiable uploader or the Supabase insert fails,
+ * instead of quietly returning a fabricated "uploaded" resource. Callers
+ * must catch this and show a real error - see ManageResourcesModal.
+ */
 export async function createResource(
  payload: Partial<Resource> & {
  title: string;
@@ -201,6 +220,18 @@ export async function createResource(
  fileBlob?: Blob | ArrayBuffer,
 ): Promise<Resource> {
  const resourceId = generateUUID();
+
+ const { data: authData } = await supabase.auth.getUser();
+ let uploaderId: string | null = authData?.user?.id || null;
+ if (!uploaderId) {
+ const stored = await getSessionUser();
+ if (stored?.id) uploaderId = stored.id;
+ }
+
+ if (!uploaderId) {
+ throw new Error('You need to be signed in to share a resource.');
+ }
+
  const created: Resource = {
  id: resourceId,
  title: payload.title,
@@ -212,34 +243,20 @@ export async function createResource(
  fileType: payload.fileType || 'PDF',
  academicLevel: payload.academicLevel || '300L',
  authorName: 'You',
+ authorId: uploaderId,
  likesCount: 0,
  downloadsCount: 0,
  createdAt: new Date().toISOString(),
  approvalStatus: 'approved',
  };
- resourcesState = [created, ...resourcesState];
 
- try {
- const { data: authData } = await supabase.auth.getUser();
- let uploaderId: string | null = authData?.user?.id || null;
- let campusCode = 'GLOBAL';
-
- if (!uploaderId) {
- const stored = await getSessionUser();
- if (stored?.id) uploaderId = stored.id;
- }
-
- if (uploaderId) {
  // Fetch uploader's campus
  const { data: profile } = await supabase
  .from('profiles')
  .select('campus_code')
  .eq('id', uploaderId)
  .maybeSingle();
-
- if (profile?.campus_code) {
- campusCode = profile.campus_code;
- }
+ const campusCode = profile?.campus_code || 'GLOBAL';
 
  let fileExt = 'pdf';
  let mimeType = 'application/pdf';
@@ -253,6 +270,7 @@ export async function createResource(
 
  const storagePath = `${uploaderId}/${resourceId}.${fileExt}`;
 
+ try {
  // If binary file blob is provided, upload directly to Supabase Storage
  if (fileBlob) {
  await supabase.storage.from('resources').upload(storagePath, fileBlob, {
@@ -260,10 +278,13 @@ export async function createResource(
  upsert: true,
  });
  }
+ } catch (err) {
+ console.warn('[Resources] Storage upload error:', err);
+ throw new Error('Could not upload your file. Please try again.');
+ }
 
  const { data: publicUrlData } = supabase.storage.from('resources').getPublicUrl(storagePath);
  const fileUrl = publicUrlData?.publicUrl || `https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/${storagePath}`;
-
  created.fileUrl = fileUrl;
 
  const realSizeBytes = (fileBlob && typeof (fileBlob as any).size === 'number' ? (fileBlob as any).size : undefined)
@@ -284,29 +305,25 @@ export async function createResource(
  file_mime_type: payload.fileMimeType || mimeType,
  is_approved: true,
  });
+
  if (error) {
- throw error;
- }
- }
- } catch (err) {
- console.warn('[Resources] Create resource error:', err);
- throw err;
+ console.warn('[Resources] Create resource error:', error.message);
+ throw new Error('Could not share this resource. Please try again.');
  }
 
+ locallyCreatedResources = [created, ...locallyCreatedResources];
  return created;
 }
 
+/**
+ * Persists to Supabase first. The in-memory cache is only used to enrich
+ * the returned object for resources this session already knows about
+ * (its own uploads); a resource that isn't in that cache (any resource
+ * fetched from the database in the normal case) still gets updated for
+ * real - this just returns a best-effort merged object for it instead of
+ * throwing, since the write already succeeded.
+ */
 export async function updateResource(id: string, payload: Partial<Resource>): Promise<Resource> {
- let updated: Resource | undefined;
- resourcesState = resourcesState.map((r) => {
- if (r.id === id) {
- updated = { ...r, ...payload };
- return updated;
- }
- return r;
- });
- if (!updated) throw new Error('Resource not found');
-
  try {
  const dbPayload: any = {};
  if (payload.title) dbPayload.title = payload.title;
@@ -314,6 +331,7 @@ export async function updateResource(id: string, payload: Partial<Resource>): Pr
  if (payload.courseCode) dbPayload.course_code = payload.courseCode;
  if (payload.semester) dbPayload.semester = payload.semester;
  if (payload.fileUrl) dbPayload.file_url = payload.fileUrl;
+ if (payload.approvalStatus) dbPayload.is_approved = payload.approvalStatus === 'approved';
 
  if (Object.keys(dbPayload).length > 0) {
  await supabase.from('resources').update(dbPayload).eq('id', id);
@@ -322,11 +340,23 @@ export async function updateResource(id: string, payload: Partial<Resource>): Pr
  console.warn('[Resources] Supabase updateResource error:', err);
  }
 
+ let updated: Resource | undefined;
+ locallyCreatedResources = locallyCreatedResources.map((r) => {
+ if (r.id === id) {
+ updated = { ...r, ...payload };
  return updated;
+ }
+ return r;
+ });
+
+ if (updated) return updated;
+
+ const seedMatch = getSeedResources().find((r) => r.id === id);
+ return { ...(seedMatch as Resource), id, ...payload };
 }
 
 export async function deleteResource(id: string): Promise<boolean> {
- resourcesState = resourcesState.filter((r) => r.id !== id);
+ locallyCreatedResources = locallyCreatedResources.filter((r) => r.id !== id);
  try {
  await supabase.from('resources').delete().eq('id', id);
  } catch {
@@ -334,4 +364,3 @@ export async function deleteResource(id: string): Promise<boolean> {
  }
  return true;
 }
-

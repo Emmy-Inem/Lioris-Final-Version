@@ -3,6 +3,7 @@ import { mockMarketplaceListings } from './mockData';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
+import { isMockDataVisible } from './mockDataSettings';
 
 export interface MarketplaceQuery {
  q?: string;
@@ -14,10 +15,20 @@ export interface MarketplaceQuery {
 import { isUserBlocked } from './connections';
 
 let wishlistIds = new Set<string>();
-let marketplaceListingsState = [...mockMarketplaceListings];
 
-function filterMockListings(query: MarketplaceQuery): MarketplaceListing[] {
- let results = [...marketplaceListingsState].filter((item) => !isUserBlocked(item.sellerId));
+// Listings this session has *successfully* written to Supabase, kept here
+// only so they render instantly before the next refetch. This is never
+// mixed with mockData.ts fixtures - those are only ever added back in by
+// getLocalPool() below, and only while the admin's "Mock Data Visibility"
+// toggle is on.
+let locallyCreatedListings: MarketplaceListing[] = [];
+
+function getLocalPool(): MarketplaceListing[] {
+ return [...locallyCreatedListings, ...(isMockDataVisible() ? mockMarketplaceListings : [])];
+}
+
+function filterListings(pool: MarketplaceListing[], query: MarketplaceQuery): MarketplaceListing[] {
+ let results = pool.filter((item) => !isUserBlocked(item.sellerId));
 
  if (query.campusCode && query.campusCode !== 'GLOBAL') {
  results = results.filter(
@@ -75,8 +86,9 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
 
  const { data, error } = await req;
 
- if (!error && data && data.length > 0) {
- const dbListings: MarketplaceListing[] = data
+ if (error) throw error;
+
+ const dbListings: MarketplaceListing[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.seller_id))
  .filter((row: any) => {
  if (isStaffOrAdmin && !query.campusCode) return true;
@@ -98,8 +110,10 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  createdAt: row.created_at,
  }));
 
- // Merge unique
- const local = filterMockListings({ ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
+ // Merge unique - the local pool only ever contributes this session's own
+ // just-created listings (always) plus seed fixtures (only when the admin
+ // mock-data toggle is on).
+ const local = filterListings(getLocalPool(), { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
  const merged = [...dbListings];
  for (const item of local) {
  if (!merged.some((m) => m.id === item.id) && !isUserBlocked(item.sellerId)) {
@@ -107,12 +121,13 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  }
  }
  return merged;
+ } catch (err) {
+ console.warn('[Marketplace] listMarketplaceListings failed, showing local pool only:', err);
+ // Real failure: never fabricate a full mock catalog here. All that's
+ // shown is this session's own successful creations, plus fixtures if
+ // the admin has mock data turned on.
+ return filterListings(getLocalPool(), query);
  }
- } catch {
- // fallback
- }
-
- return filterMockListings(query);
 }
 
 export function isWishlisted(id: string): boolean {
@@ -137,13 +152,18 @@ export interface CreateListingPayload {
  imageUrl?: string | null;
 }
 
+/**
+ * Throws on any real failure (no authenticated seller, storage upload
+ * failure that blocks the insert, or a rejected Supabase insert) instead
+ * of quietly returning a fabricated "success" listing. Callers must catch
+ * this and show a real error - see SellItemModal.
+ */
 export async function createListing(payload: CreateListingPayload): Promise<MarketplaceListing> {
  const listingId = generateUUID();
- let sellerId = 'me';
+ let sellerId: string | null = null;
  let sellerName = 'You';
  let permanentImageUrl: string | null = payload.imageUrl || null;
 
- try {
  // Upload local device photo to Supabase Storage if present
  if (payload.imageUrl && !payload.imageUrl.startsWith('http://') && !payload.imageUrl.startsWith('https://')) {
  try {
@@ -166,7 +186,10 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  }
  }
 
- if (sellerId && sellerId !== 'me') {
+ if (!sellerId) {
+ throw new Error('You need to be signed in to publish a listing.');
+ }
+
  let campusCode = (payload as any).campusCode;
  if (!campusCode) {
  const { data: profile } = await supabase
@@ -193,12 +216,10 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  image_url: permanentImageUrl,
  is_sold: false,
  });
+
  if (error) {
  console.warn('[Marketplace] Create listing Supabase error:', error.message);
- }
- }
- } catch (err) {
- console.warn('[Marketplace] Create listing exception:', err);
+ throw new Error('Could not publish your listing. Please try again.');
  }
 
  const created: MarketplaceListing = {
@@ -212,6 +233,6 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  imageUrl: permanentImageUrl,
  };
 
- marketplaceListingsState = [created, ...marketplaceListingsState];
+ locallyCreatedListings = [created, ...locallyCreatedListings];
  return created;
 }

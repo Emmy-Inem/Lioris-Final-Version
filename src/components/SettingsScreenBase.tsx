@@ -18,11 +18,13 @@ import { getMyProfile } from '@/api/profile';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 
-const SETTINGS_SECTIONS = [
+const ALL_SETTINGS_SECTIONS = [
   { key: 'account', label: 'Account & Profile', icon: 'person-outline' as const },
   { key: 'appearance', label: 'Theme & Display', icon: 'color-palette-outline' as const },
   { key: 'notifications', label: 'Notifications', icon: 'notifications-outline' as const },
   { key: 'security', label: 'Security & Logins', icon: 'shield-checkmark-outline' as const },
+  // Only ever shown to a real Root Admin (user.actualRole === 'admin') -
+  // see the filter below and SessionUser.actualRole in AuthContext.tsx.
   { key: 'preview', label: 'Role Switcher', icon: 'swap-horizontal-outline' as const },
   { key: 'legal', label: 'Terms & Policies', icon: 'document-text-outline' as const },
 ] as const;
@@ -31,7 +33,11 @@ export function SettingsScreen() {
   const { colors, spacing, radius, isDark, themeMode, setThemeMode, customAccent, setCustomAccent, accentPresets } = useTheme();
   const { user, logout, switchRole } = useAuth();
   const { isDesktop } = useResponsive();
-  const [activeSection, setActiveSection] = useState<(typeof SETTINGS_SECTIONS)[number]['key']>('account');
+  const isSuperAdmin = user?.actualRole === 'admin';
+  const SETTINGS_SECTIONS = isSuperAdmin
+    ? ALL_SETTINGS_SECTIONS
+    : ALL_SETTINGS_SECTIONS.filter((sec) => sec.key !== 'preview');
+  const [activeSection, setActiveSection] = useState<(typeof ALL_SETTINGS_SECTIONS)[number]['key']>('account');
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -93,8 +99,8 @@ export function SettingsScreen() {
         }}
       >
         {/* Header Title */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm }}>
+          <View style={{ flexShrink: 1, minWidth: 0 }}>
             <AppText variant="h1" weight="bold">
               Settings & Preferences
             </AppText>
@@ -102,7 +108,9 @@ export function SettingsScreen() {
               Manage your academic credentials, security, notifications, and portal display
             </AppText>
           </View>
-          <Badge label={user?.role?.toUpperCase() ?? 'STUDENT'} tone="brand" />
+          <View style={{ flexShrink: 0 }}>
+            <Badge label={user?.role?.toUpperCase() ?? 'STUDENT'} tone="brand" />
+          </View>
         </View>
 
         {/* 2-Column Responsive Layout on Desktop */}
@@ -326,8 +334,8 @@ export function SettingsScreen() {
               </SolidCard>
             )}
 
-            {/* Role Switcher Preview */}
-            {activeSection === 'preview' && (
+            {/* Role Switcher Preview - Root Admins only, see isSuperAdmin above */}
+            {isSuperAdmin && activeSection === 'preview' && (
               <SolidCard radius={20} style={{ padding: spacing.lg, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">

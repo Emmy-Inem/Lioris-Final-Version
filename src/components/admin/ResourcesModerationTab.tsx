@@ -301,6 +301,7 @@ export function ResourcesModerationTab() {
  horizontal
  showsHorizontalScrollIndicator={false}
  contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.md }}
+ style={{ flex: 1, minWidth: 0 }}
  >
  <Pressable
  onPress={() => {
@@ -536,7 +537,7 @@ export function ResourcesModerationTab() {
  <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
  LEVEL COHORT
  </AppText>
- <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4 }}>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 4 }}>
  {LEVELS.map((lvl) => (
  <Pressable
  key={lvl}

@@ -77,6 +77,16 @@ export interface StoredSessionUser {
  onboardingComplete: boolean;
  onboardingStep?: string;
  mfaVerified?: boolean;
+ /**
+  * The real, database-verified role behind an active "Preview Workspace As
+  * Role" selection - always the role Supabase actually authenticated this
+  * person as, never overwritten by previewing another role. `role` above
+  * is the role being *displayed*; `actualRole` is who they really are, and
+  * is what gates who can use the Role Switcher at all. Optional only for
+  * backward-compatibility with sessions stored before this field existed
+  * (treat a missing value as equal to `role`).
+  */
+ actualRole?: string;
 }
 
 export async function setSessionUser(user: StoredSessionUser) {

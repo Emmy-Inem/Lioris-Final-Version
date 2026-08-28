@@ -11,7 +11,7 @@ import { haptics } from '@/utils/haptics';
 interface CreateStudyGroupModalProps {
  visible: boolean;
  onClose: () => void;
- onCreate: (payload: { name: string; courseCode: string; description: string; isPublic: boolean }) => void;
+ onCreate: (payload: { name: string; courseCode: string; description: string; isPublic: boolean }) => Promise<void>;
 }
 
 export function CreateStudyGroupModal({ visible, onClose, onCreate }: CreateStudyGroupModalProps) {
@@ -47,7 +47,7 @@ export function CreateStudyGroupModal({ visible, onClose, onCreate }: CreateStud
  haptics.medium();
  setSubmitting(true);
  try {
- onCreate({ name: name.trim(), courseCode: courseCode.trim().toUpperCase(), description: description.trim() || 'No description provided.', isPublic });
+ await onCreate({ name: name.trim(), courseCode: courseCode.trim().toUpperCase(), description: description.trim() || 'No description provided.', isPublic });
  onClose();
  reset();
  } catch (err: any) {

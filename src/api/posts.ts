@@ -1,16 +1,21 @@
-import { api } from'./client';
-import { Post, PostVisibilityScope } from'./types';
-import { mockPosts } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
-
-// Mutable in-memory copy so newly published posts actually persist and
-// show up on the next fetch - the previous version fabricated a
-// success response without ever adding it to the list `listFeedPosts`
-// reads from, so a published thread would silently vanish.
+import { Post, PostVisibilityScope } from './types';
+import { mockPosts } from './mockData';
 import { supabase } from './supabase';
+import { isUserBlocked } from './connections';
+import { getSessionUser } from '../auth/tokenStorage';
+import { generateUUID } from '../utils/uuid';
+import { isMockDataVisible } from './mockDataSettings';
 
-let postsState = [...mockPosts];
+// Posts this session has *successfully* written to Supabase, kept here
+// only so they render instantly before the next refetch (and so
+// update/delete on this session's own posts can find them locally). Never
+// seeded with fixtures - those only come from getSeedPosts() below, and
+// only while the admin's "Mock Data Visibility" toggle is on.
+let locallyCreatedPosts: Post[] = [];
+
+function getSeedPosts(): Post[] {
+ return isMockDataVisible() ? mockPosts : [];
+}
 
 export interface FeedQuery {
  scope?: PostVisibilityScope;
@@ -22,10 +27,8 @@ export interface FeedQuery {
  viewScope?: 'campus' | 'global';
 }
 
-import { isUserBlocked } from './connections';
-
-function filterMockPosts(query: FeedQuery): Post[] {
- let results = [...postsState].filter((p) => !isUserBlocked(p.authorId));
+function filterPosts(pool: Post[], query: FeedQuery): Post[] {
+ let results = pool.filter((p) => !isUserBlocked(p.authorId));
 
  results = results.filter((p) => !p.institutionCode || p.institutionCode === query.viewerInstitutionCode);
 
@@ -58,8 +61,9 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
  dbQuery = dbQuery.ilike('category', `%${query.category}%`);
  }
  const { data, error } = await dbQuery;
- if (!error && data && data.length > 0) {
- const dbPosts: Post[] = data.map((row: any) => {
+ if (error) throw error;
+
+ const dbPosts: Post[] = (data ?? []).map((row: any) => {
  const isGlobal = row.visibility_scope === 'global' || row.campus_code === 'GLOBAL';
  return {
  id: row.id,
@@ -80,24 +84,25 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
  videoUrl: row.video_url,
  };
  });
- // Merge unique with local posts
+
+ // Merge unique - local pool only ever contributes this session's own
+ // just-created posts (always) plus seed fixtures (only when the admin
+ // mock-data toggle is on).
  const merged = [...dbPosts];
- for (const p of postsState) {
+ for (const p of [...locallyCreatedPosts, ...getSeedPosts()]) {
  if (!merged.some((m) => m.id === p.id)) {
  merged.push(p);
  }
  }
- postsState = merged;
- return filterMockPosts(query);
+ return filterPosts(merged, query);
+ } catch (err) {
+ console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
+ return filterPosts([...locallyCreatedPosts, ...getSeedPosts()], query);
  }
- } catch {
- // Fallback to local session
- }
- return filterMockPosts(query);
 }
 
 export async function listMyPosts(userId?: string): Promise<Post[]> {
- return postsState.filter(
+ return [...locallyCreatedPosts, ...getSeedPosts()].filter(
  (p) =>
  p.authorId === 'me' ||
  p.authorId === 'student-me' ||
@@ -124,9 +129,11 @@ export interface CreatePostPayload {
  pollQuestion?: string;
 }
 
-import { getSessionUser } from '../auth/tokenStorage';
-import { generateUUID } from '../utils/uuid';
-
+/**
+ * Throws if there's no authenticated author or the Supabase insert fails,
+ * instead of quietly reporting a thread as published when it was never
+ * actually saved. Callers must catch this and show a real error.
+ */
 export async function createPost(payload: CreatePostPayload): Promise<Post> {
  const { authorInstitutionCode, scopeVisibility, ...rest } = payload;
  const postId = generateUUID();
@@ -153,38 +160,57 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  }
  }
 
- let authorId = 'me';
- let authorName = 'You';
- let authorRole = 'student';
+ const { data: authData } = await supabase.auth.getUser();
+ let authorId = authData?.user?.id;
+ let authorName = authData?.user?.user_metadata?.full_name;
+ let authorRole = authData?.user?.user_metadata?.role;
  let authorCampus = authorInstitutionCode;
 
- try {
- const { data: authData } = await supabase.auth.getUser();
- if (authData?.user?.id) {
- authorId = authData.user.id;
- authorName = authData.user.user_metadata?.full_name || 'Campus Student';
- authorRole = authData.user.user_metadata?.role || 'student';
+ if (!authorId) {
+ const stored = await getSessionUser();
+ if (stored?.id) {
+ authorId = stored.id;
+ authorName = stored.fullName || authorName;
+ authorRole = stored.role || authorRole;
+ }
+ }
+
+ if (!authorId) {
+ throw new Error('You need to be signed in to post to the forum.');
+ }
+
+ authorName = authorName || 'Campus Student';
+ authorRole = authorRole || 'student';
+
  if (!authorCampus) {
  const { data: profile } = await supabase
  .from('profiles')
  .select('campus_code')
- .eq('id', authData.user.id)
+ .eq('id', authorId)
  .maybeSingle();
  authorCampus = profile?.campus_code || 'GLOBAL';
  }
- } else {
- const stored = await getSessionUser();
- if (stored?.id) {
- authorId = stored.id;
- authorName = stored.fullName || 'You';
- authorRole = stored.role || 'student';
- }
- }
- } catch {
- // fallback
- }
 
  const isExplicitlyGlobal = scopeVisibility === 'global' || payload.visibilityScope === 'global';
+ const campusCode = authorCampus || 'GLOBAL';
+ const finalVisibilityScope = isExplicitlyGlobal ? 'global' : 'campus';
+
+ const { error } = await supabase.from('posts').insert({
+ id: postId,
+ author_id: authorId,
+ campus_code: campusCode,
+ title: payload.title,
+ content: payload.content,
+ category: payload.category || 'General',
+ visibility_scope: finalVisibilityScope,
+ image_url: permanentImageUrl || null,
+ video_url: permanentVideoUrl || null,
+ });
+
+ if (error) {
+ console.warn('[Posts] Supabase create post error:', error.message);
+ throw new Error('Could not publish your post. Please try again.');
+ }
 
  const created: Post = {
  id: postId,
@@ -195,45 +221,19 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  commentsCount: 0,
  isLikedByMe: false,
  createdAt: now,
- scopeVisibility: isExplicitlyGlobal ? 'global' : 'campus',
- institutionCode: isExplicitlyGlobal ? undefined : authorCampus,
+ scopeVisibility: finalVisibilityScope,
+ institutionCode: isExplicitlyGlobal ? undefined : campusCode,
  ...rest,
  imageUrl: permanentImageUrl,
  videoUrl: permanentVideoUrl,
  };
 
- postsState = [created, ...postsState];
-
- try {
- const { data: authData } = await supabase.auth.getUser();
- if (authData?.user?.id) {
- const campusCode = authorCampus || 'GLOBAL';
- const finalVisibilityScope = isExplicitlyGlobal ? 'global' : 'campus';
-
- const { error } = await supabase.from('posts').insert({
- id: postId,
- author_id: authData.user.id,
- campus_code: campusCode,
- title: payload.title,
- content: payload.content,
- category: payload.category || 'General',
- visibility_scope: finalVisibilityScope,
- image_url: permanentImageUrl || null,
- video_url: permanentVideoUrl || null,
- });
- if (error) {
- console.warn('[Posts] Supabase create post error:', error.message);
- }
- }
- } catch (err) {
- console.warn('[Posts] Backend create post error:', err);
- }
-
+ locallyCreatedPosts = [created, ...locallyCreatedPosts];
  return created;
 }
 
 export async function togglePostLike(postId: string, liked: boolean): Promise<void> {
- postsState = postsState.map((p) =>
+ locallyCreatedPosts = locallyCreatedPosts.map((p) =>
  p.id === postId ? { ...p, isLikedByMe: liked, likesCount: Math.max(0, p.likesCount + (liked ? 1 : -1)) } : p,
  );
 
@@ -268,7 +268,7 @@ export interface PostComment {
  imageUrl?: string | null;
 }
 
-let commentsState: Record<string, PostComment[]> = {
+const SEED_COMMENTS: Record<string, PostComment[]> = {
  'post-1': [
  {
  id: 'c1',
@@ -295,6 +295,16 @@ let commentsState: Record<string, PostComment[]> = {
  ],
 };
 
+// Comments this session has *successfully* written to Supabase, kept here
+// only so they render instantly. Never seeded with fixtures - those only
+// come from getSeedComments() below, and only while the admin's "Mock
+// Data Visibility" toggle is on.
+const locallyCreatedComments: Record<string, PostComment[]> = {};
+
+function getSeedComments(postId: string): PostComment[] {
+ return isMockDataVisible() ? SEED_COMMENTS[postId] ?? [] : [];
+}
+
 export async function listPostComments(postId: string): Promise<PostComment[]> {
  try {
  const { data, error } = await supabase
@@ -303,8 +313,9 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  .eq('post_id', postId)
  .order('created_at', { ascending: true });
 
- if (!error && data) {
- const dbComments: PostComment[] = data.map((row: any) => ({
+ if (error) throw error;
+
+ const dbComments: PostComment[] = (data ?? []).map((row: any) => ({
  id: row.id,
  postId: row.post_id,
  authorName: row.author?.full_name || 'Campus Member',
@@ -317,24 +328,26 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  isLikedByMe: false,
  }));
 
- // Merge local in-memory comments
- const local = commentsState[postId] ?? [];
+ // Merge unique - local pool only ever contributes this session's own
+ // just-created comments (always) plus seed fixtures (only when the
+ // admin mock-data toggle is on).
  const merged = [...dbComments];
- for (const c of local) {
+ for (const c of [...(locallyCreatedComments[postId] ?? []), ...getSeedComments(postId)]) {
  if (!merged.some((m) => m.id === c.id)) {
  merged.push(c);
  }
  }
- commentsState[postId] = merged;
  return merged;
- }
  } catch (err) {
- console.warn('[Posts] listPostComments Supabase notice:', err);
+ console.warn('[Posts] listPostComments failed, showing local pool only:', err);
+ return [...(locallyCreatedComments[postId] ?? []), ...getSeedComments(postId)];
  }
-
- return commentsState[postId] ?? [];
 }
 
+/**
+ * Throws if there's no identifiable author or the Supabase insert fails,
+ * instead of quietly showing a comment nobody else will ever see.
+ */
 export async function createPostComment(
  postId: string,
  content: string,
@@ -343,6 +356,30 @@ export async function createPostComment(
  imageUrl?: string | null,
 ): Promise<PostComment> {
  const commentId = generateUUID();
+
+ const { data: authData } = await supabase.auth.getUser();
+ let authorId = authData?.user?.id;
+ if (!authorId) {
+ const stored = await getSessionUser();
+ if (stored?.id) authorId = stored.id;
+ }
+
+ if (!authorId) {
+ throw new Error('You need to be signed in to comment.');
+ }
+
+ const { error } = await supabase.from('post_comments').insert({
+ id: commentId,
+ post_id: postId,
+ author_id: authorId,
+ content,
+ });
+
+ if (error) {
+ console.warn('[Posts] Supabase comment insert error:', error.message);
+ throw new Error('Could not post your comment. Please try again.');
+ }
+
  const created: PostComment = {
  id: commentId,
  postId,
@@ -355,38 +392,15 @@ export async function createPostComment(
  isLikedByMe: false,
  imageUrl: imageUrl || null,
  };
- commentsState[postId] = [...(commentsState[postId] ?? []), created];
- postsState = postsState.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
-
- try {
- const { data: authData } = await supabase.auth.getUser();
- let authorId = authData?.user?.id;
- if (!authorId) {
- const stored = await getSessionUser();
- if (stored?.id) authorId = stored.id;
- }
-
- if (authorId) {
- const { error } = await supabase.from('post_comments').insert({
- id: commentId,
- post_id: postId,
- author_id: authorId,
- content,
- });
- if (error) {
- console.warn('[Posts] Supabase comment insert error:', error.message);
- }
- }
- } catch (err) {
- console.warn('[Posts] Comment insert error:', err);
- }
+ locallyCreatedComments[postId] = [...(locallyCreatedComments[postId] ?? []), created];
+ locallyCreatedPosts = locallyCreatedPosts.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
 
  return created;
 }
 
 export async function toggleCommentLike(postId: string, commentId: string, liked: boolean): Promise<void> {
- const current = commentsState[postId] ?? [];
- commentsState[postId] = current.map((c) =>
+ const current = locallyCreatedComments[postId] ?? [];
+ locallyCreatedComments[postId] = current.map((c) =>
  c.id === commentId
  ? { ...c, isLikedByMe: liked, likesCount: Math.max(0, c.likesCount + (liked ? 1 : -1)) }
  : c
@@ -394,7 +408,7 @@ export async function toggleCommentLike(postId: string, commentId: string, liked
 }
 
 export async function voteOnPoll(postId: string, optionId: string): Promise<void> {
- postsState = postsState.map((p) => {
+ locallyCreatedPosts = locallyCreatedPosts.map((p) => {
  if (p.id !== postId || !p.poll) return p;
  const hasVoted = p.poll.options.some((o) => o.isVotedByMe);
  if (hasVoted) return p;
@@ -413,8 +427,8 @@ export async function voteOnPoll(postId: string, optionId: string): Promise<void
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
- postsState = postsState.filter((p) => p.id !== postId);
- delete commentsState[postId];
+ locallyCreatedPosts = locallyCreatedPosts.filter((p) => p.id !== postId);
+ delete locallyCreatedComments[postId];
  try {
  const { error } = await supabase.from('posts').delete().eq('id', postId);
  if (error) {
@@ -426,17 +440,13 @@ export async function deletePost(postId: string): Promise<boolean> {
  return true;
 }
 
+/**
+ * Persists to Supabase first. A post that isn't in this session's local
+ * cache (any post fetched from the database in the normal case) still
+ * gets updated for real - this just returns a best-effort merged object
+ * for it instead of throwing, since the write already succeeded.
+ */
 export async function updatePost(postId: string, updates: Partial<Post>): Promise<Post> {
- let updated: Post | undefined;
- postsState = postsState.map((p) => {
- if (p.id === postId) {
- updated = { ...p, ...updates };
- return updated;
- }
- return p;
- });
- if (!updated) throw new Error('Post not found');
-
  try {
  const dbPayload: any = {};
  if (updates.title) dbPayload.title = updates.title;
@@ -452,5 +462,17 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
  console.warn('[Posts] Backend updatePost error:', err);
  }
 
+ let updated: Post | undefined;
+ locallyCreatedPosts = locallyCreatedPosts.map((p) => {
+ if (p.id === postId) {
+ updated = { ...p, ...updates };
  return updated;
+ }
+ return p;
+ });
+
+ if (updated) return updated;
+
+ const seedMatch = getSeedPosts().find((p) => p.id === postId);
+ return { ...(seedMatch as Post), id: postId, ...updates };
 }

@@ -15,14 +15,31 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts } from '@/api/posts';
+import { getMyProfile } from '@/api/profile';
+import { useMockDataVisible } from '@/api/mockDataSettings';
 
 export default function AlumniDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const { data: posts } = useQuery({ queryKey: ['feed', 'alumni-dash'], queryFn: () => listFeedPosts({ scope: 'global' }) });
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+  // The 3-KPI network/engagement grid below has no real membership-registry
+  // backend behind it - it was hardcoded placeholder content shown to every
+  // alumni account. Gate it the same way the rest of the app now gates
+  // fixture data, via the Mock Data Visibility toggle.
+  const mockDataVisible = useMockDataVisible();
 
-  const fullName = user?.fullName ?? 'Adeola Adeleke';
+  const fullName = profile?.fullName ?? user?.fullName ?? 'Adeola Adeleke';
+  const subtitleParts = [
+    profile?.graduationYear ? `Class of '${String(profile.graduationYear).slice(-2)}` : null,
+    profile?.department,
+    'Verified Alumni Fellow',
+  ].filter(Boolean);
 
   return (
     <ScreenContainer glow={false}>
@@ -96,14 +113,16 @@ export default function AlumniDashboard() {
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
                   </View>
                   <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
-                    Class of '20 • Computer Science & AI • Verified Alumni Fellow
+                    {subtitleParts.length > 0 ? subtitleParts.join(' • ') : 'Verified Alumni Fellow'}
                   </AppText>
                 </View>
               </View>
 
               <View style={{ flexDirection: 'row', gap: spacing.xs }}>
                 <Badge label="Alumni Fellow" tone="brand" />
-                <Badge label="Class of '20" tone="success" />
+                {profile?.graduationYear ? (
+                  <Badge label={`Class of '${String(profile.graduationYear).slice(-2)}`} tone="success" />
+                ) : null}
               </View>
             </View>
           </View>
@@ -113,6 +132,7 @@ export default function AlumniDashboard() {
         <AnnouncementsWidget scope="alumni" />
 
         {/* 3. 3-KPI Executive Metrics Grid */}
+        {mockDataVisible && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
           <View style={{ flex: 1, width: isDesktop ? undefined : 'calc(50% - 6px)' as any, minWidth: isDesktop ? 240 : undefined }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
@@ -165,6 +185,7 @@ export default function AlumniDashboard() {
             </SolidCard>
           </View>
         </View>
+        )}
 
         {/* 4. Live Campus & Alumni Pulse Feed */}
         <View>
@@ -212,13 +233,13 @@ export default function AlumniDashboard() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name="heart-outline" size={14} color={colors.textSecondary} />
                       <AppText variant="caption" tone="secondary">
-                        {post.upvotesCount ?? 14}
+                        {post.upvotesCount ?? 0}
                       </AppText>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name="chatbubble-outline" size={14} color={colors.textSecondary} />
                       <AppText variant="caption" tone="secondary">
-                        {post.commentsCount ?? 5} replies
+                        {post.commentsCount ?? 0} replies
                       </AppText>
                     </View>
                   </View>

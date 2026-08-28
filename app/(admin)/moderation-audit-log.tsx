@@ -158,6 +158,7 @@ export default function ModerationAuditLogScreen() {
  <FlatList
  data={visibleEntries}
  keyExtractor={(item) => item.id}
+ showsVerticalScrollIndicator={false}
  contentContainerStyle={{ paddingBottom: 130 }}
  renderItem={({ item }) => (
  <SolidCard style={{ marginBottom: spacing.md }}>

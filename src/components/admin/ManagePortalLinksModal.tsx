@@ -6,6 +6,7 @@ import { AppTextField } from '../AppTextField';
 import { AppButton } from '../AppButton';
 import { SolidCard } from '../SolidCard';
 import { Badge } from '../Badge';
+import { ShimmerCardList } from '../ShimmerSkeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { haptics } from '@/utils/haptics';
 import {
@@ -99,6 +100,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  }
 
  async function handleSave() {
+ if (saving) return; // Guard against duplicate writes from repeated taps on a slow network.
  setFormError(null);
  if (!title.trim()) {
  setFormError('Please enter a link title.');
@@ -328,10 +330,12 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  ) : null}
 
  <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
- <AppButton label="Cancel" variant="ghost" onPress={cancelForm} />
+ <AppButton label="Cancel" variant="ghost" onPress={cancelForm} disabled={saving} />
  <AppButton
  label={editingId ? 'Save Changes' : 'Publish Link'}
  onPress={handleSave}
+ loading={saving}
+ disabled={saving}
  />
  </View>
  </SolidCard>
@@ -347,7 +351,10 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  )}
  </View>
 
- {links.map((link) => (
+ {loading ? (
+ <ShimmerCardList count={3} />
+ ) : (
+ links.map((link) => (
  <SolidCard
  key={link.id}
  radius={16}
@@ -414,7 +421,8 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  </View>
  </View>
  </SolidCard>
- ))}
+ ))
+ )}
  </ScrollView>
  </View>
  </View>

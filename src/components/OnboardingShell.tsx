@@ -26,7 +26,7 @@ export function OnboardingShell({ currentPath, title, subtitle, children, footer
 
  return (
  <ScreenContainer noPadding glow={false}>
- <ScrollView style={{ flex: 1, width: '100%' }} keyboardShouldPersistTaps="handled"contentContainerStyle={{ paddingBottom: spacing.xl }}>
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xl }}>
  <AuthHeroBackground height={110}>
  <View style={{ flex: 1, justifyContent: 'flex-end', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg }}>
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>

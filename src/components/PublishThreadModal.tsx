@@ -38,7 +38,7 @@ interface PublishThreadModalProps {
  videoUrl?: string;
  pollQuestion?: string;
  pollOptions?: string[];
- }) => void;
+ }) => Promise<void>;
 }
 
 export function PublishThreadModal({ visible, onClose, onPublish }: PublishThreadModalProps) {
@@ -56,6 +56,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  const [customMediaType, setCustomMediaType] = useState<'image' | 'video' | null>(null);
  const [isVideoAttachment, setIsVideoAttachment] = useState(false);
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+ const [submitting, setSubmitting] = useState(false);
 
  // Poll state
  const [attachPoll, setAttachPoll] = useState(false);
@@ -141,7 +142,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  setPollOptions(pollOptions.filter((_, i) => i !== index));
  }
 
- function handlePublish() {
+ async function handlePublish() {
  setErrorMessage(null);
  if (!topic.trim()) {
  setErrorMessage('Please enter a headline or topic for your discussion.');
@@ -165,7 +166,9 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  ? customMediaUri
  : (isVideoAttachment ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' : undefined);
 
- onPublish({
+ setSubmitting(true);
+ try {
+ await onPublish({
  title: topic.trim(),
  content: content.trim(),
  category: channel,
@@ -181,6 +184,12 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  });
  onClose();
  reset();
+ } catch (err: any) {
+ haptics.error();
+ setErrorMessage(err?.message || 'Could not publish this post. Please try again.');
+ } finally {
+ setSubmitting(false);
+ }
  }
 
  return (
@@ -373,7 +382,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  </View>
  ) : (
  /* Preset Campus Images */
- <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: spacing.sm }}>
  {ATTACHABLE_MEDIA.map((preset) => {
  const isSelected = selectedMediaId === preset.id;
  return (
@@ -578,10 +587,11 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
  ) : null}
 
  <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider }}>
- <AppButton label="Cancel" variant="ghost" onPress={onClose} />
+ <AppButton label="Cancel" variant="ghost" onPress={onClose} disabled={submitting} />
  <AppButton
- label="Publish Thread"
+ label={submitting ? 'Publishing...' : 'Publish Thread'}
  onPress={handlePublish}
+ disabled={submitting}
  />
  </View>
  </View>

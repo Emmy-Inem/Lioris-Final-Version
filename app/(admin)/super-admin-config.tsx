@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+import React, { useEffect, useState } from'react';
 import { Alert, Pressable, ScrollView, Switch, View } from'react-native';
 import { router } from'expo-router';
 import { ScreenContainer } from'@/components/ScreenContainer';
@@ -21,6 +21,7 @@ import {
 import { PaymentGatewayModalContent, WebrtcKeysModalContent, AiKeysModalContent } from'@/components/admin/SecureConfigModals';
 import { LegacyVaultModalContent, ImpersonatorModalContent } from'@/components/admin/HighRiskModals';
 import { recordAuditLogEntry } from '@/api/auditLog';
+import { isMockDataVisible, setMockDataVisible, hydrateMockDataVisibility } from '@/api/mockDataSettings';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -48,7 +49,7 @@ export default function SuperAdminConfigScreen() {
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [mockDataVisible, setMockDataVisible] = useState(true);
+  const [mockDataVisible, setMockDataVisibleState] = useState(isMockDataVisible());
 
   // Lifted form states for configuration modals
   const [domainAuthorityInput, setDomainAuthorityInput] = useState('@ui.edu.ng, @student.ui.edu.ng, @unilag.edu.ng, @oau.edu.ng, @funaab.edu.ng');
@@ -64,7 +65,31 @@ export default function SuperAdminConfigScreen() {
   const [pushTitle, setPushTitle] = useState('');
   const [pushBody, setPushBody] = useState('');
 
-  function confirmMaintenanceMode(next: boolean) {
+  useEffect(() => {
+ let mounted = true;
+ hydrateMockDataVisibility().then((visible) => {
+ if (mounted) setMockDataVisibleState(visible);
+ });
+ return () => {
+ mounted = false;
+ };
+ }, []);
+
+ async function handleToggleMockData(next: boolean) {
+ // Optimistic - the toggle takes effect immediately for every src/api/*
+ // module (they read isMockDataVisible() at call time), independent of
+ // whether this async persistence write succeeds.
+ setMockDataVisibleState(next);
+ await setMockDataVisible(next);
+ recordAuditLogEntry({
+ action: 'platform_config_updated',
+ summary: `${next ? 'Enabled' : 'Disabled'} mock/seed data visibility platform-wide.`,
+ targetType: 'platform_config',
+ targetId: 'mock_data_visibility',
+ });
+ }
+
+ function confirmMaintenanceMode(next: boolean) {
     if (!next) {
       setMaintenanceMode(false);
       return;
@@ -210,8 +235,8 @@ export default function SuperAdminConfigScreen() {
  titleTone="critical"
  />
  <ToggleRow
- title="Mock Data Visibility & Setup"description="Toggle the visibility of seed datasets across the platform for testing."value={mockDataVisible}
- onValueChange={setMockDataVisible}
+ title="Mock Data Visibility & Setup"description="Show seed/demo fixtures mixed into real data across the platform. Turn off to see only real database content everywhere, including on failures."value={mockDataVisible}
+ onValueChange={handleToggleMockData}
  last
  />
  </Section>

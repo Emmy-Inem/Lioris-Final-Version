@@ -116,6 +116,7 @@ export function AnalyticsTab() {
  horizontal
  showsHorizontalScrollIndicator={false}
  contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.md }}
+ style={{ flex: 1, minWidth: 0 }}
  >
  {TIMEFRAMES.map((t) => {
  const selected = timeframe === t;

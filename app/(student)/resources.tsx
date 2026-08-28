@@ -17,8 +17,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 import { listResources, createResource } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
-import { getMyProfile } from '@/api/profile';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 
 const RESOURCE_CATEGORIES = [
@@ -40,26 +40,21 @@ export default function ResourcesScreen() {
  const [filterModalOpen, setFilterModalOpen] = useState(false);
  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
 
- const { data: profile } = useQuery({
- queryKey: ['myProfile', user?.id],
- queryFn: () => getMyProfile(),
- enabled: !!user?.id,
- });
-
- const campusCode = profile?.institutionCode || 'UNILAG';
+ const { campusCode, homeInstitutionCode } = useCampusScope();
 
  const { data: portalLinks = [] } = useQuery({
- queryKey: ['portalLinks', campusCode],
- queryFn: () => listPortalLinks(campusCode),
+ queryKey: ['portalLinks', homeInstitutionCode],
+ queryFn: () => listPortalLinks(homeInstitutionCode || 'UNILAG'),
  });
 
  const { data: resources, isLoading, refetch, isRefetching } = useQuery({
- queryKey: ['resources', debouncedQuery, filters],
+ queryKey: ['resources', debouncedQuery, filters, campusCode],
  queryFn: () =>
  listResources({
  q: debouncedQuery || undefined,
  category: filters.resourceType === 'All Types' ? undefined : (filters.resourceType as any),
  department: filters.department === 'All Depts' ? undefined : filters.department,
+ campusCode,
  }),
  });
 
@@ -165,7 +160,7 @@ export default function ResourcesScreen() {
       <View style={{ marginBottom: spacing.md }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, fontSize: 10.5 }}>
-            PORTAL SHORTCUTS ({campusCode})
+            PORTAL SHORTCUTS
           </AppText>
           <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5 }}>
             {portalLinks.filter((p) => p.active).length} links
@@ -462,7 +457,7 @@ export default function ResourcesScreen() {
           <View style={{ marginBottom: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
               <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
-                CAMPUS DIRECTORIES & OFFICIAL PORTALS ({campusCode})
+                CAMPUS DIRECTORIES & OFFICIAL PORTALS
               </AppText>
               <AppText tone="secondary" variant="caption">
                 {portalLinks.filter((p) => p.active).length} active verified portals
@@ -553,7 +548,7 @@ export default function ResourcesScreen() {
               </View>
 
               {/* Resource Type Pills */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
                 {RESOURCE_CATEGORIES.map((c) => {
                   const selected = filters.resourceType === c.filter;
                   return (

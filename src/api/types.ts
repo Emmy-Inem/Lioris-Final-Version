@@ -333,6 +333,7 @@ export interface JobListing {
  applyUrl: string;
  postedByName: string;
  createdAt: string;
+ campusCode?: string;
 }
 
 export interface StudyGroup {

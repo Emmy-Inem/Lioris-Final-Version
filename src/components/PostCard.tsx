@@ -517,6 +517,7 @@ export function PostCard({ post }: { post: Post }) {
  <AppButton
  label="Submit Report"variant="accent"onPress={async () => {
  if (!reportReason.trim()) return;
+ try {
  await submitReport({
  targetType: 'post',
  targetId: post.id,
@@ -526,6 +527,9 @@ export function PostCard({ post }: { post: Post }) {
  setReportOpen(false);
  setReportReason('');
  Alert.alert('Report Dispatched', 'Campus moderators have been notified.');
+ } catch (err: any) {
+ Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
+ }
  }}
  />
  </View>

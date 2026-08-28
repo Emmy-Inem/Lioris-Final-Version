@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View } from'react-native';
 import { Ionicons } from'@expo/vector-icons';
 import { AppText } from'./AppText';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useMockDataVisible } from '@/api/mockDataSettings';
 
 const TRENDS = [
  { tag: 'CONVOCATION_2026', title: 'Convocation', count: '2.4K' },
@@ -17,9 +18,19 @@ interface HorizontalTrendsSliderProps {
  onSelectTrend: (tag: string | null) => void;
 }
 
-/** Ported from HorizontalTrendsSlider (DashboardAndProfile.kt): a filter-chip row of trending campus topics. */
+/**
+ * Ported from HorizontalTrendsSlider (DashboardAndProfile.kt): a filter-chip
+ * row of trending campus topics. The tags/counts above have no real
+ * trending-topics backend behind them - they're fixture data, so this only
+ * renders while Mock Data Visibility is on (Settings -> Super Admin Config).
+ */
 export function HorizontalTrendsSlider({ selectedTrend, onSelectTrend }: HorizontalTrendsSliderProps) {
  const { colors, spacing, radius } = useTheme();
+ const mockDataVisible = useMockDataVisible();
+
+ if (!mockDataVisible) {
+ return null;
+ }
 
  return (
  <View style={{ marginBottom: spacing.md }}>
@@ -37,7 +48,7 @@ export function HorizontalTrendsSlider({ selectedTrend, onSelectTrend }: Horizon
  ) : null}
  </View>
 
- <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: spacing.sm }}>
  {TRENDS.map((trend) => {
  const selected = selectedTrend === trend.tag;
  return (

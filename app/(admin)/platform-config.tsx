@@ -38,6 +38,7 @@ export default function PlatformConfigScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user, switchRole } = useAuth();
+  const isSuperAdmin = user?.actualRole === 'admin';
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Analytics');
   const [institution, setInstitution] = useState(SCOPE_OPTIONS[0]);
@@ -102,7 +103,8 @@ export default function PlatformConfigScreen() {
           <Badge label="Lioris Root Admin" tone="critical" />
         </View>
 
-        {/* Preview Workspace As Role Switcher */}
+        {/* Preview Workspace As Role Switcher - Root Admins only, see isSuperAdmin above */}
+        {isSuperAdmin && (
         <SolidCard
           frosted
           radius={20}
@@ -165,6 +167,7 @@ export default function PlatformConfigScreen() {
             })}
           </View>
         </SolidCard>
+        )}
 
         {/* Active Workspace Scope Frosted Card */}
         <SolidCard

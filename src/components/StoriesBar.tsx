@@ -23,6 +23,7 @@ export function StoriesBar() {
  horizontal
  showsHorizontalScrollIndicator={false}
  contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.sm }}
+ style={{ flex: 1, minWidth: 0 }}
  >
  <View style={{ alignItems: 'center', width: 64 }}>
  <View

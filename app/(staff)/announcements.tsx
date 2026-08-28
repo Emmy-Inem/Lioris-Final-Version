@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { Pressable, ScrollView, View } from'react-native';
+import { Alert, Pressable, ScrollView, View } from'react-native';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { ScreenContainer } from'@/components/ScreenContainer';
 import { AppHeader } from'@/components/AppHeader';
@@ -8,6 +8,8 @@ import { AppTextField } from'@/components/AppTextField';
 import { AppButton } from'@/components/AppButton';
 import { AnnouncementCard } from'@/components/AnnouncementCard';
 import { SolidCard } from'@/components/SolidCard';
+import { ShimmerCardList } from'@/components/ShimmerSkeleton';
+import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listAnnouncements, publishAnnouncement, PublishAnnouncementPayload } from '@/api/announcements';
@@ -39,6 +41,8 @@ export default function StaffAnnouncementsScreen() {
       setTitle('');
       setContent('');
       setComposing(false);
+    } catch (err: any) {
+      Alert.alert('Could not publish', err?.message || 'Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -86,13 +90,19 @@ export default function StaffAnnouncementsScreen() {
           </SolidCard>
         ) : null}
 
-        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
-          {announcements?.map((a) => (
-            <View key={a.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 } : undefined}>
-              <AnnouncementCard announcement={a} />
-            </View>
-          ))}
-        </View>
+        {isLoading ? (
+          <ShimmerCardList count={3} />
+        ) : announcements && announcements.length > 0 ? (
+          <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+            {announcements.map((a) => (
+              <View key={a.id} style={isDesktop ? { width: 'calc(50% - 8px)' as any, minWidth: 320, maxWidth: 580 } : undefined}>
+                <AnnouncementCard announcement={a} />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <EmptyState title="No announcements yet" description="Publish one above to notify your audience." />
+        )}
       </ScrollView>
     </ScreenContainer>
  );

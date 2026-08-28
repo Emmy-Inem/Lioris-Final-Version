@@ -14,6 +14,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useToast } from '@/context/ToastContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listStudyGroups, createStudyGroup } from '@/api/studyGroups';
+import { useCampusScope } from '@/hooks/useCampusScope';
 
 const COURSE_FILTERS = ['All Pods', 'CSC 401', 'CSC 412', 'MAT 201', 'EEE 301', 'Public Circles'];
 
@@ -24,8 +25,9 @@ export default function StudyGroupsScreen() {
  const [createModalOpen, setCreateModalOpen] = useState(false);
  const [searchQuery, setSearchQuery] = useState('');
  const [selectedFilter, setSelectedFilter] = useState('All Pods');
+ const { campusCode } = useCampusScope();
 
- const { data: groups, isLoading } = useQuery({ queryKey: ['study-groups'], queryFn: () => listStudyGroups() });
+ const { data: groups, isLoading } = useQuery({ queryKey: ['study-groups', campusCode], queryFn: () => listStudyGroups(campusCode) });
 
  async function handleCreate(payload: Parameters<typeof createStudyGroup>[0]) {
  await createStudyGroup(payload);
@@ -50,8 +52,8 @@ export default function StudyGroupsScreen() {
       {!isDesktop && <AppHeader />}
       
       {/* Top Title & Header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-        <View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flexShrink: 1, minWidth: 0 }}>
           <AppText variant="h1" weight="bold">
             Study Pods
           </AppText>
@@ -59,11 +61,13 @@ export default function StudyGroupsScreen() {
             Collaborative course squads, exam revision circles, and weekly peer sprints
           </AppText>
         </View>
-        <AppButton
-          label="+ Create Pod"
-          variant="primary"
-          onPress={() => setCreateModalOpen(true)}
-        />
+        <View style={{ flexShrink: 0 }}>
+          <AppButton
+            label="+ Create Pod"
+            variant="primary"
+            onPress={() => setCreateModalOpen(true)}
+          />
+        </View>
       </View>
 
       <ScrollView style={{ flex: 1, width: '100%' }}
@@ -108,7 +112,7 @@ export default function StudyGroupsScreen() {
                 </View>
 
                 {/* Course Cohort Pills */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
                   {COURSE_FILTERS.map((f) => {
                     const isSelected = selectedFilter === f;
                     return (
@@ -159,7 +163,7 @@ export default function StudyGroupsScreen() {
           </>
         ) : (
           <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: spacing.md }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8, marginBottom: spacing.md }}>
               {COURSE_FILTERS.map((f) => (
                 <Pressable
                   key={f}

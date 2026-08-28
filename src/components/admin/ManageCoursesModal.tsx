@@ -249,7 +249,7 @@ export function ManageCoursesModal({ visible, onClose }: ManageCoursesModalProps
  <AppText variant="bodySmall"weight="bold"style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
  Select Course Cover Image
  </AppText>
- <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.lg }}>
  {COURSE_COVER_PRESETS.map((preset) => {
  const isSelected = formCover === preset.id;
  return (

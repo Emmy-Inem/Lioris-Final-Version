@@ -48,7 +48,7 @@ export default function VerifyAlumniScreen() {
 
  return (
  <ScreenContainer noPadding glow={false}>
- <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={{ paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
+ <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
  <AuthHeroBackground height={160}>
  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
  <View

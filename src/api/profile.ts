@@ -2,6 +2,7 @@ import { api } from './client';
 import { UserProfile, UserRole } from './types';
 import { withMockFallback } from './withMockFallback';
 import { FALL_BACK_TO_MOCKS } from './config';
+import { isMockDataVisible, subscribeMockDataVisible } from './mockDataSettings';
 import { supabase } from './supabase';
 import { getInstitutionByCode, LAUNCH_INSTITUTIONS } from './institutions';
 import { getSessionUser } from '../auth/tokenStorage';
@@ -16,27 +17,49 @@ export function nextLevelXp(level: number): number {
 
 const profileState = new Map<string, UserProfile>();
 
+// The gamification-style fields on UserProfile (xp, level, reputationScore,
+// followersCount, etc.) have no backing `profiles` columns at all yet - see
+// mockProfileFor below - so they only ever come from the memoized fallback
+// object, never from a fresh Supabase read. Without this, toggling Mock
+// Data Visibility off would correctly zero them out for the NEXT person
+// whose profile gets built, but everyone already cached here would keep
+// showing the old fabricated numbers indefinitely. Clearing the cache here
+// forces mockProfileFor to rebuild honestly on the next read.
+subscribeMockDataVisible(() => {
+ profileState.clear();
+});
+
+/**
+ * Placeholder profile used only until a real `profiles` row exists/loads
+ * for this person, or a field on the real row is empty. Two shapes:
+ *  - Mock Data Visibility ON: a filled-in demo persona (fake bio, XP,
+ *    follower counts, etc.) so the UI has something to look at while
+ *    testing.
+ *  - Mock Data Visibility OFF: honest zeros/blanks built from the real
+ *    signed-in user's own name/email/role - never invented stats.
+ * Either way this is a *base* that real `profiles` columns get merged
+ * over in getMyProfile() below, so it only shows where the real row is
+ * genuinely missing data - it never overwrites a real value.
+ */
 function mockProfileFor(user: { id: string; fullName: string; role: UserRole; email?: string }): UserProfile {
  if (profileState.has(user.id)) return profileState.get(user.id)!;
 
  const isAlumni = user.role === 'alumni';
  const isStaff = user.role === 'staff';
  const isAdmin = user.role === 'admin';
- const isSpecialAdmin = user.email?.toLowerCase().includes('inememmanuel') || user.id.includes('inememmanuel');
+ const resolvedEmail = user.email || `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`;
+ const username = user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
 
- const resolvedEmail = user.email || (isSpecialAdmin ? 'inememmanuel@gmail.com' : `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`);
-
- const created: UserProfile = {
+ const created: UserProfile = isMockDataVisible()
+ ? {
  id: user.id,
- fullName: isSpecialAdmin ? 'Inem Emmanuel' : user.fullName,
- username: isSpecialAdmin ? 'inememmanuel' : user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.'),
+ fullName: user.fullName,
+ username,
  email: resolvedEmail,
- userType: isSpecialAdmin ? 'admin' : user.role,
+ userType: user.role,
  graduationYear: isAlumni ? 2022 : 2026,
  connectionsCount: isAlumni ? 142 : 48,
- bio: isSpecialAdmin
- ? 'Platform Root Administrator & Campus Architect. Overseeing multi-campus workspaces, security policies & moderation.'
- : isAlumni
+ bio: isAlumni
  ? 'Lead Software Engineer @ Paystack. Mentoring student developers and sponsoring open STEM research.'
  : isStaff
  ? 'Faculty Coordinator & Lecturer, Department of Computer Sciences. Campus Tech Advisor.'
@@ -47,29 +70,50 @@ function mockProfileFor(user: { id: string; fullName: string; role: UserRole; em
  interests: ['Software Engineering', 'Cloud Architecture', 'Mobile Systems', 'Campus AI', 'UI/UX Design'],
  institutionName: 'University of Ibadan',
  institutionCode: 'UI',
- avatarUrl: isSpecialAdmin
- ? 'avatar_male_2'
- : isAlumni
- ? 'avatar_female'
- : isStaff
- ? 'avatar_mentor'
- : isAdmin
- ? 'avatar_alumni_2'
- : 'avatar_male',
+ avatarUrl: isAlumni ? 'avatar_female' : isStaff ? 'avatar_mentor' : isAdmin ? 'avatar_alumni_2' : 'avatar_male',
  coverUrl: 'campus_students_photo',
- isVerified: isSpecialAdmin || isAdmin,
- verificationStatus: (isSpecialAdmin || isAdmin) ? 'verified' : 'none',
- xp: isSpecialAdmin ? 3200 : 850,
- level: isSpecialAdmin ? 10 : 4,
- reputationScore: isSpecialAdmin ? 980 : 320,
- trustLevel: isSpecialAdmin ? 10 : 8,
+ isVerified: isAdmin,
+ verificationStatus: isAdmin ? 'verified' : 'none',
+ xp: 850,
+ level: 4,
+ reputationScore: 320,
+ trustLevel: 8,
  streakDays: 28,
- postsCount: isSpecialAdmin ? 16 : 4,
- resourcesCount: isSpecialAdmin ? 24 : 6,
- eventsCount: isSpecialAdmin ? 12 : 5,
- badgesCount: isSpecialAdmin ? 8 : 3,
- followersCount: isSpecialAdmin ? 340 : 88,
- followingCount: isSpecialAdmin ? 120 : 64,
+ postsCount: 4,
+ resourcesCount: 6,
+ eventsCount: 5,
+ badgesCount: 3,
+ followersCount: 88,
+ followingCount: 64,
+ }
+ : {
+ id: user.id,
+ fullName: user.fullName,
+ username,
+ email: resolvedEmail,
+ userType: user.role,
+ graduationYear: undefined,
+ connectionsCount: 0,
+ bio: '',
+ department: '',
+ interests: [],
+ institutionName: '',
+ institutionCode: undefined,
+ avatarUrl: undefined,
+ coverUrl: undefined,
+ isVerified: isAdmin,
+ verificationStatus: isAdmin ? 'verified' : 'none',
+ xp: 0,
+ level: 1,
+ reputationScore: 0,
+ trustLevel: 0,
+ streakDays: 0,
+ postsCount: 0,
+ resourcesCount: 0,
+ eventsCount: 0,
+ badgesCount: 0,
+ followersCount: 0,
+ followingCount: 0,
  };
  profileState.set(user.id, created);
  return created;

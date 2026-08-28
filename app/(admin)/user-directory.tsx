@@ -13,6 +13,7 @@ import { Avatar } from'@/components/Avatar';
 import { UserTypeBadge } from'@/components/UserTypeBadge';
 import { ActionSheetModal } from'@/components/ActionSheetModal';
 import { EmptyState } from'@/components/EmptyState';
+import { ShimmerCardList } from'@/components/ShimmerSkeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { recordAuditLogEntry } from '@/api/auditLog';
@@ -311,20 +312,24 @@ export default function UserDirectoryScreen() {
       {!isDesktop && <AppHeader />}
 
       {/* Header & Quick Action Row */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md }}>
-        <View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md }}>
+        <View style={{ flexShrink: 1, minWidth: 0 }}>
           <AppText variant="h1" weight="bold">
             User Directory
           </AppText>
           <AppText tone="secondary">Manage identities, matric records & role privileges</AppText>
         </View>
-        <AppButton
-          label="+ Provision User"
-          onPress={() => setCreateModalOpen(true)}
-        />
+        <View style={{ flexShrink: 0 }}>
+          <AppButton
+            label="+ Provision User"
+            onPress={() => setCreateModalOpen(true)}
+          />
+        </View>
       </View>
 
-      {isDesktop ? (
+      {loading && users.length === 0 ? (
+        <ShimmerCardList count={isDesktop ? 6 : 4} />
+      ) : isDesktop ? (
         <View style={{ flexDirection: 'row', gap: 24, flex: 1, alignItems: 'flex-start' }}>
           {/* Left Column: Search & Filters Rail */}
           <View style={{ width: 280, gap: spacing.md }}>

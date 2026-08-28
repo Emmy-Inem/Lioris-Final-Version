@@ -20,6 +20,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listEvents, EventsQuery } from '@/api/events';
 import { CampusEvent } from '@/api/types';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import { haptics } from '@/utils/haptics';
 
 const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
@@ -43,6 +44,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  const [filter, setFilter] = useState<(typeof EVENT_FILTERS)[number]['key']>('all');
  const [searchQuery, setSearchQuery] = useState('');
  const [publishModalOpen, setPublishModalOpen] = useState(false);
+ const { campusCode } = useCampusScope();
 
  // Automatic Horizontal Carousel State
  const [activeSlide, setActiveSlide] = useState(0);
@@ -50,8 +52,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  const isInteracting = useRef(false);
 
  const { data: events, isLoading, refetch, isRefetching } = useQuery({
- queryKey: ['events', scope ?? 'all', 'full'],
- queryFn: () => listEvents(scope ? { scope } : {}),
+ queryKey: ['events', scope ?? 'all', 'full', campusCode],
+ queryFn: () => listEvents({ ...(scope ? { scope } : {}), campusCode }),
  });
 
  const featuredEvents: CampusEvent[] = (events ?? []).filter((e) => e.sponsored || e.rsvpCount >= 15);
@@ -172,6 +174,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  horizontal
  showsHorizontalScrollIndicator={false}
  contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.sm }}
+ style={{ flex: 1, minWidth: 0 }}
  >
  {EVENT_FILTERS.map((f) => {
  const active = filter === f.key;
@@ -283,7 +286,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               </View>
 
               {/* Filter Pills */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
                 {EVENT_FILTERS.map((f) => {
                   const active = filter === f.key;
                   return (

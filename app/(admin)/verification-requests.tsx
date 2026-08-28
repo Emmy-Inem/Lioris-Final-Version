@@ -119,14 +119,16 @@ export default function VerificationRequestsScreen() {
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
-          <View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
+          <View style={{ flexShrink: 1, minWidth: 0 }}>
             <AppText variant="h1" weight="bold">
               Verify Credentials
             </AppText>
             <AppText tone="secondary">Review student matriculation records & government ID certificates</AppText>
           </View>
-          <Badge label={`${requests?.length ?? 0} Pending`} tone="brand" />
+          <View style={{ flexShrink: 0 }}>
+            <Badge label={`${requests?.length ?? 0} Pending`} tone="brand" />
+          </View>
         </View>
 
         <View style={{ height: spacing.md }} />

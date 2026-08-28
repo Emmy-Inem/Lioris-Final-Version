@@ -29,6 +29,7 @@ export default function ConnectionRequestsScreen() {
       <FlatList
         data={requests ?? []}
         keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
         key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
         numColumns={isDesktop ? 2 : 1}
         columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}

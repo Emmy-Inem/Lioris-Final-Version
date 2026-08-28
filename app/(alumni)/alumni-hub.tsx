@@ -20,6 +20,7 @@ import { searchAlumniDirectory } from '@/api/connections';
 import { getMyProfile } from '@/api/profile';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { haptics } from '@/utils/haptics';
+import { useMockDataVisible } from '@/api/mockDataSettings';
 
 const TABS = ['Overview Hub', 'Member Search', 'Legacy & Giving'] as const;
 const DEPARTMENTS = ['All Departments', 'Computer Science', 'Mathematics', 'Electrical Engineering'];
@@ -93,8 +94,8 @@ export default function AlumniHubScreen() {
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: isDesktop ? spacing.xs : spacing.lg, marginBottom: spacing.md }}>
-        <View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.lg, marginBottom: spacing.md }}>
+        <View style={{ flexShrink: 1, minWidth: 0 }}>
           <AppText variant="h1" weight="bold">
             Alumni Hub
           </AppText>
@@ -104,6 +105,7 @@ export default function AlumniHubScreen() {
           <View
             style={{
               flexDirection: 'row',
+              flexShrink: 0,
               alignItems: 'center',
               gap: 4,
               backgroundColor: '#FDF0DA',
@@ -166,6 +168,9 @@ function OverviewHubTab() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const [registeredList, setRegisteredList] = useState<string[]>([]);
+  // UPCOMING_MASTERCLASSES is fixture data - there's no real webinar/events
+  // backend behind it, so only show it while Mock Data Visibility is on.
+  const mockDataVisible = useMockDataVisible();
 
   const utilities = [
     {
@@ -221,9 +226,14 @@ function OverviewHubTab() {
           <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
             UPCOMING ALUMNI WEBINARS
           </AppText>
-          <Badge label="Live Panels" tone="accent" />
+          {mockDataVisible && <Badge label="Live Panels" tone="accent" />}
         </View>
 
+        {!mockDataVisible ? (
+          <AppText tone="secondary" variant="caption">
+            No upcoming webinars scheduled yet.
+          </AppText>
+        ) : (
         <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
           {UPCOMING_MASTERCLASSES.map((mc) => {
             const isRegistered = registeredList.includes(mc.id);
@@ -271,6 +281,7 @@ function OverviewHubTab() {
             );
           })}
         </View>
+        )}
       </View>
 
       <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
@@ -428,6 +439,11 @@ function MemberRow({
 function LegacyGivingTab() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  // LEGACY_CAMPAIGNS (and the pledge flow below) is simulated fixture data -
+  // there's no real payments/donation backend behind it, so it should not
+  // be shown to real users as if it were live fundraising. Gate it behind
+  // Mock Data Visibility like the rest of the app's fixture content.
+  const mockDataVisible = useMockDataVisible();
   const [pledgeModalCampaign, setPledgeModalCampaign] = useState<(typeof LEGACY_CAMPAIGNS)[0] | null>(null);
   const [pledgeAmount, setPledgeAmount] = useState('100');
   const [pledgeNote, setPledgeNote] = useState('');
@@ -464,6 +480,11 @@ function LegacyGivingTab() {
         ACTIVE ENDOWMENT INITIATIVES
       </AppText>
 
+      {!mockDataVisible ? (
+        <AppText tone="secondary" variant="caption">
+          No active giving initiatives are open right now. Check back soon.
+        </AppText>
+      ) : (
       <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
         {LEGACY_CAMPAIGNS.map((c) => {
           const isPledged = pledgedList.includes(c.id);
@@ -510,6 +531,7 @@ function LegacyGivingTab() {
           );
         })}
       </View>
+      )}
 
       {/* Pledge / Donation Interactive Modal */}
       <Modal visible={!!pledgeModalCampaign} transparent animationType="slide" onRequestClose={() => setPledgeModalCampaign(null)}>

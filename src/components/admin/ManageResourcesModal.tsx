@@ -259,7 +259,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  <AppText variant="bodySmall"weight="bold"style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
  Select Resource Thumbnail / Cover
  </AppText>
- <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.lg }}>
  {RESOURCE_COVER_PRESETS.map((preset) => {
  const isSelected = formCover === preset.id;
  return (
@@ -295,7 +295,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  ) : (
  <View style={{ padding: spacing.lg, flex: 1 }}>
  {/* Category Filter bar */}
- <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: spacing.sm }}>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 6, marginBottom: spacing.sm }}>
  <Pressable
  onPress={() => setSelectedCategory('all')}
  style={{

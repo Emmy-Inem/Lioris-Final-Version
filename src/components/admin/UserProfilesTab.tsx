@@ -215,6 +215,7 @@ export function UserProfilesTab() {
  horizontal
  showsHorizontalScrollIndicator={false}
  contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.md }}
+ style={{ flex: 1, minWidth: 0 }}
  >
  {(['all', 'student', 'alumni', 'staff', 'admin'] as const).map((r) => {
  const selected = roleFilter === r;

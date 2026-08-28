@@ -21,7 +21,10 @@ interface SessionUser {
  id: string;
  fullName: string;
  email?: string;
+ /** The role currently being displayed/routed on - see switchRole below. */
  role: UserRole;
+ /** The real, database-verified role. Never changed by switchRole - this is what gates who can use the Role Switcher. */
+ actualRole: UserRole;
  onboardingComplete: boolean;
  onboardingStep?: string;
  /** See src/auth/mfaPolicy.ts - only meaningful when the role requires MFA. */
@@ -40,7 +43,15 @@ interface AuthContextValue {
  completeOnboarding: () => Promise<void>;
  /** Called by the MFA challenge screen once the code checks out. No-op if the current role doesn't require MFA. */
  verifyMfa: (code: string) => Promise<void>;
- /** Allows admins and testers to switch role view in settings. */
+ /**
+  * Lets a real Root Admin preview the app as another role, for testing.
+  * Only ever changes `user.role` (what's displayed/routed) - `user.id`,
+  * `email`, and `actualRole` (the real, authenticated identity) never
+  * change, so the admin's own Supabase session and database row stay
+  * intact and switching back to Admin is instant. Throws if the caller
+  * isn't really an admin (checked against `actualRole`, which this
+  * function itself can never have altered).
+  */
  switchRole: (role: UserRole) => Promise<void>;
 }
 
@@ -52,6 +63,7 @@ async function persist(user: SessionUser) {
  fullName: user.fullName,
  email: user.email,
  role: user.role,
+ actualRole: user.actualRole,
  onboardingComplete: user.onboardingComplete,
  onboardingStep: user.onboardingStep,
  mfaVerified: user.mfaVerified,
@@ -75,6 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
  const isOnboarding = stored.onboardingComplete === false && Boolean(stored.onboardingStep);
  setUser({
  ...stored,
+ role: stored.role as UserRole,
+ actualRole: (stored.actualRole ?? stored.role) as UserRole,
  onboardingComplete: !isOnboarding,
  mfaVerified: stored.mfaVerified ?? !roleRequiresMfa(stored.role as UserRole),
  } as SessionUser);
@@ -110,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             fullName,
             email: userEmail,
             role,
+            actualRole: role,
             onboardingComplete: isOnboarded,
             mfaVerified: !roleRequiresMfa(role),
           };
@@ -154,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           fullName,
           email: userEmail,
           role,
+          actualRole: role,
           onboardingComplete: isOnboarded,
           mfaVerified: !roleRequiresMfa(role),
         };
@@ -196,6 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const nextUser: SessionUser = {
           ...session.user,
+          actualRole: session.user.role,
           onboardingComplete: isOnboarded,
           onboardingStep: isOnboarded ? undefined : firstOnboardingStep(session.user.role),
           mfaVerified: !roleRequiresMfa(session.user.role),
@@ -210,6 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await setTokens(session.accessToken, session.refreshToken);
         const nextUser: SessionUser = {
           ...session.user,
+          actualRole: session.user.role,
           onboardingComplete: false,
           onboardingStep: firstOnboardingStep(session.user.role),
           mfaVerified: !roleRequiresMfa(session.user.role),
@@ -250,17 +268,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       },
       async switchRole(newRole: UserRole) {
-        const demo = Object.values(authApi.DEMO_ACCOUNTS).find((d) => d.role === newRole);
-        const demoEmail = Object.keys(authApi.DEMO_ACCOUNTS).find((e) => authApi.DEMO_ACCOUNTS[e].role === newRole) ?? `${newRole}@ui.edu.ng`;
-        const fullName = demo?.fullName ?? (newRole === 'student' ? 'Diana Prince' : newRole === 'alumni' ? 'Adeola Adeleke' : newRole === 'staff' ? 'Dr. Adeyemi Alabi' : 'Super Admin UI');
+        // Gated on actualRole (the real, database-verified identity), not
+        // the currently-displayed role - so a Root Admin previewing as
+        // Student can still switch straight back to Admin, and nobody who
+        // isn't really an admin can ever reach any role through this at
+        // all, in any build. See the SessionUser.actualRole comment above.
+        if (!user || user.actualRole !== 'admin') {
+          throw new Error('Role switching is only available to Root Admins.');
+        }
 
+        // Only the *displayed* role changes - id/email/fullName/actualRole
+        // (the real signed-in identity) stay exactly as they are, so the
+        // admin's own Supabase session and database row keep working
+        // normally underneath the preview. Previously this fabricated an
+        // entirely new local-only identity (id: `user-${newRole}`, a fake
+        // email, etc.), which silently broke every query scoped to the
+        // real user id and was a big source of "seeing mock/fallback data"
+        // reports whenever the switcher had been used.
         const nextUser: SessionUser = {
-          id: `user-${newRole}`,
-          fullName,
-          email: demoEmail,
+          ...user,
           role: newRole,
-          onboardingComplete: true,
-          mfaVerified: true,
         };
         await persist(nextUser);
         setUser(nextUser);

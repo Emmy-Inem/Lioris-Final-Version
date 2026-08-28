@@ -40,8 +40,8 @@ export default function PulseAnalyticsScreen() {
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md }}>
-          <View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md }}>
+          <View style={{ flexShrink: 1, minWidth: 0 }}>
             <AppText variant="h1" weight="bold">
               Campus Pulse Analytics
             </AppText>
@@ -49,7 +49,9 @@ export default function PulseAnalyticsScreen() {
               Real-time student engagement, DAU metrics & retention
             </AppText>
           </View>
-          <Badge label="Live Telemetry" tone="accent" />
+          <View style={{ flexShrink: 0 }}>
+            <Badge label="Live Telemetry" tone="accent" />
+          </View>
         </View>
 
         {/* Timeframe Filter Pills */}

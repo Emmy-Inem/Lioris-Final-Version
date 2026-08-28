@@ -38,8 +38,8 @@ export default function AlumniDirectoryScreen() {
  return (
  <ScreenContainer glow={false}>
  {!isDesktop && <AppHeader />}
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: isDesktop ? spacing.md : spacing.lg, marginBottom: spacing.md }}>
- <View>
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.md : spacing.lg, marginBottom: spacing.md }}>
+ <View style={{ flexShrink: 1, minWidth: 0 }}>
  <AppText variant="h1" weight="bold">
  Alumni Directory
  </AppText>
@@ -47,7 +47,7 @@ export default function AlumniDirectoryScreen() {
  Network with graduates across technology, finance & engineering
  </AppText>
  </View>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 }}>
  {(user?.role === 'admin' || user?.role === 'staff') && (
  <Pressable
  onPress={() => setAdminManageOpen(true)}

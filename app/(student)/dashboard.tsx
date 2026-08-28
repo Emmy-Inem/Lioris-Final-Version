@@ -20,6 +20,7 @@ import { getMyProfile, updateProfileImages } from '@/api/profile';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
 import { haptics } from '@/utils/haptics';
+import { useMockDataVisible } from '@/api/mockDataSettings';
 
 const COVER_PRESETS = [
   { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
@@ -45,6 +46,12 @@ export default function StudentDashboard() {
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
+  // The 4-KPI grid below (courses/attendance/timeline/status) and the
+  // department-rep card have no real academic-records backend - they were
+  // hardcoded placeholder content. Gate them behind the same Mock Data
+  // Visibility toggle every other screen respects, instead of always
+  // showing fabricated numbers and a fake person to every student.
+  const mockDataVisible = useMockDataVisible();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -193,6 +200,7 @@ export default function StudentDashboard() {
         <AnnouncementsWidget scope="student" />
 
         {/* 3. Balanced 4-KPI Academic Overview Grid */}
+        {mockDataVisible && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
           <View style={{ width: isDesktop ? ('calc(25% - 8px)' as any) : ('calc(50% - 5px)' as any) }}>
             <SolidCard radius={18} style={{ padding: 14 }}>
@@ -253,7 +261,7 @@ export default function StudentDashboard() {
                 </AppText>
                 <Ionicons name="shield-checkmark-outline" size={15} color="#8B5CF6" />
               </View>
-              <AppText variant="h2" weight="bold" tone="brand" style={{ fontSize: 20 }} numberOfLines={1}>
+              <AppText variant="h2" weight="bold" tone="brand" style={{ fontSize: isDesktop ? 20 : 16 }} numberOfLines={2}>
                 Good Standing
               </AppText>
               <AppText variant="caption" style={{ color: '#10B981', fontWeight: '600', marginTop: 3, fontSize: 11 }} numberOfLines={1}>
@@ -262,6 +270,7 @@ export default function StudentDashboard() {
             </SolidCard>
           </View>
         </View>
+        )}
 
         {/* 4. Optional Enabled Modules Grid (Only if toggled ON in Admin) */}
         {(isFeatureEnabled('academic_resources') || isFeatureEnabled('career_page') || isFeatureEnabled('marketplace') || isFeatureEnabled('campus_events')) && (
@@ -388,13 +397,13 @@ export default function StudentDashboard() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name="heart-outline" size={14} color={colors.textSecondary} />
                       <AppText variant="caption" tone="secondary">
-                        {post.upvotesCount ?? 12}
+                        {post.upvotesCount ?? 0}
                       </AppText>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name="chatbubble-outline" size={14} color={colors.textSecondary} />
                       <AppText variant="caption" tone="secondary">
-                        {post.commentsCount ?? 4} replies
+                        {post.commentsCount ?? 0} replies
                       </AppText>
                     </View>
                   </View>
@@ -405,6 +414,7 @@ export default function StudentDashboard() {
         </View>
 
         {/* 6. Department Representative Support Card */}
+        {mockDataVisible && (
         <SolidCard radius={18} style={{ padding: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -438,6 +448,7 @@ export default function StudentDashboard() {
             ) : null}
           </View>
         </SolidCard>
+        )}
 
       </ScrollView>
 

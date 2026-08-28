@@ -284,6 +284,7 @@ export function EventsModerationTab() {
  horizontal
  showsHorizontalScrollIndicator={false}
  contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.md }}
+ style={{ flex: 1, minWidth: 0 }}
  >
  <Pressable
  onPress={() => {
@@ -583,7 +584,7 @@ export function EventsModerationTab() {
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
  EVENT BANNER PHOTO
  </AppText>
- <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.md }}>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.md }}>
  {EVENT_COVER_PRESETS.map((preset) => {
  const isSelected = formCover === preset.id;
  return (

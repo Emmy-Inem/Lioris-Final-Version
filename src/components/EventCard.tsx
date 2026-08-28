@@ -113,6 +113,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
 
  async function handleReport() {
  setMenuOpen(false);
+ try {
  await submitReport({
  targetType: 'event',
  targetId: event.id,
@@ -120,6 +121,9 @@ export function EventCard({ event }: { event: CampusEvent }) {
  reason: 'Reported from event card',
  });
  Alert.alert('Reported', 'Thanks - our campus moderation team will review this event.');
+ } catch (err: any) {
+ Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
+ }
  }
 
  return (

@@ -24,7 +24,7 @@ interface SellItemModalProps {
  condition: MarketplaceListing['condition'];
  category: MarketplaceListing['category'];
  imageUrl?: string | null;
- }) => void;
+ }) => Promise<void>;
 }
 
 export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProps) {
@@ -74,7 +74,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
  haptics.medium();
  setSubmitting(true);
  try {
- onPublish({
+ await onPublish({
  title: title.trim(),
  description: description.trim() || 'No description provided.',
  price: price.trim(),

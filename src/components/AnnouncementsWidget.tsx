@@ -136,7 +136,7 @@ export function AnnouncementsWidget({
  Posted by {selectedAnnouncement.authorName} • {new Date(selectedAnnouncement.publishedAt).toLocaleDateString()}
  </AppText>
 
- <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 250, marginBottom: spacing.lg }}>
+ <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 250, marginBottom: spacing.lg }} showsVerticalScrollIndicator={false}>
  <AppText variant="bodySmall" style={{ lineHeight: 22 }}>
  {selectedAnnouncement.content}
  </AppText>
@@ -240,7 +240,7 @@ export function AnnouncementsWidget({
  Posted by {selectedAnnouncement.authorName} • {new Date(selectedAnnouncement.publishedAt).toLocaleDateString()}
  </AppText>
 
- <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 250, marginBottom: spacing.lg }}>
+ <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 250, marginBottom: spacing.lg }} showsVerticalScrollIndicator={false}>
  <AppText variant="bodySmall" style={{ lineHeight: 22 }}>
  {selectedAnnouncement.content}
  </AppText>

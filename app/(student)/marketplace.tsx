@@ -15,6 +15,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { listMarketplaceListings, createListing } from '@/api/marketplace';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useCampusScope } from '@/hooks/useCampusScope';
 
 const CATEGORIES = [
  { id: 'All Categories', label: 'All Categories', icon: 'grid-outline' as const },
@@ -36,10 +37,11 @@ export default function MarketplaceScreen() {
  const [category, setCategory] = useState('All Categories');
  const [condition, setCondition] = useState('All Conditions');
  const [sellModalOpen, setSellModalOpen] = useState(false);
+ const { campusCode } = useCampusScope();
 
  const { data: listings, isLoading } = useQuery({
- queryKey: ['marketplace', debouncedQuery, category, condition],
- queryFn: () => listMarketplaceListings({ q: debouncedQuery || undefined, category: category as any, condition: condition as any }),
+ queryKey: ['marketplace', debouncedQuery, category, condition, campusCode],
+ queryFn: () => listMarketplaceListings({ q: debouncedQuery || undefined, category: category as any, condition: condition as any, campusCode }),
  });
 
  async function handlePublish(payload: Parameters<typeof createListing>[0]) {
@@ -127,7 +129,7 @@ export default function MarketplaceScreen() {
               </View>
 
               {/* Category Pills */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
                 {CATEGORIES.map((cat) => {
                   const isSelected = category === cat.id;
                   return (
@@ -266,30 +268,6 @@ export default function MarketplaceScreen() {
  ListEmptyComponent={!isLoading ? <EmptyState title="No listings found" description="Try a different search or filter." /> : null}
  />
  </View>
-
- <Pressable
- onPress={() => setSellModalOpen(true)}
- accessibilityRole="button"
- accessibilityLabel="Sell an item"
- style={{
- position: 'absolute',
- bottom: 90,
- right: spacing.lg,
- width: 52,
- height: 52,
- borderRadius: 26,
- backgroundColor: colors.brandPrimary,
- alignItems: 'center',
- justifyContent: 'center',
- shadowColor: '#000',
- shadowOffset: { width: 0, height: 4 },
- shadowOpacity: 0.2,
- shadowRadius: 8,
- elevation: 4,
- }}
- >
- <Ionicons name="add" size={26} color="#FFFFFF" />
- </Pressable>
  </>
  )}
 

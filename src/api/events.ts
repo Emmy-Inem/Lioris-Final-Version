@@ -1,13 +1,14 @@
-import { api } from'./client';
-import { CampusEvent, EventCategory } from'./types';
-import { mockEvents } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { FALL_BACK_TO_MOCKS } from'./config';
-import { recordAuditLogEntry } from'./auditLog';
-import { getSessionUser } from'@/auth/tokenStorage';
+import { CampusEvent } from './types';
+import { mockEvents } from './mockData';
+import { recordAuditLogEntry } from './auditLog';
+import { getSessionUser } from '@/auth/tokenStorage';
+import { supabase } from './supabase';
+import { isUserBlocked } from './connections';
+import { generateUUID } from '../utils/uuid';
+import { isMockDataVisible } from './mockDataSettings';
 
-const INITIAL_EVENTS: CampusEvent[] = [
- ...mockEvents.map((e) => ({ ...e, approvalStatus: 'approved'as const })),
+const SEED_EVENTS: CampusEvent[] = [
+ ...mockEvents.map((e) => ({ ...e, approvalStatus: 'approved' as const })),
  {
  id: 'event-sub-1',
  organizerId: 'user-chioma',
@@ -56,9 +57,16 @@ const INITIAL_EVENTS: CampusEvent[] = [
  },
 ];
 
-import { supabase } from './supabase';
+// Events this session has *successfully* written to Supabase (or locally
+// mutated via rsvp/approve/etc on one of those), kept here only so they
+// render instantly before the next refetch. Never seeded with fixtures -
+// those only come from getSeedEvents() below, and only while the admin's
+// "Mock Data Visibility" toggle is on.
+let locallyCreatedEvents: CampusEvent[] = [];
 
-let eventsState: CampusEvent[] = [...INITIAL_EVENTS];
+function getSeedEvents(): CampusEvent[] {
+ return isMockDataVisible() ? SEED_EVENTS : [];
+}
 
 export interface EventsQuery {
  scope?: 'student' | 'alumni' | 'global';
@@ -69,10 +77,8 @@ export interface EventsQuery {
  campusCode?: string;
 }
 
-import { isUserBlocked } from './connections';
-
-function filterMockEvents(query: EventsQuery): CampusEvent[] {
- let results = [...eventsState].filter((e) => !isUserBlocked(e.organizerId));
+function filterEvents(pool: CampusEvent[], query: EventsQuery): CampusEvent[] {
+ let results = pool.filter((e) => !isUserBlocked(e.organizerId));
 
  if (query.approvalStatus && query.approvalStatus !== 'all') {
  results = results.filter((e) => e.approvalStatus === query.approvalStatus);
@@ -139,8 +145,9 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
  .select('*, profiles:creator_id(full_name)')
  .order('start_time', { ascending: true });
 
- if (!error && data && data.length > 0) {
- const dbEvents: CampusEvent[] = data
+ if (error) throw error;
+
+ const dbEvents: CampusEvent[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.creator_id))
  .filter((row: any) => {
  if (isStaffOrAdmin && !query.campusCode) return true;
@@ -164,9 +171,13 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
  campusCode: row.campus_code || 'GLOBAL',
  coverImageUrl: row.banner_url,
  }));
- // Merge unique
+
+ // Merge unique - local pool only ever contributes this session's own
+ // just-created events (always) plus seed fixtures (only when the admin
+ // mock-data toggle is on).
+ const pool = [...locallyCreatedEvents, ...getSeedEvents()];
  const merged = [...dbEvents];
- for (const e of eventsState) {
+ for (const e of pool) {
  if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
  if (isStaffOrAdmin && !query.campusCode) {
  merged.push(e);
@@ -175,18 +186,16 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
  }
  }
  }
- eventsState = merged;
- return filterMockEvents({ ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
- }
+ return filterEvents(merged, { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
  } catch (err) {
- console.warn('[Events] Supabase listEvents error:', err);
+ console.warn('[Events] Supabase listEvents error, showing local pool only:', err);
+ return filterEvents([...locallyCreatedEvents, ...getSeedEvents()], query);
  }
- return filterMockEvents(query);
 }
 
 export async function getEvent(id?: string | null): Promise<CampusEvent | null> {
  if (!id) return null;
- const found = eventsState.find((e) => e.id === id);
+ const found = [...locallyCreatedEvents, ...getSeedEvents()].find((e) => e.id === id);
  if (found) return found;
  try {
  const { data, error } = await supabase
@@ -233,8 +242,11 @@ export interface CreateEventPayload {
  sponsored?: boolean;
 }
 
-import { generateUUID } from '../utils/uuid';
-
+/**
+ * Throws if there's no authenticated organizer or the Supabase insert
+ * fails, instead of quietly returning a fabricated "published" event.
+ * Callers must catch this and show a real error - see PublishEventModal.
+ */
 export async function createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
  const eventId = generateUUID();
 
@@ -248,17 +260,46 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  }
  }
 
- let organizerId = 'me';
- try {
  const { data: authData } = await supabase.auth.getUser();
- if (authData?.user?.id) {
- organizerId = authData.user.id;
- } else {
+ let organizerId = authData?.user?.id;
+ if (!organizerId) {
  const stored = await getSessionUser();
  if (stored?.id) organizerId = stored.id;
  }
- } catch {
- // fallback
+
+ if (!organizerId) {
+ throw new Error('You need to be signed in to publish an event.');
+ }
+
+ let campusCode = payload.campusCode;
+ if (!campusCode) {
+ const { data: profile } = await supabase
+ .from('profiles')
+ .select('campus_code')
+ .eq('id', organizerId)
+ .maybeSingle();
+ campusCode = profile?.campus_code || 'GLOBAL';
+ }
+ if (!campusCode) campusCode = 'GLOBAL';
+
+ const { error } = await supabase.from('events').insert({
+ id: eventId,
+ creator_id: organizerId,
+ campus_code: campusCode,
+ title: payload.title,
+ description: payload.description,
+ category: payload.category || 'Academic',
+ venue: payload.location || 'Campus Auditorium',
+ visibility_scope: payload.visibilityScope || 'global',
+ start_time: payload.startAt,
+ end_time: payload.endAt,
+ banner_url: permanentImageUrl,
+ registered_count: 0,
+ });
+
+ if (error) {
+ console.warn('[Events] Supabase create event error:', error.message);
+ throw new Error('Could not publish this event. Please try again.');
  }
 
  const created: CampusEvent = {
@@ -271,47 +312,11 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  ...payload,
  category: (payload.category as any) || 'academic',
  visibilityScope: (payload.visibilityScope as any) || 'global',
+ campusCode,
  coverImageUrl: permanentImageUrl,
  };
- eventsState = [created, ...eventsState];
 
- try {
- const { data: authData } = await supabase.auth.getUser();
- if (authData?.user?.id) {
- let campusCode = payload.campusCode;
- if (!campusCode) {
- const { data: profile } = await supabase
- .from('profiles')
- .select('campus_code')
- .eq('id', authData.user.id)
- .maybeSingle();
- campusCode = profile?.campus_code || 'GLOBAL';
- }
- if (!campusCode) campusCode = 'GLOBAL';
- created.campusCode = campusCode;
-
- const { error } = await supabase.from('events').insert({
- id: eventId,
- creator_id: authData.user.id,
- campus_code: campusCode,
- title: payload.title,
- description: payload.description,
- category: payload.category || 'Academic',
- venue: payload.location || 'Campus Auditorium',
- visibility_scope: payload.visibilityScope || 'global',
- start_time: payload.startAt,
- end_time: payload.endAt,
- banner_url: permanentImageUrl,
- registered_count: 0,
- });
- if (error) {
- console.warn('[Events] Supabase create event error:', error.message);
- }
- }
- } catch (err) {
- console.warn('[Events] Backend create event error:', err);
- }
-
+ locallyCreatedEvents = [created, ...locallyCreatedEvents];
  return created;
 }
 
@@ -321,7 +326,7 @@ export async function rsvpToEvent(
 ): Promise<{ eventId: string; status: string }> {
  const result = { eventId: id, status: action === 'rsvp' ? 'confirmed' : 'cancelled' };
 
- eventsState = eventsState.map((e) => {
+ locallyCreatedEvents = locallyCreatedEvents.map((e) => {
  if (e.id !== id) return e;
  const nextRsvpd = action === 'rsvp';
  const nextCount = Math.max(0, e.rsvpCount + (nextRsvpd ? 1 : -1));
@@ -350,7 +355,7 @@ export async function rsvpToEvent(
 
 export async function updateEvent(id: string, updates: Partial<CampusEvent>): Promise<CampusEvent | null> {
  let updated: CampusEvent | null = null;
- eventsState = eventsState.map((e) => {
+ locallyCreatedEvents = locallyCreatedEvents.map((e) => {
  if (e.id === id) {
  updated = { ...e, ...updates };
  return updated;
@@ -379,8 +384,8 @@ export async function updateEvent(id: string, updates: Partial<CampusEvent>): Pr
 }
 
 export async function approveEvent(id: string) {
- const target = eventsState.find((e) => e.id === id);
- eventsState = eventsState.map((e) => (e.id === id ? { ...e, approvalStatus: 'approved' } : e));
+ const target = locallyCreatedEvents.find((e) => e.id === id) ?? getSeedEvents().find((e) => e.id === id);
+ locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, approvalStatus: 'approved' } : e));
  try {
  await supabase.from('events').update({ status: 'upcoming' }).eq('id', id);
  } catch (err) {
@@ -396,8 +401,8 @@ export async function approveEvent(id: string) {
 
 // Admin moderation actions - backs the Events tab in the Admin Workdesk.
 export async function revokeEventApproval(id: string) {
- const target = eventsState.find((e) => e.id === id);
- eventsState = eventsState.map((e) => (e.id === id ? { ...e, approvalStatus: 'rejected' } : e));
+ const target = locallyCreatedEvents.find((e) => e.id === id) ?? getSeedEvents().find((e) => e.id === id);
+ locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, approvalStatus: 'rejected' } : e));
  try {
  await supabase.from('events').update({ status: 'cancelled' }).eq('id', id);
  } catch (err) {
@@ -412,8 +417,8 @@ export async function revokeEventApproval(id: string) {
 }
 
 export async function purgeEvent(id: string) {
- const target = eventsState.find((e) => e.id === id);
- eventsState = eventsState.filter((e) => e.id !== id);
+ const target = locallyCreatedEvents.find((e) => e.id === id) ?? getSeedEvents().find((e) => e.id === id);
+ locallyCreatedEvents = locallyCreatedEvents.filter((e) => e.id !== id);
  try {
  await supabase.from('events').delete().eq('id', id);
  } catch (err) {

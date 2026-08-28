@@ -2,8 +2,17 @@ import { supabase } from './supabase';
 import { AppNotification } from './types';
 import { mockNotifications } from './mockData';
 import { getSessionUser } from '../auth/tokenStorage';
+import { generateUUID } from '../utils/uuid';
+import { isMockDataVisible } from './mockDataSettings';
 
-let notificationsState = [...mockNotifications];
+// Real notifications only (db-fetched or locally created) - never seeded
+// with mockData.ts fixtures. Fixtures only ever come from getMockPool()
+// below, and only while the admin's "Mock Data Visibility" toggle is on.
+let localNotificationsCache: AppNotification[] = [];
+
+function getMockPool(): AppNotification[] {
+ return isMockDataVisible() ? mockNotifications : [];
+}
 
 export interface CreateNotificationPayload {
  type: AppNotification['type'];
@@ -14,13 +23,11 @@ export interface CreateNotificationPayload {
  senderId?: string;
 }
 
-import { generateUUID } from '../utils/uuid';
-
 export async function createNotification(payload: CreateNotificationPayload): Promise<AppNotification> {
  const notifId = generateUUID();
  const now = new Date().toISOString();
 
- // Resolve authentic sender and recipient identities
+ // Resolve authentic sender identity
  let currentUserId: string | null = null;
  try {
  const { data: authData } = await supabase.auth.getUser();
@@ -48,7 +55,6 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  body: payload.body,
  deepLinkPath: payload.deepLinkPath,
  };
- notificationsState = [notification, ...notificationsState];
 
  try {
  if (targetRecipientId) {
@@ -85,6 +91,15 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  console.warn('[Notifications] Failed to reach backend:', err);
  }
 
+ // This is fire-and-forget infrastructure used by other create flows
+ // (announcements, messaging, etc.) that already surface their own
+ // errors - it intentionally never throws so a failed "notify people"
+ // side-effect can't sink an otherwise-successful primary action. Only
+ // cache it locally when it's actually for the current viewer.
+ if (targetRecipientId && targetRecipientId === currentUserId) {
+ localNotificationsCache = [notification, ...localNotificationsCache];
+ }
+
  return notification;
 }
 
@@ -100,15 +115,17 @@ export async function listNotifications(
  const { data: authData } = await supabase.auth.getUser();
  const uid = authData?.user?.id;
 
- if (uid) {
+ if (!uid) throw new Error('Not signed in');
+
  const { data, error } = await supabase
  .from('notifications')
  .select('*')
  .eq('recipient_id', uid)
  .order('created_at', { ascending: false });
 
- if (!error && data && data.length > 0) {
- const dbNotifs: AppNotification[] = data.map((row: any) => ({
+ if (error) throw error;
+
+ const dbNotifs: AppNotification[] = (data ?? []).map((row: any) => ({
  id: row.id,
  channel: 'in_app',
  type: row.type || 'system_announcement',
@@ -119,30 +136,27 @@ export async function listNotifications(
  openedAt: row.is_read ? row.created_at : null,
  createdAt: row.created_at,
  }));
- // Merge unique
+
+ // Merge unique - local cache only ever contributes this session's own
+ // just-created notifications (always) plus seed fixtures (only when the
+ // admin mock-data toggle is on).
  const merged = [...dbNotifs];
- for (const n of notificationsState) {
+ for (const n of [...localNotificationsCache, ...getMockPool()]) {
  if (!merged.some((m) => m.id === n.id)) {
  merged.push(n);
  }
  }
- notificationsState = merged;
  return query.status === 'unread' ? merged.filter((n) => !n.openedAt) : merged;
+ } catch (err) {
+ console.warn('[Notifications] listNotifications failed, showing local pool only:', err);
+ const pool = [...localNotificationsCache, ...getMockPool()];
+ return query.status === 'unread' ? pool.filter((n) => !n.openedAt) : pool;
  }
- }
- } catch {
- // Session fallback
- }
-
- if (query.status === 'unread') {
- return notificationsState.filter((n) => !n.openedAt);
- }
- return notificationsState;
 }
 
 export async function markNotificationRead(id: string) {
  const openedAt = new Date().toISOString();
- notificationsState = notificationsState.map((n) => (n.id === id ? { ...n, openedAt } : n));
+ localNotificationsCache = localNotificationsCache.map((n) => (n.id === id ? { ...n, openedAt } : n));
  try {
  await supabase.from('notifications').update({ is_read: true }).eq('id', id);
  } catch {
@@ -153,7 +167,7 @@ export async function markNotificationRead(id: string) {
 
 export async function markAllNotificationsRead() {
  const openedAt = new Date().toISOString();
- notificationsState = notificationsState.map((n) => ({ ...n, openedAt }));
+ localNotificationsCache = localNotificationsCache.map((n) => ({ ...n, openedAt }));
  try {
  const { data: authData } = await supabase.auth.getUser();
  const uid = authData?.user?.id;
@@ -163,11 +177,11 @@ export async function markAllNotificationsRead() {
  } catch {
  // Fallback
  }
- return { success: true, count: notificationsState.length };
+ return { success: true, count: localNotificationsCache.length };
 }
 
 export async function clearAllNotifications() {
- notificationsState = [];
+ localNotificationsCache = [];
  try {
  const { data: authData } = await supabase.auth.getUser();
  const uid = authData?.user?.id;
@@ -180,7 +194,7 @@ export async function clearAllNotifications() {
 }
 
 export async function deleteNotification(id: string) {
- notificationsState = notificationsState.filter((n) => n.id !== id);
+ localNotificationsCache = localNotificationsCache.filter((n) => n.id !== id);
  try {
  await supabase.from('notifications').delete().eq('id', id);
  } catch {

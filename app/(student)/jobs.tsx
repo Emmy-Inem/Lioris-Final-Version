@@ -14,6 +14,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listJobs } from '@/api/jobs';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import { haptics } from '@/utils/haptics';
 
 const JOB_FILTERS = [
@@ -32,10 +33,11 @@ export default function JobsScreen() {
  const [selectedFilter, setSelectedFilter] = useState('all');
  const [createModalOpen, setCreateModalOpen] = useState(false);
  const debouncedQuery = useDebouncedValue(query);
+ const { campusCode } = useCampusScope();
 
  const { data: jobs, isLoading } = useQuery({
- queryKey: ['jobs', debouncedQuery],
- queryFn: () => listJobs({ q: debouncedQuery || undefined }),
+ queryKey: ['jobs', debouncedQuery, campusCode],
+ queryFn: () => listJobs({ q: debouncedQuery || undefined, campusCode }),
  });
 
  const filteredJobs = (jobs ?? []).filter((j) => {
@@ -127,7 +129,7 @@ export default function JobsScreen() {
               </View>
 
               {/* Filter Pills */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
                 {JOB_FILTERS.map((f) => {
                   const isSelected = selectedFilter === f.id;
                   return (
