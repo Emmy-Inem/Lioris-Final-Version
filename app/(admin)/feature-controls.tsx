@@ -14,7 +14,7 @@ import { haptics } from '@/utils/haptics';
 export default function AdminFeatureControlsScreen() {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
-  const { flags, setFeature, resetDefaults } = useFeatureFlags();
+  const { flags, isFeatureEnabled, setFeature, resetDefaults } = useFeatureFlags();
 
   async function handleToggleFlag(key: FeatureKey, next: boolean, label: string) {
     haptics.medium();
@@ -52,7 +52,7 @@ export default function AdminFeatureControlsScreen() {
 
         <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
           {FEATURE_CATALOG.map((flag) => {
-            const isEnabled = flags[flag.key] !== false;
+            const isEnabled = isFeatureEnabled(flag.key);
             return (
               <View key={flag.key} style={isDesktop ? { width: '48.5%' } : undefined}>
                 <SolidCard

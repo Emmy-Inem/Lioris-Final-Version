@@ -58,7 +58,7 @@ export function DesktopSidebar() {
 
  const role = user?.role || 'student';
 
-  const { flags } = useFeatureFlags();
+  const { flags, isFeatureEnabled } = useFeatureFlags();
 
   const rawStudentNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Dashboard', href: '/(student)/dashboard', icon: 'home' },
@@ -91,8 +91,8 @@ export function DesktopSidebar() {
     { id: 'settings', label: 'Settings', href: '/(alumni)/settings', icon: 'settings' },
   ];
 
-  const studentNavItems = rawStudentNavItems.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true));
-  const alumniNavItems = rawAlumniNavItems.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true));
+  const studentNavItems = rawStudentNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
+  const alumniNavItems = rawAlumniNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
 
  const rawStaffNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
  { id: 'home', label: 'Staff Console', href: '/(staff)/dashboard', icon: 'home' },
@@ -106,7 +106,7 @@ export function DesktopSidebar() {
  { id: 'settings', label: 'Console Settings', href: '/(staff)/settings', icon: 'settings' },
  ];
 
-  const staffNavItems = rawStaffNavItems.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true));
+  const staffNavItems = rawStaffNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
 
   const adminNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'platform-config', label: 'Admin Command Desk', href: '/(admin)/platform-config', icon: 'shield' },

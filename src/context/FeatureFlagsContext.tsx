@@ -130,7 +130,7 @@ export const DEFAULT_FLAGS: Record<FeatureKey, boolean> = Object.fromEntries(
  FEATURE_CATALOG.map((f) => [f.key, f.defaultOn]),
 ) as Record<FeatureKey, boolean>;
 
-const STORAGE_KEY = 'lioris_runtime_feature_flags_v1';
+const STORAGE_KEY = 'lioris_runtime_feature_flags_v3';
 const isWeb = Platform.OS === 'web';
 
 async function getStoredFlags(): Promise<string | null> {
@@ -171,7 +171,7 @@ interface FeatureFlagsContextValue {
 
 const FeatureFlagsContext = createContext<FeatureFlagsContextValue>({
  flags: DEFAULT_FLAGS,
- isFeatureEnabled: () => true,
+ isFeatureEnabled: (key: FeatureKey) => DEFAULT_FLAGS[key] ?? false,
  toggleFeature: async () => {},
  setFeature: async () => {},
  resetDefaults: async () => {},

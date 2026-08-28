@@ -26,7 +26,7 @@ const RAW_QUICK_COMMANDS: { id: string; title: string; subtitle: string; icon: a
 export function DesktopTopBar() {
  const { colors, isDark } = useTheme();
  const { user, switchRole } = useAuth();
-  const { flags } = useFeatureFlags();
+  const { flags, isFeatureEnabled } = useFeatureFlags();
  const queryClient = useQueryClient();
  const [composerOpen, setComposerOpen] = useState(false);
  const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
@@ -74,7 +74,7 @@ export function DesktopTopBar() {
  }
  };
 
- const filteredCommands = RAW_QUICK_COMMANDS.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true)).filter(
+ const filteredCommands = RAW_QUICK_COMMANDS.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true)).filter(
  (c) =>
  c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
  c.subtitle.toLowerCase().includes(searchQuery.toLowerCase()),
