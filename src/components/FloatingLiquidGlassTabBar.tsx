@@ -29,20 +29,20 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
 
   return (
     <View style={styles.floatingWrapper} pointerEvents="box-none">
-      <View
+            <View
         style={[
           styles.glassPill,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.28)' : 'rgba(255, 255, 255, 0.20)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.32)' : 'rgba(255, 255, 255, 0.85)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.70)' : 'rgba(255, 255, 255, 0.75)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(36px) saturate(220%) contrast(108%) brightness(112%)',
-              WebkitBackdropFilter: 'blur(36px) saturate(220%) contrast(108%) brightness(112%)',
+              backdropFilter: 'blur(28px) saturate(200%) brightness(105%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(200%) brightness(105%)',
               boxShadow: isDark
-                ? '0 24px 50px rgba(0, 0, 0, 0.75), inset 0 1.5px 2px rgba(255, 255, 255, 0.45)'
-                : '0 24px 50px rgba(15, 23, 42, 0.16), inset 0 1.5px 2px rgba(255, 255, 255, 1)',
+                ? '0 20px 45px rgba(0, 0, 0, 0.7), inset 0 1px 1.5px rgba(255, 255, 255, 0.35)'
+                : '0 20px 45px rgba(15, 23, 42, 0.14), inset 0 1.5px 2px rgba(255, 255, 255, 0.95), 0 0 0 1px rgba(0, 0, 0, 0.05)',
             } as any),
         ]}
       >

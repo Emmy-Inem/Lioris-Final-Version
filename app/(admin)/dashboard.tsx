@@ -121,29 +121,33 @@ export default function AdminDashboard() {
               Manage courses, resources, directory profiles and cover media
             </AppText>
 
-            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: spacing.md, justifyContent: 'space-between' }}>
               <Pressable
                 onPress={() => {
                   haptics.light();
                   setCoursesModalOpen(true);
                 }}
-                style={{ flex: 1 }}
+                style={{ width: isDesktop ? 'calc(33.333% - 8px)' : 'calc(50% - 5px)' as any }}
               >
                 <SolidCard
                   frosted
                   style={{
                     borderRadius: 18,
-                    padding: spacing.md,
+                    padding: 12,
                     backgroundColor: colors.surface,
+                    height: 115,
+                    justifyContent: 'space-between',
                   }}
                 >
-                  <Ionicons name="book-outline" size={22} color={colors.brandPrimary} style={{ marginBottom: 4 }} />
-                  <AppText weight="bold" variant="bodySmall">
-                    Courses
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11 }}>
-                    Edit curriculum & covers
-                  </AppText>
+                  <Ionicons name="book-outline" size={20} color={colors.brandPrimary} />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Courses
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Curriculum & covers
+                    </AppText>
+                  </View>
                 </SolidCard>
               </Pressable>
 
@@ -152,23 +156,27 @@ export default function AdminDashboard() {
                   haptics.light();
                   setResourcesModalOpen(true);
                 }}
-                style={{ flex: 1 }}
+                style={{ width: isDesktop ? 'calc(33.333% - 8px)' : 'calc(50% - 5px)' as any }}
               >
                 <SolidCard
                   frosted
                   style={{
                     borderRadius: 18,
-                    padding: spacing.md,
+                    padding: 12,
                     backgroundColor: colors.surface,
+                    height: 115,
+                    justifyContent: 'space-between',
                   }}
                 >
-                  <Ionicons name="folder-open-outline" size={22} color={colors.brandAccent} style={{ marginBottom: 4 }} />
-                  <AppText weight="bold" variant="bodySmall">
-                    Resources
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11 }}>
-                    Edit files & past questions
-                  </AppText>
+                  <Ionicons name="folder-open-outline" size={20} color={colors.brandAccent} />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Resources
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Files & past exams
+                    </AppText>
+                  </View>
                 </SolidCard>
               </Pressable>
 
@@ -177,23 +185,32 @@ export default function AdminDashboard() {
                   haptics.light();
                   setDirectoryModalOpen(true);
                 }}
-                style={{ flex: 1 }}
+                style={{ width: isDesktop ? 'calc(33.333% - 8px)' : '100%' as any }}
               >
                 <SolidCard
                   frosted
                   style={{
                     borderRadius: 18,
-                    padding: spacing.md,
+                    padding: 12,
                     backgroundColor: colors.surface,
+                    height: isDesktop ? 115 : 70,
+                    flexDirection: isDesktop ? 'column' : 'row',
+                    alignItems: isDesktop ? 'flex-start' : 'center',
+                    justifyContent: 'space-between',
                   }}
                 >
-                  <Ionicons name="people-outline" size={22} color="#38BDF8" style={{ marginBottom: 4 }} />
-                  <AppText weight="bold" variant="bodySmall">
-                    Directory
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11 }}>
-                    Edit profiles & avatars
-                  </AppText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Ionicons name="people-outline" size={20} color="#38BDF8" />
+                    <View>
+                      <AppText weight="bold" variant="bodySmall">
+                        User Directory
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 1, fontSize: 10 }}>
+                        Manage campus accounts, roles & avatars
+                      </AppText>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
                 </SolidCard>
               </Pressable>
             </View>
