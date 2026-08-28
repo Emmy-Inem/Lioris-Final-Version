@@ -17,7 +17,15 @@ export default function AlumniLayout() {
  tabBar={(props) => <FloatingLiquidGlassTabBar {...props} />}
  screenOptions={{
  headerShown: false,
- tabBarStyle: { display: 'none' },
+ tabBarStyle: isDesktop
+   ? { display: 'none' }
+   : {
+       position: 'absolute',
+       backgroundColor: 'transparent',
+       borderTopWidth: 0,
+       elevation: 0,
+       height: 0,
+     },
  }}
  >
  <Tabs.Screen

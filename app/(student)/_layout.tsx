@@ -21,7 +21,15 @@ export default function StudentLayout() {
  headerShown: false,
  tabBarActiveTintColor: colors.brandPrimary,
  tabBarInactiveTintColor: colors.tabInactive,
- tabBarStyle: { display: 'none' },
+ tabBarStyle: isDesktop
+          ? { display: 'none' }
+          : {
+              position: 'absolute',
+              backgroundColor: 'transparent',
+              borderTopWidth: 0,
+              elevation: 0,
+              height: 0,
+            },
  tabBarLabelStyle: {
  fontSize: 11,
  fontWeight: '600',

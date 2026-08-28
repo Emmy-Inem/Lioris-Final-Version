@@ -130,203 +130,176 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  queryClient.invalidateQueries({ queryKey: ['feed'] });
  }
 
- const renderHeader = () => (
- <View style={{ marginBottom: spacing.sm }}>
- {!isDesktop && <AppHeader />}
+  const renderHeader = () => (
+    <View style={{ marginBottom: spacing.xs }}>
+      {!isDesktop && <AppHeader />}
 
- {/* Screen Title & Workspace Selector */}
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
- <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
- <AppText variant="h1" weight="bold">
- Campus Forum
- </AppText>
- <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ fontSize: 12 }}>
- Trending discussions, academic queries, and cohort threads
- </AppText>
- </View>
+      {/* Screen Title & Scope Switcher in 1 Unified Clean Row */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
+        <View>
+          <AppText variant="h1" weight="bold">
+            Campus Forum
+          </AppText>
+        </View>
 
- <Pressable
- onPress={() => setWorkspacesOpen(true)}
- accessibilityRole="button"
- accessibilityLabel="Open discussion workspaces"
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 6,
- backgroundColor: colors.pastelPrimaryBg,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.md,
- paddingVertical: 7,
- flexShrink: 0,
- }}
- >
- <Ionicons name="chatbubbles" size={15} color={colors.brandPrimary} />
- <AppText weight="bold" tone="brand" variant="caption">
- All Channels
- </AppText>
- </Pressable>
- </View>
+        {!isDesktop && (
+          <View
+            style={{
+              flexDirection: 'row',
+              backgroundColor: colors.surface,
+              borderRadius: radius.pill,
+              padding: 2,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            {(['campus', 'global'] as const).map((s) => {
+              const selected = viewScope === s;
+              return (
+                <Pressable
+                  key={s}
+                  onPress={() => setViewScope(s)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
+                    borderRadius: radius.pill,
+                    backgroundColor: selected ? colors.brandPrimary : 'transparent',
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
+                    {s === 'campus' ? 'My Campus' : 'Global'}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+      </View>
 
- {/* Scope Switcher: Mobile Only (Desktop has it in sidebar) */}
- {!isDesktop && (
- <View
- style={{
- flexDirection: 'row',
- backgroundColor: colors.surface,
- borderRadius: radius.pill,
- padding: 3,
- marginBottom: spacing.md,
- borderWidth: 1,
- borderColor: colors.border,
- }}
- >
- {(['campus', 'global'] as const).map((s) => {
- const selected = viewScope === s;
- return (
- <Pressable
- key={s}
- onPress={() => setViewScope(s)}
- accessibilityRole="tab"
- accessibilityState={{ selected }}
- accessibilityLabel={s === 'campus' ? 'My Campus Feed' : 'Global Network Feed'}
- style={{
- flex: 1,
- paddingVertical: 7,
- borderRadius: radius.pill,
- backgroundColor: selected ? colors.brandPrimary : 'transparent',
- alignItems: 'center',
- }}
- >
- <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
- {s === 'campus' ? 'My Campus' : 'Global Network'}
- </AppText>
- </Pressable>
- );
- })}
- </View>
- )}
+      {/* Quick Search & Sort Bar */}
+      <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            backgroundColor: colors.surface,
+            borderRadius: radius.pill,
+            borderWidth: 1,
+            borderColor: colors.border,
+            paddingHorizontal: spacing.md,
+            height: 40,
+          }}
+        >
+          <Ionicons name="search" size={15} color={colors.textSecondary} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search discussions, topics, codes..."
+            placeholderTextColor={colors.textSecondary}
+            style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
+          />
+          {query ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={15} color={colors.textSecondary} />
+            </Pressable>
+          ) : null}
+        </View>
+        <Pressable
+          onPress={() => setSortModalOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`Sort: ${sortBy === 'latest' ? 'Latest' : 'Most Popular'}`}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            height: 40,
+            backgroundColor: colors.surface,
+          }}
+        >
+          <Ionicons name="swap-vertical" size={14} color={colors.textSecondary} />
+          <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 11 }}>
+            {sortBy === 'latest' ? 'Latest' : 'Top'}
+          </AppText>
+        </Pressable>
+      </View>
 
- {/* Quick Search & Sort Bar */}
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
- <View
- style={{
- flex: 1,
- flexDirection: 'row',
- alignItems: 'center',
- gap: spacing.sm,
- backgroundColor: colors.surface,
- borderRadius: radius.pill,
- borderWidth: 1,
- borderColor: colors.border,
- paddingHorizontal: spacing.md,
- height: 42,
- }}
- >
- <Ionicons name="search"size={16} color={colors.textSecondary} />
- <TextInput
- value={query}
- onChangeText={setQuery}
- placeholder="Search discussions, polls, courses..."placeholderTextColor={colors.textSecondary}
- style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
- />
- {query ? (
- <Pressable onPress={() => setQuery('')} hitSlop={8}>
- <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
- </Pressable>
- ) : null}
- </View>
- <Pressable
- onPress={() => setSortModalOpen(true)}
- accessibilityRole="button"accessibilityLabel={`Sort: ${sortBy === 'latest' ? 'Latest' : 'Most Popular'}`}
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 4,
- borderWidth: 1,
- borderColor: colors.border,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.md,
- height: 42,
- backgroundColor: colors.surface,
- }}
- >
- <Ionicons name="swap-vertical"size={16} color={colors.textSecondary} />
- <AppText variant="caption"weight="semiBold"tone="secondary">
- {sortBy === 'latest' ? 'Latest' : 'Top'}
- </AppText>
- </Pressable>
- </View>
+      {/* Horizontal Channel Filter Pills */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 6, paddingBottom: spacing.xs }}
+        style={{ marginBottom: spacing.xs }}
+      >
+        {CHANNELS.map((ch) => {
+          const selected = selectedChannel === ch.category;
+          return (
+            <Pressable
+              key={ch.id}
+              onPress={() => setSelectedChannel(ch.category)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              style={{
+                backgroundColor: selected ? colors.brandPrimary : colors.surface,
+                borderRadius: radius.pill,
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderWidth: 1,
+                borderColor: selected ? colors.brandPrimary : colors.border,
+              }}
+            >
+              <AppText
+                variant="caption"
+                weight={selected ? 'bold' : 'medium'}
+                tone={selected ? 'inverse' : 'secondary'}
+                style={{ fontSize: 11 }}
+              >
+                {ch.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
- {/* Official Campus Announcements & Broadcasts */}
- <AnnouncementsWidget scope={scope as any} compact={true} />
-
- {/* Horizontal Channel Filter Pills */}
- <ScrollView
- horizontal
- showsHorizontalScrollIndicator={false}
- contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.sm }}
- style={{ marginBottom: spacing.xs }}
- >
- {CHANNELS.map((ch) => {
- const selected = selectedChannel === ch.category;
- return (
- <Pressable
- key={ch.id}
- onPress={() => setSelectedChannel(ch.category)}
- accessibilityRole="button"accessibilityState={{ selected }}
- style={{
- backgroundColor: selected ? colors.brandPrimary : colors.surface,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.md,
- paddingVertical: 7,
- borderWidth: 1,
- borderColor: selected ? colors.brandPrimary : colors.border,
- }}
- >
- <AppText
- variant="caption"weight={selected ? 'bold' : 'medium'}
- tone={selected ? 'inverse' : 'secondary'}
- >
- {ch.label}
- </AppText>
- </Pressable>
- );
- })}
- </ScrollView>
-
- {/* Trending Topics Slider */}
- <HorizontalTrendsSlider selectedTrend={selectedTrend} onSelectTrend={setSelectedTrend} />
-
- {/* Interactive Quick Thread Composer Bar */}
- <Pressable
- onPress={() => setComposerOpen(true)}
- accessibilityRole="button"accessibilityLabel="Start a new thread or create a poll"
- >
- <SolidCard backgroundColor={colors.surface} radius={18} style={{ marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
- <Avatar name={user?.fullName ?? 'You'} size={38} role={user?.role} />
- <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 8 }}>
- <AppText tone="secondary"variant="bodySmall">
- Start a discussion or create a poll...
- </AppText>
- </View>
- <View
- style={{
- width: 36,
- height: 36,
- borderRadius: 18,
- backgroundColor: colors.brandPrimary,
- alignItems: 'center',
- justifyContent: 'center',
- }}
- >
- <Ionicons name="add"size={20} color="#FFFFFF" />
- </View>
- </View>
- </SolidCard>
- </Pressable>
- </View>
- );
+      {/* Interactive Quick Thread Composer Bar */}
+      <Pressable
+        onPress={() => setComposerOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Start a new thread or create a poll"
+        style={{ marginTop: 2, marginBottom: spacing.sm }}
+      >
+        <SolidCard backgroundColor={colors.surface} radius={16} style={{ padding: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Avatar name={user?.fullName ?? 'You'} size={34} role={user?.role} />
+            <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7 }}>
+              <AppText tone="secondary" variant="bodySmall" style={{ fontSize: 12 }}>
+                Start a discussion or create a poll...
+              </AppText>
+            </View>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: colors.brandPrimary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="add" size={18} color="#FFFFFF" />
+            </View>
+          </View>
+        </SolidCard>
+      </Pressable>
+    </View>
+  );
 
   return (
     <ScreenContainer glow={true}>
