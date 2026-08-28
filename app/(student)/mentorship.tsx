@@ -189,7 +189,7 @@ export default function StudentMentorshipScreen() {
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.lg }}>
  <AchievementBox icon="trophy-outline" title="Tech Fest" subtitle="Annual Hackathon" />
- <AchievementBox icon="ribbon-outline" title="Class Topper" subtitle="GPA 4.8 / 5.0" />
+ <AchievementBox icon="ribbon-outline" title="Class Scholar" subtitle="Honor Roll" />
  <AchievementBox icon="medal-outline" title="Debate Final" subtitle="Campus Cup" />
  </View>
 

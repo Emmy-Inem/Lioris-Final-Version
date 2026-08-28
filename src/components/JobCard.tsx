@@ -17,7 +17,7 @@ export function JobCard({ job }: { job: JobListing }) {
  Alert.alert('Application Submitted', `Your profile was submitted for ${job.title} at ${job.company}.`);
  });
  } else {
- Alert.alert('Application Submitted', `Your student resume and GPA have been sent to ${job.company}.`);
+ Alert.alert('Application Submitted', `Your student profile has been sent to ${job.company}.`);
  }
  }
 
