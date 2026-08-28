@@ -11,6 +11,7 @@ import { StudyGroupCard } from '@/components/StudyGroupCard';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateStudyGroupModal } from '@/components/CreateStudyGroupModal';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useToast } from '@/context/ToastContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listStudyGroups, createStudyGroup } from '@/api/studyGroups';
 

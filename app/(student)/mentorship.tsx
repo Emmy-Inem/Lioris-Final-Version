@@ -15,6 +15,7 @@ import { Badge } from'@/components/Badge';
 import { MentorCard } from'@/components/MentorCard';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listMentorships, searchMentors } from '@/api/mentorship';
@@ -24,6 +25,7 @@ const EXPERTISE_CATEGORIES = ['All Fields', 'Software', 'Resume Prep', 'Finance'
 
 export default function StudentMentorshipScreen() {
  const { colors, spacing, radius } = useTheme();
+  const toast = useToast();
  const { user } = useAuth();
  const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
@@ -46,7 +48,7 @@ export default function StudentMentorshipScreen() {
  if (!messageText.trim()) return;
  setMessageModalOpen(false);
  setMessageText('');
- Alert.alert('Message Sent', 'Your message has been delivered directly to your Class Representative.');
+ toast.success('Your message has been delivered to your Class Representative!');
  }
 
  return (

@@ -7,12 +7,14 @@ import { Avatar } from'./Avatar';
 import { Badge } from'./Badge';
 import { AppButton } from'./AppButton';
 import { AppTextField } from'./AppTextField';
-import { useTheme } from'@/theme/ThemeProvider';
-import { MentorProfile } from'@/api/types';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useToast } from '@/context/ToastContext';
+import { MentorProfile } from '@/api/types';
 import { requestMentorship } from'@/api/mentorship';
 
 export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onRequested?: () => void }) {
  const { spacing } = useTheme();
+  const toast = useToast();
  const [modalOpen, setModalOpen] = useState(false);
  const [pitch, setPitch] = useState('');
  const [submitting, setSubmitting] = useState(false);
@@ -42,6 +44,7 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
  setRequested(true);
  setModalOpen(false);
  onRequested?.();
+    toast.success('Mentorship session requested with ' + mentor.fullName + '!');
  } finally {
  setSubmitting(false);
  }
