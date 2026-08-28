@@ -118,11 +118,11 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
   },
   {
     key: 'e2ee_messaging',
-    label: 'Direct Chat Encryption',
+    label: 'Direct Chat & Messages',
     category: 'AI & Tools',
     tier: 'P1',
-    description: 'Protects student-to-mentor messaging threads.',
-    defaultOn: true,
+    description: 'Enables private 1-on-1 direct messaging across students, mentors, and class reps.',
+    defaultOn: false,
   },
 ];
 
@@ -130,7 +130,7 @@ export const DEFAULT_FLAGS: Record<FeatureKey, boolean> = Object.fromEntries(
   FEATURE_CATALOG.map((f) => [f.key, f.defaultOn]),
 ) as Record<FeatureKey, boolean>;
 
-const STORAGE_KEY = 'lioris_runtime_feature_flags_v6';
+const STORAGE_KEY = 'lioris_runtime_feature_flags_v7';
 const isWeb = Platform.OS === 'web';
 
 async function getStoredFlags(): Promise<string | null> {

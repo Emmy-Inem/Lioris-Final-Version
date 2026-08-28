@@ -209,7 +209,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       {isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }}
           showsVerticalScrollIndicator={true}
-          contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60 }}
+          contentContainerStyle={{ maxWidth: 1120, alignSelf: 'center', width: '100%', paddingHorizontal: isDesktop ? spacing.lg : spacing.md, paddingTop: spacing.lg, paddingBottom: 60 }}
         >
           {/* Top Header Bar */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>

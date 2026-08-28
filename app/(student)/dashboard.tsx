@@ -421,19 +421,21 @@ export default function StudentDashboard() {
                 </AppText>
               </View>
             </View>
-            <Pressable
-              onPress={() => router.push('/(student)/messages')}
-              style={{
-                backgroundColor: colors.brandPrimary,
-                borderRadius: radius.pill,
-                paddingHorizontal: spacing.md,
-                paddingVertical: 6,
-              }}
-            >
-              <AppText variant="caption" weight="bold" tone="inverse">
-                Message Rep
-              </AppText>
-            </Pressable>
+            {isFeatureEnabled('e2ee_messaging') ? (
+              <Pressable
+                onPress={() => router.push('/(student)/messages')}
+                style={{
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 6,
+                }}
+              >
+                <AppText variant="caption" weight="bold" tone="inverse">
+                  Message Rep
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         </SolidCard>
 
