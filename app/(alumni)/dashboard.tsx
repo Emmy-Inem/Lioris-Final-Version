@@ -49,10 +49,7 @@ export default function AlumniDashboard() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          maxWidth: 1120,
-          alignSelf: 'center',
-          width: '100%',
-          paddingHorizontal: isDesktop ? spacing.lg : spacing.md,
+          paddingHorizontal: isDesktop ? 0 : spacing.md,
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
           paddingBottom: 80,
           gap: spacing.lg,
@@ -212,7 +209,7 @@ export default function AlumniDashboard() {
                       <Avatar name={post.authorName ?? 'Student'} size={28} />
                       <View>
                         <AppText variant="caption" weight="bold">
-                          {post.authorName}
+                          {post.authorName ?? 'Student'}
                         </AppText>
                         <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
                           {post.department ?? 'Computer Science'}

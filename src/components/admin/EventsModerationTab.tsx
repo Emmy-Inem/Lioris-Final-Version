@@ -385,7 +385,7 @@ export function EventsModerationTab() {
  </AppText>
 
  {/* Quick Badges: Spotlight & Pricing */}
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md }}>
  <Pressable
  onPress={() => handleToggleSpotlight(event)}
  style={{

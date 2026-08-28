@@ -24,7 +24,11 @@ function colorPairFor(colors: ThemeColors, tone: DashboardShortcut['iconColor'])
  mint: { bg: colors.mintBg, fg: colors.mintText },
  lavender: { bg: colors.lavenderBg, fg: colors.lavenderText },
  };
- return map[tone];
+ // A shortcut row from the database can carry an iconColor value that
+ // predates the current palette (or one a future update adds server-side
+ // before the client knows about it). Falling back to `sage` here keeps
+ // the whole Utility Hub tab from crashing on an unrecognized color.
+ return map[tone] ?? map.sage;
 }
 
 export function LocalHubControlTab() {

@@ -48,7 +48,11 @@ export default function AlumniDirectoryScreen() {
  </AppText>
  </View>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 }}>
- {(user?.role === 'admin' || user?.role === 'staff') && (
+ {/* This route only ever renders for a displayed role of 'alumni' (RoleGate
+ restricts it), so checking user.role here could never match 'admin'/'staff'
+ - it's the real underlying admin/staff identity (actualRole) previewing
+ the alumni workspace that should still see this management affordance. */}
+ {(user?.actualRole === 'admin' || user?.actualRole === 'staff') && (
  <Pressable
  onPress={() => setAdminManageOpen(true)}
  accessibilityRole="button"

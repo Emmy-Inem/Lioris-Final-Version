@@ -110,10 +110,13 @@ export default function ModerationAuditLogScreen() {
  const activeFilter = FILTERS[filterIndex];
 
  const { data: entries, isLoading } = useQuery({
- queryKey: ['audit-log', activeFilter.label],
+ // Same cache entry as app/(admin)/audit-logs.tsx's ['audit-log'] query -
+ // both screens show the same underlying log, just filtered differently,
+ // so they should share one fetch/cache instead of each re-querying and
+ // never invalidating the other's copy. Filtering itself stays
+ // client-side across the fetched set - see the render below.
+ queryKey: ['audit-log'],
  queryFn: () => listAuditLog(),
- // Filtering client-side across the small mock set rather than
- // round-tripping per-chip queries - see the render below.
  });
 
  const visibleEntries: AuditLogEntry[] = (entries ?? []).filter(

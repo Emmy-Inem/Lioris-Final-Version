@@ -54,7 +54,7 @@ export default function AdminFeatureControlsScreen() {
           {FEATURE_CATALOG.map((flag) => {
             const isEnabled = isFeatureEnabled(flag.key);
             return (
-              <View key={flag.key} style={isDesktop ? { width: '48.5%' } : undefined}>
+              <View key={flag.key} style={isDesktop ? { width: 'calc(50% - 8px)' as any } : undefined}>
                 <SolidCard
                   radius={18}
                   style={{

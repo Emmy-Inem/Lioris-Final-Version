@@ -496,7 +496,7 @@ function EcosystemTile({
  }}
  accessibilityRole="button"
  accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
- style={{ width: isDesktop ? ('calc(33.333% - 11px)' as any) : ('calc(50% - 6px)' as any), minWidth: 220 }}
+ style={{ width: isDesktop ? ('calc(33.333% - 5.33px)' as any) : ('calc(50% - 4px)' as any), minWidth: 220 }}
  >
  <SolidCard radius={18} frosted style={{ minHeight: 110, justifyContent: 'space-between' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>

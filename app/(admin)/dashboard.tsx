@@ -127,7 +127,7 @@ export default function AdminDashboard() {
                   haptics.light();
                   setCoursesModalOpen(true);
                 }}
-                style={{ width: isDesktop ? 'calc(33.333% - 8px)' : 'calc(50% - 5px)' as any }}
+                style={{ width: isDesktop ? 'calc(33.333% - 6.67px)' : 'calc(50% - 5px)' as any }}
               >
                 <SolidCard
                   frosted
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
                   haptics.light();
                   setResourcesModalOpen(true);
                 }}
-                style={{ width: isDesktop ? 'calc(33.333% - 8px)' : 'calc(50% - 5px)' as any }}
+                style={{ width: isDesktop ? 'calc(33.333% - 6.67px)' : 'calc(50% - 5px)' as any }}
               >
                 <SolidCard
                   frosted
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
                   haptics.light();
                   setDirectoryModalOpen(true);
                 }}
-                style={{ width: isDesktop ? 'calc(33.333% - 8px)' : '100%' as any }}
+                style={{ width: isDesktop ? 'calc(33.333% - 6.67px)' : '100%' as any }}
               >
                 <SolidCard
                   frosted

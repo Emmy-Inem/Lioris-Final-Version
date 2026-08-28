@@ -53,7 +53,10 @@ export default function AuditLogsScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const [filter, setFilter] = useState('All Events');
-  const { data: entries, isLoading } = useQuery({ queryKey: ['audit-log', 'global'], queryFn: () => listAuditLog() });
+  // Same cache entry as app/(admin)/moderation-audit-log.tsx's ['audit-log']
+  // query - both screens show the same underlying log, just filtered
+  // differently, so they share one fetch/cache instead of duplicating it.
+  const { data: entries, isLoading } = useQuery({ queryKey: ['audit-log'], queryFn: () => listAuditLog() });
 
   const filtered = (entries ?? []).filter((e) => {
     if (filter === 'Moderation') return e.action.includes('report') || e.action.includes('event');

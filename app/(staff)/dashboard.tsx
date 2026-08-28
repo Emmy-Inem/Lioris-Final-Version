@@ -32,10 +32,7 @@ export default function StaffDashboard() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          maxWidth: 1120,
-          alignSelf: 'center',
-          width: '100%',
-          paddingHorizontal: isDesktop ? spacing.lg : spacing.md,
+          paddingHorizontal: isDesktop ? 0 : spacing.md,
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
           paddingBottom: 80,
           gap: spacing.lg,

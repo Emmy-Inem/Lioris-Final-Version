@@ -95,10 +95,7 @@ export default function StudentDashboard() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          maxWidth: 1120,
-          alignSelf: 'center',
-          width: '100%',
-          paddingHorizontal: isDesktop ? spacing.lg : 14,
+          paddingHorizontal: isDesktop ? 0 : 14,
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
           paddingBottom: isDesktop ? 60 : 120,
           gap: spacing.lg,
