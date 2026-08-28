@@ -131,7 +131,7 @@ export default function AlumniMentorshipScreen() {
                         {studentName}
                       </AppText>
                       <AppText tone="secondary" variant="caption">
-                        University of Ibadan • GPA 4.7 / 5.0
+                        University of Ibadan • Computer Science
                       </AppText>
                     </View>
                   </View>

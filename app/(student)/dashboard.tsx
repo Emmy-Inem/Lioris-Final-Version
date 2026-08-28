@@ -400,20 +400,20 @@ export default function StudentDashboard() {
         {/* Right Sticky Column on Desktop */}
         {isDesktop && (
           <View style={{ width: 360, gap: spacing.md }}>
-            {/* Academic Standing & Semester KPI Card */}
+            {/* Semester Progress & Enrolled Units Card */}
             <SolidCard radius={20} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                 <AppText variant="h3" weight="bold">
-                  Academic Standing
+                  Semester Overview
                 </AppText>
-                <Badge label="1st Class Track" tone="success" />
+                <Badge label="Active Term" tone="brand" />
               </View>
 
               <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
                 <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}>
-                  <AppText variant="caption" tone="secondary">CGPA</AppText>
-                  <AppText variant="h2" weight="bold" tone="brand">3.85</AppText>
-                  <AppText variant="caption" style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>↑ +0.12</AppText>
+                  <AppText variant="caption" tone="secondary">Courses</AppText>
+                  <AppText variant="h2" weight="bold" tone="brand">6 Units</AppText>
+                  <AppText variant="caption" style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>Cleared</AppText>
                 </View>
                 <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}>
                   <AppText variant="caption" tone="secondary">Attendance</AppText>
