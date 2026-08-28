@@ -484,6 +484,7 @@ function EcosystemTile({
  onPress: () => void;
 }) {
  const { colors, spacing, radius } = useTheme();
+ const { isDesktop } = useResponsive();
  return (
  <Pressable
  onPress={() => {

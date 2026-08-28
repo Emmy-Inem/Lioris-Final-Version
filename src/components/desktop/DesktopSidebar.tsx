@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useViewScope } from '@/hooks/useViewScope';
-import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { LiorisLogo } from '@/components/LiorisLogo';
@@ -60,7 +60,7 @@ export function DesktopSidebar() {
 
   const { flags } = useFeatureFlags();
 
-  const rawStudentNavItems: (NavItem & { flagKey?: string })[] = [
+  const rawStudentNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Dashboard', href: '/(student)/dashboard', icon: 'home' },
     { id: 'forum', label: 'Campus Forum', href: '/(student)/feed', icon: 'chatbubbles' },
     { id: 'events', label: 'Events Hub', href: '/(student)/events-list', icon: 'calendar', flagKey: 'campus_events' },
@@ -76,7 +76,7 @@ export function DesktopSidebar() {
     { id: 'settings', label: 'Settings & Security', href: '/(student)/settings', icon: 'settings' },
   ];
 
-  const rawAlumniNavItems: (NavItem & { flagKey?: string })[] = [
+  const rawAlumniNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Alumni Home', href: '/(alumni)/dashboard', icon: 'home' },
     { id: 'forum', label: 'Global Forum', href: '/(alumni)/forum', icon: 'chatbubbles' },
     { id: 'hub', label: 'Alumni Network Hub', href: '/(alumni)/alumni-hub', icon: 'school', flagKey: 'alumni_mentorship' },
@@ -91,8 +91,8 @@ export function DesktopSidebar() {
     { id: 'settings', label: 'Settings', href: '/(alumni)/settings', icon: 'settings' },
   ];
 
-  const studentNavItems = rawStudentNavItems.filter((item) => !item.flagKey || flags[item.flagKey as any] !== false);
-  const alumniNavItems = rawAlumniNavItems.filter((item) => !item.flagKey || flags[item.flagKey as any] !== false);
+  const studentNavItems = rawStudentNavItems.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true));
+  const alumniNavItems = rawAlumniNavItems.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true));
 
  const staffNavItems: NavItem[] = [
  { id: 'home', label: 'Staff Console', href: '/(staff)/dashboard', icon: 'home' },

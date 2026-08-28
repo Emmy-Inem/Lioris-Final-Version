@@ -254,7 +254,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 
   // If demo role differs from profile role in DB, quietly sync the profile
   if (demoMatch && profile && profile.role !== demoMatch.role) {
-    supabase.from('profiles').update({ role: demoMatch.role }).eq('id', signInData.user.id).catch(() => {});
+    supabase.from('profiles').update({ role: demoMatch.role }).eq('id', signInData.user.id).then(() => {}, () => {});
   }
 
   return {

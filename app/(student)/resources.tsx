@@ -418,7 +418,7 @@ export default function ResourcesScreen() {
                         <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
                       </View>
                       <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 11 }}>
-                        {portal.description || portal.category || 'Portal Link'}
+                        {(portal as any).description || portal.category || 'Portal Link'}
                       </AppText>
                     </View>
                   </SolidCard>

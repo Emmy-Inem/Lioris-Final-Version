@@ -13,6 +13,7 @@ import { Avatar } from'./Avatar';
 import { ImageViewerModal } from'./ImageViewerModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
 import { getEvent, rsvpToEvent } from '@/api/events';
 import { haptics } from '@/utils/haptics';
 
@@ -28,6 +29,8 @@ const EVENT_MEDIA_MAP: Record<string, any> = {
 export function EventDetailScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop, contentMaxWidth } = useResponsive();
+  const { user } = useAuth();
+  const roleGroup = user?.role ? `(${user.role})` : '(student)';
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
 
@@ -526,14 +529,15 @@ export function EventDetailScreen() {
                 </View>
 
                 {/* Main RSVP Action Button */}
-                <AppButton
-                  label={isRsvpd ? 'Release / Cancel Seat' : 'Claim Your Seat (RSVP)'}
-                  variant={isRsvpd ? 'secondary' : 'primary'}
-                  loading={submittingRsvp}
-                  onPress={handleToggleRsvp}
-                  fullWidth
-                  style={{ marginBottom: spacing.md }}
-                />
+                <View style={{ marginBottom: spacing.md }}>
+                  <AppButton
+                    label={isRsvpd ? 'Release / Cancel Seat' : 'Claim Your Seat (RSVP)'}
+                    variant={isRsvpd ? 'secondary' : 'primary'}
+                    loading={submittingRsvp}
+                    onPress={handleToggleRsvp}
+                    fullWidth
+                  />
+                </View>
 
                 {/* Attendee Avatars */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
@@ -556,7 +560,6 @@ export function EventDetailScreen() {
                       label="Google Cal"
                       variant="secondary"
                       onPress={handleGoogleCalendar}
-                      size="sm"
                     />
                   </View>
                   <View style={{ flex: 1 }}>
@@ -564,7 +567,6 @@ export function EventDetailScreen() {
                       label={icsExported ? 'Saved .ICS' : '.ICS File'}
                       variant="secondary"
                       onPress={handleExportIcs}
-                      size="sm"
                     />
                   </View>
                 </View>
@@ -580,7 +582,6 @@ export function EventDetailScreen() {
                   label="Open Navigation"
                   variant="ghost"
                   onPress={handleLaunchMaps}
-                  size="sm"
                 />
               </SolidCard>
             </View>

@@ -1,5 +1,5 @@
-import React, { useState } from'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, TextInput, View } from'react-native';
+import React, { useState } from 'react';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Image } from'expo-image';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
