@@ -164,24 +164,24 @@ export default function StudentDashboard() {
             </Pressable>
           </View>
 
-          <View style={{ padding: isDesktop ? spacing.lg : spacing.md, backgroundColor: colors.surface }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: isDesktop ? spacing.md : 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                <Avatar name={profile?.fullName ?? user?.fullName ?? 'Diana Prince'} size={52} />
-                <View>
+                    <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
+            <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Avatar name={profile?.fullName ?? user?.fullName ?? 'Diana Prince'} size={48} />
+                <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <AppText variant="h2" weight="bold">
+                    <AppText variant="h2" weight="bold" numberOfLines={1} style={{ fontSize: 18 }}>
                       Welcome back, {firstName}
                     </AppText>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
-                  <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
+                  <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: 12 }}>
                     {profile?.department ?? 'Computer Science & AI'} • Level {profile?.level ?? 400}
                   </AppText>
                 </View>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                 <Badge label="Verified Student" tone="brand" />
                 <Badge label="Active Term" tone="success" />
               </View>
