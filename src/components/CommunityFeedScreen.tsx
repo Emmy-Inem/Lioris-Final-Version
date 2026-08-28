@@ -21,6 +21,10 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts, createPost } from '@/api/posts';
 import { getMyProfile } from '@/api/profile';
 import { useViewScope } from '@/hooks/useViewScope';
+import { useToast } from '@/context/ToastContext';
+import { ShimmerCardList } from './ShimmerSkeleton';
+import { UserProfileQuickViewModal, QuickViewUser } from './UserProfileQuickViewModal';
+import { EmptyState } from './EmptyState';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
 
@@ -39,6 +43,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  const { user } = useAuth();
  const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [quickViewUser, setQuickViewUser] = useState<QuickViewUser | null>(null);
  const [query, setQuery] = useState('');
  const debouncedQuery = useDebouncedValue(query);
  const [composerOpen, setComposerOpen] = useState(false);
@@ -652,6 +658,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
  <PublishThreadModal visible={composerOpen} onClose={() => setComposerOpen(false)} onPublish={handlePublish} />
  <DiscussionWorkspacesModal visible={workspacesOpen} onClose={() => setWorkspacesOpen(false)} />
- </ScreenContainer>
+   <UserProfileQuickViewModal user={quickViewUser} visible={!!quickViewUser} onClose={() => setQuickViewUser(null)} />
+    </ScreenContainer>
  );
 }

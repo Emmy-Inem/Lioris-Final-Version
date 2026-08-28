@@ -14,6 +14,7 @@ import { ImageViewerModal } from'./ImageViewerModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { getEvent, rsvpToEvent } from '@/api/events';
 import { haptics } from '@/utils/haptics';
 
@@ -30,6 +31,7 @@ export function EventDetailScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop, contentMaxWidth } = useResponsive();
   const { user } = useAuth();
+  const toast = useToast();
   const roleGroup = user?.role ? `(${user.role})` : '(student)';
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -72,21 +74,20 @@ export function EventDetailScreen() {
   async function handleToggleRsvp() {
     if (!event) return;
     haptics.medium();
-    setSubmittingRsvp(true);
+      setSubmittingRsvp(true);
     try {
       const action = isRsvpd ? 'cancel' : 'rsvp';
       await rsvpToEvent(event.id, action);
       setRsvpdState(!isRsvpd);
       queryClient.invalidateQueries({ queryKey: ['events'] });
       haptics.success();
-      Alert.alert(
-        !isRsvpd ? 'RSVP Confirmed' : 'RSVP Cancelled',
+      toast.success(
         !isRsvpd
-          ? `You have secured a seat for "${event.title}". An in-app calendar reminder has been set.`
-          : 'Your seat has been released for another student.',
+          ? `Seat secured for "${event.title}"! Added to your campus schedule.`
+          : 'Your RSVP has been cancelled and seat released.'
       );
     } catch {
-      Alert.alert('Error', 'Could not update RSVP status.');
+      toast.error('Could not update RSVP status. Please try again.');
     } finally {
       setSubmittingRsvp(false);
     }

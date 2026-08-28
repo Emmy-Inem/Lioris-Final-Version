@@ -11,6 +11,8 @@ import { AppText } from'./AppText';
 import { Badge } from './Badge';
 import { SolidCard } from './SolidCard';
 import { EmptyState } from './EmptyState';
+import { ShimmerCardList } from './ShimmerSkeleton';
+import { useToast } from '@/context/ToastContext';
 import { EventCard } from'./EventCard';
 import { SpotlightEventsCarousel } from'./SpotlightEventsCarousel';
 import { PublishEventModal } from'./PublishEventModal';
@@ -35,6 +37,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
+  const toast = useToast();
  const segments = useSegments();
  const roleGroup = segments[0] ?? '(student)';
  const [filter, setFilter] = useState<(typeof EVENT_FILTERS)[number]['key']>('all');

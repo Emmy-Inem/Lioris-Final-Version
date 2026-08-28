@@ -18,6 +18,7 @@ import { addNotificationResponseListener } from'@/notifications/push';
 import { loadBlockedUserIds } from '@/api/connections';
 
 import { FeatureFlagsProvider } from '@/context/FeatureFlagsContext';
+import { ToastProvider } from '@/context/ToastContext';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
  // No-op: harmless if called more than once (e.g. fast refresh in dev).
@@ -197,6 +198,7 @@ export default function RootLayout() {
  <QueryClientProvider client={queryClient}>
  <AuthProvider>
  <ThemeProvider>
+ <ToastProvider>
  <FeatureFlagsProvider>
  <StatusBarForTheme />
  <OfflineBanner />
@@ -204,6 +206,7 @@ export default function RootLayout() {
  <Slot />
  </ErrorBoundary>
  </FeatureFlagsProvider>
+ </ToastProvider>
  </ThemeProvider>
  </AuthProvider>
  </QueryClientProvider>

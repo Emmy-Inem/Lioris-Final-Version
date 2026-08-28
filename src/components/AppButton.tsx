@@ -11,6 +11,7 @@ import Animated, {
  useSharedValue,
  withTiming,
 } from'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from'@/theme/ThemeProvider';
 import { AppText } from'./AppText';
 
@@ -19,6 +20,7 @@ interface AppButtonProps extends Omit<PressableProps, 'style'> {
  variant?: 'primary' | 'secondary' | 'accent' | 'ghost';
  loading?: boolean;
  fullWidth?: boolean;
+ icon?: keyof typeof Ionicons.glyphMap;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -29,6 +31,7 @@ export function AppButton({
  loading,
  fullWidth,
  disabled,
+ icon,
  ...rest
 }: AppButtonProps) {
  const { colors, radius, spacing, minTouchTarget, isDark } = useTheme();
@@ -68,15 +71,18 @@ export function AppButton({
  ]}
  {...rest}
  >
- <View style={styles.content}>
- {loading ? (
- <ActivityIndicator color={palette.fg} />
- ) : (
- <AppText weight="semiBold"style={{ color: palette.fg }}>
- {label}
- </AppText>
- )}
- </View>
+      <View style={[styles.content, { gap: 8 }]}>
+        {loading ? (
+          <ActivityIndicator color={palette.fg} />
+        ) : (
+          <>
+            {icon && <Ionicons name={icon} size={18} color={palette.fg} />}
+            <AppText weight="semiBold" style={{ color: palette.fg }}>
+              {label}
+            </AppText>
+          </>
+        )}
+      </View>
  </AnimatedPressable>
  );
 }

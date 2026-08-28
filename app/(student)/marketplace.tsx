@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { SellItemModal } from '@/components/SellItemModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useToast } from '@/context/ToastContext';
 import { listMarketplaceListings, createListing } from '@/api/marketplace';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
@@ -28,6 +29,7 @@ const CONDITIONS = ['All Conditions', 'New', 'Like New', 'Fair'];
 export default function MarketplaceScreen() {
  const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
+ const toast = useToast();
  const queryClient = useQueryClient();
  const [query, setQuery] = useState('');
  const debouncedQuery = useDebouncedValue(query);
@@ -43,6 +45,7 @@ export default function MarketplaceScreen() {
  async function handlePublish(payload: Parameters<typeof createListing>[0]) {
  await createListing(payload);
  queryClient.invalidateQueries({ queryKey: ['marketplace'] });
+ toast.success('Your listing is live on the campus marketplace!');
  }
 
  return (

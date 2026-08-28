@@ -542,49 +542,35 @@ export default function ResourcesScreen() {
           ) : null}
         </ScrollView>
       ) : (
- /* Mobile Single Column FlatList */
- <FlatList
- data={resources ?? []}
- keyExtractor={(item) => item.id}
- ListHeaderComponent={renderHeader}
- initialNumToRender={8}
- maxToRenderPerBatch={8}
- contentContainerStyle={{ paddingBottom: 130 }}
- renderItem={({ item }) => <ResourceCard resource={item} />}
- showsVerticalScrollIndicator={true}
- onRefresh={refetch}
- refreshing={isRefetching}
- ListEmptyComponent={
- !isLoading ? (
- <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
- <View
- style={{
- width: 64,
- height: 64,
- borderRadius: 32,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="book-outline" size={32} color={colors.brandPrimary} />
- </View>
- <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
- No Academic Resources Found
- </AppText>
- <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
- Try searching for another course code or upload study materials for your peers.
- </AppText>
- </View>
- ) : null
- }
- />
- )}
+        /* Mobile Single Column FlatList */
+        <FlatList
+          data={resources ?? []}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={renderHeader}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          contentContainerStyle={{ paddingBottom: 130 }}
+          renderItem={({ item }) => <ResourceCard resource={item} />}
+          showsVerticalScrollIndicator={true}
+          onRefresh={refetch}
+          refreshing={isRefetching}
+          ListEmptyComponent={
+            !isLoading ? (
+              <EmptyState
+                icon="book-outline"
+                title="No Academic Resources Found"
+                description="Try searching for another course code or upload study materials for your peers."
+                actionLabel="Upload Study Material"
+                onAction={() => setUploadModalOpen(true)}
+              />
+            ) : null
+          }
+        />
+      )}
 
- <ShareAcademicFileModal visible={uploadModalOpen} onClose={() => setUploadModalOpen(false)} onUpload={handleUpload} />
- <LibraryFilterModal visible={filterModalOpen} onClose={() => setFilterModalOpen(false)} filters={filters} onApply={setFilters} />
- <ManageResourcesModal visible={adminManageOpen} onClose={() => setAdminManageOpen(false)} />
- </ScreenContainer>
- );
+      <ShareAcademicFileModal visible={uploadModalOpen} onClose={() => setUploadModalOpen(false)} onUpload={handleUpload} />
+      <LibraryFilterModal visible={filterModalOpen} onClose={() => setFilterModalOpen(false)} filters={filters} onApply={setFilters} />
+      <ManageResourcesModal visible={adminManageOpen} onClose={() => setAdminManageOpen(false)} />
+    </ScreenContainer>
+  );
 }
