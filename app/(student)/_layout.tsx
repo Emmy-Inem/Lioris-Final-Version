@@ -16,27 +16,12 @@ export default function StudentLayout() {
 
  const tabsContent = (
  <Tabs
+  tabBar={(props) => <FloatingLiquidGlassTabBar {...props} />}
  screenOptions={{
  headerShown: false,
  tabBarActiveTintColor: colors.brandPrimary,
  tabBarInactiveTintColor: colors.tabInactive,
- tabBarStyle: isDesktop
- ? { display: 'none' }
- : {
- backgroundColor: isDark ? 'rgba(10, 19, 38, 0.85)' : 'rgba(255, 255, 255, 0.88)',
- borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
- borderTopWidth: 1,
- height: 68,
- paddingBottom: 10,
- paddingTop: 8,
- ...(Platform.OS === 'web'
- ? ({
- backdropFilter: 'blur(24px)',
- WebkitBackdropFilter: 'blur(24px)',
- boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.06)',
- } as any)
- : {}),
- },
+ tabBarStyle: { display: 'none' },
  tabBarLabelStyle: {
  fontSize: 11,
  fontWeight: '600',

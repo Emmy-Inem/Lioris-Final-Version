@@ -7,30 +7,10 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 
 export interface FloatingLiquidGlassTabBarProps {
-  state: {
-    index: number;
-    routes: Array<{
-      key: string;
-      name: string;
-      params?: any;
-    }>;
-  };
-  descriptors: Record<
-    string,
-    {
-      options: {
-        tabBarLabel?: any;
-        title?: string;
-        tabBarButton?: any;
-        href?: string | null;
-        [key: string]: any;
-      };
-    }
-  >;
-  navigation: {
-    emit: (event: any) => { defaultPrevented: boolean };
-    navigate: (name: string, params?: any) => void;
-  };
+  state: any;
+  descriptors: any;
+  navigation: any;
+  insets?: any;
 }
 
 export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: FloatingLiquidGlassTabBarProps) {

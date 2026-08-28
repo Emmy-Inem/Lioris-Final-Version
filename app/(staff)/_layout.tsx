@@ -14,6 +14,7 @@ export default function StaffLayout() {
 
  const tabsContent = (
  <Tabs
+ tabBar={(props) => <FloatingLiquidGlassTabBar {...props} />}
  screenOptions={{
  headerShown: false,
  tabBarActiveTintColor: colors.brandPrimary,
