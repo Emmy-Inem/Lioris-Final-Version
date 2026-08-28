@@ -14,7 +14,7 @@ import { roleRequiresMfa } from'./mfaPolicy';
 import { registerForPushNotificationsAsync } from'@/notifications/push';
 
 import { supabase } from '@/api/supabase';
-
+import { queryClient } from '@/api/queryClient';
 import { loadBlockedUserIds } from '@/api/connections';
 
 interface SessionUser {
@@ -264,6 +264,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         await persist(nextUser);
         setUser(nextUser);
+        try {
+          queryClient.clear();
+        } catch {
+          // Non-blocking
+        }
       },
     }),
     [user, isLoading],

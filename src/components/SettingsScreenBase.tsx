@@ -640,78 +640,10 @@ export function SettingsScreen() {
  </AppText>
  <Badge label="Hardware Shield"tone="brand" />
  </View>
-
  <SettingSwitchRow
  title="Biometric App Lock"description="Require Face ID / Touch ID / Fingerprint on launch."value={biometricShield}
  onValueChange={setBiometricShield}
  />
-
- <SettingSwitchRow
- title="Private Profile Visibility"description="Only fellow verified students in your campus see contact details."value={privateVisibility}
- onValueChange={setPrivateVisibility}
- />
-
- <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
-
- {/* Device Sessions Row */}
- <Pressable
- onPress={() => {
- haptics.light();
- setSessionsModalOpen(true);
- }}
- style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm }}
- >
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <AppText weight="bold"variant="bodySmall">Active Device Sessions</AppText>
- <Badge label={`${sessions.length} Active`} tone="brand" />
- </View>
- <AppText tone="secondary"variant="caption">
- Manage authenticated phones, tablets & desktop browsers
- </AppText>
- </View>
- <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
- </Pressable>
-
-            {/* 2FA Setup Row */}
-            <Pressable
-              onPress={() => {
-                haptics.light();
-                setTwoFactorModalOpen(true);
-              }}
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm }}
-            >
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <AppText weight="bold" variant="bodySmall">Two-Factor Authentication (2FA)</AppText>
-                  <Badge label={twoFactorEnabled ? 'Enabled' : 'Disabled'} tone={twoFactorEnabled ? 'success' : 'neutral'} />
-                </View>
-                <AppText tone="secondary" variant="caption">
-                  TOTP Authenticator app verification codes
-                </AppText>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-            </Pressable>
-
- {/* E2EE Cryptography Fingerprint Row */}
- <Pressable
- onPress={() => {
- haptics.light();
- setE2eeModalOpen(true);
- }}
- style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm }}
- >
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <AppText weight="bold"variant="bodySmall">E2EE Chat Encryption Keys</AppText>
- <Badge label="AES-256-GCM"tone="accent" />
- </View>
- <AppText tone="secondary"variant="caption">
- Verify device encryption keys & cryptographic fingerprints
- </AppText>
- </View>
- <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
- </Pressable>
  </SolidCard>
 
  {/* Display & Visual Preferences */}
