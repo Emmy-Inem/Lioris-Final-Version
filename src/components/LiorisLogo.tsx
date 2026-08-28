@@ -1,89 +1,81 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { Image } from 'expo-image';
-import Svg, { Text as SvgText, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useTheme } from '@/theme/ThemeProvider';
 
 interface LiorisLogoProps {
- size?: number;
- tintColor?: string;
- variant?: 'symbol' | 'wordmark' | 'full';
- showSubtitle?: boolean;
+  size?: number;
+  tintColor?: string;
+  variant?: 'symbol' | 'wordmark' | 'full';
+  showSubtitle?: boolean;
 }
 
 const EMBLEM_ASSET = require('../../assets/images/lioris_emblem.png');
 
-/**
- * Official LIORIS Brand Emblem Crest & Wordmark.
- * Completely free of black drop-shadows or dark background artifacts.
- */
 export function LiorisLogo({ size = 48, tintColor, variant = 'symbol' }: LiorisLogoProps) {
- const { colors, isDark } = useTheme();
+  const { colors, isDark } = useTheme();
 
- if (variant === 'symbol') {
- return (
- <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
- <Image
- source={EMBLEM_ASSET}
- style={{ width: size, height: size }}
- contentFit="contain"
- transition={200}
- />
- </View>
- );
- }
+  if (variant === 'symbol') {
+    return (
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Image
+          source={EMBLEM_ASSET}
+          style={{ width: size, height: size }}
+          contentFit="contain"
+          transition={200}
+        />
+      </View>
+    );
+  }
 
- const activeColor = tintColor || (isDark ? '#38BDF8' : colors.brandPrimary);
- const accentColor = tintColor || (isDark ? '#60A5FA' : colors.brandAccent || '#0284C7');
+  const activeColor = tintColor || (isDark ? '#818CF8' : colors.brandPrimary);
 
- if (variant === 'wordmark') {
- const height = size;
- const width = Math.round(size * 3.6);
- return (
- <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
- <Svg width={width} height={height} viewBox="0 0 180 50">
- <SvgText
- fill={activeColor}
- fontSize="40"
- fontWeight="900"
- letterSpacing="3.5"
- x="0"
- y="38"
- >
- LIORIS
- </SvgText>
- </Svg>
- </View>
- );
- }
+  if (variant === 'wordmark') {
+    return (
+      <View style={{ justifyContent: 'center' }}>
+        <Text
+          style={{
+            color: activeColor,
+            fontSize: Math.round(size * 0.95),
+            fontWeight: '900',
+            letterSpacing: 2.2,
+            fontFamily: Platform.select({
+              web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              default: 'Inter_900Black',
+            }),
+          }}
+        >
+          LIORIS
+        </Text>
+      </View>
+    );
+  }
 
- // Full variant: Crest symbol + Clean Wordmark
- const gap = Math.max(8, Math.round(size * 0.2));
- const wmHeight = Math.round(size * 0.7);
- const wmWidth = Math.round(wmHeight * 3.6);
+  // Full variant: Crest symbol + Clean Wordmark
+  const gap = Math.max(8, Math.round(size * 0.2));
 
- return (
- <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>
- <Image
- source={EMBLEM_ASSET}
- style={{ width: size, height: size }}
- contentFit="contain"
- transition={200}
- />
- <View style={{ width: wmWidth, height: wmHeight, justifyContent: 'center' }}>
- <Svg width={wmWidth} height={wmHeight} viewBox="0 0 180 50">
- <SvgText
- fill={activeColor}
- fontSize="40"
- fontWeight="900"
- letterSpacing="3.5"
- x="0"
- y="38"
- >
- LIORIS
- </SvgText>
- </Svg>
- </View>
- </View>
- );
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>
+      <Image
+        source={EMBLEM_ASSET}
+        style={{ width: size, height: size }}
+        contentFit="contain"
+        transition={200}
+      />
+      <Text
+        style={{
+          color: activeColor,
+          fontSize: Math.round(size * 0.55),
+          fontWeight: '900',
+          letterSpacing: 2.2,
+          fontFamily: Platform.select({
+            web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            default: 'Inter_900Black',
+          }),
+        }}
+      >
+        LIORIS
+      </Text>
+    </View>
+  );
 }
