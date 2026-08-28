@@ -29,20 +29,21 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
 
   return (
     <View style={styles.floatingWrapper} pointerEvents="box-none">
-            <View
+      <View
+        {...({ dataSet: { component: 'floating-liquid-glass-bar' } } as any)}
         style={[
           styles.glassPill,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.70)' : 'rgba(255, 255, 255, 0.75)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.95)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.40)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.90)',
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(28px) saturate(200%) brightness(105%)',
-              WebkitBackdropFilter: 'blur(28px) saturate(200%) brightness(105%)',
+              backdropFilter: 'blur(36px) saturate(220%) contrast(108%) brightness(110%)',
+              WebkitBackdropFilter: 'blur(36px) saturate(220%) contrast(108%) brightness(110%)',
               boxShadow: isDark
-                ? '0 20px 45px rgba(0, 0, 0, 0.7), inset 0 1px 1.5px rgba(255, 255, 255, 0.35)'
-                : '0 20px 45px rgba(15, 23, 42, 0.14), inset 0 1.5px 2px rgba(255, 255, 255, 0.95), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                ? '0 24px 50px rgba(0, 0, 0, 0.75), inset 0 1.5px 2px rgba(255, 255, 255, 0.40)'
+                : '0 24px 50px rgba(15, 23, 42, 0.16), inset 0 1.5px 2px rgba(255, 255, 255, 1), 0 0 0 1px rgba(255, 255, 255, 0.60)',
             } as any),
         ]}
       >
@@ -72,8 +73,8 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
             iconName = isFocused ? 'megaphone' : 'megaphone-outline';
           } else if (route.name.includes('directory')) {
             iconName = isFocused ? 'people' : 'people-outline';
-          } else if (route.name.includes('config') || route.name.includes('settings')) {
-            iconName = isFocused ? 'settings' : 'settings-outline';
+          } else if (route.name.includes('config') || route.name.includes('platform') || route.name.includes('settings')) {
+            iconName = isFocused ? 'shield' : 'shield-outline';
           }
 
           const onPress = () => {
@@ -114,7 +115,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
               <Ionicons
                 name={iconName}
                 size={18}
-                color={isFocused ? '#FFFFFF' : isDark ? '#FFFFFF' : '#0F172A'}
+                color={isFocused ? '#FFFFFF' : isDark ? '#F8FAFC' : '#0F172A'}
               />
               <AppText
                 variant="caption"
@@ -122,7 +123,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
                 style={{
                   fontSize: 10,
                   marginTop: 2,
-                  color: isFocused ? '#FFFFFF' : isDark ? '#FFFFFF' : '#0F172A',
+                  color: isFocused ? '#FFFFFF' : isDark ? '#F8FAFC' : '#0F172A',
                 }}
               >
                 {typeof label === 'string' ? label : route.name}

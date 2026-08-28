@@ -70,6 +70,15 @@ export default function RootLayout() {
         const style = document.createElement('style');
         style.id = styleId;
         style.textContent = `
+          
+          /* Hardware-accelerated true liquid glass refraction for floating nav */
+          [data-component="floating-liquid-glass-bar"] {
+            backdrop-filter: blur(36px) saturate(220%) contrast(108%) brightness(110%) !important;
+            -webkit-backdrop-filter: blur(36px) saturate(220%) contrast(108%) brightness(110%) !important;
+            transform: translate3d(0, 0, 0) !important;
+            will-change: backdrop-filter, -webkit-backdrop-filter;
+          }
+
           /* Universal Clean Layout & Mobile Touch Optimization */
           html, body, #root {
             height: 100% !important;
