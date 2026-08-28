@@ -6,10 +6,12 @@ import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 export default function StudentLayout() {
  const { colors, isDark } = useTheme();
  const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
 
  const tabsContent = (
  <Tabs
@@ -57,7 +59,8 @@ export default function StudentLayout() {
  }}
  />
  <Tabs.Screen
- name="events-list"options={{
+ name="events-list" options={{
+          href: isFeatureEnabled('campus_events') ? undefined : null,
  title: 'Events',
  tabBarIcon: ({ focused, size }) => (
  <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} size={size} />
@@ -65,7 +68,8 @@ export default function StudentLayout() {
  }}
  />
  <Tabs.Screen
- name="resources"options={{
+ name="resources" options={{
+          href: isFeatureEnabled('academic_resources') ? undefined : null,
  title: 'Resources',
  tabBarIcon: ({ focused, size }) => (
  <TabIcon name={focused ? 'folder' : 'folder-outline'} focused={focused} size={size} />

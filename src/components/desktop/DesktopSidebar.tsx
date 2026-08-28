@@ -94,41 +94,43 @@ export function DesktopSidebar() {
   const studentNavItems = rawStudentNavItems.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true));
   const alumniNavItems = rawAlumniNavItems.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true));
 
- const staffNavItems: NavItem[] = [
+ const rawStaffNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
  { id: 'home', label: 'Staff Console', href: '/(staff)/dashboard', icon: 'home' },
  { id: 'forum', label: 'Faculty Forum', href: '/(staff)/forum', icon: 'chatbubbles' },
  { id: 'announcements', label: 'Broadcasts', href: '/(staff)/announcements', icon: 'megaphone' },
  { id: 'moderation', label: 'Moderation Desk', href: '/(staff)/moderation', icon: 'shield-checkmark' },
- { id: 'events', label: 'Campus Events', href: '/(staff)/events', icon: 'calendar' },
+ { id: 'events', label: 'Campus Events', href: '/(staff)/events', icon: 'calendar', flagKey: 'campus_events' },
  { id: 'messages', label: 'Direct Messages', href: '/(staff)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount },
  { id: 'notifications', label: 'Staff Alerts', href: '/(staff)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
  { id: 'profile', label: 'Faculty Profile', href: '/(staff)/profile', icon: 'person' },
  { id: 'settings', label: 'Console Settings', href: '/(staff)/settings', icon: 'settings' },
  ];
 
- const adminNavItems: NavItem[] = [
- { id: 'platform-config', label: 'Admin Command Desk', href: '/(admin)/platform-config', icon: 'shield' },
- { id: 'home', label: 'Executive Dashboard', href: '/(admin)/dashboard', icon: 'pie-chart' },
- { id: 'user-directory', label: 'User Directory', href: '/(admin)/user-directory', icon: 'people' },
- { id: 'verification-requests', label: 'Student Verifications', href: '/(admin)/verification-requests', icon: 'checkmark-done-circle' },
- { id: 'moderation-queue', label: 'Moderation Queue', href: '/(admin)/moderation-queue', icon: 'flag' },
- { id: 'audit-logs', label: 'Security Audit Logs', href: '/(admin)/audit-logs', icon: 'key' },
- { id: 'pulse-analytics', label: 'Pulse Analytics', href: '/(admin)/pulse-analytics', icon: 'analytics' },
- { id: 'super-admin-config', label: 'System Configuration', href: '/(admin)/super-admin-config', icon: 'construct' },
- { id: 'forum', label: 'Campus Forum', href: '/(admin)/forum', icon: 'chatbubbles' },
- { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount },
- { id: 'notifications', label: 'Alerts', href: '/(admin)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
- { id: 'settings', label: 'Settings', href: '/(admin)/settings', icon: 'settings' },
- ];
+  const staffNavItems = rawStaffNavItems.filter((item) => (item.flagKey ? flags[item.flagKey] !== false : true));
 
- const navItems =
- role === 'admin'
- ? adminNavItems
- : role === 'staff'
- ? staffNavItems
- : role === 'alumni'
- ? alumniNavItems
- : studentNavItems;
+  const adminNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
+    { id: 'platform-config', label: 'Admin Command Desk', href: '/(admin)/platform-config', icon: 'shield' },
+    { id: 'home', label: 'Executive Dashboard', href: '/(admin)/dashboard', icon: 'pie-chart' },
+    { id: 'user-directory', label: 'User Directory', href: '/(admin)/user-directory', icon: 'people' },
+    { id: 'verification-requests', label: 'Student Verifications', href: '/(admin)/verification-requests', icon: 'checkmark-done-circle' },
+    { id: 'moderation-queue', label: 'Moderation Queue', href: '/(admin)/moderation-queue', icon: 'flag' },
+    { id: 'audit-logs', label: 'Security Audit Logs', href: '/(admin)/audit-logs', icon: 'key' },
+    { id: 'pulse-analytics', label: 'Pulse Analytics', href: '/(admin)/pulse-analytics', icon: 'analytics' },
+    { id: 'super-admin-config', label: 'System Configuration', href: '/(admin)/super-admin-config', icon: 'construct' },
+    { id: 'forum', label: 'Campus Forum', href: '/(admin)/forum', icon: 'chatbubbles' },
+    { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount },
+    { id: 'notifications', label: 'Alerts', href: '/(admin)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
+    { id: 'settings', label: 'Settings', href: '/(admin)/settings', icon: 'settings' },
+  ];
+
+  const navItems: (NavItem & { flagKey?: FeatureKey })[] =
+    role === 'admin'
+      ? adminNavItems
+      : role === 'staff'
+      ? staffNavItems
+      : role === 'alumni'
+      ? alumniNavItems
+      : studentNavItems;
 
  const campusName = profile?.institutionName ?? 'University of Ibadan';
 
