@@ -34,7 +34,7 @@ export interface FloatingLiquidGlassTabBarProps {
 }
 
 export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: FloatingLiquidGlassTabBarProps) {
-  const { colors, isDark, radius } = useTheme();
+  const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
 
   if (isDesktop) return null;
@@ -53,16 +53,16 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
         style={[
           styles.glassPill,
           {
-            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.85)' : 'rgba(255, 255, 255, 0.88)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.75)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(28px)',
-              WebkitBackdropFilter: 'blur(28px)',
+              backdropFilter: 'blur(32px)',
+              WebkitBackdropFilter: 'blur(32px)',
               boxShadow: isDark
-                ? '0 16px 36px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.18)'
-                : '0 16px 36px rgba(15, 23, 42, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.9)',
+                ? '0 20px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25)'
+                : '0 20px 40px rgba(15, 23, 42, 0.2), inset 0 1px 1px rgba(255, 255, 255, 1)',
             } as any),
         ]}
       >
@@ -116,10 +116,14 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
               style={[
                 styles.tabItem,
                 isFocused && {
-                  backgroundColor: isDark ? 'rgba(129, 140, 248, 0.22)' : colors.pastelPrimaryBg,
-                  borderRadius: radius.pill,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(129, 140, 248, 0.35)' : colors.brandPrimary + '40',
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: 22,
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  shadowColor: colors.brandPrimary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 8,
                 },
               ]}
               accessibilityRole="tab"
@@ -128,8 +132,8 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
             >
               <Ionicons
                 name={iconName}
-                size={20}
-                color={isFocused ? colors.brandPrimary : colors.textSecondary}
+                size={18}
+                color={isFocused ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
               />
               <AppText
                 variant="caption"
@@ -137,7 +141,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
                 style={{
                   fontSize: 10,
                   marginTop: 2,
-                  color: isFocused ? colors.brandPrimary : colors.textSecondary,
+                  color: isFocused ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
                 }}
               >
                 {typeof label === 'string' ? label : route.name}
@@ -164,24 +168,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    width: '90%',
+    width: '92%',
     maxWidth: 390,
-    height: 62,
-    borderRadius: 31,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 16,
   },
   tabItem: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     marginHorizontal: 2,
   },
 });
