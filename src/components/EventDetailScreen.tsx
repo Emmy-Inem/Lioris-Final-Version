@@ -268,8 +268,8 @@ export function EventDetailScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120,
-    paddingHorizontal: isDesktop ? spacing.lg : 16 }}
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130,
+    paddingHorizontal: isDesktop ? spacing.lg : 0 }}
       >
         {isDesktop ? (
           /* DESKTOP 2-COLUMN BALANCED LAYOUT */
@@ -653,7 +653,7 @@ export function EventDetailScreen() {
             </View>
 
             {/* Content Body Container */}
-            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, width: '100%' }}>
+            <View style={{ paddingHorizontal: isDesktop ? spacing.lg : 0, paddingTop: spacing.md, width: '100%' }}>
               {/* Event Title */}
               <AppText variant="h1" weight="bold" style={{ fontSize: 24, lineHeight: 30, marginBottom: spacing.xs }}>
                 {event.title}

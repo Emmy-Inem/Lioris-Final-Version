@@ -163,7 +163,42 @@ export default function StudyGroupsScreen() {
           </>
         ) : (
           <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8, marginBottom: spacing.md }}>
+            {/* Mobile Search Input */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.surface,
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.md,
+                height: 42,
+                borderWidth: 1,
+                borderColor: colors.border,
+                gap: spacing.sm,
+                marginBottom: spacing.sm,
+              }}
+            >
+              <Ionicons name="search" size={16} color={colors.textSecondary} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search courses, topics, or study pods..."
+                placeholderTextColor={colors.textSecondary}
+                style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
+              />
+              {searchQuery ? (
+                <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flex: 1, minWidth: 0, marginBottom: spacing.md }}
+              contentContainerStyle={{ gap: 8, paddingRight: 16 }}
+            >
               {COURSE_FILTERS.map((f) => (
                 <Pressable
                   key={f}

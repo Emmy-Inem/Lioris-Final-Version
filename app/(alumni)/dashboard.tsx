@@ -51,7 +51,7 @@ export default function AlumniDashboard() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
-          paddingBottom: 80,
+          paddingBottom: isDesktop ? 60 : 130,
           gap: spacing.lg,
         }}
       >

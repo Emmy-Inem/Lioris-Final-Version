@@ -253,7 +253,8 @@ export default function JobsScreen() {
  <ScrollView
  horizontal
  showsHorizontalScrollIndicator={false}
- contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.md }}
+ style={{ marginBottom: spacing.md }}
+ contentContainerStyle={{ gap: spacing.xs, paddingRight: 16 }}
  >
  {JOB_FILTERS.map((f) => {
  const selected = selectedFilter === f.id;

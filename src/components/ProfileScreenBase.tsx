@@ -510,7 +510,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
               OR CHOOSE AVATAR PRESET
             </AppText>
-            <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingRight: spacing.md, marginBottom: spacing.lg }}>
               {AVATAR_PRESETS.map((preset) => {
                 const isSelected = profile.avatarUrl === preset.id;
                 return (
@@ -518,7 +518,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                     key={preset.id}
                     onPress={() => handleSelectAvatar(preset.id)}
                     style={{
-                      flex: 1,
+                      width: 90,
                       alignItems: 'center',
                       padding: spacing.sm,
                       borderRadius: radius.md,
@@ -534,7 +534,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
 
             {/* Cover Banner Selector */}
             <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>

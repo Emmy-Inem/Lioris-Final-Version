@@ -1,6 +1,7 @@
-import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
-import { router, useSegments } from'expo-router';
+import React, { useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { router, useSegments } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { SolidCard } from'./SolidCard';
 import { AppText } from'./AppText';
@@ -89,16 +90,28 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  }
  }
 
- return (
- <SolidCard radius={18} padded={false} style={{ flex: 1 }}>
- <View style={{ height: 100, backgroundColor: colors.divider, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden' }}>
- <View style={{ position: 'absolute', top: 6, left: 6 }}>
- <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
- <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 8 }}>
- {item.condition}
- </AppText>
- </View>
- </View>
+  return (
+    <SolidCard radius={18} padded={false} style={{ flex: 1 }}>
+      <View style={{ height: 100, backgroundColor: colors.divider, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden' }}>
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={200}
+          />
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.pastelPrimaryBg }}>
+            <Ionicons name="pricetag-outline" size={28} color={colors.brandPrimary} />
+          </View>
+        )}
+        <View style={{ position: 'absolute', top: 6, left: 6, zIndex: 2 }}>
+          <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+            <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 8 }}>
+              {item.condition}
+            </AppText>
+          </View>
+        </View>
  <Pressable
  onPress={handleToggleWishlist}
  accessibilityRole="button"accessibilityState={{ selected: saved }}

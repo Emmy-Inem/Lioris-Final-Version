@@ -242,7 +242,7 @@ export function SettingsScreen() {
                 <AppText variant="h3" weight="bold" style={{ marginTop: spacing.md }}>
                   Brand Accent Color
                 </AppText>
-                <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, rowGap: spacing.sm }}>
                   {accentPresets.map((preset) => {
                     const isSelected = customAccent === preset.id;
                     const displayColor = isDark ? preset.primaryDark : preset.primaryLight;

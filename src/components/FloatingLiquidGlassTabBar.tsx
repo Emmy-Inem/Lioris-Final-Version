@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Pressable, Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -16,8 +17,25 @@ export interface FloatingLiquidGlassTabBarProps {
 export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: FloatingLiquidGlassTabBarProps) {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const safeAreaInsets = useSafeAreaInsets();
 
   if (isDesktop) return null;
+
+  // Active route
+  const currentRoute = state.routes[state.index];
+  const currentDescriptor = descriptors[currentRoute?.key];
+  const currentOptions = currentDescriptor?.options || {};
+
+  // Suppress floating tab bar on detail/child routes or when explicitly hidden
+  const isHiddenRoute =
+    currentOptions.tabBarStyle?.display === 'none' ||
+    currentRoute?.name?.includes('[id]') ||
+    currentRoute?.name?.includes('detail') ||
+    currentRoute?.name?.includes('chat') ||
+    currentRoute?.name === 'messages' ||
+    currentRoute?.name?.startsWith('messages/');
+
+  if (isHiddenRoute) return null;
 
   // Filter only visible routes (href !== null)
   const visibleRoutes = state.routes.filter((route: any) => {
@@ -27,26 +45,28 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
     return options.tabBarButton === undefined && (options as any).href !== null;
   });
 
+  const bottomInset = Platform.OS === 'web' ? 18 : Math.max(18, (safeAreaInsets?.bottom ?? 0) + 6);
+
   return (
-    <View style={styles.floatingWrapper} pointerEvents="box-none">
+    <View style={[styles.floatingWrapper, { bottom: bottomInset }]} pointerEvents="box-none">
       <View
         {...({ dataSet: { component: 'floating-liquid-glass-bar' } } as any)}
         style={[
           styles.glassPill,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.22)' : 'rgba(255, 255, 255, 0.18)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.32)' : 'rgba(255, 255, 255, 0.88)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.72)' : 'rgba(255, 255, 255, 0.75)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.95)',
           },
           Platform.OS === 'web' &&
             ({
               background: isDark
-                ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(15, 23, 42, 0.20) 50%, rgba(30, 41, 59, 0.25) 100%)'
-                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.25) 100%)',
-              backdropFilter: 'blur(40px) saturate(240%) brightness(115%) contrast(110%)',
-              WebkitBackdropFilter: 'blur(40px) saturate(240%) brightness(115%) contrast(110%)',
+                ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.82) 0%, rgba(15, 23, 42, 0.74) 50%, rgba(15, 23, 42, 0.80) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.72) 50%, rgba(248, 250, 252, 0.78) 100%)',
+              backdropFilter: 'blur(18px) saturate(190%) brightness(106%) contrast(104%)',
+              WebkitBackdropFilter: 'blur(18px) saturate(190%) brightness(106%) contrast(104%)',
               boxShadow: isDark
-                ? '0 28px 60px -10px rgba(0, 0, 0, 0.85), inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.60), inset 0 -1.5px 2px 0 rgba(255, 255, 255, 0.18), inset 0 0 20px 2px rgba(255, 255, 255, 0.12)'
-                : '0 28px 60px -10px rgba(15, 23, 42, 0.20), inset 0 1.5px 2.5px 0 rgba(255, 255, 255, 1), inset 0 -1.5px 2px 0 rgba(255, 255, 255, 0.40), inset 0 0 20px 2px rgba(255, 255, 255, 0.35)',
+                ? '0 20px 48px -8px rgba(0, 0, 0, 0.75), inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.40), inset 0 -1.5px 1.5px 0 rgba(255, 255, 255, 0.12), inset 0 0 12px 1px rgba(255, 255, 255, 0.08)'
+                : '0 20px 48px -8px rgba(15, 23, 42, 0.16), inset 0 1.5px 2px 0 rgba(255, 255, 255, 1), inset 0 -1.5px 1.5px 0 rgba(255, 255, 255, 0.35), inset 0 0 12px 1px rgba(255, 255, 255, 0.25)',
             } as any),
         ]}
       >

@@ -73,8 +73,8 @@ export default function RootLayout() {
           
           /* Hardware-accelerated true iPhone liquid glass refraction for floating nav */
           [data-component="floating-liquid-glass-bar"] {
-            backdrop-filter: blur(40px) saturate(240%) brightness(115%) contrast(110%) !important;
-            -webkit-backdrop-filter: blur(40px) saturate(240%) brightness(115%) contrast(110%) !important;
+            backdrop-filter: blur(18px) saturate(190%) brightness(106%) contrast(104%) !important;
+            -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(106%) contrast(104%) !important;
             transform: translate3d(0, 0, 0) !important;
             will-change: backdrop-filter, -webkit-backdrop-filter !important;
           }
