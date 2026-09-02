@@ -43,18 +43,18 @@ export function SolidCard({
         {
           borderRadius: cornerRadius,
           backgroundColor: defaultBg,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.80)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : colors.border,
           borderWidth: 1,
           overflow: 'hidden',
         },
         frosted &&
           Platform.OS === 'web' &&
           ({
-            backdropFilter: 'blur(22px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             boxShadow: isDark
-              ? '0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.18)'
-              : '0 10px 30px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 1.5px rgba(255, 255, 255, 0.95)',
+              ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+              : 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
           } as any),
         padded && { padding: spacing.lg },
         style,
@@ -76,19 +76,14 @@ export function SolidCard({
 const styles = StyleSheet.create({
   shadowWrapper: Platform.select({
     ios: {
-      shadowColor: '#0A1326',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.05,
-      shadowRadius: 10,
+      shadowOpacity: 0,
+      elevation: 0,
     },
     android: {
-      // Android's elevation shadow renders much darker/harder than iOS's
-      // shadowOpacity for the same nominal "level" - keep this low so cards
-      // don't look like they have a heavy drop-shadow on phones.
-      elevation: 1.5,
+      elevation: 0,
     },
     web: {
-      boxShadow: '0 6px 20px -6px rgba(0, 0, 0, 0.05), 0 1px 4px -1px rgba(0, 0, 0, 0.03)',
+      boxShadow: 'none',
     } as any,
     default: {},
   }),

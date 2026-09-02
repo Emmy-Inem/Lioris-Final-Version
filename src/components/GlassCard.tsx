@@ -17,64 +17,65 @@ export function GlassCard({ padded = true, radius, intensity = 40, style, childr
  const { colors, spacing, radius: radiusTokens, isDark } = useTheme();
  const cornerRadius = radius ?? radiusTokens.glass;
 
- return (
- <View
- style={[
- styles.shadowWrapper,
- {
- borderRadius: cornerRadius,
- shadowColor: colors.glassShadowColor,
- },
- style,
- ]}
- {...rest}
- >
- <View
- style={[
- styles.container,
- {
- borderRadius: cornerRadius,
- borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.65)',
- backgroundColor: isDark ? 'rgba(15, 23, 42, 0.65)' : 'rgba(255, 255, 255, 0.72)',
- },
- Platform.OS === 'web' &&
- ({
- backdropFilter: 'blur(24px)',
- WebkitBackdropFilter: 'blur(24px)',
- } as any),
- ]}
- >
- {Platform.OS !== 'web' ? (
- <BlurView
- intensity={intensity}
- tint={isDark ? 'dark' : 'light'}
- style={StyleSheet.absoluteFill}
- />
- ) : null}
+  return (
+    <View
+      style={[
+        styles.shadowWrapper,
+        {
+          borderRadius: cornerRadius,
+        },
+        style,
+      ]}
+      {...rest}
+    >
+      <View
+        style={[
+          styles.container,
+          {
+            borderRadius: cornerRadius,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.72)' : 'rgba(255, 255, 255, 0.80)',
+          },
+          Platform.OS === 'web' &&
+            ({
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              boxShadow: isDark
+                ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                : 'inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+            } as any),
+        ]}
+      >
+        {Platform.OS !== 'web' ? (
+          <BlurView
+            intensity={intensity}
+            tint={isDark ? 'dark' : 'light'}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
 
- <View style={padded && { padding: spacing.lg }}>{children}</View>
- </View>
- </View>
- );
+        <View style={padded && { padding: spacing.lg }}>{children}</View>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
- container: {
- overflow: 'hidden',
- borderWidth: 1,
- },
- shadowWrapper: Platform.select({
- ios: {
- shadowOffset: { width: 0, height: 8 },
- shadowOpacity: 0.12,
- shadowRadius: 20,
- },
- android: {
- elevation: 6,
- },
- web: {
- boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.06)',
- } as any,
- default: {},
- }),
+  container: {
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  shadowWrapper: Platform.select({
+    ios: {
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    android: {
+      elevation: 0,
+    },
+    web: {
+      boxShadow: 'none',
+    } as any,
+    default: {},
+  }),
 });

@@ -189,11 +189,6 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  borderWidth: 1,
  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
  position: 'relative',
- shadowColor: '#000',
- shadowOffset: { width: 0, height: 4 },
- shadowOpacity: 0.1,
- shadowRadius: 10,
- elevation: 3,
  }}
  >
  {/* Cover Image */}

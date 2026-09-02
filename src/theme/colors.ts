@@ -142,7 +142,7 @@ export const lightColors: ThemeColors = {
  glassSurfaceBottom: 'rgba(241,245,249,0.93)',
  glassBorderStart: 'rgba(230,232,239,0.3)',
  glassBorderEnd: 'rgba(230,232,239,0.15)',
- glassShadowColor: 'rgba(27,47,94,0.12)',
+ glassShadowColor: 'rgba(27, 47, 94, 0.04)',
 
  textPrimary: palette.textDark,
  textSecondary: palette.liorisNeutralGray,
@@ -191,7 +191,7 @@ export const darkColors: ThemeColors = {
  glassSurfaceBottom: 'rgba(12, 22, 42, 0.97)',
  glassBorderStart: 'rgba(255, 255, 255, 0.14)',
  glassBorderEnd: 'rgba(255, 255, 255, 0.06)',
- glassShadowColor: 'rgba(0, 0, 0, 0.45)',
+ glassShadowColor: 'rgba(0, 0, 0, 0.15)',
 
  textPrimary: '#FFFFFF',
  textSecondary: '#94A3B8',

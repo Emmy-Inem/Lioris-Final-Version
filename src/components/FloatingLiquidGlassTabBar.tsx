@@ -65,8 +65,8 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
               backdropFilter: 'blur(18px) saturate(190%) brightness(106%) contrast(104%)',
               WebkitBackdropFilter: 'blur(18px) saturate(190%) brightness(106%) contrast(104%)',
               boxShadow: isDark
-                ? '0 20px 48px -8px rgba(0, 0, 0, 0.75), inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.40), inset 0 -1.5px 1.5px 0 rgba(255, 255, 255, 0.12), inset 0 0 12px 1px rgba(255, 255, 255, 0.08)'
-                : '0 20px 48px -8px rgba(15, 23, 42, 0.16), inset 0 1.5px 2px 0 rgba(255, 255, 255, 1), inset 0 -1.5px 1.5px 0 rgba(255, 255, 255, 0.35), inset 0 0 12px 1px rgba(255, 255, 255, 0.25)',
+                ? '0 16px 36px -8px rgba(0, 0, 0, 0.40), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.35), inset 0 0 10px 1px rgba(255, 255, 255, 0.06)'
+                : '0 14px 32px -8px rgba(15, 23, 42, 0.08), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.90), inset 0 0 10px 1px rgba(255, 255, 255, 0.15)',
             } as any),
         ]}
       >
@@ -180,10 +180,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     paddingHorizontal: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.3,
-    shadowRadius: 28,
-    elevation: 20,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
   },
   tabItem: {
     alignItems: 'center',
