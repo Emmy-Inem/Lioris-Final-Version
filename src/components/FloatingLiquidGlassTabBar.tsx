@@ -135,14 +135,14 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
                 styles.tabItem,
                 isFocused && {
                   backgroundColor: colors.brandPrimary,
-                  borderRadius: 24,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
+                  borderRadius: 20,
+                  paddingHorizontal: 8,
+                  paddingVertical: 6,
                   shadowColor: colors.brandPrimary,
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.5,
-                  shadowRadius: 12,
-                  elevation: 8,
+                  shadowRadius: 10,
+                  elevation: 6,
                 },
               ]}
               accessibilityRole="tab"
@@ -157,6 +157,8 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
               <AppText
                 variant="caption"
                 weight={isFocused ? 'bold' : 'semiBold'}
+                numberOfLines={1}
+                ellipsizeMode="tail"
                 style={{
                   fontSize: 10,
                   marginTop: 2,
@@ -187,12 +189,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    width: '92%',
-    maxWidth: 390,
-    height: 64,
-    borderRadius: 32,
+    width: '94%',
+    maxWidth: 420,
+    height: 62,
+    borderRadius: 31,
     borderWidth: 1.5,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
@@ -200,10 +202,12 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   tabItem: {
+    flex: 1,
+    minWidth: 46,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginHorizontal: 2,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    marginHorizontal: 1,
   },
 });

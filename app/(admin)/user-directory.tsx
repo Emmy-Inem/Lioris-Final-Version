@@ -322,6 +322,7 @@ export default function UserDirectoryScreen() {
         <View style={{ flexShrink: 0 }}>
           <AppButton
             label="+ Provision User"
+            size={isDesktop ? 'md' : 'sm'}
             onPress={() => setCreateModalOpen(true)}
           />
         </View>
@@ -528,7 +529,14 @@ export default function UserDirectoryScreen() {
                     hitSlop={12}
                     accessibilityRole="button"
                     accessibilityLabel={`Manage ${item.fullName}`}
-                    style={{ padding: spacing.xs, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill }}
+                    style={{
+                      width: 38,
+                      height: 38,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: colors.pastelPrimaryBg,
+                      borderRadius: 19,
+                    }}
                   >
                     <Ionicons name="ellipsis-horizontal" size={18} color={colors.brandPrimary} />
                   </Pressable>

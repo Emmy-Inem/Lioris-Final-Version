@@ -45,7 +45,7 @@ export default function AdminFeatureControlsScreen() {
               Temporarily enable or disable any non-major feature across campus
             </AppText>
           </View>
-          <AppButton label="Reset All" variant="ghost" onPress={handleResetDefaults} />
+          <AppButton label="Reset All" variant="ghost" size={isDesktop ? 'md' : 'sm'} onPress={handleResetDefaults} />
         </View>
 
         <View style={{ height: spacing.md }} />

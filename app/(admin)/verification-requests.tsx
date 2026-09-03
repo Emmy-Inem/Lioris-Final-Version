@@ -164,22 +164,22 @@ export default function VerificationRequestsScreen() {
                   </View>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs, flexWrap: 'wrap' }}>
-                  <View style={{ flex: 1, minWidth: 100 }}>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.xs }}>
+                  <View style={{ flex: 1 }}>
                     <AppButton
                       label="Inspect"
                       variant="ghost"
                       onPress={() => setInspectDocRequest(req)}
                     />
                   </View>
-                  <View style={{ flex: 1, minWidth: 90 }}>
+                  <View style={{ flex: 1 }}>
                     <AppButton
                       label="Approve"
                       loading={processingId === req.id}
                       onPress={() => handleApprove(req)}
                     />
                   </View>
-                  <View style={{ flex: 1, minWidth: 80 }}>
+                  <View style={{ flex: 1 }}>
                     <AppButton
                       label="Reject"
                       variant="secondary"

@@ -564,7 +564,7 @@ function Row({
  opacity: disabled ? 0.5 : 1,
  }}
  >
- <View style={{ flex: 1, marginRight: spacing.md }}>
+ <View style={{ flex: 1, marginRight: spacing.sm }}>
  <AppText weight="bold"variant="bodySmall">
  {title}
  </AppText>
@@ -572,7 +572,7 @@ function Row({
  {description}
  </AppText>
  </View>
- <AppButton label={actionLabel} variant={tone === 'critical' ? 'accent' : 'primary'} onPress={onPress} disabled={disabled} />
+ <AppButton label={actionLabel} size="sm" variant={tone === 'critical' ? 'accent' : 'primary'} onPress={onPress} disabled={disabled} />
  </View>
  );
 }

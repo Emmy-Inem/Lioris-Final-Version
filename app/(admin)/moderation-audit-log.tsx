@@ -1,5 +1,5 @@
-import React, { useState } from'react';
-import { FlatList, Pressable, View } from'react-native';
+import React, { useState } from 'react';
+import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { useQuery } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
 import { ScreenContainer } from'@/components/ScreenContainer';
@@ -134,29 +134,37 @@ export default function ModerationAuditLogScreen() {
  did it, when, and why. Backs PRD Section 14's audit trail requirement.
  </AppText>
 
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.lg }}>
- {FILTERS.map((f, i) => {
- const selected = i === filterIndex;
- return (
- <Pressable
- key={f.label}
- onPress={() => setFilterIndex(i)}
- accessibilityRole="tab"accessibilityState={{ selected }}
- accessibilityLabel={f.label}
- style={{
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.xs,
- borderRadius: radius.pill,
- backgroundColor: selected ? colors.brandPrimary : colors.divider,
- }}
- >
- <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'inverse' : 'secondary'}>
- {f.label}
- </AppText>
- </Pressable>
- );
- })}
- </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: spacing.xs, paddingHorizontal: 2 }}
+        style={{ marginBottom: spacing.lg }}
+      >
+        {FILTERS.map((f, i) => {
+          const selected = i === filterIndex;
+          return (
+            <Pressable
+              key={f.label}
+              onPress={() => setFilterIndex(i)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+              accessibilityLabel={f.label}
+              style={{
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.xs,
+                borderRadius: radius.pill,
+                backgroundColor: selected ? colors.brandPrimary : colors.surface,
+                borderWidth: 1,
+                borderColor: selected ? colors.brandPrimary : colors.border,
+              }}
+            >
+              <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'inverse' : 'secondary'}>
+                {f.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
  <FlatList
  data={visibleEntries}

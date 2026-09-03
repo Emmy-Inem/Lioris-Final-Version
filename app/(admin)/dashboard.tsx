@@ -154,12 +154,13 @@ export default function AdminDashboard() {
             </AppText>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: spacing.md }}>
+              {/* 1. ID Verifications */}
               <Pressable
                 onPress={() => {
                   haptics.light();
                   router.push('/(admin)/verification-requests');
                 }}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
                 <SolidCard
                   frosted
@@ -167,7 +168,7 @@ export default function AdminDashboard() {
                     borderRadius: 18,
                     padding: 12,
                     backgroundColor: colors.surface,
-                    height: 115,
+                    height: 118,
                     justifyContent: 'space-between',
                   }}
                 >
@@ -190,12 +191,13 @@ export default function AdminDashboard() {
                 </SolidCard>
               </Pressable>
 
+              {/* 2. Moderation Queue */}
               <Pressable
                 onPress={() => {
                   haptics.light();
                   router.push('/(admin)/moderation-queue');
                 }}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
                 <SolidCard
                   frosted
@@ -203,7 +205,7 @@ export default function AdminDashboard() {
                     borderRadius: 18,
                     padding: 12,
                     backgroundColor: colors.surface,
-                    height: 115,
+                    height: 118,
                     justifyContent: 'space-between',
                   }}
                 >
@@ -226,12 +228,13 @@ export default function AdminDashboard() {
                 </SolidCard>
               </Pressable>
 
+              {/* 3. Feature Switches */}
               <Pressable
                 onPress={() => {
                   haptics.light();
                   router.push('/(admin)/feature-controls');
                 }}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
                 <SolidCard
                   frosted
@@ -239,7 +242,7 @@ export default function AdminDashboard() {
                     borderRadius: 18,
                     padding: 12,
                     backgroundColor: colors.surface,
-                    height: 115,
+                    height: 118,
                     justifyContent: 'space-between',
                   }}
                 >
@@ -255,12 +258,13 @@ export default function AdminDashboard() {
                 </SolidCard>
               </Pressable>
 
+              {/* 4. User Directory */}
               <Pressable
                 onPress={() => {
                   haptics.light();
                   router.push('/(admin)/user-directory');
                 }}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
                 <SolidCard
                   frosted
@@ -268,7 +272,7 @@ export default function AdminDashboard() {
                     borderRadius: 18,
                     padding: 12,
                     backgroundColor: colors.surface,
-                    height: 115,
+                    height: 118,
                     justifyContent: 'space-between',
                   }}
                 >
@@ -284,12 +288,13 @@ export default function AdminDashboard() {
                 </SolidCard>
               </Pressable>
 
+              {/* 5. Command Desk & Alerts */}
               <Pressable
                 onPress={() => {
                   haptics.light();
-                  router.push('/(admin)/audit-logs');
+                  router.push('/(admin)/platform-config');
                 }}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
                 <SolidCard
                   frosted
@@ -297,7 +302,37 @@ export default function AdminDashboard() {
                     borderRadius: 18,
                     padding: 12,
                     backgroundColor: colors.surface,
-                    height: 115,
+                    height: 118,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="settings-outline" size={22} color={colors.brandPrimary} />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Command Desk
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      System params & alerts
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+
+              {/* 6. Security Audit Logs */}
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/audit-logs');
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 118,
                     justifyContent: 'space-between',
                   }}
                 >
@@ -313,12 +348,13 @@ export default function AdminDashboard() {
                 </SolidCard>
               </Pressable>
 
+              {/* 7. Academic Resources */}
               <Pressable
                 onPress={() => {
                   haptics.light();
                   setResourcesModalOpen(true);
                 }}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
                 <SolidCard
                   frosted
@@ -326,7 +362,7 @@ export default function AdminDashboard() {
                     borderRadius: 18,
                     padding: 12,
                     backgroundColor: colors.surface,
-                    height: 115,
+                    height: 118,
                     justifyContent: 'space-between',
                   }}
                 >
@@ -341,13 +377,41 @@ export default function AdminDashboard() {
                   </View>
                 </SolidCard>
               </Pressable>
+
+              {/* 8. Super Admin System Configuration */}
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/super-admin-config');
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 118,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="construct-outline" size={22} color="#3B82F6" />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      System Config
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Multi-tenant & security
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
             </View>
-
-
           </View>
 
           {/* Right Sticky Column on Desktop */}
-          {isDesktop ? (
+          {isDesktop && (
             <View style={{ width: 360, gap: spacing.md }}>
               {/* Primary Admin Workdesk Actions */}
               <SolidCard radius={20} style={{ padding: spacing.md }}>
@@ -410,7 +474,6 @@ export default function AdminDashboard() {
                     { icon: 'checkmark-done-circle-outline' as const, label: 'Student Verifications', desc: 'Review pending ID submissions', route: '/(admin)/verification-requests' },
                     { icon: 'list-outline' as const, label: 'Security Audit Logs', desc: 'Immutable compliance trail', route: '/(admin)/audit-logs' },
                     { icon: 'toggle-outline' as const, label: 'Feature Flags', desc: 'Toggle modules & features', route: '/(admin)/feature-controls' },
-
                   ].map((item) => (
                     <Pressable
                       key={item.label}
@@ -433,101 +496,6 @@ export default function AdminDashboard() {
                 </View>
               </SolidCard>
             </View>
-          ) : (
-            /* Mobile Quick Action Section */
-            <>
-              <View style={{ flexDirection: 'row', gap: spacing.sm, marginVertical: spacing.md }}>
-                <Pressable
-                  onPress={() => {
-                    haptics.light();
-                    router.push('/(admin)/platform-config');
-                  }}
-                  style={{ flex: 1 }}
-                >
-                  <SolidCard
-                    frosted
-                    style={{
-                      backgroundColor: colors.pastelPrimaryBg,
-                      borderColor: `${colors.brandPrimary}40`,
-                      borderRadius: 18,
-                    }}
-                  >
-                    <Ionicons name="settings" size={22} color={colors.brandPrimary} style={{ marginBottom: 4 }} />
-                    <AppText weight="bold" variant="bodySmall" tone="brand">
-                      Workdesk & Alerts
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                      Broadcast alerts & system params
-                    </AppText>
-                  </SolidCard>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => {
-                    haptics.light();
-                    router.push('/(admin)/moderation-queue');
-                  }}
-                  style={{ flex: 1 }}
-                >
-                  <SolidCard
-                    frosted
-                    style={{
-                      borderRadius: 18,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <Ionicons name="shield-half" size={22} color={colors.critical} />
-                      {(openReports?.length ?? 0) > 0 && (
-                        <View style={{ backgroundColor: colors.critical, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                          <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
-                            {openReports?.length} pending
-                          </AppText>
-                        </View>
-                      )}
-                    </View>
-                    <AppText weight="bold" variant="bodySmall">
-                      Moderation Queue
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                      Content review & reports
-                    </AppText>
-                  </SolidCard>
-                </Pressable>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
-                {[
-                  { icon: 'people-outline' as const, label: 'Directory', route: '/(admin)/user-directory' },
-                  { icon: 'checkmark-done-circle-outline' as const, label: 'Verify IDs', route: '/(admin)/verification-requests' },
-                  { icon: 'list-outline' as const, label: 'Audit Logs', route: '/(admin)/audit-logs' },
-                  { icon: 'toggle-outline' as const, label: 'Features', route: '/(admin)/feature-controls' },
-                ].map((item) => (
-                  <Pressable
-                    key={item.label}
-                    onPress={() => {
-                      haptics.light();
-                      router.push(item.route as any);
-                    }}
-                    style={{ flex: 1 }}
-                  >
-                    <SolidCard
-                      frosted
-                      padded={false}
-                      style={{
-                        paddingVertical: 10,
-                        borderRadius: 14,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Ionicons name={item.icon} size={18} color={colors.textPrimary} style={{ marginBottom: 2 }} />
-                      <AppText variant="caption" weight="bold" style={{ fontSize: 11 }}>
-                        {item.label}
-                      </AppText>
-                    </SolidCard>
-                  </Pressable>
-                ))}
-              </View>
-            </>
           )}
         </View>
       </ScrollView>

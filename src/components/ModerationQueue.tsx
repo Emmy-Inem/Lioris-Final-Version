@@ -230,7 +230,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 <View style={{ flex: 2 }}>
                   <AppButton
-                    label="Enforce Takedown / Ban"
+                    label="Enforce Action"
                     onPress={() => setActionModalReport(item)}
                   />
                 </View>

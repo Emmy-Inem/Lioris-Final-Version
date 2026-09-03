@@ -18,6 +18,7 @@ import { AppText } from'./AppText';
 interface AppButtonProps extends Omit<PressableProps, 'style'> {
  label: string;
  variant?: 'primary' | 'secondary' | 'accent' | 'ghost';
+ size?: 'sm' | 'md';
  loading?: boolean;
  fullWidth?: boolean;
  icon?: keyof typeof Ionicons.glyphMap;
@@ -28,6 +29,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export function AppButton({
  label,
  variant = 'primary',
+ size = 'md',
  loading,
  fullWidth,
  disabled,
@@ -48,9 +50,12 @@ export function AppButton({
  ghost: { bg: 'transparent', fg: colors.textPrimary, border: 'transparent' },
  }[variant];
 
+ const isSmall = size === 'sm';
+
  return (
  <AnimatedPressable
- accessibilityRole="button"accessibilityLabel={label}
+ accessibilityRole="button"
+ accessibilityLabel={label}
  accessibilityState={{ disabled: !!disabled || !!loading, busy: !!loading }}
  disabled={disabled || loading}
  onPressIn={() => (scale.value = withTiming(0.97, { duration: 100 }))}
@@ -62,22 +67,23 @@ export function AppButton({
  backgroundColor: palette.bg,
  borderColor: palette.border,
  borderWidth: palette.border === 'transparent' ? 0 : 1.5,
- borderRadius: radius.md,
- minHeight: minTouchTarget,
- paddingHorizontal: spacing.lg,
+ borderRadius: isSmall ? radius.pill : radius.md,
+ minHeight: isSmall ? 34 : minTouchTarget,
+ paddingHorizontal: isSmall ? spacing.md : spacing.lg,
+ paddingVertical: isSmall ? 4 : undefined,
  opacity: disabled ? 0.5 : 1,
  width: fullWidth ? '100%' : undefined,
  },
  ]}
  {...rest}
  >
-      <View style={[styles.content, { gap: 8 }]}>
+      <View style={[styles.content, { gap: isSmall ? 6 : 8 }]}>
         {loading ? (
-          <ActivityIndicator color={palette.fg} />
+          <ActivityIndicator color={palette.fg} size={isSmall ? 'small' : undefined} />
         ) : (
           <>
-            {icon && <Ionicons name={icon} size={18} color={palette.fg} />}
-            <AppText weight="semiBold" style={{ color: palette.fg }}>
+            {icon && <Ionicons name={icon} size={isSmall ? 15 : 18} color={palette.fg} />}
+            <AppText weight="semiBold" variant={isSmall ? 'caption' : 'body'} style={{ color: palette.fg, fontSize: isSmall ? 12 : undefined }}>
               {label}
             </AppText>
           </>

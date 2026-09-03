@@ -29,7 +29,7 @@ import { createNotification } from '@/api/notifications';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 
-const WORKDESK_TABS = ['Flags', 'User Profiles', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
+const WORKDESK_TABS = ['Feature Flags', 'User Profiles', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
 const SCOPE_OPTIONS = ['All Campuses', ...LAUNCH_INSTITUTIONS.map((inst) => inst.name)];
 
 export default function PlatformConfigScreen() {
@@ -38,7 +38,7 @@ export default function PlatformConfigScreen() {
   const { user, switchRole } = useAuth();
   const isSuperAdmin = user?.actualRole === 'admin';
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Flags');
+  const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Feature Flags');
   const [institution, setInstitution] = useState(SCOPE_OPTIONS[0]);
   const [institutionPickerOpen, setInstitutionPickerOpen] = useState(false);
   const [portalLinksModalOpen, setPortalLinksModalOpen] = useState(false);
@@ -375,7 +375,7 @@ export default function PlatformConfigScreen() {
  </ScrollView>
 
         <View style={{ minHeight: 200 }}>
-          {tab === 'Flags' ? <FeatureFlagsTab /> : null}
+          {tab === 'Feature Flags' ? <FeatureFlagsTab /> : null}
           {tab === 'User Profiles' ? <UserProfilesTab /> : null}
  {tab === 'Forums' ? <ForumsModerationTab /> : null}
  {tab === 'Events' ? <EventsModerationTab /> : null}
@@ -491,7 +491,7 @@ function EcosystemTile({
  }}
  accessibilityRole="button"
  accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
- style={{ flexGrow: 1, flexBasis: 0, minWidth: 220 }}
+ style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '48%', minWidth: isDesktop ? 220 : '48%' }}
  >
  <SolidCard radius={18} frosted style={{ minHeight: 110, justifyContent: 'space-between' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>

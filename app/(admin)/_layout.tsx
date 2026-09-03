@@ -42,7 +42,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="verification-requests"
         options={{
-          title: 'Verifications',
+          title: 'Verify',
           tabBarIcon: ({ focused, size }) => (
             <TabIcon name={focused ? 'checkmark-circle' : 'checkmark-circle-outline'} focused={focused} size={size} />
           ),
@@ -51,7 +51,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="moderation-queue"
         options={{
-          title: 'Moderation',
+          title: 'Safety',
           tabBarIcon: ({ focused, size }) => (
             <TabIcon name={focused ? 'shield-checkmark' : 'shield-outline'} focused={focused} size={size} />
           ),
