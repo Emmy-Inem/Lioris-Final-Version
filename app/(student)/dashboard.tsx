@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Alert, Modal, StyleSheet } from 'react-native';
+import { ScrollView, View, Pressable, Alert, Modal, Linking, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
+import { EventCard } from '@/components/EventCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -20,8 +21,10 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { getMyProfile, updateProfileImages } from '@/api/profile';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
+import { listResources } from '@/api/resources';
+import { listStudyGroups } from '@/api/studyGroups';
+import { listPortalLinks } from '@/api/portalLinks';
 import { haptics } from '@/utils/haptics';
-
 
 const COVER_PRESETS = [
   { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
@@ -65,7 +68,24 @@ export default function StudentDashboard() {
     enabled: isFeatureEnabled('campus_events'),
   });
 
-  const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Diana';
+  const { data: resources } = useQuery({
+    queryKey: ['resources', 'dashboard'],
+    queryFn: () => listResources({ approvalStatus: 'approved' }),
+    enabled: isFeatureEnabled('academic_resources'),
+  });
+
+  const { data: studyGroups } = useQuery({
+    queryKey: ['study-groups', 'dashboard', profile?.institutionCode],
+    queryFn: () => listStudyGroups(profile?.institutionCode),
+    enabled: isFeatureEnabled('study_groups'),
+  });
+
+  const { data: portalLinks } = useQuery({
+    queryKey: ['portal-links', 'dashboard', profile?.institutionCode],
+    queryFn: () => listPortalLinks(profile?.institutionCode),
+  });
+
+  const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Student';
   const activeCover = COVER_PRESETS.find((c) => c.id === profile?.coverUrl)?.src ?? require('../../assets/images/campus_students_photo.jpg');
 
   async function handleSelectAvatar(presetId: string) {
@@ -82,6 +102,19 @@ export default function StudentDashboard() {
     setPhotoPickerOpen(false);
   }
 
+  function handleOpenPortal(url: string) {
+    haptics.light();
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url).catch(() => {});
+    }
+  }
+
+  const upcomingEvents = (events ?? []).slice(0, 2);
+  const featuredResources = (resources ?? []).slice(0, 3);
+  const activePods = (studyGroups ?? []).slice(0, 3);
+
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
@@ -95,7 +128,7 @@ export default function StudentDashboard() {
           gap: spacing.lg,
         }}
       >
-        {/* 1. Sleek Hero Profile Card */}
+        {/* 1. Student Identity & Hero Banner Card */}
         <SolidCard
           radius={22}
           style={{
@@ -162,10 +195,10 @@ export default function StudentDashboard() {
             </Pressable>
           </View>
 
-                    <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
+          <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
             <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Avatar name={profile?.fullName ?? user?.fullName ?? 'Diana Prince'} size={48} />
+                <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} size={48} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <AppText variant="h2" weight="bold" numberOfLines={1} style={{ fontSize: 18 }}>
@@ -174,108 +207,279 @@ export default function StudentDashboard() {
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
                   <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: 12 }}>
-                    {profile?.department ?? 'Computer Science & AI'} • Level {profile?.level ?? 400}
+                    {profile?.department || 'Undergraduate Member'} • {profile?.institutionCode || 'UI Node'}
                   </AppText>
                 </View>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                <Badge label="Verified Student" tone="brand" />
-                <Badge label="Active Term" tone="success" />
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                {profile?.verificationStatus === 'verified' ? (
+                  <Badge label="✓ Verified Student" tone="success" />
+                ) : profile?.verificationStatus === 'pending' ? (
+                  <Badge label="⏳ Verification In Review" tone="brand" />
+                ) : (
+                  <Pressable
+                    onPress={() => router.push('/(student)/profile')}
+                    style={{
+                      backgroundColor: colors.pastelPrimaryBg,
+                      borderRadius: radius.pill,
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderWidth: 1,
+                      borderColor: colors.brandPrimary,
+                    }}
+                  >
+                    <AppText variant="caption" weight="bold" tone="brand">
+                      Verify Student ID →
+                    </AppText>
+                  </Pressable>
+                )}
+                <Badge label="Active Term" tone="brand" />
               </View>
             </View>
           </View>
         </SolidCard>
 
-        {/* 2. Official Campus Announcements */}
+        {/* 2. Quick Student Everyday Productivity Actions */}
+        <View>
+          <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+            Quick Actions
+          </AppText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {isFeatureEnabled('academic_resources') && (
+              <Pressable
+                onPress={() => router.push('/(student)/resources')}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              >
+                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="folder-open" size={18} color={colors.brandPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="bold">Resources</AppText>
+                    <AppText variant="caption" tone="secondary">Past questions & notes</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
+
+            {isFeatureEnabled('study_groups') && (
+              <Pressable
+                onPress={() => router.push('/(student)/study-groups')}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              >
+                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="people" size={18} color="#10B981" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="bold">Study Pods</AppText>
+                    <AppText variant="caption" tone="secondary">Course circles</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
+
+            <Pressable
+              onPress={() => router.push('/(student)/feed')}
+              style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+            >
+              <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="chatbubbles" size={18} color="#EC4899" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="bodySmall" weight="bold">Ask / Discuss</AppText>
+                  <AppText variant="caption" tone="secondary">Campus forum</AppText>
+                </View>
+              </SolidCard>
+            </Pressable>
+
+            {isFeatureEnabled('campus_events') && (
+              <Pressable
+                onPress={() => router.push('/(student)/events-list')}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              >
+                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="calendar" size={18} color="#3B82F6" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="bold">Events & RSVPs</AppText>
+                    <AppText variant="caption" tone="secondary">Workshops & talks</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* 3. Official Campus Bulletins */}
         <AnnouncementsWidget scope="student" />
 
-
-        {/* 4. Optional Enabled Modules Grid (Only if toggled ON in Admin) */}
-        {(isFeatureEnabled('academic_resources') || isFeatureEnabled('career_page') || isFeatureEnabled('marketplace') || isFeatureEnabled('campus_events')) && (
+        {/* 4. Real Upcoming Campus Events */}
+        {isFeatureEnabled('campus_events') && (
           <View>
-            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
-              Campus Portals & Hubs
-            </AppText>
-
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-              {isFeatureEnabled('academic_resources') && (
-                <Pressable
-                  onPress={() => router.push('/(student)/resources')}
-                  style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}
-                >
-                  <SolidCard radius={18} style={{ padding: spacing.md, height: '100%' }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
-                      <Ionicons name="folder-open" size={18} color={colors.brandPrimary} />
-                    </View>
-                    <AppText variant="bodySmall" weight="bold">Resources Library</AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={2}>
-                      Lecture notes & solved past questions
-                    </AppText>
-                  </SolidCard>
-                </Pressable>
-              )}
-
-              {isFeatureEnabled('career_page') && (
-                <Pressable
-                  onPress={() => router.push('/(student)/jobs')}
-                  style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}
-                >
-                  <SolidCard radius={18} style={{ padding: spacing.md, height: '100%' }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, borderWidth: 1, borderColor: '#10B981' }}>
-                      <Ionicons name="briefcase" size={18} color="#10B981" />
-                    </View>
-                    <AppText variant="bodySmall" weight="bold">Opportunities</AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={2}>
-                      Student internships & company roles
-                    </AppText>
-                  </SolidCard>
-                </Pressable>
-              )}
-
-              {isFeatureEnabled('marketplace') && (
-                <Pressable
-                  onPress={() => router.push('/(student)/marketplace')}
-                  style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}
-                >
-                  <SolidCard radius={18} style={{ padding: spacing.md, height: '100%' }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, borderWidth: 1, borderColor: '#EC4899' }}>
-                      <Ionicons name="cart" size={18} color="#EC4899" />
-                    </View>
-                    <AppText variant="bodySmall" weight="bold">Marketplace</AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={2}>
-                      Buy/sell textbooks & dorm kits
-                    </AppText>
-                  </SolidCard>
-                </Pressable>
-              )}
-
-              {isFeatureEnabled('campus_events') && (
-                <Pressable
-                  onPress={() => router.push('/(student)/events-list')}
-                  style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}
-                >
-                  <SolidCard radius={18} style={{ padding: spacing.md, height: '100%' }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, borderWidth: 1, borderColor: '#3B82F6' }}>
-                      <Ionicons name="calendar" size={18} color="#3B82F6" />
-                    </View>
-                    <AppText variant="bodySmall" weight="bold">Events Hub</AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={2}>
-                      Campus workshops & hackathons
-                    </AppText>
-                  </SolidCard>
-                </Pressable>
-              )}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="calendar-outline" size={18} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold">
+                  Upcoming Campus Events
+                </AppText>
+              </View>
+              <Pressable onPress={() => router.push('/(student)/events-list')}>
+                <AppText tone="brand" variant="bodySmall" weight="bold">
+                  View All ({events?.length ?? 0}) →
+                </AppText>
+              </Pressable>
             </View>
+
+            {upcomingEvents.length === 0 ? (
+              <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
+                <Ionicons name="calendar-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+                <AppText weight="bold" variant="bodySmall">No upcoming campus events</AppText>
+                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
+                  Stay tuned for upcoming hackathons, career talks, and faculty seminars.
+                </AppText>
+                <AppButton label="Browse Calendar" variant="secondary" onPress={() => router.push('/(student)/events-list')} />
+              </SolidCard>
+            ) : (
+              <View style={{ gap: spacing.md }}>
+                {upcomingEvents.map((evt: any) => (
+                  <EventCard key={evt.id} event={evt} />
+                ))}
+              </View>
+            )}
           </View>
         )}
 
-        {/* 5. Live Campus Feed Preview */}
+        {/* 5. Verified Academic Resources & Past Questions */}
+        {isFeatureEnabled('academic_resources') && (
+          <View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="document-text-outline" size={18} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold">
+                  Course Materials & Past Questions
+                </AppText>
+              </View>
+              <Pressable onPress={() => router.push('/(student)/resources')}>
+                <AppText tone="brand" variant="bodySmall" weight="bold">
+                  View All ({resources?.length ?? 0}) →
+                </AppText>
+              </Pressable>
+            </View>
+
+            {featuredResources.length === 0 ? (
+              <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
+                <Ionicons name="folder-open-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+                <AppText weight="bold" variant="bodySmall">No study materials uploaded yet</AppText>
+                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
+                  Help your department by sharing lecture slides, notes, or solved past papers.
+                </AppText>
+                <AppButton label="Upload Study Material" onPress={() => router.push('/(student)/resources')} />
+              </SolidCard>
+            ) : (
+              <View style={{ gap: spacing.sm }}>
+                {featuredResources.map((res: any) => (
+                  <Pressable key={res.id} onPress={() => router.push('/(student)/resources')}>
+                    <SolidCard radius={16} style={{ padding: 14 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Badge label={res.courseCode || 'GEN'} tone="brand" />
+                          <AppText variant="caption" tone="secondary">
+                            {res.department || 'Academic'}
+                          </AppText>
+                        </View>
+                        <Badge label={res.category || 'Notes'} tone="neutral" />
+                      </View>
+                      <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                        {res.title}
+                      </AppText>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                        <AppText variant="caption" tone="secondary">
+                          By {res.authorName || 'Student'} • {res.downloadsCount ?? 0} downloads
+                        </AppText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name="cloud-download-outline" size={14} color={colors.brandPrimary} />
+                          <AppText variant="caption" weight="bold" tone="brand">
+                            Access File
+                          </AppText>
+                        </View>
+                      </View>
+                    </SolidCard>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* 6. Active Study Groups / Pods */}
+        {isFeatureEnabled('study_groups') && (
+          <View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="people-outline" size={18} color="#10B981" />
+                <AppText variant="h3" weight="bold">
+                  Active Study Pods
+                </AppText>
+              </View>
+              <Pressable onPress={() => router.push('/(student)/study-groups')}>
+                <AppText tone="brand" variant="bodySmall" weight="bold">
+                  View All ({studyGroups?.length ?? 0}) →
+                </AppText>
+              </Pressable>
+            </View>
+
+            {activePods.length === 0 ? (
+              <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
+                <Ionicons name="people-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+                <AppText weight="bold" variant="bodySmall">No active study pods yet</AppText>
+                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
+                  Start a study circle with classmates to collaborate on course revisions and projects.
+                </AppText>
+                <AppButton label="Create Study Pod" variant="secondary" onPress={() => router.push('/(student)/study-groups')} />
+              </SolidCard>
+            ) : (
+              <View style={{ gap: spacing.sm }}>
+                {activePods.map((group: any) => (
+                  <Pressable key={group.id} onPress={() => router.push('/(student)/study-groups')}>
+                    <SolidCard radius={16} style={{ padding: 14 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Badge label={group.courseCode || 'Study Pod'} tone="success" />
+                          <AppText variant="bodySmall" weight="bold">
+                            {group.name}
+                          </AppText>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name="person" size={12} color={colors.textSecondary} />
+                          <AppText variant="caption" tone="secondary">
+                            {group.memberCount ?? 1}
+                          </AppText>
+                        </View>
+                      </View>
+                      <AppText tone="secondary" variant="caption" numberOfLines={2}>
+                        {group.description || 'Collaborative study pod for shared review and academic discussion.'}
+                      </AppText>
+                    </SolidCard>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* 7. Trending Campus Discussions */}
         <View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <AppText variant="h3" weight="bold">
-              Trending Campus Discussions
-            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" />
+              <AppText variant="h3" weight="bold">
+                Campus Discussions
+              </AppText>
+            </View>
             <Pressable onPress={() => router.push('/(student)/feed')}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
                 View Full Forum →
@@ -343,7 +547,41 @@ export default function StudentDashboard() {
           </View>
         </View>
 
-
+        {/* 8. Institutional Direct Portal Shortcuts */}
+        {(portalLinks ?? []).length > 0 && (
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+              <Ionicons name="link-outline" size={18} color={colors.brandPrimary} />
+              <AppText variant="h3" weight="bold">
+                Official University Services
+              </AppText>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {(portalLinks ?? []).slice(0, 4).map((portal: any) => (
+                <Pressable
+                  key={portal.id}
+                  onPress={() => handleOpenPortal(portal.url)}
+                  style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 220 : 150 }}
+                >
+                  <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={portal.icon || 'globe-outline'} size={18} color={colors.brandPrimary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                        {portal.title}
+                      </AppText>
+                      <AppText variant="caption" tone="secondary">
+                        {portal.category} • Official
+                      </AppText>
+                    </View>
+                    <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+                  </SolidCard>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Photo Customizer Modal */}
@@ -454,3 +692,4 @@ export default function StudentDashboard() {
     </ScreenContainer>
   );
 }
+
