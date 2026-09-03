@@ -60,44 +60,34 @@ export interface MentorSearchQuery {
  q?: string;
 }
 
-function filterMockMentors(query: MentorSearchQuery): MentorProfile[] {
- return [];
-}
-
 export async function searchMentors(query: MentorSearchQuery = {}): Promise<MentorProfile[]> {
- try {
- const { data, error } = await supabase
- .from('profiles')
- .select('id, full_name, bio, role, department, avatar_url, campus_code')
- .in('role', ['staff', 'alumni', 'admin']);
+  try {
+    let q = supabase
+      .from('profiles')
+      .select('id, full_name, bio, role, department, avatar_url, campus_code')
+      .in('role', ['staff', 'alumni', 'admin']);
 
- if (error) throw error;
+    if (query.q) {
+      q = q.ilike('full_name', `%${query.q}%`);
+    }
 
- const dbMentors: MentorProfile[] = (data ?? []).map((row: any) => ({
- id: row.id,
- fullName: row.full_name,
- department: row.department || 'Academic Department',
- bio: row.bio || `Academic Mentor & Verified ${row.role} at ${row.campus_code || 'University'}`,
- expertiseTags: ['Leadership', 'Career Growth', 'Research', 'Tech'],
- avatarUrl: row.avatar_url,
- company: row.campus_code || 'Academic Faculty',
- availableSlots: 4,
- }));
+    const { data, error } = await q;
+    if (error) throw error;
 
- // Merge unique - mock fixtures only ever show up here when the admin
- // mock-data toggle is on.
- const local = filterMockMentors(query);
- const merged = [...dbMentors];
- for (const item of local) {
- if (!merged.some((m) => m.id === item.id)) {
- merged.push(item);
- }
- }
- return merged;
- } catch (err) {
- console.warn('[Mentorship] searchMentors failed, showing mock pool only:', err);
- return filterMockMentors(query);
- }
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      fullName: row.full_name,
+      department: row.department || 'Academic Department',
+      bio: row.bio || `Academic Mentor & Verified ${row.role} at ${row.campus_code || 'University'}`,
+      expertiseTags: ['Leadership', 'Career Growth', 'Research', 'Tech'],
+      avatarUrl: row.avatar_url,
+      company: row.campus_code || 'Academic Faculty',
+      availableSlots: 4,
+    }));
+  } catch (err) {
+    console.warn('[Mentorship] searchMentors failed:', err);
+    return [];
+  }
 }
 
 /**

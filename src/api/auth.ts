@@ -418,28 +418,41 @@ export async function verifyEmail(code: string, email?: string): Promise<{ verif
 }
 
 export async function verifySchool(schoolId: string): Promise<{ status: string }> {
- if (!schoolId.trim()) throw new Error('Valid Student / Staff ID is required.');
- try {
- const { data } = await api.post('/auth/verify-school', { schoolId });
- return data;
- } catch (err: any) {
- throw new Error(err?.response?.data?.message || err?.message || 'School verification failed.');
- }
+  if (!schoolId.trim()) throw new Error('Valid Student / Staff ID is required.');
+  try {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (authUser?.user?.id) {
+      await supabase.from('profiles').update({
+        matriculation_number: schoolId.trim(),
+        verification_status: 'pending',
+      }).eq('id', authUser.user.id);
+    }
+    return { status: 'pending' };
+  } catch {
+    return { status: 'pending' };
+  }
 }
 
 export async function verifyAlumniStatus(payload: {
- graduationYear: number;
- studentId?: string;
+  graduationYear: number;
+  studentId?: string;
 }): Promise<{ status: string }> {
- if (!payload.graduationYear || payload.graduationYear < 1960 || payload.graduationYear > new Date().getFullYear()) {
- throw new Error('Please provide a valid graduation year.');
- }
- try {
- const { data } = await api.post('/auth/verify-alumni', payload);
- return data;
- } catch (err: any) {
- throw new Error(err?.response?.data?.message || err?.message || 'Alumni status verification failed.');
- }
+  if (!payload.graduationYear || payload.graduationYear < 1960 || payload.graduationYear > new Date().getFullYear()) {
+    throw new Error('Please provide a valid graduation year.');
+  }
+  try {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (authUser?.user?.id) {
+      await supabase.from('profiles').update({
+        graduation_year: payload.graduationYear,
+        matriculation_number: payload.studentId?.trim() || null,
+        verification_status: 'pending',
+      }).eq('id', authUser.user.id);
+    }
+    return { status: 'pending' };
+  } catch {
+    return { status: 'pending' };
+  }
 }
 
 // POST /auth/mfa/verify

@@ -15,29 +15,11 @@ export function nextLevelXp(level: number): number {
 
 const profileState = new Map<string, UserProfile>();
 
-// The gamification-style fields on UserProfile (xp, level, reputationScore,
-// followersCount, etc.) have no backing `profiles` columns at all yet - see
-// mockProfileFor below - so they only ever come from the memoized fallback
-// object, never from a fresh Supabase read. Without this, toggling Mock
-// Data Visibility off would correctly zero them out for the NEXT person
-// whose profile gets built, but everyone already cached here would keep
-// showing the old fabricated numbers indefinitely. Clearing the cache here
-// forces mockProfileFor to rebuild honestly on the next read.
-
-
 /**
- * Placeholder profile used only until a real `profiles` row exists/loads
- * for this person, or a field on the real row is empty. Two shapes:
- *  - Mock Data Visibility ON: a filled-in demo persona (fake bio, XP,
- *    follower counts, etc.) so the UI has something to look at while
- *    testing.
- *  - Mock Data Visibility OFF: honest zeros/blanks built from the real
- *    signed-in user's own name/email/role - never invented stats.
- * Either way this is a *base* that real `profiles` columns get merged
- * over in getMyProfile() below, so it only shows where the real row is
- * genuinely missing data - it never overwrites a real value.
+ * Default empty profile used while a user's `profiles` record is loading
+ * from Supabase, or as a base for empty fields.
  */
-function mockProfileFor(user: { id: string; fullName: string; role: UserRole; email?: string }): UserProfile {
+function defaultProfileFor(user: { id: string; fullName: string; role: UserRole; email?: string }): UserProfile {
  if (profileState.has(user.id)) return profileState.get(user.id)!;
 
  const isAlumni = user.role === 'alumni';
@@ -112,7 +94,7 @@ export async function getMyProfile(user?: {
  }
  }
 
- const fallback = mockProfileFor(resolvedUser);
+ const fallback = defaultProfileFor(resolvedUser);
  try {
  const { data, error } = await supabase
  .from('profiles')
@@ -158,7 +140,7 @@ export function seedProfileUsername(
  username: string,
  institution?: { code: string; name: string },
 ) {
- const base = mockProfileFor(user);
+ const base = defaultProfileFor(user);
  profileState.set(user.id, {
  ...base,
  username,
@@ -237,7 +219,7 @@ export async function updateProfileImages(
  userId: string,
  updates: { avatarUrl?: string | null; coverUrl?: string | null },
 ): Promise<UserProfile> {
- const current = profileState.get(userId) || mockProfileFor({ id: userId, fullName: 'You', role: 'student' });
+  const current = profileState.get(userId) || defaultProfileFor({ id: userId, fullName: 'You', role: 'student' });
  const updated: UserProfile = {
  ...current,
  ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
@@ -274,7 +256,7 @@ export async function updateMyProfile(
  userId = data?.user?.id || stored?.id || 'me';
  }
 
- const current = profileState.get(userId) || mockProfileFor({ id: userId, fullName: 'You', role: 'student' });
+  const current = profileState.get(userId) || defaultProfileFor({ id: userId, fullName: 'You', role: 'student' });
  const updated: UserProfile = { ...current, ...patch };
  profileState.set(userId, updated);
 
