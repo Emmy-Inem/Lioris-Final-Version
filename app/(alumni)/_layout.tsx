@@ -7,10 +7,12 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
 import { FloatingLiquidGlassTabBar } from '@/components/FloatingLiquidGlassTabBar';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 export default function AlumniLayout() {
- const { colors, isDark } = useTheme();
- const { isDesktop } = useResponsive();
+  const { colors, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
 
  const tabsContent = (
  <Tabs
@@ -37,6 +39,16 @@ export default function AlumniLayout() {
  ),
  }}
  />
+  <Tabs.Screen
+    name="jobs"
+    options={{
+      href: isFeatureEnabled('career_page') ? undefined : null,
+      title: 'Careers',
+      tabBarIcon: ({ focused, size }) => (
+        <TabIcon name={focused ? 'briefcase' : 'briefcase-outline'} focused={focused} size={size} />
+      ),
+    }}
+  />
  <Tabs.Screen
  name="forum"
  options={{
@@ -46,15 +58,32 @@ export default function AlumniLayout() {
  ),
  }}
  />
+  <Tabs.Screen
+    name="events"
+    options={{
+      href: isFeatureEnabled('campus_events') ? undefined : null,
+      title: 'Events',
+      tabBarIcon: ({ focused, size }) => (
+        <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} size={size} />
+      ),
+    }}
+  />
+  <Tabs.Screen
+    name="mentorship"
+    options={{
+      href: isFeatureEnabled('alumni_mentorship') ? undefined : null,
+      title: 'Mentorship',
+      tabBarIcon: ({ focused, size }) => (
+        <TabIcon name={focused ? 'ribbon' : 'ribbon-outline'} focused={focused} size={size} />
+      ),
+    }}
+  />
  {/* Reachable via header avatar / dashboard / Alumni Hub links, not bottom tabs. */}
- <Tabs.Screen name="events" options={{ href: null }} />
  <Tabs.Screen name="profile" options={{ href: null }} />
- <Tabs.Screen name="mentorship" options={{ href: null }} />
  <Tabs.Screen name="notifications" options={{ href: null }} />
  <Tabs.Screen name="search" options={{ href: null }} />
  <Tabs.Screen name="connection-requests" options={{ href: null }} />
  <Tabs.Screen name="marketplace" options={{ href: null }} />
- <Tabs.Screen name="jobs" options={{ href: null }} />
  <Tabs.Screen name="settings" options={{ href: null }} />
  <Tabs.Screen name="messages" options={{ href: null }} />
  <Tabs.Screen name="post/[id]" options={{ href: null }} />
