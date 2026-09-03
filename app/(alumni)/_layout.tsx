@@ -59,7 +59,7 @@ export default function AlumniLayout() {
  }}
  />
   <Tabs.Screen
-    name="events"
+    name="events-list"
     options={{
       href: isFeatureEnabled('campus_events') ? undefined : null,
       title: 'Events',
@@ -79,7 +79,8 @@ export default function AlumniLayout() {
     }}
   />
  {/* Reachable via header avatar / dashboard / Alumni Hub links, not bottom tabs. */}
- <Tabs.Screen name="profile" options={{ href: null }} />
+  <Tabs.Screen name="events" options={{ href: null }} />
+  <Tabs.Screen name="profile" options={{ href: null }} />
  <Tabs.Screen name="notifications" options={{ href: null }} />
  <Tabs.Screen name="search" options={{ href: null }} />
  <Tabs.Screen name="connection-requests" options={{ href: null }} />

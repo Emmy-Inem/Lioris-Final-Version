@@ -240,7 +240,7 @@ export default function AlumniDashboard() {
 
             {isFeatureEnabled('campus_events') && (
               <Pressable
-                onPress={() => router.push('/(alumni)/events')}
+                onPress={() => router.push('/(alumni)/events-list' as any)}
                 style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
               >
                 <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -409,7 +409,7 @@ export default function AlumniDashboard() {
                   Alumni Reunions & Events
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(alumni)/events')}>
+              <Pressable onPress={() => router.push('/(alumni)/events-list' as any)}>
                 <AppText tone="brand" variant="bodySmall" weight="bold">
                   View Calendar ({events?.length ?? 0}) →
                 </AppText>
@@ -423,7 +423,7 @@ export default function AlumniDashboard() {
                 <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
                   Alumni dinners, homecoming summits, and chapter meetings will appear here.
                 </AppText>
-                <AppButton label="Browse Alumni Events" variant="secondary" onPress={() => router.push('/(alumni)/events')} />
+                <AppButton label="Browse Alumni Events" variant="secondary" onPress={() => router.push('/(alumni)/events-list' as any)} />
               </SolidCard>
             ) : (
               <View style={{ gap: spacing.md }}>

@@ -79,7 +79,7 @@ export function DesktopSidebar() {
   const rawAlumniNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Alumni Home', href: '/(alumni)/dashboard', icon: 'home' },
     { id: 'forum', label: 'Global Forum', href: '/(alumni)/forum', icon: 'chatbubbles' },
-    { id: 'events', label: 'Alumni Events', href: '/(alumni)/events', icon: 'calendar', flagKey: 'campus_events' },
+    { id: 'events', label: 'Alumni Events', href: '/(alumni)/events-list', icon: 'calendar', flagKey: 'campus_events' },
     { id: 'mentorship', label: 'Mentor Students', href: '/(alumni)/mentorship', icon: 'ribbon', flagKey: 'alumni_mentorship' },
     { id: 'marketplace', label: 'Marketplace', href: '/(alumni)/marketplace', icon: 'cart', flagKey: 'marketplace' },
     { id: 'jobs', label: 'Post / Find Jobs', href: '/(alumni)/jobs', icon: 'briefcase', flagKey: 'career_page' },
