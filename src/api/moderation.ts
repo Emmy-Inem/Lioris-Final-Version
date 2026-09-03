@@ -1,11 +1,9 @@
 import { Report } from './types';
-import { mockReports } from './mockData';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { recordAuditLogEntry } from './auditLog';
 import { createNotification } from './notifications';
 import { generateUUID } from '../utils/uuid';
-import { isMockDataVisible } from './mockDataSettings';
 
 // Reports this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch. Never mixed with
@@ -13,9 +11,7 @@ import { isMockDataVisible } from './mockDataSettings';
 // only while the admin's "Mock Data Visibility" toggle is on.
 let locallyCreatedReports: Report[] = [];
 
-function getMockPool(): Report[] {
- return isMockDataVisible() ? mockReports : [];
-}
+
 
 export interface ReportsQuery {
  status?: Report['status'];
@@ -65,7 +61,7 @@ export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
  // just-submitted reports (always) plus seed fixtures (only when the
  // admin mock-data toggle is on).
  const merged = [...dbReports];
- for (const m of [...locallyCreatedReports, ...getMockPool()]) {
+  for (const m of [...locallyCreatedReports]) {
  if (!merged.some((r) => r.id === m.id)) {
  merged.push(m);
  }
@@ -73,7 +69,7 @@ export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
  return merged;
  } catch (err) {
  console.warn('[Moderation] Failed to list from supabase, showing local pool only:', err);
- let results = [...locallyCreatedReports, ...getMockPool()];
+ let results = [...locallyCreatedReports];
  if (query.status) results = results.filter((r) => r.status === query.status);
  if (query.targetType) results = results.filter((r) => r.targetType === query.targetType);
  if (query.institutionCode) results = results.filter((r) => r.institutionCode === query.institutionCode);

@@ -122,22 +122,7 @@ export interface WaitlistEntry {
  status: 'pending' | 'approved' | 'rejected';
 }
 
-let waitlistState: WaitlistEntry[] = [
- {
- id: 'w1',
- universityName: 'Obafemi Awolowo University',
- email: 'coordinator@oauife.edu.ng',
- submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
- status: 'pending',
- },
- {
- id: 'w2',
- universityName: 'Covenant University',
- email: 'admin@covenantuniversity.edu.ng',
- submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
- status: 'pending',
- },
-];
+let waitlistState: WaitlistEntry[] = [];
 
 export interface JoinWaitlistPayload {
  universityName: string;

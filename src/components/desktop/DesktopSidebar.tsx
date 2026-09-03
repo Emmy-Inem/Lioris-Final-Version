@@ -79,8 +79,6 @@ export function DesktopSidebar() {
   const rawAlumniNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Alumni Home', href: '/(alumni)/dashboard', icon: 'home' },
     { id: 'forum', label: 'Global Forum', href: '/(alumni)/forum', icon: 'chatbubbles' },
-    { id: 'hub', label: 'Alumni Network Hub', href: '/(alumni)/alumni-hub', icon: 'school', flagKey: 'alumni_mentorship' },
-    { id: 'directory', label: 'Alumni Directory', href: '/(alumni)/directory', icon: 'book' },
     { id: 'events', label: 'Alumni Events', href: '/(alumni)/events', icon: 'calendar', flagKey: 'campus_events' },
     { id: 'mentorship', label: 'Mentor Students', href: '/(alumni)/mentorship', icon: 'ribbon', flagKey: 'alumni_mentorship' },
     { id: 'marketplace', label: 'Marketplace', href: '/(alumni)/marketplace', icon: 'cart', flagKey: 'marketplace' },
@@ -115,7 +113,6 @@ export function DesktopSidebar() {
     { id: 'verification-requests', label: 'Student Verifications', href: '/(admin)/verification-requests', icon: 'checkmark-done-circle' },
     { id: 'moderation-queue', label: 'Moderation Queue', href: '/(admin)/moderation-queue', icon: 'flag' },
     { id: 'audit-logs', label: 'Security Audit Logs', href: '/(admin)/audit-logs', icon: 'key' },
-    { id: 'pulse-analytics', label: 'Pulse Analytics', href: '/(admin)/pulse-analytics', icon: 'analytics' },
     { id: 'super-admin-config', label: 'System Configuration', href: '/(admin)/super-admin-config', icon: 'construct' },
     { id: 'forum', label: 'Campus Forum', href: '/(admin)/forum', icon: 'chatbubbles' },
     { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },

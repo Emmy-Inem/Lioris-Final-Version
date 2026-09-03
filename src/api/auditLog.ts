@@ -3,20 +3,7 @@ import { AuditLogAction, AuditLogEntry, UserRole } from './types';
 import { getSessionUser } from '@/auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 
-let auditLogState: AuditLogEntry[] = [
- {
- id: generateUUID(),
- actorId: 'system',
- actorName: 'Platform Security Engine',
- actorRole: 'admin',
- action: 'report_resolved',
- summary: 'Automated campus node health & TLS certificates verified',
- targetType: 'report',
- targetId: generateUUID(),
- institutionCode: 'UI',
- createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
- },
-];
+let auditLogState: AuditLogEntry[] = [];
 
 export interface RecordAuditLogEntryPayload {
  action: AuditLogAction;

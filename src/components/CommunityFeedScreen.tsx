@@ -12,7 +12,7 @@ import { Badge } from './Badge';
 import { PostCard } from './PostCard';
 import { PublishThreadModal } from './PublishThreadModal';
 import { DiscussionWorkspacesModal } from './DiscussionWorkspacesModal';
-import { HorizontalTrendsSlider } from './HorizontalTrendsSlider';
+
 import { ActionSheetModal } from './ActionSheetModal';
 import { AnnouncementsWidget } from './AnnouncementsWidget';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -28,7 +28,7 @@ import { UserProfileQuickViewModal, QuickViewUser } from './UserProfileQuickView
 import { EmptyState } from './EmptyState';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
-import { useMockDataVisible } from '@/api/mockDataSettings';
+
 
 const CHANNELS = [
  { id: 'all', label: 'All Threads', category: null, icon: 'chatbubbles' as const },
@@ -45,11 +45,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  const { user } = useAuth();
  const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
- // "Discussion Hubs" below has no real workspace-membership backend behind
- // its numbers (active builders / students enrolled / verified openings) -
- // it was hardcoded placeholder content shown on every forum view. Gate it
- // behind the same Mock Data Visibility toggle as everything else.
- const mockDataVisible = useMockDataVisible();
+
   const toast = useToast();
   const [quickViewUser, setQuickViewUser] = useState<QuickViewUser | null>(null);
  const [query, setQuery] = useState('');
@@ -57,7 +53,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  const [composerOpen, setComposerOpen] = useState(false);
  const [workspacesOpen, setWorkspacesOpen] = useState(false);
  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
- const [selectedTrend, setSelectedTrend] = useState<string | null>(null);
+
  const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
  const [sortModalOpen, setSortModalOpen] = useState(false);
  const { scope: viewScope, setScope: setViewScope } = useViewScope();
@@ -89,20 +85,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  if (selectedChannel === 'Polls') {
  posts = posts.filter((p) => !!p.poll);
  }
- if (selectedTrend) {
- const trendKeywords: Record<string, string[]> = {
- CONVOCATION_2026: ['convocation', 'graduate', 'gown', 'ceremony'],
- DEANS_CUP_FINALS: ["dean's cup", 'football', 'finals', 'match', 'sports'],
- HOSTEL_TOWNHALL: ['hostel', 'townhall', 'accommodation', 'hall', 'room'],
- CAMPUS_TECH_FEST: ['tech', 'hackathon', 'coding', 'ai', 'developer', 'demo'],
- LIORIS_VIRAL: ['lioris', 'campus', 'launch', 'viral'],
- };
- const keywords = trendKeywords[selectedTrend] ?? [selectedTrend.toLowerCase()];
- posts = posts.filter((p) => {
- const targetText = `${p.title} ${p.content} ${p.category} ${p.courseTags ?? ''}`.toLowerCase();
- return keywords.some((kw) => targetText.includes(kw));
- });
- }
+
  posts = [...posts].sort((a, b) =>
  sortBy === 'popular' ? b.likesCount - a.likesCount : b.createdAt.localeCompare(a.createdAt),
  );
@@ -442,13 +425,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               </View>
             </SolidCard>
 
-            {/* Trending Hot Topics */}
-            <View style={{ marginBottom: spacing.md }}>
-              <HorizontalTrendsSlider
-                selectedTrend={selectedTrend}
-                onSelectTrend={(trend) => setSelectedTrend(selectedTrend === trend ? null : trend)}
-              />
-            </View>
+
 
             {/* Posts Feed Stream */}
             <FlatList
@@ -497,50 +474,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
           {/* Right Sidebar: Hubs, Mentors & Guidelines */}
           <View style={{ width: 320, gap: spacing.md }}>
-            {mockDataVisible ? (
-            <SolidCard radius={18} style={{ padding: spacing.md }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                <AppText variant="h3" weight="bold">
-                  Discussion Hubs
-                </AppText>
-                <Pressable onPress={() => setWorkspacesOpen(true)}>
-                  <AppText variant="caption" weight="bold" tone="brand">Explore →</AppText>
-                </Pressable>
-              </View>
-              <View style={{ gap: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="code-slash" size={16} color={colors.brandPrimary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold">Tech Hackathon 2026</AppText>
-                    <AppText variant="caption" tone="secondary">48 active builders</AppText>
-                  </View>
-                  <Badge label="Active" tone="brand" />
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="book" size={16} color="#3B82F6" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold">Finals Revision Squad</AppText>
-                    <AppText variant="caption" tone="secondary">112 students enrolled</AppText>
-                  </View>
-                  <Badge label="Hot" tone="warning" />
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="briefcase" size={16} color="#10B981" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold">Internship Hub</AppText>
-                    <AppText variant="caption" tone="secondary">12 verified openings</AppText>
-                  </View>
-                  <Badge label="12 New" tone="success" />
-                </View>
-              </View>
-            </SolidCard>
-            ) : (
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                 <AppText variant="h3" weight="bold">
@@ -554,7 +487,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 No active discussion hubs for this workspace yet.
               </AppText>
             </SolidCard>
-            )}
 
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>

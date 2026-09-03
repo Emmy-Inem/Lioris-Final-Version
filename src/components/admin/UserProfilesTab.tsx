@@ -43,11 +43,7 @@ export function UserProfilesTab() {
  avatarUrl: (p.avatar_url || 'avatar_male') as any,
  isVerified: p.verification_status === 'verified',
  verificationStatus: p.verification_status === 'verified' ? 'verified' : 'none',
- xp: 850,
- level: 4,
- reputationScore: 320,
- trustLevel: 8,
- streakDays: 14,
+
  postsCount: 6,
  resourcesCount: 12,
  eventsCount: 4,
@@ -278,7 +274,7 @@ export function UserProfilesTab() {
  </View>
 
  <AppText tone="secondary"variant="caption"style={{ marginBottom: spacing.sm }}>
- Dept: {user.department ?? 'General'} • Trust Level: {user.trustLevel}/10 • {user.postsCount} Posts • {user.resourcesCount} Files
+ Dept: {user.department ?? 'General'} • {user.postsCount} Posts • {user.resourcesCount} Files
  </AppText>
 
  {/* Quick Action Buttons */}
@@ -390,41 +386,7 @@ export function UserProfilesTab() {
  </Pressable>
  </View>
 
- {/* Trust Score Stepper */}
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, marginBottom: spacing.sm }}>
- <View style={{ flex: 1, marginRight: spacing.sm }}>
- <AppText weight="bold"variant="bodySmall">
- Trust Rating Level ({selectedUser?.trustLevel ?? 8}/10)
- </AppText>
- <AppText tone="secondary"variant="caption">
- Determines auto-flag exemptions and community clearance.
- </AppText>
- </View>
- <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
- {[6, 7, 8, 9, 10].map((num) => (
- <Pressable
- key={num}
- onPress={() => {
- if (selectedUser) {
- setSelectedUser({ ...selectedUser, trustLevel: num });
- }
- }}
- style={{
- width: 32,
- height: 32,
- borderRadius: radius.sm,
- backgroundColor: (selectedUser?.trustLevel ?? 8) === num ? colors.brandPrimary : colors.divider,
- alignItems: 'center',
- justifyContent: 'center',
- }}
- >
- <AppText variant="caption"weight="bold"tone={(selectedUser?.trustLevel ?? 8) === num ? 'inverse' : 'secondary'}>
- {num}
- </AppText>
- </Pressable>
- ))}
- </View>
- </View>
+
 
  {/* MFA Reset Button */}
  <Pressable

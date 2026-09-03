@@ -41,12 +41,6 @@ export function EventDetailScreen() {
   const [bookmarked, setBookmarked] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'agenda' | 'map'>('overview');
 
-  // Map & Navigation state
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [selectedWaypoint, setSelectedWaypoint] = useState<string>('Destination Venue');
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceStep, setVoiceStep] = useState(0);
-
   // Fullscreen Image Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -63,13 +57,6 @@ export function EventDetailScreen() {
   const currentRsvpCount = (event?.rsvpCount ?? 34) + (rsvpd === true && !event?.isRsvpd ? 1 : rsvpd === false && event?.isRsvpd ? -1 : 0);
   const capacity = event?.capacity ?? 150;
   const remainingSpots = Math.max(0, capacity - currentRsvpCount);
-
-  const walkingSteps = [
-    'Start at the University Main Gate / Senate Bus Terminus.',
-    'Walk straight North along Academic Palm Walk (120m).',
-    'Pass Faculty of Science Courtyard and ICT Innovation Center.',
-    `Arrive at ${event?.location ?? 'Venue Hall'} on your right (Ground Floor Auditorium).`,
-  ];
 
   async function handleToggleRsvp() {
     if (!event) return;
@@ -155,36 +142,7 @@ export function EventDetailScreen() {
  setTimeout(() => setIcsExported(false), 3000);
  }
 
- function handleVoiceGuide() {
- haptics.light();
- if (isSpeaking) {
- if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis'in window) {
- window.speechSynthesis.cancel();
- }
- setIsSpeaking(false);
- return;
- }
-
- const currentInstruction = walkingSteps[voiceStep];
- setIsSpeaking(true);
-
- if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis'in window) {
- const utterance = new SpeechSynthesisUtterance(currentInstruction);
- utterance.rate = 0.95;
- utterance.onend = () => {
- setIsSpeaking(false);
- setVoiceStep((s) => (s + 1) % walkingSteps.length);
- };
- window.speechSynthesis.speak(utterance);
- } else {
- setTimeout(() => {
- setIsSpeaking(false);
- setVoiceStep((s) => (s + 1) % walkingSteps.length);
- }, 2500);
- }
- }
-
- if (isLoading || !event) {
+  if (isLoading || !event) {
  return (
  <ScreenContainer>
  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
@@ -406,31 +364,9 @@ export function EventDetailScreen() {
                     Program Schedule & Timeline
                   </AppText>
 
-                  {[
-                    { time: '09:30 AM', title: 'Arrival & QR Check-in', desc: 'Badge pick-up at Entrance Foyer & Welcome coffee.' },
-                    { time: '10:00 AM', title: 'Keynote & Opening Remarks', desc: 'Dean Welcome Address & Industry Guest introduction.' },
-                    { time: '11:15 AM', title: 'Interactive Technical Session', desc: 'Hands-on live demo, architectural teardown & workshop.' },
-                    { time: '01:00 PM', title: 'Networking Lunch & Peer Huddle', desc: 'Faculty plaza refreshments and alumni mentor discussions.' },
-                    { time: '02:30 PM', title: 'Closing Showcase & Awards', desc: 'Certificate distribution and closing photography.' },
-                  ].map((item, index) => (
-                    <View key={index} style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md, alignItems: 'flex-start' }}>
-                      <View style={{ alignItems: 'center' }}>
-                        <View style={{ backgroundColor: colors.brandPrimary, width: 12, height: 12, borderRadius: 6 }} />
-                        {index < 4 ? <View style={{ width: 2, height: 42, backgroundColor: colors.border, marginVertical: 2 }} /> : null}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <AppText weight="bold" variant="caption" tone="brand">
-                          {item.time}
-                        </AppText>
-                        <AppText weight="bold" variant="bodySmall">
-                          {item.title}
-                        </AppText>
-                        <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                          {item.desc}
-                        </AppText>
-                      </View>
-                    </View>
-                  ))}
+                  <AppText tone="secondary" variant="bodySmall">
+                    Agenda details are not available for this event yet.
+                  </AppText>
                 </SolidCard>
               )}
 
@@ -472,34 +408,6 @@ export function EventDetailScreen() {
                     )}
                   </View>
 
-                  <SolidCard style={{ marginBottom: spacing.lg, padding: spacing.lg }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="compass" size={18} color={colors.brandPrimary} />
-                        <AppText weight="bold" variant="bodySmall">
-                          Turn-by-Turn Campus Guide
-                        </AppText>
-                      </View>
-                      <Badge label="Live GPS" tone="brand" />
-                    </View>
-
-                    <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
-                      Step {voiceStep + 1} of {walkingSteps.length}: {walkingSteps[voiceStep]}
-                    </AppText>
-
-                    <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                      <View style={{ flex: 1 }}>
-                        <AppButton label="Launch Maps" onPress={handleLaunchMaps} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <AppButton
-                          label={isSpeaking ? 'Stop Voice' : 'Voice Guide'}
-                          variant="secondary"
-                          onPress={handleVoiceGuide}
-                        />
-                      </View>
-                    </View>
-                  </SolidCard>
                 </View>
               )}
             </View>
@@ -543,12 +451,8 @@ export function EventDetailScreen() {
 
                 {/* Attendee Avatars */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
-                  <View style={{ marginLeft: 0 }}><Avatar name="Diana Prince" size={28} role="student" /></View>
-                  <View style={{ marginLeft: -8 }}><Avatar name="Tunde Adebayo" size={28} role="student" /></View>
-                  <View style={{ marginLeft: -8 }}><Avatar name="Amina Yusuf" size={28} role="student" /></View>
-                  <View style={{ marginLeft: -8 }}><Avatar name="Emeka Okafor" size={28} role="student" /></View>
-                  <AppText variant="caption" tone="secondary" style={{ marginLeft: 10, fontSize: 12 }}>
-                    +{currentRsvpCount} students attending
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: 12 }}>
+                    {currentRsvpCount} students attending
                   </AppText>
                 </View>
 
@@ -701,12 +605,8 @@ export function EventDetailScreen() {
                 {/* Attendee Avatars Row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ marginLeft: 0 }}><Avatar name="Diana Prince" size={26} role="student" /></View>
-                    <View style={{ marginLeft: -8 }}><Avatar name="Tunde Adebayo" size={26} role="student" /></View>
-                    <View style={{ marginLeft: -8 }}><Avatar name="Amina Yusuf" size={26} role="student" /></View>
-                    <View style={{ marginLeft: -8 }}><Avatar name="Emeka Okafor" size={26} role="student" /></View>
-                    <AppText variant="caption" tone="secondary" style={{ marginLeft: 8, fontSize: 11 }}>
-                      +{currentRsvpCount} attending
+                    <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                      {currentRsvpCount} attending
                     </AppText>
                   </View>
 
@@ -873,34 +773,7 @@ export function EventDetailScreen() {
                     )}
                   </View>
 
-                  <SolidCard style={{ marginBottom: spacing.md }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="compass" size={18} color={colors.brandPrimary} />
-                        <AppText weight="bold" variant="bodySmall">
-                          Turn-by-Turn Campus Guide
-                        </AppText>
-                      </View>
-                      <Badge label="Live GPS" tone="brand" />
-                    </View>
 
-                    <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
-                      Step {voiceStep + 1} of {walkingSteps.length}: {walkingSteps[voiceStep]}
-                    </AppText>
-
-                    <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                      <View style={{ flex: 1 }}>
-                        <AppButton label="Launch Maps" onPress={handleLaunchMaps} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <AppButton
-                          label={isSpeaking ? 'Stop Voice' : 'Voice Guide'}
-                          variant="secondary"
-                          onPress={handleVoiceGuide}
-                        />
-                      </View>
-                    </View>
-                  </SolidCard>
                 </View>
               )}
             </View>

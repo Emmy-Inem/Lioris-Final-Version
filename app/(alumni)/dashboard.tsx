@@ -17,7 +17,6 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts } from '@/api/posts';
 import { getMyProfile } from '@/api/profile';
-import { useMockDataVisible } from '@/api/mockDataSettings';
 
 export default function AlumniDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -29,11 +28,6 @@ export default function AlumniDashboard() {
     queryFn: () => getMyProfile(user!),
     enabled: !!user,
   });
-  // The 3-KPI network/engagement grid below has no real membership-registry
-  // backend behind it - it was hardcoded placeholder content shown to every
-  // alumni account. Gate it the same way the rest of the app now gates
-  // fixture data, via the Mock Data Visibility toggle.
-  const mockDataVisible = useMockDataVisible();
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Adeola Adeleke';
   const subtitleParts = [
@@ -128,61 +122,6 @@ export default function AlumniDashboard() {
         {/* 2. Official Campus Announcements */}
         <AnnouncementsWidget scope="alumni" />
 
-        {/* 3. 3-KPI Executive Metrics Grid */}
-        {mockDataVisible && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
-            <SolidCard radius={18} style={{ padding: spacing.md }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <AppText variant="caption" tone="secondary" weight="bold">
-                  ALUMNI NETWORK
-                </AppText>
-                <Ionicons name="people-outline" size={16} color={colors.brandPrimary} />
-              </View>
-              <AppText variant="h2" weight="bold" tone="brand">
-                2,450+ Verified
-              </AppText>
-              <AppText variant="caption" style={{ color: '#10B981', fontWeight: '600', marginTop: 2 }}>
-                ✓ Global Chapter Active
-              </AppText>
-            </SolidCard>
-          </View>
-
-          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
-            <SolidCard radius={18} style={{ padding: spacing.md }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <AppText variant="caption" tone="secondary" weight="bold">
-                  CHAPTER ENGAGEMENT
-                </AppText>
-                <Ionicons name="ribbon-outline" size={16} color="#0284C7" />
-              </View>
-              <AppText variant="h2" weight="bold" tone="brand">
-                Good Standing
-              </AppText>
-              <AppText variant="caption" style={{ color: '#10B981', fontWeight: '600', marginTop: 2 }}>
-                ✓ Verified Alum
-              </AppText>
-            </SolidCard>
-          </View>
-
-          <View style={{ flex: 1, minWidth: isDesktop ? 240 : 150 }}>
-            <SolidCard radius={18} style={{ padding: spacing.md }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <AppText variant="caption" tone="secondary" weight="bold">
-                  UPCOMING REUNIONS
-                </AppText>
-                <Ionicons name="calendar-outline" size={16} color="#16A34A" />
-              </View>
-              <AppText variant="h2" weight="bold" tone="brand">
-                2 Events
-              </AppText>
-              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-                Annual Homecoming & Gala
-              </AppText>
-            </SolidCard>
-          </View>
-        </View>
-        )}
 
         {/* 4. Live Campus & Alumni Pulse Feed */}
         <View>

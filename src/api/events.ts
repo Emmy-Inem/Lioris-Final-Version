@@ -1,72 +1,12 @@
 import { CampusEvent } from './types';
-import { mockEvents } from './mockData';
 import { recordAuditLogEntry } from './auditLog';
 import { getSessionUser } from '@/auth/tokenStorage';
 import { supabase } from './supabase';
 import { isUserBlocked } from './connections';
 import { generateUUID } from '../utils/uuid';
-import { isMockDataVisible } from './mockDataSettings';
 
-const SEED_EVENTS: CampusEvent[] = [
- ...mockEvents.map((e) => ({ ...e, approvalStatus: 'approved' as const })),
- {
- id: 'event-sub-1',
- organizerId: 'user-chioma',
- organizerName: 'Google Developer Student Club (GDSC UI)',
- title: 'Google Cloud & AI Campus Study Jam: Gemini Pro Deep Dive',
- description: 'Hands-on practical workshop exploring Gemini API multimodal integration, Cloud Run container deployments, and fine-tuning models.',
- category: 'workshop',
- location: 'Faculty of Science Computer Laboratory 3',
- venueType: 'Physical Auditorium',
- visibilityScope: 'global',
- startAt: new Date(Date.now() + 86400000 * 2).toISOString(),
- endAt: new Date(Date.now() + 86400000 * 2 + 10800000).toISOString(),
- capacity: 120,
- rsvpCount: 45,
- isRsvpd: false,
- approvalStatus: 'approved',
- sponsored: true,
- isSpotlight: true,
- coverImageUrl: 'event_tech_hackathon',
- ticketPrice: 'Free',
- targetCohort: 'All Levels (100L - 500L)',
- attendeeNames: ['Adekunle Gold', 'Chioma Okonkwo', 'Tunde Bakare'],
- },
- {
- id: 'event-sub-2',
- organizerId: 'user-adekunle',
- organizerName: 'Engineering Students Association (ESA)',
- title: 'Annual Faculty Career Dinner & Alumni Mentorship Connect',
- description: 'Exclusive networking dinner with alumni working at Chevron, Paystack, and Flutterwave. CV reviews and open internship referrals.',
- category: 'career',
- location: 'Faculty of Technology Conference Center & Banquet Hall',
- venueType: 'Hybrid Room',
- visibilityScope: 'global',
- startAt: new Date(Date.now() + 86400000 * 5).toISOString(),
- endAt: new Date(Date.now() + 86400000 * 5 + 14400000).toISOString(),
- capacity: 250,
- rsvpCount: 88,
- isRsvpd: false,
- approvalStatus: 'approved',
- sponsored: true,
- isSpotlight: false,
- coverImageUrl: 'campus_students_photo',
- ticketPrice: 'Free',
- targetCohort: 'Penultimate & Final Year Students',
- attendeeNames: ['Folake Adeleke', 'Dr. Babatunde Lawal', 'Amina Yusuf'],
- },
-];
 
-// Events this session has *successfully* written to Supabase (or locally
-// mutated via rsvp/approve/etc on one of those), kept here only so they
-// render instantly before the next refetch. Never seeded with fixtures -
-// those only come from getSeedEvents() below, and only while the admin's
-// "Mock Data Visibility" toggle is on.
 let locallyCreatedEvents: CampusEvent[] = [];
-
-function getSeedEvents(): CampusEvent[] {
- return isMockDataVisible() ? SEED_EVENTS : [];
-}
 
 export interface EventsQuery {
  scope?: 'student' | 'alumni' | 'global';
@@ -175,7 +115,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
  // Merge unique - local pool only ever contributes this session's own
  // just-created events (always) plus seed fixtures (only when the admin
  // mock-data toggle is on).
- const pool = [...locallyCreatedEvents, ...getSeedEvents()];
+ const pool = [...locallyCreatedEvents];
  const merged = [...dbEvents];
  for (const e of pool) {
  if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
@@ -189,13 +129,13 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
  return filterEvents(merged, { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
  } catch (err) {
  console.warn('[Events] Supabase listEvents error, showing local pool only:', err);
- return filterEvents([...locallyCreatedEvents, ...getSeedEvents()], query);
+ return filterEvents([...locallyCreatedEvents], query);
  }
 }
 
 export async function getEvent(id?: string | null): Promise<CampusEvent | null> {
  if (!id) return null;
- const found = [...locallyCreatedEvents, ...getSeedEvents()].find((e) => e.id === id);
+ const found = [...locallyCreatedEvents].find((e) => e.id === id);
  if (found) return found;
  try {
  const { data, error } = await supabase
@@ -384,7 +324,7 @@ export async function updateEvent(id: string, updates: Partial<CampusEvent>): Pr
 }
 
 export async function approveEvent(id: string) {
- const target = locallyCreatedEvents.find((e) => e.id === id) ?? getSeedEvents().find((e) => e.id === id);
+  const target = locallyCreatedEvents.find((e) => e.id === id);
  locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, approvalStatus: 'approved' } : e));
  try {
  await supabase.from('events').update({ status: 'upcoming' }).eq('id', id);
@@ -401,7 +341,7 @@ export async function approveEvent(id: string) {
 
 // Admin moderation actions - backs the Events tab in the Admin Workdesk.
 export async function revokeEventApproval(id: string) {
- const target = locallyCreatedEvents.find((e) => e.id === id) ?? getSeedEvents().find((e) => e.id === id);
+ const target = locallyCreatedEvents.find((e) => e.id === id);
  locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, approvalStatus: 'rejected' } : e));
  try {
  await supabase.from('events').update({ status: 'cancelled' }).eq('id', id);
@@ -417,7 +357,7 @@ export async function revokeEventApproval(id: string) {
 }
 
 export async function purgeEvent(id: string) {
- const target = locallyCreatedEvents.find((e) => e.id === id) ?? getSeedEvents().find((e) => e.id === id);
+ const target = locallyCreatedEvents.find((e) => e.id === id);
  locallyCreatedEvents = locallyCreatedEvents.filter((e) => e.id !== id);
  try {
  await supabase.from('events').delete().eq('id', id);

@@ -1,10 +1,8 @@
 import { supabase } from './supabase';
 import { StudyGroup } from './types';
-import { mockStudyGroups } from './mockData';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { isUserBlocked } from './connections';
-import { isMockDataVisible } from './mockDataSettings';
 
 // Groups this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch. Never mixed with
@@ -13,7 +11,7 @@ import { isMockDataVisible } from './mockDataSettings';
 let locallyCreatedGroups: StudyGroup[] = [];
 
 function getLocalPool(): StudyGroup[] {
- return [...locallyCreatedGroups, ...(isMockDataVisible() ? mockStudyGroups : [])];
+ return [...locallyCreatedGroups];
 }
 
 export interface CreateStudyGroupPayload {

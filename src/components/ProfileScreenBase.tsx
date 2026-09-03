@@ -337,9 +337,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
         {/* Quick Metrics Bar */}
         <View style={{ flexDirection: 'row', gap: spacing.xs, marginVertical: spacing.md }}>
-          <StatChip label="Authored" value={myPosts?.length ?? profile.postsCount} />
-          <StatChip label="Connections" value={profile.connectionsCount} />
-          <StatChip label="Reputation" value={profile.reputationScore} />
+          <StatChip label="Authored" value={myPosts?.length ?? profile.postsCount ?? 0} />
+          <StatChip label="Connections" value={profile.connectionsCount ?? 0} />
         </View>
 
         {/* Verification Callout if not verified */}

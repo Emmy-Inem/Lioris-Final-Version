@@ -7,21 +7,8 @@ import { AppText } from'@/components/AppText';
 import { SolidCard } from'@/components/SolidCard';
 import { AppButton } from'@/components/AppButton';
 import { AdminConfigModal } from'@/components/AdminConfigModal';
-import {
- AddUniversityWizardContent,
- DomainAuthorityModalContent,
- XpMultiplierModalContent,
- LevelBadgesModalContent,
- SeasonalLeaderboardsModalContent,
- EscrowConfigModalContent,
- CloudStorageModalContent,
- ToxicityThresholdsModalContent,
- GlobalPushNotificationModalContent,
-} from'@/components/admin/ConfigModals';
-import { PaymentGatewayModalContent, WebrtcKeysModalContent, AiKeysModalContent } from'@/components/admin/SecureConfigModals';
-import { LegacyVaultModalContent, ImpersonatorModalContent } from'@/components/admin/HighRiskModals';
+
 import { recordAuditLogEntry } from '@/api/auditLog';
-import { isMockDataVisible, setMockDataVisible, hydrateMockDataVisibility } from '@/api/mockDataSettings';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -49,7 +36,6 @@ export default function SuperAdminConfigScreen() {
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [mockDataVisible, setMockDataVisibleState] = useState(isMockDataVisible());
 
   // Lifted form states for configuration modals
   const [domainAuthorityInput, setDomainAuthorityInput] = useState('@ui.edu.ng, @student.ui.edu.ng, @unilag.edu.ng, @oau.edu.ng, @funaab.edu.ng');
@@ -64,31 +50,6 @@ export default function SuperAdminConfigScreen() {
   const [cloudStoragePdfMb, setCloudStoragePdfMb] = useState('25');
   const [pushTitle, setPushTitle] = useState('');
   const [pushBody, setPushBody] = useState('');
-
-  useEffect(() => {
- let mounted = true;
- hydrateMockDataVisibility().then((visible) => {
- if (mounted) setMockDataVisibleState(visible);
- });
- return () => {
- mounted = false;
- };
- }, []);
-
- async function handleToggleMockData(next: boolean) {
- // Optimistic - the toggle takes effect immediately for every src/api/*
- // module (they read isMockDataVisible() at call time), independent of
- // whether this async persistence write succeeds.
- setMockDataVisibleState(next);
- await setMockDataVisible(next);
- recordAuditLogEntry({
- action: 'platform_config_updated',
- summary: `${next ? 'Enabled' : 'Disabled'} mock/seed data visibility platform-wide.`,
- targetType: 'platform_config',
- targetId: 'mock_data_visibility',
- });
- }
-
  function confirmMaintenanceMode(next: boolean) {
     if (!next) {
       setMaintenanceMode(false);
@@ -201,12 +162,9 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
- <Section number={7} title="Storage, Media, & Data Analytics"emoji="">
+  <Section number={7} title="Storage, Media, & Data Analytics"emoji="">
  <Row
  title="Cloud Storage Limits"description="Limits for AWS/GCP to prevent ballooning server costs."actionLabel="Storage"onPress={() => setActiveModal('cloudStorage')}
- />
- <Row
- title="University Pulse Analytics"description="Global DAU/MAU and Marketplace volume."actionLabel="Pulse"tone="critical"onPress={() => router.push('/(admin)/pulse-analytics')}
  last
  />
  </Section>
@@ -233,10 +191,6 @@ export default function SuperAdminConfigScreen() {
  title="Maintenance Mode Kill Switch"description="Force offline mode & disable DB writes."value={maintenanceMode}
  onValueChange={confirmMaintenanceMode}
  titleTone="critical"
- />
- <ToggleRow
- title="Mock Data Visibility & Setup"description="Show seed/demo fixtures mixed into real data across the platform. Turn off to see only real database content everywhere, including on failures."value={mockDataVisible}
- onValueChange={handleToggleMockData}
  last
  />
  </Section>
@@ -251,340 +205,7 @@ export default function SuperAdminConfigScreen() {
  <View style={{ height: spacing.xxl }} />
  </ScrollView>
 
- <AdminConfigModal visible={activeModal === 'addUniversity'} onClose={() => setActiveModal(null)} title="Add University">
- <AddUniversityWizardContent
- onComplete={async (data) => {
- try {
- const { createInstitution } = await import('@/api/institutions');
- await createInstitution({
- code: data.abbrev.toUpperCase(),
- name: data.name,
- shortName: data.abbrev,
- location: data.region,
- domain: `${data.abbrev.toLowerCase()}.edu.ng`,
- });
 
- await recordAuditLogEntry({
- action: 'institution_provisioned',
- summary: `Provisioned new university tenant partition for ${data.name} (${data.abbrev}) in ${data.region}`,
- targetType: 'institution',
- targetId: `univ-${data.abbrev.toLowerCase()}`,
- });
- setActiveModal(null);
- Alert.alert('University Added', `New institutional node partition successfully created in database for ${data.name}.`);
- } catch (err: any) {
- Alert.alert('Provisioning Error', err?.message || 'Failed to add university.');
- }
- }}
- />
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'domainAuthority'}
- onClose={() => setActiveModal(null)}
- title="Domain Authority Binding"
- description="Whitelist official email domains controlling automated verification."
- confirmLabel="Synchronize"
- onConfirm={async () => {
- const domainList = domainAuthorityInput
- .split(',')
- .map((d) => d.trim())
- .filter(Boolean);
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('platform_settings').upsert({
- key: 'domain_authority',
- value: { domains: domainList },
- updated_at: new Date().toISOString(),
- });
- } catch {}
- await recordAuditLogEntry({
- action: 'domain_authority_updated',
- summary: `Synchronized ${domainList.length} authoritative campus email domains: ${domainList.join(', ')}`,
- targetType: 'platform_config',
- targetId: 'domain-authority',
- });
- Alert.alert('Domain Authority Updated', `Whitelisted ${domainList.length} domains synchronized and logged.`);
- }}
- >
- <DomainAuthorityModalContent
- domains={domainAuthorityInput}
- onChangeDomains={setDomainAuthorityInput}
- />
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'tenantToggles'}
- onClose={() => setActiveModal(null)}
- title="Tenant Feature Toggles"
- description="Enable or disable individual modules per university tenant."
- confirmLabel="Save"
- onConfirm={async () => {
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('platform_settings').upsert({
- key: 'tenant_toggles',
- value: { marketplace: true, study_groups: true, mentorship: true, alumni_giving: true },
- updated_at: new Date().toISOString(),
- });
- } catch {}
- await recordAuditLogEntry({
- action: 'tenant_toggles_updated',
- summary: 'Updated per-tenant feature modules and access controls',
- targetType: 'platform_config',
- targetId: 'tenant-modules',
- });
- Alert.alert('Tenant Modules Saved', 'University module toggles updated.');
- }}
- >
- <AppText tone="secondary" variant="bodySmall">
- Per-tenant module toggles (Marketplace, Study Groups, Mentorship, etc.) configured for selected workspace.
- </AppText>
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'xpMultiplier'}
- onClose={() => setActiveModal(null)}
- title="XP Multiplier"
- confirmLabel="Apply"
- onConfirm={async () => {
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('platform_settings').upsert({
- key: 'xp_multiplier',
- value: { multiplier: xpMultiplierVal },
- updated_at: new Date().toISOString(),
- });
- } catch {}
- await recordAuditLogEntry({
- action: 'xp_multiplier_updated',
- summary: `Updated global XP engagement multiplier to ${xpMultiplierVal.toFixed(1)}x`,
- targetType: 'platform_config',
- targetId: 'gamification-xp',
- });
- Alert.alert('XP Multiplier Applied', `Global engagement multiplier updated to ${xpMultiplierVal.toFixed(1)}x.`);
- }}
- >
- <XpMultiplierModalContent
- multiplier={xpMultiplierVal}
- onChangeMultiplier={setXpMultiplierVal}
- />
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'levelBadges'}
- onClose={() => setActiveModal(null)}
- title="Levels & Badges"
- confirmLabel="Save"
- onConfirm={async () => {
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('platform_settings').upsert({
- key: 'level_badges',
- value: { tiers: ['Scholar (200 XP)', 'Dean List (500 XP)', 'Campus Leader (1000 XP)', 'Valedictorian (2000 XP)'] },
- updated_at: new Date().toISOString(),
- });
- } catch {}
- await recordAuditLogEntry({
- action: 'level_badges_updated',
- summary: 'Configured level badge tiers and visual assets for all 4 rank tiers',
- targetType: 'platform_config',
- targetId: 'level-badges',
- });
- Alert.alert('Badges Saved', 'Level milestones and badge criteria updated.');
- }}
- >
- <LevelBadgesModalContent />
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'seasonalLeaderboards'}
- onClose={() => setActiveModal(null)}
- title="Seasonal Leaderboards"
- confirmLabel="Deploy season"
- onConfirm={async () => {
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('platform_settings').upsert({
- key: 'seasonal_leaderboards',
- value: { current_season: seasonNameVal, auto_reset: seasonAutoReset, is_active: true },
- updated_at: new Date().toISOString(),
- });
- } catch {}
- await recordAuditLogEntry({
- action: 'seasonal_leaderboard_deployed',
- summary: `Deployed seasonal leaderboard cohort "${seasonNameVal}" across active campuses (auto-reset: ${seasonAutoReset ? 'enabled' : 'disabled'})`,
- targetType: 'platform_config',
- targetId: 'seasonal-leaderboards',
- });
- Alert.alert('Season Deployed', `Season "${seasonNameVal}" is now live for all universities.`);
- }}
- >
- <SeasonalLeaderboardsModalContent
- seasonName={seasonNameVal}
- onChangeSeasonName={setSeasonNameVal}
- autoReset={seasonAutoReset}
- onChangeAutoReset={setSeasonAutoReset}
- />
- </AdminConfigModal>
- <AdminConfigModal visible={activeModal === 'paymentGateway'} onClose={() => setActiveModal(null)} title="Payment Gateway">
- <PaymentGatewayModalContent />
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'escrowConfig'}
- onClose={() => setActiveModal(null)}
- title="Marketplace Escrow Configuration"
- confirmLabel="Save escrow logic"
- onConfirm={async () => {
- const holdHours = Number(escrowHoldHours) || 48;
- const fee = Number(escrowFeePercent) || 1.5;
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('platform_settings').upsert({
- key: 'escrow_config',
- value: { hold_duration_hours: holdHours, fee_percent: fee, auto_refund: escrowAutoRefund },
- updated_at: new Date().toISOString(),
- });
- } catch {}
- await recordAuditLogEntry({
- action: 'escrow_config_updated',
- summary: `Updated marketplace escrow: ${holdHours}h hold duration, ${fee}% platform fee, autoRefund=${escrowAutoRefund}`,
- targetType: 'platform_config',
- targetId: 'marketplace-escrow',
- });
- Alert.alert('Escrow Saved', `Marketplace escrow parameters saved (${holdHours}h hold, ${fee}% fee) - logged to audit trail.`);
- }}
- >
- <EscrowConfigModalContent
- holdPeriod={escrowHoldHours}
- onChangeHoldPeriod={setEscrowHoldHours}
- feePercent={escrowFeePercent}
- onChangeFeePercent={setEscrowFeePercent}
- autoRefund={escrowAutoRefund}
- onChangeAutoRefund={setEscrowAutoRefund}
- />
- </AdminConfigModal>
- <AdminConfigModal visible={activeModal === 'legacyVault'} onClose={() => setActiveModal(null)} title="Legacy Giving Vault">
- <LegacyVaultModalContent
- onReleased={async (amount) => {
- await recordAuditLogEntry({
- action: 'escrow_funds_released',
- summary: `Force-released $${amount.toFixed(2)} in escrowed funds to cold storage`,
- targetType: 'escrow',
- targetId: 'global-escrow',
- reason: 'Typed CONFIRM in Legacy Giving Vault',
- });
- Alert.alert('Released', 'Funds released - action logged to audit trail.');
- }}
- />
- </AdminConfigModal>
- <AdminConfigModal visible={activeModal === 'webrtcKeys'} onClose={() => setActiveModal(null)} title="Video SDK Keys">
- <WebrtcKeysModalContent />
- </AdminConfigModal>
- <AdminConfigModal visible={activeModal === 'aiKeys'} onClose={() => setActiveModal(null)} title="AI Service Routing">
- <AiKeysModalContent />
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'toxicityThresholds'}
- onClose={() => setActiveModal(null)}
- title="Automated Toxicity Thresholds"
- confirmLabel="Deploy"
- onConfirm={async () => {
- const toxLimit = toxicityScoreLimit / 100;
- const severeToxLimit = Math.min(1.0, (toxicityScoreLimit + 15) / 100);
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('platform_settings').upsert({
- key: 'toxicity_thresholds',
- value: { toxicity_limit: toxLimit, severe_toxicity_limit: severeToxLimit, limit_score: toxicityScoreLimit },
- updated_at: new Date().toISOString(),
- });
- } catch {}
- await recordAuditLogEntry({
- action: 'toxicity_thresholds_deployed',
- summary: `Deployed automated AI toxicity filter threshold at ${toxicityScoreLimit}/100 index`,
- targetType: 'platform_config',
- targetId: 'moderation-ai',
- });
- Alert.alert('Thresholds Deployed', `AI content moderation filter threshold set to ${toxicityScoreLimit}/100.`);
- }}
- >
- <ToxicityThresholdsModalContent
- score={toxicityScoreLimit}
- onChangeScore={setToxicityScoreLimit}
- />
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'cloudStorage'}
- onClose={() => setActiveModal(null)}
- title="Cloud Storage Limits"
- confirmLabel="Enforce limits"
- onConfirm={async () => {
- const maxImgMb = Number(cloudStorageImgMb) || 5;
- const maxPdfMb = Number(cloudStoragePdfMb) || 25;
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('platform_settings').upsert({
- key: 'cloud_storage_limits',
- value: { max_image_mb: maxImgMb, max_pdf_mb: maxPdfMb, max_resource_mb: maxPdfMb },
- updated_at: new Date().toISOString(),
- });
- } catch {}
- await recordAuditLogEntry({
- action: 'storage_quotas_enforced',
- summary: `Enforced file size caps: ${maxImgMb}MB images, ${maxPdfMb}MB PDFs & resources`,
- targetType: 'platform_config',
- targetId: 'cloud-storage',
- });
- Alert.alert('Limits Enforced', `Cloud storage quotas enforced: ${maxImgMb}MB image, ${maxPdfMb}MB PDF.`);
- }}
- >
- <CloudStorageModalContent
- imgSize={cloudStorageImgMb}
- onChangeImgSize={setCloudStorageImgMb}
- pdfSize={cloudStoragePdfMb}
- onChangePdfSize={setCloudStoragePdfMb}
- />
- </AdminConfigModal>
- <AdminConfigModal
- visible={activeModal === 'globalPush'}
- onClose={() => setActiveModal(null)}
- title="Global Push Notification Composer"
- confirmLabel="Dispatch"
- onConfirm={async () => {
- const finalTitle = pushTitle.trim() || 'Campus Institutional Announcement';
- const finalBody = pushBody.trim() || 'A global institutional update has been broadcasted by Platform Administration.';
- await recordAuditLogEntry({
- action: 'global_push_broadcast',
- summary: `Dispatched push notification broadcast "${finalTitle}": ${finalBody.slice(0, 80)}`,
- targetType: 'notifications',
- targetId: 'global-broadcast',
- });
- const { createNotification } = await import('@/api/notifications');
- await createNotification({
- type: 'system_announcement',
- title: finalTitle,
- body: finalBody,
- });
- Alert.alert('Push Broadcast Dispatched', `Broadcast "${finalTitle}" dispatched and logged to audit trail.`);
- }}
- >
- <GlobalPushNotificationModalContent
- title={pushTitle}
- onChangeTitle={setPushTitle}
- body={pushBody}
- onChangeBody={setPushBody}
- />
- </AdminConfigModal>
- <AdminConfigModal visible={activeModal === 'impersonator'} onClose={() => setActiveModal(null)} title="Role Impersonator">
- <ImpersonatorModalContent
- onStart={async (targetUid, reason) => {
- await recordAuditLogEntry({
- action: 'impersonation_started',
- summary: `Started a shadow session as user ${targetUid}`,
- targetType: 'user',
- targetId: targetUid,
- reason,
- });
- Alert.alert('Session started', 'Shadow session active for 15 minutes - logged to audit trail.');
- }}
- />
- </AdminConfigModal>
  </ScreenContainer>
  );
 }

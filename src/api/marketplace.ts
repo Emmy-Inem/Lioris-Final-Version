@@ -1,9 +1,7 @@
 import { MarketplaceListing } from './types';
-import { mockMarketplaceListings } from './mockData';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
-import { isMockDataVisible } from './mockDataSettings';
 
 export interface MarketplaceQuery {
  q?: string;
@@ -24,7 +22,7 @@ let wishlistIds = new Set<string>();
 let locallyCreatedListings: MarketplaceListing[] = [];
 
 function getLocalPool(): MarketplaceListing[] {
- return [...locallyCreatedListings, ...(isMockDataVisible() ? mockMarketplaceListings : [])];
+ return [...locallyCreatedListings];
 }
 
 function filterListings(pool: MarketplaceListing[], query: MarketplaceQuery): MarketplaceListing[] {

@@ -1,22 +1,9 @@
 import { api } from'./client';
 import { AlumniDirectoryEntry, Connection, IncomingConnectionRequest } from'./types';
-import { mockDirectory, mockIncomingConnectionRequests } from'./mockData';
-import { withMockFallback } from'./withMockFallback';
-import { isMockDataVisible } from'./mockDataSettings';
 import { createNotification } from'./notifications';
 import { supabase } from './supabase';
 
-// Mutable in-memory copy so accept/decline visibly removes a request
-// from the inbox within a session, without needing a real backend.
-// Seeded fresh from the mock fixture each time it's read (rather than once
-// at module load) so the mock-data toggle actually controls whether these
-// demo requests appear at all.
-const resolvedSeedRequestIds = new Set<string>();
 
-function getIncomingRequestsState(): IncomingConnectionRequest[] {
- if (!isMockDataVisible()) return [];
- return mockIncomingConnectionRequests.filter((r) => !resolvedSeedRequestIds.has(r.id));
-}
 
 export interface DirectorySearchQuery {
  q?: string;
@@ -26,55 +13,40 @@ export interface DirectorySearchQuery {
  company?: string;
 }
 
-// Client-side stand-in for PRD Section 16's search spec (case-insensitive
-// partial match on name/company/industry, exact-match ranked first) - 
-// used only while there's no real backend to search against.
-function filterMockDirectory(query: DirectorySearchQuery): AlumniDirectoryEntry[] {
- let results = isMockDataVisible() ? [...mockDirectory] : [];
 
- if (query.graduationYear) {
- results = results.filter((e) => e.graduationYear === query.graduationYear);
- }
- if (query.industry) {
- results = results.filter((e) => e.industry?.toLowerCase() === query.industry!.toLowerCase());
- }
- if (query.company) {
- results = results.filter((e) => e.company?.toLowerCase() === query.company!.toLowerCase());
- }
-
- if (query.q) {
- const q = query.q.toLowerCase();
- results = results
- .filter(
- (e) =>
- e.fullName.toLowerCase().includes(q) ||
- e.company?.toLowerCase().includes(q) ||
- e.industry?.toLowerCase().includes(q) ||
- e.bio?.toLowerCase().includes(q),
- )
- .sort((a, b) => {
- // Exact name match ranks first, then partial matches - PRD
- // Section 16.3's ranking order (exact > partial > ...).
- const aExact = a.fullName.toLowerCase() === q ? 0 : 1;
- const bExact = b.fullName.toLowerCase() === q ? 0 : 1;
- return aExact - bExact;
- });
- }
-
- return results;
-}
 
 // Backs the alumni directory search described in PRD Section 6.2 /
 // Section 16 (Search Specifications).
 export async function searchAlumniDirectory(
- query: DirectorySearchQuery = {},
+  query: DirectorySearchQuery = {},
 ): Promise<AlumniDirectoryEntry[]> {
- return withMockFallback(async () => {
- const { data } = await api.get<{ items: AlumniDirectoryEntry[] }>('/directory/alumni', {
- params: query,
- });
- return data.items;
- }, filterMockDirectory(query));
+  try {
+    let q = supabase
+      .from('profiles')
+      .select('id, full_name, department, bio, avatar_url, role')
+      .ilike('role', '%alumni%');
+
+    if (query.q) {
+      q = q.ilike('full_name', `%${query.q}%`);
+    }
+    if (query.department) {
+      q = q.eq('department', query.department);
+    }
+
+    const { data, error } = await q.limit(20);
+    if (error || !data) return [];
+
+    return data.map((p: any) => ({
+      id: p.id,
+      fullName: p.full_name || 'Alumni Member',
+      department: p.department || 'Alumni Network',
+      bio: p.bio || '',
+      avatarUrl: p.avatar_url || null,
+      connectionStatus: 'none' as const,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 import { generateUUID } from '../utils/uuid';
@@ -132,10 +104,7 @@ export async function respondToConnectionRequest(
  connectionId: string,
  action: 'accept' | 'decline',
 ): Promise<Connection> {
- const target = getIncomingRequestsState().find((r) => r.id === connectionId);
- resolvedSeedRequestIds.add(connectionId);
-
- let realRequesterId = target?.requesterId;
+ let realRequesterId: string | undefined;
  let responderName = 'A colleague';
 
  try {
@@ -214,7 +183,7 @@ export async function listIncomingConnectionRequests(): Promise<IncomingConnecti
  // fallback
  }
 
- return getIncomingRequestsState();
+ return [];
 }
 
 export interface SuggestedConnection {

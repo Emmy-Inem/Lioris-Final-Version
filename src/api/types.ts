@@ -10,7 +10,7 @@ export interface UserProfile {
  email: string;
  userType: UserRole;
  graduationYear?: number | null;
- connectionsCount: number;
+ connectionsCount?: number;
  bio?: string | null;
  department?: string | null;
  interests?: string[];
@@ -29,17 +29,17 @@ export interface UserProfile {
  verificationStatus: 'none' | 'pending' | 'verified';
  // Gamification - ported from the reference app's UserProfile entity
  // (xp/level/reputationScore/trustLevel/streakDays).
- xp: number;
- level: number;
- reputationScore: number;
- trustLevel: number;
- streakDays: number;
- postsCount: number;
- resourcesCount: number;
- eventsCount: number;
- badgesCount: number;
- followersCount: number;
- followingCount: number;
+ xp?: number;
+ level?: number;
+ reputationScore?: number;
+ trustLevel?: number;
+ streakDays?: number;
+ postsCount?: number;
+ resourcesCount?: number;
+ eventsCount?: number;
+ badgesCount?: number;
+ followersCount?: number;
+ followingCount?: number;
 }
 
 export interface AuthSession {

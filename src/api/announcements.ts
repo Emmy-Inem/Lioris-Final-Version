@@ -1,9 +1,7 @@
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { Announcement } from './types';
-import { mockAnnouncements } from './mockData';
 import { generateUUID } from '../utils/uuid';
-import { isMockDataVisible } from './mockDataSettings';
 
 // Announcements this session has *successfully* written to Supabase, kept
 // here only so they render instantly before the next refetch. Never mixed
@@ -11,9 +9,7 @@ import { isMockDataVisible } from './mockDataSettings';
 // and only while the admin's "Mock Data Visibility" toggle is on.
 let locallyCreatedAnnouncements: Announcement[] = [];
 
-function getMockPool(): Announcement[] {
- return isMockDataVisible() ? mockAnnouncements : [];
-}
+
 
 export async function listAnnouncements(): Promise<Announcement[]> {
  try {
@@ -38,7 +34,7 @@ export async function listAnnouncements(): Promise<Announcement[]> {
  }));
 
  const merged = [...dbItems];
- for (const item of [...locallyCreatedAnnouncements, ...getMockPool()]) {
+  for (const item of [...locallyCreatedAnnouncements]) {
  if (!merged.some((m) => m.id === item.id)) {
  merged.push(item);
  }
@@ -46,7 +42,7 @@ export async function listAnnouncements(): Promise<Announcement[]> {
  return merged;
  } catch (err) {
  console.warn('[Announcements] Fetch error, showing local pool only:', err);
- return [...locallyCreatedAnnouncements, ...getMockPool()];
+ return [...locallyCreatedAnnouncements];
  }
 }
 

@@ -1,18 +1,14 @@
 import { supabase } from './supabase';
 import { AppNotification } from './types';
-import { mockNotifications } from './mockData';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
-import { isMockDataVisible } from './mockDataSettings';
 
 // Real notifications only (db-fetched or locally created) - never seeded
 // with mockData.ts fixtures. Fixtures only ever come from getMockPool()
 // below, and only while the admin's "Mock Data Visibility" toggle is on.
 let localNotificationsCache: AppNotification[] = [];
 
-function getMockPool(): AppNotification[] {
- return isMockDataVisible() ? mockNotifications : [];
-}
+
 
 export interface CreateNotificationPayload {
  type: AppNotification['type'];
@@ -141,7 +137,7 @@ export async function listNotifications(
  // just-created notifications (always) plus seed fixtures (only when the
  // admin mock-data toggle is on).
  const merged = [...dbNotifs];
- for (const n of [...localNotificationsCache, ...getMockPool()]) {
+ for (const n of [...localNotificationsCache]) {
  if (!merged.some((m) => m.id === n.id)) {
  merged.push(n);
  }
@@ -149,7 +145,7 @@ export async function listNotifications(
  return query.status === 'unread' ? merged.filter((n) => !n.openedAt) : merged;
  } catch (err) {
  console.warn('[Notifications] listNotifications failed, showing local pool only:', err);
- const pool = [...localNotificationsCache, ...getMockPool()];
+ const pool = [...localNotificationsCache];
  return query.status === 'unread' ? pool.filter((n) => !n.openedAt) : pool;
  }
 }

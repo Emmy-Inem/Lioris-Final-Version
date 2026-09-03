@@ -21,7 +21,7 @@ import { getMyProfile, updateProfileImages } from '@/api/profile';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
 import { haptics } from '@/utils/haptics';
-import { useMockDataVisible } from '@/api/mockDataSettings';
+
 
 const COVER_PRESETS = [
   { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
@@ -47,12 +47,6 @@ export default function StudentDashboard() {
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
-  // The 4-KPI grid below (courses/attendance/timeline/status) and the
-  // department-rep card have no real academic-records backend - they were
-  // hardcoded placeholder content. Gate them behind the same Mock Data
-  // Visibility toggle every other screen respects, instead of always
-  // showing fabricated numbers and a fake person to every student.
-  const mockDataVisible = useMockDataVisible();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -196,78 +190,6 @@ export default function StudentDashboard() {
         {/* 2. Official Campus Announcements */}
         <AnnouncementsWidget scope="student" />
 
-        {/* 3. Balanced 4-KPI Academic Overview Grid */}
-        {mockDataVisible && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
-          <View style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 150 : 140 }}>
-            <SolidCard radius={18} style={{ padding: 14 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <AppText variant="caption" tone="secondary" weight="bold" style={{ fontSize: 10, letterSpacing: 0.5 }}>
-                  COURSES
-                </AppText>
-                <Ionicons name="book-outline" size={15} color={colors.brandPrimary} />
-              </View>
-              <AppText variant="h2" weight="bold" tone="brand" style={{ fontSize: 20 }}>
-                6 Units
-              </AppText>
-              <AppText variant="caption" style={{ color: '#10B981', fontWeight: '600', marginTop: 3, fontSize: 11 }} numberOfLines={1}>
-                ✓ Cleared for Term
-              </AppText>
-            </SolidCard>
-          </View>
-
-          <View style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 150 : 140 }}>
-            <SolidCard radius={18} style={{ padding: 14 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <AppText variant="caption" tone="secondary" weight="bold" style={{ fontSize: 10, letterSpacing: 0.5 }}>
-                  ATTENDANCE
-                </AppText>
-                <Ionicons name="checkmark-done-circle-outline" size={15} color="#10B981" />
-              </View>
-              <AppText variant="h2" weight="bold" tone="brand" style={{ fontSize: 20 }}>
-                94%
-              </AppText>
-              <AppText variant="caption" style={{ color: '#10B981', fontWeight: '600', marginTop: 3, fontSize: 11 }} numberOfLines={1}>
-                ✓ Exam Eligible
-              </AppText>
-            </SolidCard>
-          </View>
-
-          <View style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 150 : 140 }}>
-            <SolidCard radius={18} style={{ padding: 14 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <AppText variant="caption" tone="secondary" weight="bold" style={{ fontSize: 10, letterSpacing: 0.5 }}>
-                  TIMELINE
-                </AppText>
-                <Ionicons name="time-outline" size={15} color="#3B82F6" />
-              </View>
-              <AppText variant="h2" weight="bold" tone="brand" style={{ fontSize: 20 }}>
-                Week 8
-              </AppText>
-              <AppText variant="caption" tone="secondary" style={{ marginTop: 3, fontSize: 11 }} numberOfLines={1}>
-                of 14 (Midterm)
-              </AppText>
-            </SolidCard>
-          </View>
-
-          <View style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 150 : 140 }}>
-            <SolidCard radius={18} style={{ padding: 14 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <AppText variant="caption" tone="secondary" weight="bold" style={{ fontSize: 10, letterSpacing: 0.5 }}>
-                  STATUS
-                </AppText>
-                <Ionicons name="shield-checkmark-outline" size={15} color="#8B5CF6" />
-              </View>
-              <AppText variant="h2" weight="bold" tone="brand" style={{ fontSize: isDesktop ? 20 : 16 }} numberOfLines={2}>
-                Good Standing
-              </AppText>
-              <AppText variant="caption" style={{ color: '#10B981', fontWeight: '600', marginTop: 3, fontSize: 11 }} numberOfLines={1}>
-                ✓ Verified Matric
-              </AppText>
-            </SolidCard>
-          </View>
-        </View>
-        )}
 
         {/* 4. Optional Enabled Modules Grid (Only if toggled ON in Admin) */}
         {(isFeatureEnabled('academic_resources') || isFeatureEnabled('career_page') || isFeatureEnabled('marketplace') || isFeatureEnabled('campus_events')) && (
@@ -421,42 +343,6 @@ export default function StudentDashboard() {
           </View>
         </View>
 
-        {/* 6. Department Representative Support Card */}
-        {mockDataVisible && (
-        <SolidCard radius={18} style={{ padding: spacing.md }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <Avatar name="Tobi Alabi" size={40} />
-              <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <AppText variant="bodySmall" weight="bold">
-                    Tobi Alabi
-                  </AppText>
-                  <Badge label="Class Rep" tone="brand" />
-                </View>
-                <AppText tone="secondary" variant="caption">
-                  300L Computer Science • Academic & Cohort Inquiries
-                </AppText>
-              </View>
-            </View>
-            {isFeatureEnabled('e2ee_messaging') ? (
-              <Pressable
-                onPress={() => router.push('/(student)/messages')}
-                style={{
-                  backgroundColor: colors.brandPrimary,
-                  borderRadius: radius.pill,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: 6,
-                }}
-              >
-                <AppText variant="caption" weight="bold" tone="inverse">
-                  Message Rep
-                </AppText>
-              </Pressable>
-            ) : null}
-          </View>
-        </SolidCard>
-        )}
 
       </ScrollView>
 

@@ -12,10 +12,8 @@ import { SolidCard } from'@/components/SolidCard';
 import { GlassCard } from'@/components/GlassCard';
 import { Badge } from'@/components/Badge';
 import { ModerationQueue } from'@/components/ModerationQueue';
-import { AnalyticsTab } from'@/components/admin/AnalyticsTab';
 import { ForumsModerationTab } from'@/components/admin/ForumsModerationTab';
 import { EventsModerationTab } from'@/components/admin/EventsModerationTab';
-import { LocalHubControlTab } from'@/components/admin/LocalHubControlTab';
 import { UserProfilesTab } from'@/components/admin/UserProfilesTab';
 import { ResourcesModerationTab } from'@/components/admin/ResourcesModerationTab';
 import { ApprovalsModerationTab } from'@/components/admin/ApprovalsModerationTab';
@@ -31,7 +29,7 @@ import { createNotification } from '@/api/notifications';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 
-const WORKDESK_TABS = ['Analytics', 'Flags', 'User Profiles', 'Utility Hub', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
+const WORKDESK_TABS = ['Flags', 'User Profiles', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
 const SCOPE_OPTIONS = ['All Campuses', ...LAUNCH_INSTITUTIONS.map((inst) => inst.name)];
 
 export default function PlatformConfigScreen() {
@@ -40,7 +38,7 @@ export default function PlatformConfigScreen() {
   const { user, switchRole } = useAuth();
   const isSuperAdmin = user?.actualRole === 'admin';
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Analytics');
+  const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Flags');
   const [institution, setInstitution] = useState(SCOPE_OPTIONS[0]);
   const [institutionPickerOpen, setInstitutionPickerOpen] = useState(false);
   const [portalLinksModalOpen, setPortalLinksModalOpen] = useState(false);
@@ -376,12 +374,9 @@ export default function PlatformConfigScreen() {
  })}
  </ScrollView>
 
-        {/* Active Tab Content (Rendered directly in unified scroll flow) */}
         <View style={{ minHeight: 200 }}>
-          {tab === 'Analytics' ? <AnalyticsTab /> : null}
           {tab === 'Flags' ? <FeatureFlagsTab /> : null}
           {tab === 'User Profiles' ? <UserProfilesTab /> : null}
- {tab === 'Utility Hub' ? <LocalHubControlTab /> : null}
  {tab === 'Forums' ? <ForumsModerationTab /> : null}
  {tab === 'Events' ? <EventsModerationTab /> : null}
  {tab === 'Resources' ? <ResourcesModerationTab /> : null}

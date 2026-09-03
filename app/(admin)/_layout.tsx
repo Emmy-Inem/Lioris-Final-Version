@@ -59,7 +59,6 @@ export default function AdminLayout() {
       />
 
       {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
-      <Tabs.Screen name="analytics" options={{ href: null }} />
       <Tabs.Screen name="super-admin-config" options={{ href: null }} />
       <Tabs.Screen name="moderation-queue" options={{ href: null }} />
       <Tabs.Screen name="reports" options={{ href: null }} />
@@ -68,7 +67,6 @@ export default function AdminLayout() {
       <Tabs.Screen name="audit-logs" options={{ href: null }} />
       <Tabs.Screen name="moderation-audit-log" options={{ href: null }} />
       <Tabs.Screen name="verification-requests" options={{ href: null }} />
-      <Tabs.Screen name="pulse-analytics" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="search" options={{ href: null }} />

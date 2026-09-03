@@ -17,24 +17,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getPlatformHealthSummary } from '@/api/analytics';
 import { listReports } from '@/api/moderation';
-import { ManageCoursesModal } from '@/components/admin/ManageCoursesModal';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
-import { ManageDirectoryModal } from '@/components/admin/ManageDirectoryModal';
 import { haptics } from '@/utils/haptics';
 
 export default function AdminDashboard() {
  const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
  const { user } = useAuth();
- const { data: health } = useQuery({ queryKey: ['analytics', 'health'], queryFn: getPlatformHealthSummary });
  const { data: openReports } = useQuery({ queryKey: ['reports', 'open'], queryFn: () => listReports({ status: 'open' }) });
 
  // Admin Management Modals
- const [coursesModalOpen, setCoursesModalOpen] = useState(false);
  const [resourcesModalOpen, setResourcesModalOpen] = useState(false);
- const [directoryModalOpen, setDirectoryModalOpen] = useState(false);
 
   return (
     <ScreenContainer glow={true}>
@@ -71,9 +65,6 @@ export default function AdminDashboard() {
                     <AppText variant="h1" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 22 }}>
                       Welcome, {user?.fullName?.split(' ')[0] ?? 'Admin'}
                     </AppText>
-                    <AppText variant="caption" tone="inverse" style={{ opacity: 0.85, marginTop: 2 }}>
-                      System Health 99.98% | All services operational
-                    </AppText>
                   </View>
 
                   <Avatar name={user?.fullName ?? 'Root Administrator'} size={56} role="admin" />
@@ -81,34 +72,7 @@ export default function AdminDashboard() {
               </View>
             </View>
 
-            {/* Live Multi-Campus Nodes Status Bar */}
-            <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.md }}>
-              {[
-                { code: 'UI', label: 'Ibadan', status: 'Healthy' },
-                { code: 'UNILAG', label: 'Lagos', status: 'Healthy' },
-                { code: 'OAU', label: 'Ife', status: 'Healthy' },
-                { code: 'FUNAAB', label: 'Abeokuta', status: 'Healthy' },
-              ].map((node) => (
-                <SolidCard
-                  key={node.code}
-                  frosted
-                  padded={false}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 10,
-                    alignItems: 'center',
-                    borderRadius: 14,
-                  }}
-                >
-                  <AppText variant="caption" weight="bold">
-                    {node.code}
-                  </AppText>
-                  <AppText tone="secondary" style={{ fontSize: 9, marginTop: 1 }}>
-                    {node.status}
-                  </AppText>
-                </SolidCard>
-              ))}
-            </View>
+
 
             {/* Official Campus Announcements & Broadcasts */}
             <AnnouncementsWidget scope="global" />
@@ -122,34 +86,7 @@ export default function AdminDashboard() {
             </AppText>
 
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: spacing.md, justifyContent: 'space-between' }}>
-              <Pressable
-                onPress={() => {
-                  haptics.light();
-                  setCoursesModalOpen(true);
-                }}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 200 : 140 }}
-              >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
-                    padding: 12,
-                    backgroundColor: colors.surface,
-                    height: 115,
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Ionicons name="book-outline" size={20} color={colors.brandPrimary} />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
-                      Courses
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
-                      Curriculum & covers
-                    </AppText>
-                  </View>
-                </SolidCard>
-              </Pressable>
+
 
               <Pressable
                 onPress={() => {
@@ -180,61 +117,9 @@ export default function AdminDashboard() {
                 </SolidCard>
               </Pressable>
 
-              <Pressable
-                onPress={() => {
-                  haptics.light();
-                  setDirectoryModalOpen(true);
-                }}
-                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : ('100%' as any), minWidth: isDesktop ? 200 : undefined }}
-              >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
-                    padding: 12,
-                    backgroundColor: colors.surface,
-                    height: isDesktop ? 115 : 70,
-                    flexDirection: isDesktop ? 'column' : 'row',
-                    alignItems: isDesktop ? 'flex-start' : 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Ionicons name="people-outline" size={20} color="#38BDF8" />
-                    <View>
-                      <AppText weight="bold" variant="bodySmall">
-                        User Directory
-                      </AppText>
-                      <AppText tone="secondary" variant="caption" style={{ marginTop: 1, fontSize: 10 }}>
-                        Manage campus accounts, roles & avatars
-                      </AppText>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                </SolidCard>
-              </Pressable>
             </View>
 
-            {/* Platform Health Matrix */}
-            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm, marginTop: spacing.sm }}>
-              Campus Platform Metrics
-            </AppText>
-            {health ? (
-              <SolidCard frosted style={{ marginBottom: spacing.lg, borderRadius: 20 }}>
-                <HealthMetricBar label="Student MAU (target: 60% @ 6mo)" valuePct={health.studentMauPct} greenMin={60} amberMin={40} />
-                <HealthMetricBar label="Alumni MAU (target: 30% @ 9mo)" valuePct={health.alumniMauPct} greenMin={30} amberMin={20} />
-                <HealthMetricBar label="Event participation" valuePct={health.eventParticipationPct} greenMin={40} amberMin={20} />
-                <HealthMetricBar label="Connection activation" valuePct={health.connectionActivationPct} greenMin={25} amberMin={15} />
-                <HealthMetricBar label="Notification read rate" valuePct={health.notificationReadRatePct} greenMin={90} amberMin={70} />
-                <HealthMetricBar
-                  label="Moderation false-positive rate"
-                  valuePct={health.moderationFalsePositivePct}
-                  greenMin={2}
-                  amberMin={5}
-                  invert
-                />
-              </SolidCard>
-            ) : null}
+
           </View>
 
           {/* Right Sticky Column on Desktop */}
@@ -301,7 +186,7 @@ export default function AdminDashboard() {
                     { icon: 'checkmark-done-circle-outline' as const, label: 'Student Verifications', desc: 'Review pending ID submissions', route: '/(admin)/verification-requests' },
                     { icon: 'list-outline' as const, label: 'Security Audit Logs', desc: 'Immutable compliance trail', route: '/(admin)/audit-logs' },
                     { icon: 'toggle-outline' as const, label: 'Feature Flags', desc: 'Toggle modules & features', route: '/(admin)/feature-controls' },
-                    { icon: 'analytics-outline' as const, label: 'Pulse Analytics', desc: 'Engagement & cohort retention', route: '/(admin)/pulse-analytics' },
+
                   ].map((item) => (
                     <Pressable
                       key={item.label}
@@ -424,9 +309,7 @@ export default function AdminDashboard() {
       </ScrollView>
 
       {/* Admin Entities Modals */}
-      <ManageCoursesModal visible={coursesModalOpen} onClose={() => setCoursesModalOpen(false)} />
       <ManageResourcesModal visible={resourcesModalOpen} onClose={() => setResourcesModalOpen(false)} />
-      <ManageDirectoryModal visible={directoryModalOpen} onClose={() => setDirectoryModalOpen(false)} />
     </ScreenContainer>
   );
 }

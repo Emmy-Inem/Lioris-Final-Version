@@ -1,9 +1,7 @@
 import { supabase } from './supabase';
 import { Conversation, Message } from './types';
-import { mockConversations, mockMessages } from './mockData';
 import { generateUUID } from '../utils/uuid';
 import { getSessionUser } from '../auth/tokenStorage';
-import { isMockDataVisible } from './mockDataSettings';
 
 // Real conversations/messages only (db-fetched or locally created) - never
 // seeded with mockData.ts fixtures. Fixtures only ever come from
@@ -12,13 +10,7 @@ import { isMockDataVisible } from './mockDataSettings';
 let localConversations: Conversation[] = [];
 const localMessages: Record<string, Message[]> = {};
 
-function getMockConversations(): Conversation[] {
- return isMockDataVisible() ? mockConversations : [];
-}
 
-function getMockMessagesFor(conversationId: string): Message[] {
- return isMockDataVisible() ? mockMessages[conversationId] ?? [] : [];
-}
 
 export async function listConversations(): Promise<Conversation[]> {
  try {
@@ -47,12 +39,12 @@ export async function listConversations(): Promise<Conversation[]> {
  merged.push(c);
  }
  }
- localConversations = merged;
- return [...merged, ...getMockConversations()];
- } catch (err) {
- console.warn('[Messaging] listConversations failed, showing local pool only:', err);
- return [...localConversations, ...getMockConversations()];
- }
+  localConversations = merged;
+  return [...merged];
+  } catch (err) {
+  console.warn('[Messaging] listConversations failed, showing local pool only:', err);
+  return [...localConversations];
+  }
 }
 
 export async function archiveConversation(id: string): Promise<void> {
@@ -151,13 +143,13 @@ export async function listMessages(
  }
  }
  localMessages[conversationId] = combined;
- return { items: [...combined, ...getMockMessagesFor(conversationId)] };
+ return { items: [...combined] };
  }
  } catch (err) {
  console.warn('[Messaging] listMessages failed, showing local pool only:', err);
  }
 
- return { items: [...(localMessages[conversationId] ?? []), ...getMockMessagesFor(conversationId)] };
+ return { items: [...(localMessages[conversationId] ?? [])] };
 }
 
 /**

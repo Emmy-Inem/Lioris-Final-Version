@@ -16,7 +16,6 @@ import { OfflineBanner, setupNetworkAwareQueries } from'@/components/OfflineBann
 import { addNotificationResponseListener } from'@/notifications/push';
 
 import { loadBlockedUserIds } from '@/api/connections';
-import { hydrateMockDataVisibility, subscribeMockDataVisible } from '@/api/mockDataSettings';
 
 import { FeatureFlagsProvider } from '@/context/FeatureFlagsContext';
 import { ToastProvider } from '@/context/ToastContext';
@@ -36,32 +35,14 @@ export default function RootLayout() {
  }
  }, [fontsLoaded, fontError]);
 
- // Every src/api/*.ts module reads isMockDataVisible() live, so flipping the
- // Settings -> Super Admin Config -> "Mock Data Visibility" toggle already
- // changes what the NEXT fetch of any list returns. What it doesn't do on
- // its own is force screens that already have cached results to refetch -
- // React Query only refetches on invalidation, remount, or a stale-time/
- // focus trigger, so a marketplace/jobs/forum/etc. screen the admin already
- // had open would keep showing its old (mock-blended) data indefinitely.
- // Subscribing here, once, at the root, means flipping the toggle from
- // *any* screen immediately invalidates every cached query app-wide, so
- // the purge is actually visible right away instead of only affecting
- // screens visited after the toggle.
- useEffect(() => {
- const unsubscribe = subscribeMockDataVisible(() => {
- queryClient.invalidateQueries().catch(() => {});
- });
- return unsubscribe;
- }, []);
+
 
  useEffect(() => {
  onLayoutRootView();
  loadBlockedUserIds().catch(() => {
  // background load
  });
- hydrateMockDataVisibility().catch(() => {
- // background load - keeps the build default until this resolves
- });
+
     if (typeof document !== 'undefined') {
       document.title = 'Lioris';
 

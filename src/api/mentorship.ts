@@ -1,10 +1,8 @@
 import { Mentorship, MentorProfile } from './types';
-import { mockMentorships, mockMentorProfiles } from './mockData';
 import { createNotification } from './notifications';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
-import { isMockDataVisible } from './mockDataSettings';
 
 // Mentorships this session has *successfully* written to Supabase, kept
 // here only so they render instantly before the next refetch. Never mixed
@@ -12,9 +10,7 @@ import { isMockDataVisible } from './mockDataSettings';
 // and only while the admin's "Mock Data Visibility" toggle is on.
 let locallyCreatedMentorships: Mentorship[] = [];
 
-function getMockMentorshipsPool(): Mentorship[] {
- return isMockDataVisible() ? mockMentorships : [];
-}
+
 
 export async function listMentorships(): Promise<Mentorship[]> {
  try {
@@ -46,17 +42,17 @@ export async function listMentorships(): Promise<Mentorship[]> {
  createdAt: row.created_at,
  }));
 
- const merged = [...dbMentorships];
- for (const item of [...locallyCreatedMentorships, ...getMockMentorshipsPool()]) {
- if (!merged.some((m) => m.id === item.id)) {
- merged.push(item);
- }
- }
- return merged;
- } catch (err) {
- console.warn('[Mentorship] listMentorships failed, showing local pool only:', err);
- return [...locallyCreatedMentorships, ...getMockMentorshipsPool()];
- }
+  const merged = [...dbMentorships];
+  for (const item of [...locallyCreatedMentorships]) {
+  if (!merged.some((m) => m.id === item.id)) {
+  merged.push(item);
+  }
+  }
+  return merged;
+  } catch (err) {
+  console.warn('[Mentorship] listMentorships failed, showing local pool only:', err);
+  return [...locallyCreatedMentorships];
+  }
 }
 
 export interface MentorSearchQuery {
@@ -65,26 +61,7 @@ export interface MentorSearchQuery {
 }
 
 function filterMockMentors(query: MentorSearchQuery): MentorProfile[] {
- let results = isMockDataVisible() ? [...mockMentorProfiles] : [];
-
- if (query.focusArea && query.focusArea !== 'All Fields') {
- results = results.filter((m) =>
- m.expertiseTags.some((tag) => tag.toLowerCase() === query.focusArea!.toLowerCase()),
- );
- }
-
- if (query.q) {
- const q = query.q.toLowerCase();
- results = results.filter(
- (m) =>
- m.fullName.toLowerCase().includes(q) ||
- m.bio.toLowerCase().includes(q) ||
- m.company?.toLowerCase().includes(q) ||
- m.expertiseTags.some((tag) => tag.toLowerCase().includes(q)),
- );
- }
-
- return results;
+ return [];
 }
 
 export async function searchMentors(query: MentorSearchQuery = {}): Promise<MentorProfile[]> {
@@ -158,12 +135,11 @@ export async function requestMentorship(
  throw new Error('Could not send this mentorship request. Please try again.');
  }
 
- const mentor = mockMentorProfiles.find((m) => m.id === mentorId);
  const created: Mentorship = {
  id: reqId,
  studentId,
  mentorId,
- mentorName: mentor?.fullName ?? 'Verified Mentor',
+ mentorName: 'Verified Mentor',
  status: 'pending',
  focusArea,
  };

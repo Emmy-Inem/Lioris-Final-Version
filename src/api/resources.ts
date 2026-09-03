@@ -1,66 +1,10 @@
 import { Resource } from './types';
-import { mockResources } from './mockData';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { isUserBlocked } from './connections';
 import { generateUUID } from '../utils/uuid';
-import { isMockDataVisible } from './mockDataSettings';
 
-const SEED_RESOURCES: Resource[] = [
- ...mockResources.map((r) => ({ ...r, approvalStatus: 'approved' as const })),
- {
- id: 'res-sub-1',
- title: 'CSC 415 Distributed Systems Midterm Review & Solutions (2024)',
- courseCode: 'CSC 415',
- department: 'Computer Science & AI',
- category: 'Past Questions',
- description: 'Detailed past question breakdown with concurrency proofs, Byzantine fault tolerance diagrams, and consensus notes.',
- fileSize: '4.2 MB',
- authorName: 'Chioma Okonkwo',
- authorId: 'user-chioma',
- authorRole: 'student',
- likesCount: 0,
- downloadsCount: 0,
- createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
- approvalStatus: 'pending',
- fileType: 'PDF',
- semester: 'Harmattan / First',
- academicLevel: '400L',
- syllabusTopic: 'Distributed Consensus & Raft',
- },
- {
- id: 'res-sub-2',
- title: 'EEE 305 Signal Processing Formula Sheet & Matlab Laboratory Scripts',
- courseCode: 'EEE 305',
- department: 'Electrical Engineering',
- category: 'Notes',
- description: 'Fourier transform summary, Z-transforms, and Matlab frequency filter design templates.',
- fileSize: '6.8 MB',
- authorName: 'Adekunle Gold',
- authorId: 'user-adekunle',
- authorRole: 'student',
- likesCount: 0,
- downloadsCount: 0,
- createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
- approvalStatus: 'pending',
- fileType: 'ZIP',
- semester: 'Rain / Second',
- academicLevel: '300L',
- syllabusTopic: 'Fast Fourier Transform & Filter Banks',
- },
-];
-
-// Resources this session has *successfully* written to Supabase, kept
-// here only so they render instantly before the next refetch (and so
-// approve/reject/update/delete on this session's own uploads can find
-// them locally). Never seeded with fixtures - those only come from
-// getSeedResources() below, and only while the admin's "Mock Data
-// Visibility" toggle is on.
 let locallyCreatedResources: Resource[] = [];
-
-function getSeedResources(): Resource[] {
- return isMockDataVisible() ? SEED_RESOURCES : [];
-}
 
 export interface ResourcesQuery {
  q?: string;
@@ -149,7 +93,7 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
  // Merge unique - local pool only ever contributes this session's own
  // just-created resources (always) plus seed fixtures (only when the
  // admin mock-data toggle is on).
- const pool = [...locallyCreatedResources, ...getSeedResources()];
+ const pool = [...locallyCreatedResources];
  const merged = [...dbResources];
  for (const r of pool) {
  if (!merged.some((m) => m.id === r.id) && !isUserBlocked(r.authorId)) {
@@ -163,7 +107,7 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
  return filterResources(merged, query);
  } catch (err) {
  console.warn('[Resources] listResources failed, showing local pool only:', err);
- return filterResources([...locallyCreatedResources, ...getSeedResources()], query);
+ return filterResources([...locallyCreatedResources], query);
  }
 }
 
@@ -351,8 +295,7 @@ export async function updateResource(id: string, payload: Partial<Resource>): Pr
 
  if (updated) return updated;
 
- const seedMatch = getSeedResources().find((r) => r.id === id);
- return { ...(seedMatch as Resource), id, ...payload };
+  return { id, ...payload } as Resource;
 }
 
 export async function deleteResource(id: string): Promise<boolean> {

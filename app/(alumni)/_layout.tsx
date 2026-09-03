@@ -46,19 +46,8 @@ export default function AlumniLayout() {
  ),
  }}
  />
- <Tabs.Screen
- name="alumni-hub"
- options={{
- title: 'Alumni Hub',
- tabBarIcon: ({ focused, size }) => (
- <TabIcon name={focused ? 'school' : 'school-outline'} focused={focused} size={size} />
- ),
- }}
- />
-
  {/* Reachable via header avatar / dashboard / Alumni Hub links, not bottom tabs. */}
  <Tabs.Screen name="events" options={{ href: null }} />
- <Tabs.Screen name="directory" options={{ href: null }} />
  <Tabs.Screen name="profile" options={{ href: null }} />
  <Tabs.Screen name="mentorship" options={{ href: null }} />
  <Tabs.Screen name="notifications" options={{ href: null }} />

@@ -1,8 +1,6 @@
 import { api } from './client';
 import { UserProfile, UserRole } from './types';
-import { withMockFallback } from './withMockFallback';
-import { FALL_BACK_TO_MOCKS } from './config';
-import { isMockDataVisible, subscribeMockDataVisible } from './mockDataSettings';
+
 import { supabase } from './supabase';
 import { getInstitutionByCode, LAUNCH_INSTITUTIONS } from './institutions';
 import { getSessionUser } from '../auth/tokenStorage';
@@ -25,9 +23,7 @@ const profileState = new Map<string, UserProfile>();
 // whose profile gets built, but everyone already cached here would keep
 // showing the old fabricated numbers indefinitely. Clearing the cache here
 // forces mockProfileFor to rebuild honestly on the next read.
-subscribeMockDataVisible(() => {
- profileState.clear();
-});
+
 
 /**
  * Placeholder profile used only until a real `profiles` row exists/loads
@@ -50,50 +46,13 @@ function mockProfileFor(user: { id: string; fullName: string; role: UserRole; em
  const resolvedEmail = user.email || `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`;
  const username = user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
 
- const created: UserProfile = isMockDataVisible()
- ? {
- id: user.id,
- fullName: user.fullName,
- username,
- email: resolvedEmail,
- userType: user.role,
- graduationYear: isAlumni ? 2022 : 2026,
- connectionsCount: isAlumni ? 142 : 48,
- bio: isAlumni
- ? 'Lead Software Engineer @ Paystack. Mentoring student developers and sponsoring open STEM research.'
- : isStaff
- ? 'Faculty Coordinator & Lecturer, Department of Computer Sciences. Campus Tech Advisor.'
- : isAdmin
- ? 'Platform Root Administrator. Overseeing campus multi-node workspaces & moderation.'
- : 'Computer Science senior building mobile systems & AI apps. Active campus peer mentor.',
- department: 'Computer Science & AI',
- interests: ['Software Engineering', 'Cloud Architecture', 'Mobile Systems', 'Campus AI', 'UI/UX Design'],
- institutionName: 'University of Ibadan',
- institutionCode: 'UI',
- avatarUrl: isAlumni ? 'avatar_female' : isStaff ? 'avatar_mentor' : isAdmin ? 'avatar_alumni_2' : 'avatar_male',
- coverUrl: 'campus_students_photo',
- isVerified: isAdmin,
- verificationStatus: isAdmin ? 'verified' : 'none',
- xp: 850,
- level: 4,
- reputationScore: 320,
- trustLevel: 8,
- streakDays: 28,
- postsCount: 4,
- resourcesCount: 6,
- eventsCount: 5,
- badgesCount: 3,
- followersCount: 88,
- followingCount: 64,
- }
- : {
+ const created: UserProfile = {
  id: user.id,
  fullName: user.fullName,
  username,
  email: resolvedEmail,
  userType: user.role,
  graduationYear: undefined,
- connectionsCount: 0,
  bio: '',
  department: '',
  interests: [],
@@ -103,11 +62,6 @@ function mockProfileFor(user: { id: string; fullName: string; role: UserRole; em
  coverUrl: undefined,
  isVerified: isAdmin,
  verificationStatus: isAdmin ? 'verified' : 'none',
- xp: 0,
- level: 1,
- reputationScore: 0,
- trustLevel: 0,
- streakDays: 0,
  postsCount: 0,
  resourcesCount: 0,
  eventsCount: 0,
@@ -241,17 +195,13 @@ export function markVerificationRejected(userId: string) {
 }
 
 export async function verifyProfileEmail(userId: string): Promise<UserProfile> {
- if (!FALL_BACK_TO_MOCKS) {
- const { data } = await api.post<UserProfile>('/profile/me/verify-email');
- return data;
- }
  try {
  const { data } = await api.post<UserProfile>('/profile/me/verify-email');
  return data;
  } catch {
  const current = profileState.get(userId);
  if (!current) throw new Error('Profile not found');
- const updated: UserProfile = { ...current, isVerified: true, xp: current.xp + 150, reputationScore: current.reputationScore + 150 };
+ const updated: UserProfile = { ...current, isVerified: true };
  profileState.set(userId, updated);
  return updated;
  }

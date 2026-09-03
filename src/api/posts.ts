@@ -1,10 +1,8 @@
 import { Post, PostVisibilityScope } from './types';
-import { mockPosts } from './mockData';
 import { supabase } from './supabase';
 import { isUserBlocked } from './connections';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
-import { isMockDataVisible } from './mockDataSettings';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -13,9 +11,6 @@ import { isMockDataVisible } from './mockDataSettings';
 // only while the admin's "Mock Data Visibility" toggle is on.
 let locallyCreatedPosts: Post[] = [];
 
-function getSeedPosts(): Post[] {
- return isMockDataVisible() ? mockPosts : [];
-}
 
 export interface FeedQuery {
  scope?: PostVisibilityScope;
@@ -89,7 +84,7 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
  // just-created posts (always) plus seed fixtures (only when the admin
  // mock-data toggle is on).
  const merged = [...dbPosts];
- for (const p of [...locallyCreatedPosts, ...getSeedPosts()]) {
+ for (const p of [...locallyCreatedPosts]) {
  if (!merged.some((m) => m.id === p.id)) {
  merged.push(p);
  }
@@ -97,12 +92,12 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
  return filterPosts(merged, query);
  } catch (err) {
  console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
- return filterPosts([...locallyCreatedPosts, ...getSeedPosts()], query);
+ return filterPosts([...locallyCreatedPosts], query);
  }
 }
 
 export async function listMyPosts(userId?: string): Promise<Post[]> {
- return [...locallyCreatedPosts, ...getSeedPosts()].filter(
+ return [...locallyCreatedPosts].filter(
  (p) =>
  p.authorId === 'me' ||
  p.authorId === 'student-me' ||
@@ -268,42 +263,8 @@ export interface PostComment {
  imageUrl?: string | null;
 }
 
-const SEED_COMMENTS: Record<string, PostComment[]> = {
- 'post-1': [
- {
- id: 'c1',
- postId: 'post-1',
- authorName: 'Amina Yusuf',
- authorRole: 'student',
- authorDepartment: '300L CS',
- content: 'Thanks for sharing! Does anyone have the past question solutions for CSC 301?',
- createdAt: new Date(Date.now() - 3600000).toISOString(),
- likesCount: 3,
- isLikedByMe: false,
- },
- {
- id: 'c2',
- postId: 'post-1',
- authorName: 'Dr. Adeyemi',
- authorRole: 'staff',
- authorDepartment: 'Faculty of Science',
- content: 'The review session will be held this Thursday at 2pm in LT2. Bring your laptops.',
- createdAt: new Date(Date.now() - 1800000).toISOString(),
- likesCount: 8,
- isLikedByMe: true,
- },
- ],
-};
 
-// Comments this session has *successfully* written to Supabase, kept here
-// only so they render instantly. Never seeded with fixtures - those only
-// come from getSeedComments() below, and only while the admin's "Mock
-// Data Visibility" toggle is on.
 const locallyCreatedComments: Record<string, PostComment[]> = {};
-
-function getSeedComments(postId: string): PostComment[] {
- return isMockDataVisible() ? SEED_COMMENTS[postId] ?? [] : [];
-}
 
 export async function listPostComments(postId: string): Promise<PostComment[]> {
  try {
@@ -332,7 +293,7 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  // just-created comments (always) plus seed fixtures (only when the
  // admin mock-data toggle is on).
  const merged = [...dbComments];
- for (const c of [...(locallyCreatedComments[postId] ?? []), ...getSeedComments(postId)]) {
+ for (const c of [...(locallyCreatedComments[postId] ?? [])]) {
  if (!merged.some((m) => m.id === c.id)) {
  merged.push(c);
  }
@@ -340,7 +301,7 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  return merged;
  } catch (err) {
  console.warn('[Posts] listPostComments failed, showing local pool only:', err);
- return [...(locallyCreatedComments[postId] ?? []), ...getSeedComments(postId)];
+ return [...(locallyCreatedComments[postId] ?? [])];
  }
 }
 
@@ -473,6 +434,5 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
 
  if (updated) return updated;
 
- const seedMatch = getSeedPosts().find((p) => p.id === postId);
- return { ...(seedMatch as Post), id: postId, ...updates };
+  return { id: postId, ...updates } as Post;
 }

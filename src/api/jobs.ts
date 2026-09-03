@@ -1,10 +1,8 @@
 import { JobListing } from './types';
-import { mockJobListings } from './mockData';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { isUserBlocked } from './connections';
-import { isMockDataVisible } from './mockDataSettings';
 
 export interface JobsQuery {
  q?: string;
@@ -19,7 +17,7 @@ export interface JobsQuery {
 let locallyCreatedJobs: JobListing[] = [];
 
 function getLocalPool(): JobListing[] {
- return [...locallyCreatedJobs, ...(isMockDataVisible() ? mockJobListings : [])];
+ return [...locallyCreatedJobs];
 }
 
 function filterJobs(pool: JobListing[], query: JobsQuery): JobListing[] {

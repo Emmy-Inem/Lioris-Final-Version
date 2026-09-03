@@ -57,27 +57,10 @@ export function PostDetailScreen() {
  queryFn: () => listFeedPosts(),
  });
 
- const post = posts?.find((p) => p.id === id) ?? {
- id: id ?? 'post-1',
- authorId: 'student-1',
- authorName: 'Diana Prince',
- authorRole: 'student'as const,
- title: 'CSC 301 Study Session & Algorithms Review Group',
- content: 'We are organizing an intensive peer study session on Dynamic Programming and Graph Algorithms ahead of midterm examinations. Feel free to join!',
- category: 'Academic',
- visibilityScope: 'student'as const,
- scopeVisibility: 'campus'as const,
- institutionCode: 'UI',
- imageUrl: 'campus_students_photo',
- likesCount: 24,
- commentsCount: 6,
- isLikedByMe: false,
- createdAt: new Date().toISOString(),
- courseTags: 'CSC 301, Algorithms',
- };
+ const post = posts?.find((p) => p.id === id);
 
- const [liked, setLiked] = useState(!!post.isLikedByMe);
- const [likesCount, setLikesCount] = useState(post.likesCount);
+ const [liked, setLiked] = useState(!!post?.isLikedByMe);
+ const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
  const [reposted, setReposted] = useState(false);
  const [bookmarked, setBookmarked] = useState(false);
  const [menuOpen, setMenuOpen] = useState(false);
@@ -101,91 +84,113 @@ export function PostDetailScreen() {
  const [commentLikedByMe, setCommentLikedByMe] = useState<Record<string, boolean>>({});
 
  // Poll state
- const [poll, setPoll] = useState(post.poll);
+ const [poll, setPoll] = useState(post?.poll ?? null);
+
+ React.useEffect(() => {
+   if (post) {
+     setLiked(!!post.isLikedByMe);
+     setLikesCount(post.likesCount);
+     setPoll(post.poll ?? null);
+   }
+ }, [post]);
 
  // Report state
  const [reportOpen, setReportOpen] = useState(false);
  const [reportReason, setReportReason] = useState('');
 
  const { data: comments, refetch: refetchComments } = useQuery({
- queryKey: ['post-comments', post.id],
- queryFn: () => listPostComments(post.id),
+ queryKey: ['post-comments', id],
+ queryFn: () => id ? listPostComments(id) : Promise.resolve([]),
+ enabled: !!id,
  });
 
  async function handleToggleLike() {
- haptics.light();
- const next = !liked;
- setLiked(next);
- setLikesCount((prev) => prev + (next ? 1 : -1));
- try {
- await togglePostLike(post.id, next);
- queryClient.invalidateQueries({ queryKey: ['feed'] });
- } catch {
- setLiked(!next);
- setLikesCount((prev) => prev + (next ? -1 : 1));
- }
+   if (!post) return;
+   haptics.light();
+   const next = !liked;
+   setLiked(next);
+   setLikesCount((prev) => prev + (next ? 1 : -1));
+   try {
+     await togglePostLike(post.id, next);
+     queryClient.invalidateQueries({ queryKey: ['feed'] });
+   } catch {
+     setLiked(!next);
+     setLikesCount((prev) => prev + (next ? -1 : 1));
+   }
  }
 
  async function handleVote(optionId: string) {
- if (!poll) return;
- haptics.medium();
- const hasVoted = poll.options.some((o) => o.isVotedByMe);
- if (hasVoted) return;
+   if (!poll || !post) return;
+   haptics.medium();
+   const hasVoted = poll.options.some((o) => o.isVotedByMe);
+   if (hasVoted) return;
 
- const nextOptions = poll.options.map((opt) =>
- opt.id === optionId ? { ...opt, votes: opt.votes + 1, isVotedByMe: true } : opt,
- );
- const nextPoll = {
- ...poll,
- options: nextOptions,
- totalVotes: poll.totalVotes + 1,
- };
- setPoll(nextPoll);
- await voteOnPoll(post.id, optionId);
- queryClient.invalidateQueries({ queryKey: ['feed'] });
+   const nextOptions = poll.options.map((opt) =>
+     opt.id === optionId ? { ...opt, votes: opt.votes + 1, isVotedByMe: true } : opt,
+   );
+   const nextPoll = {
+     ...poll,
+     options: nextOptions,
+     totalVotes: poll.totalVotes + 1,
+   };
+   setPoll(nextPoll);
+   await voteOnPoll(post.id, optionId);
+   queryClient.invalidateQueries({ queryKey: ['feed'] });
  }
 
  async function handleAddReply() {
- if (!newReply.trim() && !attachedReplyMedia) return;
- setSubmittingReply(true);
- try {
- const commentPayload = replyingToAuthor ? `@${replyingToAuthor} ${newReply.trim()}` : newReply.trim();
- await createPostComment(
- post.id,
- commentPayload,
- user?.fullName ?? 'You',
- user?.role ?? 'student',
- attachedReplyMedia || undefined,
- );
- setNewReply('');
- setAttachedReplyMedia(null);
- setReplyingToAuthor(null);
- await refetchComments();
- await queryClient.invalidateQueries({ queryKey: ['post-comments', post.id] });
- await queryClient.invalidateQueries({ queryKey: ['feed'] });
- haptics.success();
- } catch {
- Alert.alert('Error', 'Could not submit reply.');
- } finally {
- setSubmittingReply(false);
- }
+   if (!post || (!newReply.trim() && !attachedReplyMedia)) return;
+   setSubmittingReply(true);
+   try {
+     const commentPayload = replyingToAuthor ? `@${replyingToAuthor} ${newReply.trim()}` : newReply.trim();
+     await createPostComment(
+       post.id,
+       commentPayload,
+       user?.fullName ?? 'You',
+       user?.role ?? 'student',
+       attachedReplyMedia || undefined,
+     );
+     setNewReply('');
+     setAttachedReplyMedia(null);
+     setReplyingToAuthor(null);
+     await refetchComments();
+     await queryClient.invalidateQueries({ queryKey: ['post-comments', post.id] });
+     await queryClient.invalidateQueries({ queryKey: ['feed'] });
+     haptics.success();
+   } catch {
+     Alert.alert('Error', 'Could not submit reply.');
+   } finally {
+     setSubmittingReply(false);
+   }
  }
 
  async function handleToggleCommentLikeAction(commentId: string, currentCount: number) {
- haptics.light();
- const isCurrentlyLiked = commentLikedByMe[commentId] ?? false;
- const nextLiked = !isCurrentlyLiked;
- setCommentLikedByMe((prev) => ({ ...prev, [commentId]: nextLiked }));
- setCommentLikes((prev) => ({
- ...prev,
- [commentId]: (prev[commentId] ?? currentCount) + (nextLiked ? 1 : -1),
- }));
- await toggleCommentLike(post.id, commentId, nextLiked);
+   if (!post) return;
+   haptics.light();
+   const isCurrentlyLiked = commentLikedByMe[commentId] ?? false;
+   const nextLiked = !isCurrentlyLiked;
+   setCommentLikedByMe((prev) => ({ ...prev, [commentId]: nextLiked }));
+   setCommentLikes((prev) => ({
+     ...prev,
+     [commentId]: (prev[commentId] ?? currentCount) + (nextLiked ? 1 : -1),
+   }));
+   await toggleCommentLike(post.id, commentId, nextLiked);
  }
 
- const postImageSource = post.imageUrl
+  const postImageSource = post?.imageUrl
  ? STOCK_IMAGES[post.imageUrl] ?? (post.imageUrl.startsWith('http') ? { uri: post.imageUrl } : null)
  : null;
+
+  if (!post) {
+    return (
+      <ScreenContainer glow={true}>
+        <AppHeader />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <AppText tone="secondary">Post not found or loading...</AppText>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
  return (
  <ScreenContainer glow={true}>
