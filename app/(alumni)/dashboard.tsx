@@ -276,31 +276,14 @@ export default function AlumniDashboard() {
             >
               <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2A1F3D' : '#F5F3FF', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="person-add" size={18} color="#8B5CF6" />
+                  <Ionicons name="people-circle" size={18} color="#8B5CF6" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold">Connections</AppText>
-                  <AppText variant="caption" tone="secondary">Peer requests</AppText>
+                  <AppText variant="bodySmall" weight="bold">Alumni Network</AppText>
+                  <AppText variant="caption" tone="secondary">Fellow directory</AppText>
                 </View>
               </SolidCard>
             </Pressable>
-
-            {isFeatureEnabled('marketplace') && (
-              <Pressable
-                onPress={() => router.push('/(alumni)/marketplace')}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
-              >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#33241A' : '#FFF7ED', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="cart" size={18} color="#F97316" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold">Marketplace</AppText>
-                    <AppText variant="caption" tone="secondary">Campus trade</AppText>
-                  </View>
-                </SolidCard>
-              </Pressable>
-            )}
           </View>
         </View>
 
@@ -511,41 +494,44 @@ export default function AlumniDashboard() {
           </View>
         </View>
 
-        {/* 8. Institutional Direct Portal Shortcuts */}
-        {(portalLinks ?? []).length > 0 && (
-          <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
-              <Ionicons name="link-outline" size={18} color={colors.brandPrimary} />
-              <AppText variant="h3" weight="bold">
-                Official University Services
-              </AppText>
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {(portalLinks ?? []).slice(0, 4).map((portal: any) => (
-                <Pressable
-                  key={portal.id}
-                  onPress={() => handleOpenPortal(portal.url)}
-                  style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 220 : 150 }}
-                >
-                  <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name={portal.icon || 'globe-outline'} size={18} color={colors.brandPrimary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
-                        {portal.title}
-                      </AppText>
-                      <AppText variant="caption" tone="secondary">
-                        {portal.category} • Official
-                      </AppText>
-                    </View>
-                    <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
-                  </SolidCard>
-                </Pressable>
-              ))}
-            </View>
+        {/* 8. Institutional Alumni & Graduate Services */}
+        <View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <Ionicons name="school-outline" size={18} color={colors.brandPrimary} />
+            <AppText variant="h3" weight="bold">
+              Alumni & Graduate Services
+            </AppText>
           </View>
-        )}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {[
+              { id: 'alumni-1', title: 'Alumni Relations & Chapter', category: 'Fellowship', url: 'https://alumni.ui.edu.ng/', icon: 'ribbon-outline' as const },
+              { id: 'alumni-2', title: 'e-Transcript & Records Desk', category: 'Certificates', url: 'https://etranscript.ui.edu.ng/', icon: 'document-text-outline' as const },
+              { id: 'alumni-3', title: 'Degree Verification Service', category: 'Registry', url: 'https://verification.ui.edu.ng/', icon: 'shield-checkmark-outline' as const },
+              { id: 'alumni-4', title: 'Endowment & Giving Fund', category: 'Advancement', url: 'https://advancement.ui.edu.ng/', icon: 'gift-outline' as const },
+            ].map((portal) => (
+              <Pressable
+                key={portal.id}
+                onPress={() => handleOpenPortal(portal.url)}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 220 : 150 }}
+              >
+                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name={portal.icon} size={18} color={colors.brandPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                      {portal.title}
+                    </AppText>
+                    <AppText variant="caption" tone="secondary">
+                      {portal.category} • Official
+                    </AppText>
+                  </View>
+                  <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+                </SolidCard>
+              </Pressable>
+            ))}
+          </View>
+        </View>
       </ScrollView>
     </ScreenContainer>
   );

@@ -18,14 +18,19 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listReports } from '@/api/moderation';
+import { listVerificationRequests } from '@/api/verification';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 import { haptics } from '@/utils/haptics';
 
 export default function AdminDashboard() {
- const { colors, spacing, radius, isDark } = useTheme();
- const { isDesktop } = useResponsive();
- const { user } = useAuth();
- const { data: openReports } = useQuery({ queryKey: ['reports', 'open'], queryFn: () => listReports({ status: 'open' }) });
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const { user } = useAuth();
+  const { data: openReports } = useQuery({ queryKey: ['reports', 'open'], queryFn: () => listReports({ status: 'open' }) });
+  const { data: pendingVerifications } = useQuery({ queryKey: ['verifications', 'pending'], queryFn: listVerificationRequests });
+
+  const pendingVerificationsCount = pendingVerifications?.length ?? 0;
+  const openReportsCount = openReports?.length ?? 0;
 
  // Admin Management Modals
  const [resourcesModalOpen, setResourcesModalOpen] = useState(false);
@@ -72,28 +77,89 @@ export default function AdminDashboard() {
               </View>
             </View>
 
+            {/* Urgent Administrative Alerts */}
+            {(pendingVerificationsCount > 0 || openReportsCount > 0) && (
+              <View style={{ gap: spacing.xs, marginBottom: spacing.sm }}>
+                {pendingVerificationsCount > 0 && (
+                  <Pressable onPress={() => router.push('/(admin)/verification-requests')}>
+                    <SolidCard
+                      radius={16}
+                      style={{
+                        padding: 12,
+                        backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5',
+                        borderWidth: 1,
+                        borderColor: '#10B981',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <Ionicons name="shield-checkmark" size={20} color="#10B981" />
+                        <View style={{ flex: 1 }}>
+                          <AppText variant="bodySmall" weight="bold" style={{ color: '#10B981' }}>
+                            {pendingVerificationsCount} ID Verification Request{pendingVerificationsCount > 1 ? 's' : ''} Pending
+                          </AppText>
+                          <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                            Review matric credentials and grant verified badges
+                          </AppText>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color="#10B981" />
+                    </SolidCard>
+                  </Pressable>
+                )}
 
+                {openReportsCount > 0 && (
+                  <Pressable onPress={() => router.push('/(admin)/moderation-queue')}>
+                    <SolidCard
+                      radius={16}
+                      style={{
+                        padding: 12,
+                        backgroundColor: isDark ? '#2E1A1A' : '#FEF2F2',
+                        borderWidth: 1,
+                        borderColor: '#EF4444',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <Ionicons name="flag" size={20} color="#EF4444" />
+                        <View style={{ flex: 1 }}>
+                          <AppText variant="bodySmall" weight="bold" style={{ color: '#EF4444' }}>
+                            {openReportsCount} Content Moderation Flag{openReportsCount > 1 ? 's' : ''} Open
+                          </AppText>
+                          <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                            Review reported student submissions and forum posts
+                          </AppText>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color="#EF4444" />
+                    </SolidCard>
+                  </Pressable>
+                )}
+              </View>
+            )}
 
             {/* Official Campus Announcements & Broadcasts */}
             <AnnouncementsWidget scope="global" />
 
-            {/* Academic & Platform Entity Management Hub */}
+            {/* Administrative Operations & Control Desk */}
             <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
-              Content & Entity Management
+              Administrative Operations & Controls
             </AppText>
             <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.sm }}>
-              Manage courses, resources, directory profiles and cover media
+              Campus verifications, content safety, feature switches, and audit logs
             </AppText>
 
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: spacing.md, justifyContent: 'space-between' }}>
-
-
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: spacing.md }}>
               <Pressable
                 onPress={() => {
                   haptics.light();
-                  setResourcesModalOpen(true);
+                  router.push('/(admin)/verification-requests');
                 }}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 200 : 140 }}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
               >
                 <SolidCard
                   frosted
@@ -105,18 +171,176 @@ export default function AdminDashboard() {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <Ionicons name="folder-open-outline" size={20} color={colors.brandAccent} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Ionicons name="checkmark-circle-outline" size={22} color="#10B981" />
+                    {pendingVerificationsCount > 0 ? (
+                      <Badge label={`${pendingVerificationsCount} pending`} tone="warning" />
+                    ) : (
+                      <Badge label="Cleared" tone="success" />
+                    )}
+                  </View>
                   <View>
                     <AppText weight="bold" variant="bodySmall">
-                      Resources
+                      ID Verifications
                     </AppText>
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
-                      Files & past exams
+                      Matric & alumni IDs
                     </AppText>
                   </View>
                 </SolidCard>
               </Pressable>
 
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/moderation-queue');
+                }}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 115,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Ionicons name="shield-checkmark-outline" size={22} color="#EF4444" />
+                    {openReportsCount > 0 ? (
+                      <Badge label={`${openReportsCount} flags`} tone="critical" />
+                    ) : (
+                      <Badge label="Safe" tone="success" />
+                    )}
+                  </View>
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Moderation Queue
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Reported campus content
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/feature-controls');
+                }}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 115,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="options-outline" size={22} color={colors.brandPrimary} />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Feature Switches
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Toggle campus modules
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/user-directory');
+                }}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 115,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="people-outline" size={22} color="#8B5CF6" />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      User Directory
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Manage all accounts
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/audit-logs');
+                }}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 115,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="key-outline" size={22} color="#F59E0B" />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Security Audit
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Forensic activity logs
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setResourcesModalOpen(true);
+                }}
+                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 180 : 140 }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 115,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="folder-open-outline" size={22} color={colors.brandAccent} />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Academic Resources
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Past papers & notes
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
             </View>
 
 

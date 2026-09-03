@@ -33,40 +33,56 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Home',
+          title: 'Overview',
           tabBarIcon: ({ focused, size }) => (
-            <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} size={size} />
+            <TabIcon name={focused ? 'grid' : 'grid-outline'} focused={focused} size={size} />
           ),
         }}
       />
       <Tabs.Screen
-        name="forum"
+        name="verification-requests"
         options={{
-          title: 'Forum',
+          title: 'Verifications',
           tabBarIcon: ({ focused, size }) => (
-            <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />
+            <TabIcon name={focused ? 'checkmark-circle' : 'checkmark-circle-outline'} focused={focused} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="moderation-queue"
+        options={{
+          title: 'Moderation',
+          tabBarIcon: ({ focused, size }) => (
+            <TabIcon name={focused ? 'shield-checkmark' : 'shield-outline'} focused={focused} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="feature-controls"
+        options={{
+          title: 'Features',
+          tabBarIcon: ({ focused, size }) => (
+            <TabIcon name={focused ? 'options' : 'options-outline'} focused={focused} size={size} />
           ),
         }}
       />
       <Tabs.Screen
         name="platform-config"
         options={{
-          title: 'Admin Desk',
+          title: 'Console',
           tabBarIcon: ({ focused, size }) => (
-            <TabIcon name={focused ? 'shield' : 'shield-outline'} focused={focused} size={size} />
+            <TabIcon name={focused ? 'settings' : 'settings-outline'} focused={focused} size={size} />
           ),
         }}
       />
 
       {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
+      <Tabs.Screen name="forum" options={{ href: null }} />
       <Tabs.Screen name="super-admin-config" options={{ href: null }} />
-      <Tabs.Screen name="moderation-queue" options={{ href: null }} />
       <Tabs.Screen name="reports" options={{ href: null }} />
-      <Tabs.Screen name="feature-controls" options={{ href: null }} />
       <Tabs.Screen name="user-directory" options={{ href: null }} />
       <Tabs.Screen name="audit-logs" options={{ href: null }} />
       <Tabs.Screen name="moderation-audit-log" options={{ href: null }} />
-      <Tabs.Screen name="verification-requests" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="search" options={{ href: null }} />

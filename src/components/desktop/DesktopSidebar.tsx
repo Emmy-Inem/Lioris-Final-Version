@@ -97,7 +97,7 @@ export function DesktopSidebar() {
  { id: 'forum', label: 'Faculty Forum', href: '/(staff)/forum', icon: 'chatbubbles' },
  { id: 'announcements', label: 'Broadcasts', href: '/(staff)/announcements', icon: 'megaphone' },
  { id: 'moderation', label: 'Moderation Desk', href: '/(staff)/moderation', icon: 'shield-checkmark' },
- { id: 'events', label: 'Campus Events', href: '/(staff)/events', icon: 'calendar', flagKey: 'campus_events' },
+ { id: 'events', label: 'Campus Events', href: '/(staff)/events-list', icon: 'calendar', flagKey: 'campus_events' },
  { id: 'messages', label: 'Direct Messages', href: '/(staff)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
  { id: 'notifications', label: 'Staff Alerts', href: '/(staff)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
  { id: 'profile', label: 'Faculty Profile', href: '/(staff)/profile', icon: 'person' },
