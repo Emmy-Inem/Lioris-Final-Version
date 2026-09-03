@@ -193,34 +193,35 @@ export default function MarketplaceScreen() {
  <AppHeader />
 
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
- <View>
- <AppText variant="h1" weight="bold">
- Campus Marketplace
- </AppText>
- <AppText tone="secondary" variant="bodySmall">
- Buy & sell books, gadgets, and campus gear with escrow
- </AppText>
- </View>
- <Pressable
- onPress={() => setSellModalOpen(true)}
- accessibilityRole="button"
- accessibilityLabel="Sell an item"
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 4,
- backgroundColor: colors.brandPrimary,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.md,
- paddingVertical: 8,
- }}
- >
- <Ionicons name="add" size={18} color="#FFFFFF" />
- <AppText weight="bold" tone="inverse" variant="caption">
- List Item
- </AppText>
- </Pressable>
- </View>
+        <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
+          <AppText variant="h1" weight="bold" numberOfLines={1}>
+            Campus Marketplace
+          </AppText>
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+            Buy & sell books, gadgets, and campus gear with escrow
+          </AppText>
+        </View>
+        <Pressable
+          onPress={() => setSellModalOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Sell an item"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: colors.brandPrimary,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 8,
+            flexShrink: 0,
+          }}
+        >
+          <Ionicons name="add" size={18} color="#FFFFFF" />
+          <AppText weight="bold" tone="inverse" variant="caption">
+            List Item
+          </AppText>
+        </Pressable>
+      </View>
 
  <View style={{ flex: 1 }}>
  <View

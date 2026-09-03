@@ -192,36 +192,37 @@ export default function JobsScreen() {
  <>
  <AppHeader />
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
- <View style={{ flex: 1, marginRight: spacing.sm }}>
- <AppText variant="h1" weight="bold">
- Career & Internships
- </AppText>
- <AppText tone="secondary" variant="bodySmall">
- Verified student roles, alumni referrals & industry gigs
- </AppText>
- </View>
- <Pressable
- onPress={() => {
- haptics.light();
- setCreateModalOpen(true);
- }}
- accessibilityRole="button"
- accessibilityLabel="Post a new job opening"
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 4,
- backgroundColor: colors.brandPrimary,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.md,
- paddingVertical: 8,
- }}
- >
- <Ionicons name="add" size={18} color="#FFFFFF" />
- <AppText weight="bold" tone="inverse" variant="caption">
- Post Job
- </AppText>
- </Pressable>
+          <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
+            <AppText variant="h1" weight="bold" numberOfLines={1}>
+              Career & Internships
+            </AppText>
+            <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+              Verified student roles, alumni referrals & industry gigs
+            </AppText>
+          </View>
+          <Pressable
+            onPress={() => {
+              haptics.light();
+              setCreateModalOpen(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Post a new job opening"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              backgroundColor: colors.brandPrimary,
+              borderRadius: radius.pill,
+              paddingHorizontal: spacing.md,
+              paddingVertical: 8,
+              flexShrink: 0,
+            }}
+          >
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <AppText weight="bold" tone="inverse" variant="caption">
+              Post Job
+            </AppText>
+          </Pressable>
  </View>
 
  {/* Search Input Bar */}

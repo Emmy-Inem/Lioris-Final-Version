@@ -112,8 +112,52 @@ export function SettingsScreen() {
         {/* 2-Column Responsive Layout on Desktop */}
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: spacing.lg, alignItems: 'flex-start' }}>
           {/* Sub Navigation Tabs */}
-          <View style={{ width: isDesktop ? 260 : '100%' }}>
-            <SolidCard radius={20} style={{ padding: spacing.xs }}>
+          {isDesktop ? (
+            <View style={{ width: 260 }}>
+              <SolidCard radius={20} style={{ padding: spacing.xs }}>
+                {SETTINGS_SECTIONS.map((sec) => {
+                  const active = activeSection === sec.key;
+                  return (
+                    <Pressable
+                      key={sec.key}
+                      onPress={() => {
+                        haptics.light();
+                        setActiveSection(sec.key);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: spacing.sm,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: 12,
+                        borderRadius: radius.md,
+                        backgroundColor: active ? colors.pastelPrimaryBg : 'transparent',
+                      }}
+                    >
+                      <Ionicons
+                        name={sec.icon}
+                        size={18}
+                        color={active ? colors.brandPrimary : colors.textSecondary}
+                      />
+                      <AppText
+                        variant="bodySmall"
+                        weight={active ? 'bold' : 'medium'}
+                        tone={active ? 'brand' : 'primary'}
+                      >
+                        {sec.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </SolidCard>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: spacing.xs, paddingHorizontal: 2 }}
+              style={{ width: '100%', marginBottom: spacing.xs }}
+            >
               {SETTINGS_SECTIONS.map((sec) => {
                 const active = activeSection === sec.key;
                 return (
@@ -126,30 +170,32 @@ export function SettingsScreen() {
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: spacing.sm,
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: 12,
-                      borderRadius: radius.md,
-                      backgroundColor: active ? colors.pastelPrimaryBg : 'transparent',
+                      gap: 6,
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: radius.pill,
+                      backgroundColor: active ? colors.brandPrimary : colors.surface,
+                      borderWidth: 1,
+                      borderColor: active ? colors.brandPrimary : colors.border,
                     }}
                   >
                     <Ionicons
                       name={sec.icon}
-                      size={18}
-                      color={active ? colors.brandPrimary : colors.textSecondary}
+                      size={15}
+                      color={active ? '#FFFFFF' : colors.textSecondary}
                     />
                     <AppText
-                      variant="bodySmall"
+                      variant="caption"
                       weight={active ? 'bold' : 'medium'}
-                      tone={active ? 'brand' : 'primary'}
+                      tone={active ? 'inverse' : 'secondary'}
                     >
                       {sec.label}
                     </AppText>
                   </Pressable>
                 );
               })}
-            </SolidCard>
-          </View>
+            </ScrollView>
+          )}
 
           {/* Main Active Settings Content */}
           <View style={{ flex: 1, width: '100%', gap: spacing.md }}>

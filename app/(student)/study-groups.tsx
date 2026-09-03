@@ -53,18 +53,19 @@ export default function StudyGroupsScreen() {
       
       {/* Top Title & Header */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-        <View style={{ flexShrink: 1, minWidth: 0 }}>
-          <AppText variant="h1" weight="bold">
+        <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
+          <AppText variant="h1" weight="bold" numberOfLines={1}>
             Study Pods
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
-            Collaborative course squads, exam revision circles, and weekly peer sprints
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+            Collaborative course squads, exam revision circles & peer sprints
           </AppText>
         </View>
         <View style={{ flexShrink: 0 }}>
           <AppButton
             label="+ Create Pod"
             variant="primary"
+            size={isDesktop ? 'md' : 'sm'}
             onPress={() => setCreateModalOpen(true)}
           />
         </View>

@@ -222,11 +222,11 @@ export function NotificationsScreen() {
 
       {/* Screen Title & Actions */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-        <View style={{ flexShrink: 1, minWidth: 0 }}>
-          <AppText variant="h1" weight="bold">
+        <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
+          <AppText variant="h1" weight="bold" numberOfLines={1}>
             Notifications & Network
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
             {unreadCount > 0 ? `${unreadCount} unread campus updates` : 'All caught up'}
           </AppText>
         </View>
@@ -235,6 +235,7 @@ export function NotificationsScreen() {
             <AppButton
               label="Mark all read"
               variant="secondary"
+              size={isDesktop ? 'md' : 'sm'}
               onPress={handleReadAll}
             />
           )}

@@ -303,6 +303,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             <AppButton
               label="Edit Profile"
               variant="secondary"
+              size={isDesktop ? 'md' : 'sm'}
               onPress={handleOpenEdit}
             />
           </View>
