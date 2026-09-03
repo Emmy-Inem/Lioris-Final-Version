@@ -179,11 +179,35 @@ export async function joinStudyGroup(id: string): Promise<StudyGroup> {
  console.warn('[StudyGroups] Join backend error:', err);
  }
 
+ if (!updated) {
+ try {
+ const { data: grp } = await supabase
+ .from('study_groups')
+ .select('*, study_group_members(count)')
+ .eq('id', id)
+ .maybeSingle();
+ if (grp) {
+ updated = {
+ id: grp.id,
+ name: grp.name,
+ courseCode: grp.course_code || 'GEN 101',
+ description: grp.description || '',
+ isPublic: !grp.is_private,
+ memberCount: Math.max(1, (grp.study_group_members?.[0]?.count ?? 1)),
+ isJoined: true,
+ campusCode: grp.campus_code || 'GLOBAL',
+ };
+ }
+ } catch {
+ // ignore
+ }
+ }
+
  return (
  updated ?? {
  id,
- name: 'Campus Study Squad',
- courseCode: 'CSC 301',
+ name: 'Study Group',
+ courseCode: 'Academic Group',
  description: 'Active revision cohort',
  isPublic: true,
  memberCount: 2,
@@ -220,11 +244,35 @@ export async function leaveStudyGroup(id: string): Promise<StudyGroup> {
  console.warn('[StudyGroups] Leave backend error:', err);
  }
 
+ if (!updated) {
+ try {
+ const { data: grp } = await supabase
+ .from('study_groups')
+ .select('*, study_group_members(count)')
+ .eq('id', id)
+ .maybeSingle();
+ if (grp) {
+ updated = {
+ id: grp.id,
+ name: grp.name,
+ courseCode: grp.course_code || 'GEN 101',
+ description: grp.description || '',
+ isPublic: !grp.is_private,
+ memberCount: Math.max(1, (grp.study_group_members?.[0]?.count ?? 1)),
+ isJoined: false,
+ campusCode: grp.campus_code || 'GLOBAL',
+ };
+ }
+ } catch {
+ // ignore
+ }
+ }
+
  return (
  updated ?? {
  id,
- name: 'Campus Study Squad',
- courseCode: 'CSC 301',
+ name: 'Study Group',
+ courseCode: 'Academic Group',
  description: 'Active revision cohort',
  isPublic: true,
  memberCount: 1,

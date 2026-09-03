@@ -50,62 +50,114 @@ function filterPosts(pool: Post[], query: FeedQuery): Post[] {
 }
 
 export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
- try {
- let dbQuery = supabase.from('posts').select('*').order('created_at', { ascending: false });
- if (query.category) {
- dbQuery = dbQuery.ilike('category', `%${query.category}%`);
- }
- const { data, error } = await dbQuery;
- if (error) throw error;
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
 
- const dbPosts: Post[] = (data ?? []).map((row: any) => {
- const isGlobal = row.visibility_scope === 'global' || row.campus_code === 'GLOBAL';
- return {
- id: row.id,
- authorId: row.author_id,
- authorName: row.author_name || 'Campus Student',
- authorRole: (row.author_role as any) || 'student',
- title: row.title,
- content: row.content,
- category: row.category || 'General',
- visibilityScope: (row.visibility_scope as any) || 'campus',
- scopeVisibility: isGlobal ? 'global' : 'campus',
- institutionCode: isGlobal ? undefined : row.campus_code,
- likesCount: row.likes_count || 0,
- commentsCount: row.comments_count || 0,
- isLikedByMe: false,
- createdAt: row.created_at,
- imageUrl: row.image_url,
- videoUrl: row.video_url,
- };
- });
+    let dbQuery = supabase
+      .from('posts')
+      .select('*, profiles:author_id(full_name, role, avatar_url, campus_code), post_likes(user_id)')
+      .order('created_at', { ascending: false });
 
- // Merge unique - local pool only ever contributes this session's own
- // just-created posts (always) plus seed fixtures (only when the admin
- // mock-data toggle is on).
- const merged = [...dbPosts];
- for (const p of [...locallyCreatedPosts]) {
- if (!merged.some((m) => m.id === p.id)) {
- merged.push(p);
- }
- }
- return filterPosts(merged, query);
- } catch (err) {
- console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
- return filterPosts([...locallyCreatedPosts], query);
- }
+    if (query.category) {
+      dbQuery = dbQuery.ilike('category', `%${query.category}%`);
+    }
+    const { data, error } = await dbQuery;
+    if (error) throw error;
+
+    const dbPosts: Post[] = (data ?? []).map((row: any) => {
+      const isGlobal = row.visibility_scope === 'global' || row.campus_code === 'GLOBAL';
+      const isLiked = currentUserId ? (row.post_likes ?? []).some((l: any) => l.user_id === currentUserId) : false;
+
+      return {
+        id: row.id,
+        authorId: row.author_id,
+        authorName: row.profiles?.full_name || row.author_name || 'Campus Student',
+        authorRole: (row.profiles?.role || row.author_role || 'student') as any,
+        title: row.title,
+        content: row.content,
+        category: row.category || 'General',
+        visibilityScope: (row.visibility_scope as any) || 'campus',
+        scopeVisibility: isGlobal ? 'global' : 'campus',
+        institutionCode: isGlobal ? undefined : row.campus_code,
+        likesCount: row.likes_count || 0,
+        commentsCount: row.comments_count || 0,
+        isLikedByMe: isLiked,
+        createdAt: row.created_at,
+        imageUrl: row.image_url,
+        videoUrl: row.video_url,
+      };
+    });
+
+    // Merge unique - local pool only ever contributes this session's own
+    // just-created posts (always) plus seed fixtures (only when the admin
+    // mock-data toggle is on).
+    const merged = [...dbPosts];
+    for (const p of [...locallyCreatedPosts]) {
+      if (!merged.some((m) => m.id === p.id)) {
+        merged.push(p);
+      }
+    }
+    return filterPosts(merged, query);
+  } catch (err) {
+    console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
+    return filterPosts([...locallyCreatedPosts], query);
+  }
 }
 
 export async function listMyPosts(userId?: string): Promise<Post[]> {
- return [...locallyCreatedPosts].filter(
- (p) =>
- p.authorId === 'me' ||
- p.authorId === 'student-me' ||
- p.authorId === userId ||
- p.authorName === 'You' ||
- p.authorId === 'my-post-1' ||
- p.authorId === 'my-post-2',
- );
+  try {
+    let targetUid = userId;
+    if (!targetUid) {
+      const { data: authData } = await supabase.auth.getUser();
+      targetUid = authData?.user?.id;
+      if (!targetUid) {
+        const stored = await getSessionUser();
+        if (stored?.id) targetUid = stored.id;
+      }
+    }
+
+    if (targetUid) {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*, profiles:author_id(full_name, role, avatar_url, campus_code), post_likes(user_id)')
+        .eq('author_id', targetUid)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        return data.map((row: any) => ({
+          id: row.id,
+          authorId: row.author_id,
+          authorName: row.profiles?.full_name || 'You',
+          authorRole: (row.profiles?.role || 'student') as any,
+          title: row.title,
+          content: row.content,
+          category: row.category || 'General',
+          visibilityScope: (row.visibility_scope as any) || 'campus',
+          scopeVisibility: row.visibility_scope === 'global' ? 'global' : 'campus',
+          institutionCode: row.campus_code === 'GLOBAL' ? undefined : row.campus_code,
+          likesCount: row.likes_count || 0,
+          commentsCount: row.comments_count || 0,
+          isLikedByMe: (row.post_likes ?? []).some((l: any) => l.user_id === targetUid),
+          createdAt: row.created_at,
+          imageUrl: row.image_url,
+          videoUrl: row.video_url,
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('[Posts] listMyPosts error:', err);
+  }
+
+  return [...locallyCreatedPosts].filter(
+    (p) =>
+      p.authorId === 'me' ||
+      p.authorId === 'student-me' ||
+      p.authorId === userId ||
+      p.authorName === 'You' ||
+      p.authorId === 'my-post-1' ||
+      p.authorId === 'my-post-2',
+  );
 }
 
 export interface CreatePostPayload {

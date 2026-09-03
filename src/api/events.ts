@@ -80,92 +80,101 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
 
  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
- const { data, error } = await supabase
- .from('events')
- .select('*, profiles:creator_id(full_name)')
- .order('start_time', { ascending: true });
+    const currentUserId = authData?.user?.id;
 
- if (error) throw error;
+    const { data, error } = await supabase
+      .from('events')
+      .select('*, profiles:creator_id(full_name), event_attendees(user_id)')
+      .order('start_time', { ascending: true });
 
- const dbEvents: CampusEvent[] = (data ?? [])
- .filter((row: any) => !isUserBlocked(row.creator_id))
- .filter((row: any) => {
- if (isStaffOrAdmin && !query.campusCode) return true;
- return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
- })
- .map((row: any) => ({
- id: row.id,
- organizerId: row.creator_id,
- organizerName: row.profiles?.full_name || 'Campus Event Organizer',
- title: row.title,
- description: row.description,
- category: row.category as any,
- location: row.venue || 'Campus Main Venue',
- startAt: row.start_time,
- endAt: row.end_time,
- capacity: row.capacity,
- rsvpCount: row.registered_count || 0,
- isRsvpd: false,
- approvalStatus: row.status === 'cancelled' ? 'rejected' : 'approved',
- visibilityScope: (row.visibility_scope as any) || 'global',
- campusCode: row.campus_code || 'GLOBAL',
- coverImageUrl: row.banner_url,
- }));
+    if (error) throw error;
 
- // Merge unique - local pool only ever contributes this session's own
- // just-created events (always) plus seed fixtures (only when the admin
- // mock-data toggle is on).
- const pool = [...locallyCreatedEvents];
- const merged = [...dbEvents];
- for (const e of pool) {
- if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
- if (isStaffOrAdmin && !query.campusCode) {
- merged.push(e);
- } else if (!userCampus || userCampus === 'GLOBAL' || !e.campusCode || e.campusCode === 'GLOBAL' || e.campusCode === userCampus) {
- merged.push(e);
- }
- }
- }
- return filterEvents(merged, { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
- } catch (err) {
- console.warn('[Events] Supabase listEvents error, showing local pool only:', err);
- return filterEvents([...locallyCreatedEvents], query);
- }
+    const dbEvents: CampusEvent[] = (data ?? [])
+      .filter((row: any) => !isUserBlocked(row.creator_id))
+      .filter((row: any) => {
+        if (isStaffOrAdmin && !query.campusCode) return true;
+        return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
+      })
+      .map((row: any) => {
+        const isRsvpd = currentUserId ? (row.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
+        return {
+          id: row.id,
+          organizerId: row.creator_id,
+          organizerName: row.profiles?.full_name || 'Campus Event Organizer',
+          title: row.title,
+          description: row.description,
+          category: row.category as any,
+          location: row.venue || 'Campus Main Venue',
+          startAt: row.start_time,
+          endAt: row.end_time,
+          capacity: row.capacity,
+          rsvpCount: row.registered_count || 0,
+          isRsvpd,
+          approvalStatus: row.status === 'cancelled' ? 'rejected' : 'approved',
+          visibilityScope: (row.visibility_scope as any) || 'global',
+          campusCode: row.campus_code || 'GLOBAL',
+          coverImageUrl: row.banner_url,
+        };
+      });
+
+    // Merge unique - local pool only ever contributes this session's own
+    // just-created events (always) plus seed fixtures (only when the admin
+    // mock-data toggle is on).
+    const pool = [...locallyCreatedEvents];
+    const merged = [...dbEvents];
+    for (const e of pool) {
+      if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
+        if (isStaffOrAdmin && !query.campusCode) {
+          merged.push(e);
+        } else if (!userCampus || userCampus === 'GLOBAL' || !e.campusCode || e.campusCode === 'GLOBAL' || e.campusCode === userCampus) {
+          merged.push(e);
+        }
+      }
+    }
+    return filterEvents(merged, { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
+  } catch (err) {
+    console.warn('[Events] Supabase listEvents error, showing local pool only:', err);
+    return filterEvents([...locallyCreatedEvents], query);
+  }
 }
 
 export async function getEvent(id?: string | null): Promise<CampusEvent | null> {
- if (!id) return null;
- const found = [...locallyCreatedEvents].find((e) => e.id === id);
- if (found) return found;
- try {
- const { data, error } = await supabase
- .from('events')
- .select('*, profiles:creator_id(full_name)')
- .eq('id', id)
- .single();
- if (!error && data) {
- return {
- id: data.id,
- organizerId: data.creator_id,
- organizerName: data.profiles?.full_name || 'Campus Event Organizer',
- title: data.title,
- description: data.description,
- category: data.category,
- location: data.venue || 'Campus Main Venue',
- startAt: data.start_time,
- endAt: data.end_time,
- capacity: data.capacity,
- rsvpCount: data.registered_count || 0,
- isRsvpd: false,
- approvalStatus: data.status === 'cancelled' ? 'rejected' : 'approved',
- visibilityScope: data.visibility_scope || 'global',
- campusCode: data.campus_code || 'GLOBAL',
- coverImageUrl: data.banner_url,
- };
- }
- } catch (err) {
- console.warn('[Events] Supabase getEvent error:', err);
- }
+  if (!id) return null;
+  const found = [...locallyCreatedEvents].find((e) => e.id === id);
+  if (found) return found;
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+
+    const { data, error } = await supabase
+      .from('events')
+      .select('*, profiles:creator_id(full_name), event_attendees(user_id)')
+      .eq('id', id)
+      .single();
+    if (!error && data) {
+      const isRsvpd = currentUserId ? (data.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
+      return {
+        id: data.id,
+        organizerId: data.creator_id,
+        organizerName: data.profiles?.full_name || 'Campus Event Organizer',
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        location: data.venue || 'Campus Main Venue',
+        startAt: data.start_time,
+        endAt: data.end_time,
+        capacity: data.capacity,
+        rsvpCount: data.registered_count || 0,
+        isRsvpd,
+        approvalStatus: data.status === 'cancelled' ? 'rejected' : 'approved',
+        visibilityScope: data.visibility_scope || 'global',
+        campusCode: data.campus_code || 'GLOBAL',
+        coverImageUrl: data.banner_url,
+      };
+    }
+  } catch (err) {
+    console.warn('[Events] Supabase getEvent error:', err);
+  }
  return null;
 }
 

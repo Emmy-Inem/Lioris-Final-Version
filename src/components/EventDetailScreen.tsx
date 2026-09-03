@@ -67,6 +67,7 @@ export function EventDetailScreen() {
       await rsvpToEvent(event.id, action);
       setRsvpdState(!isRsvpd);
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', event.id] });
       haptics.success();
       toast.success(
         !isRsvpd

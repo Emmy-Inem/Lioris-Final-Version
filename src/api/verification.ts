@@ -157,24 +157,50 @@ export async function respondToVerificationRequest(
  console.warn('[Verification] Status update backend warning:', err);
  }
 
- if (updated) {
- await recordAuditLogEntry({
- action: status === 'approved' ? 'verification_approved' : 'verification_rejected',
- summary: `${status === 'approved' ? 'Approved' : 'Rejected'} a verification application from ${updated.applicantName} (claimed ${updated.institutionClaimed})`,
- targetType: 'verification_request',
- targetId: id,
- });
+ if (!updated) {
+    try {
+      const { data: vRow } = await supabase
+        .from('verifications')
+        .select('*, profiles!verifications_user_id_fkey(full_name, role, campus_code)')
+        .eq('id', id)
+        .maybeSingle();
 
- createNotification({
- recipientId: updated.userId,
- type: 'system',
- title: status === 'approved' ? 'Verification approved' : 'Verification not approved',
- body:
- status === 'approved'
- ? `Your ${updated.institutionClaimed} verification was approved. Your profile now shows the verified badge.`
- : `Your ${updated.institutionClaimed} verification wasn't approved this time. Check your submitted details and try again.`,
- });
- }
+      if (vRow) {
+        updated = {
+          id: vRow.id,
+          userId: vRow.user_id,
+          applicantName: vRow.profiles?.full_name || 'Campus Applicant',
+          documentType: 'Student ID',
+          documentReference: vRow.review_notes || 'ID-VERIFY',
+          institutionClaimed: vRow.campus_code || 'University Campus',
+          submittedAt: vRow.created_at,
+          status,
+          documentPhotoUri: vRow.id_card_front_url,
+        };
+      }
+    } catch {
+      // ignore
+    }
+  }
 
- return updated;
+  if (updated) {
+    await recordAuditLogEntry({
+      action: status === 'approved' ? 'verification_approved' : 'verification_rejected',
+      summary: `${status === 'approved' ? 'Approved' : 'Rejected'} a verification application from ${updated.applicantName} (claimed ${updated.institutionClaimed})`,
+      targetType: 'verification_request',
+      targetId: id,
+    });
+
+    createNotification({
+      recipientId: updated.userId,
+      type: 'system',
+      title: status === 'approved' ? 'Verification approved' : 'Verification not approved',
+      body:
+        status === 'approved'
+          ? `Your ${updated.institutionClaimed} verification was approved. Your profile now shows the verified badge.`
+          : `Your ${updated.institutionClaimed} verification wasn't approved this time. Check your submitted details and try again.`,
+    });
+  }
+
+  return updated;
 }

@@ -61,34 +61,37 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
 
  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
- const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
- if (error) throw error;
+    const { data, error } = await supabase
+      .from('resources')
+      .select('*, profiles:uploader_id(full_name, role, avatar_url, department)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
 
- const dbResources: Resource[] = (data ?? [])
- .filter((row: any) => !isUserBlocked(row.uploader_id))
- .filter((row: any) => {
- if (isStaffOrAdmin && !(query as any).campusCode) return true;
- return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
- })
- .map((row: any) => ({
- id: row.id,
- title: row.title,
- courseCode: row.course_code || 'GEN 101',
- department: row.course_title || 'Academic Repository',
- category: mapResourceTypeToCategory(row.resource_type),
- description: row.description || '',
- fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : '2.5 MB',
- fileUrl: row.file_url || null,
- authorName: 'Verified Student',
- authorId: row.uploader_id,
- authorRole: 'student',
- likesCount: row.upvotes_count || 0,
- downloadsCount: row.downloads_count || 0,
- createdAt: row.created_at,
- approvalStatus: row.is_approved ? 'approved' : 'pending',
- fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
- campusCode: row.campus_code || 'GLOBAL',
- }));
+    const dbResources: Resource[] = (data ?? [])
+      .filter((row: any) => !isUserBlocked(row.uploader_id))
+      .filter((row: any) => {
+        if (isStaffOrAdmin && !(query as any).campusCode) return true;
+        return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
+      })
+      .map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        courseCode: row.course_code || 'GEN 101',
+        department: row.profiles?.department || row.course_title || 'Academic Repository',
+        category: mapResourceTypeToCategory(row.resource_type),
+        description: row.description || '',
+        fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : '2.5 MB',
+        fileUrl: row.file_url || null,
+        authorName: row.profiles?.full_name || 'Campus Student',
+        authorId: row.uploader_id,
+        authorRole: (row.profiles?.role || 'student') as any,
+        likesCount: row.upvotes_count || 0,
+        downloadsCount: row.downloads_count || 0,
+        createdAt: row.created_at,
+        approvalStatus: row.is_approved ? 'approved' : 'pending',
+        fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
+        campusCode: row.campus_code || 'GLOBAL',
+      }));
 
  // Merge unique - local pool only ever contributes this session's own
  // just-created resources (always) plus seed fixtures (only when the
