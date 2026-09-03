@@ -216,6 +216,28 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
 
     loadFlags();
 
+    if (isWeb && typeof window !== 'undefined') {
+      const handleSync = (e: any) => {
+        try {
+          if (e.type === 'lioris_feature_flags_sync' && e.detail) {
+            setFlags((prev) => ({ ...prev, ...e.detail }));
+          } else if (e.type === 'storage' && e.key === STORAGE_KEY && e.newValue) {
+            const incoming = JSON.parse(e.newValue);
+            setFlags((prev) => ({ ...prev, ...incoming }));
+          }
+        } catch {}
+      };
+
+      window.addEventListener('lioris_feature_flags_sync', handleSync);
+      window.addEventListener('storage', handleSync);
+
+      return () => {
+        mounted = false;
+        window.removeEventListener('lioris_feature_flags_sync', handleSync);
+        window.removeEventListener('storage', handleSync);
+      };
+    }
+
     return () => {
       mounted = false;
     };
@@ -232,6 +254,10 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
     const nextFlags = { ...flags, [key]: enabled };
     setFlags(nextFlags);
     await setStoredFlags(JSON.stringify(nextFlags)).catch(() => {});
+
+    if (isWeb && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lioris_feature_flags_sync', { detail: nextFlags }));
+    }
 
     try {
       await supabase.from('platform_settings').upsert({

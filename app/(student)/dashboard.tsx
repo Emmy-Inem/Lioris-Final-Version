@@ -14,6 +14,9 @@ import { Badge } from '@/components/Badge';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
 import { EventCard } from '@/components/EventCard';
+import { StoriesBar } from '@/components/StoriesBar';
+import { GamificationWidget } from '@/components/GamificationWidget';
+import { AiStudyCopilotCard } from '@/components/AiStudyCopilotCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -251,6 +254,15 @@ export default function StudentDashboard() {
             </View>
           </View>
         </SolidCard>
+
+        {/* Stories & Fleets Bar (Feature Flagged) */}
+        {isFeatureEnabled('stories_bar') && <StoriesBar />}
+
+        {/* Gamification & Streaks (Feature Flagged) */}
+        {isFeatureEnabled('xp_gamification') && <GamificationWidget />}
+
+        {/* AI Campus Study Copilot (Feature Flagged) */}
+        {isFeatureEnabled('ai_copilot') && <AiStudyCopilotCard />}
 
         {/* 2. Quick Student Everyday Productivity Actions */}
         <View>

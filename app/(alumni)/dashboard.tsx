@@ -114,7 +114,7 @@ export default function AlumniDashboard() {
             borderColor: colors.border,
           }}
         >
-          <View style={{ height: isDesktop ? 160 : 120, position: 'relative', width: '100%' }}>
+          <View style={{ height: isDesktop ? 160 : 115, position: 'relative', width: '100%' }}>
             <Image
               source={require('../../assets/images/campus_library_study.jpg')}
               style={{ width: '100%', height: '100%' }}
@@ -131,44 +131,45 @@ export default function AlumniDashboard() {
               }}
             />
 
-            <View style={{ position: 'absolute', top: 14, left: 16 }}>
+            <View style={{ position: 'absolute', top: 12, left: 12, right: 12, flexDirection: 'row' }}>
               <View
                 style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.70)',
                   borderRadius: radius.pill,
-                  paddingHorizontal: 12,
-                  paddingVertical: 5,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
+                  maxWidth: '100%',
                 }}
               >
-                <Ionicons name="school" size={14} color="#FCD34D" />
-                <AppText variant="caption" weight="bold" tone="inverse">
+                <Ionicons name="school" size={13} color="#FCD34D" style={{ flexShrink: 0 }} />
+                <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 11, flexShrink: 1 }}>
                   Alumni Fellowship • {profile?.institutionName ?? 'University Chapter'}
                 </AppText>
               </View>
             </View>
           </View>
 
-          <View style={{ padding: spacing.lg, backgroundColor: colors.surface }}>
-            <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0 }}>
-                <Avatar name={fullName} size={52} role="alumni" />
+          <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
+            <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0, width: '100%' }}>
+                <Avatar name={fullName} size={isDesktop ? 52 : 44} role="alumni" />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <AppText variant="h2" weight="bold" numberOfLines={1}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
                       Welcome, {fullName}
                     </AppText>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
-                  <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2 }}>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
                     {subtitleParts.length > 0 ? subtitleParts.join(' • ') : 'Verified Alumni Fellow'}
                   </AppText>
                 </View>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: isDesktop ? 0 : 4 }}>
                 {profile?.verificationStatus === 'verified' ? (
                   <Badge label="✓ Verified Alumni" tone="success" />
                 ) : profile?.verificationStatus === 'pending' ? (
@@ -185,7 +186,7 @@ export default function AlumniDashboard() {
                       borderColor: colors.brandPrimary,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone="brand">
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
                       Verify Alumni Credentials →
                     </AppText>
                   </Pressable>
@@ -198,7 +199,7 @@ export default function AlumniDashboard() {
           </View>
         </SolidCard>
 
-        {/* 2. Quick Alumni Action Hub */}
+        {/* 2. Quick Alumni Action Hub (Responsive Grid) */}
         <View>
           <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
             Alumni Action Hub
@@ -207,15 +208,15 @@ export default function AlumniDashboard() {
             {isFeatureEnabled('career_page') && (
               <Pressable
                 onPress={() => router.push('/(alumni)/jobs')}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="briefcase" size={18} color={colors.brandPrimary} />
+                <SolidCard radius={16} style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name="briefcase" size={17} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold">Careers</AppText>
-                    <AppText variant="caption" tone="secondary">Post & find jobs</AppText>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Careers</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>Post & find jobs</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -224,15 +225,15 @@ export default function AlumniDashboard() {
             {isFeatureEnabled('alumni_mentorship') && (
               <Pressable
                 onPress={() => router.push('/(alumni)/mentorship')}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="people" size={18} color="#10B981" />
+                <SolidCard radius={16} style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name="people" size={17} color="#10B981" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold">Mentorship</AppText>
-                    <AppText variant="caption" tone="secondary">
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Mentorship</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>
                       {pendingMentees.length > 0 ? `${pendingMentees.length} requests` : 'Guide students'}
                     </AppText>
                   </View>
@@ -243,15 +244,32 @@ export default function AlumniDashboard() {
             {isFeatureEnabled('campus_events') && (
               <Pressable
                 onPress={() => router.push('/(alumni)/events-list' as any)}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="calendar" size={18} color="#3B82F6" />
+                <SolidCard radius={16} style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name="calendar" size={17} color="#3B82F6" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold">Events</AppText>
-                    <AppText variant="caption" tone="secondary">Reunions & talks</AppText>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Events</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>Reunions & talks</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
+
+            {isFeatureEnabled('marketplace') && (
+              <Pressable
+                onPress={() => router.push('/(alumni)/marketplace' as any)}
+                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
+              >
+                <SolidCard radius={16} style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isDark ? '#2D2319' : '#FEF3C7', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name="cart" size={17} color="#D97706" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Campus Trade</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>Books & gear</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -259,30 +277,30 @@ export default function AlumniDashboard() {
 
             <Pressable
               onPress={() => router.push('/(alumni)/forum')}
-              style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
             >
-              <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="chatbubbles" size={18} color="#EC4899" />
+              <SolidCard radius={16} style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64 }}>
+                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Ionicons name="chatbubbles" size={17} color="#EC4899" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold">Global Forum</AppText>
-                  <AppText variant="caption" tone="secondary">Fellowship feed</AppText>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Global Forum</AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>Fellowship feed</AppText>
                 </View>
               </SolidCard>
             </Pressable>
 
             <Pressable
               onPress={() => router.push('/(alumni)/connection-requests')}
-              style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
             >
-              <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2A1F3D' : '#F5F3FF', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="people-circle" size={18} color="#8B5CF6" />
+              <SolidCard radius={16} style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64 }}>
+                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isDark ? '#2A1F3D' : '#F5F3FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Ionicons name="people-circle" size={17} color="#8B5CF6" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold">Alumni Network</AppText>
-                  <AppText variant="caption" tone="secondary">Fellow directory</AppText>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Alumni Network</AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>Fellow directory</AppText>
                 </View>
               </SolidCard>
             </Pressable>
@@ -303,23 +321,23 @@ export default function AlumniDashboard() {
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(alumni)/jobs')} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" variant="bodySmall" weight="bold">
+                <AppText tone="brand" variant="caption" weight="bold">
                   All Openings ({jobs?.length ?? 0}) →
                 </AppText>
               </Pressable>
             </View>
 
             {activeJobs.length === 0 ? (
-              <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
-                <Ionicons name="briefcase-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+              <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
+                <Ionicons name="briefcase-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
                 <AppText weight="bold" variant="bodySmall">No active job openings yet</AppText>
-                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
-                  Post an internship, graduate role, or remote contract from your organization to hire university talent.
+                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.sm }}>
+                  Post an internship, graduate role, or remote contract to hire university talent.
                 </AppText>
-                <AppButton label="+ Post Career Opportunity" onPress={() => router.push('/(alumni)/jobs')} />
+                <AppButton label="+ Post Career Opportunity" size="sm" onPress={() => router.push('/(alumni)/jobs')} />
               </SolidCard>
             ) : (
-              <View style={{ gap: spacing.sm }}>
+              <View style={{ gap: spacing.xs }}>
                 {activeJobs.map((job: any) => (
                   <JobCard key={job.id} job={job} />
                 ))}
@@ -339,34 +357,34 @@ export default function AlumniDashboard() {
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(alumni)/mentorship')} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" variant="bodySmall" weight="bold">
+                <AppText tone="brand" variant="caption" weight="bold">
                   Mentorship Hub →
                 </AppText>
               </Pressable>
             </View>
 
             {(mentorships ?? []).length === 0 ? (
-              <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
-                <Ionicons name="school-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+              <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
+                <Ionicons name="school-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
                 <AppText weight="bold" variant="bodySmall">Mentor undergraduate students</AppText>
-                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
-                  Help undergraduates in your department with career advice, project guidance, and graduate school prep.
+                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.sm }}>
+                  Help undergraduates in your department with career advice and project guidance.
                 </AppText>
-                <AppButton label="Open Mentorship Desk" variant="secondary" onPress={() => router.push('/(alumni)/mentorship')} />
+                <AppButton label="Open Mentorship Desk" variant="secondary" size="sm" onPress={() => router.push('/(alumni)/mentorship')} />
               </SolidCard>
             ) : (
-              <View style={{ gap: spacing.sm }}>
+              <View style={{ gap: spacing.xs }}>
                 {(mentorships ?? []).slice(0, 2).map((item: any) => (
                   <Pressable key={item.id} onPress={() => router.push('/(alumni)/mentorship')}>
-                    <SolidCard radius={16} style={{ padding: 14 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <SolidCard radius={16} style={{ padding: 12 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                           <Avatar name={item.studentName || 'Student'} size={28} />
-                          <View>
-                            <AppText variant="bodySmall" weight="bold">
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                               {item.studentName || 'Student Mentee'}
                             </AppText>
-                            <AppText variant="caption" tone="secondary">
+                            <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11 }}>
                               Focus: {item.focusArea || 'Career Guidance'}
                             </AppText>
                           </View>
@@ -395,23 +413,23 @@ export default function AlumniDashboard() {
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(alumni)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" variant="bodySmall" weight="bold">
+                <AppText tone="brand" variant="caption" weight="bold">
                   View Calendar ({events?.length ?? 0}) →
                 </AppText>
               </Pressable>
             </View>
 
             {upcomingEvents.length === 0 ? (
-              <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
-                <Ionicons name="calendar-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+              <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
+                <Ionicons name="calendar-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
                 <AppText weight="bold" variant="bodySmall">No upcoming reunions scheduled</AppText>
-                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
+                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.sm }}>
                   Alumni dinners, homecoming summits, and chapter meetings will appear here.
                 </AppText>
-                <AppButton label="Browse Alumni Events" variant="secondary" onPress={() => router.push('/(alumni)/events-list' as any)} />
+                <AppButton label="Browse Alumni Events" variant="secondary" size="sm" onPress={() => router.push('/(alumni)/events-list' as any)} />
               </SolidCard>
             ) : (
-              <View style={{ gap: spacing.md }}>
+              <View style={{ gap: spacing.sm }}>
                 {upcomingEvents.map((evt: any) => (
                   <EventCard key={evt.id} event={evt} />
                 ))}
@@ -430,13 +448,13 @@ export default function AlumniDashboard() {
               </AppText>
             </View>
             <Pressable onPress={() => router.push('/(alumni)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>
-              <AppText tone="brand" variant="bodySmall" weight="bold">
+              <AppText tone="brand" variant="caption" weight="bold">
                 View Global Forum →
               </AppText>
             </Pressable>
           </View>
 
-          <View style={{ gap: spacing.sm }}>
+          <View style={{ gap: spacing.xs }}>
             {(posts ?? []).length === 0 ? (
               <SolidCard radius={18} style={{ padding: 0 }}>
                 <EmptyState
@@ -453,15 +471,15 @@ export default function AlumniDashboard() {
                 key={post.id}
                 onPress={() => router.push(`/(alumni)/post/${post.id}` as any)}
               >
-                <SolidCard radius={18} style={{ padding: spacing.md }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Avatar name={post.authorName ?? 'Fellow'} size={28} />
-                      <View>
-                        <AppText variant="caption" weight="bold">
+                <SolidCard radius={16} style={{ padding: 12 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <Avatar name={post.authorName ?? 'Fellow'} size={26} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <AppText variant="caption" weight="bold" numberOfLines={1}>
                           {post.authorName ?? 'Fellow'}
                         </AppText>
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                        <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10 }}>
                           {post.department ?? 'Alumni Network'}
                         </AppText>
                       </View>
@@ -469,23 +487,23 @@ export default function AlumniDashboard() {
                     <Badge label={post.category ?? 'Discussion'} tone="brand" />
                   </View>
 
-                  <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }}>
+                  <AppText variant="bodySmall" weight="semiBold" numberOfLines={1} style={{ marginTop: 2, marginBottom: 2 }}>
                     {post.title}
                   </AppText>
                   <AppText tone="secondary" variant="caption" numberOfLines={2}>
                     {post.content}
                   </AppText>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="heart-outline" size={14} color={colors.textSecondary} />
-                      <AppText variant="caption" tone="secondary">
+                      <Ionicons name="heart-outline" size={13} color={colors.textSecondary} />
+                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                         {post.upvotesCount ?? 0}
                       </AppText>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="chatbubble-outline" size={14} color={colors.textSecondary} />
-                      <AppText variant="caption" tone="secondary">
+                      <Ionicons name="chatbubble-outline" size={13} color={colors.textSecondary} />
+                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                         {post.commentsCount ?? 0} replies
                       </AppText>
                     </View>
@@ -499,8 +517,8 @@ export default function AlumniDashboard() {
         {/* 8. Institutional Alumni & Graduate Services */}
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
-            <Ionicons name="school-outline" size={18} color={colors.brandPrimary} />
-            <AppText variant="h3" weight="bold">
+            <Ionicons name="school-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+            <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
               Alumni & Graduate Services
             </AppText>
           </View>
@@ -511,15 +529,15 @@ export default function AlumniDashboard() {
                 onPress={() => handleOpenPortal(portal.url)}
                 style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.brandPrimary} />
+                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name={portal.icon || 'globe-outline'} size={18} color={colors.brandPrimary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                       {portal.title}
                     </AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2, fontSize: 11 }}>
                       {portal.category} • Official Alumni Service
                     </AppText>
                   </View>

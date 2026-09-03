@@ -28,21 +28,24 @@ import { UserProfileQuickViewModal, QuickViewUser } from './UserProfileQuickView
 import { EmptyState } from './EmptyState';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
-
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { StoriesBar } from './StoriesBar';
+import { GamificationWidget } from './GamificationWidget';
 
 const CHANNELS = [
- { id: 'all', label: 'All Threads', category: null, icon: 'chatbubbles' as const },
- { id: 'polls', label: 'Polls & Votes', category: 'Polls', icon: 'stats-chart' as const },
- { id: 'tech', label: 'Tech & Code Hub', category: 'Tech Hub', icon: 'code-slash' as const },
- { id: 'academic', label: 'Academic & Courses', category: 'Academic', icon: 'school' as const },
- { id: 'housing', label: 'Hostel & Housing', category: 'Housing', icon: 'home' as const },
- { id: 'social', label: 'Campus Life & Sports', category: 'Social', icon: 'people' as const },
- { id: 'lost', label: 'Lost & Found', category: 'Lost & Found', icon: 'search' as const },
+  { id: 'all', label: 'All Threads', category: null, icon: 'chatbubbles' as const },
+  { id: 'polls', label: 'Polls & Votes', category: 'Polls', icon: 'stats-chart' as const, flagKey: 'discussion_workspaces' as const },
+  { id: 'tech', label: 'Tech & Code Hub', category: 'Tech Hub', icon: 'code-slash' as const },
+  { id: 'academic', label: 'Academic & Courses', category: 'Academic', icon: 'school' as const },
+  { id: 'housing', label: 'Hostel & Housing', category: 'Housing', icon: 'home' as const },
+  { id: 'social', label: 'Campus Life & Sports', category: 'Social', icon: 'people' as const },
+  { id: 'lost', label: 'Lost & Found', category: 'Lost & Found', icon: 'search' as const },
 ];
 
 export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
- const { colors, spacing, radius, isDark } = useTheme();
- const { user } = useAuth();
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { user } = useAuth();
+  const { isFeatureEnabled } = useFeatureFlags();
  const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
 
@@ -173,6 +176,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         )}
       </View>
 
+      {/* 24h Campus Stories & Fleets */}
+      {isFeatureEnabled('stories_bar') && <StoriesBar />}
+
+      {/* Gamification & Streaks Widget */}
+      {isFeatureEnabled('xp_gamification') && <GamificationWidget />}
+
       {/* Quick Search & Sort Bar */}
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
         <View
@@ -234,7 +243,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         style={{ width: '100%', flexGrow: 0, marginBottom: spacing.xs }}
         {...({ dataSet: { horizontalScroll: 'true' } } as any)}
       >
-        {CHANNELS.map((ch) => {
+        {CHANNELS.filter((ch: any) => (ch.flagKey ? isFeatureEnabled(ch.flagKey) : true)).map((ch) => {
           const selected = selectedChannel === ch.category;
           return (
             <Pressable

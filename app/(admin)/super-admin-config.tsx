@@ -15,6 +15,7 @@ import { createNotification } from '@/api/notifications';
 import { AppTextField } from '@/components/AppTextField';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 type ModalKey =
   | 'addUniversity'
@@ -37,8 +38,9 @@ type ModalKey =
 export default function SuperAdminConfigScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  const { isFeatureEnabled, setFeature } = useFeatureFlags();
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
-  const [gamificationEnabled, setGamificationEnabled] = useState(true);
+  const gamificationEnabled = isFeatureEnabled('xp_gamification');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   // Lifted form states for configuration modals
@@ -301,11 +303,13 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
- <Section number={3} title="Gamification & XP Rules"emoji="">
- <ToggleRow
- title="Enable Gamification System"description="Hides/shows the XP levels, active streaks, login score metrics & reward leaderboards across the workspace."value={gamificationEnabled}
- onValueChange={setGamificationEnabled}
- />
+        <Section number={3} title="Gamification & XP Rules" emoji="">
+          <ToggleRow
+            title="Enable Gamification System"
+            description="Hides/shows the XP levels, active streaks, login score metrics & reward leaderboards across the workspace."
+            value={gamificationEnabled}
+            onValueChange={(next) => setFeature('xp_gamification', next)}
+          />
  <Row
  title="Global XP Multiplier"description="Set system-wide XP multipliers for active engagement."actionLabel="Configure"onPress={() => setActiveModal('xpMultiplier')}
  disabled={!gamificationEnabled}

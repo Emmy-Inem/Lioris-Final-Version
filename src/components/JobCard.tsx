@@ -101,27 +101,31 @@ export function JobCard({ job }: { job: JobListing }) {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 8,
           marginTop: spacing.md,
           paddingTop: spacing.xs,
           borderTopWidth: 1,
           borderTopColor: colors.divider,
         }}
       >
-        <AppText tone="secondary" variant="caption">
+        <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ flexShrink: 1, minWidth: 100 }}>
           Posted by {job.postedByName}
         </AppText>
 
-        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flexShrink: 0 }}>
           {job.applyUrl && job.applyUrl.startsWith('http') && (
             <AppButton
               label="Job Site ↗"
               variant="ghost"
+              size="sm"
               onPress={handleOpenApplyUrl}
             />
           )}
           <AppButton
             label={applied ? 'Applied' : 'Apply Now'}
             variant={applied ? 'secondary' : 'primary'}
+            size="sm"
             disabled={applied}
             onPress={handleOpenApply}
           />

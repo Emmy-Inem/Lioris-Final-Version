@@ -13,7 +13,7 @@ import { haptics } from '@/utils/haptics';
 export function FeatureFlagsTab() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
-  const { flags, setFeature, resetDefaults } = useFeatureFlags();
+  const { flags, isFeatureEnabled, setFeature, resetDefaults } = useFeatureFlags();
 
   async function handleToggleFlag(key: FeatureKey, next: boolean, label: string) {
     haptics.medium();
@@ -50,7 +50,7 @@ export function FeatureFlagsTab() {
 
       <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 14 } : undefined}>
         {FEATURE_CATALOG.map((flag) => {
-          const isEnabled = flags[flag.key] !== false;
+          const isEnabled = isFeatureEnabled(flag.key);
           return (
             <View key={flag.key} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 260 } : undefined}>
               <SolidCard
