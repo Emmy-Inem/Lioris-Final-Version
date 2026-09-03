@@ -59,7 +59,22 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
  if (prof?.role) userRole = prof.role;
  }
 
- const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
+ if (!userCampus && authData?.user?.email) {
+      const em = authData.user.email.toLowerCase();
+      userCampus = em.includes('ui.edu.ng') || em.includes('diana.prince') || em.includes('dr.adeyemi') || em.includes('admin@ui.edu.ng') || em.includes('adeola')
+        ? 'UI'
+        : em.includes('unilag.edu.ng')
+        ? 'UNILAG'
+        : em.includes('funaab.edu.ng')
+        ? 'FUNAAB'
+        : em.includes('oau')
+        ? 'OAU'
+        : em.includes('unn.edu.ng')
+        ? 'UNN'
+        : undefined;
+    }
+
+    const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
     const { data, error } = await supabase
       .from('resources')
@@ -71,7 +86,9 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
       .filter((row: any) => !isUserBlocked(row.uploader_id))
       .filter((row: any) => {
         if (isStaffOrAdmin && !(query as any).campusCode) return true;
-        return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
+        if (!userCampus || userCampus === 'GLOBAL') return true;
+        const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
+        return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
       })
       .map((row: any) => ({
         id: row.id,
@@ -93,21 +110,26 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         campusCode: row.campus_code || 'GLOBAL',
       }));
 
- // Merge unique - local pool only ever contributes this session's own
- // just-created resources (always) plus seed fixtures (only when the
- // admin mock-data toggle is on).
- const pool = [...locallyCreatedResources];
- const merged = [...dbResources];
- for (const r of pool) {
- if (!merged.some((m) => m.id === r.id) && !isUserBlocked(r.authorId)) {
- if (isStaffOrAdmin && !(query as any).campusCode) {
- merged.push(r);
- } else if (!userCampus || userCampus === 'GLOBAL' || !(r as any).campusCode || (r as any).campusCode === 'GLOBAL' || (r as any).campusCode === userCampus) {
- merged.push(r);
- }
- }
- }
- return filterResources(merged, query);
+    // Merge unique - local pool only ever contributes this session's own
+    // just-created resources (always) plus seed fixtures (only when the
+    // admin mock-data toggle is on).
+    const pool = [...locallyCreatedResources];
+    const merged = [...dbResources];
+    for (const r of pool) {
+      if (!merged.some((m) => m.id === r.id) && !isUserBlocked(r.authorId)) {
+        if (isStaffOrAdmin && !(query as any).campusCode) {
+          merged.push(r);
+        } else if (!userCampus || userCampus === 'GLOBAL') {
+          merged.push(r);
+        } else {
+          const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
+          if (rCampus === userCampus.toUpperCase() || rCampus === 'GLOBAL') {
+            merged.push(r);
+          }
+        }
+      }
+    }
+    return filterResources(merged, query);
  } catch (err) {
  console.warn('[Resources] listResources failed, showing local pool only:', err);
  return filterResources([...locallyCreatedResources], query);

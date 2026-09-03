@@ -2,7 +2,7 @@ import { api } from './client';
 import { UserProfile, UserRole } from './types';
 
 import { supabase } from './supabase';
-import { getInstitutionByCode, LAUNCH_INSTITUTIONS } from './institutions';
+import { getInstitutionByCode, getInstitutionForEmail, LAUNCH_INSTITUTIONS } from './institutions';
 import { getSessionUser } from '../auth/tokenStorage';
 
 export function nextLevelXp(level: number): number {
@@ -28,6 +28,34 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
  const resolvedEmail = user.email || `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`;
  const username = user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
 
+ // Authoritatively derive campus institution from email domain or demo identity
+ const emailLower = resolvedEmail.toLowerCase();
+ let inst = getInstitutionForEmail(emailLower);
+ let instCode = inst?.code;
+ let instName = inst?.name;
+
+ if (!instCode) {
+   if (emailLower.includes('ui.edu.ng') || emailLower.includes('diana.prince') || emailLower.includes('dr.adeyemi') || emailLower.includes('adeola')) {
+     instCode = 'UI';
+     instName = 'University of Ibadan';
+   } else if (emailLower.includes('unilag.edu.ng')) {
+     instCode = 'UNILAG';
+     instName = 'University of Lagos';
+   } else if (emailLower.includes('funaab.edu.ng')) {
+     instCode = 'FUNAAB';
+     instName = 'Federal University of Agriculture, Abeokuta';
+   } else if (emailLower.includes('oau') || emailLower.includes('oauife.edu.ng')) {
+     instCode = 'OAU';
+     instName = 'Obafemi Awolowo University';
+   } else if (emailLower.includes('unn.edu.ng')) {
+     instCode = 'UNN';
+     instName = 'University of Nigeria Nsukka';
+   } else {
+     instCode = 'UI';
+     instName = 'University of Ibadan';
+   }
+ }
+
  const created: UserProfile = {
  id: user.id,
  fullName: user.fullName,
@@ -36,10 +64,10 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
  userType: user.role,
  graduationYear: undefined,
  bio: '',
- department: '',
+ department: 'Computer Science',
  interests: [],
- institutionName: '',
- institutionCode: undefined,
+ institutionName: instName || 'University of Ibadan',
+ institutionCode: instCode || 'UI',
  avatarUrl: undefined,
  coverUrl: undefined,
  isVerified: isAdmin,

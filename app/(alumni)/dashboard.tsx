@@ -33,7 +33,7 @@ export default function AlumniDashboard() {
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const { isFeatureEnabled } = useFeatureFlags();
-  const { campusCode } = useCampusScope();
+  const { campusCode, homeInstitutionCode } = useCampusScope();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -41,14 +41,16 @@ export default function AlumniDashboard() {
     enabled: !!user,
   });
 
+  const effectiveCampus = homeInstitutionCode || campusCode || profile?.institutionCode || 'UI';
+
   const { data: posts } = useQuery({
-    queryKey: ['feed', 'alumni-dash'],
-    queryFn: () => listFeedPosts({ scope: 'global' }),
+    queryKey: ['feed', 'alumni-dash', effectiveCampus],
+    queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus, viewScope: 'campus' }),
   });
 
   const { data: jobs } = useQuery({
-    queryKey: ['jobs', 'alumni-dash', campusCode],
-    queryFn: () => listJobs({ campusCode }),
+    queryKey: ['jobs', 'alumni-dash', effectiveCampus],
+    queryFn: () => listJobs({ campusCode: effectiveCampus }),
     enabled: isFeatureEnabled('career_page'),
   });
 
@@ -59,14 +61,14 @@ export default function AlumniDashboard() {
   });
 
   const { data: events } = useQuery({
-    queryKey: ['events', 'alumni-dash', campusCode],
-    queryFn: () => listEvents({ scope: 'alumni', campusCode }),
+    queryKey: ['events', 'alumni-dash', effectiveCampus],
+    queryFn: () => listEvents({ scope: 'alumni', campusCode: effectiveCampus }),
     enabled: isFeatureEnabled('campus_events'),
   });
 
   const { data: portalLinks } = useQuery({
-    queryKey: ['portal-links', 'alumni', profile?.institutionCode],
-    queryFn: () => listPortalLinks(profile?.institutionCode),
+    queryKey: ['portal-links', 'alumni-dash', effectiveCampus],
+    queryFn: () => listPortalLinks(effectiveCampus),
   });
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Alumni Fellow';
@@ -503,12 +505,7 @@ export default function AlumniDashboard() {
             </AppText>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {[
-              { id: 'alumni-1', title: 'Alumni Relations & Chapter', category: 'Fellowship', url: 'https://alumni.ui.edu.ng/', icon: 'ribbon-outline' as const },
-              { id: 'alumni-2', title: 'e-Transcript & Records Desk', category: 'Certificates', url: 'https://etranscript.ui.edu.ng/', icon: 'document-text-outline' as const },
-              { id: 'alumni-3', title: 'Degree Verification Service', category: 'Registry', url: 'https://verification.ui.edu.ng/', icon: 'shield-checkmark-outline' as const },
-              { id: 'alumni-4', title: 'Endowment & Giving Fund', category: 'Advancement', url: 'https://advancement.ui.edu.ng/', icon: 'gift-outline' as const },
-            ].map((portal) => (
+            {(portalLinks ?? []).slice(0, 4).map((portal: any) => (
               <Pressable
                 key={portal.id}
                 onPress={() => handleOpenPortal(portal.url)}
@@ -516,7 +513,7 @@ export default function AlumniDashboard() {
               >
                 <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name={portal.icon} size={20} color={colors.brandPrimary} />
+                    <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.brandPrimary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText variant="bodySmall" weight="bold" numberOfLines={1}>

@@ -18,6 +18,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import { getMyProfile, updateProfileImages } from '@/api/profile';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
@@ -38,9 +39,9 @@ const AVATAR_PRESETS = [
   { id: 'avatar_male', label: 'Male Student', src: require('../../assets/images/avatar_male.jpg') },
   { id: 'avatar_female', label: 'Female Student', src: require('../../assets/images/avatar_female.jpg') },
   { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
-  { id: 'avatar_female_2', label: 'Honor Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
-  { id: 'avatar_alumni_2', label: 'Alumni Founder', src: require('../../assets/images/avatar_alumni_2.jpg') },
-  { id: 'avatar_mentor', label: 'Faculty Advisor', src: require('../../assets/images/avatar_mentor.jpg') },
+  { id: 'avatar_female_2', label: 'Science Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
+  { id: 'avatar_mentor', label: 'Class Representative', src: require('../../assets/images/avatar_mentor.jpg') },
+  { id: 'class_rep_portrait', label: 'Department Executive', src: require('../../assets/images/class_rep_portrait.jpg') },
 ];
 
 export default function StudentDashboard() {
@@ -49,6 +50,7 @@ export default function StudentDashboard() {
   const queryClient = useQueryClient();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
+  const { campusCode, homeInstitutionCode } = useCampusScope();
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
 
   const { data: profile } = useQuery({
@@ -57,32 +59,34 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
+  const effectiveCampus = homeInstitutionCode || campusCode || profile?.institutionCode || 'UI';
+
   const { data: recentPosts } = useQuery({
-    queryKey: ['posts', 'dashboard-feed'],
-    queryFn: () => listFeedPosts({ scope: 'student' }),
+    queryKey: ['posts', 'dashboard-feed', effectiveCampus],
+    queryFn: () => listFeedPosts({ scope: 'student', viewerInstitutionCode: effectiveCampus, viewScope: 'campus' }),
   });
 
   const { data: events } = useQuery({
-    queryKey: ['events', 'student'],
-    queryFn: () => listEvents({ scope: 'student' }),
+    queryKey: ['events', 'student', effectiveCampus],
+    queryFn: () => listEvents({ scope: 'student', campusCode: effectiveCampus }),
     enabled: isFeatureEnabled('campus_events'),
   });
 
   const { data: resources } = useQuery({
-    queryKey: ['resources', 'dashboard'],
-    queryFn: () => listResources({ approvalStatus: 'approved' }),
+    queryKey: ['resources', 'dashboard', effectiveCampus],
+    queryFn: () => listResources({ approvalStatus: 'approved', campusCode: effectiveCampus }),
     enabled: isFeatureEnabled('academic_resources'),
   });
 
   const { data: studyGroups } = useQuery({
-    queryKey: ['study-groups', 'dashboard', profile?.institutionCode],
-    queryFn: () => listStudyGroups(profile?.institutionCode),
+    queryKey: ['study-groups', 'dashboard', effectiveCampus],
+    queryFn: () => listStudyGroups(effectiveCampus),
     enabled: isFeatureEnabled('study_groups'),
   });
 
   const { data: portalLinks } = useQuery({
-    queryKey: ['portal-links', 'dashboard', profile?.institutionCode],
-    queryFn: () => listPortalLinks(profile?.institutionCode),
+    queryKey: ['portal-links', 'dashboard', effectiveCampus],
+    queryFn: () => listPortalLinks(effectiveCampus),
   });
 
   const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Student';

@@ -29,7 +29,20 @@ export function useCampusScope() {
     enabled: !!user,
   });
 
-  const homeInstitutionCode = profile?.institutionCode;
+  const emailLower = user?.email?.toLowerCase() || '';
+  const deducedFromEmail = emailLower.includes('ui.edu.ng') || emailLower.includes('diana.prince') || emailLower.includes('dr.adeyemi') || emailLower.includes('admin@ui.edu.ng') || emailLower.includes('adeola')
+    ? 'UI'
+    : emailLower.includes('unilag.edu.ng')
+    ? 'UNILAG'
+    : emailLower.includes('funaab.edu.ng')
+    ? 'FUNAAB'
+    : emailLower.includes('oau')
+    ? 'OAU'
+    : emailLower.includes('unn.edu.ng')
+    ? 'UNN'
+    : undefined;
+
+  const homeInstitutionCode = profile?.institutionCode || deducedFromEmail || 'UI';
   const campusCode = scope === 'global' ? 'GLOBAL' : activeCampusCode || homeInstitutionCode;
 
   return { scope, setScope, activeCampusCode, setActiveCampusCode, campusCode, homeInstitutionCode };

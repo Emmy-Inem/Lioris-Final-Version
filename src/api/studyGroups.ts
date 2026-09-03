@@ -101,6 +101,21 @@ export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]
  if (prof?.role) userRole = prof.role;
  }
 
+ if (!userCampus && authData?.user?.email) {
+   const em = authData.user.email.toLowerCase();
+   userCampus = em.includes('ui.edu.ng') || em.includes('diana.prince') || em.includes('dr.adeyemi') || em.includes('admin@ui.edu.ng') || em.includes('adeola')
+     ? 'UI'
+     : em.includes('unilag.edu.ng')
+     ? 'UNILAG'
+     : em.includes('funaab.edu.ng')
+     ? 'FUNAAB'
+     : em.includes('oau')
+     ? 'OAU'
+     : em.includes('unn.edu.ng')
+     ? 'UNN'
+     : undefined;
+ }
+
  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
  const { data, error } = await supabase
@@ -113,8 +128,10 @@ export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]
  const dbGroups: StudyGroup[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.creator_id))
  .filter((row: any) => {
- if (isStaffOrAdmin && !campusCode) return true;
- return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
+   if (isStaffOrAdmin && !campusCode) return true;
+   if (!userCampus || userCampus === 'GLOBAL') return true;
+   const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
+   return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
  })
  .map((row: any) => {
  const members = Array.isArray(row.study_group_members) ? row.study_group_members : [];
@@ -138,11 +155,16 @@ export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]
  const merged = [...dbGroups];
  for (const g of getLocalPool()) {
  if (!merged.some((m) => m.id === g.id) && !isUserBlocked((g as any).creatorId)) {
- if (isStaffOrAdmin && !campusCode) {
- merged.push(g);
- } else if (!userCampus || userCampus === 'GLOBAL' || !(g as any).campusCode || (g as any).campusCode === 'GLOBAL' || (g as any).campusCode === userCampus) {
- merged.push(g);
- }
+   if (isStaffOrAdmin && !campusCode) {
+     merged.push(g);
+   } else if (!userCampus || userCampus === 'GLOBAL') {
+     merged.push(g);
+   } else {
+     const gCampus = ((g as any).campusCode || 'GLOBAL').toUpperCase();
+     if (gCampus === userCampus.toUpperCase() || gCampus === 'GLOBAL') {
+       merged.push(g);
+     }
+   }
  }
  }
  return merged;

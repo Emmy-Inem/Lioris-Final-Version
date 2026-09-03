@@ -23,6 +23,7 @@ import { listReports } from '@/api/moderation';
 import { listEvents } from '@/api/events';
 import { listFeedPosts } from '@/api/posts';
 import { listResources } from '@/api/resources';
+import { listPortalLinks } from '@/api/portalLinks';
 import { getMyProfile } from '@/api/profile';
 import { haptics } from '@/utils/haptics';
 
@@ -30,7 +31,7 @@ export default function StaffDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
-  const { campusCode } = useCampusScope();
+  const { campusCode, homeInstitutionCode } = useCampusScope();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -38,24 +39,31 @@ export default function StaffDashboard() {
     enabled: !!user,
   });
 
+  const effectiveCampus = homeInstitutionCode || campusCode || profile?.institutionCode || 'UI';
+
   const { data: openReports } = useQuery({
     queryKey: ['reports', 'open'],
     queryFn: () => listReports({ status: 'open' }),
   });
 
   const { data: pendingResources } = useQuery({
-    queryKey: ['resources', 'pending-review'],
-    queryFn: () => listResources({ approvalStatus: 'pending' }),
+    queryKey: ['resources', 'pending-review', effectiveCampus],
+    queryFn: () => listResources({ approvalStatus: 'pending', campusCode: effectiveCampus }),
   });
 
   const { data: events } = useQuery({
-    queryKey: ['events', 'staff-dash', campusCode],
-    queryFn: () => listEvents({ scope: 'global', campusCode }),
+    queryKey: ['events', 'staff-dash', effectiveCampus],
+    queryFn: () => listEvents({ scope: 'global', campusCode: effectiveCampus }),
   });
 
   const { data: studentPosts } = useQuery({
-    queryKey: ['posts', 'staff-student-pulse'],
-    queryFn: () => listFeedPosts({ scope: 'student' }),
+    queryKey: ['posts', 'staff-student-pulse', effectiveCampus],
+    queryFn: () => listFeedPosts({ scope: 'student', viewerInstitutionCode: effectiveCampus, viewScope: 'campus' }),
+  });
+
+  const { data: portalLinks } = useQuery({
+    queryKey: ['portal-links', 'staff-dash', effectiveCampus],
+    queryFn: () => listPortalLinks(effectiveCampus),
   });
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Dr. Faculty Member';
@@ -368,12 +376,7 @@ export default function StaffDashboard() {
             </AppText>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {[
-              { id: 'staff-1', title: 'Academic Senate & Grading Desk', category: 'Senate', url: 'https://portal.ui.edu.ng/staff', icon: 'ribbon-outline' as const },
-              { id: 'staff-2', title: 'TETFUND & Research Grants', category: 'Research', url: 'https://tetfund.gov.ng/', icon: 'document-text-outline' as const },
-              { id: 'staff-3', title: 'Kenneth Dike e-Library Catalog', category: 'Library', url: 'https://library.ui.edu.ng/', icon: 'book-outline' as const },
-              { id: 'staff-4', title: 'Staff Payroll & Bursary Desk', category: 'Finance', url: 'https://bursary.ui.edu.ng/', icon: 'card-outline' as const },
-            ].map((portal) => (
+            {(portalLinks ?? []).slice(0, 4).map((portal: any) => (
               <Pressable
                 key={portal.id}
                 onPress={() => handleOpenPortal(portal.url)}
@@ -381,7 +384,7 @@ export default function StaffDashboard() {
               >
                 <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name={portal.icon} size={20} color={colors.brandPrimary} />
+                    <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.brandPrimary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText variant="bodySmall" weight="bold" numberOfLines={1}>

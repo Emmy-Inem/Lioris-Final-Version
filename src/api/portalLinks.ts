@@ -39,18 +39,16 @@ export const DEFAULT_CAMPUS_PORTAL_LINKS: Record<string, PortalLink[]> = {
  { id: 'funaab-6', campusCode: 'FUNAAB', title: 'Directorate of Health Services', url: 'https://healthservices.unaab.edu.ng/', category: 'Health', icon: 'medkit-outline', active: true, displayOrder: 6 },
  ],
  GLOBAL: [
- { id: 'glob-1', campusCode: 'GLOBAL', title: 'Campus Student Portal', url: 'https://studentportal.unilag.edu.ng/', category: 'Academic', icon: 'school-outline', active: true, displayOrder: 1 },
- { id: 'glob-2', campusCode: 'GLOBAL', title: 'LMS Virtual Classroom', url: 'https://lms.unilag.edu.ng/', category: 'Classes', icon: 'laptop-outline', active: true, displayOrder: 2 },
- { id: 'glob-3', campusCode: 'GLOBAL', title: 'Academic Library & Archives', url: 'https://library.unilag.edu.ng/', category: 'Library', icon: 'book-outline', active: true, displayOrder: 3 },
- { id: 'glob-4', campusCode: 'GLOBAL', title: 'Tuition & Bursary Services', url: 'https://payments.unilag.edu.ng/', category: 'Finance', icon: 'card-outline', active: true, displayOrder: 4 },
- { id: 'glob-5', campusCode: 'GLOBAL', title: 'Campus Accommodation Portal', url: 'https://studentportal.unilag.edu.ng/hostel', category: 'Housing', icon: 'home-outline', active: true, displayOrder: 5 },
- { id: 'glob-6', campusCode: 'GLOBAL', title: 'University Health Center', url: 'https://medical.unilag.edu.ng/', category: 'Health', icon: 'medkit-outline', active: true, displayOrder: 6 },
+ { id: 'glob-1', campusCode: 'GLOBAL', title: 'National Academic Repository (JAMB)', url: 'https://efacility.jamb.gov.ng/', category: 'National', icon: 'school-outline', active: true, displayOrder: 1 },
+ { id: 'glob-2', campusCode: 'GLOBAL', title: 'National Universities Commission (NUC)', url: 'https://www.nuc.edu.ng/', category: 'Commission', icon: 'globe-outline', active: true, displayOrder: 2 },
+ { id: 'glob-3', campusCode: 'GLOBAL', title: 'TETFUND Digital Research Library', url: 'https://tetfund.gov.ng/', category: 'Research', icon: 'book-outline', active: true, displayOrder: 3 },
+ { id: 'glob-4', campusCode: 'GLOBAL', title: 'Central Education Payments (Remita)', url: 'https://remita.net/', category: 'Finance', icon: 'card-outline', active: true, displayOrder: 4 },
  ],
 };
 
 let localPortalLinksState: PortalLink[] = [
- ...DEFAULT_CAMPUS_PORTAL_LINKS.UNILAG,
  ...DEFAULT_CAMPUS_PORTAL_LINKS.UI,
+ ...DEFAULT_CAMPUS_PORTAL_LINKS.UNILAG,
  ...DEFAULT_CAMPUS_PORTAL_LINKS.FUNAAB,
 ];
 
@@ -58,7 +56,7 @@ export async function listPortalLinks(campusCode?: string): Promise<PortalLink[]
  try {
  let query = supabase.from('portal_links').select('*').order('display_order', { ascending: true });
  if (campusCode && campusCode !== 'GLOBAL') {
- query = query.or(`campus_code.eq.${campusCode},campus_code.eq.GLOBAL,campus_code.is.null`);
+ query = query.eq('campus_code', campusCode);
  }
 
  const { data, error } = await query;
@@ -79,8 +77,8 @@ export async function listPortalLinks(campusCode?: string): Promise<PortalLink[]
  }
 
  // Curated campus fallback
- const code = (campusCode || 'UNILAG').toUpperCase();
- const campusDefaults = DEFAULT_CAMPUS_PORTAL_LINKS[code] || DEFAULT_CAMPUS_PORTAL_LINKS.UNILAG;
+ const code = (campusCode || 'UI').toUpperCase();
+ const campusDefaults = DEFAULT_CAMPUS_PORTAL_LINKS[code] || DEFAULT_CAMPUS_PORTAL_LINKS.UI;
  return campusDefaults;
 }
 

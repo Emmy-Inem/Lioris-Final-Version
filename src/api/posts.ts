@@ -23,36 +23,54 @@ export interface FeedQuery {
 }
 
 function filterPosts(pool: Post[], query: FeedQuery): Post[] {
- let results = pool.filter((p) => !isUserBlocked(p.authorId));
+  let results = pool.filter((p) => !isUserBlocked(p.authorId));
 
- results = results.filter((p) => !p.institutionCode || p.institutionCode === query.viewerInstitutionCode);
+  if (query.viewScope === 'global') {
+    results = results.filter((p) => p.scopeVisibility === 'global' || !p.institutionCode);
+  } else if (query.viewerInstitutionCode) {
+    const viewerCode = query.viewerInstitutionCode.toUpperCase();
+    results = results.filter((p) => {
+      if (p.institutionCode && p.institutionCode !== 'GLOBAL') {
+        return p.institutionCode.toUpperCase() === viewerCode;
+      }
+      return p.scopeVisibility === 'global' || !p.institutionCode;
+    });
+  }
 
- if (query.viewScope === 'global') {
- results = results.filter((p) => !p.institutionCode);
- }
-
- if (query.scope) {
- results = results.filter((p) => p.visibilityScope === query.scope || p.visibilityScope === 'global');
- }
- if (query.category) {
- results = results.filter((p) => p.category.toLowerCase() === query.category!.toLowerCase());
- }
- if (query.q) {
- const q = query.q.toLowerCase();
- results = results.filter(
- (p) =>
- p.title.toLowerCase().includes(q) ||
- p.content.toLowerCase().includes(q) ||
- p.authorName.toLowerCase().includes(q),
- );
- }
- return results;
+  if (query.scope) {
+    results = results.filter((p) => p.visibilityScope === query.scope || p.visibilityScope === 'global');
+  }
+  if (query.category) {
+    results = results.filter((p) => p.category.toLowerCase() === query.category!.toLowerCase());
+  }
+  if (query.q) {
+    const q = query.q.toLowerCase();
+    results = results.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        p.content.toLowerCase().includes(q) ||
+        p.authorName.toLowerCase().includes(q),
+    );
+  }
+  return results;
 }
 
 export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
+  let viewerInstitutionCode = query.viewerInstitutionCode;
   try {
     const { data: authData } = await supabase.auth.getUser();
     const currentUserId = authData?.user?.id;
+
+    if (!viewerInstitutionCode && authData?.user?.email) {
+      const em = authData.user.email.toLowerCase();
+      viewerInstitutionCode = em.includes('ui.edu.ng') || em.includes('diana.prince') || em.includes('dr.adeyemi') || em.includes('admin@ui.edu.ng') || em.includes('adeola')
+        ? 'UI'
+        : em.includes('unilag.edu.ng')
+        ? 'UNILAG'
+        : em.includes('funaab.edu.ng')
+        ? 'FUNAAB'
+        : undefined;
+    }
 
     let dbQuery = supabase
       .from('posts')
@@ -98,10 +116,10 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
         merged.push(p);
       }
     }
-    return filterPosts(merged, query);
+    return filterPosts(merged, { ...query, viewerInstitutionCode });
   } catch (err) {
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
-    return filterPosts([...locallyCreatedPosts], query);
+    return filterPosts([...locallyCreatedPosts], { ...query, viewerInstitutionCode });
   }
 }
 

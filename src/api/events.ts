@@ -68,17 +68,32 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
  let userCampus = query.campusCode;
  let userRole = 'student';
 
- if (authData?.user?.id) {
- const { data: prof } = await supabase
- .from('profiles')
- .select('campus_code, role')
- .eq('id', authData.user.id)
- .maybeSingle();
- if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
- if (prof?.role) userRole = prof.role;
- }
+    if (authData?.user?.id) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('campus_code, role')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+      if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
+      if (prof?.role) userRole = prof.role;
+    }
 
- const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
+    if (!userCampus && authData?.user?.email) {
+      const em = authData.user.email.toLowerCase();
+      userCampus = em.includes('ui.edu.ng') || em.includes('diana.prince') || em.includes('dr.adeyemi') || em.includes('admin@ui.edu.ng') || em.includes('adeola')
+        ? 'UI'
+        : em.includes('unilag.edu.ng')
+        ? 'UNILAG'
+        : em.includes('funaab.edu.ng')
+        ? 'FUNAAB'
+        : em.includes('oau')
+        ? 'OAU'
+        : em.includes('unn.edu.ng')
+        ? 'UNN'
+        : undefined;
+    }
+
+    const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
     const currentUserId = authData?.user?.id;
 
@@ -93,7 +108,9 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
       .filter((row: any) => !isUserBlocked(row.creator_id))
       .filter((row: any) => {
         if (isStaffOrAdmin && !query.campusCode) return true;
-        return !userCampus || userCampus === 'GLOBAL' || !row.campus_code || row.campus_code === 'GLOBAL' || row.campus_code === userCampus;
+        if (!userCampus || userCampus === 'GLOBAL') return true;
+        const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
+        return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
       })
       .map((row: any) => {
         const isRsvpd = currentUserId ? (row.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
@@ -126,8 +143,13 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
       if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
         if (isStaffOrAdmin && !query.campusCode) {
           merged.push(e);
-        } else if (!userCampus || userCampus === 'GLOBAL' || !e.campusCode || e.campusCode === 'GLOBAL' || e.campusCode === userCampus) {
+        } else if (!userCampus || userCampus === 'GLOBAL') {
           merged.push(e);
+        } else {
+          const eCampus = (e.campusCode || 'GLOBAL').toUpperCase();
+          if (eCampus === userCampus.toUpperCase() || eCampus === 'GLOBAL') {
+            merged.push(e);
+          }
         }
       }
     }
