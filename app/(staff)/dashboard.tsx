@@ -25,6 +25,7 @@ import { listFeedPosts } from '@/api/posts';
 import { listResources } from '@/api/resources';
 import { listPortalLinks } from '@/api/portalLinks';
 import { getMyProfile } from '@/api/profile';
+import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { haptics } from '@/utils/haptics';
 
 export default function StaffDashboard() {
@@ -67,6 +68,7 @@ export default function StaffDashboard() {
   });
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Dr. Faculty Member';
+  const institutionName = profile?.institutionName || LAUNCH_INSTITUTIONS.find((i) => i.code === effectiveCampus)?.name || 'University of Ibadan';
   const openReportsCount = openReports?.length ?? 0;
   const pendingResourcesCount = pendingResources?.length ?? 0;
   const upcomingEvents = (events ?? []).slice(0, 2);
@@ -133,8 +135,8 @@ export default function StaffDashboard() {
                 }}
               >
                 <Ionicons name="school" size={14} color="#68D391" />
-                <AppText variant="caption" weight="bold" tone="inverse">
-                  Faculty Console • {profile?.institutionName ?? 'University of Ibadan'}
+                <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1}>
+                  Faculty Console • {institutionName}
                 </AppText>
               </View>
             </View>
@@ -206,30 +208,30 @@ export default function StaffDashboard() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             <Pressable
               onPress={() => router.push('/(staff)/announcements')}
-              style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
               <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Ionicons name="megaphone" size={18} color={colors.brandPrimary} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold">Broadcast</AppText>
-                  <AppText variant="caption" tone="secondary">Post notices</AppText>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Broadcast</AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1}>Post notices</AppText>
                 </View>
               </SolidCard>
             </Pressable>
 
             <Pressable
               onPress={() => router.push('/(staff)/moderation')}
-              style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
               <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F1A' : '#FEF2F2', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F1A' : '#FEF2F2', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Ionicons name="shield-checkmark" size={18} color="#EF4444" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold">Moderation</AppText>
-                  <AppText variant="caption" tone="secondary">
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Moderation</AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
                     {openReportsCount > 0 ? `${openReportsCount} flags` : 'Queue clear'}
                   </AppText>
                 </View>
@@ -238,30 +240,30 @@ export default function StaffDashboard() {
 
             <Pressable
               onPress={() => router.push('/(staff)/events-list' as any)}
-              style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
               <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Ionicons name="calendar" size={18} color="#3B82F6" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold">Academic Events</AppText>
-                  <AppText variant="caption" tone="secondary">Seminars & talks</AppText>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Faculty Events</AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1}>Seminars & talks</AppText>
                 </View>
               </SolidCard>
             </Pressable>
 
             <Pressable
               onPress={() => router.push('/(staff)/forum')}
-              style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 160 : 140 }}
+              style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
               <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Ionicons name="chatbubbles" size={18} color="#EC4899" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold">Faculty Forum</AppText>
-                  <AppText variant="caption" tone="secondary">Academic feed</AppText>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Faculty Forum</AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1}>Academic feed</AppText>
                 </View>
               </SolidCard>
             </Pressable>
