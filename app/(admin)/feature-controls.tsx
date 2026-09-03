@@ -9,22 +9,25 @@ import { AppButton } from '@/components/AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags, FEATURE_CATALOG, FeatureKey } from '@/context/FeatureFlagsContext';
+import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 
 export default function AdminFeatureControlsScreen() {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
+  const toast = useToast();
   const { flags, isFeatureEnabled, setFeature, resetDefaults } = useFeatureFlags();
 
   async function handleToggleFlag(key: FeatureKey, next: boolean, label: string) {
     haptics.medium();
     await setFeature(key, next);
+    toast.success(`"${label}" is now ${next ? 'Active' : 'Disabled'}`);
   }
 
   async function handleResetDefaults() {
     haptics.light();
     await resetDefaults();
-    Alert.alert('Flags Reset', 'All feature toggles restored to production baseline.');
+    toast.info('All feature toggles restored to default.');
   }
 
   return (
@@ -70,7 +73,7 @@ export default function AdminFeatureControlsScreen() {
                         <AppText weight="bold" variant="bodySmall">
                           {flag.label}
                         </AppText>
-                        <Badge label={flag.category} tone={isEnabled ? 'brand' : 'critical'} />
+                        <Badge label={isEnabled ? 'Active' : 'Disabled'} tone={isEnabled ? 'success' : 'critical'} />
                       </View>
                       <AppText tone="secondary" variant="caption" style={{ lineHeight: 16 }}>
                         {flag.description}

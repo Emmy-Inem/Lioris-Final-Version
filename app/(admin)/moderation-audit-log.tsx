@@ -61,6 +61,7 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
  toxicity_thresholds_deployed: 'warning',
  storage_quotas_enforced: 'warning',
  global_push_broadcast: 'critical',
+ maintenance_mode_toggled: 'critical',
 };
 
 const ACTION_LABEL: Record<AuditLogAction, string> = {
@@ -92,6 +93,7 @@ const ACTION_LABEL: Record<AuditLogAction, string> = {
  toxicity_thresholds_deployed: 'Toxicity thresholds deployed',
  storage_quotas_enforced: 'Storage limits enforced',
  global_push_broadcast: 'Global push notification broadcast',
+ maintenance_mode_toggled: 'Maintenance mode toggled',
 };
 
 function formatTimestamp(iso: string) {

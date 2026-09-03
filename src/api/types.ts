@@ -228,6 +228,7 @@ export interface Mentorship {
  id: string;
  studentId: string;
  studentName?: string | null;
+ studentDepartment?: string | null;
  mentorId: string;
  mentorName: string;
  status: MentorshipStatus;
@@ -277,7 +278,8 @@ export type AuditLogAction =
  | 'escrow_config_updated'
  | 'toxicity_thresholds_deployed'
  | 'storage_quotas_enforced'
- | 'global_push_broadcast';
+ | 'global_push_broadcast'
+ | 'maintenance_mode_toggled';
 
 export interface AuditLogEntry {
  id: string;

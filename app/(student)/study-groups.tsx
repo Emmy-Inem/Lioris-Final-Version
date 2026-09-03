@@ -197,8 +197,9 @@ export default function StudyGroupsScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={{ flex: 1, minWidth: 0, marginBottom: spacing.md }}
+              style={{ width: '100%', flexGrow: 0, marginBottom: spacing.md }}
               contentContainerStyle={{ gap: 8, paddingRight: 16 }}
+              {...({ 'data-horizontal-scroll': 'true' } as any)}
             >
               {COURSE_FILTERS.map((f) => (
                 <Pressable

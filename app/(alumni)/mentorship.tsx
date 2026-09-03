@@ -94,15 +94,15 @@ export default function AlumniMentorshipScreen() {
             const studentName = m.studentName || 'Student Mentee';
             return (
               <SolidCard key={m.id} radius={18} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 300, marginBottom: spacing.md } : { marginBottom: spacing.md }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
-                  <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
-                    <Avatar name={studentName} size={42} />
-                    <View>
-                      <AppText variant="bodySmall" weight="bold">
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: spacing.xs }}>
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flex: 1, minWidth: 0 }}>
+                    <Avatar name={studentName} size={40} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                         {studentName}
                       </AppText>
-                      <AppText tone="secondary" variant="caption">
-                        University of Ibadan • Computer Science
+                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>
+                        {m.studentDepartment ? `${m.studentDepartment} • Mentee` : 'Undergraduate Scholar'}
                       </AppText>
                     </View>
                   </View>
@@ -150,26 +150,26 @@ export default function AlumniMentorshipScreen() {
 }
 
 function StatBox({ label, value, icon }: { label: string; value: number; icon: keyof typeof Ionicons.glyphMap }) {
- const { colors, spacing, radius } = useTheme();
- return (
- <View
- style={{
- flex: 1,
- backgroundColor: colors.pastelPrimaryBg,
- borderRadius: radius.md,
- padding: spacing.sm,
- alignItems: 'center',
- borderWidth: 1,
- borderColor: colors.brandPrimary,
- }}
- >
- <Ionicons name={icon} size={18} color={colors.brandPrimary} style={{ marginBottom: 2 }} />
- <AppText variant="h3"weight="bold"tone="brand">
- {value}
- </AppText>
- <AppText tone="secondary"variant="caption"style={{ fontSize: 10 }}>
- {label}
- </AppText>
- </View>
- );
+  const { colors, spacing, radius } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.pastelPrimaryBg,
+        borderRadius: radius.md,
+        padding: spacing.sm,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.brandPrimary,
+      }}
+    >
+      <Ionicons name={icon} size={18} color={colors.brandPrimary} style={{ marginBottom: 2 }} />
+      <AppText variant="h3" weight="bold" tone="brand">
+        {value}
+      </AppText>
+      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10, textAlign: 'center' }}>
+        {label}
+      </AppText>
+    </View>
+  );
 }

@@ -167,6 +167,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  onScrollEndDrag={handleScrollEnd}
  onMomentumScrollEnd={handleScrollEnd}
  contentContainerStyle={{ paddingRight: 16 }}
+ {...({ 'data-horizontal-scroll': 'true' } as any)}
  >
  {displayEvents.map((item) => {
  const imageSource = item.coverImageUrl

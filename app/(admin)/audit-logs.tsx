@@ -47,6 +47,7 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
   toxicity_thresholds_deployed: 'warning',
   storage_quotas_enforced: 'warning',
   global_push_broadcast: 'critical',
+  maintenance_mode_toggled: 'critical',
 };
 
 export default function AuditLogsScreen() {

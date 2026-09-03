@@ -250,13 +250,14 @@ export default function JobsScreen() {
  />
  </View>
 
- {/* Category Filter Chips */}
- <ScrollView
- horizontal
- showsHorizontalScrollIndicator={false}
- style={{ marginBottom: spacing.md }}
- contentContainerStyle={{ gap: spacing.xs, paddingRight: 16 }}
- >
+        {/* Category Filter Chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ width: '100%', flexGrow: 0, marginBottom: spacing.md }}
+          contentContainerStyle={{ gap: spacing.xs, paddingRight: 16 }}
+          {...({ 'data-horizontal-scroll': 'true' } as any)}
+        >
  {JOB_FILTERS.map((f) => {
  const selected = selectedFilter === f.id;
  return (

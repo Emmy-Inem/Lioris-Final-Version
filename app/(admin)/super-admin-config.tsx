@@ -65,6 +65,62 @@ export default function SuperAdminConfigScreen() {
   const [pushTitle, setPushTitle] = useState('');
   const [pushBody, setPushBody] = useState('');
 
+  // Hydrate settings on mount from local storage / remote cache
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const cachedDomains = localStorage.getItem('lioris_setting_allowed_email_domains');
+        if (cachedDomains) {
+          const parsed = JSON.parse(cachedDomains);
+          if (Array.isArray(parsed)) setDomainAuthorityInput(parsed.join(', '));
+        }
+
+        const cachedQuotas = localStorage.getItem('lioris_setting_storage_quotas');
+        if (cachedQuotas) {
+          const parsed = JSON.parse(cachedQuotas);
+          if (parsed.maxImageMb) setCloudStorageImgMb(String(parsed.maxImageMb));
+          if (parsed.maxPdfMb) setCloudStoragePdfMb(String(parsed.maxPdfMb));
+        }
+
+        const cachedEscrow = localStorage.getItem('lioris_setting_escrow_config');
+        if (cachedEscrow) {
+          const parsed = JSON.parse(cachedEscrow);
+          if (parsed.holdHours) setEscrowHoldHours(String(parsed.holdHours));
+          if (parsed.feePercent) setEscrowFeePercent(String(parsed.feePercent));
+          if (typeof parsed.autoRefund === 'boolean') setEscrowAutoRefund(parsed.autoRefund);
+        }
+
+        const cachedKeys = localStorage.getItem('lioris_setting_payment_gateway_config');
+        if (cachedKeys) {
+          const parsed = JSON.parse(cachedKeys);
+          if (parsed.paystackPublicKey) setPaystackKey(parsed.paystackPublicKey);
+          if (parsed.flutterwavePublicKey) setFlutterwaveKey(parsed.flutterwavePublicKey);
+        }
+
+        const cachedMaintenance = localStorage.getItem('lioris_setting_maintenance_mode');
+        if (cachedMaintenance) {
+          setMaintenanceMode(JSON.parse(cachedMaintenance) === true);
+        }
+      } catch {}
+    }
+  }, []);
+
+  async function persistSetting(key: string, value: any, description: string) {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(`lioris_setting_${key}`, JSON.stringify(value));
+      } catch {}
+    }
+    try {
+      await supabase.from('platform_settings').upsert({
+        key,
+        value,
+        description,
+        updated_at: new Date().toISOString(),
+      });
+    } catch {}
+  }
+
   async function handleAddUniversity() {
     if (!newUniName.trim() || !newUniCode.trim()) {
       Alert.alert('Validation Error', 'University Name and Campus Code are required.');
@@ -103,12 +159,7 @@ export default function SuperAdminConfigScreen() {
     setIsSaving(true);
     try {
       const domains = domainAuthorityInput.split(',').map((d) => d.trim()).filter(Boolean);
-      await supabase.from('platform_settings').upsert({
-        key: 'allowed_email_domains',
-        value: domains,
-        description: 'Whitelisted campus email domain authorities',
-        updated_at: new Date().toISOString(),
-      });
+      await persistSetting('allowed_email_domains', domains, 'Whitelisted campus email domain authorities');
       await recordAuditLogEntry({
         action: 'domain_authority_updated',
         summary: `Whitelisted ${domains.length} campus email domain authorities`,
@@ -132,12 +183,7 @@ export default function SuperAdminConfigScreen() {
         maxImageMb: Number(cloudStorageImgMb) || 5,
         maxPdfMb: Number(cloudStoragePdfMb) || 25,
       };
-      await supabase.from('platform_settings').upsert({
-        key: 'storage_quotas',
-        value: quotas,
-        description: 'Per-user upload file size limits',
-        updated_at: new Date().toISOString(),
-      });
+      await persistSetting('storage_quotas', quotas, 'Per-user upload file size limits');
       await recordAuditLogEntry({
         action: 'storage_quotas_enforced',
         summary: `Updated upload storage quotas: Images ${quotas.maxImageMb}MB, Documents ${quotas.maxPdfMb}MB`,
@@ -162,12 +208,7 @@ export default function SuperAdminConfigScreen() {
         feePercent: Number(escrowFeePercent) || 1.5,
         autoRefund: escrowAutoRefund,
       };
-      await supabase.from('platform_settings').upsert({
-        key: 'escrow_config',
-        value: config,
-        description: 'Marketplace escrow parameters and holding periods',
-        updated_at: new Date().toISOString(),
-      });
+      await persistSetting('escrow_config', config, 'Marketplace escrow parameters and holding periods');
       await recordAuditLogEntry({
         action: 'escrow_config_updated',
         summary: `Updated Marketplace Escrow rules: Hold ${config.holdHours}h, Fee ${config.feePercent}%`,
@@ -193,7 +234,7 @@ export default function SuperAdminConfigScreen() {
     try {
       await createNotification({
         type: 'system_announcement',
-        title: ` ${pushTitle.trim()}`,
+        title: `📢 ${pushTitle.trim()}`,
         body: pushBody.trim(),
         deepLinkPath: '/(student)/dashboard',
       });
@@ -222,12 +263,7 @@ export default function SuperAdminConfigScreen() {
         paystackPublicKey: paystackKey.trim(),
         flutterwavePublicKey: flutterwaveKey.trim(),
       };
-      await supabase.from('platform_settings').upsert({
-        key: 'payment_gateway_config',
-        value: keys,
-        description: 'Campus payments and alumni endowment gateway keys',
-        updated_at: new Date().toISOString(),
-      });
+      await persistSetting('payment_gateway_config', keys, 'Campus payments and alumni endowment gateway keys');
       await recordAuditLogEntry({
         action: 'platform_config_updated',
         summary: 'Updated payment gateway public API credentials',
@@ -243,9 +279,17 @@ export default function SuperAdminConfigScreen() {
       setIsSaving(false);
     }
   }
- function confirmMaintenanceMode(next: boolean) {
+
+  function confirmMaintenanceMode(next: boolean) {
     if (!next) {
       setMaintenanceMode(false);
+      persistSetting('maintenance_mode', false, 'System maintenance mode disabled');
+      recordAuditLogEntry({
+        action: 'maintenance_mode_toggled',
+        summary: 'Maintenance mode deactivated - platform online',
+        targetType: 'platform_config',
+        targetId: 'maintenance_mode',
+      }).catch(() => {});
       return;
     }
     Alert.alert(
@@ -253,7 +297,20 @@ export default function SuperAdminConfigScreen() {
       'This forces the entire platform offline and disables all database writes for every user, immediately. This is not reversible without another manual toggle.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Enable', style: 'destructive', onPress: () => setMaintenanceMode(true) },
+        {
+          text: 'Enable',
+          style: 'destructive',
+          onPress: () => {
+            setMaintenanceMode(true);
+            persistSetting('maintenance_mode', true, 'System maintenance mode enabled');
+            recordAuditLogEntry({
+              action: 'maintenance_mode_toggled',
+              summary: 'Maintenance mode ACTIVATED by super admin',
+              targetType: 'platform_config',
+              targetId: 'maintenance_mode',
+            }).catch(() => {});
+          },
+        },
       ],
     );
   }
