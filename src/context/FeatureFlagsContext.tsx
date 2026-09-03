@@ -42,7 +42,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Commerce & Career',
     tier: 'P1',
     description: 'Enables student internships, graduate recruitment, and alumni job postings.',
-    defaultOn: false,
+    defaultOn: true,
   },
   {
     key: 'marketplace',
@@ -50,7 +50,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Commerce & Career',
     tier: 'P1',
     description: 'Allows students to buy and sell textbooks, electronics, dorm essentials, and academic kits.',
-    defaultOn: false,
+    defaultOn: true,
   },
   {
     key: 'utility_cards',
@@ -58,7 +58,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Campus Life',
     tier: 'P1',
     description: 'Shows lecture countdowns, timetable shortcuts, and university portal tiles.',
-    defaultOn: false,
+    defaultOn: true,
   },
   {
     key: 'study_groups',
@@ -66,7 +66,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Campus Life',
     tier: 'P1',
     description: 'Enables Senate E-Library check-ins, study circles, and peer revision squad activity.',
-    defaultOn: false,
+    defaultOn: true,
   },
   {
     key: 'campus_events',
@@ -90,7 +90,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Commerce & Career',
     tier: 'P1',
     description: 'Connects undergraduates with alumni mentors for career coaching and 1-on-1 calls.',
-    defaultOn: false,
+    defaultOn: true,
   },
   {
     key: 'stories_bar',
@@ -122,7 +122,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'AI & Tools',
     tier: 'P1',
     description: 'Enables private 1-on-1 direct messaging across students, mentors, and class reps.',
-    defaultOn: false,
+    defaultOn: true,
   },
 ];
 
