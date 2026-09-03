@@ -81,6 +81,7 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  remote: row.is_remote ?? false,
  applyUrl: row.apply_url,
  postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
+ posterId: row.poster_id,
  createdAt: row.created_at,
  description: row.description || '',
  salary: row.salary || undefined,

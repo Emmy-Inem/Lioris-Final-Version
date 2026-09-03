@@ -332,6 +332,7 @@ export interface JobListing {
  remote: boolean;
  applyUrl: string;
  postedByName: string;
+ posterId?: string;
  createdAt: string;
  campusCode?: string;
 }

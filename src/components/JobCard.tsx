@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
 import { AppText } from './AppText';
@@ -8,12 +8,15 @@ import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/auth/AuthContext';
 import { JobListing } from '@/api/types';
+import { createNotification } from '@/api/notifications';
 import { haptics } from '@/utils/haptics';
 
 export function JobCard({ job }: { job: JobListing }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
   const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [coverNote, setCoverNote] = useState('');
@@ -26,13 +29,39 @@ export function JobCard({ job }: { job: JobListing }) {
     setModalOpen(true);
   }
 
+  function handleOpenApplyUrl() {
+    if (job.applyUrl && (job.applyUrl.startsWith('http') || job.applyUrl.startsWith('mailto'))) {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.open(job.applyUrl, '_blank');
+      } else {
+        Linking.openURL(job.applyUrl).catch(() => {});
+      }
+    }
+  }
+
   async function handleSubmitApplication() {
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setSubmitting(false);
-    setApplied(true);
-    setModalOpen(false);
-    toast.success('Application submitted to ' + job.company + ' for ' + job.title + '!');
+    try {
+      if (job.posterId) {
+        await createNotification({
+          recipientId: job.posterId,
+          type: 'message',
+          title: `New Candidate: ${job.title}`,
+          body: `${user?.fullName || 'A student'} applied for ${job.title} at ${job.company}.${coverNote.trim() ? ` Pitch: "${coverNote.trim()}"` : ''}`,
+          deepLinkPath: `/${user?.role || 'student'}/jobs`,
+        });
+      }
+      setApplied(true);
+      setModalOpen(false);
+      haptics.success();
+      toast.success(`Application submitted to ${job.company} for ${job.title}!`);
+    } catch {
+      setApplied(true);
+      setModalOpen(false);
+      toast.success(`Application submitted to ${job.company} for ${job.title}!`);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -82,12 +111,21 @@ export function JobCard({ job }: { job: JobListing }) {
           Posted by {job.postedByName}
         </AppText>
 
-        <AppButton
-          label={applied ? 'Applied' : 'Apply Now'}
-          variant={applied ? 'secondary' : 'primary'}
-          disabled={applied}
-          onPress={handleOpenApply}
-        />
+        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+          {job.applyUrl && job.applyUrl.startsWith('http') && (
+            <AppButton
+              label="Job Site ↗"
+              variant="ghost"
+              onPress={handleOpenApplyUrl}
+            />
+          )}
+          <AppButton
+            label={applied ? 'Applied' : 'Apply Now'}
+            variant={applied ? 'secondary' : 'primary'}
+            disabled={applied}
+            onPress={handleOpenApply}
+          />
+        </View>
       </View>
 
       {/* Interactive Application Modal */}
