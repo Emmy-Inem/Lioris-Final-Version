@@ -396,14 +396,14 @@ export default function StudentDashboard() {
         {/* 4. Real Upcoming Campus Events */}
         {isFeatureEnabled('campus_events') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="calendar-outline" size={18} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold">
-                  Upcoming Campus Events
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                <Ionicons name="calendar-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                  Campus Events
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(student)/events-list')}>
+              <Pressable onPress={() => router.push('/(student)/events-list')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" variant="bodySmall" weight="bold">
                   View All ({events?.length ?? 0}) →
                 </AppText>
@@ -432,14 +432,14 @@ export default function StudentDashboard() {
         {/* 5. Verified Academic Resources & Past Questions */}
         {isFeatureEnabled('academic_resources') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="document-text-outline" size={18} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold">
-                  Course Materials & Past Questions
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                <Ionicons name="document-text-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                  Course Materials
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(student)/resources')}>
+              <Pressable onPress={() => router.push('/(student)/resources')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" variant="bodySmall" weight="bold">
                   View All ({resources?.length ?? 0}) →
                 </AppText>
@@ -494,14 +494,14 @@ export default function StudentDashboard() {
         {/* 6. Active Study Groups / Pods */}
         {isFeatureEnabled('study_groups') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="people-outline" size={18} color="#10B981" />
-                <AppText variant="h3" weight="bold">
-                  Active Study Pods
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                <Ionicons name="people-outline" size={18} color="#10B981" style={{ flexShrink: 0 }} />
+                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                  Study Pods
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(student)/study-groups')}>
+              <Pressable onPress={() => router.push('/(student)/study-groups')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" variant="bodySmall" weight="bold">
                   View All ({studyGroups?.length ?? 0}) →
                 </AppText>
@@ -549,16 +549,16 @@ export default function StudentDashboard() {
 
         {/* 7. Trending Campus Discussions */}
         <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" />
-              <AppText variant="h3" weight="bold">
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" style={{ flexShrink: 0 }} />
+              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
                 Campus Discussions
               </AppText>
             </View>
-            <Pressable onPress={() => router.push('/(student)/feed')}>
+            <Pressable onPress={() => router.push('/(student)/feed')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
-                View Full Forum →
+                View All →
               </AppText>
             </Pressable>
           </View>
@@ -637,21 +637,21 @@ export default function StudentDashboard() {
                 <Pressable
                   key={portal.id}
                   onPress={() => handleOpenPortal(portal.url)}
-                  style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '48%', minWidth: isDesktop ? 220 : '48%' }}
+                  style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
                 >
-                  <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name={portal.icon || 'globe-outline'} size={18} color={colors.brandPrimary} />
+                  <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.brandPrimary} />
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
                       <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                         {portal.title}
                       </AppText>
-                      <AppText variant="caption" tone="secondary">
-                        {portal.category} • Official
+                      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                        {portal.category} • Official University Portal
                       </AppText>
                     </View>
-                    <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+                    <Ionicons name="open-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                   </SolidCard>
                 </Pressable>
               ))}

@@ -262,14 +262,14 @@ export default function StaffDashboard() {
 
         {/* 4. Official Faculty Broadcasts & Announcements */}
         <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="megaphone-outline" size={18} color={colors.brandPrimary} />
-              <AppText variant="h3" weight="bold">
-                Official Campus Bulletins
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              <Ionicons name="megaphone-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                Campus Bulletins
               </AppText>
             </View>
-            <Pressable onPress={() => router.push('/(staff)/announcements')}>
+            <Pressable onPress={() => router.push('/(staff)/announcements')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
                 + New Notice →
               </AppText>
@@ -280,14 +280,14 @@ export default function StaffDashboard() {
 
         {/* 5. Academic Symposiums & Faculty Events */}
         <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="calendar-outline" size={18} color="#3B82F6" />
-              <AppText variant="h3" weight="bold">
-                Academic Symposiums & Events
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              <Ionicons name="calendar-outline" size={18} color="#3B82F6" style={{ flexShrink: 0 }} />
+              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                Faculty Events
               </AppText>
             </View>
-            <Pressable onPress={() => router.push('/(staff)/events-list' as any)}>
+            <Pressable onPress={() => router.push('/(staff)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
                 All Events ({events?.length ?? 0}) →
               </AppText>
@@ -314,14 +314,14 @@ export default function StaffDashboard() {
 
         {/* 6. Trending Campus Inquiries & Academic Discussions */}
         <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" />
-              <AppText variant="h3" weight="bold">
-                Student & Faculty Pulse
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" style={{ flexShrink: 0 }} />
+              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                Faculty Pulse
               </AppText>
             </View>
-            <Pressable onPress={() => router.push('/(staff)/forum')}>
+            <Pressable onPress={() => router.push('/(staff)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
                 View Forum →
               </AppText>
@@ -377,21 +377,21 @@ export default function StaffDashboard() {
               <Pressable
                 key={portal.id}
                 onPress={() => handleOpenPortal(portal.url)}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 220 : 150 }}
+                style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name={portal.icon} size={18} color={colors.brandPrimary} />
+                <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name={portal.icon} size={20} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                       {portal.title}
                     </AppText>
-                    <AppText variant="caption" tone="secondary">
-                      {portal.category} • Official
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                      {portal.category} • Official Faculty Portal
                     </AppText>
                   </View>
-                  <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+                  <Ionicons name="open-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                 </SolidCard>
               </Pressable>
             ))}

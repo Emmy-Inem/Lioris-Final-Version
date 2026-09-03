@@ -293,14 +293,14 @@ export default function AlumniDashboard() {
         {/* 4. Career & Talent Opportunities (Live Job Board) */}
         {isFeatureEnabled('career_page') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="briefcase-outline" size={18} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                <Ionicons name="briefcase-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
                   Career & Hiring Board
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(alumni)/jobs')}>
+              <Pressable onPress={() => router.push('/(alumni)/jobs')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" variant="bodySmall" weight="bold">
                   All Openings ({jobs?.length ?? 0}) →
                 </AppText>
@@ -329,14 +329,14 @@ export default function AlumniDashboard() {
         {/* 5. Student Mentorship Requests & Impact */}
         {isFeatureEnabled('alumni_mentorship') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="ribbon-outline" size={18} color="#10B981" />
-                <AppText variant="h3" weight="bold">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                <Ionicons name="ribbon-outline" size={18} color="#10B981" style={{ flexShrink: 0 }} />
+                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
                   Student Mentorship & Giving Back
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(alumni)/mentorship')}>
+              <Pressable onPress={() => router.push('/(alumni)/mentorship')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" variant="bodySmall" weight="bold">
                   Mentorship Hub →
                 </AppText>
@@ -385,14 +385,14 @@ export default function AlumniDashboard() {
         {/* 6. Upcoming Alumni Reunions & Events */}
         {isFeatureEnabled('campus_events') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="calendar-outline" size={18} color="#3B82F6" />
-                <AppText variant="h3" weight="bold">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                <Ionicons name="calendar-outline" size={18} color="#3B82F6" style={{ flexShrink: 0 }} />
+                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
                   Alumni Reunions & Events
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(alumni)/events-list' as any)}>
+              <Pressable onPress={() => router.push('/(alumni)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" variant="bodySmall" weight="bold">
                   View Calendar ({events?.length ?? 0}) →
                 </AppText>
@@ -420,14 +420,14 @@ export default function AlumniDashboard() {
 
         {/* 7. Live Campus & Alumni Pulse Feed */}
         <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" />
-              <AppText variant="h3" weight="bold">
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" style={{ flexShrink: 0 }} />
+              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
                 Campus Pulse & Discussions
               </AppText>
             </View>
-            <Pressable onPress={() => router.push('/(alumni)/forum')}>
+            <Pressable onPress={() => router.push('/(alumni)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
                 View Global Forum →
               </AppText>
@@ -512,21 +512,21 @@ export default function AlumniDashboard() {
               <Pressable
                 key={portal.id}
                 onPress={() => handleOpenPortal(portal.url)}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: isDesktop ? 220 : 150 }}
+                style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name={portal.icon} size={18} color={colors.brandPrimary} />
+                <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name={portal.icon} size={20} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                       {portal.title}
                     </AppText>
-                    <AppText variant="caption" tone="secondary">
-                      {portal.category} • Official
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                      {portal.category} • Official Alumni Service
                     </AppText>
                   </View>
-                  <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+                  <Ionicons name="open-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                 </SolidCard>
               </Pressable>
             ))}

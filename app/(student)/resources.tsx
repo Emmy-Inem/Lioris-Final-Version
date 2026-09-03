@@ -455,11 +455,11 @@ export default function ResourcesScreen() {
 
           {/* Section: University Portal Directories */}
           <View style={{ marginBottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
+              <AppText variant="caption" weight="bold" tone="brand" numberOfLines={1} style={{ letterSpacing: 1, flex: 1, minWidth: 0 }}>
                 CAMPUS DIRECTORIES & OFFICIAL PORTALS
               </AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary" variant="caption" style={{ flexShrink: 0 }}>
                 {portalLinks.filter((p) => p.active).length} active verified portals
               </AppText>
             </View>
