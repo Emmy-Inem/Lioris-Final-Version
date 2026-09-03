@@ -78,11 +78,11 @@ export function DesktopSidebar() {
 
   const rawAlumniNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Alumni Home', href: '/(alumni)/dashboard', icon: 'home' },
-    { id: 'forum', label: 'Global Forum', href: '/(alumni)/forum', icon: 'chatbubbles' },
-    { id: 'events', label: 'Alumni Events', href: '/(alumni)/events-list', icon: 'calendar', flagKey: 'campus_events' },
+    { id: 'jobs', label: 'Career Board & Jobs', href: '/(alumni)/jobs', icon: 'briefcase', flagKey: 'career_page' },
     { id: 'mentorship', label: 'Mentor Students', href: '/(alumni)/mentorship', icon: 'ribbon', flagKey: 'alumni_mentorship' },
-    { id: 'marketplace', label: 'Marketplace', href: '/(alumni)/marketplace', icon: 'cart', flagKey: 'marketplace' },
-    { id: 'jobs', label: 'Post / Find Jobs', href: '/(alumni)/jobs', icon: 'briefcase', flagKey: 'career_page' },
+    { id: 'events', label: 'Alumni Events', href: '/(alumni)/events-list', icon: 'calendar', flagKey: 'campus_events' },
+    { id: 'forum', label: 'Global Forum', href: '/(alumni)/forum', icon: 'chatbubbles' },
+    { id: 'connections', label: 'Alumni Network', href: '/(alumni)/connection-requests', icon: 'people' },
     { id: 'messages', label: 'Messages', href: '/(alumni)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Notifications', href: '/(alumni)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
     { id: 'profile', label: 'My Alumni Profile', href: '/(alumni)/profile', icon: 'person' },
@@ -92,26 +92,27 @@ export function DesktopSidebar() {
   const studentNavItems = rawStudentNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
   const alumniNavItems = rawAlumniNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
 
- const rawStaffNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
- { id: 'home', label: 'Staff Console', href: '/(staff)/dashboard', icon: 'home' },
- { id: 'forum', label: 'Faculty Forum', href: '/(staff)/forum', icon: 'chatbubbles' },
- { id: 'announcements', label: 'Broadcasts', href: '/(staff)/announcements', icon: 'megaphone' },
- { id: 'moderation', label: 'Moderation Desk', href: '/(staff)/moderation', icon: 'shield-checkmark' },
- { id: 'events', label: 'Campus Events', href: '/(staff)/events-list', icon: 'calendar', flagKey: 'campus_events' },
- { id: 'messages', label: 'Direct Messages', href: '/(staff)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
- { id: 'notifications', label: 'Staff Alerts', href: '/(staff)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
- { id: 'profile', label: 'Faculty Profile', href: '/(staff)/profile', icon: 'person' },
- { id: 'settings', label: 'Console Settings', href: '/(staff)/settings', icon: 'settings' },
- ];
+  const rawStaffNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
+    { id: 'home', label: 'Staff Console', href: '/(staff)/dashboard', icon: 'home' },
+    { id: 'announcements', label: 'Broadcasts', href: '/(staff)/announcements', icon: 'megaphone' },
+    { id: 'moderation', label: 'Moderation Desk', href: '/(staff)/moderation', icon: 'shield-checkmark' },
+    { id: 'events', label: 'Campus Events', href: '/(staff)/events-list', icon: 'calendar', flagKey: 'campus_events' },
+    { id: 'forum', label: 'Faculty Forum', href: '/(staff)/forum', icon: 'chatbubbles' },
+    { id: 'messages', label: 'Direct Messages', href: '/(staff)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
+    { id: 'notifications', label: 'Staff Alerts', href: '/(staff)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
+    { id: 'profile', label: 'Faculty Profile', href: '/(staff)/profile', icon: 'person' },
+    { id: 'settings', label: 'Console Settings', href: '/(staff)/settings', icon: 'settings' },
+  ];
 
   const staffNavItems = rawStaffNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
 
   const adminNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
-    { id: 'platform-config', label: 'Admin Command Desk', href: '/(admin)/platform-config', icon: 'shield' },
     { id: 'home', label: 'Executive Dashboard', href: '/(admin)/dashboard', icon: 'pie-chart' },
-    { id: 'user-directory', label: 'User Directory', href: '/(admin)/user-directory', icon: 'people' },
     { id: 'verification-requests', label: 'Student Verifications', href: '/(admin)/verification-requests', icon: 'checkmark-done-circle' },
     { id: 'moderation-queue', label: 'Moderation Queue', href: '/(admin)/moderation-queue', icon: 'flag' },
+    { id: 'feature-controls', label: 'Feature Switches', href: '/(admin)/feature-controls', icon: 'toggle' },
+    { id: 'user-directory', label: 'User Directory', href: '/(admin)/user-directory', icon: 'people' },
+    { id: 'platform-config', label: 'Admin Command Desk', href: '/(admin)/platform-config', icon: 'shield' },
     { id: 'audit-logs', label: 'Security Audit Logs', href: '/(admin)/audit-logs', icon: 'key' },
     { id: 'super-admin-config', label: 'System Configuration', href: '/(admin)/super-admin-config', icon: 'construct' },
     { id: 'forum', label: 'Campus Forum', href: '/(admin)/forum', icon: 'chatbubbles' },

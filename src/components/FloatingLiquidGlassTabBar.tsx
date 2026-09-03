@@ -92,12 +92,26 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
             iconName = isFocused ? 'calendar' : 'calendar-outline';
           } else if (route.name.includes('resources')) {
             iconName = isFocused ? 'folder' : 'folder-outline';
+          } else if (route.name.includes('jobs') || route.name.includes('careers')) {
+            iconName = isFocused ? 'briefcase' : 'briefcase-outline';
+          } else if (route.name.includes('mentorship')) {
+            iconName = isFocused ? 'ribbon' : 'ribbon-outline';
+          } else if (route.name.includes('verification')) {
+            iconName = isFocused ? 'checkmark-circle' : 'checkmark-circle-outline';
+          } else if (route.name.includes('moderation')) {
+            iconName = isFocused ? 'shield-checkmark' : 'shield-outline';
+          } else if (route.name.includes('feature')) {
+            iconName = isFocused ? 'options' : 'options-outline';
           } else if (route.name.includes('announcements') || route.name.includes('broadcasts')) {
             iconName = isFocused ? 'megaphone' : 'megaphone-outline';
           } else if (route.name.includes('directory')) {
             iconName = isFocused ? 'people' : 'people-outline';
           } else if (route.name.includes('config') || route.name.includes('platform') || route.name.includes('settings')) {
-            iconName = isFocused ? 'shield' : 'shield-outline';
+            iconName = isFocused ? 'settings' : 'settings-outline';
+          } else if (route.name.includes('marketplace')) {
+            iconName = isFocused ? 'cart' : 'cart-outline';
+          } else if (route.name.includes('study-group')) {
+            iconName = isFocused ? 'library' : 'library-outline';
           }
 
           const onPress = () => {
