@@ -160,6 +160,55 @@ export async function listMyPosts(userId?: string): Promise<Post[]> {
   );
 }
 
+export async function getPost(id: string): Promise<Post | null> {
+  const local = locallyCreatedPosts.find((p) => p.id === id);
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let currentUserId = authData?.user?.id;
+    if (!currentUserId) {
+      const stored = await getSessionUser();
+      if (stored?.id) currentUserId = stored.id;
+    }
+
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*, profiles:author_id(full_name, role, avatar_url, campus_code), post_likes(user_id)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return local || null;
+
+    const likedByMe = currentUserId
+      ? (data.post_likes || []).some((like: any) => like.user_id === currentUserId)
+      : false;
+
+    return {
+      id: data.id,
+      authorName: data.profiles?.full_name || 'Campus Student',
+      authorRole: (data.profiles?.role || 'student') as any,
+      authorAvatarUrl: data.profiles?.avatar_url || null,
+      institutionCode: data.profiles?.campus_code || 'GLOBAL',
+      authorId: data.author_id,
+      title: data.title,
+      content: data.content,
+      category: data.category || 'General',
+      createdAt: data.created_at,
+      likesCount: data.likes_count || 0,
+      commentsCount: data.comments_count || 0,
+      isLikedByMe: likedByMe,
+      visibilityScope: (data.visibility_scope || 'global') as any,
+      imageUrl: data.image_url || undefined,
+      videoUrl: data.video_url || undefined,
+      courseTags: data.course_tags || undefined,
+    };
+  } catch (err) {
+    console.warn('[Posts] getPost error:', err);
+    return local || null;
+  }
+}
+
 export interface CreatePostPayload {
  title: string;
  content: string;

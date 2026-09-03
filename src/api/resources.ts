@@ -302,11 +302,35 @@ export async function updateResource(id: string, payload: Partial<Resource>): Pr
 }
 
 export async function deleteResource(id: string): Promise<boolean> {
- locallyCreatedResources = locallyCreatedResources.filter((r) => r.id !== id);
- try {
- await supabase.from('resources').delete().eq('id', id);
- } catch {
- // Fallback
- }
- return true;
+  locallyCreatedResources = locallyCreatedResources.filter((r) => r.id !== id);
+  try {
+    await supabase.from('resources').delete().eq('id', id);
+  } catch {
+    // Fallback
+  }
+  return true;
+}
+
+export async function trackResourceDownload(id: string): Promise<void> {
+  try {
+    const { data } = await supabase.from('resources').select('downloads_count').eq('id', id).maybeSingle();
+    if (data) {
+      await supabase.from('resources').update({ downloads_count: (data.downloads_count || 0) + 1 }).eq('id', id);
+    }
+  } catch (err) {
+    console.warn('[Resources] Error tracking download:', err);
+  }
+}
+
+export async function toggleResourceUpvote(id: string, increment: boolean): Promise<void> {
+  try {
+    const { data } = await supabase.from('resources').select('upvotes_count').eq('id', id).maybeSingle();
+    if (data) {
+      const current = data.upvotes_count || 0;
+      const next = increment ? current + 1 : Math.max(0, current - 1);
+      await supabase.from('resources').update({ upvotes_count: next }).eq('id', id);
+    }
+  } catch (err) {
+    console.warn('[Resources] Error toggling upvote:', err);
+  }
 }

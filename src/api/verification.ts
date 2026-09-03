@@ -54,28 +54,39 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
  photoUrl = signedUrlData?.signedUrl || filePath;
  }
 
- const campusCode = payload.institutionClaimed.includes('UNILAG')
- ? 'UNILAG'
- : payload.institutionClaimed.includes('UI')
- ? 'UI'
- : 'GLOBAL';
+        let campusCode = 'GLOBAL';
+        const { data: userProfile } = await supabase.from('profiles').select('campus_code').eq('id', authUserId).maybeSingle();
+        if (userProfile?.campus_code) {
+          campusCode = userProfile.campus_code;
+        } else if (payload.institutionClaimed) {
+          const upper = payload.institutionClaimed.toUpperCase();
+          if (upper.includes('UNILAG')) campusCode = 'UNILAG';
+          else if (upper.includes('UI') || upper.includes('IBADAN')) campusCode = 'UI';
+          else if (upper.includes('OAU') || upper.includes('IFE')) campusCode = 'OAU';
+          else if (upper.includes('UNN') || upper.includes('NSUKKA')) campusCode = 'UNN';
+          else if (upper.includes('FUNAAB') || upper.includes('ABEOKUTA')) campusCode = 'FUNAAB';
+          else if (upper.includes('CU') || upper.includes('COVENANT')) campusCode = 'CU';
+        }
 
- const { error } = await supabase.from('verifications').insert({
- id: reqId,
- user_id: authUserId,
- campus_code: campusCode,
- requested_role: 'student',
- id_card_front_url: photoUrl || 'https://storage.lioris.app/verifications/default-id.jpg',
- status: 'pending',
- review_notes: `${payload.documentType}: ${payload.documentReference}`,
- });
- if (error) {
- console.warn('[Verification] Supabase insert warning:', error.message);
- }
- }
- } catch (err) {
- console.warn('[Verification] Submission backend warning:', err);
- }
+        const { error } = await supabase.from('verifications').insert({
+          id: reqId,
+          user_id: authUserId,
+          campus_code: campusCode,
+          requested_role: 'student',
+          id_card_front_url: photoUrl || 'https://storage.lioris.app/verifications/default-id.jpg',
+          status: 'pending',
+          review_notes: `${payload.documentType}: ${payload.documentReference}`,
+        });
+        if (error) {
+          console.warn('[Verification] Supabase insert warning:', error.message);
+        }
+
+        // Sync pending status to user's profile in database
+        await supabase.from('profiles').update({ verification_status: 'pending' }).eq('id', authUserId);
+      }
+    } catch (err) {
+      console.warn('[Verification] Submission backend warning:', err);
+    }
 
  const created: VerificationRequest = {
  id: reqId,

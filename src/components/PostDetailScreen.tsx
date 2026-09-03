@@ -19,7 +19,7 @@ import { ActionSheetModal } from'./ActionSheetModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
+import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
 import { submitReport } from '@/api/moderation';
 import { haptics } from '@/utils/haptics';
 
@@ -52,18 +52,17 @@ export function PostDetailScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
- const { data: posts } = useQuery({
- queryKey: ['feed'],
- queryFn: () => listFeedPosts(),
- });
+  const { data: post, isLoading: postLoading } = useQuery({
+    queryKey: ['post', id],
+    queryFn: () => (id ? getPost(id) : Promise.resolve(null)),
+    enabled: !!id,
+  });
 
- const post = posts?.find((p) => p.id === id);
-
- const [liked, setLiked] = useState(!!post?.isLikedByMe);
- const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
- const [reposted, setReposted] = useState(false);
- const [bookmarked, setBookmarked] = useState(false);
- const [menuOpen, setMenuOpen] = useState(false);
+  const [liked, setLiked] = useState(!!post?.isLikedByMe);
+  const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
+  const [reposted, setReposted] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
  // Discussion reply state
  const [newReply, setNewReply] = useState('');
@@ -113,6 +112,7 @@ export function PostDetailScreen() {
    try {
      await togglePostLike(post.id, next);
      queryClient.invalidateQueries({ queryKey: ['feed'] });
+     queryClient.invalidateQueries({ queryKey: ['post', post.id] });
    } catch {
      setLiked(!next);
      setLikesCount((prev) => prev + (next ? -1 : 1));
@@ -136,6 +136,7 @@ export function PostDetailScreen() {
    setPoll(nextPoll);
    await voteOnPoll(post.id, optionId);
    queryClient.invalidateQueries({ queryKey: ['feed'] });
+   queryClient.invalidateQueries({ queryKey: ['post', post.id] });
  }
 
  async function handleAddReply() {
@@ -156,6 +157,7 @@ export function PostDetailScreen() {
      await refetchComments();
      await queryClient.invalidateQueries({ queryKey: ['post-comments', post.id] });
      await queryClient.invalidateQueries({ queryKey: ['feed'] });
+     await queryClient.invalidateQueries({ queryKey: ['post', post.id] });
      haptics.success();
    } catch {
      Alert.alert('Error', 'Could not submit reply.');

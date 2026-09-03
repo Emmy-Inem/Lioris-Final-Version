@@ -7,6 +7,7 @@ import { Badge } from './Badge';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Resource } from '@/api/types';
+import { trackResourceDownload, toggleResourceUpvote } from '@/api/resources';
 import { haptics } from '@/utils/haptics';
 
 export function ResourceCard({ resource }: { resource: Resource }) {
@@ -27,6 +28,7 @@ export function ResourceCard({ resource }: { resource: Resource }) {
  await Linking.openURL(resource.fileUrl);
  }
  setDownloaded(true);
+ trackResourceDownload(resource.id).catch(() => {});
  } else {
  Alert.alert(
  'Sample Curriculum Reference',
@@ -44,8 +46,10 @@ export function ResourceCard({ resource }: { resource: Resource }) {
 
  function handleToggleUpvote() {
  haptics.light();
- setUpvoted(!upvoted);
- setUpvotes(upvotes + (upvoted ? -1 : 1));
+ const nextUpvoted = !upvoted;
+ setUpvoted(nextUpvoted);
+ setUpvotes(upvotes + (nextUpvoted ? 1 : -1));
+ toggleResourceUpvote(resource.id, nextUpvoted).catch(() => {});
  }
 
  return (

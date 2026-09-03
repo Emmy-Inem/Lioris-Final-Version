@@ -5,25 +5,38 @@ import { SolidCard } from'./SolidCard';
 import { AppText } from'./AppText';
 import { Badge } from'./Badge';
 import { AppButton } from'./AppButton';
-import { useTheme } from'@/theme/ThemeProvider';
-import { StudyGroup } from'@/api/types';
-import { joinStudyGroup } from'@/api/studyGroups';
+import { StudyGroup } from '@/api/types';
+import { joinStudyGroup, leaveStudyGroup } from '@/api/studyGroups';
+import { router } from 'expo-router';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoined?: () => void }) {
- const { colors, spacing, radius } = useTheme();
- const [joined, setJoined] = useState(group.isJoined);
- const [submitting, setSubmitting] = useState(false);
+  const { colors, spacing, radius } = useTheme();
+  const [joined, setJoined] = useState(group.isJoined);
+  const [submitting, setSubmitting] = useState(false);
 
- async function handleJoin() {
- setSubmitting(true);
- try {
- await joinStudyGroup(group.id);
- setJoined(true);
- onJoined?.();
- } finally {
- setSubmitting(false);
- }
- }
+  async function handleToggleJoin() {
+    setSubmitting(true);
+    try {
+      if (joined) {
+        await leaveStudyGroup(group.id);
+        setJoined(false);
+      } else {
+        await joinStudyGroup(group.id);
+        setJoined(true);
+      }
+      onJoined?.();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleOpenDiscussion() {
+    router.push({
+      pathname: '/(student)/feed',
+      params: { category: group.courseCode || 'Academics' },
+    } as any);
+  }
 
  return (
  <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
@@ -101,12 +114,21 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
           ) : null}
         </View>
 
-        <AppButton
-          label={joined ? 'Member' : 'Join Pod'}
-          variant={joined ? 'secondary' : 'primary'}
-          onPress={handleJoin}
-          loading={submitting}
-        />
+        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+          {joined && (
+            <AppButton
+              label="Discussion"
+              variant="ghost"
+              onPress={handleOpenDiscussion}
+            />
+          )}
+          <AppButton
+            label={joined ? 'Joined ✓' : 'Join Pod'}
+            variant={joined ? 'secondary' : 'primary'}
+            onPress={handleToggleJoin}
+            loading={submitting}
+          />
+        </View>
       </View>
     </SolidCard>
   );
