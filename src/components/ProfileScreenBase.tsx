@@ -311,7 +311,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
         <View style={{ marginTop: spacing.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <AppText variant="h2" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+            <AppText weight="bold" numberOfLines={1} style={{ flexShrink: 1, fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
               {profile.fullName}
             </AppText>
             {profile.verificationStatus === 'verified' ? (

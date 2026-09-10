@@ -92,121 +92,124 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  router.push(`/${roleGroup}/events/${eventId}` as any);
  }
 
- const renderHeader = () => (
- <View style={{ marginBottom: spacing.sm }}>
- {!isDesktop && <AppHeader />}
+  const renderHeader = () => (
+    <View style={{ marginBottom: spacing.sm }}>
+      {!isDesktop && <AppHeader />}
 
- {/* Screen Title & Post Event Button */}
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
- <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
- <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
- Events
- </AppText>
- <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
- Workshops, career fairs & campus gatherings
- </AppText>
- </View>
+      {/* Screen Title & Post Event Button */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
+          <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
+            Events
+          </AppText>
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 11.5, marginTop: 1 }}>
+            Workshops, career fairs & campus gatherings
+          </AppText>
+        </View>
 
- <Pressable
- onPress={() => {
- haptics.light();
- setPublishModalOpen(true);
- }}
- accessibilityRole="button"
- accessibilityLabel="Post event"
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 4,
- backgroundColor: colors.brandPrimary,
- borderRadius: radius.pill,
- paddingHorizontal: spacing.sm,
- paddingVertical: 8,
- flexShrink: 0,
- }}
- >
- <Ionicons name="add" size={16} color="#FFFFFF" />
- <AppText weight="bold" tone="inverse" variant="caption">
- Post Event
- </AppText>
- </Pressable>
- </View>
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setPublishModalOpen(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Post event"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: colors.brandPrimary,
+            borderRadius: radius.pill,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            flexShrink: 0,
+          }}
+        >
+          <Ionicons name="add" size={15} color="#FFFFFF" />
+          <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+            Post Event
+          </AppText>
+        </Pressable>
+      </View>
 
- {/* Section: Automatic & Manual Stackable Spotlight Events Carousel */}
- {filter === 'all' && !searchQuery && carouselData.length > 0 ? (
- <SpotlightEventsCarousel events={carouselData} roleGroup={roleGroup} />
- ) : null}
+      {/* Section: Automatic & Manual Stackable Spotlight Events Carousel */}
+      {filter === 'all' && !searchQuery && carouselData.length > 0 ? (
+        <SpotlightEventsCarousel events={carouselData} roleGroup={roleGroup} />
+      ) : null}
 
- {/* Search Input */}
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- backgroundColor: colors.surface,
- borderRadius: radius.lg,
- paddingHorizontal: spacing.md,
- marginBottom: spacing.md,
- borderWidth: 1,
- borderColor: colors.border,
- height: 46,
- }}
- >
- <Ionicons name="search-outline"size={18} color={colors.textSecondary} style={{ marginRight: spacing.sm }} />
- <TextInput
- placeholder="Search campus events, hackathons, seminars..."placeholderTextColor={colors.textSecondary}
- value={searchQuery}
- onChangeText={setSearchQuery}
- style={{
- flex: 1,
- color: colors.textPrimary,
- fontSize: 14,
- }}
- />
- {searchQuery.trim() ? (
- <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
- <Ionicons name="close-circle"size={18} color={colors.textSecondary} />
- </Pressable>
- ) : null}
- </View>
+      {/* Search Input */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: colors.surface,
+          borderRadius: radius.pill,
+          paddingHorizontal: spacing.md,
+          marginBottom: spacing.sm,
+          borderWidth: 1,
+          borderColor: colors.border,
+          height: 40,
+        }}
+      >
+        <Ionicons name="search-outline" size={16} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
+        <TextInput
+          placeholder="Search campus events, hackathons, seminars..."
+          placeholderTextColor={colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          style={{
+            flex: 1,
+            color: colors.textPrimary,
+            fontSize: 13,
+          }}
+        />
+        {searchQuery.trim() ? (
+          <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+          </Pressable>
+        ) : null}
+      </View>
 
- {/* Filter Chips Bar */}
- <ScrollView
+      {/* Filter Chips Bar */}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingRight: 16, paddingBottom: 6 }}
+        contentContainerStyle={{ gap: 6, paddingRight: 16, paddingBottom: 4 }}
         style={{ width: '100%', flexGrow: 0 }}
         {...({ 'data-horizontal-scroll': 'true' } as any)}
       >
- {EVENT_FILTERS.map((f) => {
- const active = filter === f.key;
- return (
- <Pressable
- key={f.key}
- onPress={() => {
- haptics.light();
- setFilter(f.key);
- }}
- style={{
- backgroundColor: active ? colors.brandPrimary : colors.surface,
- paddingHorizontal: spacing.md,
- paddingVertical: 7,
- borderRadius: radius.pill,
- borderWidth: 1,
- borderColor: active ? colors.brandPrimary : colors.border,
- }}
- >
- <AppText
- variant="caption"weight={active ? 'bold' : 'medium'}
- tone={active ? 'inverse' : 'secondary'}
- >
- {f.label}
- </AppText>
- </Pressable>
- );
- })}
- </ScrollView>
- </View>
- );
+        {EVENT_FILTERS.map((f) => {
+          const active = filter === f.key;
+          return (
+            <Pressable
+              key={f.key}
+              onPress={() => {
+                haptics.light();
+                setFilter(f.key);
+              }}
+              style={{
+                backgroundColor: active ? colors.brandPrimary : colors.surface,
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: radius.pill,
+                borderWidth: 1,
+                borderColor: active ? colors.brandPrimary : colors.border,
+              }}
+            >
+              <AppText
+                variant="caption"
+                weight={active ? 'bold' : 'medium'}
+                tone={active ? 'inverse' : 'secondary'}
+                style={{ fontSize: 11 }}
+              >
+                {f.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
 
  return (
     <ScreenContainer glow={false}>

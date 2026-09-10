@@ -309,17 +309,64 @@ export async function updateMyProfile(
 }
 
 export async function deleteMyAccount(userId?: string): Promise<{ success: boolean }> {
- let targetId = userId;
- if (!targetId) {
- const { data } = await supabase.auth.getUser();
- targetId = data?.user?.id;
- }
- if (targetId) {
- try {
- await supabase.from('profiles').delete().eq('id', targetId);
- profileState.delete(targetId);
- } catch {}
- }
- await supabase.auth.signOut().catch(() => {});
- return { success: true };
+  let targetId = userId;
+  if (!targetId) {
+    const { data } = await supabase.auth.getUser();
+    targetId = data?.user?.id;
+  }
+  if (targetId) {
+    try {
+      await supabase.from('profiles').delete().eq('id', targetId);
+      profileState.delete(targetId);
+    } catch {}
+  }
+  await supabase.auth.signOut().catch(() => {});
+  return { success: true };
+}
+
+export async function getPublicProfile(userId: string): Promise<UserProfile | null> {
+  if (!userId) return null;
+  const cached = profileState.get(userId);
+  if (cached) return cached;
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role')
+      .eq('id', userId)
+      .single();
+
+    if (!error && data) {
+      const inst = data.campus_code ? getInstitutionByCode(data.campus_code) : null;
+      const isVerified = data.verification_status === 'verified';
+      const userProfile: UserProfile = {
+        id: data.id,
+        fullName: data.full_name || 'Campus Member',
+        username: data.username || data.full_name?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user',
+        email: '',
+        userType: (data.role || 'student') as UserRole,
+        graduationYear: undefined,
+        bio: data.bio || '',
+        department: data.department || 'Academic',
+        interests: data.interests || [],
+        institutionName: inst?.name || 'University of Ibadan',
+        institutionCode: inst?.code || data.campus_code || 'UI',
+        avatarUrl: data.avatar_url || undefined,
+        coverUrl: data.banner_url || undefined,
+        isVerified,
+        verificationStatus: data.verification_status || (isVerified ? 'verified' : 'none'),
+        postsCount: 0,
+        resourcesCount: 0,
+        eventsCount: 0,
+        badgesCount: 0,
+        followersCount: 0,
+        followingCount: 0,
+      };
+      profileState.set(userId, userProfile);
+      return userProfile;
+    }
+  } catch (err) {
+    console.warn('[Profile] getPublicProfile lookup failed:', err);
+  }
+  return null;
 }

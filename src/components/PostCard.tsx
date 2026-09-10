@@ -167,10 +167,10 @@ export function PostCard({ post }: { post: Post }) {
 
  {/* Thread Title & Content (Tap to Open Full Screen Post) */}
  <Pressable onPress={handleOpenDedicatedPost} style={{ marginTop: spacing.xs, marginBottom: spacing.sm }}>
- <AppText variant="h3"weight="bold"numberOfLines={1} style={{ marginBottom: 4 }}>
+ <AppText weight="bold" numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, marginBottom: 4 }}>
  {post.title}
  </AppText>
- <AppText tone="primary"variant="bodySmall"numberOfLines={2} style={{ lineHeight: 20 }}>
+ <AppText tone="primary" variant="bodySmall" numberOfLines={2} style={{ lineHeight: 20, fontSize: 13 }}>
  {post.content}
  </AppText>
  </Pressable>

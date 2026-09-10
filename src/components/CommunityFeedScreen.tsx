@@ -139,7 +139,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       {/* Screen Title & Scope Switcher in 1 Unified Clean Row */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
         <View style={{ flexShrink: 1, minWidth: 0 }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+          <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
             Campus Forum
           </AppText>
         </View>

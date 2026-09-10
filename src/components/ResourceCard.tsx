@@ -53,85 +53,89 @@ export function ResourceCard({ resource }: { resource: Resource }) {
  }
 
  return (
- <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
- <View
- style={{
- width: 48,
- height: 48,
- borderRadius: radius.md,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- borderWidth: 1,
- borderColor: colors.brandPrimary,
- }}
- >
- <Ionicons
- name={resource.category === 'Past Questions' ? 'help-circle-outline' : 'document-text-outline'}
- size={22}
- color={colors.brandPrimary}
- />
- </View>
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
- <Badge label={resource.category} tone="brand" />
- {resource.fileSize ? (
- <AppText tone="secondary" variant="caption">
- {resource.fileSize}
- </AppText>
- ) : null}
- </View>
- <AppText weight="bold" variant="bodySmall" style={{ marginTop: 2 }}>
- {resource.title}
- </AppText>
- <AppText tone="secondary" variant="caption">
- {resource.courseCode} • {resource.department}
- </AppText>
- </View>
- </View>
+    <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
+      <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radius.md,
+            backgroundColor: colors.pastelPrimaryBg,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: colors.brandPrimary,
+            flexShrink: 0,
+          }}
+        >
+          <Ionicons
+            name={resource.category === 'Past Questions' ? 'help-circle-outline' : 'document-text-outline'}
+            size={20}
+            color={colors.brandPrimary}
+          />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+            <Badge label={resource.category} tone="brand" />
+            {resource.fileSize ? (
+              <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5 }}>
+                {resource.fileSize}
+              </AppText>
+            ) : null}
+          </View>
+          <AppText weight="bold" numberOfLines={2} style={{ fontSize: 14, lineHeight: 18, marginTop: 2 }}>
+            {resource.title}
+          </AppText>
+          <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11, marginTop: 2 }}>
+            {resource.courseCode} • {resource.department}
+          </AppText>
+        </View>
+      </View>
 
- <AppText tone="secondary" variant="bodySmall" style={{ marginTop: spacing.sm, lineHeight: 18 }}>
- {resource.description}
- </AppText>
+      {resource.description ? (
+        <AppText tone="secondary" numberOfLines={2} style={{ marginTop: spacing.xs, lineHeight: 17, fontSize: 12 }}>
+          {resource.description}
+        </AppText>
+      ) : null}
 
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- justifyContent: 'space-between',
- marginTop: spacing.md,
- paddingTop: spacing.xs,
- borderTopWidth: 1,
- borderTopColor: colors.divider,
- }}
- >
- <View style={{ flexDirection: 'row', gap: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
- <Ionicons name="download-outline" size={14} color={colors.textSecondary} />
- <AppText tone="secondary" variant="caption">
- {resource.downloadsCount + (downloaded ? 1 : 0)}
- </AppText>
- </View>
- <Pressable onPress={handleToggleUpvote} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
- <Ionicons
- name={upvoted ? 'thumbs-up' : 'thumbs-up-outline'}
- size={14}
- color={upvoted ? colors.brandPrimary : colors.textSecondary}
- />
- <AppText tone={upvoted ? 'brand' : 'secondary'} variant="caption" weight={upvoted ? 'bold' : 'regular'}>
- {upvotes}
- </AppText>
- </Pressable>
- </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: spacing.sm,
+          paddingTop: spacing.xs,
+          borderTopWidth: 1,
+          borderTopColor: colors.divider,
+        }}
+      >
+        <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="download-outline" size={14} color={colors.textSecondary} />
+            <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
+              {resource.downloadsCount + (downloaded ? 1 : 0)}
+            </AppText>
+          </View>
+          <Pressable onPress={handleToggleUpvote} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons
+              name={upvoted ? 'thumbs-up' : 'thumbs-up-outline'}
+              size={14}
+              color={upvoted ? colors.brandPrimary : colors.textSecondary}
+            />
+            <AppText tone={upvoted ? 'brand' : 'secondary'} variant="caption" weight={upvoted ? 'bold' : 'regular'} style={{ fontSize: 11 }}>
+              {upvotes}
+            </AppText>
+          </Pressable>
+        </View>
 
- <AppButton
- label={downloaded ? 'Saved' : resource.fileUrl ? 'Download' : 'Info'}
- variant={downloaded ? 'secondary' : resource.fileUrl ? 'primary' : 'ghost'}
- onPress={handleDownload}
- loading={downloading}
- />
- </View>
- </SolidCard>
+        <AppButton
+          label={downloaded ? 'Saved' : resource.fileUrl ? 'Download' : 'Info'}
+          variant={downloaded ? 'secondary' : resource.fileUrl ? 'primary' : 'ghost'}
+          onPress={handleDownload}
+          loading={downloading}
+          size="sm"
+        />
+      </View>
+    </SolidCard>
  );
 }

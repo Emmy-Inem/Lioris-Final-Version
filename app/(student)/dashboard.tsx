@@ -226,12 +226,12 @@ export default function StudentDashboard() {
                 <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} size={48} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <AppText variant="h2" weight="bold" numberOfLines={1} style={{ fontSize: 18 }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 18 : 16, lineHeight: isDesktop ? 22 : 20 }}>
                       Welcome back, {firstName}
                     </AppText>
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
-                  <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: 12 }}>
+                  <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11 }}>
                     {/* "UI Node" as a fallback asserted University of Ibadan for
                         anyone whose campus wasn't resolved yet. */}
                     {[profile?.department, profile?.institutionCode].filter(Boolean).join(' • ') ||
@@ -257,7 +257,7 @@ export default function StudentDashboard() {
                       borderColor: colors.brandPrimary,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone="brand">
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
                       Verify Student ID →
                     </AppText>
                   </Pressable>
@@ -289,22 +289,23 @@ export default function StudentDashboard() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
                 <View
                   style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
                     backgroundColor: `${colors.brandPrimary}15`,
                     justifyContent: 'center',
                     alignItems: 'center',
+                    flexShrink: 0,
                   }}
                 >
-                  <Ionicons name="sparkles" size={20} color={colors.brandPrimary} />
+                  <Ionicons name="sparkles" size={18} color={colors.brandPrimary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText variant="bodySmall" weight="bold">
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13.5 : 12.5 }}>
                     AI Academic Study Copilot
                   </AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                    Gemini concept breakdowns & past question reasoning
+                  <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5, marginTop: 1 }}>
+                    Gemini concept breakdowns & past questions
                   </AppText>
                 </View>
               </View>
@@ -313,11 +314,13 @@ export default function StudentDashboard() {
                 style={{
                   backgroundColor: colors.brandPrimary,
                   borderRadius: radius.pill,
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  flexShrink: 0,
+                  marginLeft: 8,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone="inverse">
+                <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11 }}>
                   Ask AI →
                 </AppText>
               </Pressable>
@@ -331,7 +334,7 @@ export default function StudentDashboard() {
 
         {/* 2. Quick Student Everyday Productivity Actions */}
         <View>
-          <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+          <AppText weight="bold" style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, marginBottom: spacing.xs }}>
             Student Services
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -340,13 +343,23 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/messages')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="chatbubble-ellipses" size={18} color={colors.brandPrimary} />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="chatbubble-ellipses" size={isDesktop ? 18 : 16} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Direct Messages</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Chats & calls</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Direct Messages</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Chats & calls</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -360,13 +373,23 @@ export default function StudentDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="cash-outline" size={18} color="#10B981" />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="cash-outline" size={isDesktop ? 18 : 16} color="#10B981" />
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>FX Converter</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Live rates & NGN</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>FX Converter</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Live rates & NGN</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -376,13 +399,23 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/resources')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="folder-open" size={18} color={colors.brandPrimary} />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="folder-open" size={isDesktop ? 18 : 16} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Resources</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Past Qs & notes</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Resources</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Past Qs & notes</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -393,13 +426,23 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/study-groups')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="people" size={18} color="#10B981" />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="people" size={isDesktop ? 18 : 16} color="#10B981" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Study Pods</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Course revision</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Study Pods</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Course revision</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -409,13 +452,23 @@ export default function StudentDashboard() {
               onPress={() => router.push('/(student)/feed')}
               style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
             >
-              <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="chatbubbles" size={18} color="#EC4899" />
+              <SolidCard
+                radius={16}
+                style={{
+                  padding: isDesktop ? 12 : 10,
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  alignItems: isDesktop ? 'center' : 'flex-start',
+                  justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                  gap: isDesktop ? 10 : 8,
+                  minHeight: isDesktop ? 68 : 84,
+                }}
+              >
+                <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="chatbubbles" size={isDesktop ? 18 : 16} color="#EC4899" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Campus Forum</AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>Ask questions</AppText>
+                <View style={{ width: '100%' }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Forum</AppText>
+                  <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Ask questions</AppText>
                 </View>
               </SolidCard>
             </Pressable>
@@ -425,13 +478,23 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/events-list')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="calendar" size={18} color="#3B82F6" />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="calendar" size={isDesktop ? 18 : 16} color="#3B82F6" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Events & RSVPs</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Talks & summits</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Events & RSVPs</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Talks & summits</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -442,13 +505,23 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/marketplace')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2D261A' : '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="cart" size={18} color="#F59E0B" />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#2D261A' : '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="cart" size={isDesktop ? 18 : 16} color="#F59E0B" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Marketplace</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Buy, sell & swap</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Marketplace</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Buy, sell & swap</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -459,13 +532,23 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/jobs')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1F2937' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="briefcase" size={18} color="#6366F1" />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1F2937' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="briefcase" size={isDesktop ? 18 : 16} color="#6366F1" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Career & Jobs</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Internships & gigs</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Career & Jobs</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Internships & gigs</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -476,13 +559,23 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/mentorship')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#271F38' : '#F3E8FF', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="ribbon" size={18} color="#A855F7" />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#271F38' : '#F3E8FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="ribbon" size={isDesktop ? 18 : 16} color="#A855F7" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Mentorship</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Alumni advisors</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Mentorship</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Alumni advisors</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -493,13 +586,23 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/calendar')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1F2E2B' : '#E6FFFA', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="time" size={18} color="#0D9488" />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1F2E2B' : '#E6FFFA', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="time" size={isDesktop ? 18 : 16} color="#0D9488" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>My Schedule</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Timetable & tests</AppText>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>My Schedule</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Timetable & tests</AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -513,15 +616,15 @@ export default function StudentDashboard() {
         {/* 4. Real Upcoming Campus Events */}
         {isFeatureEnabled('campus_events') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                 <Ionicons name="calendar-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
-                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                   Campus Events
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(student)/events-list')} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" variant="bodySmall" weight="bold">
+                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
                   View All ({events?.length ?? 0}) →
                 </AppText>
               </Pressable>
@@ -549,15 +652,15 @@ export default function StudentDashboard() {
         {/* 5. Verified Academic Resources & Past Questions */}
         {isFeatureEnabled('academic_resources') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                 <Ionicons name="document-text-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
-                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                   Course Materials
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(student)/resources')} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" variant="bodySmall" weight="bold">
+                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
                   View All ({resources?.length ?? 0}) →
                 </AppText>
               </Pressable>
@@ -613,15 +716,15 @@ export default function StudentDashboard() {
         {/* 6. Active Study Groups / Pods */}
         {isFeatureEnabled('study_groups') && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                 <Ionicons name="people-outline" size={18} color="#10B981" style={{ flexShrink: 0 }} />
-                <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                   Study Pods
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(student)/study-groups')} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" variant="bodySmall" weight="bold">
+                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
                   View All ({studyGroups?.length ?? 0}) →
                 </AppText>
               </Pressable>
@@ -668,15 +771,15 @@ export default function StudentDashboard() {
 
         {/* 7. Trending Campus Discussions */}
         <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
               <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" style={{ flexShrink: 0 }} />
-              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+              <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                 Campus Discussions
               </AppText>
             </View>
             <Pressable onPress={() => router.push('/(student)/feed')} style={{ flexShrink: 0 }} hitSlop={8}>
-              <AppText tone="brand" variant="bodySmall" weight="bold">
+              <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
                 View All →
               </AppText>
             </Pressable>
@@ -747,9 +850,9 @@ export default function StudentDashboard() {
         {/* 8. Institutional Direct Portal Shortcuts */}
         {(portalLinks ?? []).length > 0 && (
           <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <Ionicons name="link-outline" size={18} color={colors.brandPrimary} />
-              <AppText variant="h3" weight="bold">
+              <AppText weight="bold" style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                 Official University Services
               </AppText>
             </View>

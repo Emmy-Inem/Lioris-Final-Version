@@ -13,7 +13,8 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { sendConnectionRequest, checkConnectionStatus, deleteConnection } from '@/api/connections';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
-import { UserRole } from '@/api/types';
+import { getPublicProfile } from '@/api/profile';
+import { UserProfile, UserRole } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 
 const STOCK_IMAGES: Record<string, any> = {
@@ -53,35 +54,50 @@ export function UserProfileModal({
 
  const [connected, setConnected] = useState(false);
  const [connecting, setConnecting] = useState(false);
+ const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
 
  useEffect(() => {
  if (visible && userId) {
  checkConnectionStatus(userId).then((status) => {
  setConnected(status === 'accepted' || status === 'pending');
  }).catch(() => {});
+
+ getPublicProfile(userId)
+ .then((p) => {
+ if (p) setFetchedProfile(p);
+ })
+ .catch(() => {});
  }
  }, [visible, userId]);
 
- const isAlumni = userRole === 'alumni';
- const isStaff = userRole === 'staff';
+ const effectiveName = fetchedProfile?.fullName || userName;
+ const effectiveRole = (fetchedProfile?.userType || userRole) as UserRole;
+ const effectiveAvatar = fetchedProfile?.avatarUrl || userAvatarUrl;
+ const effectiveCover = fetchedProfile?.coverUrl || coverImageUrl;
+ const effectiveDepartment = fetchedProfile?.department || department;
+ const effectiveInstitution = fetchedProfile?.institutionName || institution;
+ const effectiveBio =
+ fetchedProfile?.bio ||
+ (effectiveRole === 'student'
+ ? 'Undergraduate student and active member of the campus academic community.'
+ : effectiveRole === 'alumni'
+ ? 'University alumnus, industry professional and campus advisor.'
+ : 'Faculty member and campus academic advisor.');
 
- const bioText = isAlumni
- ? "Senior Software Architect @ Google. University of Ibadan Class of'21. Mentoring students in distributed systems & fintech architecture."
- : isStaff
- ? 'Associate Professor of Distributed Systems & Cloud Computing. Department of Computer Science. Research lead for Campus AI.'
- : 'Honors Student & President of Google Developer Student Club (GDSC). Passionate about Mobile Systems, React Native & Machine Learning.';
+ const effectiveInterests =
+ fetchedProfile?.interests && fetchedProfile.interests.length > 0
+ ? fetchedProfile.interests
+ : effectiveRole === 'alumni'
+ ? ['Mentorship', 'Career Growth', 'Networking']
+ : effectiveRole === 'staff'
+ ? ['Curriculum Advisory', 'Academic Research']
+ : ['Course Studies', 'Campus Life', 'Projects'];
 
- const interests = isAlumni
- ? ['Cloud Architecture', 'Mentorship', 'Fintech', 'Angel Investing']
- : isStaff
- ? ['Computer Science', 'Distributed Systems', 'Curriculum Advisory']
- : ['React Native', 'TypeScript', 'Machine Learning', 'UI/UX Design', 'Algorithms'];
-
- const coverSource = coverImageUrl
- ? (STOCK_IMAGES[coverImageUrl] ?? { uri: coverImageUrl })
- : isAlumni
+ const coverSource = effectiveCover
+ ? (STOCK_IMAGES[effectiveCover] ?? { uri: effectiveCover })
+ : effectiveRole === 'alumni'
  ? STOCK_IMAGES.campus_library_study
- : isStaff
+ : effectiveRole === 'staff'
  ? STOCK_IMAGES.student_rep_group
  : STOCK_IMAGES.campus_students_photo;
 
@@ -90,7 +106,7 @@ export function UserProfileModal({
  if (connected) {
  setConnected(false);
  await deleteConnection(userId).catch(() => {});
- Alert.alert('Connection Removed', `You have disconnected from ${userName}.`);
+ Alert.alert('Connection Removed', `You have disconnected from ${effectiveName}.`);
  return;
  }
 
@@ -99,7 +115,7 @@ export function UserProfileModal({
  await sendConnectionRequest(userId);
  setConnected(true);
  haptics.success();
- Alert.alert('Connection Request Sent', `Invitation dispatched to ${userName}. You will be notified when accepted.`);
+ Alert.alert('Connection Request Sent', `Invitation dispatched to ${effectiveName}. You will be notified when accepted.`);
  } catch {
  Alert.alert('Error', 'Could not send connection request.');
  } finally {
@@ -111,7 +127,7 @@ export function UserProfileModal({
  haptics.light();
  onClose();
  try {
- const conv = await getOrCreateConversationWithUser(userId, userName, userAvatarUrl);
+ const conv = await getOrCreateConversationWithUser(userId, effectiveName, effectiveAvatar);
  router.push(`/${roleGroup}/messages/${conv.id}` as any);
  } catch {
  router.push(`/${roleGroup}/messages/${userId}` as any);
@@ -206,7 +222,7 @@ export function UserProfileModal({
  elevation: 6,
  }}
  >
- <Avatar name={userName} uri={userAvatarUrl} size={80} role={userRole} />
+ <Avatar name={effectiveName} uri={effectiveAvatar} size={80} role={effectiveRole} />
  </View>
 
  <View style={{ flexDirection: 'row', gap: spacing.xs }}>
@@ -217,7 +233,9 @@ export function UserProfileModal({
  loading={connecting}
  />
  <AppButton
- label="Message"variant="secondary"onPress={handleStartChat}
+ label="Message"
+ variant="secondary"
+ onPress={handleStartChat}
  />
  </View>
  </View>
@@ -225,44 +243,40 @@ export function UserProfileModal({
  {/* User Name & Academic Role Meta */}
  <View style={{ marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
- <AppText variant="h2"weight="bold">
- {userName}
+ <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
+ {effectiveName}
  </AppText>
- {/* The verified check used to render unconditionally, marking every
- profile as verified regardless of verification_status. */}
- <UserTypeBadge role={userRole} />
+ {fetchedProfile?.isVerified ? (
+ <Ionicons name="checkmark-circle" size={18} color={colors.brandPrimary} />
+ ) : null}
+ <UserTypeBadge role={effectiveRole} />
  </View>
 
- {institution || department ? (
- <AppText tone="brand"weight="semiBold"variant="bodySmall"style={{ marginTop: 3 }}>
- {[institution, department].filter(Boolean).join(' | ')}
+ {effectiveInstitution || effectiveDepartment ? (
+ <AppText tone="brand" weight="semiBold" variant="bodySmall" numberOfLines={1} style={{ marginTop: 3, fontSize: 12 }}>
+ {[effectiveInstitution, effectiveDepartment].filter(Boolean).join(' | ')}
  </AppText>
  ) : null}
  </View>
 
- {/* The metrics bar that stood here showed the same invented figures for
- every person on the platform - "142 Connections", "Lv. 4 Campus XP",
- "18 Discussions" - alongside a byline claiming "Member since Sept 2024 |
- Trust Score 9.6 / 10". None of it had a backing column, so it is gone
- rather than guessed. */}
-
  {/* Academic Bio */}
  <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginBottom: 4 }}>
+ <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: 4 }}>
  ABOUT & ACADEMIC BIO
  </AppText>
- <AppText variant="bodySmall"tone="primary"style={{ lineHeight: 22 }}>
- {bioText}
+ <AppText variant="bodySmall" tone="primary" style={{ lineHeight: 20 }}>
+ {effectiveBio}
  </AppText>
  </SolidCard>
 
  {/* Academic Interests Tags */}
+ {effectiveInterests && effectiveInterests.length > 0 ? (
  <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
+ <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
  FOCUS AREAS & INTERESTS
  </AppText>
  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
- {interests.map((tag) => (
+ {effectiveInterests.map((tag) => (
  <View
  key={tag}
  style={{
@@ -274,26 +288,14 @@ export function UserProfileModal({
  borderColor: `${colors.brandPrimary}30`,
  }}
  >
- <AppText variant="caption"weight="semiBold"tone="brand">
+ <AppText variant="caption" weight="semiBold" tone="brand">
  {tag}
  </AppText>
  </View>
  ))}
  </View>
  </SolidCard>
-
- {/* Mutual Connections & Cohort */}
- <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5 }}>
- MUTUAL CONNECTIONS (12)
- </AppText>
- <Badge label="Verified Network"tone="brand" />
- </View>
- <AppText tone="secondary"variant="caption"style={{ lineHeight: 18 }}>
- Connected with Diana Prince, Marcus Webb, Amina Yusuf and 9 other students in your department.
- </AppText>
- </SolidCard>
+ ) : null}
  </View>
  </ScrollView>
  </View>

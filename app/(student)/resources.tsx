@@ -103,14 +103,14 @@ export default function ResourcesScreen() {
           alignItems: 'center',
           justifyContent: 'space-between',
           marginTop: isDesktop ? spacing.xs : spacing.sm,
-          marginBottom: spacing.md,
+          marginBottom: spacing.sm,
         }}
       >
         <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-          <AppText variant="h1" weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 24 : 20 }}>
+          <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
             Campus Resources
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ fontSize: 12 }}>
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ fontSize: isDesktop ? 12 : 11, marginTop: 1 }}>
             Past questions, lecture notes & portal directories
           </AppText>
         </View>
@@ -129,12 +129,12 @@ export default function ResourcesScreen() {
                 borderColor: `${colors.brandPrimary}40`,
                 borderWidth: 1,
                 borderRadius: radius.pill,
-                paddingHorizontal: 10,
-                paddingVertical: 7,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
               }}
             >
-              <Ionicons name="settings-outline" size={14} color={colors.brandPrimary} />
-              <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 11 }}>
+              <Ionicons name="settings-outline" size={13} color={colors.brandPrimary} />
+              <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 10.5 }}>
                 Manage
               </AppText>
             </Pressable>
@@ -148,14 +148,14 @@ export default function ResourcesScreen() {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 5,
+                gap: 4,
                 backgroundColor: colors.brandPrimary,
                 borderRadius: radius.pill,
-                paddingHorizontal: 12,
-                paddingVertical: 7,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
               }}
             >
-              <Ionicons name="library" size={14} color="#ffffff" />
+              <Ionicons name="library" size={13} color="#ffffff" />
               <AppText weight="bold" variant="caption" style={{ color: '#ffffff', fontSize: 11 }}>
                 Global Library
               </AppText>
@@ -172,15 +172,15 @@ export default function ResourcesScreen() {
               gap: 4,
               backgroundColor: colors.brandPrimary,
               borderRadius: radius.pill,
-              paddingHorizontal: 14,
-              paddingVertical: 7,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
               shadowColor: colors.brandPrimary,
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.3,
               shadowRadius: 6,
             }}
           >
-            <Ionicons name="cloud-upload-outline" size={15} color="#FFFFFF" />
+            <Ionicons name="cloud-upload-outline" size={14} color="#FFFFFF" />
             <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
               Upload
             </AppText>
