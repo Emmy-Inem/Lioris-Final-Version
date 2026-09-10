@@ -187,6 +187,8 @@ export interface Conversation {
  participantId: string; // the other participant, from the current user's POV
  participantName: string;
  participantAvatarUrl?: string | null;
+ participantDepartment?: string | null;
+ participantRole?: string | null;
  isOnline?: boolean;
  lastMessageAt?: string | null;
  lastMessagePreview?: string | null;

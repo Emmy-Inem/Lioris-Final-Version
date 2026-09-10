@@ -6,7 +6,7 @@ import { ChatThread } from'@/components/ChatThread';
 export default function ChatScreen() {
  const { id } = useLocalSearchParams<{ id: string }>();
  return (
- <ScreenContainer edges={['bottom']}>
+ <ScreenContainer edges={['top', 'bottom']} noPadding glow={false}>
  <ChatThread conversationId={id} />
  </ScreenContainer>
  );

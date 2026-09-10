@@ -5,9 +5,9 @@ import { ChatThread } from'@/components/ChatThread';
 
 export default function AlumniChatScreen() {
  const { id } = useLocalSearchParams<{ id: string }>();
- return (
- <ScreenContainer edges={['bottom']}>
- <ChatThread conversationId={id} />
- </ScreenContainer>
- );
+  return (
+    <ScreenContainer edges={['top', 'bottom']} noPadding glow={false}>
+      <ChatThread conversationId={id} />
+    </ScreenContainer>
+  );
 }

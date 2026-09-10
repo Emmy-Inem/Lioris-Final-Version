@@ -17,6 +17,23 @@ interface ConversationRowProps {
  isSelected?: boolean;
 }
 
+function formatMessageTime(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) {
+    return d.toLocaleDateString([], { weekday: 'short' });
+  }
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
 export function ConversationRow({ conversation, onArchive, onSelect, isSelected }: ConversationRowProps) {
  const { colors, spacing, isDark } = useTheme();
  const segments = useSegments();
@@ -62,9 +79,19 @@ export function ConversationRow({ conversation, onArchive, onSelect, isSelected 
  ) : null}
  </View>
  <View style={{ flex: 1, minWidth: 0 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6, marginBottom: 3 }}>
  <AppText weight="bold"variant="bodySmall"numberOfLines={1}style={{ flex: 1, minWidth: 0 }}>
  {conversation.participantName}
+ </AppText>
+ {conversation.lastMessageAt ? (
+ <AppText variant="caption"tone="secondary"style={{ fontSize: 11, flexShrink: 0 }}>
+ {formatMessageTime(conversation.lastMessageAt)}
+ </AppText>
+ ) : null}
+ </View>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+ <AppText tone="secondary"variant="bodySmall"numberOfLines={1}style={{ flex: 1, minWidth: 0 }}>
+ {conversation.lastMessagePreview ?? 'Say hello \ud83d\udc4b'}
  </AppText>
  {conversation.unreadCount > 0 && (
  <View
@@ -85,9 +112,6 @@ export function ConversationRow({ conversation, onArchive, onSelect, isSelected 
  </View>
  )}
  </View>
- <AppText tone="secondary"variant="bodySmall"numberOfLines={1}>
- {conversation.lastMessagePreview ?? 'Say hello \ud83d\udc4b'}
- </AppText>
  </View>
  </Pressable>
  );

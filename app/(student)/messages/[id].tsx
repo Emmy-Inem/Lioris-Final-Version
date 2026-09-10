@@ -6,8 +6,8 @@ import { ChatThread } from'@/components/ChatThread';
 export default function StudentChatScreen() {
  const { id } = useLocalSearchParams<{ id: string }>();
  return (
- <ScreenContainer edges={['bottom']}>
- <ChatThread conversationId={id} />
- </ScreenContainer>
+   <ScreenContainer edges={['top', 'bottom']} noPadding glow={false}>
+     <ChatThread conversationId={id} />
+   </ScreenContainer>
  );
 }
