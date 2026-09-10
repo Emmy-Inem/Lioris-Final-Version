@@ -13,10 +13,13 @@ import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { HealthMetricBar } from'@/components/HealthMetricBar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
+import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
+import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { listReports } from '@/api/moderation';
 import { listVerificationRequests } from '@/api/verification';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
@@ -25,6 +28,7 @@ import { haptics } from '@/utils/haptics';
 export default function AdminDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
   const { data: openReports } = useQuery({ queryKey: ['reports', 'open'], queryFn: () => listReports({ status: 'open' }) });
   const { data: pendingVerifications } = useQuery({ queryKey: ['verifications', 'pending'], queryFn: listVerificationRequests });
@@ -142,6 +146,12 @@ export default function AdminDashboard() {
               </View>
             )}
 
+            {/* Multi-Campus Live Weather */}
+            {isFeatureEnabled('live_weather') && <CampusWeatherWidget />}
+
+            {/* Live Campus Radio Stream */}
+            {isFeatureEnabled('campus_radio') && <CampusRadioPlayer />}
+
             {/* Official Campus Announcements & Broadcasts */}
             <AnnouncementsWidget scope="global" />
 
@@ -154,6 +164,38 @@ export default function AdminDashboard() {
             </AppText>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: spacing.md }}>
+              {/* Direct Messages Desk */}
+              {isFeatureEnabled('e2ee_messaging') && (
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    router.push('/(admin)/messages');
+                  }}
+                  style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+                >
+                  <SolidCard
+                    frosted
+                    style={{
+                      borderRadius: 18,
+                      padding: 12,
+                      backgroundColor: colors.surface,
+                      height: 118,
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.brandPrimary} />
+                    <View>
+                      <AppText weight="bold" variant="bodySmall">
+                        Direct Messages
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                        Student & staff chat
+                      </AppText>
+                    </View>
+                  </SolidCard>
+                </Pressable>
+              )}
+
               {/* 1. ID Verifications */}
               <Pressable
                 onPress={() => {

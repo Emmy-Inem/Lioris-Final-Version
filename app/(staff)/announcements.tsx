@@ -52,11 +52,11 @@ export default function StaffAnnouncementsScreen() {
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.sm, paddingBottom: spacing.sm }}>
+          <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
             Announcements
           </AppText>
-          <AppButton label={composing ? 'Cancel' : 'New'} variant={composing ? 'ghost' : 'primary'} onPress={() => setComposing((v) => !v)} />
+          <AppButton label={composing ? 'Cancel' : 'New'} variant={composing ? 'ghost' : 'primary'} size="sm" onPress={() => setComposing((v) => !v)} />
         </View>
 
         {composing ? (
@@ -129,15 +129,15 @@ function ChipRow<T extends string>({
  accessibilityRole="radio"accessibilityState={{ checked: isSelected }}
  accessibilityLabel={option}
  style={{
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
+ paddingHorizontal: 11,
+ paddingVertical: 6,
  borderRadius: radius.pill,
  borderWidth: 1.5,
  borderColor: isSelected ? colors.brandPrimary : colors.border,
  backgroundColor: isSelected ? `${colors.brandPrimary}18` : 'transparent',
  }}
  >
- <AppText variant="bodySmall"weight="semiBold"tone={isSelected ? 'brand' : 'secondary'}>
+ <AppText variant="caption" weight="semiBold" tone={isSelected ? 'brand' : 'secondary'} style={{ fontSize: 11.5 }}>
  {option}
  </AppText>
  </Pressable>

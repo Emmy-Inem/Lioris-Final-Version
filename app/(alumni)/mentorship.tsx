@@ -83,11 +83,11 @@ export default function AlumniMentorshipScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 130 }}
       >
-        <View style={{ paddingTop: spacing.md, marginBottom: spacing.md }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+        <View style={{ paddingTop: isDesktop ? spacing.md : spacing.xs, marginBottom: spacing.sm }}>
+          <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
             Alumni Mentorship Desk
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ marginTop: 2 }}>
             Guide university students, review portfolio code, and conduct 1-on-1 video calls.
           </AppText>
         </View>
@@ -135,22 +135,34 @@ export default function AlumniMentorshipScreen() {
                 ) : null}
 
                 {m.status === 'pending' ? (
-                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-                    <AppButton label="Accept Mentee" onPress={() => respond(m.id, 'accept')} loading={submittingId === m.id} />
-                    <AppButton label="Decline" variant="secondary" onPress={() => respond(m.id, 'decline')} />
+                  <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>
+                    <View style={{ flex: 1 }}>
+                      <AppButton label="Accept Mentee" fullWidth size="sm" onPress={() => respond(m.id, 'accept')} loading={submittingId === m.id} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppButton label="Decline" variant="secondary" fullWidth size="sm" onPress={() => respond(m.id, 'decline')} />
+                    </View>
                   </View>
                 ) : m.status === 'active' ? (
-                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-                    <AppButton
-                      label="Video Call"
-                      variant="primary"
-                      onPress={() => handleStartMentorshipCall(m.studentId, studentName, m.studentDepartment)}
-                    />
-                    <AppButton
-                      label="Message"
-                      variant="secondary"
-                      onPress={() => handleOpenChat(m.studentId, studentName)}
-                    />
+                  <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>
+                    <View style={{ flex: 1 }}>
+                      <AppButton
+                        label="Video Call"
+                        variant="primary"
+                        fullWidth
+                        size="sm"
+                        onPress={() => handleStartMentorshipCall(m.studentId, studentName, m.studentDepartment)}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppButton
+                        label="Message"
+                        variant="secondary"
+                        fullWidth
+                        size="sm"
+                        onPress={() => handleOpenChat(m.studentId, studentName)}
+                      />
+                    </View>
                   </View>
                 ) : null}
               </SolidCard>
@@ -180,24 +192,26 @@ export default function AlumniMentorshipScreen() {
 }
 
 function StatBox({ label, value, icon }: { label: string; value: number; icon: keyof typeof Ionicons.glyphMap }) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, radius } = useTheme();
   return (
     <View
       style={{
         flex: 1,
         backgroundColor: colors.pastelPrimaryBg,
         borderRadius: radius.md,
-        padding: spacing.sm,
+        paddingHorizontal: 6,
+        paddingVertical: 8,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: colors.brandPrimary,
+        minWidth: 0,
       }}
     >
-      <Ionicons name={icon} size={18} color={colors.brandPrimary} style={{ marginBottom: 2 }} />
-      <AppText variant="h3" weight="bold" tone="brand">
+      <Ionicons name={icon} size={16} color={colors.brandPrimary} style={{ marginBottom: 2 }} />
+      <AppText variant="h3" weight="bold" tone="brand" numberOfLines={1}>
         {value}
       </AppText>
-      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10, textAlign: 'center' }}>
+      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, textAlign: 'center' }}>
         {label}
       </AppText>
     </View>

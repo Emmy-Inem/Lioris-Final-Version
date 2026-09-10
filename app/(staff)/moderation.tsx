@@ -27,58 +27,72 @@ export default function StaffModerationScreen() {
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
-        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.xs }}>
+        <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
           Staff Workdesk
         </AppText>
- {profile?.institutionCode ? <Badge label={`${profile.institutionCode} Node`} tone="brand" /> : null}
- </View>
- <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
- Faculty moderation covers reports, student matric verifications, and resource catalog approvals.
- </AppText>
+        {profile?.institutionCode ? <Badge label={`${profile.institutionCode} Node`} tone="brand" /> : null}
+      </View>
+      <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
+        Faculty moderation covers reports, student matric verifications, and resource catalog approvals.
+      </AppText>
 
- {/* Tab Switcher */}
- <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
-      <Pressable
-        onPress={() => {
-          haptics.light();
-          setActiveTab('reports');
-        }}
-        style={{
-          flex: 1,
-          paddingVertical: 10,
-          borderRadius: radius.pill,
-          alignItems: 'center',
-          backgroundColor: activeTab === 'reports' ? colors.brandPrimary : colors.surface,
-          borderWidth: 1,
-          borderColor: activeTab === 'reports' ? colors.brandPrimary : colors.border,
-        }}
-      >
-        <AppText weight="bold" variant="bodySmall" tone={activeTab === 'reports' ? 'inverse' : 'secondary'}>
-          Reports Queue
-        </AppText>
-      </Pressable>
+      {/* Tab Switcher */}
+      <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setActiveTab('reports');
+          }}
+          style={{
+            flex: 1,
+            paddingVertical: 9,
+            borderRadius: radius.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: activeTab === 'reports' ? colors.brandPrimary : colors.surface,
+            borderWidth: 1,
+            borderColor: activeTab === 'reports' ? colors.brandPrimary : colors.border,
+          }}
+        >
+          <AppText
+            weight="bold"
+            variant="bodySmall"
+            tone={activeTab === 'reports' ? 'inverse' : 'secondary'}
+            numberOfLines={1}
+            style={{ fontSize: isDesktop ? 13 : 11.5 }}
+          >
+            Reports Queue
+          </AppText>
+        </Pressable>
 
-      <Pressable
-        onPress={() => {
-          haptics.light();
-          setActiveTab('approvals');
-        }}
-        style={{
-          flex: 1,
-          paddingVertical: 10,
-          borderRadius: radius.pill,
-          alignItems: 'center',
-          backgroundColor: activeTab === 'approvals' ? colors.brandPrimary : colors.surface,
-          borderWidth: 1,
-          borderColor: activeTab === 'approvals' ? colors.brandPrimary : colors.border,
-        }}
-      >
-        <AppText weight="bold" variant="bodySmall" tone={activeTab === 'approvals' ? 'inverse' : 'secondary'}>
-          Verifications & Approvals
-        </AppText>
-      </Pressable>
- </View>
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setActiveTab('approvals');
+          }}
+          style={{
+            flex: 1,
+            paddingVertical: 9,
+            borderRadius: radius.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: activeTab === 'approvals' ? colors.brandPrimary : colors.surface,
+            borderWidth: 1,
+            borderColor: activeTab === 'approvals' ? colors.brandPrimary : colors.border,
+          }}
+        >
+          <AppText
+            weight="bold"
+            variant="bodySmall"
+            tone={activeTab === 'approvals' ? 'inverse' : 'secondary'}
+            numberOfLines={1}
+            style={{ fontSize: isDesktop ? 13 : 11.5 }}
+          >
+            {isDesktop ? 'Verifications & Approvals' : 'Approvals Desk'}
+          </AppText>
+        </Pressable>
+      </View>
 
  {activeTab === 'reports' ? (
  <ModerationQueue institutionCode={profile?.institutionCode} emptyTitle="Your campus queue is clear" />

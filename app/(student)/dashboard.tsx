@@ -10,6 +10,7 @@ import { SolidCard } from '@/components/SolidCard';
 import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { AICopilotModal } from '@/components/AICopilotModal';
+import { CurrencyConverterModal } from '@/components/CurrencyConverterModal';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Avatar } from '@/components/Avatar';
@@ -56,6 +57,7 @@ export default function StudentDashboard() {
   const { campusCode, homeInstitutionCode } = useCampusScope();
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -333,6 +335,42 @@ export default function StudentDashboard() {
             Student Services
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {isFeatureEnabled('e2ee_messaging') && (
+              <Pressable
+                onPress={() => router.push('/(student)/messages')}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="chatbubble-ellipses" size={18} color={colors.brandPrimary} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Direct Messages</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Chats & calls</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
+
+            {isFeatureEnabled('currency_converter') && (
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setCurrencyModalOpen(true);
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 68 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="cash-outline" size={18} color="#10B981" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>FX Converter</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Live rates & NGN</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
             {isFeatureEnabled('academic_resources') && (
               <Pressable
                 onPress={() => router.push('/(student)/resources')}
@@ -850,6 +888,7 @@ export default function StudentDashboard() {
         </View>
       </Modal>
       <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
+      <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
     </ScreenContainer>
   );
 }

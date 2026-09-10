@@ -9,17 +9,20 @@ import { LiorisLogo } from'./LiorisLogo';
 import { ChangeWorkspaceScopeModal } from'./ChangeWorkspaceScopeModal';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
-import { listNotifications } from'@/api/notifications';
-import { getMyProfile } from'@/api/profile';
-import { getInstitutionByCode } from'@/api/institutions';
+import { listNotifications } from '@/api/notifications';
+import { listConversations } from '@/api/messaging';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { getMyProfile } from '@/api/profile';
+import { getInstitutionByCode } from '@/api/institutions';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useViewScope } from '@/hooks/useViewScope';
 import { haptics } from '@/utils/haptics';
 
 export function AppHeader() {
- const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
- const { isDesktop } = useResponsive();
- const { user } = useAuth();
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
+  const { user } = useAuth();
 
  if (isDesktop) return null;
 
@@ -28,12 +31,23 @@ export function AppHeader() {
  const [scopeModalOpen, setScopeModalOpen] = useState(false);
  const { scope, setScope, activeCampusCode } = useViewScope();
 
- const { data: notifications } = useQuery({
- queryKey: ['notifications', 'unread-count'],
- queryFn: () => listNotifications({ status: 'unread' }),
- });
- const unreadCount = notifications?.length ?? 0;
- const showWorkspaceSwitcher = true;
+  const { data: notifications } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => listNotifications({ status: 'unread' }),
+  });
+  const unreadCount = notifications?.length ?? 0;
+
+  const messagingEnabled = isFeatureEnabled('e2ee_messaging');
+  const { data: conversations } = useQuery({
+    queryKey: ['conversations', 'unread-count'],
+    queryFn: () => listConversations(),
+    enabled: !!user && messagingEnabled,
+  });
+  const unreadMessagesCount = (conversations ?? []).reduce(
+    (sum, c) => sum + (c.unreadCount || 0),
+    0,
+  );
+  const showWorkspaceSwitcher = true;
 
  const { data: profile } = useQuery({
  queryKey: ['profile', 'me', user?.id],
@@ -101,25 +115,56 @@ export function AppHeader() {
  </View>
 
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>
- {/* Theme Toggle Button */}
- <Pressable
- hitSlop={8}
- accessibilityRole="button" accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
- onPress={() => {
- haptics.light();
- toggleTheme();
- }}
- style={{
- width: 32,
- height: 32,
- borderRadius: 16,
- backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
- alignItems: 'center',
- justifyContent: 'center',
- }}
- >
- <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={18} color={colors.textPrimary} />
- </Pressable>
+        {/* Direct Messages Button (Replaces Theme Toggle) */}
+        {messagingEnabled && (
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={unreadMessagesCount > 0 ? `Messages, ${unreadMessagesCount} unread` : 'Messages'}
+            onPress={() => {
+              haptics.light();
+              router.push(`/${roleGroup}/messages` as any);
+            }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textPrimary} />
+            {unreadMessagesCount > 0 && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -2,
+                  minWidth: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: colors.brandPrimary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 2,
+                  borderWidth: 1.5,
+                  borderColor: colors.surface,
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  weight="bold"
+                  tone="inverse"
+                  style={{ fontSize: 8, lineHeight: 10 }}
+                >
+                  {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                </AppText>
+              </View>
+            )}
+          </Pressable>
+        )}
 
  {/* Global Search Button */}
  <Pressable

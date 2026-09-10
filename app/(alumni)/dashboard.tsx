@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, View, Pressable, Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -6,6 +6,10 @@ import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { SolidCard } from '@/components/SolidCard';
+import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
+import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
+import { AICopilotModal } from '@/components/AICopilotModal';
+import { CurrencyConverterModal } from '@/components/CurrencyConverterModal';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';
@@ -34,6 +38,8 @@ export default function AlumniDashboard() {
   const { user } = useAuth();
   const { isFeatureEnabled } = useFeatureFlags();
   const { campusCode, homeInstitutionCode } = useCampusScope();
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -206,12 +212,107 @@ export default function AlumniDashboard() {
           </View>
         </SolidCard>
 
+        {/* Alma Mater Live Campus Weather */}
+        {isFeatureEnabled('live_weather') && <CampusWeatherWidget />}
+
+        {/* Live Campus Radio Stream */}
+        {isFeatureEnabled('campus_radio') && <CampusRadioPlayer />}
+
+        {/* AI Career & Mentorship Assistant Banner */}
+        {isFeatureEnabled('ai_study_copilot') && (
+          <SolidCard
+            radius={20}
+            style={{
+              padding: spacing.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    backgroundColor: `${colors.brandPrimary}15`,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Ionicons name="sparkles" size={18} color={colors.brandPrimary} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                    AI Career & Mentorship Copilot
+                  </AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                    Interview prep, career coaching & technical resume review
+                  </AppText>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setCopilotOpen(true)}
+                style={{
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  flexShrink: 0,
+                }}
+              >
+                <AppText variant="caption" weight="bold" tone="inverse">
+                  Ask AI →
+                </AppText>
+              </Pressable>
+            </View>
+          </SolidCard>
+        )}
+
         {/* 2. Quick Alumni Action Hub (Responsive Grid) */}
         <View>
           <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
             Alumni Action Hub
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {isFeatureEnabled('e2ee_messaging') && (
+              <Pressable
+                onPress={() => router.push('/(alumni)/messages')}
+                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
+              >
+                <SolidCard radius={16} style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isDark ? '#1F2937' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name="chatbubble-ellipses" size={17} color={colors.brandPrimary} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Direct Messages</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>Mentees & fellows</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
+
+            {isFeatureEnabled('currency_converter') && (
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setCurrencyModalOpen(true);
+                }}
+                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
+              >
+                <SolidCard radius={16} style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name="cash-outline" size={17} color="#10B981" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>FX & Endowments</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>Live rate converter</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
             {isFeatureEnabled('career_page') && (
               <Pressable
                 onPress={() => router.push('/(alumni)/jobs')}
@@ -555,6 +656,8 @@ export default function AlumniDashboard() {
           </View>
         </View>
       </ScrollView>
+      <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
+      <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
     </ScreenContainer>
   );
 }
