@@ -59,7 +59,14 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
-  const effectiveCampus = homeInstitutionCode || campusCode || profile?.institutionCode || 'UI';
+  const effectiveCampus =
+    homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
+      ? homeInstitutionCode
+      : campusCode && campusCode !== 'GLOBAL'
+      ? campusCode
+      : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
+      ? profile.institutionCode
+      : 'UI';
 
   const { data: recentPosts } = useQuery({
     queryKey: ['posts', 'dashboard-feed', effectiveCampus],

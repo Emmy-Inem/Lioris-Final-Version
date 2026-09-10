@@ -190,9 +190,10 @@ export function SettingsScreen() {
 
   // Derived role & institution presentation
   const institutionDisplay =
-    profile?.institutionName ||
-    LAUNCH_INSTITUTIONS.find((i) => i.code === homeInstitutionCode)?.name ||
-    'University of Ibadan';
+    profile?.institutionName && profile.institutionCode !== 'GLOBAL'
+      ? profile.institutionName
+      : LAUNCH_INSTITUTIONS.find((i) => i.code === homeInstitutionCode && i.code !== 'GLOBAL')?.name ||
+        'University of Ibadan';
 
   const departmentDisplay = profile?.department || 'Computer Science & AI';
 

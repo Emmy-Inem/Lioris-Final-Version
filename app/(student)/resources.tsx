@@ -41,7 +41,12 @@ export default function ResourcesScreen() {
  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
 
  const { campusCode, homeInstitutionCode } = useCampusScope();
- const effectiveCampus = homeInstitutionCode || campusCode || 'UI';
+  const effectiveCampus =
+    homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
+      ? homeInstitutionCode
+      : campusCode && campusCode !== 'GLOBAL'
+      ? campusCode
+      : 'UI';
 
  const { data: portalLinks = [] } = useQuery({
  queryKey: ['portalLinks', effectiveCampus],

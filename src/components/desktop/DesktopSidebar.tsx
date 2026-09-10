@@ -131,7 +131,10 @@ export function DesktopSidebar() {
       ? alumniNavItems
       : studentNavItems;
 
- const campusName = profile?.institutionName ?? 'University of Ibadan';
+  const campusName =
+    profile?.institutionName && profile.institutionCode !== 'GLOBAL'
+      ? profile.institutionName
+      : 'University of Ibadan';
 
  return (
  <View

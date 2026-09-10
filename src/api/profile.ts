@@ -39,10 +39,10 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
  // live here only ran for *unrecognised* domains, where it guessed badly -
  // `includes('oau')` assigned joaustin@some-school.edu to Obafemi Awolowo.
  // An unknown domain has no campus, so fall back to the default explicitly.
- if (!instCode) {
-   instCode = 'UI';
-   instName = 'University of Ibadan';
- }
+  if (!instCode || instCode === 'GLOBAL') {
+    instCode = 'UI';
+    instName = 'University of Ibadan';
+  }
 
  const created: UserProfile = {
  id: user.id,
@@ -121,12 +121,22 @@ export async function getMyProfile(user?: {
  const isVerified = data.verification_status === 'verified';
  const verificationStatus = data.verification_status || (isVerified ? 'verified' : 'none');
  
- const campusCode = data.campus_code || fallback.institutionCode;
- const inst = getInstitutionByCode(campusCode) || {
- code: campusCode,
- name: campusCode === 'UNILAG' ? 'University of Lagos' : campusCode === 'FUNAAB' ? 'Federal University of Agriculture, Abeokuta' : 'University of Ibadan',
- domain: 'ui.edu.ng',
- };
+    const isStudent = data.role === 'student' || resolvedUser.role === 'student';
+    const rawCampus = data.campus_code;
+    let campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
+    if (isStudent && (!campusCode || campusCode === 'GLOBAL')) {
+      campusCode = 'UI';
+    }
+    const inst = (campusCode && campusCode !== 'GLOBAL' ? getInstitutionByCode(campusCode) : null) || {
+      code: 'UI',
+      name: 'University of Ibadan',
+      domain: 'ui.edu.ng',
+    };
+
+    // Quietly sync back to Supabase if the student's campus_code was set to GLOBAL or empty
+    if (isStudent && (data.campus_code === 'GLOBAL' || !data.campus_code)) {
+      supabase.from('profiles').update({ campus_code: 'UI' }).eq('id', resolvedUser.id).then(() => {}, () => {});
+    }
 
  const merged: UserProfile = {
  ...fallback,

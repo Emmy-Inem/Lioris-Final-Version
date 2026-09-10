@@ -61,14 +61,21 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  // activeCampusCode lets an admin's "Explore Other Campus Workspaces" pick
  // (Settings/Workdesk -> Change Workspace Scope) actually change which
  // campus's threads show here too, not just their own home campus.
- const { activeCampusCode } = useCampusScope();
+  const { activeCampusCode, homeInstitutionCode } = useCampusScope();
 
- const { data: profile } = useQuery({
- queryKey: ['profile', 'me', user?.id],
- queryFn: () => getMyProfile(user!),
- enabled: !!user,
- });
- const viewerInstitutionCode = activeCampusCode || profile?.institutionCode;
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+  const viewerInstitutionCode =
+    activeCampusCode && activeCampusCode !== 'GLOBAL'
+      ? activeCampusCode
+      : homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
+      ? homeInstitutionCode
+      : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
+      ? profile.institutionCode
+      : 'UI';
 
  const { data: rawPosts, isLoading, refetch, isRefetching } = useQuery({
  queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel],

@@ -110,7 +110,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  if (scope === 'global') {
  activeKey = 'GLOBAL';
  } else {
- activeKey = activeCampusCode || profile?.institutionCode || 'UI';
+ activeKey =
+ activeCampusCode && activeCampusCode !== 'GLOBAL'
+ ? activeCampusCode
+ : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
+ ? profile.institutionCode
+ : 'UI';
  }
  }
 

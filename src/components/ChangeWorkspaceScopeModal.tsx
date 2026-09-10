@@ -34,14 +34,17 @@ export function ChangeWorkspaceScopeModal({
  const { activeCampusCode, setActiveCampusCode } = useViewScope();
  const isAdmin = user?.role === 'admin';
 
- // Guest explored workspaces list
- const [guestWorkspaces, setGuestWorkspaces] = useState<{ code: string; name: string; description: string }[]>(
- LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== homeInstitutionCode).map((inst) => ({
- code: inst.code,
- name: inst.name,
- description: `${inst.shortName} Campus Community`,
- })),
- );
+  // Guest explored workspaces list (exclude home institution and global)
+  const cleanHomeCode = (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL') ? homeInstitutionCode : 'UI';
+  const cleanHomeName = (homeInstitution && !homeInstitution.includes('Global')) ? homeInstitution : 'University of Ibadan';
+
+  const [guestWorkspaces, setGuestWorkspaces] = useState<{ code: string; name: string; description: string }[]>(
+    LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== cleanHomeCode && inst.code !== 'GLOBAL').map((inst) => ({
+      code: inst.code,
+      name: inst.name,
+      description: `${inst.shortName} Campus Community`,
+    })),
+  );
 
  // New custom workspace modal state
  const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -122,8 +125,8 @@ export function ChangeWorkspaceScopeModal({
  <ScopeOption
  icon="school"
  title="My Campus Workspace"
- subtitle={`${homeInstitution} (${homeInstitutionCode})`}
- selected={scope === 'campus' && (!activeCampusCode || activeCampusCode === homeInstitutionCode)}
+ subtitle={`${cleanHomeName} (${cleanHomeCode})`}
+ selected={scope === 'campus' && (!activeCampusCode || activeCampusCode === cleanHomeCode)}
  onPress={() => {
  setActiveCampusCode(undefined);
  setCustomAccent(null);

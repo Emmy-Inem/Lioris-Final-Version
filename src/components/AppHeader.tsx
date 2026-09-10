@@ -40,8 +40,13 @@ export function AppHeader() {
  queryFn: () => getMyProfile(user!),
  enabled: !!user && showWorkspaceSwitcher,
  });
- const homeInstitutionCode = activeCampusCode || profile?.institutionCode || 'UI';
- const homeInstitutionName = getInstitutionByCode(homeInstitutionCode)?.name ?? profile?.institutionName ?? 'Your Campus';
+  const homeInstitutionCode =
+    (activeCampusCode && activeCampusCode !== 'GLOBAL')
+      ? activeCampusCode
+      : (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
+      ? profile.institutionCode
+      : 'UI';
+  const homeInstitutionName = getInstitutionByCode(homeInstitutionCode)?.name ?? 'University of Ibadan';
 
  return (
  <View

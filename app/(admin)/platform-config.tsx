@@ -30,7 +30,7 @@ import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 
 const WORKDESK_TABS = ['Feature Flags', 'User Profiles', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
-const SCOPE_OPTIONS = ['All Campuses', ...LAUNCH_INSTITUTIONS.map((inst) => inst.name)];
+const SCOPE_OPTIONS = ['All Campuses', ...LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== 'GLOBAL').map((inst) => inst.name)];
 
 export default function PlatformConfigScreen() {
   const { colors, spacing, radius, isDark } = useTheme();

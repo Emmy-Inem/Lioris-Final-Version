@@ -38,8 +38,13 @@ export function useCampusScope() {
   // @ui.edu.ng, so plain domain matching already covers them.
   const deducedFromEmail = getInstitutionForEmail(user?.email ?? '')?.code;
 
-  const homeInstitutionCode = profile?.institutionCode || deducedFromEmail || 'UI';
-  const campusCode = scope === 'global' ? 'GLOBAL' : activeCampusCode || homeInstitutionCode;
+  const rawHome = (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
+    ? profile.institutionCode
+    : (deducedFromEmail && deducedFromEmail !== 'GLOBAL')
+    ? deducedFromEmail
+    : 'UI';
+  const homeInstitutionCode = rawHome;
+  const campusCode = scope === 'global' ? 'GLOBAL' : (activeCampusCode && activeCampusCode !== 'GLOBAL' ? activeCampusCode : homeInstitutionCode);
 
   return { scope, setScope, activeCampusCode, setActiveCampusCode, campusCode, homeInstitutionCode };
 }

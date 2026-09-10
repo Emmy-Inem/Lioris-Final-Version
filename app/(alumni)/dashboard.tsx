@@ -41,7 +41,14 @@ export default function AlumniDashboard() {
     enabled: !!user,
   });
 
-  const effectiveCampus = homeInstitutionCode || campusCode || profile?.institutionCode || 'UI';
+  const effectiveCampus =
+    homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
+      ? homeInstitutionCode
+      : campusCode && campusCode !== 'GLOBAL'
+      ? campusCode
+      : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
+      ? profile.institutionCode
+      : 'UI';
 
   const { data: posts } = useQuery({
     queryKey: ['feed', 'alumni-dash', effectiveCampus],

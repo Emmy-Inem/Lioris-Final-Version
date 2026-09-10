@@ -16,6 +16,7 @@ import { registerForPushNotificationsAsync } from'@/notifications/push';
 import { supabase } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
 import { loadBlockedUserIds } from '@/api/connections';
+import { resetToDefaultCampusScope } from '@/hooks/useViewScope';
 
 interface SessionUser {
  id: string;
@@ -219,6 +220,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         await persist(nextUser);
         setUser(nextUser);
+        if (session.user.role === 'student') {
+          resetToDefaultCampusScope();
+        }
         loadBlockedUserIds().catch(() => {});
         registerForPushNotificationsAsync().catch(() => {});
       },
@@ -234,6 +238,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         await persist(nextUser);
         setUser(nextUser);
+        if (session.user.role === 'student') {
+          resetToDefaultCampusScope();
+        }
         return nextUser;
       },
       async logout() {
@@ -291,6 +298,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         await persist(nextUser);
         setUser(nextUser);
+        if (newRole === 'student') {
+          resetToDefaultCampusScope();
+        }
         try {
           queryClient.clear();
         } catch {
