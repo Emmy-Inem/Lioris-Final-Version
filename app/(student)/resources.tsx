@@ -20,6 +20,8 @@ import { listPortalLinks, PortalLink } from '@/api/portalLinks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
+import { AcademicLibraryModal } from '@/components/AcademicLibraryModal';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 const RESOURCE_CATEGORIES = [
  { id: 'all', label: 'All Files', filter: 'All Types', icon: 'document-text-outline' as const },
@@ -39,6 +41,8 @@ export default function ResourcesScreen() {
  const [adminManageOpen, setAdminManageOpen] = useState(false);
  const [filterModalOpen, setFilterModalOpen] = useState(false);
  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
+  const [libraryModalOpen, setLibraryModalOpen] = useState(false);
+  const { isFeatureEnabled } = useFeatureFlags();
 
  const { campusCode, homeInstitutionCode } = useCampusScope();
   const effectiveCampus =
@@ -132,6 +136,28 @@ export default function ResourcesScreen() {
               <Ionicons name="settings-outline" size={14} color={colors.brandPrimary} />
               <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 11 }}>
                 Manage
+              </AppText>
+            </Pressable>
+          )}
+
+          {isFeatureEnabled('global_library') && (
+            <Pressable
+              onPress={() => setLibraryModalOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Search Global Academic Library"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                backgroundColor: colors.brandPrimary,
+                borderRadius: radius.pill,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+              }}
+            >
+              <Ionicons name="library" size={14} color="#ffffff" />
+              <AppText weight="bold" variant="caption" style={{ color: '#ffffff', fontSize: 11 }}>
+                Global Library
               </AppText>
             </Pressable>
           )}
@@ -667,6 +693,7 @@ export default function ResourcesScreen() {
       <ShareAcademicFileModal visible={uploadModalOpen} onClose={() => setUploadModalOpen(false)} onUpload={handleUpload} />
       <LibraryFilterModal visible={filterModalOpen} onClose={() => setFilterModalOpen(false)} filters={filters} onApply={setFilters} />
       <ManageResourcesModal visible={adminManageOpen} onClose={() => setAdminManageOpen(false)} />
+      <AcademicLibraryModal visible={libraryModalOpen} onClose={() => setLibraryModalOpen(false)} />
     </ScreenContainer>
   );
 }

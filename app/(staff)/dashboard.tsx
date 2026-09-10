@@ -6,6 +6,8 @@ import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { SolidCard } from '@/components/SolidCard';
+import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
+import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';

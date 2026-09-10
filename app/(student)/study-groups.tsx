@@ -10,6 +10,8 @@ import { AppButton } from '@/components/AppButton';
 import { StudyGroupCard } from '@/components/StudyGroupCard';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateStudyGroupModal } from '@/components/CreateStudyGroupModal';
+import { AICopilotModal } from '@/components/AICopilotModal';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useToast } from '@/context/ToastContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -23,6 +25,8 @@ export default function StudyGroupsScreen() {
  const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const { isFeatureEnabled } = useFeatureFlags();
  const [searchQuery, setSearchQuery] = useState('');
  const [selectedFilter, setSelectedFilter] = useState('All Pods');
  const { campusCode } = useCampusScope();
@@ -62,12 +66,22 @@ export default function StudyGroupsScreen() {
           </AppText>
         </View>
         <View style={{ flexShrink: 0 }}>
-          <AppButton
-            label="+ Create Pod"
-            variant="primary"
-            size={isDesktop ? 'md' : 'sm'}
-            onPress={() => setCreateModalOpen(true)}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {isFeatureEnabled('ai_study_copilot') && (
+              <AppButton
+                label="⚡ Ask AI Copilot"
+                variant="ghost"
+                size={isDesktop ? 'md' : 'sm'}
+                onPress={() => setCopilotOpen(true)}
+              />
+            )}
+            <AppButton
+              label="+ Create Pod"
+              variant="primary"
+              size={isDesktop ? 'md' : 'sm'}
+              onPress={() => setCreateModalOpen(true)}
+            />
+          </View>
         </View>
       </View>
 
@@ -247,6 +261,7 @@ export default function StudyGroupsScreen() {
         onClose={() => setCreateModalOpen(false)}
         onCreate={handleCreate}
       />
+      <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
     </ScreenContainer>
   );
 }

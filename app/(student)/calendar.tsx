@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { CampusMapModal } from '@/components/CampusMapModal';
 import { listEvents } from '@/api/events';
 
 const TABS = ['Monthly Grid', 'Agenda'] as const;
@@ -20,6 +21,7 @@ export default function CalendarScreen() {
  const { isDesktop } = useResponsive();
  const { isFeatureEnabled } = useFeatureFlags();
  const [tab, setTab] = useState<(typeof TABS)[number]>('Monthly Grid');
+  const [mapModalOpen, setMapModalOpen] = useState(false);
 
  const { data: events } = useQuery({ queryKey: ['events', 'student', 'calendar'], queryFn: () => listEvents({ scope: 'student' }) });
 
@@ -34,6 +36,7 @@ export default function CalendarScreen() {
           description="Campus timetable and schedule modules have been temporarily hidden by campus administration."
         />
       </View>
+      <CampusMapModal visible={mapModalOpen} onClose={() => setMapModalOpen(false)} />
     </ScreenContainer>
   );
  }

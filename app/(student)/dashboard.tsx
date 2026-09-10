@@ -7,6 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { SolidCard } from '@/components/SolidCard';
+import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
+import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
+import { AICopilotModal } from '@/components/AICopilotModal';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Avatar } from '@/components/Avatar';
@@ -52,6 +55,7 @@ export default function StudentDashboard() {
   const { isFeatureEnabled } = useFeatureFlags();
   const { campusCode, homeInstitutionCode } = useCampusScope();
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -262,7 +266,62 @@ export default function StudentDashboard() {
           </View>
         </SolidCard>
 
-        {/* Stories & Fleets Bar (Feature Flagged) */}
+        {/* Live Campus Weather & Transit Widget */}
+        <CampusWeatherWidget campusCode={effectiveCampus} />
+
+        {/* Live Campus Radio Player */}
+        <CampusRadioPlayer />
+
+        {/* AI Campus Study Copilot Quick Launcher */}
+        {isFeatureEnabled('ai_study_copilot') && (
+          <SolidCard
+            radius={18}
+            style={{
+              padding: spacing.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: `${colors.brandPrimary}15`,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="sparkles" size={20} color={colors.brandPrimary} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold">
+                    AI Academic Study Copilot
+                  </AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                    Gemini concept breakdowns & past question reasoning
+                  </AppText>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setCopilotOpen(true)}
+                style={{
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                }}
+              >
+                <AppText variant="caption" weight="bold" tone="inverse">
+                  Ask AI →
+                </AppText>
+              </Pressable>
+            </View>
+          </SolidCard>
+        )}
 
         {/* Gamification & Streaks (Feature Flagged) */}
 
@@ -790,6 +849,7 @@ export default function StudentDashboard() {
           </View>
         </View>
       </Modal>
+      <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
     </ScreenContainer>
   );
 }

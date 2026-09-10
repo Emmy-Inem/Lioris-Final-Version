@@ -15,7 +15,13 @@ export type FeatureKey =
   | 'academic_resources'
   | 'alumni_mentorship'
   | 'discussion_workspaces'
-  | 'e2ee_messaging';
+  | 'e2ee_messaging'
+  | 'live_weather'
+  | 'global_library'
+  | 'campus_radio'
+  | 'campus_map'
+  | 'ai_study_copilot'
+  | 'currency_converter';
 
 export interface FeatureFlagMeta {
   key: FeatureKey;
@@ -97,6 +103,54 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'AI & Tools',
     tier: 'P1',
     description: 'Enables private 1-on-1 direct messaging across students, mentors, and class reps.',
+    defaultOn: true,
+  },
+  {
+    key: 'live_weather',
+    label: 'Live Campus Weather & Transit',
+    category: 'Campus Life',
+    tier: 'P1',
+    description: 'Real-time university meteorological conditions, forecast, and walking transit advice via Open-Meteo.',
+    defaultOn: true,
+  },
+  {
+    key: 'global_library',
+    label: 'Global Academic Library Search',
+    category: 'Campus Life',
+    tier: 'P0',
+    description: 'Instant search across millions of open textbooks, academic papers, and covers via Open Library & arXiv.',
+    defaultOn: true,
+  },
+  {
+    key: 'campus_radio',
+    label: 'Live Campus Radio Player',
+    category: 'Campus Life',
+    tier: 'P2',
+    description: 'Listen to live campus broadcast stations (UI Diamond FM, UNILAG FM) with an in-app streaming player.',
+    defaultOn: true,
+  },
+  {
+    key: 'campus_map',
+    label: 'Interactive Campus Map & Hall Locator',
+    category: 'Campus Life',
+    tier: 'P1',
+    description: 'OpenStreetMap navigation for campus landmarks, lecture theatres, and hostel walking directions.',
+    defaultOn: true,
+  },
+  {
+    key: 'ai_study_copilot',
+    label: 'AI Academic Study Copilot',
+    category: 'AI & Tools',
+    tier: 'P0',
+    description: 'Gemini-powered academic assistant for concept explanation, past questions, and revision summaries.',
+    defaultOn: true,
+  },
+  {
+    key: 'currency_converter',
+    label: 'Real-Time Currency & Price Converter',
+    category: 'Commerce & Career',
+    tier: 'P2',
+    description: 'Live exchange rates converting NGN marketplace prices and alumni gifts into USD, EUR, and GBP.',
     defaultOn: true,
   },
 ];

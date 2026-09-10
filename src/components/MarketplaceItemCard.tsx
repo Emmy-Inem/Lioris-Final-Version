@@ -12,6 +12,8 @@ import { MarketplaceListing } from'@/api/types';
 import { isWishlisted, toggleWishlist } from '@/api/marketplace';
 import { getOrCreateConversationWithUser, sendMessage } from '@/api/messaging';
 import { useAuth } from '@/auth/AuthContext';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { formatConvertedPrice } from '@/api/currency';
 import { haptics } from '@/utils/haptics';
 
 function trustLabel(level: number) {
@@ -35,6 +37,9 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
  const trust = trustLabel(item.sellerTrustLevel);
  const isOwnListing = item.sellerId === 'me' || (!!user?.id && item.sellerId === user.id);
+  const { isFeatureEnabled } = useFeatureFlags();
+  const showConverter = isFeatureEnabled('currency_converter');
+  const numericPrice = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
 
  async function handleToggleWishlist() {
  haptics.light();
@@ -136,9 +141,16 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  <AppText variant="bodySmall"weight="bold"numberOfLines={2} style={{ marginBottom: 2 }}>
  {item.title}
  </AppText>
- <AppText weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
- {item.price}
- </AppText>
+ <View style={{ marginBottom: spacing.xs }}>
+    <AppText weight="bold" tone="brand">
+      {item.price}
+    </AppText>
+    {showConverter && numericPrice > 0 ? (
+      <AppText variant="caption" tone="secondary" style={{ fontSize: 10, marginTop: 1 }}>
+        ≈ {formatConvertedPrice(numericPrice, 'USD')} • {formatConvertedPrice(numericPrice, 'EUR')}
+      </AppText>
+    ) : null}
+  </View>
 
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>

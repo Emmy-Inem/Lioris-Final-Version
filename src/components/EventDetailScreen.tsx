@@ -17,6 +17,8 @@ import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { getEvent, rsvpToEvent } from '@/api/events';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
+import { CampusMapModal } from './CampusMapModal';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { haptics } from '@/utils/haptics';
 
 const EVENT_MEDIA_MAP: Record<string, any> = {
@@ -55,6 +57,8 @@ export function EventDetailScreen() {
   });
 
   const [contactingOrganizer, setContactingOrganizer] = useState(false);
+  const [campusMapOpen, setCampusMapOpen] = useState(false);
+  const { isFeatureEnabled } = useFeatureFlags();
 
   /**
    * Opens (or creates) the real conversation with this event's organizer.
@@ -186,7 +190,13 @@ export function EventDetailScreen() {
  <Ionicons name="calendar-outline"size={36} color={colors.brandPrimary} />
  <AppText tone="secondary"style={{ marginTop: spacing.sm }}>Loading event details...</AppText>
  </View>
- </ScreenContainer>
+   <CampusMapModal
+        visible={campusMapOpen}
+        onClose={() => setCampusMapOpen(false)}
+        initialLandmarkName={event?.location}
+        campusFilter={event?.campusCode || 'UI'}
+      />
+    </ScreenContainer>
  );
  }
 
@@ -327,12 +337,18 @@ export function EventDetailScreen() {
                   </AppText>
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border }}>
+                <Pressable
+                  onPress={() => isFeatureEnabled('campus_map') && setCampusMapOpen(true)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border }}
+                >
                   <Ionicons name="location" size={16} color={colors.brandPrimary} />
                   <AppText weight="bold" variant="bodySmall" tone="primary">
                     {event.location}
                   </AppText>
-                </View>
+                  {isFeatureEnabled('campus_map') && (
+                    <Badge label="Interactive Map" tone="brand" />
+                  )}
+                </Pressable>
               </View>
 
               {/* Segmented Navigation Tabs */}
