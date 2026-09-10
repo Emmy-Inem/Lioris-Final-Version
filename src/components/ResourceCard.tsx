@@ -76,9 +76,11 @@ export function ResourceCard({ resource }: { resource: Resource }) {
  <View style={{ flex: 1 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
  <Badge label={resource.category} tone="brand" />
+ {resource.fileSize ? (
  <AppText tone="secondary" variant="caption">
  {resource.fileSize}
  </AppText>
+ ) : null}
  </View>
  <AppText weight="bold" variant="bodySmall" style={{ marginTop: 2 }}>
  {resource.title}

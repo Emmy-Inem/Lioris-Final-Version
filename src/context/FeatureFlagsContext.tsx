@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import { supabase } from '@/api/supabase';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';import { Platform } from 'react-native';import * as SecureStore from 'expo-secure-store';import { supabase } from '@/api/supabase';
 import { recordAuditLogEntry } from '@/api/auditLog';
 
+// 'xp_gamification', 'stories_bar' and 'ai_copilot' were removed along with
+// the widgets they gated. All three rendered hardcoded content (a fixed XP
+// streak and rank, four invented campus stories, canned "AI" answers behind a
+// simulated delay) with no backing tables or service, so they were deleted
+// rather than left as flagged-off placeholders.
 export type FeatureKey =
-  | 'xp_gamification'
   | 'career_page'
   | 'marketplace'
   | 'utility_cards'
@@ -13,9 +14,7 @@ export type FeatureKey =
   | 'campus_events'
   | 'academic_resources'
   | 'alumni_mentorship'
-  | 'stories_bar'
   | 'discussion_workspaces'
-  | 'ai_copilot'
   | 'e2ee_messaging';
 
 export interface FeatureFlagMeta {
@@ -28,14 +27,6 @@ export interface FeatureFlagMeta {
 }
 
 export const FEATURE_CATALOG: FeatureFlagMeta[] = [
-  {
-    key: 'xp_gamification',
-    label: 'XP Gamification & Streaks',
-    category: 'Engagement & XP',
-    tier: 'P1',
-    description: 'Awards streak counters, badges, and leaderboard rankings across campus feeds.',
-    defaultOn: false,
-  },
   {
     key: 'career_page',
     label: 'Career & Job Opportunities',
@@ -93,28 +84,12 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     defaultOn: true,
   },
   {
-    key: 'stories_bar',
-    label: 'Stories & Fleets Bar',
-    category: 'Engagement & XP',
-    tier: 'P2',
-    description: 'Displays temporary 24-hour campus photo stories at the top of feeds.',
-    defaultOn: false,
-  },
-  {
     key: 'discussion_workspaces',
     label: 'Topic Discussions & Polls',
     category: 'Engagement & XP',
     tier: 'P0',
     description: 'Allows community forum threads, student voting polls, and departmental discussions.',
     defaultOn: true,
-  },
-  {
-    key: 'ai_copilot',
-    label: 'AI Campus Study Copilot',
-    category: 'AI & Tools',
-    tier: 'P2',
-    description: 'Generates lecture summaries and smart past-question explanations.',
-    defaultOn: false,
   },
   {
     key: 'e2ee_messaging',
@@ -145,6 +120,33 @@ async function getStoredFlags(): Promise<string | null> {
     return await SecureStore.getItemAsync(STORAGE_KEY);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Pushes the flag set to platform_settings so every admin and device sees
+ * it. Returns the failure instead of throwing so callers can finish their
+ * local work (and still write the audit entry) before surfacing it.
+ *
+ * supabase-js resolves with `{ error }` rather than rejecting, so the old
+ * `try/catch {}` around this never fired even in principle - a failed
+ * platform-wide toggle looked exactly like a successful one.
+ */
+async function syncFlagsToPlatform(nextFlags: Record<string, boolean>): Promise<Error | null> {
+  try {
+    const { error } = await supabase.from('platform_settings').upsert({
+      key: 'feature_flags',
+      value: nextFlags,
+      description: 'Runtime module killswitches and feature toggles',
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+    return null;
+  } catch (err: any) {
+    console.warn('[FeatureFlags] Platform sync failed:', err?.message ?? err);
+    return new Error(
+      `Saved on this device only - the platform database could not be reached (${err?.message ?? 'unknown error'}).`,
+    );
   }
 }
 
@@ -259,14 +261,11 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
       window.dispatchEvent(new CustomEvent('lioris_feature_flags_sync', { detail: nextFlags }));
     }
 
-    try {
-      await supabase.from('platform_settings').upsert({
-        key: 'feature_flags',
-        value: nextFlags,
-        description: 'Runtime module killswitches and feature toggles',
-        updated_at: new Date().toISOString(),
-      });
-    } catch {}
+    // Sync failure is reported, not swallowed. Feature flags are
+    // platform-wide killswitches: an admin who turns one off and sees
+    // "Disabled" needs to know when the change only reached their own
+    // device. The local state above is already applied either way.
+    const syncError = await syncFlagsToPlatform(nextFlags);
 
     const meta = FEATURE_CATALOG.find((f) => f.key === key);
     recordAuditLogEntry({
@@ -276,6 +275,8 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
       targetId: key,
       reason: 'Admin runtime modular feature flag mutation',
     }).catch(() => {});
+
+    if (syncError) throw syncError;
   };
 
   const toggleFeature = async (key: FeatureKey) => {
@@ -285,14 +286,8 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
   const resetDefaults = async () => {
     setFlags(DEFAULT_FLAGS);
     await setStoredFlags(JSON.stringify(DEFAULT_FLAGS)).catch(() => {});
-    try {
-      await supabase.from('platform_settings').upsert({
-        key: 'feature_flags',
-        value: DEFAULT_FLAGS,
-        description: 'Runtime module killswitches and feature toggles',
-        updated_at: new Date().toISOString(),
-      });
-    } catch {}
+    const syncError = await syncFlagsToPlatform(DEFAULT_FLAGS);
+    if (syncError) throw syncError;
   };
 
   const value = useMemo(

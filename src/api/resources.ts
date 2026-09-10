@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { isUserBlocked } from './connections';
 import { generateUUID } from '../utils/uuid';
+import { getInstitutionForEmail } from './institutions';
 
 let locallyCreatedResources: Resource[] = [];
 
@@ -60,18 +61,11 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
  }
 
  if (!userCampus && authData?.user?.email) {
-      const em = authData.user.email.toLowerCase();
-      userCampus = em.includes('ui.edu.ng') || em.includes('diana.prince') || em.includes('dr.adeyemi') || em.includes('admin@ui.edu.ng') || em.includes('adeola')
-        ? 'UI'
-        : em.includes('unilag.edu.ng')
-        ? 'UNILAG'
-        : em.includes('funaab.edu.ng')
-        ? 'FUNAAB'
-        : em.includes('oau')
-        ? 'OAU'
-        : em.includes('unn.edu.ng')
-        ? 'UNN'
-        : undefined;
+      // Domain match, not substring. The previous chain mis-assigned campuses
+      // (`includes('oau')` claimed joaustin@unilag.edu.ng for OAU) and hardcoded
+      // demo names above the real domain. Every demo account is @ui.edu.ng, so
+      // plain domain matching already covers them.
+      userCampus = getInstitutionForEmail(authData.user.email)?.code;
     }
 
     const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
@@ -97,7 +91,9 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         department: row.profiles?.department || row.course_title || 'Academic Repository',
         category: mapResourceTypeToCategory(row.resource_type),
         description: row.description || '',
-        fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : '2.5 MB',
+        // Undefined when the upload recorded no size - ResourceCard omits the
+        // chip rather than showing an invented "2.5 MB".
+        fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : undefined,
         fileUrl: row.file_url || null,
         authorName: row.profiles?.full_name || 'Campus Student',
         authorId: row.uploader_id,
@@ -208,7 +204,7 @@ export async function createResource(
  category: payload.category,
  department: payload.department || 'General',
  courseCode: payload.courseCode,
- fileSize: payload.fileSize || '3.4 MB',
+ fileSize: payload.fileSize || undefined,
  fileType: payload.fileType || 'PDF',
  academicLevel: payload.academicLevel || '300L',
  authorName: 'You',

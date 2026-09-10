@@ -69,7 +69,6 @@ export function DesktopSidebar() {
     { id: 'jobs', label: 'Opportunities', href: '/(student)/jobs', icon: 'briefcase', flagKey: 'career_page' },
     { id: 'mentorship', label: 'Mentorship Hub', href: '/(student)/mentorship', icon: 'people', flagKey: 'alumni_mentorship' },
     { id: 'study-groups', label: 'Study Groups', href: '/(student)/study-groups', icon: 'school', flagKey: 'study_groups' },
-    { id: 'ai-copilot', label: 'AI Study Copilot', href: '/(student)/resources', icon: 'sparkles', flagKey: 'ai_copilot' },
     { id: 'calendar', label: 'Calendar & Schedule', href: '/(student)/calendar', icon: 'calendar-outline', flagKey: 'utility_cards' },
     { id: 'messages', label: 'Messages', href: '/(student)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Notifications', href: '/(student)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },

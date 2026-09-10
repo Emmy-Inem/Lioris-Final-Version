@@ -14,9 +14,6 @@ import { Badge } from '@/components/Badge';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
 import { EventCard } from '@/components/EventCard';
-import { StoriesBar } from '@/components/StoriesBar';
-import { GamificationWidget } from '@/components/GamificationWidget';
-import { AiStudyCopilotCard } from '@/components/AiStudyCopilotCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -222,7 +219,10 @@ export default function StudentDashboard() {
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
                   <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: 12 }}>
-                    {profile?.department || 'Undergraduate Member'} • {profile?.institutionCode || 'UI Node'}
+                    {/* "UI Node" as a fallback asserted University of Ibadan for
+                        anyone whose campus wasn't resolved yet. */}
+                    {[profile?.department, profile?.institutionCode].filter(Boolean).join(' • ') ||
+                      'Complete your profile'}
                   </AppText>
                 </View>
               </View>
@@ -256,13 +256,10 @@ export default function StudentDashboard() {
         </SolidCard>
 
         {/* Stories & Fleets Bar (Feature Flagged) */}
-        {isFeatureEnabled('stories_bar') && <StoriesBar />}
 
         {/* Gamification & Streaks (Feature Flagged) */}
-        {isFeatureEnabled('xp_gamification') && <GamificationWidget />}
 
         {/* AI Campus Study Copilot (Feature Flagged) */}
-        {isFeatureEnabled('ai_copilot') && <AiStudyCopilotCard />}
 
         {/* 2. Quick Student Everyday Productivity Actions */}
         <View>

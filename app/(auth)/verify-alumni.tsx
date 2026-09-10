@@ -81,7 +81,10 @@ export default function VerifyAlumniScreen() {
  keyboardType="number-pad"
  value={graduationYear}
  onChangeText={(t) => { setGraduationYear(t); if (errorMessage) setErrorMessage(null); }}
- placeholder="2019"
+ // A bare year reads as a filled-in value rather than a hint, so people
+ // pressed "Verify" and got a validation error on a field that looked
+ // complete. Matches the "e.g." form used by the field below it.
+ placeholder="e.g. 2019"
  maxLength={4}
  />
  <AppTextField

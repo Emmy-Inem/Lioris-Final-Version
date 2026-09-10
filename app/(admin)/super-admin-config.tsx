@@ -21,8 +21,6 @@ type ModalKey =
   | 'addUniversity'
   | 'domainAuthority'
   | 'tenantToggles'
-  | 'xpMultiplier'
-  | 'levelBadges'
   | 'seasonalLeaderboards'
   | 'paymentGateway'
   | 'escrowConfig'
@@ -40,7 +38,6 @@ export default function SuperAdminConfigScreen() {
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled, setFeature } = useFeatureFlags();
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
-  const gamificationEnabled = isFeatureEnabled('xp_gamification');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   // Lifted form states for configuration modals
@@ -53,7 +50,6 @@ export default function SuperAdminConfigScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   const [domainAuthorityInput, setDomainAuthorityInput] = useState('@ui.edu.ng, @student.ui.edu.ng, @unilag.edu.ng, @oau.edu.ng, @funaab.edu.ng');
-  const [xpMultiplierVal, setXpMultiplierVal] = useState(1.5);
   const [seasonNameVal, setSeasonNameVal] = useState('Semester 1 2025/2026');
   const [seasonAutoReset, setSeasonAutoReset] = useState(true);
   const [escrowHoldHours, setEscrowHoldHours] = useState('48');
@@ -105,20 +101,43 @@ export default function SuperAdminConfigScreen() {
     }
   }, []);
 
+  /**
+   * Writes a platform setting to this browser and to platform_settings.
+   *
+   * Throws when the database write fails. It used to swallow the failure
+   * two ways over - `catch {}`, plus ignoring the `{ error }` that
+   * supabase-js resolves with instead of throwing - so every caller went
+   * on to announce "updated in the database" for a setting that only ever
+   * reached the admin's own localStorage. Callers already surface thrown
+   * errors, so failing loudly here is all that's needed.
+   */
   async function persistSetting(key: string, value: any, description: string) {
+    let cachedLocally = false;
     if (typeof localStorage !== 'undefined') {
       try {
         localStorage.setItem(`lioris_setting_${key}`, JSON.stringify(value));
-      } catch {}
+        cachedLocally = true;
+      } catch {
+        // Private mode / quota - non-fatal, the database write below is
+        // the one that actually matters.
+      }
     }
     try {
-      await supabase.from('platform_settings').upsert({
+      const { error } = await supabase.from('platform_settings').upsert({
         key,
         value,
         description,
         updated_at: new Date().toISOString(),
       });
-    } catch {}
+      if (error) throw error;
+    } catch (err: any) {
+      throw new Error(
+        `Couldn’t sync "${key}" to the platform database (${err?.message ?? 'unknown error'}). ` +
+          (cachedLocally
+            ? 'It is applied on this device only, so other admins and devices will not see it.'
+            : 'The change was not saved.'),
+      );
+    }
   }
 
   async function handleAddUniversity() {
@@ -280,16 +299,28 @@ export default function SuperAdminConfigScreen() {
     }
   }
 
+  /**
+   * Maintenance mode is platform-wide, so a failed write has to be
+   * reported - the toggle flipping on screen is not evidence it stuck.
+   * The switch is reverted so the UI keeps matching the real state.
+   */
+  function applyMaintenanceMode(next: boolean, summary: string) {
+    setMaintenanceMode(next);
+    persistSetting('maintenance_mode', next, summary).catch((err: any) => {
+      setMaintenanceMode(!next);
+      Alert.alert('Maintenance mode not applied', err?.message || 'Could not reach the platform database.');
+    });
+    recordAuditLogEntry({
+      action: 'maintenance_mode_toggled',
+      summary,
+      targetType: 'platform_config',
+      targetId: 'maintenance_mode',
+    }).catch(() => {});
+  }
+
   function confirmMaintenanceMode(next: boolean) {
     if (!next) {
-      setMaintenanceMode(false);
-      persistSetting('maintenance_mode', false, 'System maintenance mode disabled');
-      recordAuditLogEntry({
-        action: 'maintenance_mode_toggled',
-        summary: 'Maintenance mode deactivated - platform online',
-        targetType: 'platform_config',
-        targetId: 'maintenance_mode',
-      }).catch(() => {});
+      applyMaintenanceMode(false, 'Maintenance mode deactivated - platform online');
       return;
     }
     Alert.alert(
@@ -301,14 +332,7 @@ export default function SuperAdminConfigScreen() {
           text: 'Enable',
           style: 'destructive',
           onPress: () => {
-            setMaintenanceMode(true);
-            persistSetting('maintenance_mode', true, 'System maintenance mode enabled');
-            recordAuditLogEntry({
-              action: 'maintenance_mode_toggled',
-              summary: 'Maintenance mode ACTIVATED by super admin',
-              targetType: 'platform_config',
-              targetId: 'maintenance_mode',
-            }).catch(() => {});
+            applyMaintenanceMode(true, 'Maintenance mode ACTIVATED by super admin');
           },
         },
       ],
@@ -360,25 +384,12 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
-        <Section number={3} title="Gamification & XP Rules" emoji="">
-          <ToggleRow
-            title="Enable Gamification System"
-            description="Hides/shows the XP levels, active streaks, login score metrics & reward leaderboards across the workspace."
-            value={gamificationEnabled}
-            onValueChange={(next) => setFeature('xp_gamification', next)}
-          />
- <Row
- title="Global XP Multiplier"description="Set system-wide XP multipliers for active engagement."actionLabel="Configure"onPress={() => setActiveModal('xpMultiplier')}
- disabled={!gamificationEnabled}
- />
- <Row
- title="Manage Level Badges"description="Upload or configure level-up badge designs."actionLabel="Manage"onPress={() => setActiveModal('levelBadges')}
- disabled={!gamificationEnabled}
- last
- />
- </Section>
+        {/* "Gamification & XP Rules" was removed with the XP feature itself.
+            Its two rows opened 'xpMultiplier' and 'levelBadges' modals that
+            were never implemented, so they were dead buttons on top of a
+            feature with no backing tables. */}
 
- <Section number={4} title="Financial Infrastructure & Escrow"emoji="">
+ <Section number={3} title="Financial Infrastructure & Escrow"emoji="">
  <Row
  title="Payment Gateway API Manager"description="Secure Live/Test keys for Paystack/Flutterwave."actionLabel="Keys"onPress={() => setActiveModal('paymentGateway')}
  />
@@ -391,7 +402,7 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
- <Section number={5} title="Third-Party API & Integration"emoji="">
+ <Section number={4} title="Third-Party API & Integration"emoji="">
  <Row
  title="WebRTC/Video SDK Keys"description="ZegoCloud/Agora Audio/Video Call provider keys."actionLabel="Manage"onPress={() => setActiveModal('webrtcKeys')}
  />
@@ -401,7 +412,7 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
- <Section number={6} title="Cybersecurity & Ecosystem Safety"emoji="">
+ <Section number={5} title="Cybersecurity & Ecosystem Safety"emoji="">
  <Row
  title="Moderation & Admin Action Log"description="Every resolved report, event takedown, verification decision, and high-risk action - who, when, and why."actionLabel="View Log"onPress={() => router.push('/(admin)/moderation-audit-log')}
  />
@@ -414,14 +425,14 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
-  <Section number={7} title="Storage, Media, & Data Analytics"emoji="">
+  <Section number={6} title="Storage, Media, & Data Analytics"emoji="">
  <Row
  title="Cloud Storage Limits"description="Limits for AWS/GCP to prevent ballooning server costs."actionLabel="Storage"onPress={() => setActiveModal('cloudStorage')}
  last
  />
  </Section>
 
- <Section number={8} title="Developer, QA, & Maintenance" emoji="">
+ <Section number={7} title="Developer, QA, & Maintenance" emoji="">
  <Row
  title="Feature Controls & Kill Switches"
  description="Toggle runtime modules (XP, careers, marketplace, utilities, events, mentorship)."
@@ -447,7 +458,7 @@ export default function SuperAdminConfigScreen() {
  />
  </Section>
 
- <Section number={9} title="Global Communications"emoji="">
+ <Section number={8} title="Global Communications"emoji="">
  <Row
  title="Global Push Notifications"description="Send mandatory, un-dismissible full-screen alerts to ALL users."actionLabel="Broadcast"tone="critical"onPress={() => setActiveModal('globalPush')}
  last

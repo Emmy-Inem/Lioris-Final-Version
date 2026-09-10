@@ -94,7 +94,7 @@ export function ResourcesModerationTab() {
  setFormLevel(resource.academicLevel || '300L');
  setFormFileType(resource.fileType || 'PDF');
  setFormDesc(resource.description);
- setFormFileSize(resource.fileSize);
+ setFormFileSize(resource.fileSize ?? '');
  setEditModalOpen(true);
  }
 

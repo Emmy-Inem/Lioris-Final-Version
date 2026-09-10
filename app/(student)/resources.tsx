@@ -19,8 +19,6 @@ import { listResources, createResource } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
-import { useFeatureFlags } from '@/context/FeatureFlagsContext';
-import { AiStudyCopilotCard } from '@/components/AiStudyCopilotCard';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 
 const RESOURCE_CATEGORIES = [
@@ -41,7 +39,6 @@ export default function ResourcesScreen() {
  const [adminManageOpen, setAdminManageOpen] = useState(false);
  const [filterModalOpen, setFilterModalOpen] = useState(false);
  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
- const { isFeatureEnabled } = useFeatureFlags();
 
  const { campusCode, homeInstitutionCode } = useCampusScope();
  const effectiveCampus = homeInstitutionCode || campusCode || 'UI';
@@ -161,7 +158,6 @@ export default function ResourcesScreen() {
       </View>
 
       {/* AI Campus Study Copilot (Feature Flagged) */}
-      {isFeatureEnabled('ai_copilot') && <AiStudyCopilotCard />}
 
       {/* Section 1: Compact University Portal Shortcuts */}
       <View style={{ marginBottom: spacing.md }}>

@@ -29,8 +29,6 @@ import { EmptyState } from './EmptyState';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
-import { StoriesBar } from './StoriesBar';
-import { GamificationWidget } from './GamificationWidget';
 
 const CHANNELS = [
   { id: 'all', label: 'All Threads', category: null, icon: 'chatbubbles' as const },
@@ -177,10 +175,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       </View>
 
       {/* 24h Campus Stories & Fleets */}
-      {isFeatureEnabled('stories_bar') && <StoriesBar />}
 
       {/* Gamification & Streaks Widget */}
-      {isFeatureEnabled('xp_gamification') && <GamificationWidget />}
 
       {/* Quick Search & Sort Bar */}
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>

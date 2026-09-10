@@ -11,9 +11,16 @@ import { useAdvanceOnboarding } from'@/auth/useAdvanceOnboarding';
 export default function ConnectClassmatesScreen() {
  const { user } = useAuth();
  const advance = useAdvanceOnboarding('/(auth)/onboarding/connect-classmates');
+ // Students are told this step connects them with "peers and alumni", so
+ // the query has to include students too - it used to be alumni-only,
+ // which is why this step was almost always empty for a new student.
+ const suggestionRoles = user?.role === 'alumni'
+ ? (['alumni', 'student'] as const)
+ : (['student', 'alumni'] as const);
+
  const { data: entries, isLoading } = useQuery({
- queryKey: ['directory', 'onboarding-suggestions'],
- queryFn: () => searchAlumniDirectory(),
+ queryKey: ['directory', 'onboarding-suggestions', user?.role ?? 'student'],
+ queryFn: () => searchAlumniDirectory({ roles: [...suggestionRoles] }),
  });
  const [submitting, setSubmitting] = useState(false);
 

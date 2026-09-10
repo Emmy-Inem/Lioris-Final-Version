@@ -3,6 +3,7 @@ import { StudyGroup } from './types';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { isUserBlocked } from './connections';
+import { getInstitutionForEmail } from './institutions';
 
 // Groups this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch. Never mixed with
@@ -102,18 +103,11 @@ export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]
  }
 
  if (!userCampus && authData?.user?.email) {
-   const em = authData.user.email.toLowerCase();
-   userCampus = em.includes('ui.edu.ng') || em.includes('diana.prince') || em.includes('dr.adeyemi') || em.includes('admin@ui.edu.ng') || em.includes('adeola')
-     ? 'UI'
-     : em.includes('unilag.edu.ng')
-     ? 'UNILAG'
-     : em.includes('funaab.edu.ng')
-     ? 'FUNAAB'
-     : em.includes('oau')
-     ? 'OAU'
-     : em.includes('unn.edu.ng')
-     ? 'UNN'
-     : undefined;
+   // Domain match, not substring. The previous chain mis-assigned campuses
+      // (`includes('oau')` claimed joaustin@unilag.edu.ng for OAU) and hardcoded
+      // demo names above the real domain. Every demo account is @ui.edu.ng, so
+      // plain domain matching already covers them.
+      userCampus = getInstitutionForEmail(authData.user.email)?.code;
  }
 
  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';

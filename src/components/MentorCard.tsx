@@ -77,8 +77,12 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
  </View>
 
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md }}>
+ {/* Only shown when the mentor has actually published a capacity.
+ Every mentor used to read "4 slots available" regardless. */}
  <AppText tone="secondary"variant="caption">
- {mentor.availableSlots} slot{mentor.availableSlots === 1 ? '' : 's'} available
+ {typeof mentor.availableSlots === 'number'
+ ? `${mentor.availableSlots} slot${mentor.availableSlots === 1 ? '' : 's'} available`
+ : 'Open to mentorship requests'}
  </AppText>
  <AppButton
  label={requested ? 'Requested' : 'Request mentorship'}

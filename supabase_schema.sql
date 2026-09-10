@@ -61,7 +61,13 @@ VALUES
     ('UI', 'University of Ibadan', 'UI', 'Ibadan, Oyo', '#047857'),
     ('UNN', 'University of Nigeria Nsukka', 'UNN', 'Nsukka, Enugu', '#B45309'),
     ('OAU', 'Obafemi Awolowo University', 'OAU', 'Ile-Ife, Osun', '#7C3AED'),
-    ('CU', 'Covenant University', 'CU', 'Ota, Ogun', '#DC2626')
+    ('CU', 'Covenant University', 'CU', 'Ota, Ogun', '#DC2626'),
+    -- FUNAAB was missing here while the portal_links seed further down
+    -- inserts rows with campus_code='FUNAAB', so the script aborted with:
+    --   ERROR: 23503: portal_links_campus_code_fkey ... Key (campus_code)=(FUNAAB)
+    --   is not present in table "campuses"
+    -- Values match src/api/institutions.ts LAUNCH_INSTITUTIONS.
+    ('FUNAAB', 'Federal University of Agriculture, Abeokuta', 'FUNAAB', 'Abeokuta, Ogun', '#059669')
 ON CONFLICT (code) DO NOTHING;
 
 -- ============================================================================
@@ -433,10 +439,6 @@ ALTER TABLE chat_channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_channel_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mentorships ENABLE ROW LEVEL SECURITY;
-ALTER TABLE marketplace_listings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE waitlist_entries ENABLE ROW LEVEL SECURITY;
 
 -- Campuses: Public Read, Admin Full Management
 CREATE POLICY "Campuses are viewable by everyone" ON campuses FOR SELECT USING (true);
@@ -496,30 +498,53 @@ BEFORE UPDATE ON profiles
 FOR EACH ROW
 EXECUTE FUNCTION prevent_profile_role_escalation();
 
+-- ---------------------------------------------------------------------------
+-- Caller's own role/campus, read through SECURITY DEFINER so RLS is bypassed.
+--
+-- These exist because policies ON profiles must never sub-query profiles: an
+-- earlier version of the SELECT policy did
+--   campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid())
+-- which re-entered the same policy and aborted every read with
+--   42P17: infinite recursion detected in policy for relation "profiles"
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.auth_profile_role()
+RETURNS TEXT LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+    SELECT role::text FROM public.profiles WHERE id = auth.uid()
+$$;
+
+CREATE OR REPLACE FUNCTION public.auth_profile_campus()
+RETURNS TEXT LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+    SELECT campus_code FROM public.profiles WHERE id = auth.uid()
+$$;
+
+REVOKE ALL ON FUNCTION public.auth_profile_role()   FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.auth_profile_campus() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.auth_profile_role()   TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.auth_profile_campus() TO authenticated, anon, service_role;
+
+DROP POLICY IF EXISTS "Profiles viewable by same campus or global or self or admin" ON profiles;
 CREATE POLICY "Profiles viewable by same campus or global or self or admin" ON profiles FOR SELECT TO authenticated USING (
     auth.uid() = id OR
     campus_code = 'GLOBAL' OR
-    campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    campus_code = public.auth_profile_campus() OR
+    public.auth_profile_role() IN ('admin', 'staff')
 );
 CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO authenticated 
+
+-- WITH CHECK deliberately does not re-read profiles. Privilege escalation is
+-- blocked authoritatively by the SECURITY DEFINER trigger
+-- prevent_profile_role_escalation(), which runs BEFORE UPDATE and reverts any
+-- non-admin/non-staff change to role, campus_code, is_suspended, trust_score
+-- or verification_status.
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO authenticated
 USING (auth.uid() = id)
-WITH CHECK (
-    auth.uid() = id AND (
-        (
-            role = (SELECT role FROM profiles WHERE id = auth.uid()) AND
-            campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) AND
-            is_suspended = (SELECT is_suspended FROM profiles WHERE id = auth.uid()) AND
-            trust_score = (SELECT trust_score FROM profiles WHERE id = auth.uid()) AND
-            verification_status = (SELECT verification_status FROM profiles WHERE id = auth.uid())
-        ) OR
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-    )
-);
-CREATE POLICY "Admins have full profile access" ON profiles FOR ALL TO authenticated USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins have full profile access" ON profiles;
+CREATE POLICY "Admins have full profile access" ON profiles FOR ALL TO authenticated
+USING (public.auth_profile_role() = 'admin')
+WITH CHECK (public.auth_profile_role() = 'admin');
 
 -- Posts: Viewable by campus scope or global
 CREATE POLICY "Posts viewable by campus or global" ON posts FOR SELECT TO authenticated USING (
@@ -669,9 +694,26 @@ CREATE POLICY "Users can leave study groups" ON study_group_members FOR DELETE T
 );
 
 -- Chat Channels & Membership (Strict Privacy)
+-- Membership is resolved through a SECURITY DEFINER function so that a
+-- policy ON chat_channel_members never sub-queries chat_channel_members.
+-- The earlier version did, and the recursion took chat_channels and
+-- chat_messages down with it:
+--   42P17: infinite recursion detected in policy for relation
+--          "chat_channel_members"
+CREATE OR REPLACE FUNCTION public.is_channel_member(p_channel_id UUID)
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.chat_channel_members
+        WHERE channel_id = p_channel_id AND user_id = auth.uid()
+    )
+$$;
+
+REVOKE ALL ON FUNCTION public.is_channel_member(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_channel_member(UUID) TO authenticated, service_role;
+
+DROP POLICY IF EXISTS "Users can view channels they belong to" ON chat_channels;
 CREATE POLICY "Users can view channels they belong to" ON chat_channels FOR SELECT TO authenticated USING (
-    EXISTS (SELECT 1 FROM chat_channel_members WHERE channel_id = chat_channels.id AND user_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    public.is_channel_member(id) OR public.auth_profile_role() = 'admin'
 );
 CREATE POLICY "Authenticated users can create chat channels" ON chat_channels FOR INSERT TO authenticated WITH CHECK (
     NOT (SELECT COALESCE(is_suspended, false) FROM profiles WHERE id = auth.uid())
@@ -680,20 +722,20 @@ CREATE POLICY "Admins can manage chat channels" ON chat_channels FOR ALL TO auth
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
+DROP POLICY IF EXISTS "Channel members viewable by channel participants" ON chat_channel_members;
 CREATE POLICY "Channel members viewable by channel participants" ON chat_channel_members FOR SELECT TO authenticated USING (
-    EXISTS (SELECT 1 FROM chat_channel_members m WHERE m.channel_id = chat_channel_members.channel_id AND m.user_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    user_id = auth.uid() OR public.is_channel_member(channel_id) OR public.auth_profile_role() = 'admin'
 );
+DROP POLICY IF EXISTS "Users can join or add members to channels" ON chat_channel_members;
 CREATE POLICY "Users can join or add members to channels" ON chat_channel_members FOR INSERT TO authenticated WITH CHECK (
-    (auth.uid() = user_id OR EXISTS (SELECT 1 FROM chat_channel_members WHERE channel_id = chat_channel_members.channel_id AND user_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')) AND
-    NOT (SELECT COALESCE(is_suspended, false) FROM profiles WHERE id = auth.uid())
+    (auth.uid() = user_id OR public.is_channel_member(channel_id) OR public.auth_profile_role() = 'admin') AND
+    NOT COALESCE((SELECT is_suspended FROM profiles WHERE id = auth.uid()), false)
 );
 
 -- Chat Messages (Strict Channel Membership & Non-spoofable Sender)
+DROP POLICY IF EXISTS "Chat messages viewable only by channel members" ON chat_messages;
 CREATE POLICY "Chat messages viewable only by channel members" ON chat_messages FOR SELECT TO authenticated USING (
-    EXISTS (SELECT 1 FROM chat_channel_members WHERE channel_id = chat_messages.channel_id AND user_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    public.is_channel_member(channel_id) OR public.auth_profile_role() = 'admin'
 );
 CREATE POLICY "Users can only send messages as themselves to channels they belong to" ON chat_messages FOR INSERT TO authenticated WITH CHECK (
     auth.uid() = sender_id AND
@@ -865,6 +907,16 @@ CREATE TABLE IF NOT EXISTS platform_settings (
     updated_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- RLS for the section 14 tables (connections, mentorships,
+-- marketplace_listings, waitlist_entries). These four used to sit in the
+-- bulk ENABLE block around line 436, ~300 lines BEFORE the tables were
+-- created, so the whole script aborted with:
+--   ERROR: 42P01: relation "connections" does not exist
+ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mentorships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marketplace_listings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE waitlist_entries ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE platform_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Platform settings viewable by authenticated users" ON platform_settings FOR SELECT TO authenticated USING (true);
@@ -1383,9 +1435,12 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', 'No account found with this email address.');
     END IF;
     
-    UPDATE auth.users 
+    -- confirmed_at is GENERATED ALWAYS AS LEAST(email_confirmed_at,
+    -- phone_confirmed_at) in current Supabase, so it cannot be assigned -
+    -- doing so aborts with "column confirmed_at can only be updated to
+    -- DEFAULT". Setting email_confirmed_at updates it automatically.
+    UPDATE auth.users
     SET email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
-        confirmed_at = COALESCE(confirmed_at, NOW()),
         updated_at = NOW()
     WHERE id = v_user_id;
 
@@ -1402,9 +1457,8 @@ BEGIN
     IF NEW.email_confirmed_at IS NULL THEN
         NEW.email_confirmed_at := NOW();
     END IF;
-    IF NEW.confirmed_at IS NULL THEN
-        NEW.confirmed_at := NOW();
-    END IF;
+    -- No NEW.confirmed_at assignment: it is a generated column derived from
+    -- email_confirmed_at, and assigning to it raises error 428C9.
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -1416,8 +1470,9 @@ CREATE TRIGGER on_auth_user_created_auto_confirm
     EXECUTE FUNCTION public.handle_auto_confirm_user();
 
 -- Backfill any existing unconfirmed accounts in auth.users
-UPDATE auth.users 
-SET email_confirmed_at = NOW(), confirmed_at = NOW() 
+-- confirmed_at is generated from this column, so it updates on its own.
+UPDATE auth.users
+SET email_confirmed_at = NOW()
 WHERE email_confirmed_at IS NULL;
 
 

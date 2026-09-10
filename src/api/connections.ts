@@ -11,6 +11,12 @@ export interface DirectorySearchQuery {
  department?: string;
  industry?: string;
  company?: string;
+ /**
+  * Which roles to include. Defaults to alumni only, which is what the
+  * alumni directory wants. Onboarding's "connect with peers and alumni"
+  * step passes the wider set so students actually see their classmates.
+  */
+ roles?: Array<'student' | 'alumni' | 'staff' | 'admin'>;
 }
 
 
@@ -23,8 +29,20 @@ export async function searchAlumniDirectory(
   try {
     let q = supabase
       .from('profiles')
-      .select('id, full_name, department, bio, avatar_url, role')
-      .ilike('role', '%alumni%');
+      .select('id, full_name, department, bio, avatar_url, role');
+
+    if (query.roles && query.roles.length > 0) {
+      q = q.in('role', query.roles);
+    } else {
+      q = q.ilike('role', '%alumni%');
+    }
+
+    // Never suggest people to themselves.
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+    if (currentUserId) {
+      q = q.neq('id', currentUserId);
+    }
 
     if (query.q) {
       q = q.ilike('full_name', `%${query.q}%`);

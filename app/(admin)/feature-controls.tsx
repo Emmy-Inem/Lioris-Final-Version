@@ -20,14 +20,24 @@ export default function AdminFeatureControlsScreen() {
 
   async function handleToggleFlag(key: FeatureKey, next: boolean, label: string) {
     haptics.medium();
-    await setFeature(key, next);
-    toast.success(`"${label}" is now ${next ? 'Active' : 'Disabled'}`);
+    try {
+      await setFeature(key, next);
+      toast.success(`"${label}" is now ${next ? 'Active' : 'Disabled'}`);
+    } catch (err: any) {
+      // The toggle still applies locally, so say what actually happened
+      // rather than reporting a platform-wide change that didn't land.
+      toast.warning(err?.message || `"${label}" could not be synced to the platform.`);
+    }
   }
 
   async function handleResetDefaults() {
     haptics.light();
-    await resetDefaults();
-    toast.info('All feature toggles restored to default.');
+    try {
+      await resetDefaults();
+      toast.info('All feature toggles restored to default.');
+    } catch (err: any) {
+      toast.warning(err?.message || 'Defaults restored on this device, but could not be synced.');
+    }
   }
 
   return (

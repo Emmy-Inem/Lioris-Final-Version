@@ -64,7 +64,7 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
   try {
     let q = supabase
       .from('profiles')
-      .select('id, full_name, bio, role, department, avatar_url, campus_code')
+      .select('id, full_name, bio, role, department, avatar_url, campus_code, interests')
       .in('role', ['staff', 'alumni', 'admin']);
 
     if (query.q) {
@@ -74,15 +74,23 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
     const { data, error } = await q;
     if (error) throw error;
 
+    // Real profile fields only. This used to hand every mentor an identical
+    // fabricated payload: the same four expertise tags, "4 slots available",
+    // a campus code presented as an employer, and a bio asserting the person
+    // was a "Verified" mentor.
     return (data ?? []).map((row: any) => ({
       id: row.id,
       fullName: row.full_name,
-      department: row.department || 'Academic Department',
-      bio: row.bio || `Academic Mentor & Verified ${row.role} at ${row.campus_code || 'University'}`,
-      expertiseTags: ['Leadership', 'Career Growth', 'Research', 'Tech'],
+      department: row.department || undefined,
+      bio: row.bio || '',
+      // profiles.interests is what the user actually picked during onboarding.
+      expertiseTags: Array.isArray(row.interests) ? row.interests : [],
       avatarUrl: row.avatar_url,
-      company: row.campus_code || 'Academic Faculty',
-      availableSlots: 4,
+      // No employer field exists on profiles; MentorCard omits it when unset.
+      company: undefined,
+      // Mentor capacity has no backing column, so it stays unknown rather
+      // than claiming a number.
+      availableSlots: undefined,
     }));
   } catch (err) {
     console.warn('[Mentorship] searchMentors failed:', err);

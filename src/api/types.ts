@@ -85,6 +85,8 @@ export interface Post {
  poll?: PostPoll | null;
  likesCount: number;
  commentsCount: number;
+ /** Mirrors posts.reposts_count. */
+ repostsCount: number;
  isLikedByMe?: boolean;
  isPinned?: boolean;
  createdAt: string;
@@ -219,7 +221,8 @@ export interface MentorProfile {
  expertiseTags: string[];
  bio: string;
  company?: string;
- availableSlots: number;
+ /** Undefined when the mentor hasn't published a capacity - never guess a number. */
+ availableSlots?: number;
 }
 
 export type MentorshipStatus = 'pending' | 'active' | 'completed' | 'declined';
@@ -358,7 +361,8 @@ export interface Resource {
  category: 'Notes' | 'Past Questions' | 'Projects';
  department: string;
  courseCode: string;
- fileSize: string;
+ /** Undefined when the stored file has no recorded size. */
+ fileSize?: string;
  authorName: string;
  authorId?: string;
  authorRole?: UserRole;

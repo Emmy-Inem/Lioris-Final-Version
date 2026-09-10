@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/auth/AuthContext';
 import { useViewScope } from './useViewScope';
 import { getMyProfile } from '@/api/profile';
+import { getInstitutionForEmail } from '@/api/institutions';
 
 /**
  * Resolves the campusCode that should be passed into any campus-scoped
@@ -29,18 +30,13 @@ export function useCampusScope() {
     enabled: !!user,
   });
 
-  const emailLower = user?.email?.toLowerCase() || '';
-  const deducedFromEmail = emailLower.includes('ui.edu.ng') || emailLower.includes('diana.prince') || emailLower.includes('dr.adeyemi') || emailLower.includes('admin@ui.edu.ng') || emailLower.includes('adeola')
-    ? 'UI'
-    : emailLower.includes('unilag.edu.ng')
-    ? 'UNILAG'
-    : emailLower.includes('funaab.edu.ng')
-    ? 'FUNAAB'
-    : emailLower.includes('oau')
-    ? 'OAU'
-    : emailLower.includes('unn.edu.ng')
-    ? 'UNN'
-    : undefined;
+  // Match on the email *domain*, not a substring of the whole address.
+  // The old substring test mis-assigned campuses in ways that break the
+  // isolation rule this hook exists to enforce: `includes('oau')` claimed
+  // joaustin@unilag.edu.ng for OAU, and the hardcoded demo names meant
+  // diana.prince@unilag.edu.ng resolved to UI. Every demo account is
+  // @ui.edu.ng, so plain domain matching already covers them.
+  const deducedFromEmail = getInstitutionForEmail(user?.email ?? '')?.code;
 
   const homeInstitutionCode = profile?.institutionCode || deducedFromEmail || 'UI';
   const campusCode = scope === 'global' ? 'GLOBAL' : activeCampusCode || homeInstitutionCode;

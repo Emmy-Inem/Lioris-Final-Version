@@ -9,12 +9,14 @@ import { AppText } from'@/components/AppText';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
+import { useToast } from '@/context/ToastContext';
 import { uploadAvatarImage, updateMyProfile } from '@/api/profile';
 
 export default function UploadPhotoScreen() {
  const { colors, spacing } = useTheme();
  const { user } = useAuth();
  const advance = useAdvanceOnboarding('/(auth)/onboarding/upload-photo');
+ const toast = useToast();
  const [photoUri, setPhotoUri] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
 
@@ -50,7 +52,15 @@ export default function UploadPhotoScreen() {
  const blob = await res.blob();
  await uploadAvatarImage(user.id, blob);
  } catch {
+ // Storage upload failed - fall back to recording the local URI.
+ // If that fails too we still move on, but we say so: this used to
+ // throw straight past advance(), leaving "Continue" spinning down
+ // to nothing with the user stranded on this step.
+ try {
  await updateMyProfile({ avatarUrl: photoUri });
+ } catch {
+ toast.warning('We couldn’t save your photo just now - you can add it later in Settings.');
+ }
  }
  }
  await advance();

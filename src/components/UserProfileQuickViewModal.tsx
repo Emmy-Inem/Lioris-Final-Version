@@ -1,5 +1,5 @@
-import React from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
@@ -10,6 +10,7 @@ import { SolidCard } from './SolidCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
+import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { haptics } from '@/utils/haptics';
 
 export interface QuickViewUser {
@@ -37,6 +38,34 @@ export function UserProfileQuickViewModal({
   const { isDesktop } = useResponsive();
   const { user: currentUser } = useAuth();
   const roleGroup = currentUser?.role ? `(${currentUser.role})` : '(student)';
+  const [startingChat, setStartingChat] = useState(false);
+
+  /**
+   * Opens the real conversation with this person. This used to push a
+   * hardcoded `messages/conv-1`, so "Send Direct Message" always dropped
+   * the user into the same empty thread regardless of whose profile it was.
+   */
+  async function handleSendDirectMessage(target: QuickViewUser) {
+    haptics.light();
+    if (!target.id) {
+      Alert.alert('Direct message', 'This profile is not linked to a messageable account yet.');
+      return;
+    }
+    setStartingChat(true);
+    try {
+      const conversation = await getOrCreateConversationWithUser(
+        target.id,
+        target.name,
+        target.avatarUrl ?? null,
+      );
+      onClose();
+      router.push(`/${roleGroup}/messages/${conversation.id}` as any);
+    } catch {
+      Alert.alert('Couldn’t start conversation', 'Please try again.');
+    } finally {
+      setStartingChat(false);
+    }
+  }
 
   if (!user) return null;
 
@@ -107,11 +136,8 @@ export function UserProfileQuickViewModal({
               icon="chatbubble-ellipses-outline"
               variant="primary"
               fullWidth
-              onPress={() => {
-                haptics.light();
-                onClose();
-                router.push(`/${roleGroup}/messages/conv-1` as any);
-              }}
+              loading={startingChat}
+              onPress={() => handleSendDirectMessage(user)}
             />
             <AppButton
               label="Dismiss"

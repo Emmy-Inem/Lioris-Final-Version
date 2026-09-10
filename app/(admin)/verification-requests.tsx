@@ -68,6 +68,15 @@ export default function VerificationRequestsScreen() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
       Alert.alert('Verification Granted', `${req.applicantName}'s verified identity badge has been activated.`);
+    } catch (err: any) {
+      // Without this the rejection was unhandled: the spinner cleared and
+      // the row stayed put, so the admin couldn't tell an approval had
+      // failed from one that simply hadn't refreshed yet.
+      haptics.error();
+      Alert.alert(
+        'Could not approve request',
+        err?.message || `${req.applicantName}'s verification could not be approved. Please try again.`,
+      );
     } finally {
       setProcessingId(null);
     }
@@ -107,7 +116,15 @@ export default function VerificationRequestsScreen() {
       setRejectModalRequest(null);
       setCustomRejectNote('');
       Alert.alert('Request Rejected', `Rejection notice dispatched to ${req.applicantName}.`);
-    } catch {}
+    } catch (err: any) {
+      // `catch {}` here meant a failed rejection did nothing at all - the
+      // modal stayed open with no error, so "Confirm" read as a dead button.
+      haptics.error();
+      Alert.alert(
+        'Could not reject request',
+        err?.message || `${req.applicantName}'s verification could not be rejected. Please try again.`,
+      );
+    }
   }
 
   return (

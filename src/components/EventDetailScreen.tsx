@@ -16,6 +16,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { getEvent, rsvpToEvent } from '@/api/events';
+import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { haptics } from '@/utils/haptics';
 
 const EVENT_MEDIA_MAP: Record<string, any> = {
@@ -53,10 +54,45 @@ export function EventDetailScreen() {
     enabled: !!id,
   });
 
+  const [contactingOrganizer, setContactingOrganizer] = useState(false);
+
+  /**
+   * Opens (or creates) the real conversation with this event's organizer.
+   * This used to push a hardcoded `messages/conv-1`, which is not a
+   * conversation anyone owns - the button looked live but always landed on
+   * an empty thread.
+   */
+  async function handleContactOrganizer() {
+    haptics.light();
+    if (!event?.organizerId) {
+      toast.show('This event has no organizer to contact yet.');
+      return;
+    }
+    setContactingOrganizer(true);
+    try {
+      const conversation = await getOrCreateConversationWithUser(
+        event.organizerId,
+        event.organizerName ?? 'Event Organizer',
+      );
+      router.push(`/${roleGroup}/messages/${conversation.id}` as any);
+    } catch {
+      toast.show('Could not open that conversation. Please try again.');
+    } finally {
+      setContactingOrganizer(false);
+    }
+  }
+
   const isRsvpd = rsvpd !== null ? rsvpd : !!event?.isRsvpd;
-  const currentRsvpCount = (event?.rsvpCount ?? 34) + (rsvpd === true && !event?.isRsvpd ? 1 : rsvpd === false && event?.isRsvpd ? -1 : 0);
-  const capacity = event?.capacity ?? 150;
-  const remainingSpots = Math.max(0, capacity - currentRsvpCount);
+  // Real numbers only. These used to fall back to 34 RSVPs and a capacity of
+  // 150, so a brand-new event with nobody signed up advertised "34 / 150
+  // Registered" and "116 spots left".
+  const currentRsvpCount =
+    (event?.rsvpCount ?? 0) + (rsvpd === true && !event?.isRsvpd ? 1 : rsvpd === false && event?.isRsvpd ? -1 : 0);
+  /** null means the organiser set no cap - not "we don't know yet". */
+  const capacity = typeof event?.capacity === 'number' && event.capacity > 0 ? event.capacity : null;
+  const hasCapacity = capacity !== null;
+  const remainingSpots = hasCapacity ? Math.max(0, capacity - currentRsvpCount) : null;
+  const filledPercent = hasCapacity ? Math.min(100, Math.round((currentRsvpCount / capacity) * 100)) : 0;
 
   async function handleToggleRsvp() {
     if (!event) return;
@@ -271,7 +307,7 @@ export function EventDetailScreen() {
 
                   <View style={{ backgroundColor: 'rgba(0,0,0,0.75)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: radius.pill }}>
                     <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11 }}>
-                      {currentRsvpCount} / {capacity} Registered
+                      {hasCapacity ? ` /  Registered` : ` Registered`}
                     </AppText>
                   </View>
                 </View>
@@ -348,10 +384,8 @@ export function EventDetailScreen() {
                       <AppButton
                         label="Contact Organizer"
                         variant="ghost"
-                        onPress={() => {
-                          haptics.light();
-                          router.push(`/${roleGroup}/messages/conv-1` as any);
-                        }}
+                        loading={contactingOrganizer}
+                        onPress={handleContactOrganizer}
                       />
                     </View>
                   </SolidCard>
@@ -422,8 +456,16 @@ export function EventDetailScreen() {
                     Registration
                   </AppText>
                   <Badge
-                    label={isRsvpd ? 'Seat Confirmed' : remainingSpots > 0 ? `${remainingSpots} spots left` : 'Sold Out'}
-                    tone={isRsvpd ? 'brand' : remainingSpots > 0 ? 'accent' : 'critical'}
+                    label={
+                      isRsvpd
+                        ? 'Seat Confirmed'
+                        : remainingSpots === null
+                        ? 'Open Registration'
+                        : remainingSpots > 0
+                        ? `${remainingSpots} spots left`
+                        : 'Sold Out'
+                    }
+                    tone={isRsvpd || remainingSpots === null ? 'brand' : remainingSpots > 0 ? 'accent' : 'critical'}
                   />
                 </View>
 
@@ -431,9 +473,9 @@ export function EventDetailScreen() {
                 <View style={{ width: '100%', height: 8, borderRadius: 4, backgroundColor: colors.divider, overflow: 'hidden', marginBottom: spacing.md }}>
                   <View
                     style={{
-                      width: `${Math.min(100, Math.round((currentRsvpCount / capacity) * 100))}%`,
+                      width: `${filledPercent}%`,
                       height: '100%',
-                      backgroundColor: remainingSpots < 10 ? colors.critical : colors.brandPrimary,
+                      backgroundColor: remainingSpots !== null && remainingSpots < 10 ? colors.critical : colors.brandPrimary,
                       borderRadius: 4,
                     }}
                   />
@@ -551,7 +593,7 @@ export function EventDetailScreen() {
 
                 <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
                   <AppText variant="caption" weight="bold" tone="inverse">
-                    {currentRsvpCount} / {capacity} Registered
+                    {hasCapacity ? ` /  Registered` : ` Registered`}
                   </AppText>
                 </View>
               </View>
@@ -588,16 +630,20 @@ export function EventDetailScreen() {
                     Seats and Attendance
                   </AppText>
                   <AppText variant="caption" tone="brand" weight="bold">
-                    {remainingSpots > 0 ? `${remainingSpots} spots left` : 'Fully Booked'}
+                    {remainingSpots === null
+                      ? 'Open Registration'
+                      : remainingSpots > 0
+                      ? `${remainingSpots} spots left`
+                      : 'Fully Booked'}
                   </AppText>
                 </View>
 
                 <View style={{ width: '100%', height: 8, borderRadius: 4, backgroundColor: colors.divider, overflow: 'hidden' }}>
                   <View
                     style={{
-                      width: `${Math.min(100, Math.round((currentRsvpCount / capacity) * 100))}%`,
+                      width: `${filledPercent}%`,
                       height: '100%',
-                      backgroundColor: remainingSpots < 10 ? colors.critical : colors.brandPrimary,
+                      backgroundColor: remainingSpots !== null && remainingSpots < 10 ? colors.critical : colors.brandPrimary,
                       borderRadius: 4,
                     }}
                   />
@@ -669,10 +715,8 @@ export function EventDetailScreen() {
                       <AppButton
                         label="Contact"
                         variant="ghost"
-                        onPress={() => {
-                          haptics.light();
-                          router.push(`/${roleGroup}/messages/conv-1` as any);
-                        }}
+                        loading={contactingOrganizer}
+                        onPress={handleContactOrganizer}
                       />
                     </View>
                   </SolidCard>

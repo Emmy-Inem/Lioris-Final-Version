@@ -1,6 +1,7 @@
 import { Post, PostVisibilityScope } from './types';
 import { supabase } from './supabase';
 import { isUserBlocked } from './connections';
+import { getInstitutionForEmail } from './institutions';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 
@@ -11,6 +12,48 @@ import { generateUUID } from '../utils/uuid';
 // only while the admin's "Mock Data Visibility" toggle is on.
 let locallyCreatedPosts: Post[] = [];
 
+/**
+ * PostgREST fails the *entire* query when an embedded relationship is
+ * missing (PGRST200), not just the embed - so a single absent table used
+ * to blank the whole feed instead of costing us one column. Degrade
+ * through progressively simpler selects so the posts themselves still
+ * load when the author join or the likes join isn't resolvable.
+ */
+const POST_SELECT_LADDER = [
+  '*, profiles:author_id(full_name, role, avatar_url, campus_code), post_likes(user_id)',
+  '*, profiles:author_id(full_name, role, avatar_url, campus_code)',
+  '*',
+] as const;
+
+/** True for the PostgREST errors that mean "this embed can't be resolved". */
+function isMissingRelationshipError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return (
+    error.code === 'PGRST200' ||
+    error.code === 'PGRST204' ||
+    /schema cache|relationship|does not exist/i.test(error.message ?? '')
+  );
+}
+
+async function selectPostsWithFallback(
+  build: (select: string) => any,
+): Promise<{ rows: any[]; degraded: boolean }> {
+  let lastError: any = null;
+
+  for (let i = 0; i < POST_SELECT_LADDER.length; i++) {
+    const { data, error } = await build(POST_SELECT_LADDER[i]);
+    if (!error) return { rows: data ?? [], degraded: i > 0 };
+
+    lastError = error;
+    if (!isMissingRelationshipError(error)) break;
+
+    console.warn(
+      `[Posts] Select "${POST_SELECT_LADDER[i]}" rejected (${error.code}: ${error.message}); retrying with a simpler projection.`,
+    );
+  }
+
+  throw lastError;
+}
 
 export interface FeedQuery {
  scope?: PostVisibilityScope;
@@ -62,28 +105,21 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     const currentUserId = authData?.user?.id;
 
     if (!viewerInstitutionCode && authData?.user?.email) {
-      const em = authData.user.email.toLowerCase();
-      viewerInstitutionCode = em.includes('ui.edu.ng') || em.includes('diana.prince') || em.includes('dr.adeyemi') || em.includes('admin@ui.edu.ng') || em.includes('adeola')
-        ? 'UI'
-        : em.includes('unilag.edu.ng')
-        ? 'UNILAG'
-        : em.includes('funaab.edu.ng')
-        ? 'FUNAAB'
-        : undefined;
+      // Domain match, not substring - this decides which campus's posts the
+      // viewer is allowed to see, so `email.includes('adeola')` claiming
+      // adeola@unilag.edu.ng for UI was a real cross-campus leak.
+      viewerInstitutionCode = getInstitutionForEmail(authData.user.email)?.code;
     }
 
-    let dbQuery = supabase
-      .from('posts')
-      .select('*, profiles:author_id(full_name, role, avatar_url, campus_code), post_likes(user_id)')
-      .order('created_at', { ascending: false });
+    const { rows } = await selectPostsWithFallback((select) => {
+      let dbQuery = supabase.from('posts').select(select).order('created_at', { ascending: false });
+      if (query.category) {
+        dbQuery = dbQuery.ilike('category', `%${query.category}%`);
+      }
+      return dbQuery;
+    });
 
-    if (query.category) {
-      dbQuery = dbQuery.ilike('category', `%${query.category}%`);
-    }
-    const { data, error } = await dbQuery;
-    if (error) throw error;
-
-    const dbPosts: Post[] = (data ?? []).map((row: any) => {
+    const dbPosts: Post[] = rows.map((row: any) => {
       const isGlobal = row.visibility_scope === 'global' || row.campus_code === 'GLOBAL';
       const isLiked = currentUserId ? (row.post_likes ?? []).some((l: any) => l.user_id === currentUserId) : false;
 
@@ -95,11 +131,16 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
         title: row.title,
         content: row.content,
         category: row.category || 'General',
-        visibilityScope: (row.visibility_scope as any) || 'campus',
+        // Audience comes from audience_scope; visibility_scope is the
+        // institution axis and belongs to scopeVisibility below. A row
+        // written before audience_scope existed has no audience
+        // restriction, so it reads as 'global' (visible to everyone).
+        visibilityScope: (row.audience_scope as any) || 'global',
         scopeVisibility: isGlobal ? 'global' : 'campus',
         institutionCode: isGlobal ? undefined : row.campus_code,
         likesCount: row.likes_count || 0,
         commentsCount: row.comments_count || 0,
+        repostsCount: row.reposts_count || 0,
         isLikedByMe: isLiked,
         createdAt: row.created_at,
         imageUrl: row.image_url,
@@ -151,11 +192,12 @@ export async function listMyPosts(userId?: string): Promise<Post[]> {
           title: row.title,
           content: row.content,
           category: row.category || 'General',
-          visibilityScope: (row.visibility_scope as any) || 'campus',
+          visibilityScope: (row.audience_scope as any) || 'global',
           scopeVisibility: row.visibility_scope === 'global' ? 'global' : 'campus',
           institutionCode: row.campus_code === 'GLOBAL' ? undefined : row.campus_code,
           likesCount: row.likes_count || 0,
           commentsCount: row.comments_count || 0,
+          repostsCount: row.reposts_count || 0,
           isLikedByMe: (row.post_likes ?? []).some((l: any) => l.user_id === targetUid),
           createdAt: row.created_at,
           imageUrl: row.image_url,
@@ -215,8 +257,9 @@ export async function getPost(id: string): Promise<Post | null> {
       createdAt: data.created_at,
       likesCount: data.likes_count || 0,
       commentsCount: data.comments_count || 0,
+      repostsCount: data.reposts_count || 0,
       isLikedByMe: likedByMe,
-      visibilityScope: (data.visibility_scope || 'global') as any,
+      visibilityScope: (data.audience_scope || 'global') as any,
       imageUrl: data.image_url || undefined,
       videoUrl: data.video_url || undefined,
       courseTags: data.course_tags || undefined,
@@ -241,6 +284,45 @@ export interface CreatePostPayload {
  videoUrl?: string;
  poll?: any;
  pollQuestion?: string;
+}
+
+/** Columns we'd like to write but can live without if the table predates them. */
+const OPTIONAL_POST_COLUMNS = new Set([
+  'campus_code',
+  'visibility_scope',
+  'audience_scope',
+  'category',
+  'video_url',
+  'image_url',
+]);
+
+/**
+ * Inserts a post, dropping optional columns the deployed table doesn't have
+ * yet rather than losing the whole post to one unknown column. Required
+ * columns (author_id, content, ...) are never dropped - if one of those is
+ * rejected the error is returned so the caller still fails loudly.
+ */
+async function insertPostRow(row: Record<string, unknown>): Promise<{ message: string } | null> {
+  const attempt = { ...row };
+
+  // Bounded by the number of optional columns, so this always terminates.
+  for (let i = 0; i <= OPTIONAL_POST_COLUMNS.size; i++) {
+    const { error } = await supabase.from('posts').insert(attempt);
+    if (!error) return null;
+
+    const missingColumn = error.message.match(/'([a-z_]+)' column/i)?.[1];
+    if (!missingColumn || !OPTIONAL_POST_COLUMNS.has(missingColumn) || !(missingColumn in attempt)) {
+      return error;
+    }
+
+    console.warn(
+      `[Posts] posts.${missingColumn} missing on the deployed table; retrying insert without it. ` +
+        'Run supabase_migration_align.sql + supabase_schema.sql to restore full fidelity.',
+    );
+    delete attempt[missingColumn];
+  }
+
+  return { message: 'Post insert failed after dropping every optional column.' };
 }
 
 /**
@@ -309,14 +391,19 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  const campusCode = authorCampus || 'GLOBAL';
  const finalVisibilityScope = isExplicitlyGlobal ? 'global' : 'campus';
 
- const { error } = await supabase.from('posts').insert({
+ const error = await insertPostRow({
  id: postId,
  author_id: authorId,
  campus_code: campusCode,
  title: payload.title,
  content: payload.content,
  category: payload.category || 'General',
+ // Two orthogonal axes, two columns. visibility_scope is the institution
+ // axis ('campus' | 'global'); audience_scope is who the post targets.
+ // Writing the institution value into the audience column is what used to
+ // make every new post invisible in the feed.
  visibility_scope: finalVisibilityScope,
+ audience_scope: payload.visibilityScope || 'global',
  image_url: permanentImageUrl || null,
  video_url: permanentVideoUrl || null,
  });
@@ -333,6 +420,7 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  authorRole: authorRole as any,
  likesCount: 0,
  commentsCount: 0,
+ repostsCount: 0,
  isLikedByMe: false,
  createdAt: now,
  scopeVisibility: finalVisibilityScope,
@@ -366,6 +454,39 @@ export async function togglePostLike(postId: string, liked: boolean): Promise<vo
  } catch (err) {
  console.warn('[Posts] Like error:', err);
  }
+}
+
+/**
+ * Persists a repost by moving posts.reposts_count.
+ *
+ * The Repost button used to only toggle local state and pop an alert saying
+ * "Amplified to campus cohort" - nothing was written, and the count shown
+ * next to it was the literal number 18 for every post.
+ *
+ * There's no post_reposts join table, so "have I reposted this?" is
+ * session-local; the count itself is real and shared.
+ */
+export async function togglePostRepost(postId: string, reposted: boolean): Promise<number | null> {
+  locallyCreatedPosts = locallyCreatedPosts.map((p) =>
+    p.id === postId ? { ...p, repostsCount: Math.max(0, p.repostsCount + (reposted ? 1 : -1)) } : p,
+  );
+
+  try {
+    const { data: current, error: readError } = await supabase
+      .from('posts')
+      .select('reposts_count')
+      .eq('id', postId)
+      .maybeSingle();
+    if (readError) throw readError;
+
+    const next = Math.max(0, (current?.reposts_count ?? 0) + (reposted ? 1 : -1));
+    const { error } = await supabase.from('posts').update({ reposts_count: next }).eq('id', postId);
+    if (error) throw error;
+    return next;
+  } catch (err) {
+    console.warn('[Posts] Repost persistence error:', err);
+    throw new Error('Could not update repost. Please try again.');
+  }
 }
 
 export interface PostComment {

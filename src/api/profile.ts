@@ -34,26 +34,14 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
  let instCode = inst?.code;
  let instName = inst?.name;
 
+ // getInstitutionForEmail already matches on the email domain, including
+ // every demo account (all @ui.edu.ng). The substring ladder that used to
+ // live here only ran for *unrecognised* domains, where it guessed badly -
+ // `includes('oau')` assigned joaustin@some-school.edu to Obafemi Awolowo.
+ // An unknown domain has no campus, so fall back to the default explicitly.
  if (!instCode) {
-   if (emailLower.includes('ui.edu.ng') || emailLower.includes('diana.prince') || emailLower.includes('dr.adeyemi') || emailLower.includes('adeola')) {
-     instCode = 'UI';
-     instName = 'University of Ibadan';
-   } else if (emailLower.includes('unilag.edu.ng')) {
-     instCode = 'UNILAG';
-     instName = 'University of Lagos';
-   } else if (emailLower.includes('funaab.edu.ng')) {
-     instCode = 'FUNAAB';
-     instName = 'Federal University of Agriculture, Abeokuta';
-   } else if (emailLower.includes('oau') || emailLower.includes('oauife.edu.ng')) {
-     instCode = 'OAU';
-     instName = 'Obafemi Awolowo University';
-   } else if (emailLower.includes('unn.edu.ng')) {
-     instCode = 'UNN';
-     instName = 'University of Nigeria Nsukka';
-   } else {
-     instCode = 'UI';
-     instName = 'University of Ibadan';
-   }
+   instCode = 'UI';
+   instName = 'University of Ibadan';
  }
 
  const created: UserProfile = {

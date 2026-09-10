@@ -17,13 +17,27 @@ export function FeatureFlagsTab() {
 
   async function handleToggleFlag(key: FeatureKey, next: boolean, label: string) {
     haptics.medium();
-    await setFeature(key, next);
+    try {
+      await setFeature(key, next);
+    } catch (err: any) {
+      Alert.alert(
+        'Toggle not synced',
+        err?.message || `"${label}" was applied on this device but could not be saved platform-wide.`,
+      );
+    }
   }
 
   async function handleResetDefaults() {
     haptics.light();
-    await resetDefaults();
-    Alert.alert('Feature Flags Reset', 'All campus feature toggles restored to production baseline.');
+    try {
+      await resetDefaults();
+      Alert.alert('Feature Flags Reset', 'All campus feature toggles restored to production baseline.');
+    } catch (err: any) {
+      Alert.alert(
+        'Reset not synced',
+        err?.message || 'Defaults were restored on this device but could not be saved platform-wide.',
+      );
+    }
   }
 
   return (

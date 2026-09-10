@@ -138,6 +138,23 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
  return { success: true };
 }
 
+/**
+ * Stable UUIDs for the offline demo fallback session.
+ *
+ * These have to be syntactically valid UUIDs: every table keys off
+ * profiles(id) as a uuid, so the old `demo-${role}-id` placeholder made
+ * Postgres reject *every* write with `invalid input syntax for type uuid`
+ * - the user saw "Could not publish your post" with no way to recover.
+ * They're fixed rather than random so a demo session keeps the same
+ * identity (and therefore its own content) across reloads.
+ */
+const DEMO_FALLBACK_IDS: Record<UserRole, string> = {
+  student: '00000000-0000-4000-8000-000000000001',
+  alumni: '00000000-0000-4000-8000-000000000002',
+  staff: '00000000-0000-4000-8000-000000000003',
+  admin: '00000000-0000-4000-8000-000000000004',
+};
+
 export const DEMO_ACCOUNTS: Record<string, { role: UserRole; fullName: string; username: string }> = {
   'diana.prince@ui.edu.ng': { role: 'student', fullName: 'Diana Prince', username: 'diana_prince' },
   'alumni.adeola@ui.edu.ng': { role: 'alumni', fullName: 'Adeola Adeleke', username: 'adeola_alumni' },
@@ -214,12 +231,21 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
       // Non-blocking fallback
     }
 
-    // Demo account offline fallback session
+    // Demo account offline fallback session.
+    // Reaching here means Supabase auth rejected the sign-in AND the
+    // self-provisioning sign-up didn't return a session - most often
+    // because confirm_user_email() is missing, which is what
+    // supabase_migration_align.sql + supabase_schema.sql install.
+    console.warn(
+      `[Auth] Falling back to an offline demo session for ${cleanEmail}. ` +
+        'Supabase-backed reads and writes will be limited until the database ' +
+        'schema is applied (see supabase_migration_align.sql).',
+    );
     return {
       accessToken: `demo-token-${demo.role}-${Date.now()}`,
       refreshToken: `demo-refresh-${demo.role}-${Date.now()}`,
       user: {
-        id: `demo-${demo.role}-id`,
+        id: DEMO_FALLBACK_IDS[demo.role],
         fullName: demo.fullName,
         email: cleanEmail,
         role: demo.role,

@@ -57,7 +57,7 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
  <Badge label={group.isPublic ? 'Public Pod' : 'Private Pod'} tone={group.isPublic ? 'brand' : 'neutral'} />
  <AppText tone="secondary"variant="caption">
- {group.memberCount} members
+ {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
  </AppText>
  </View>
  <AppText variant="h3"weight="bold"style={{ marginTop: 2 }}>
@@ -74,44 +74,28 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
  </AppText>
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xs }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {['Ad', 'Ch', 'Em'].slice(0, Math.min(3, group.memberCount || 1)).map((initials, idx) => (
-            <View
-              key={idx}
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: 13,
-                backgroundColor: colors.pastelPrimaryBg,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginLeft: idx === 0 ? 0 : -6,
-                borderWidth: 1.5,
-                borderColor: colors.surface,
-              }}
-            >
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9 }}>
-                {initials}
-              </AppText>
-            </View>
-          ))}
-          {group.memberCount > 3 ? (
-            <View
-              style={{
-                paddingHorizontal: 6,
-                paddingVertical: 2,
-                borderRadius: radius.pill,
-                backgroundColor: colors.background,
-                marginLeft: 4,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <AppText variant="caption" tone="secondary" style={{ fontSize: 9 }}>
-                +{group.memberCount - 3} more
-              </AppText>
-            </View>
-          ) : null}
+        {/* Member count only. This used to render an avatar stack from the
+            hardcoded initials ['Ad', 'Ch', 'Em'], so a pod with one member
+            showed a face for two people who don't exist. StudyGroup carries
+            no member list, so the honest thing to show is the number. */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 13,
+              backgroundColor: colors.pastelPrimaryBg,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1.5,
+              borderColor: colors.surface,
+            }}
+          >
+            <Ionicons name="people" size={13} color={colors.brandPrimary} />
+          </View>
+          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+            {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
+          </AppText>
         </View>
 
         <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>

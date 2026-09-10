@@ -4,6 +4,7 @@ import { ChipSelect } from'@/components/ChipSelect';
 import { AppButton } from'@/components/AppButton';
 import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
 import { updateMyProfile } from '@/api/profile';
+import { useToast } from '@/context/ToastContext';
 
 const INTERESTS = [
  'Career & Networking',
@@ -19,6 +20,7 @@ const INTERESTS = [
 
 export default function SelectInterestsScreen() {
  const advance = useAdvanceOnboarding('/(auth)/onboarding/select-interests');
+ const toast = useToast();
  const [interests, setInterests] = useState<string[]>([]);
  const [submitting, setSubmitting] = useState(false);
 
@@ -32,6 +34,10 @@ export default function SelectInterestsScreen() {
  await updateMyProfile({ interests });
  await advance();
  } catch {
+ // Advancing anyway keeps a failed save from trapping someone in
+ // onboarding, but staying silent meant their answer was dropped and
+ // they'd reach the dashboard missing it with no idea why.
+ toast.warning('We couldn\u2019t save that just now - you can add it later in Settings.');
  await advance();
  } finally {
  setSubmitting(false);

@@ -44,3 +44,6 @@ scratch/
 
 .vercel
 .env*
+
+# Supabase CLI local link state (contains project ref, not for VCS)
+supabase/.temp/

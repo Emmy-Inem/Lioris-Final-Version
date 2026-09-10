@@ -19,9 +19,20 @@ const PRIORITY_TONE = {
 export function AnnouncementsWidget({
  scope,
  compact = false,
+ title = 'Campus Announcements',
+ action,
+ showWhenEmpty = false,
+ emptyMessage = 'No bulletins posted yet. New notices will appear here.',
 }: {
  scope?: 'student' | 'alumni' | 'staff' | 'global';
  compact?: boolean;
+ /** Header text. Callers that want their own wording (e.g. staff's "Campus Bulletins") pass it here rather than rendering a second header above the widget. */
+ title?: string;
+ /** Optional control rendered at the right of the header, e.g. staff's "+ New Notice". */
+ action?: React.ReactNode;
+ /** Render the header and an empty-state card when there's nothing to show, instead of collapsing to null. */
+ showWhenEmpty?: boolean;
+ emptyMessage?: string;
 }) {
  const { colors, spacing, radius } = useTheme();
  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
@@ -32,12 +43,8 @@ export function AnnouncementsWidget({
  queryFn: listAnnouncements,
  });
 
- if (isLoading || !announcements || announcements.length === 0) {
- return null;
- }
-
  // Filter announcements for current audience scope and active expiration
- const activeAnnouncements = announcements
+ const activeAnnouncements = (announcements ?? [])
  .filter((a) => !dismissedIds.includes(a.id))
  .filter((a) => {
  if (!scope || scope === 'global') return true;
@@ -48,8 +55,33 @@ export function AnnouncementsWidget({
  return new Date(a.expiresAt).getTime() > Date.now();
  });
 
- if (activeAnnouncements.length === 0) {
+ if (isLoading || activeAnnouncements.length === 0) {
+ // Callers that own a section header (and its action) need the widget to
+ // keep rendering when empty - otherwise the header is left dangling
+ // above nothing, which is what the staff dashboard used to show.
+ if (!showWhenEmpty || compact || isLoading) {
  return null;
+ }
+
+ return (
+ <View style={{ marginBottom: spacing.lg }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+ <Ionicons name="megaphone" size={18} color={colors.brandPrimary} />
+ <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+ {title}
+ </AppText>
+ </View>
+ {action}
+ </View>
+ <SolidCard radius={16} style={{ padding: spacing.lg, alignItems: 'center' }}>
+ <Ionicons name="megaphone-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+ <AppText tone="secondary" variant="caption" style={{ textAlign: 'center' }}>
+ {emptyMessage}
+ </AppText>
+ </SolidCard>
+ </View>
+ );
  }
 
  const critical = activeAnnouncements.find((a) => a.priority === 'critical');
@@ -158,14 +190,14 @@ export function AnnouncementsWidget({
 
  return (
  <View style={{ marginBottom: spacing.lg }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
  <Ionicons name="megaphone" size={18} color={colors.brandPrimary} />
- <AppText variant="h3" weight="bold">
- Campus Announcements
+ <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+ {title}
  </AppText>
  </View>
- <Badge label={`${activeAnnouncements.length} New`} tone="brand" />
+ {action ?? <Badge label={`${activeAnnouncements.length} New`} tone="brand" />}
  </View>
 
  <View style={{ gap: spacing.sm }}>

@@ -77,7 +77,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  setFormDept(resource.department);
  setFormCategory(resource.category);
  setFormDescription(resource.description);
- setFormFileSize(resource.fileSize);
+ setFormFileSize(resource.fileSize ?? '');
  setFormCover('campus_library_study');
  setIsCreating(false);
  }

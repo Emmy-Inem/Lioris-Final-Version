@@ -19,7 +19,7 @@ import { ActionSheetModal } from'./ActionSheetModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
+import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, togglePostRepost, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
 import { submitReport } from '@/api/moderation';
 import { haptics } from '@/utils/haptics';
 
@@ -61,6 +61,7 @@ export function PostDetailScreen() {
   const [liked, setLiked] = useState(!!post?.isLikedByMe);
   const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
   const [reposted, setReposted] = useState(false);
+  const [repostsCount, setRepostsCount] = useState(post?.repostsCount ?? 0);
   const [bookmarked, setBookmarked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -89,6 +90,7 @@ export function PostDetailScreen() {
    if (post) {
      setLiked(!!post.isLikedByMe);
      setLikesCount(post.likesCount);
+     setRepostsCount(post.repostsCount);
      setPoll(post.poll ?? null);
    }
  }, [post]);
@@ -116,6 +118,29 @@ export function PostDetailScreen() {
    } catch {
      setLiked(!next);
      setLikesCount((prev) => prev + (next ? -1 : 1));
+   }
+ }
+
+ /**
+  * Persists the repost instead of only toggling local state and claiming
+  * "Amplified to campus cohort" in an alert. Rolls back on failure so the
+  * count on screen always matches what was actually stored.
+  */
+ async function handleToggleRepost() {
+   if (!post) return;
+   haptics.light();
+   const next = !reposted;
+   setReposted(next);
+   setRepostsCount((prev) => Math.max(0, prev + (next ? 1 : -1)));
+   try {
+     const serverCount = await togglePostRepost(post.id, next);
+     if (typeof serverCount === 'number') setRepostsCount(serverCount);
+     queryClient.invalidateQueries({ queryKey: ['feed'] });
+     queryClient.invalidateQueries({ queryKey: ['post', post.id] });
+   } catch (err: any) {
+     setReposted(!next);
+     setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
+     Alert.alert('Repost failed', err?.message || 'Please try again.');
    }
  }
 
@@ -375,11 +400,11 @@ export function PostDetailScreen() {
  <AppText variant="bodySmall"weight="bold">
  {comments?.length ?? 0} <AppText tone="secondary"variant="caption">Replies</AppText>
  </AppText>
+ {/* Real reposts_count. This was the literal "18 Reposts" on every post,
+ next to a hardcoded "340 Views" - there is no view-tracking column, so
+ that stat is gone rather than invented. */}
  <AppText variant="bodySmall"weight="bold">
- 18 <AppText tone="secondary"variant="caption">Reposts</AppText>
- </AppText>
- <AppText variant="bodySmall"weight="bold">
- 340 <AppText tone="secondary"variant="caption">Views</AppText>
+ {repostsCount} <AppText tone="secondary"variant="caption">{repostsCount === 1 ? 'Repost' : 'Reposts'}</AppText>
  </AppText>
  </View>
 
@@ -393,11 +418,7 @@ export function PostDetailScreen() {
  </Pressable>
 
  <Pressable
- onPress={() => {
- haptics.light();
- setReposted((r) => !r);
- Alert.alert(reposted ? 'Removed Repost' : 'Reposted', 'Amplified to campus cohort.');
- }}
+ onPress={handleToggleRepost}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
  <Ionicons name="repeat"size={20} color={reposted ? colors.brandPrimary : colors.textSecondary} />

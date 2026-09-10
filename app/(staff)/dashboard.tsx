@@ -271,22 +271,22 @@ export default function StaffDashboard() {
         </View>
 
         {/* 4. Official Faculty Broadcasts & Announcements */}
-        <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-              <Ionicons name="megaphone-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
-              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
-                Campus Bulletins
-              </AppText>
-            </View>
+        {/* The widget owns this header so the section can't render a title
+            with nothing under it (when there are no bulletins) or two
+            stacked titles (when there are). */}
+        <AnnouncementsWidget
+          scope="staff"
+          title="Campus Bulletins"
+          showWhenEmpty
+          emptyMessage="No bulletins posted yet. Publish a notice and it will appear here for faculty and students."
+          action={
             <Pressable onPress={() => router.push('/(staff)/announcements')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
                 + New Notice →
               </AppText>
             </Pressable>
-          </View>
-          <AnnouncementsWidget scope="staff" />
-        </View>
+          }
+        />
 
         {/* 5. Academic Symposiums & Faculty Events */}
         <View>

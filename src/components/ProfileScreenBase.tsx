@@ -319,16 +319,24 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             ) : null}
           </View>
           <AppText tone="brand" weight="semiBold" variant="bodySmall">
-            @{profile.username} • {profile.department ?? 'Computer Science'}
+            @{profile.username}
+            {profile.department ? ` • ${profile.department}` : ''}
           </AppText>
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-          <Ionicons name="school-outline" size={14} color={colors.textSecondary} />
-          <AppText tone="secondary" variant="bodySmall">
-            {profile.institutionName ?? 'University of Ibadan'} (Class of {profile.graduationYear ?? 2026})
-          </AppText>
-        </View>
+        {/* Only rendered when we actually know the institution. This used to
+            fall back to "University of Ibadan (Class of 2026)", which stated
+            a specific school and graduation year for people who had set
+            neither - including alumni of other universities. */}
+        {profile.institutionName ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <Ionicons name="school-outline" size={14} color={colors.textSecondary} />
+            <AppText tone="secondary" variant="bodySmall">
+              {profile.institutionName}
+              {profile.graduationYear ? ` (Class of ${profile.graduationYear})` : ''}
+            </AppText>
+          </View>
+        ) : null}
 
         {profile.bio ? (
           <AppText style={{ marginTop: spacing.sm, lineHeight: 20 }}>

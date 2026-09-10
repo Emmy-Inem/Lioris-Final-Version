@@ -228,38 +228,23 @@ export function UserProfileModal({
  <AppText variant="h2"weight="bold">
  {userName}
  </AppText>
- <Ionicons name="checkmark-circle"size={18} color={colors.brandPrimary} />
+ {/* The verified check used to render unconditionally, marking every
+ profile as verified regardless of verification_status. */}
  <UserTypeBadge role={userRole} />
  </View>
 
+ {institution || department ? (
  <AppText tone="brand"weight="semiBold"variant="bodySmall"style={{ marginTop: 3 }}>
- {institution} | {department}
+ {[institution, department].filter(Boolean).join(' | ')}
  </AppText>
-
- <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
- Member since Sept 2024 | Trust Score 9.6 / 10 | Verified Student
- </AppText>
+ ) : null}
  </View>
 
- {/* Quick Metrics Bar */}
- <SolidCard frosted radius={16} style={{ marginBottom: spacing.md, padding: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }}>
- <View style={{ alignItems: 'center' }}>
- <AppText variant="h3"weight="bold"tone="brand">142</AppText>
- <AppText tone="secondary"variant="caption">Connections</AppText>
- </View>
- <View style={{ width: 1, height: 28, backgroundColor: colors.divider }} />
- <View style={{ alignItems: 'center' }}>
- <AppText variant="h3"weight="bold"tone="brand">Lv. 4</AppText>
- <AppText tone="secondary"variant="caption">Campus XP</AppText>
- </View>
- <View style={{ width: 1, height: 28, backgroundColor: colors.divider }} />
- <View style={{ alignItems: 'center' }}>
- <AppText variant="h3"weight="bold"tone="brand">18</AppText>
- <AppText tone="secondary"variant="caption">Discussions</AppText>
- </View>
- </View>
- </SolidCard>
+ {/* The metrics bar that stood here showed the same invented figures for
+ every person on the platform - "142 Connections", "Lv. 4 Campus XP",
+ "18 Discussions" - alongside a byline claiming "Member since Sept 2024 |
+ Trust Score 9.6 / 10". None of it had a backing column, so it is gone
+ rather than guessed. */}
 
  {/* Academic Bio */}
  <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
