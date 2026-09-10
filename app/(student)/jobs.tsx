@@ -190,40 +190,40 @@ export default function JobsScreen() {
       ) : (
  /* Mobile Layout */
  <>
- <AppHeader />
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
-          <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
-            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
-              Career & Internships
+        <AppHeader />
+        <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm }}>
+            <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
+              Career & Jobs
             </AppText>
-            <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
-              Verified student roles, alumni referrals & industry gigs
-            </AppText>
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setCreateModalOpen(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Post a new job opening"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                backgroundColor: colors.brandPrimary,
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 7,
+                flexShrink: 0,
+              }}
+            >
+              <Ionicons name="add" size={16} color="#FFFFFF" />
+              <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+                Post Job
+              </AppText>
+            </Pressable>
           </View>
-          <Pressable
-            onPress={() => {
-              haptics.light();
-              setCreateModalOpen(true);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Post a new job opening"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              backgroundColor: colors.brandPrimary,
-              borderRadius: radius.pill,
-              paddingHorizontal: spacing.md,
-              paddingVertical: 8,
-              flexShrink: 0,
-            }}
-          >
-            <Ionicons name="add" size={18} color="#FFFFFF" />
-            <AppText weight="bold" tone="inverse" variant="caption">
-              Post Job
-            </AppText>
-          </Pressable>
- </View>
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+            Verified student roles, alumni referrals & industry gigs
+          </AppText>
+        </View>
 
  {/* Search Input Bar */}
  <View

@@ -96,26 +96,27 @@ export default function ResourcesScreen() {
     <View style={{ marginBottom: spacing.md }}>
       {!isDesktop && <AppHeader />}
 
-      {/* Screen Title & Upload Action in 1 Compact Row */}
+      {/* Screen Title & Upload Action - Responsive Layout */}
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: isDesktop ? 'row' : 'column',
+          alignItems: isDesktop ? 'center' : 'stretch',
           justifyContent: 'space-between',
+          gap: isDesktop ? spacing.sm : 10,
           marginTop: isDesktop ? spacing.xs : spacing.sm,
           marginBottom: spacing.sm,
         }}
       >
-        <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-          <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
+        <View style={{ flex: isDesktop ? 1 : undefined, minWidth: 0 }}>
+          <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Campus Resources
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ fontSize: isDesktop ? 12 : 11, marginTop: 1 }}>
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 12 : 11.5, lineHeight: 16, marginTop: 2 }}>
             Past questions, lecture notes & portal directories
           </AppText>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+        <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', alignSelf: isDesktop ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
           {(user?.role === 'admin' || user?.role === 'staff') && (
             <Pressable
               onPress={() => setAdminManageOpen(true)}
@@ -219,9 +220,9 @@ export default function ResourcesScreen() {
                 radius={16}
                 padded={false}
                 style={{
-                  width: isDesktop ? 180 : 150,
+                  width: isDesktop ? 180 : 160,
                   padding: 10,
-                  height: 100,
+                  minHeight: 106,
                   justifyContent: 'space-between',
                 }}
               >
@@ -241,11 +242,11 @@ export default function ResourcesScreen() {
                   <Badge label={portal.category || 'Portal'} tone="accent" />
                 </View>
 
-                <View>
-                  <AppText weight="bold" variant="caption" numberOfLines={1} style={{ fontSize: 11.5 }}>
+                <View style={{ marginVertical: 4 }}>
+                  <AppText weight="bold" variant="caption" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 15 }}>
                     {portal.title}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, marginTop: 1 }}>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, marginTop: 2 }}>
                     {portal.url.replace(/^https?:\/\//, '')}
                   </AppText>
                 </View>

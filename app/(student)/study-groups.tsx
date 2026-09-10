@@ -55,33 +55,41 @@ export default function StudyGroupsScreen() {
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       
-      {/* Top Title & Header */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-        <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+      {/* Top Title & Header - Responsive Layout */}
+      <View
+        style={{
+          flexDirection: isDesktop ? 'row' : 'column',
+          alignItems: isDesktop ? 'center' : 'stretch',
+          justifyContent: 'space-between',
+          gap: isDesktop ? spacing.sm : 10,
+          marginTop: isDesktop ? spacing.xs : spacing.sm,
+          marginBottom: spacing.md,
+        }}
+      >
+        <View style={{ flex: isDesktop ? 1 : undefined, minWidth: 0 }}>
+          <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Study Pods
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
             Collaborative course squads, exam revision circles & peer sprints
           </AppText>
         </View>
-        <View style={{ flexShrink: 0 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {isFeatureEnabled('ai_study_copilot') && (
-              <AppButton
-                label="⚡ Ask AI Copilot"
-                variant="ghost"
-                size={isDesktop ? 'md' : 'sm'}
-                onPress={() => setCopilotOpen(true)}
-              />
-            )}
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: isDesktop ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
+          {isFeatureEnabled('ai_study_copilot') && (
             <AppButton
-              label="+ Create Pod"
-              variant="primary"
+              label="⚡ AI Copilot"
+              variant="ghost"
               size={isDesktop ? 'md' : 'sm'}
-              onPress={() => setCreateModalOpen(true)}
+              onPress={() => setCopilotOpen(true)}
             />
-          </View>
+          )}
+          <AppButton
+            label="+ Create Pod"
+            variant="primary"
+            size={isDesktop ? 'md' : 'sm'}
+            onPress={() => setCreateModalOpen(true)}
+          />
         </View>
       </View>
 

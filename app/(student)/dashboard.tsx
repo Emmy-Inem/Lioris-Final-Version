@@ -301,10 +301,10 @@ export default function StudentDashboard() {
                   <Ionicons name="sparkles" size={18} color={colors.brandPrimary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13.5 : 12.5 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13.5 : 12.5, lineHeight: 16 }}>
                     AI Academic Study Copilot
                   </AppText>
-                  <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5, marginTop: 1 }}>
+                  <AppText tone="secondary" numberOfLines={2} style={{ fontSize: isDesktop ? 11 : 10.5, lineHeight: 14, marginTop: 2 }}>
                     Gemini concept breakdowns & past questions
                   </AppText>
                 </View>
@@ -691,7 +691,7 @@ export default function StudentDashboard() {
                           <Badge label={res.category || 'Notes'} tone="neutral" />
                         </View>
                       </View>
-                      <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                      <AppText variant="bodySmall" weight="bold" numberOfLines={2} style={{ lineHeight: 18 }}>
                         {res.title}
                       </AppText>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
@@ -747,7 +747,7 @@ export default function StudentDashboard() {
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                           <Badge label={group.courseCode || 'Study Pod'} tone="success" />
-                          <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                          <AppText variant="bodySmall" weight="bold" numberOfLines={2} style={{ flex: 1, lineHeight: 18 }}>
                             {group.name}
                           </AppText>
                         </View>

@@ -44,15 +44,13 @@ export default function CalendarScreen() {
  return (
  <ScreenContainer glow={false}>
  {!isDesktop && <AppHeader />}
-  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-    <View style={{ flex: 1, minWidth: 0 }}>
-      <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
-        Calendar & Timetable
-      </AppText>
-      <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2 }}>
-        Class lectures, test deadlines & campus schedule
-      </AppText>
-    </View>
+  <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
+    <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
+      Calendar & Timetable
+    </AppText>
+    <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+      Class lectures, test deadlines & campus schedule
+    </AppText>
   </View>
 
  {!isDesktop && (

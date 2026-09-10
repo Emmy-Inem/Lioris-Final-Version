@@ -192,35 +192,35 @@ export default function MarketplaceScreen() {
  <>
  <AppHeader />
 
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
-        <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
-            Campus Marketplace
+ <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm }}>
+          <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
+            Marketplace
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
-            Buy & sell books, gadgets, and campus gear with escrow
-          </AppText>
+          <Pressable
+            onPress={() => setSellModalOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Sell an item"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              backgroundColor: colors.brandPrimary,
+              borderRadius: radius.pill,
+              paddingHorizontal: spacing.md,
+              paddingVertical: 7,
+              flexShrink: 0,
+            }}
+          >
+            <Ionicons name="add" size={16} color="#FFFFFF" />
+            <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+              List Item
+            </AppText>
+          </Pressable>
         </View>
-        <Pressable
-          onPress={() => setSellModalOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Sell an item"
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            backgroundColor: colors.brandPrimary,
-            borderRadius: radius.pill,
-            paddingHorizontal: spacing.md,
-            paddingVertical: 8,
-            flexShrink: 0,
-          }}
-        >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <AppText weight="bold" tone="inverse" variant="caption">
-            List Item
-          </AppText>
-        </Pressable>
+        <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+          Buy & sell books, gadgets, and campus gear with escrow
+        </AppText>
       </View>
 
  <View style={{ flex: 1 }}>

@@ -242,34 +242,34 @@ export function MessagesListScreen() {
           <AppHeader />
 
           {/* Screen Title & Action */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.md }}>
-            <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.sm }}>
-              <AppText variant="h2" weight="bold" numberOfLines={1}>
+          <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+              <AppText weight="bold" style={{ fontSize: 20, lineHeight: 26 }}>
                 Messages
               </AppText>
-              <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
-                Classmates, mentors & campus peers
-              </AppText>
+              <Pressable
+                onPress={() => setNewChatModalOpen(true)}
+                hitSlop={8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: colors.brandPrimary,
+                  paddingHorizontal: 13,
+                  paddingVertical: 7,
+                  borderRadius: radius.pill,
+                  flexShrink: 0,
+                }}
+              >
+                <Ionicons name="create-outline" size={15} color="#FFFFFF" />
+                <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11.5 }}>
+                  New Chat
+                </AppText>
+              </Pressable>
             </View>
-            <Pressable
-              onPress={() => setNewChatModalOpen(true)}
-              hitSlop={8}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: colors.brandPrimary,
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: radius.pill,
-                flexShrink: 0,
-              }}
-            >
-              <Ionicons name="create-outline" size={16} color="#FFFFFF" />
-              <AppText variant="bodySmall" weight="bold" tone="inverse">
-                New Chat
-              </AppText>
-            </Pressable>
+            <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 16, marginTop: 2 }}>
+              Classmates, mentors & campus peers
+            </AppText>
           </View>
 
           {/* Search Input Bar */}

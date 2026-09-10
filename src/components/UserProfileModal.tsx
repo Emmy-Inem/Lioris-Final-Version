@@ -253,7 +253,7 @@ export function UserProfileModal({
  </View>
 
  {effectiveInstitution || effectiveDepartment ? (
- <AppText tone="brand" weight="semiBold" variant="bodySmall" numberOfLines={1} style={{ marginTop: 3, fontSize: 12 }}>
+ <AppText tone="brand" weight="semiBold" variant="bodySmall" numberOfLines={2} style={{ marginTop: 3, fontSize: 12, lineHeight: 16 }}>
  {[effectiveInstitution, effectiveDepartment].filter(Boolean).join(' | ')}
  </AppText>
  ) : null}

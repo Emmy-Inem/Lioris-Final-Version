@@ -221,16 +221,11 @@ export function NotificationsScreen() {
       {!isDesktop && <AppHeader />}
 
       {/* Screen Title & Actions */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-        <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+      <View style={{ marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm }}>
+          <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Notifications & Network
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
-            {unreadCount > 0 ? `${unreadCount} unread campus updates` : 'All caught up'}
-          </AppText>
-        </View>
-        <View style={{ flexDirection: 'row', gap: spacing.sm, flexShrink: 0 }}>
           {unreadCount > 0 && (
             <AppButton
               label="Mark all read"
@@ -240,6 +235,9 @@ export function NotificationsScreen() {
             />
           )}
         </View>
+        <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+          {unreadCount > 0 ? `${unreadCount} unread campus updates` : 'All caught up'}
+        </AppText>
       </View>
 
       {/* Mobile Tab Switcher */}

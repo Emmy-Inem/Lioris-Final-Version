@@ -224,9 +224,9 @@ export function EventCard({ event }: { event: CampusEvent }) {
                 </View>
  </View>
 
-            <Pressable onPress={handleOpenEvent} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, flex: 1, minWidth: 0 }}>
-              <Ionicons name="time-outline"size={13} color={colors.textSecondary} />
-              <AppText tone="secondary"variant="caption" numberOfLines={1}>
+            <Pressable onPress={handleOpenEvent} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 4, flex: 1, minWidth: 0 }}>
+              <Ionicons name="time-outline" size={13} color={colors.textSecondary} style={{ marginTop: 2 }} />
+              <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ flex: 1, lineHeight: 15 }}>
                 {time} | {event.location}
               </AppText>
             </Pressable>

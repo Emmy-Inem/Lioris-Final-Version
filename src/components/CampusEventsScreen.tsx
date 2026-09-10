@@ -97,39 +97,40 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       {!isDesktop && <AppHeader />}
 
       {/* Screen Title & Post Event Button */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-        <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
-          <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
+      <View style={{ marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+          <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Events
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 11.5, marginTop: 1 }}>
-            Workshops, career fairs & campus gatherings
-          </AppText>
+
+          <Pressable
+            onPress={() => {
+              haptics.light();
+              setPublishModalOpen(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Post event"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              backgroundColor: colors.brandPrimary,
+              borderRadius: radius.pill,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              flexShrink: 0,
+            }}
+          >
+            <Ionicons name="add" size={15} color="#FFFFFF" />
+            <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+              Post Event
+            </AppText>
+          </Pressable>
         </View>
 
-        <Pressable
-          onPress={() => {
-            haptics.light();
-            setPublishModalOpen(true);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Post event"
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            backgroundColor: colors.brandPrimary,
-            borderRadius: radius.pill,
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            flexShrink: 0,
-          }}
-        >
-          <Ionicons name="add" size={15} color="#FFFFFF" />
-          <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
-            Post Event
-          </AppText>
-        </Pressable>
+        <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 3 }}>
+          Workshops, career fairs & campus gatherings
+        </AppText>
       </View>
 
       {/* Section: Automatic & Manual Stackable Spotlight Events Carousel */}

@@ -86,7 +86,7 @@ export function ResourceCard({ resource }: { resource: Resource }) {
           <AppText weight="bold" numberOfLines={2} style={{ fontSize: 14, lineHeight: 18, marginTop: 2 }}>
             {resource.title}
           </AppText>
-          <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11, marginTop: 2 }}>
+          <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ fontSize: 11, lineHeight: 15, marginTop: 2 }}>
             {resource.courseCode} • {resource.department}
           </AppText>
         </View>

@@ -226,10 +226,10 @@ export default function StaffDashboard() {
                   <Ionicons name="sparkles" size={17} color={colors.brandPrimary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 14 : 13 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 14 : 13, lineHeight: 16 }}>
                     AI Teaching Assistant
                   </AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 12 : 10.5 }}>
+                  <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ fontSize: isDesktop ? 12 : 10.5, lineHeight: 14, marginTop: 2 }}>
                     Syllabus, quiz generation & rubrics
                   </AppText>
                 </View>
