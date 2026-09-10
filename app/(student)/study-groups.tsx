@@ -54,7 +54,7 @@ export default function StudyGroupsScreen() {
       {/* Top Title & Header */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
         <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
-          <AppText variant="h1" weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             Study Pods
           </AppText>
           <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>

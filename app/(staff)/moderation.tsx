@@ -28,7 +28,7 @@ export default function StaffModerationScreen() {
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
-        <AppText variant="h1" weight="bold" style={{ flexShrink: 1 }}>
+        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
           Staff Workdesk
         </AppText>
  {profile?.institutionCode ? <Badge label={`${profile.institutionCode} Node`} tone="brand" /> : null}

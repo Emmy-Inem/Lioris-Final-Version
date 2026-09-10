@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
@@ -12,9 +13,11 @@ export default function AdminModerationQueueScreen() {
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
-      <AppText variant="h1" weight="bold" style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
-        Moderation Queue
-      </AppText>
+      <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
+        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+          Moderation Queue
+        </AppText>
+      </View>
       <ModerationQueue />
     </ScreenContainer>
   );

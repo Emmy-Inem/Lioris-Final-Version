@@ -127,8 +127,8 @@ export function EventCard({ event }: { event: CampusEvent }) {
  }
 
  return (
- <View style={{ marginBottom: spacing.md }}>
- <Animated.View style={cardAnimatedStyle}>
+    <View style={{ marginBottom: 0 }}>
+      <Animated.View style={cardAnimatedStyle}>
  <SolidCard radius={22} padded={false} style={{ overflow: 'hidden' }}>
  {/* Clickable Event Cover Image */}
  <Pressable
@@ -189,16 +189,16 @@ export function EventCard({ event }: { event: CampusEvent }) {
  </AppText>
  </Pressable>
 
- {/* Title & Info */}
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
- <Pressable onPress={handleOpenEvent} style={{ flex: 1, paddingRight: 4 }}>
- <AppText variant="h3"weight="bold"numberOfLines={2}>
- {event.title}
- </AppText>
- </Pressable>
+          {/* Title & Info */}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Pressable onPress={handleOpenEvent} style={{ flex: 1, paddingRight: 4 }}>
+                <AppText variant="h3"weight="bold"numberOfLines={2}>
+                  {event.title}
+                </AppText>
+              </Pressable>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 }}>
                   <Pressable
                     onPress={handleToggleReminder}
                     hitSlop={8}
@@ -224,12 +224,12 @@ export function EventCard({ event }: { event: CampusEvent }) {
                 </View>
  </View>
 
- <Pressable onPress={handleOpenEvent} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
- <Ionicons name="time-outline"size={13} color={colors.textSecondary} />
- <AppText tone="secondary"variant="caption">
- {time} | {event.location}
- </AppText>
- </Pressable>
+            <Pressable onPress={handleOpenEvent} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, flex: 1, minWidth: 0 }}>
+              <Ionicons name="time-outline"size={13} color={colors.textSecondary} />
+              <AppText tone="secondary"variant="caption" numberOfLines={1}>
+                {time} | {event.location}
+              </AppText>
+            </Pressable>
  </View>
  </View>
 
@@ -252,19 +252,21 @@ export function EventCard({ event }: { event: CampusEvent }) {
  borderTopColor: colors.divider,
  }}
  >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
  <Ionicons name="people"size={16} color={colors.brandPrimary} />
- <AppText variant="caption"weight="bold"tone="brand">
+ <AppText variant="caption"weight="bold"tone="brand" numberOfLines={1}>
  {rsvpCount} attending{event.capacity ? ` (${event.capacity} max)` : ''}
  </AppText>
  </View>
 
+ <View style={{ flexShrink: 0 }}>
  <AppButton
  label={rsvpd ? 'Going' : isFull ? 'Join Waitlist' : 'RSVP'}
  variant={rsvpd ? 'secondary' : 'primary'}
  onPress={handleRsvp}
  loading={submitting}
  />
+ </View>
  </View>
  </View>
  </SolidCard>

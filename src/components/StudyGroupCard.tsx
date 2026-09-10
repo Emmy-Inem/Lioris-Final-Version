@@ -38,36 +38,37 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
     } as any);
   }
 
- return (
- <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
- <View
- style={{
- width: 44,
- height: 44,
- borderRadius: radius.md,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- }}
- >
- <Ionicons name="people-outline"size={22} color={colors.brandPrimary} />
- </View>
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
- <Badge label={group.isPublic ? 'Public Pod' : 'Private Pod'} tone={group.isPublic ? 'brand' : 'neutral'} />
- <AppText tone="secondary"variant="caption">
- {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
- </AppText>
- </View>
- <AppText variant="h3"weight="bold"style={{ marginTop: 2 }}>
- {group.name}
- </AppText>
- <AppText tone="brand"variant="caption"weight="bold">
- {group.courseCode}
- </AppText>
- </View>
- </View>
+  return (
+    <SolidCard radius={20} style={{ marginBottom: 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radius.md,
+            backgroundColor: colors.pastelPrimaryBg,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <Ionicons name="people-outline" size={22} color={colors.brandPrimary} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+            <Badge label={group.isPublic ? 'Public Pod' : 'Private Pod'} tone={group.isPublic ? 'brand' : 'neutral'} />
+            <AppText tone="secondary" variant="caption" numberOfLines={1}>
+              {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
+            </AppText>
+          </View>
+          <AppText variant="h3" weight="bold" numberOfLines={2} style={{ marginTop: 2 }}>
+            {group.name}
+          </AppText>
+          <AppText tone="brand" variant="caption" weight="bold" numberOfLines={1}>
+            {group.courseCode}
+          </AppText>
+        </View>
+      </View>
 
  <AppText tone="secondary"variant="bodySmall"style={{ marginTop: spacing.sm, marginBottom: spacing.md, lineHeight: 18 }}>
  {group.description}
@@ -78,7 +79,7 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
             hardcoded initials ['Ad', 'Ch', 'Em'], so a pod with one member
             showed a face for two people who don't exist. StudyGroup carries
             no member list, so the honest thing to show is the number. */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
           <View
             style={{
               width: 26,
@@ -89,16 +90,17 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
               justifyContent: 'center',
               borderWidth: 1.5,
               borderColor: colors.surface,
+              flexShrink: 0,
             }}
           >
             <Ionicons name="people" size={13} color={colors.brandPrimary} />
           </View>
-          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+          <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
             {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
           </AppText>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flexShrink: 0 }}>
           {joined && (
             <AppButton
               label="Discussion"

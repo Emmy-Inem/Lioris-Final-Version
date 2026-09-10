@@ -91,14 +91,16 @@ export default function PlatformConfigScreen() {
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
       >
         {/* Page Title & Badges */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md }}>
-          <View style={{ flex: 1 }}>
-            <AppText variant="h1" weight="bold">
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: spacing.sm }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
               Staff & Admin Workdesk
             </AppText>
-            <AppText tone="secondary">Centralized university moderation, live nodes & control tower</AppText>
+            <AppText tone="secondary" numberOfLines={2}>Centralized university moderation, live nodes & control tower</AppText>
           </View>
-          <Badge label="Lioris Root Admin" tone="critical" />
+          <View style={{ flexShrink: 0 }}>
+            <Badge label="Lioris Root Admin" tone="critical" />
+          </View>
         </View>
 
         {/* Preview Workspace As Role Switcher - Root Admins only, see isSuperAdmin above */}
@@ -395,14 +397,16 @@ export default function PlatformConfigScreen() {
  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
  <Pressable style={{ flex: 1 }} onPress={() => setBroadcastModalOpen(false)} />
  <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+ <View style={{ flexShrink: 0 }}>
  <Ionicons name="megaphone-outline"size={20} color={colors.critical} />
- <AppText variant="h3"weight="bold">
+ </View>
+ <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
  Broadcast Flash Alert
  </AppText>
  </View>
- <Pressable onPress={() => setBroadcastModalOpen(false)} hitSlop={8}>
+ <Pressable onPress={() => setBroadcastModalOpen(false)} hitSlop={8} style={{ flexShrink: 0 }}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
  </Pressable>
  </View>
@@ -493,8 +497,8 @@ function EcosystemTile({
  accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
  style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '48%', minWidth: isDesktop ? 220 : '48%' }}
  >
- <SolidCard radius={18} frosted style={{ minHeight: 110, justifyContent: 'space-between' }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+ <SolidCard radius={18} frosted style={{ minHeight: 110, justifyContent: 'space-between', padding: isDesktop ? spacing.lg : spacing.md }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs, gap: spacing.xs }}>
  <View
  style={{
  width: 36,
@@ -503,23 +507,24 @@ function EcosystemTile({
  backgroundColor: colors.pastelPrimaryBg,
  alignItems: 'center',
  justifyContent: 'center',
+ flexShrink: 0,
  }}
  >
  <Ionicons name={icon} size={18} color={colors.brandPrimary} />
  </View>
  {badge ? (
- <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 10 }}>
+ <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2, flexShrink: 0 }}>
+ <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 10 }} numberOfLines={1}>
  {badge}
  </AppText>
  </View>
  ) : null}
  </View>
- <View>
- <AppText weight="bold"variant="bodySmall">
+ <View style={{ flex: 1, minWidth: 0 }}>
+ <AppText weight="bold"variant="bodySmall" numberOfLines={1}>
  {label}
  </AppText>
- <AppText tone="secondary"variant="caption"numberOfLines={1}>
+ <AppText tone="secondary"variant="caption"numberOfLines={2}>
  {description}
  </AppText>
  </View>

@@ -99,7 +99,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  {/* Screen Title & Post Event Button */}
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
  <View style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
- <AppText variant="h1" weight="bold">
+ <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
  Events
  </AppText>
  <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
@@ -173,9 +173,9 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
  <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingRight: 24, paddingBottom: 6 }}
+        contentContainerStyle={{ gap: 8, paddingRight: 16, paddingBottom: 6 }}
         style={{ width: '100%', flexGrow: 0 }}
-        {...({ dataSet: { horizontalScroll: 'true' } } as any)}
+        {...({ 'data-horizontal-scroll': 'true' } as any)}
       >
  {EVENT_FILTERS.map((f) => {
  const active = filter === f.key;
@@ -218,7 +218,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           {/* Top Header Bar */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View>
-              <AppText variant="h1" weight="bold">
+              <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
                 Campus Events & Gatherings
               </AppText>
               <AppText tone="secondary" variant="bodySmall">

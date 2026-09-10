@@ -140,10 +140,10 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  {item.price}
  </AppText>
 
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
  <Avatar name={item.sellerName} uri={item.sellerAvatarUrl} size={14} />
- <AppText variant="caption"tone="secondary"numberOfLines={1} style={{ maxWidth: 60 }}>
+ <AppText variant="caption"tone="secondary"numberOfLines={1} style={{ flex: 1, minWidth: 0 }}>
  {item.sellerName}
  </AppText>
  </View>

@@ -28,27 +28,34 @@ export function ConnectionRequestCard({ request, onHandled }: ConnectionRequestC
  }
 
  return (
- <SolidCard style={{ marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
- <Avatar name={request.requesterName} uri={request.requesterAvatarUrl} size={52} />
- <View style={{ flex: 1 }}>
- <AppText variant="h3"weight="bold">
- {request.requesterName}
- </AppText>
- {request.requesterHeadline ? (
- <AppText tone="secondary"variant="bodySmall">
- {request.requesterHeadline}
- </AppText>
- ) : null}
- </View>
- </View>
- <View style={{ flexDirection: 'row', gap: spacing.sm }}>
- <AppButton label="Accept"onPress={() => respond('accept')} loading={submitting === 'accept'} />
- <AppButton
- label="Decline"variant="secondary"onPress={() => respond('decline')}
- loading={submitting === 'decline'}
- />
- </View>
+ <SolidCard style={{ marginBottom: 0 }}>
+  <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
+   <Avatar name={request.requesterName} uri={request.requesterAvatarUrl} size={52} />
+   <View style={{ flex: 1, minWidth: 0 }}>
+    <AppText variant="h3" weight="bold" numberOfLines={1}>
+     {request.requesterName}
+    </AppText>
+    {request.requesterHeadline ? (
+     <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+      {request.requesterHeadline}
+     </AppText>
+    ) : null}
+   </View>
+  </View>
+  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+   <View style={{ flex: 1 }}>
+    <AppButton label="Accept" fullWidth onPress={() => respond('accept')} loading={submitting === 'accept'} />
+   </View>
+   <View style={{ flex: 1 }}>
+    <AppButton
+     label="Decline"
+     variant="secondary"
+     fullWidth
+     onPress={() => respond('decline')}
+     loading={submitting === 'decline'}
+    />
+   </View>
+  </View>
  </SolidCard>
  );
 }

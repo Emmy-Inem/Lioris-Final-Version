@@ -134,10 +134,12 @@ export default function StaffDashboard() {
                   gap: 6,
                 }}
               >
-                <Ionicons name="school" size={14} color="#68D391" />
-                <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1}>
-                  Faculty Console • {institutionName}
-                </AppText>
+                <Ionicons name="school" size={14} color="#68D391" style={{ flexShrink: 0 }} />
+                <View style={{ flexShrink: 1, minWidth: 0 }}>
+                  <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1}>
+                    Faculty Console • {institutionName}
+                  </AppText>
+                </View>
               </View>
             </View>
           </View>
@@ -145,13 +147,15 @@ export default function StaffDashboard() {
           <View style={{ padding: spacing.lg, backgroundColor: colors.surface }}>
             <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0 }}>
-                <Avatar name={fullName} size={52} role="staff" />
+                <View style={{ flexShrink: 0 }}>
+                  <Avatar name={fullName} size={isDesktop ? 60 : 48} role="staff" />
+                </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <AppText variant="h2" weight="bold" numberOfLines={1}>
+                    <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
                       Welcome, {fullName}
                     </AppText>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
                   <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2 }}>
                     {profile?.department || 'Department of Computer Science'} • Faculty Member • {profile?.institutionCode || 'UI Node'}
@@ -182,12 +186,12 @@ export default function StaffDashboard() {
                 justifyContent: 'space-between',
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#EA580C', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#EA580C', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Ionicons name="shield-half" size={20} color="#FFFFFF" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="bodySmall" weight="bold" style={{ color: '#EA580C' }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySmall" weight="bold" style={{ color: '#EA580C' }} numberOfLines={1}>
                     {openReportsCount} Pending Content Flag{openReportsCount > 1 ? 's' : ''}
                   </AppText>
                   <AppText variant="caption" tone="secondary" numberOfLines={1}>
@@ -195,7 +199,7 @@ export default function StaffDashboard() {
                   </AppText>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#EA580C" />
+              <Ionicons name="chevron-forward" size={18} color="#EA580C" style={{ flexShrink: 0 }} />
             </SolidCard>
           </Pressable>
         )}
@@ -343,18 +347,22 @@ export default function StaffDashboard() {
               <Pressable key={post.id} onPress={() => router.push(`/(staff)/post/${post.id}` as any)}>
                 <SolidCard radius={18} style={{ padding: spacing.md }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Avatar name={post.authorName ?? 'Student'} size={28} />
-                      <View>
-                        <AppText variant="caption" weight="bold">
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <View style={{ flexShrink: 0 }}>
+                        <Avatar name={post.authorName ?? 'Student'} size={28} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <AppText variant="caption" weight="bold" numberOfLines={1}>
                           {post.authorName ?? 'Student'}
                         </AppText>
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }} numberOfLines={1}>
                           {post.department ?? 'Computer Science'}
                         </AppText>
                       </View>
                     </View>
-                    <Badge label={post.category ?? 'Discussion'} tone="brand" />
+                    <View style={{ flexShrink: 0, marginLeft: 8 }}>
+                      <Badge label={post.category ?? 'Discussion'} tone="brand" />
+                    </View>
                   </View>
 
                   <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }}>
@@ -371,9 +379,9 @@ export default function StaffDashboard() {
 
         {/* 7. Official Faculty & Academic Institutional Portals */}
         <View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
-            <Ionicons name="school-outline" size={18} color={colors.brandPrimary} />
-            <AppText variant="h3" weight="bold">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm, flex: 1, minWidth: 0 }}>
+            <Ionicons name="school-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+            <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
               Official Faculty Services
             </AppText>
           </View>
@@ -385,7 +393,7 @@ export default function StaffDashboard() {
                 style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
               >
                 <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.brandPrimary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>

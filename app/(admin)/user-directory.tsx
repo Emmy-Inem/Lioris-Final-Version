@@ -312,12 +312,12 @@ export default function UserDirectoryScreen() {
       {!isDesktop && <AppHeader />}
 
       {/* Header & Quick Action Row */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md }}>
-        <View style={{ flexShrink: 1, minWidth: 0 }}>
-          <AppText variant="h1" weight="bold">
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: spacing.sm }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             User Directory
           </AppText>
-          <AppText tone="secondary">Manage identities, matric records & role privileges</AppText>
+          <AppText tone="secondary" numberOfLines={2}>Manage identities, matric records & role privileges</AppText>
         </View>
         <View style={{ flexShrink: 0 }}>
           <AppButton
@@ -429,20 +429,20 @@ export default function UserDirectoryScreen() {
                         style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
                       >
                         <Avatar name={item.fullName} size={44} role={item.role.toLowerCase() as any} />
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <AppText weight="bold" variant="bodySmall">
+                            <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flexShrink: 1 }}>
                               {item.fullName}
                             </AppText>
                             <UserTypeBadge role={item.role.toLowerCase() as any} />
                             {item.isVerified && (
-                              <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} />
+                              <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
                             )}
                           </View>
-                          <AppText tone="secondary" variant="caption">
+                          <AppText tone="secondary" variant="caption" numberOfLines={1}>
                             @{item.username} • {item.matricNo}
                           </AppText>
-                          <AppText tone="secondary" variant="caption">
+                          <AppText tone="secondary" variant="caption" numberOfLines={1}>
                             {item.campus} • {item.department}
                           </AppText>
                           {item.suspended && (
@@ -500,20 +500,20 @@ export default function UserDirectoryScreen() {
                     style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
                   >
                     <Avatar name={item.fullName} size={44} role={item.role.toLowerCase() as any} />
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <AppText weight="bold" variant="bodySmall">
+                        <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flexShrink: 1 }}>
                           {item.fullName}
                         </AppText>
                         <UserTypeBadge role={item.role.toLowerCase() as any} />
                         {item.isVerified && (
-                          <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} />
+                          <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
                         )}
                       </View>
-                      <AppText tone="secondary" variant="caption">
+                      <AppText tone="secondary" variant="caption" numberOfLines={1}>
                         @{item.username} • {item.matricNo}
                       </AppText>
-                      <AppText tone="secondary" variant="caption">
+                      <AppText tone="secondary" variant="caption" numberOfLines={1}>
                         {item.campus} • {item.department}
                       </AppText>
                       {item.suspended && (
@@ -619,11 +619,13 @@ export default function UserDirectoryScreen() {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
           {detailModalUser && (
             <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <AppText variant="h2" weight="bold">
-                  Identity Record
-                </AppText>
- <Pressable onPress={() => setDetailModalUser(null)} hitSlop={8}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+                    Identity Record
+                  </AppText>
+                </View>
+ <Pressable onPress={() => setDetailModalUser(null)} hitSlop={8} style={{ flexShrink: 0 }}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
  </Pressable>
  </View>

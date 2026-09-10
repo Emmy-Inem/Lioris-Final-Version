@@ -474,22 +474,24 @@ export default function StudentDashboard() {
                   <Pressable key={res.id} onPress={() => router.push('/(student)/resources')}>
                     <SolidCard radius={16} style={{ padding: 14 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                           <Badge label={res.courseCode || 'GEN'} tone="brand" />
-                          <AppText variant="caption" tone="secondary">
+                          <AppText variant="caption" tone="secondary" numberOfLines={1}>
                             {res.department || 'Academic'}
                           </AppText>
                         </View>
-                        <Badge label={res.category || 'Notes'} tone="neutral" />
+                        <View style={{ flexShrink: 0, paddingLeft: 8 }}>
+                          <Badge label={res.category || 'Notes'} tone="neutral" />
+                        </View>
                       </View>
                       <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                         {res.title}
                       </AppText>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                        <AppText variant="caption" tone="secondary">
+                        <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ flex: 1, minWidth: 0 }}>
                           By {res.authorName || 'Student'} • {res.downloadsCount ?? 0} downloads
                         </AppText>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, paddingLeft: 8 }}>
                           <Ionicons name="cloud-download-outline" size={14} color={colors.brandPrimary} />
                           <AppText variant="caption" weight="bold" tone="brand">
                             Access File
@@ -536,13 +538,13 @@ export default function StudentDashboard() {
                   <Pressable key={group.id} onPress={() => router.push('/(student)/study-groups')}>
                     <SolidCard radius={16} style={{ padding: 14 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                           <Badge label={group.courseCode || 'Study Pod'} tone="success" />
-                          <AppText variant="bodySmall" weight="bold">
+                          <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                             {group.name}
                           </AppText>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, paddingLeft: 8 }}>
                           <Ionicons name="person" size={12} color={colors.textSecondary} />
                           <AppText variant="caption" tone="secondary">
                             {group.memberCount ?? 1}
@@ -594,22 +596,24 @@ export default function StudentDashboard() {
                 onPress={() => router.push(`/(student)/post/${post.id}` as any)}
               >
                 <SolidCard radius={18} style={{ padding: spacing.md }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                       <Avatar name={post.authorName ?? 'Student'} size={28} />
-                      <View>
-                        <AppText variant="caption" weight="bold">
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <AppText variant="caption" weight="bold" numberOfLines={1}>
                           {post.authorName ?? 'Student'}
                         </AppText>
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }} numberOfLines={1}>
                           {post.department ?? 'Computer Science'}
                         </AppText>
                       </View>
                     </View>
-                    <Badge label={post.category ?? 'Discussion'} tone="brand" />
+                    <View style={{ flexShrink: 0 }}>
+                      <Badge label={post.category ?? 'Discussion'} tone="brand" />
+                    </View>
                   </View>
 
-                  <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }}>
+                  <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }} numberOfLines={2}>
                     {post.title}
                   </AppText>
                   <AppText tone="secondary" variant="caption" numberOfLines={2}>

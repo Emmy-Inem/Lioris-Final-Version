@@ -342,10 +342,12 @@ export default function SuperAdminConfigScreen() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
-      <AppText variant="h1" weight="bold" style={{ marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
-        Super Admin Configuration
-      </AppText>
-      <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
+      <View style={{ marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
+        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+          Super Admin Configuration
+        </AppText>
+      </View>
+      <AppText tone="secondary" style={{ marginBottom: spacing.md }} numberOfLines={2}>
         Root-level platform parameters - changes here apply across every campus workspace.
       </AppText>
 
@@ -598,7 +600,7 @@ function Section({ number, title, emoji, children }: { number: number; title: st
  const { spacing } = useTheme();
  return (
  <View style={{ marginBottom: spacing.lg }}>
- <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }}>
+ <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }} numberOfLines={1}>
  {number}. {title} {emoji}
  </AppText>
  <SolidCard>{children}</SolidCard>
@@ -636,11 +638,11 @@ function Row({
  opacity: disabled ? 0.5 : 1,
  }}
  >
- <View style={{ flex: 1, marginRight: spacing.sm }}>
- <AppText weight="bold"variant="bodySmall">
+ <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
+ <AppText weight="bold"variant="bodySmall" numberOfLines={1}>
  {title}
  </AppText>
- <AppText tone="secondary"variant="caption">
+ <AppText tone="secondary"variant="caption" numberOfLines={2}>
  {description}
  </AppText>
  </View>
@@ -676,11 +678,11 @@ function ToggleRow({
  borderBottomColor: colors.divider,
  }}
  >
- <View style={{ flex: 1, marginRight: spacing.md }}>
- <AppText weight="bold"variant="bodySmall"style={titleTone === 'critical' ? { color: colors.critical } : undefined}>
+ <View style={{ flex: 1, minWidth: 0, marginRight: spacing.md }}>
+ <AppText weight="bold"variant="bodySmall"style={titleTone === 'critical' ? { color: colors.critical } : undefined} numberOfLines={1}>
  {title}
  </AppText>
- <AppText tone="secondary"variant="caption">
+ <AppText tone="secondary"variant="caption" numberOfLines={2}>
  {description}
  </AppText>
  </View>

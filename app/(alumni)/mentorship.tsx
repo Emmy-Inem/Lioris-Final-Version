@@ -70,7 +70,7 @@ export default function AlumniMentorshipScreen() {
         contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 130 }}
       >
         <View style={{ paddingTop: spacing.md, marginBottom: spacing.md }}>
-          <AppText variant="h1" weight="bold">
+          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             Alumni Mentorship Desk
           </AppText>
           <AppText tone="secondary" variant="bodySmall">

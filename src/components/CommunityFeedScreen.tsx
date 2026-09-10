@@ -132,7 +132,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       {/* Screen Title & Scope Switcher in 1 Unified Clean Row */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
         <View style={{ flexShrink: 1, minWidth: 0 }}>
-          <AppText variant="h1" weight="bold">
+          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             Campus Forum
           </AppText>
         </View>
@@ -235,9 +235,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingRight: 24, paddingBottom: 6 }}
+        contentContainerStyle={{ gap: 8, paddingRight: 16, paddingBottom: 6 }}
         style={{ width: '100%', flexGrow: 0, marginBottom: spacing.xs }}
-        {...({ dataSet: { horizontalScroll: 'true' } } as any)}
+        {...({ 'data-horizontal-scroll': 'true' } as any)}
       >
         {CHANNELS.filter((ch: any) => (ch.flagKey ? isFeatureEnabled(ch.flagKey) : true)).map((ch) => {
           const selected = selectedChannel === ch.category;

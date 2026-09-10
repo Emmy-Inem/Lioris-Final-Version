@@ -213,7 +213,7 @@ export function AnnouncementsWidget({
  </Pressable>
  </View>
 
- <AppText variant="bodySmall" weight="bold" style={{ marginTop: 4, marginBottom: 2 }}>
+ <AppText variant="bodySmall" weight="bold" numberOfLines={2} style={{ marginTop: 4, marginBottom: 2 }}>
  {item.title}
  </AppText>
 
@@ -222,10 +222,10 @@ export function AnnouncementsWidget({
  </AppText>
 
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
- <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+ <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1, minWidth: 0, paddingRight: 8 }}>
  {item.authorName} • {new Date(item.publishedAt).toLocaleDateString()}
  </AppText>
- <Pressable onPress={() => setSelectedAnnouncement(item)}>
+ <Pressable onPress={() => setSelectedAnnouncement(item)} style={{ flexShrink: 0 }}>
  <AppText variant="caption" weight="bold" tone="brand">
  Read More →
  </AppText>

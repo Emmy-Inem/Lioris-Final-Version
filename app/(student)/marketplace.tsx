@@ -194,7 +194,7 @@ export default function MarketplaceScreen() {
 
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.md }}>
         <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
-          <AppText variant="h1" weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             Campus Marketplace
           </AppText>
           <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>

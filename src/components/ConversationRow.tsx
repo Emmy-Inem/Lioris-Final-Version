@@ -61,9 +61,9 @@ export function ConversationRow({ conversation, onArchive, onSelect, isSelected 
  </View>
  ) : null}
  </View>
- <View style={{ flex: 1 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
- <AppText weight="bold"variant="bodySmall">
+ <View style={{ flex: 1, minWidth: 0 }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+ <AppText weight="bold"variant="bodySmall"numberOfLines={1}style={{ flex: 1, minWidth: 0 }}>
  {conversation.participantName}
  </AppText>
  {conversation.unreadCount > 0 && (
@@ -76,6 +76,7 @@ export function ConversationRow({ conversation, onArchive, onSelect, isSelected 
  alignItems: 'center',
  justifyContent: 'center',
  paddingHorizontal: 6,
+ flexShrink: 0,
  }}
  >
  <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>

@@ -65,7 +65,7 @@ export function JobCard({ job }: { job: JobListing }) {
   }
 
   return (
-    <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
+    <SolidCard radius={20} style={{ marginBottom: 0 }}>
       <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
         <View
           style={{
@@ -87,10 +87,10 @@ export function JobCard({ job }: { job: JobListing }) {
             <Badge label={job.type} tone={job.type === 'Internship' ? 'accent' : 'brand'} />
             {job.remote && <Badge label="Remote" tone="success" />}
           </View>
-          <AppText variant="h3" weight="bold" style={{ marginTop: 2 }}>
+          <AppText variant="h3" weight="bold" style={{ marginTop: 2 }} numberOfLines={2}>
             {job.title}
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
             {job.company} | {job.location}
           </AppText>
         </View>
@@ -109,7 +109,7 @@ export function JobCard({ job }: { job: JobListing }) {
           borderTopColor: colors.divider,
         }}
       >
-        <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ flexShrink: 1, minWidth: 100 }}>
+        <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ flexShrink: 1, minWidth: 60 }}>
           Posted by {job.postedByName}
         </AppText>
 
@@ -149,15 +149,15 @@ export function JobCard({ job }: { job: JobListing }) {
             onPress={(e) => e.stopPropagation()}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <View>
-                <AppText variant="h2" weight="bold">
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText variant="h3" weight="bold" numberOfLines={2}>
                   Apply for {job.title}
                 </AppText>
                 <AppText tone="secondary" variant="bodySmall">
                   {job.company} • {job.location}
                 </AppText>
               </View>
-              <Pressable onPress={() => setModalOpen(false)} hitSlop={12}>
+              <Pressable style={{ flexShrink: 0 }} onPress={() => setModalOpen(false)} hitSlop={12}>
                 <Ionicons name="close" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>

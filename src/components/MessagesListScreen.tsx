@@ -171,7 +171,7 @@ export function MessagesListScreen() {
 
           {/* Screen Title */}
           <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
-            <AppText variant="h1" weight="bold">
+            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
               Messages
             </AppText>
             <AppText tone="secondary" variant="bodySmall">

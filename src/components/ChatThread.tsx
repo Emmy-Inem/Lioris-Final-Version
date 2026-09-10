@@ -106,25 +106,25 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
  borderBottomColor: colors.border,
  }}
  >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
- <Pressable onPress={() => router.back()} hitSlop={8}>
- <Ionicons name="arrow-back"size={22} color={colors.textPrimary} />
- </Pressable>
- <Avatar name={partnerName} uri={partnerAvatar} size={36} />
- <View>
- <AppText weight="bold"variant="bodySmall">
- {partnerName}
- </AppText>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
- <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
- <AppText tone="secondary"variant="caption">
- Online | UI Verified
- </AppText>
- </View>
- </View>
- </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+        <Pressable onPress={() => router.back()} hitSlop={8} style={{ flexShrink: 0 }}>
+          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+        </Pressable>
+        <Avatar name={partnerName} uri={partnerAvatar} size={36} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+            {partnerName}
+          </AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success, flexShrink: 0 }} />
+            <AppText tone="secondary" variant="caption" numberOfLines={1}>
+              Online | UI Verified
+            </AppText>
+          </View>
+        </View>
+      </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 0 }}>
           <Pressable
             hitSlop={8}
             accessibilityRole="button"

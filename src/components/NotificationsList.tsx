@@ -130,10 +130,10 @@ export function NotificationsScreen() {
  {/* Title & Body */}
  <View style={{ flex: 1 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
- <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flex: 1, paddingRight: 4 }}>
+ <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flex: 1, minWidth: 0, paddingRight: 6 }}>
  {item.title}
  </AppText>
- <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
+ <AppText tone="secondary" variant="caption" style={{ fontSize: 11, flexShrink: 0 }}>
  {formatNotificationTime(item.createdAt)}
  </AppText>
  </View>
@@ -223,7 +223,7 @@ export function NotificationsScreen() {
       {/* Screen Title & Actions */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
         <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
-          <AppText variant="h1" weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             Notifications & Network
           </AppText>
           <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>

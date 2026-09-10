@@ -261,7 +261,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  <SolidCard radius={22} style={{ padding: spacing.lg, position: 'relative' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.sm }}>
  <Pressable onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
- <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={isDesktop ? 96 : 88} />
+ <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={isDesktop ? 96 : 76} />
  <View
  style={{
  position: 'absolute',
@@ -311,7 +311,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
         <View style={{ marginTop: spacing.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <AppText variant="h2" weight="bold">
+            <AppText variant="h2" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
               {profile.fullName}
             </AppText>
             {profile.verificationStatus === 'verified' ? (

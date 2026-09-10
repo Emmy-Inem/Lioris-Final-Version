@@ -600,9 +600,9 @@ export function EventDetailScreen() {
             </View>
 
             {/* Content Body Container */}
-            <View style={{ paddingHorizontal: isDesktop ? spacing.lg : 0, paddingTop: spacing.md, width: '100%' }}>
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, width: '100%' }}>
               {/* Event Title */}
-              <AppText variant="h1" weight="bold" style={{ fontSize: 24, lineHeight: 30, marginBottom: spacing.xs }}>
+              <AppText variant="h2" weight="bold" style={{ fontSize: isDesktop ? 24 : 20, lineHeight: isDesktop ? 30 : 26, marginBottom: spacing.xs }}>
                 {event.title}
               </AppText>
 

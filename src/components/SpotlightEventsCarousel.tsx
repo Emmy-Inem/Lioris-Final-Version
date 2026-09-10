@@ -225,8 +225,8 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  {item.title}
  </AppText>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <Ionicons name="location-outline" size={13} color="#FFFFFF" />
- <AppText tone="inverse" variant="caption" style={{ opacity: 0.9 }}>
+ <Ionicons name="location-outline" size={13} color="#FFFFFF" style={{ flexShrink: 0 }} />
+ <AppText tone="inverse" variant="caption" numberOfLines={1} style={{ opacity: 0.9, flex: 1 }}>
  {item.location} • {new Date(item.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
  </AppText>
  </View>

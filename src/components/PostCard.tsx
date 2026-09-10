@@ -121,12 +121,12 @@ export function PostCard({ post }: { post: Post }) {
  haptics.light();
  setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl });
  }}
- style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flex: 1 }}
+ style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flex: 1, minWidth: 0 }}
  >
  <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={44} role={post.authorRole} />
- <View style={{ flex: 1 }}>
+ <View style={{ flex: 1, minWidth: 0 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
- <AppText weight="bold"variant="bodySmall">
+ <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
  {post.authorName}
  </AppText>
  <Ionicons name="checkmark-circle"size={14} color={colors.brandPrimary} />
@@ -149,7 +149,7 @@ export function PostCard({ post }: { post: Post }) {
  </View>
  </Pressable>
 
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>
  <VisibilityBadge
  visibility={isGlobalPost ? 'global' : 'campus'}
  campusCode={post.institutionCode}
@@ -167,10 +167,10 @@ export function PostCard({ post }: { post: Post }) {
 
  {/* Thread Title & Content (Tap to Open Full Screen Post) */}
  <Pressable onPress={handleOpenDedicatedPost} style={{ marginTop: spacing.xs, marginBottom: spacing.sm }}>
- <AppText variant="h3"weight="bold"style={{ marginBottom: 4 }}>
+ <AppText variant="h3"weight="bold"numberOfLines={1} style={{ marginBottom: 4 }}>
  {post.title}
  </AppText>
- <AppText tone="primary"variant="bodySmall"style={{ lineHeight: 20 }}>
+ <AppText tone="primary"variant="bodySmall"numberOfLines={2} style={{ lineHeight: 20 }}>
  {post.content}
  </AppText>
  </Pressable>

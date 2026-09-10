@@ -173,7 +173,9 @@ export default function ResourcesScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+          {...({ 'data-horizontal-scroll': 'true' } as any)}
+          style={{ width: '100%', flexGrow: 0 }}
+          contentContainerStyle={{ gap: 8, paddingVertical: 2, paddingRight: 16 }}
         >
           {portalLinks.filter((p) => p.active).map((portal) => (
             <Pressable

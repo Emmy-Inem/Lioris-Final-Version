@@ -46,10 +46,10 @@ export default function StudentMentorshipScreen() {
       <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
         {/* Top Header & Intro */}
         <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-          <AppText variant="h1" weight="bold">
+          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             Alumni Mentorship
           </AppText>
-          <AppText tone="secondary" variant="bodySmall">
+          <AppText tone="secondary" variant="bodySmall" numberOfLines={2}>
             Connect with verified alumni and faculty mentors for career advice, technical coaching, and professional growth.
           </AppText>
         </View>
@@ -62,7 +62,13 @@ export default function StudentMentorshipScreen() {
               </AppText>
               <Badge label={`${myApplications.length} submitted`} tone="brand" />
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ width: '100%', flexGrow: 0 }}
+              contentContainerStyle={{ gap: spacing.sm, paddingRight: 16 }}
+              {...({ 'data-horizontal-scroll': 'true' } as any)}
+            >
               {myApplications.map((app) => (
                 <SolidCard key={app.id} radius={12} style={{ width: 220 }}>
                   <AppText weight="bold" variant="bodySmall" numberOfLines={1}>

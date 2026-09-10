@@ -263,9 +263,9 @@ export function PostDetailScreen() {
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}
  >
  <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={50} role={post.authorRole} />
- <View style={{ flex: 1 }}>
+ <View style={{ flex: 1, minWidth: 0 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
- <AppText weight="bold"variant="body">
+ <AppText weight="bold" variant="body" numberOfLines={1}>
  {post.authorName}
  </AppText>
  <Ionicons name="checkmark-circle"size={16} color={colors.brandPrimary} />

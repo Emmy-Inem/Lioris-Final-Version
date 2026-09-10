@@ -136,12 +136,12 @@ export default function VerificationRequestsScreen() {
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
       >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
-          <View style={{ flexShrink: 1, minWidth: 0 }}>
-            <AppText variant="h1" weight="bold">
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs, gap: spacing.sm }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
               Verify Credentials
             </AppText>
-            <AppText tone="secondary">Review student matriculation records & government ID certificates</AppText>
+            <AppText tone="secondary" numberOfLines={2}>Review student matriculation records & government ID certificates</AppText>
           </View>
           <View style={{ flexShrink: 0 }}>
             <Badge label={`${requests?.length ?? 0} Pending`} tone="brand" />
@@ -154,19 +154,23 @@ export default function VerificationRequestsScreen() {
           {requests?.map((req) => (
             <View key={req.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : undefined}>
               <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                    <Avatar name={req.applicantName} size={42} role="student" />
-                    <View>
-                      <AppText weight="bold" variant="bodySmall">
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs, gap: spacing.sm }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                    <View style={{ flexShrink: 0 }}>
+                      <Avatar name={req.applicantName} size={42} role="student" />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                         {req.applicantName}
                       </AppText>
-                      <AppText tone="secondary" variant="caption">
+                      <AppText tone="secondary" variant="caption" numberOfLines={1}>
                         Institution: {req.institutionClaimed}
                       </AppText>
                     </View>
                   </View>
-                  <Badge label={req.documentType.toUpperCase()} tone="accent" />
+                  <View style={{ flexShrink: 0 }}>
+                    <Badge label={req.documentType.toUpperCase()} tone="accent" />
+                  </View>
                 </View>
 
                 {/* Document Reference Box */}
@@ -219,14 +223,16 @@ export default function VerificationRequestsScreen() {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
           {inspectDocRequest && (
             <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                  <Ionicons name="document-text" size={20} color={colors.brandPrimary} />
-                  <AppText variant="h2" weight="bold">
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 }}>
+                  <View style={{ flexShrink: 0 }}>
+                    <Ionicons name="document-text" size={20} color={colors.brandPrimary} />
+                  </View>
+                  <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
                     Credential Verification
  </AppText>
  </View>
- <Pressable onPress={() => setInspectDocRequest(null)} hitSlop={8}>
+ <Pressable onPress={() => setInspectDocRequest(null)} hitSlop={8} style={{ flexShrink: 0 }}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
  </Pressable>
  </View>
@@ -280,11 +286,13 @@ export default function VerificationRequestsScreen() {
  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
  <Pressable style={{ flex: 1 }} onPress={() => setRejectModalRequest(null)} />
  <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <AppText variant="h2"weight="bold">
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm }}>
+ <View style={{ flex: 1, minWidth: 0 }}>
+ <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
  Decline Verification Submission
  </AppText>
- <Pressable onPress={() => setRejectModalRequest(null)} hitSlop={8}>
+ </View>
+ <Pressable onPress={() => setRejectModalRequest(null)} hitSlop={8} style={{ flexShrink: 0 }}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
  </Pressable>
  </View>

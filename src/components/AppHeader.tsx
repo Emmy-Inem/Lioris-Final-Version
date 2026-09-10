@@ -54,10 +54,10 @@ export function AppHeader() {
  zIndex: 10,
  }}
  >
- <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
  <LiorisLogo size={26} variant="symbol" />
- <View style={{ marginLeft: 4 }}>
- <LiorisLogo size={24} variant="wordmark" />
+ <View style={{ marginLeft: 3 }}>
+ <LiorisLogo size={18} variant="wordmark" />
  </View>
  {showWorkspaceSwitcher ? (
  <Pressable
@@ -99,15 +99,15 @@ export function AppHeader() {
  {/* Theme Toggle Button */}
  <Pressable
  hitSlop={8}
- accessibilityRole="button"accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+ accessibilityRole="button" accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
  onPress={() => {
  haptics.light();
  toggleTheme();
  }}
  style={{
- width: 36,
- height: 36,
- borderRadius: 18,
+ width: 32,
+ height: 32,
+ borderRadius: 16,
  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
  alignItems: 'center',
  justifyContent: 'center',
@@ -119,47 +119,47 @@ export function AppHeader() {
  {/* Global Search Button */}
  <Pressable
  hitSlop={8}
- accessibilityRole="button"accessibilityLabel="Search"onPress={() => {
+ accessibilityRole="button" accessibilityLabel="Search" onPress={() => {
  haptics.light();
  router.push(`/${roleGroup}/search` as any);
  }}
  style={{
- width: 36,
- height: 36,
- borderRadius: 18,
+ width: 32,
+ height: 32,
+ borderRadius: 16,
  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
  alignItems: 'center',
  justifyContent: 'center',
  }}
  >
- <Ionicons name="search"size={18} color={colors.textPrimary} />
+ <Ionicons name="search" size={18} color={colors.textPrimary} />
  </Pressable>
 
  {/* Notifications Bell Button */}
  <Pressable
  hitSlop={8}
- accessibilityRole="button"accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+ accessibilityRole="button" accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
  onPress={() => {
  haptics.light();
  router.push(`/${roleGroup}/notifications` as any);
  }}
  style={{
- width: 36,
- height: 36,
- borderRadius: 18,
+ width: 32,
+ height: 32,
+ borderRadius: 16,
  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
  alignItems: 'center',
  justifyContent: 'center',
  }}
  >
  <View>
- <Ionicons name="notifications-outline"size={18} color={colors.textPrimary} />
+ <Ionicons name="notifications-outline" size={18} color={colors.textPrimary} />
  {unreadCount > 0 ? (
  <View
  style={{
  position: 'absolute',
- top: -4,
- right: -6,
+ top: -3,
+ right: -3,
  minWidth: 14,
  height: 14,
  borderRadius: 7,
@@ -183,7 +183,7 @@ export function AppHeader() {
  haptics.light();
  router.push(`/${roleGroup}/profile` as any);
  }}
- accessibilityRole="button"accessibilityLabel="Open profile"style={{ marginLeft: 2 }}
+ accessibilityRole="button" accessibilityLabel="Open profile" style={{ marginLeft: 2 }}
  >
  <Avatar name={user?.fullName ?? 'You'} size={32} />
  </Pressable>
