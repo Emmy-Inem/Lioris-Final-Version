@@ -99,8 +99,12 @@ export default function AlumniMentorshipScreen() {
           <StatBox label="Sessions Done" value={mentorships?.filter((m) => m.status === 'completed').length ?? 0} icon="videocam" />
         </View>
 
-        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
-          Student Mentorship Inquiries ({mentorships?.length ?? 0})
+        <AppText
+          weight="bold"
+          numberOfLines={1}
+          style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, marginBottom: spacing.xs }}
+        >
+          Mentorship Inquiries ({mentorships?.length ?? 0})
         </AppText>
 
         <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>

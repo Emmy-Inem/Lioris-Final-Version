@@ -7,6 +7,7 @@ import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { listAnnouncements } from '@/api/announcements';
 import { Announcement } from '@/api/types';
 
@@ -35,6 +36,7 @@ export function AnnouncementsWidget({
  emptyMessage?: string;
 }) {
  const { colors, spacing, radius } = useTheme();
+ const { isDesktop } = useResponsive();
  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
 
@@ -67,8 +69,12 @@ export function AnnouncementsWidget({
  <View style={{ marginBottom: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
- <Ionicons name="megaphone" size={18} color={colors.brandPrimary} />
- <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+ <Ionicons name="megaphone" size={16} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+ <AppText
+ weight="bold"
+ numberOfLines={1}
+ style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}
+ >
  {title}
  </AppText>
  </View>
@@ -192,12 +198,18 @@ export function AnnouncementsWidget({
  <View style={{ marginBottom: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
- <Ionicons name="megaphone" size={18} color={colors.brandPrimary} />
- <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+ <Ionicons name="megaphone" size={16} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+ <AppText
+ weight="bold"
+ numberOfLines={1}
+ style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}
+ >
  {title}
  </AppText>
  </View>
+ <View style={{ flexShrink: 0 }}>
  {action ?? <Badge label={`${activeAnnouncements.length} New`} tone="brand" />}
+ </View>
  </View>
 
  <View style={{ gap: spacing.sm }}>

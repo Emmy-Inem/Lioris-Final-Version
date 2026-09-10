@@ -171,8 +171,8 @@ export function EventCard({ event }: { event: CampusEvent }) {
  <Pressable
  onPress={handleOpenEvent}
  style={{
- width: 54,
- height: 58,
+ width: 48,
+ height: 52,
  borderRadius: radius.md,
  backgroundColor: colors.pastelPrimaryBg,
  alignItems: 'center',
@@ -181,10 +181,10 @@ export function EventCard({ event }: { event: CampusEvent }) {
  borderColor: colors.brandPrimary,
  }}
  >
- <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 10, letterSpacing: 0.5 }}>
+ <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10, letterSpacing: 0.5 }}>
  {month}
  </AppText>
- <AppText variant="h2"weight="bold"tone="brand"style={{ lineHeight: 24 }}>
+ <AppText weight="bold" tone="brand" style={{ fontSize: 18, lineHeight: 22 }}>
  {day}
  </AppText>
  </Pressable>
@@ -193,7 +193,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Pressable onPress={handleOpenEvent} style={{ flex: 1, paddingRight: 4 }}>
-                <AppText variant="h3"weight="bold"numberOfLines={2}>
+                <AppText weight="bold" numberOfLines={2} style={{ fontSize: 15, lineHeight: 20 }}>
                   {event.title}
                 </AppText>
               </Pressable>

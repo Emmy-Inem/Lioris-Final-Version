@@ -159,26 +159,33 @@ export default function StaffDashboard() {
             </View>
           </View>
 
-          <View style={{ padding: spacing.lg, backgroundColor: colors.surface }}>
-            <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.md }}>
+          <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
+            <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0 }}>
                 <View style={{ flexShrink: 0 }}>
-                  <Avatar name={fullName} size={isDesktop ? 60 : 48} role="staff" />
+                  <Avatar name={fullName} size={isDesktop ? 56 : 46} role="staff" />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+                    <AppText
+                      weight="bold"
+                      numberOfLines={1}
+                      style={{ fontSize: isDesktop ? 22 : 16, lineHeight: isDesktop ? 28 : 22 }}
+                    >
                       Welcome, {fullName}
                     </AppText>
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
-                  <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2 }}>
-                    {profile?.department || 'Department of Computer Science'} • Faculty Member • {profile?.institutionCode || 'UI Node'}
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11.5, fontWeight: '500' }}>
+                    {profile?.department || 'Department of Computer Science'}
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5, opacity: 0.8 }}>
+                    Faculty Member • {profile?.institutionCode || 'UI Node'}
                   </AppText>
                 </View>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap', alignItems: 'center', marginTop: isDesktop ? 0 : 4 }}>
                 <Badge label="Faculty Staff" tone="brand" />
                 <Badge label="Harmattan Term 2026" tone="success" />
               </View>
@@ -216,14 +223,14 @@ export default function StaffDashboard() {
                     flexShrink: 0,
                   }}
                 >
-                  <Ionicons name="sparkles" size={18} color={colors.brandPrimary} />
+                  <Ionicons name="sparkles" size={17} color={colors.brandPrimary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
-                    AI Faculty Teaching Assistant
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 14 : 13 }}>
+                    AI Teaching Assistant
                   </AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                    Course syllabus breakdown, quiz generation & grading rubrics
+                  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 12 : 10.5 }}>
+                    Syllabus, quiz generation & rubrics
                   </AppText>
                 </View>
               </View>
@@ -232,13 +239,13 @@ export default function StaffDashboard() {
                 style={{
                   backgroundColor: colors.brandPrimary,
                   borderRadius: radius.pill,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
+                  paddingHorizontal: isDesktop ? 12 : 10,
+                  paddingVertical: isDesktop ? 6 : 5,
                   flexShrink: 0,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone="inverse">
-                  Launch AI →
+                <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: isDesktop ? 12 : 11 }}>
+                  Ask AI →
                 </AppText>
               </Pressable>
             </View>
@@ -251,7 +258,7 @@ export default function StaffDashboard() {
             <SolidCard
               radius={16}
               style={{
-                padding: 14,
+                padding: isDesktop ? 14 : 11,
                 backgroundColor: isDark ? '#2A1810' : '#FFF7ED',
                 borderWidth: 1,
                 borderColor: '#F97316',
@@ -260,27 +267,35 @@ export default function StaffDashboard() {
                 justifyContent: 'space-between',
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#EA580C', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="shield-half" size={20} color="#FFFFFF" />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#EA580C', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Ionicons name="shield-half" size={18} color="#FFFFFF" />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText variant="bodySmall" weight="bold" style={{ color: '#EA580C' }} numberOfLines={1}>
+                  <AppText weight="bold" style={{ color: '#EA580C', fontSize: isDesktop ? 13.5 : 12.5 }} numberOfLines={1}>
                     {openReportsCount} Pending Content Flag{openReportsCount > 1 ? 's' : ''}
                   </AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                    Requires faculty review on the moderation desk
+                  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5 }}>
+                    Requires faculty review on moderation desk
                   </AppText>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#EA580C" style={{ flexShrink: 0 }} />
+              <Ionicons name="chevron-forward" size={16} color="#EA580C" style={{ flexShrink: 0 }} />
             </SolidCard>
           </Pressable>
         )}
 
         {/* 3. Faculty Command Actions Grid */}
         <View>
-          <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
+          <AppText
+            weight="bold"
+            style={{
+              fontSize: isDesktop ? 18 : 15,
+              lineHeight: isDesktop ? 24 : 20,
+              letterSpacing: -0.2,
+              marginBottom: spacing.xs,
+            }}
+          >
             Faculty Command Actions
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -289,13 +304,27 @@ export default function StaffDashboard() {
                 onPress={() => router.push('/(staff)/messages')}
                 style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1F2937' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="chatbubble-ellipses" size={18} color={colors.brandPrimary} />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? undefined : 78,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1F2937' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name="chatbubble-ellipses" size={16} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Direct Messages</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Faculty & student chat</AppText>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                      Direct Messages
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                      Faculty chat
+                    </AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -309,13 +338,27 @@ export default function StaffDashboard() {
                 }}
                 style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="cash-outline" size={18} color="#10B981" />
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? undefined : 78,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name="cash-outline" size={16} color="#10B981" />
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Grant & FX Rates</AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1}>Currency converter</AppText>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                      Grant & FX Rates
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                      Rate converter
+                    </AppText>
                   </View>
                 </SolidCard>
               </Pressable>
@@ -324,13 +367,27 @@ export default function StaffDashboard() {
               onPress={() => router.push('/(staff)/announcements')}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
-              <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="megaphone" size={18} color={colors.brandPrimary} />
+              <SolidCard
+                radius={16}
+                style={{
+                  padding: isDesktop ? 12 : 10,
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  alignItems: isDesktop ? 'center' : 'flex-start',
+                  gap: isDesktop ? 10 : 8,
+                  minHeight: isDesktop ? undefined : 78,
+                  justifyContent: 'center',
+                }}
+              >
+                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Ionicons name="megaphone" size={16} color={colors.brandPrimary} />
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Broadcast</AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>Post notices</AppText>
+                <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    Broadcast
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    Post notices
+                  </AppText>
                 </View>
               </SolidCard>
             </Pressable>
@@ -339,13 +396,25 @@ export default function StaffDashboard() {
               onPress={() => router.push('/(staff)/moderation')}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
-              <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F1A' : '#FEF2F2', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="shield-checkmark" size={18} color="#EF4444" />
+              <SolidCard
+                radius={16}
+                style={{
+                  padding: isDesktop ? 12 : 10,
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  alignItems: isDesktop ? 'center' : 'flex-start',
+                  gap: isDesktop ? 10 : 8,
+                  minHeight: isDesktop ? undefined : 78,
+                  justifyContent: 'center',
+                }}
+              >
+                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#2E1F1A' : '#FEF2F2', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Ionicons name="shield-checkmark" size={16} color="#EF4444" />
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Moderation</AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    Moderation
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                     {openReportsCount > 0 ? `${openReportsCount} flags` : 'Queue clear'}
                   </AppText>
                 </View>
@@ -356,13 +425,27 @@ export default function StaffDashboard() {
               onPress={() => router.push('/(staff)/events-list' as any)}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
-              <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="calendar" size={18} color="#3B82F6" />
+              <SolidCard
+                radius={16}
+                style={{
+                  padding: isDesktop ? 12 : 10,
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  alignItems: isDesktop ? 'center' : 'flex-start',
+                  gap: isDesktop ? 10 : 8,
+                  minHeight: isDesktop ? undefined : 78,
+                  justifyContent: 'center',
+                }}
+              >
+                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Ionicons name="calendar" size={16} color="#3B82F6" />
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Faculty Events</AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>Seminars & talks</AppText>
+                <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    Faculty Events
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    Seminars & talks
+                  </AppText>
                 </View>
               </SolidCard>
             </Pressable>
@@ -371,13 +454,27 @@ export default function StaffDashboard() {
               onPress={() => router.push('/(staff)/forum')}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
-              <SolidCard radius={16} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="chatbubbles" size={18} color="#EC4899" />
+              <SolidCard
+                radius={16}
+                style={{
+                  padding: isDesktop ? 12 : 10,
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  alignItems: isDesktop ? 'center' : 'flex-start',
+                  gap: isDesktop ? 10 : 8,
+                  minHeight: isDesktop ? undefined : 78,
+                  justifyContent: 'center',
+                }}
+              >
+                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Ionicons name="chatbubbles" size={16} color="#EC4899" />
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText variant="bodySmall" weight="bold" numberOfLines={1}>Faculty Forum</AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>Academic feed</AppText>
+                <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    Faculty Forum
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    Academic feed
+                  </AppText>
                 </View>
               </SolidCard>
             </Pressable>
@@ -404,16 +501,20 @@ export default function StaffDashboard() {
 
         {/* 5. Academic Symposiums & Faculty Events */}
         <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-              <Ionicons name="calendar-outline" size={18} color="#3B82F6" style={{ flexShrink: 0 }} />
-              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+              <Ionicons name="calendar-outline" size={16} color="#3B82F6" style={{ flexShrink: 0 }} />
+              <AppText
+                weight="bold"
+                numberOfLines={1}
+                style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
+              >
                 Faculty Events
               </AppText>
             </View>
             <Pressable onPress={() => router.push('/(staff)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
-              <AppText tone="brand" variant="bodySmall" weight="bold">
-                All Events ({events?.length ?? 0}) →
+              <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
+                All ({events?.length ?? 0}) →
               </AppText>
             </Pressable>
           </View>
@@ -438,16 +539,20 @@ export default function StaffDashboard() {
 
         {/* 6. Trending Campus Inquiries & Academic Discussions */}
         <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-              <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" style={{ flexShrink: 0 }} />
-              <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+              <Ionicons name="chatbubbles-outline" size={16} color="#EC4899" style={{ flexShrink: 0 }} />
+              <AppText
+                weight="bold"
+                numberOfLines={1}
+                style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
+              >
                 Faculty Pulse
               </AppText>
             </View>
             <Pressable onPress={() => router.push('/(staff)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>
-              <AppText tone="brand" variant="bodySmall" weight="bold">
-                View Forum →
+              <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
+                Forum →
               </AppText>
             </Pressable>
           </View>
@@ -489,9 +594,13 @@ export default function StaffDashboard() {
 
         {/* 7. Official Faculty & Academic Institutional Portals */}
         <View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm, flex: 1, minWidth: 0 }}>
-            <Ionicons name="school-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
-            <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs, flex: 1, minWidth: 0 }}>
+            <Ionicons name="school-outline" size={16} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+            <AppText
+              weight="bold"
+              numberOfLines={1}
+              style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
+            >
               Official Faculty Services
             </AppText>
           </View>
@@ -502,19 +611,19 @@ export default function StaffDashboard() {
                 onPress={() => handleOpenPortal(portal.url)}
                 style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.brandPrimary} />
+                <SolidCard radius={16} style={{ padding: isDesktop ? 14 : 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name={portal.icon || 'globe-outline'} size={18} color={colors.brandPrimary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       {portal.title}
                     </AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
                       {portal.category} • Official Faculty Portal
                     </AppText>
                   </View>
-                  <Ionicons name="open-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
+                  <Ionicons name="open-outline" size={15} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                 </SolidCard>
               </Pressable>
             ))}

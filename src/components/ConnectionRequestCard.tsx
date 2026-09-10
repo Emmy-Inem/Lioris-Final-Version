@@ -30,17 +30,17 @@ export function ConnectionRequestCard({ request, onHandled }: ConnectionRequestC
  return (
  <SolidCard style={{ marginBottom: 0 }}>
   <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-   <Avatar name={request.requesterName} uri={request.requesterAvatarUrl} size={52} />
-   <View style={{ flex: 1, minWidth: 0 }}>
-    <AppText variant="h3" weight="bold" numberOfLines={1}>
-     {request.requesterName}
-    </AppText>
-    {request.requesterHeadline ? (
-     <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
-      {request.requesterHeadline}
+    <Avatar name={request.requesterName} uri={request.requesterAvatarUrl} size={46} />
+    <View style={{ flex: 1, minWidth: 0 }}>
+     <AppText weight="bold" numberOfLines={1} style={{ fontSize: 15, lineHeight: 20 }}>
+      {request.requesterName}
      </AppText>
-    ) : null}
-   </View>
+     {request.requesterHeadline ? (
+      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11.5, marginTop: 1 }}>
+       {request.requesterHeadline}
+      </AppText>
+     ) : null}
+    </View>
   </View>
   <View style={{ flexDirection: 'row', gap: spacing.sm }}>
    <View style={{ flex: 1 }}>
