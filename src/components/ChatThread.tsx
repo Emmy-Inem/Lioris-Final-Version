@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View, Alert } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,10 +8,17 @@ import { Avatar } from './Avatar';
 import { TypingIndicator } from './TypingIndicator';
 import { EmptyState } from './EmptyState';
 import { ActionSheetModal } from './ActionSheetModal';
+import { CallModal } from './CallModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
 import { listMessages, sendMessage, listConversations, markConversationAsRead } from '@/api/messaging';
+import {
+  startCallInChat,
+  isCallMessage,
+  extractCallDetails,
+  CallDetails,
+} from '@/api/calling';
 import { Message } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
@@ -57,6 +64,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState<OutgoingMessage | null>(null);
   const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
+  const [activeCall, setActiveCall] = useState<CallDetails | null>(null);
 
   const allMessages: OutgoingMessage[] = [...(data?.items ?? []), ...pending];
 
@@ -76,6 +84,22 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       }, 100);
     }
   }, [allMessages.length]);
+
+  async function handleStartCall(callType: 'voice' | 'video') {
+    haptics.medium();
+    const callerName = user?.fullName || 'Campus Peer';
+    const details = await startCallInChat(conversationId, callType, callerName);
+    queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+    setActiveCall(details);
+  }
+
+  function handleJoinCallFromMessage(content: string) {
+    haptics.medium();
+    const details = extractCallDetails(content);
+    if (details) {
+      setActiveCall(details);
+    }
+  }
 
   async function handleSend(contentToSend?: string) {
     const content = (contentToSend ?? draft).trim();
@@ -161,18 +185,13 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           </View>
         </View>
 
+        {/* Call Action Icons */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 }}>
           <Pressable
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={`Start audio call with ${partnerName}`}
-            onPress={() => {
-              haptics.light();
-              Alert.alert('Encrypted Campus Call', `Calling ${partnerName} via peer-to-peer campus audio...`, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Join Call', onPress: () => Alert.alert('Connected', `Audio call connected with ${partnerName}`) }
-              ]);
-            }}
+            onPress={() => handleStartCall('voice')}
             style={{
               width: 36,
               height: 36,
@@ -188,13 +207,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={`Start video session with ${partnerName}`}
-            onPress={() => {
-              haptics.light();
-              Alert.alert('Video Mentorship Room', `Launching high-definition video room with ${partnerName}...`, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Start Video', onPress: () => Alert.alert('Room Active', `Video session active with ${partnerName}`) }
-              ]);
-            }}
+            onPress={() => handleStartCall('video')}
             style={{
               width: 36,
               height: 36,
@@ -219,6 +232,86 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
         renderItem={({ item }) => {
           const isMe = item.senderId === 'me' || (!!user?.id && item.senderId === user.id);
+
+          // Rich Call Invitation Card
+          if (isCallMessage(item.content)) {
+            const callInfo = extractCallDetails(item.content);
+            const isVoice = callInfo?.callType === 'voice';
+            return (
+              <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start', marginVertical: 4 }}>
+                <View
+                  style={{
+                    maxWidth: '88%',
+                    width: 280,
+                    backgroundColor: isMe ? (isDark ? '#1E293B' : '#EFF6FF') : colors.surface,
+                    padding: spacing.md,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: colors.brandPrimary,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
+                    <View
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 19,
+                        backgroundColor: colors.brandPrimary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name={isVoice ? 'call' : 'videocam'} size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                        {isVoice ? 'Campus Voice Call' : 'Campus Video Room'}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>
+                        Live Encrypted WebRTC
+                      </AppText>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    onPress={() => handleJoinCallFromMessage(item.content)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      backgroundColor: '#22C55E',
+                      paddingVertical: 9,
+                      borderRadius: radius.pill,
+                    }}
+                  >
+                    <Ionicons name={isVoice ? 'call' : 'videocam'} size={16} color="#FFFFFF" />
+                    <AppText weight="bold" tone="inverse" variant="bodySmall">
+                      Join Live Call
+                    </AppText>
+                  </Pressable>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 3, marginTop: spacing.xs }}>
+                    <AppText
+                      variant="caption"
+                      style={{ fontSize: 9, color: colors.textSecondary }}
+                    >
+                      {new Date(item.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </AppText>
+                    {isMe && (
+                      <Ionicons
+                        name={item.status === 'read' ? 'checkmark-done' : 'checkmark'}
+                        size={12}
+                        color={item.status === 'read' ? '#68D391' : colors.textSecondary}
+                      />
+                    )}
+                  </View>
+                </View>
+              </View>
+            );
+          }
+
+          // Standard Text Bubble
           return (
             <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start', marginVertical: 2 }}>
               <Pressable
@@ -267,7 +360,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         ListEmptyComponent={
           <EmptyState
             title="Start your conversation"
-            description="Direct messages are protected with end-to-end campus security."
+            description="Direct messages and calls are protected with end-to-end campus security."
           />
         }
       />
@@ -372,6 +465,28 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         <Pressable
           onPress={() => {
             setAttachmentSheetOpen(false);
+            handleStartCall('voice');
+          }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+        >
+          <Ionicons name="call-outline" size={18} color={colors.brandPrimary} />
+          <AppText weight="medium">Start Campus Voice Call</AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            setAttachmentSheetOpen(false);
+            handleStartCall('video');
+          }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+        >
+          <Ionicons name="videocam-outline" size={18} color={colors.brandPrimary} />
+          <AppText weight="medium">Start Campus Video Meeting</AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            setAttachmentSheetOpen(false);
             handleSend('Shared Study Diagram: [Past Question Solution CSC301.png]');
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
@@ -402,6 +517,20 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           <AppText weight="medium">Share Campus Location / LT Hall</AppText>
         </Pressable>
       </ActionSheetModal>
+
+      {/* Live Call Modal */}
+      {activeCall && (
+        <CallModal
+          visible={!!activeCall}
+          onClose={() => setActiveCall(null)}
+          callType={activeCall.callType}
+          roomName={activeCall.roomName}
+          callUrl={activeCall.callUrl}
+          partnerName={partnerName}
+          partnerAvatar={partnerAvatar}
+          partnerDepartment={partnerDepartment}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

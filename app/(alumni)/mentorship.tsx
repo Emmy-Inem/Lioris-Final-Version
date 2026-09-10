@@ -17,6 +17,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { listMentorships, respondToMentorshipRequest } from '@/api/mentorship';
 import { createNotification } from '@/api/notifications';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
+import { CallModal } from '@/components/CallModal';
+import { getCallRoomName, getCallUrl } from '@/api/calling';
 
 const STATUS_TONE = {
   pending: 'warning',
@@ -34,6 +36,18 @@ export default function AlumniMentorshipScreen() {
     queryFn: listMentorships,
   });
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [activeCall, setActiveCall] = useState<{
+    roomName: string;
+    callUrl: string;
+    partnerName: string;
+    partnerDepartment?: string | null;
+  } | null>(null);
+
+  function handleStartMentorshipCall(studentId: string, studentName: string, department?: string | null) {
+    const roomName = getCallRoomName(`mentorship-${studentId}`);
+    const callUrl = getCallUrl(roomName, false);
+    setActiveCall({ roomName, callUrl, partnerName: studentName, partnerDepartment: department });
+  }
 
   async function respond(id: string, action: 'accept' | 'decline') {
     setSubmittingId(id);
@@ -127,7 +141,11 @@ export default function AlumniMentorshipScreen() {
                   </View>
                 ) : m.status === 'active' ? (
                   <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-
+                    <AppButton
+                      label="Video Call"
+                      variant="primary"
+                      onPress={() => handleStartMentorshipCall(m.studentId, studentName, m.studentDepartment)}
+                    />
                     <AppButton
                       label="Message"
                       variant="secondary"
@@ -140,13 +158,25 @@ export default function AlumniMentorshipScreen() {
           })}
         </View>
 
- {!isLoading && (mentorships?.length ?? 0) === 0 ? (
- <EmptyState title="No mentorship activity"description="Incoming requests from students will appear here." />
- ) : null}
- </ScrollView>
+        {!isLoading && (mentorships?.length ?? 0) === 0 ? (
+          <EmptyState title="No mentorship activity" description="Incoming requests from students will appear here." />
+        ) : null}
+      </ScrollView>
 
- </ScreenContainer>
- );
+      {/* Live Video Call Modal */}
+      {activeCall && (
+        <CallModal
+          visible={!!activeCall}
+          onClose={() => setActiveCall(null)}
+          callType="video"
+          roomName={activeCall.roomName}
+          callUrl={activeCall.callUrl}
+          partnerName={activeCall.partnerName}
+          partnerDepartment={activeCall.partnerDepartment}
+        />
+      )}
+    </ScreenContainer>
+  );
 }
 
 function StatBox({ label, value, icon }: { label: string; value: number; icon: keyof typeof Ionicons.glyphMap }) {
