@@ -14,26 +14,42 @@ import { listResources, approveResource, rejectResource } from'@/api/resources';
 import { Resource } from'@/api/types';
 import { haptics } from'@/utils/haptics';
 
-export function ApprovalsModerationTab() {
+interface ApprovalsModerationTabProps {
+ /** 'admin' (default) sees every campus and the platform-governance campus-node federation queue. 'staff' is scoped to their own campus and never sees federation approvals. */
+ scope?: 'admin' | 'staff';
+ /** Required to actually scope down when scope === 'staff'. Ignored for admin. */
+ campusCode?: string;
+}
+
+export function ApprovalsModerationTab({ scope = 'admin', campusCode }: ApprovalsModerationTabProps) {
  const { colors, spacing, radius, isDark } = useTheme();
  const queryClient = useQueryClient();
+ const isStaffScope = scope === 'staff';
  const [section, setSection] = useState<'resources' | 'credentials' | 'nodes'>('resources');
  const [actingId, setActingId] = useState<string | null>(null);
  const [previewResource, setPreviewResource] = useState<Resource | null>(null);
 
  const { data: allResources = [], isLoading: loadingResources } = useQuery({
- queryKey: ['resources', 'admin-approvals'],
- queryFn: () => listResources({ approvalStatus: 'pending' }),
+ queryKey: ['resources', 'admin-approvals', isStaffScope ? campusCode ?? 'none' : 'all'],
+ queryFn: () => listResources({ approvalStatus: 'pending', ...(isStaffScope && campusCode ? { campusCode } : {}) }),
  });
 
- const { data: verifications = [], isLoading: loadingVerifications } = useQuery({
- queryKey: ['verification-requests', 'admin-desk'],
+ const { data: verificationsRaw = [], isLoading: loadingVerifications } = useQuery({
+ queryKey: ['verification-requests', isStaffScope ? 'staff-desk' : 'admin-desk', isStaffScope ? campusCode ?? 'none' : 'all'],
  queryFn: listVerificationRequests,
  });
+
+ // listVerificationRequests has no server-side campus filter, so staff scoping is applied
+ // client-side against the claimed institution on each request.
+ const verifications = isStaffScope && campusCode
+ ? verificationsRaw.filter((v) => (v.institutionClaimed || '').toUpperCase() === campusCode.toUpperCase())
+ : verificationsRaw;
 
  const { data: waitlist = [], isLoading: loadingWaitlist } = useQuery({
  queryKey: ['waitlist', 'admin-desk'],
  queryFn: listWaitlist,
+ // Campus-node federation approval is platform-governance and admin-only; never fetched for staff.
+ enabled: !isStaffScope,
  });
 
  const pendingResources = allResources.filter((r) => r.approvalStatus === 'pending');
@@ -137,6 +153,7 @@ export function ApprovalsModerationTab() {
  </AppText>
  </Pressable>
 
+ {!isStaffScope && (
  <Pressable
  onPress={() => {
  haptics.light();
@@ -154,6 +171,7 @@ export function ApprovalsModerationTab() {
  Campus Nodes ({waitlist.length})
  </AppText>
  </Pressable>
+ )}
  </ScrollView>
 
  {/* Resource Upload Submissions Queue */}
@@ -270,8 +288,8 @@ export function ApprovalsModerationTab() {
  </View>
  ) : null}
 
- {/* Campus Node Federations */}
- {section === 'nodes' ? (
+ {/* Campus Node Federations - platform-governance, admin-only */}
+ {!isStaffScope && section === 'nodes' ? (
  <View>
  {waitlist.map((w) => (
  <SolidCard key={w.id} radius={18} frosted style={{ marginBottom: spacing.md }}>

@@ -64,14 +64,14 @@ export default function MarketplaceScreen() {
                 Campus Marketplace
               </AppText>
               <AppText tone="secondary" variant="bodySmall">
-                Buy, sell, and swap gadgets, textbooks, and hostel essentials with verified campus escrow
+                Buy, sell, and swap gadgets, textbooks, and hostel essentials with fellow verified students
               </AppText>
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Ionicons name="shield-checkmark" size={15} color={colors.brandPrimary} />
-                <AppText variant="caption" tone="secondary" weight="semiBold">Campus Escrow Protected</AppText>
+                <AppText variant="caption" tone="secondary" weight="semiBold">Meet on Campus for a Safe Exchange</AppText>
               </View>
 
               <Pressable
@@ -219,7 +219,7 @@ export default function MarketplaceScreen() {
           </Pressable>
         </View>
         <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
-          Buy & sell books, gadgets, and campus gear with escrow
+          Buy & sell books, gadgets, and campus gear - meet on campus for a safe exchange
         </AppText>
       </View>
 

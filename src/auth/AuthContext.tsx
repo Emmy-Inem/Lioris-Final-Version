@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from'react';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router';
 import * as authApi from'@/api/auth';
 import { UserRole } from'@/api/types';
 import {
@@ -17,6 +20,72 @@ import { supabase } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
 import { loadBlockedUserIds } from '@/api/connections';
 import { resetToDefaultCampusScope } from '@/hooks/useViewScope';
+import { recordAuditLogEntry } from '@/api/auditLog';
+
+// ---------------------------------------------------------------------------
+// Admin "View As / Support Mode" impersonation - session backup helpers.
+//
+// Mirrors src/auth/tokenStorage.ts's own SecureStore/web-localStorage pattern
+// exactly (same guard, same fallback rationale), but under a distinct key so
+// it can never collide with or be clobbered by the normal token lifecycle -
+// this key only ever holds the *admin's* own tokens, backed up for the
+// duration of an impersonation session so `endImpersonation` can restore them.
+// ---------------------------------------------------------------------------
+const IMPERSONATION_ADMIN_BACKUP_KEY = 'lioris_impersonation_admin_backup';
+const isWebPlatform = Platform.OS === 'web';
+
+interface ImpersonationBackup {
+ accessToken: string;
+ refreshToken: string;
+}
+
+async function setImpersonationAdminBackup(accessToken: string, refreshToken: string): Promise<void> {
+ const value = JSON.stringify({ accessToken, refreshToken });
+ if (isWebPlatform) {
+ try {
+ if (typeof localStorage !== 'undefined') localStorage.setItem(IMPERSONATION_ADMIN_BACKUP_KEY, value);
+ } catch {
+ // no-op - best effort only, matches tokenStorage.ts's web fallback
+ }
+ return;
+ }
+ await SecureStore.setItemAsync(IMPERSONATION_ADMIN_BACKUP_KEY, value);
+}
+
+async function getImpersonationAdminBackup(): Promise<ImpersonationBackup | null> {
+ const raw = isWebPlatform
+ ? (() => {
+ try {
+ return typeof localStorage !== 'undefined' ? localStorage.getItem(IMPERSONATION_ADMIN_BACKUP_KEY) : null;
+ } catch {
+ return null;
+ }
+ })()
+ : await SecureStore.getItemAsync(IMPERSONATION_ADMIN_BACKUP_KEY);
+ if (!raw) return null;
+ try {
+ return JSON.parse(raw);
+ } catch {
+ return null;
+ }
+}
+
+async function clearImpersonationAdminBackup(): Promise<void> {
+ if (isWebPlatform) {
+ try {
+ if (typeof localStorage !== 'undefined') localStorage.removeItem(IMPERSONATION_ADMIN_BACKUP_KEY);
+ } catch {
+ // no-op
+ }
+ return;
+ }
+ await SecureStore.deleteItemAsync(IMPERSONATION_ADMIN_BACKUP_KEY);
+}
+
+/** Mirrors platform-config's own `/(role)/dashboard` convention (see the Preview Workspace switcher in SettingsScreenBase.tsx) - admin has a dedicated landing screen instead of a generic dashboard route. */
+function dashboardPathForRole(role: UserRole): string {
+ return role === 'admin' ? '/(admin)/platform-config' : `/(${role})/dashboard`;
+}
 
 interface SessionUser {
  id: string;
@@ -31,6 +100,21 @@ interface SessionUser {
  /** See src/auth/mfaPolicy.ts - only meaningful when the role requires MFA. */
  mfaVerified: boolean;
 }
+
+export interface ImpersonationState {
+ active: boolean;
+ targetUserId: string | null;
+ targetName: string | null;
+ /** ISO timestamp - when the impersonation grant auto-expires. */
+ expiresAt: string | null;
+}
+
+const DEFAULT_IMPERSONATION: ImpersonationState = {
+ active: false,
+ targetUserId: null,
+ targetName: null,
+ expiresAt: null,
+};
 
 interface AuthContextValue {
  user: SessionUser | null;
@@ -54,6 +138,24 @@ interface AuthContextValue {
   * function itself can never have altered).
   */
  switchRole: (role: UserRole) => Promise<void>;
+ /** Current "View As / Support Mode" impersonation status - see beginImpersonation/endImpersonation below. */
+ impersonation: ImpersonationState;
+ /**
+  * Root-Admin-only: backs up the admin's own live session, then swaps the
+  * active Supabase session to `targetUserId` via the admin-impersonate-user
+  * Edge Function, so the admin can view the app exactly as that user for
+  * support purposes. Time-boxed (auto-ends at the grant's expiresAt) and
+  * fully audit-logged. Throws on failure without changing the live session.
+  */
+ beginImpersonation: (targetUserId: string) => Promise<void>;
+ /**
+  * Restores the backed-up admin session and ends impersonation. Designed to
+  * never throw and never leave the app half-authenticated: if the backup is
+  * missing or corrupt, or restoring it fails, this signs the user out
+  * entirely and redirects to login rather than leaving them stuck as the
+  * impersonated user.
+  */
+ endImpersonation: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -72,9 +174,39 @@ async function persist(user: SessionUser) {
  await setSessionUser(stored);
 }
 
+// Shared with beginImpersonation/endImpersonation below - resolves the
+// verified `profiles.role` for a given Supabase session the same way
+// initAuth/onAuthStateChange do above, but always resolves `role` straight
+// from the profile (no "preview role" branch) since an impersonated or
+// restored-admin session should always reflect who is *actually* signed in
+// right now, never a stale previewed role left over from before the swap.
+async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']>): Promise<SessionUser> {
+ const userEmail = session.user.email ?? '';
+ const { data: profile } = await supabase
+ .from('profiles')
+ .select('*')
+ .eq('id', session.user.id)
+ .maybeSingle();
+
+ const role = (profile?.role || 'student') as UserRole;
+ const fullName =
+ profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
+
+ return {
+ id: session.user.id,
+ fullName,
+ email: userEmail,
+ role,
+ actualRole: role,
+ onboardingComplete: true,
+ mfaVerified: !roleRequiresMfa(role),
+ };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
  const [user, setUser] = useState<SessionUser | null>(null);
  const [isLoading, setIsLoading] = useState(true);
+ const [impersonation, setImpersonation] = useState<ImpersonationState>(DEFAULT_IMPERSONATION);
 
  useEffect(() => {
  let mounted = true;
@@ -102,8 +234,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && mounted) {
           const userEmail = session.user.email ?? '';
-          const cleanEmail = userEmail.toLowerCase().trim();
-          const demoMatch = authApi.DEMO_ACCOUNTS[cleanEmail];
 
           // Securely query verified database profile for role
           const { data: profile } = await supabase
@@ -112,8 +242,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq('id', session.user.id)
             .maybeSingle();
 
-          const role = (demoMatch?.role || profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
-          const fullName = demoMatch?.fullName || profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
+          // Authorization role must come from `profiles.role` only -
+          // `user_metadata` is client-writable via supabase.auth.updateUser()
+          // and must never be trusted for authorization. Default to the
+          // lowest-privilege role when the profile lookup is missing.
+          const role = (profile?.role || 'student') as UserRole;
+          const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
           
           const storedUser = await getSessionUser();
           const activeRole =
@@ -151,8 +285,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user && mounted) {
         const userEmail = session.user.email ?? '';
-        const cleanEmail = userEmail.toLowerCase().trim();
-        const demoMatch = authApi.DEMO_ACCOUNTS[cleanEmail];
 
         // Securely query database profile for role
         const { data: profile } = await supabase
@@ -161,8 +293,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', session.user.id)
           .maybeSingle();
 
-        const role = (demoMatch?.role || profile?.role || session.user.user_metadata?.role || 'student') as UserRole;
-        const fullName = demoMatch?.fullName || profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
+        // Authorization role must come from `profiles.role` only - see the
+        // matching comment in initAuth above.
+        const role = (profile?.role || 'student') as UserRole;
+        const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
         
         const storedUser = await getSessionUser();
         const activeRole =
@@ -217,7 +351,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
         }
 
-        const isOnboarded = Boolean(prof?.department) || session.user.role === 'admin' || session.user.role === 'staff';
+        // Trust a previously-persisted onboardingComplete flag for this same
+        // user first, matching the initAuth/onAuthStateChange logic above -
+        // otherwise a user whose onboarding chain doesn't set `department`
+        // (e.g. alumni, see src/auth/onboardingSteps.ts) gets bounced back
+        // into onboarding forever after finishing it once.
+        const storedUser = await getSessionUser();
+        const previouslyOnboarded =
+          storedUser?.id === session.user.id ? storedUser.onboardingComplete : undefined;
+        const isOnboarded =
+          previouslyOnboarded ??
+          (Boolean(prof?.department) || session.user.role === 'admin' || session.user.role === 'staff');
 
         const nextUser: SessionUser = {
           ...session.user,
@@ -255,6 +399,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await authApi.logout();
         await clearTokens();
         setUser(null);
+        try {
+          queryClient.clear();
+        } catch {
+          // Non-blocking
+        }
       },
       async setOnboardingStep(path) {
         setUser((prev) => {
@@ -315,9 +464,171 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Non-blocking
         }
       },
+      impersonation,
+      async beginImpersonation(targetUserId: string) {
+        // Gated on actualRole, same rationale as switchRole above - never
+        // trust the currently-*displayed* role for a privileged action.
+        if (!user || user.actualRole !== 'admin') {
+          throw new Error('Impersonation is only available to Root Admins.');
+        }
+
+        const { data: { session: adminSession } } = await supabase.auth.getSession();
+        if (!adminSession?.access_token || !adminSession?.refresh_token) {
+          throw new Error('No active admin session found. Please sign in again.');
+        }
+
+        // Back up the admin's own session BEFORE anything below can swap it
+        // out, so endImpersonation (or the fail-safe paths further down) can
+        // always get back to a real admin session.
+        await setImpersonationAdminBackup(adminSession.access_token, adminSession.refresh_token);
+
+        let result: Awaited<ReturnType<typeof authApi.startImpersonation>>;
+        try {
+          result = await authApi.startImpersonation(targetUserId);
+        } catch (err) {
+          await clearImpersonationAdminBackup();
+          throw err;
+        }
+
+        const { targetSession, targetName, expiresAt } = result;
+        if (!targetSession?.access_token || !targetSession?.refresh_token) {
+          await clearImpersonationAdminBackup();
+          throw new Error('Impersonation session could not be established.');
+        }
+
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: targetSession.access_token,
+          refresh_token: targetSession.refresh_token,
+        });
+        if (setSessionError) {
+          await clearImpersonationAdminBackup();
+          throw new Error(setSessionError.message || 'Could not switch to the target user session.');
+        }
+
+        // Re-run the same profile-fetch logic that normally runs on auth
+        // state change, so `user`/`role` in context correctly reflect the
+        // impersonated user (never the admin's previously-previewed role).
+        const nextUser = await fetchSessionUserForSession(targetSession);
+        await persist(nextUser);
+        await setTokens(targetSession.access_token, targetSession.refresh_token);
+        setUser(nextUser);
+
+        setImpersonation({
+          active: true,
+          targetUserId,
+          targetName: targetName || nextUser.fullName,
+          expiresAt,
+        });
+
+        try {
+          queryClient.clear();
+        } catch {
+          // Non-blocking
+        }
+
+        router.replace(dashboardPathForRole(nextUser.role) as any);
+      },
+      async endImpersonation() {
+        const backup = await getImpersonationAdminBackup();
+
+        if (!backup?.accessToken || !backup?.refreshToken) {
+          // Fail-safe: backup missing or corrupt - never leave the app
+          // stuck half-authenticated as the impersonated user. Sign out
+          // entirely and send them to login with a clear state.
+          await clearImpersonationAdminBackup();
+          await clearTokens();
+          await supabase.auth.signOut().catch(() => {});
+          setUser(null);
+          setImpersonation(DEFAULT_IMPERSONATION);
+          try {
+            queryClient.clear();
+          } catch {
+            // Non-blocking
+          }
+          router.replace('/(auth)/login');
+          return;
+        }
+
+        const endedTargetId = impersonation.targetUserId;
+        const endedTargetName = impersonation.targetName;
+
+        try {
+          const { error: setSessionError } = await supabase.auth.setSession({
+            access_token: backup.accessToken,
+            refresh_token: backup.refreshToken,
+          });
+          if (setSessionError) throw setSessionError;
+
+          const { data: { session: adminSession } } = await supabase.auth.getSession();
+          if (!adminSession) throw new Error('Could not restore admin session.');
+
+          const restoredUser = await fetchSessionUserForSession(adminSession);
+          await persist(restoredUser);
+          await setTokens(adminSession.access_token, adminSession.refresh_token ?? adminSession.access_token);
+          setUser(restoredUser);
+
+          await clearImpersonationAdminBackup();
+          setImpersonation(DEFAULT_IMPERSONATION);
+
+          // The live session is now restored to the real admin, so this
+          // write is correctly attributed to them, not the impersonated
+          // user. Non-blocking - an audit-log hiccup must never trap the
+          // admin mid-restore.
+          try {
+            await recordAuditLogEntry({
+              action: 'impersonation_ended',
+              summary: `Ended impersonation of ${endedTargetName || 'a user'}.`,
+              targetType: 'user',
+              targetId: endedTargetId || restoredUser.id,
+            });
+          } catch {
+            // Non-blocking
+          }
+
+          try {
+            queryClient.clear();
+          } catch {
+            // Non-blocking
+          }
+
+          router.replace(dashboardPathForRole(restoredUser.role) as any);
+        } catch {
+          // Fail-safe: restoring the admin session failed for some reason -
+          // never leave the app silently authenticated as the impersonated
+          // user. Sign out entirely rather than guess.
+          await clearImpersonationAdminBackup();
+          await clearTokens();
+          await supabase.auth.signOut().catch(() => {});
+          setUser(null);
+          setImpersonation(DEFAULT_IMPERSONATION);
+          try {
+            queryClient.clear();
+          } catch {
+            // Non-blocking
+          }
+          router.replace('/(auth)/login');
+        }
+      },
     }),
-    [user, isLoading],
+    [user, isLoading, impersonation],
   );
+
+  // Auto-expiry: while impersonating, end the session automatically once
+  // expiresAt is reached, so a forgotten "View As" session can't run
+  // indefinitely. Cleaned up whenever impersonation state changes/unmounts.
+  useEffect(() => {
+    if (!impersonation.active || !impersonation.expiresAt) return undefined;
+    const msRemaining = new Date(impersonation.expiresAt).getTime() - Date.now();
+    if (msRemaining <= 0) {
+      value.endImpersonation().catch(() => {});
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      value.endImpersonation().catch(() => {});
+    }, msRemaining);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [impersonation.active, impersonation.expiresAt]);
 
  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

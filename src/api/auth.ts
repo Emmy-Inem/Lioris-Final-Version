@@ -2,6 +2,7 @@ import { api } from './client';
 import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
+import { submitVerificationRequest } from './verification';
 
 export interface LoginPayload {
  email: string;
@@ -138,31 +139,17 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
  return { success: true };
 }
 
-/**
- * Stable UUIDs for the offline demo fallback session.
- *
- * These have to be syntactically valid UUIDs: every table keys off
- * profiles(id) as a uuid, so the old `demo-${role}-id` placeholder made
- * Postgres reject *every* write with `invalid input syntax for type uuid`
- * - the user saw "Could not publish your post" with no way to recover.
- * They're fixed rather than random so a demo session keeps the same
- * identity (and therefore its own content) across reloads.
- */
-const DEMO_FALLBACK_IDS: Record<UserRole, string> = {
-  student: '00000000-0000-4000-8000-000000000001',
-  alumni: '00000000-0000-4000-8000-000000000002',
-  staff: '00000000-0000-4000-8000-000000000003',
-  admin: '00000000-0000-4000-8000-000000000004',
-};
-
-export const DEMO_ACCOUNTS: Record<string, { role: UserRole; fullName: string; username: string }> = {
-  'diana.prince@ui.edu.ng': { role: 'student', fullName: 'Diana Prince', username: 'diana_prince' },
-  'alumni.adeola@ui.edu.ng': { role: 'alumni', fullName: 'Adeola Adeleke', username: 'adeola_alumni' },
-  'dr.adeyemi@ui.edu.ng': { role: 'staff', fullName: 'Dr. Adeyemi Alabi', username: 'dr_adeyemi' },
-  'admin@ui.edu.ng': { role: 'admin', fullName: 'Super Admin UI', username: 'super_admin' },
-};
-
-// POST /auth/login - Real Supabase Authentication with Demo User Support & Rate Limiting
+// POST /auth/login - Real Supabase Authentication & Rate Limiting
+//
+// NOTE: This used to auto-provision a hardcoded list of "demo" accounts
+// (including an `admin@ui.edu.ng` that self-elevated to role: 'admin' on
+// first login, with an offline fallback that fabricated a fully
+// authenticated local admin session when Supabase didn't return one). That
+// was a client-bundle admin backdoor - anyone who read the shipped JS could
+// sign in as admin with any password. It has been removed entirely. Seed
+// accounts for local development should be created via a Supabase seed
+// script against your own project, never via client code that self-elevates
+// on login.
 export async function login(payload: LoginPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim().toLowerCase();
 
@@ -190,69 +177,6 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     }
   }
 
-  // If standard demo account fails to sign in, automatically register/provision it
-  if (signInError && DEMO_ACCOUNTS[cleanEmail]) {
-    const demo = DEMO_ACCOUNTS[cleanEmail];
-    try {
-      const { data: signUpData } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: payload.password,
-        options: {
-          data: {
-            full_name: demo.fullName,
-            username: demo.username,
-            role: demo.role,
-            campus_code: 'UI',
-          },
-        },
-      });
-
-      if (signUpData?.session && signUpData?.user) {
-        await supabase.from('profiles').upsert({
-          id: signUpData.user.id,
-          email: cleanEmail,
-          full_name: demo.fullName,
-          username: demo.username,
-          role: demo.role,
-          campus_code: 'UI',
-        });
-        return {
-          accessToken: signUpData.session.access_token,
-          refreshToken: signUpData.session.refresh_token,
-          user: {
-            id: signUpData.user.id,
-            fullName: demo.fullName,
-            email: cleanEmail,
-            role: demo.role,
-          },
-        };
-      }
-    } catch {
-      // Non-blocking fallback
-    }
-
-    // Demo account offline fallback session.
-    // Reaching here means Supabase auth rejected the sign-in AND the
-    // self-provisioning sign-up didn't return a session - most often
-    // because confirm_user_email() is missing, which is what
-    // supabase_migration_align.sql + supabase_schema.sql install.
-    console.warn(
-      `[Auth] Falling back to an offline demo session for ${cleanEmail}. ` +
-        'Supabase-backed reads and writes will be limited until the database ' +
-        'schema is applied (see supabase_migration_align.sql).',
-    );
-    return {
-      accessToken: `demo-token-${demo.role}-${Date.now()}`,
-      refreshToken: `demo-refresh-${demo.role}-${Date.now()}`,
-      user: {
-        id: DEMO_FALLBACK_IDS[demo.role],
-        fullName: demo.fullName,
-        email: cleanEmail,
-        role: demo.role,
-      },
-    };
-  }
-
   if (signInError || !signInData?.session || !signInData?.user) {
     await recordLoginFailure(cleanEmail);
     throw new Error('Invalid email or password. Please verify your credentials and try again.');
@@ -274,14 +198,13 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
   }
 
-  const demoMatch = DEMO_ACCOUNTS[cleanEmail];
-  const userRole = (demoMatch?.role || profile?.role || signInData.user.user_metadata?.role || 'student') as UserRole;
-  const fullName = demoMatch?.fullName || profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
-
-  // If demo role differs from profile role in DB, quietly sync the profile
-  if (demoMatch && profile && profile.role !== demoMatch.role) {
-    supabase.from('profiles').update({ role: demoMatch.role }).eq('id', signInData.user.id).then(() => {}, () => {});
-  }
+  // Authorization role must come from the server-verified `profiles` row
+  // only. `user_metadata` is writable by the client via
+  // supabase.auth.updateUser(), so it can never be trusted as a role
+  // source - defaulting to the lowest-privilege role when the profile
+  // lookup is missing keeps a spoofed metadata.role from granting access.
+  const userRole = (profile?.role || 'student') as UserRole;
+  const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
 
   return {
     accessToken: signInData.session.access_token,
@@ -409,38 +332,38 @@ export async function verifyPasswordResetOtpAndSetPassword(
  return { success: true };
 }
 
+// Real Supabase email confirmation via supabase.auth.verifyOtp - no custom
+// backend involved. Supabase issues signup OTPs as type 'signup'; some
+// project configs deliver the same code under the generic 'email' OTP type,
+// so both are attempted before giving up.
 export async function verifyEmail(code: string, email?: string): Promise<{ verified: boolean }> {
  const cleanCode = code.trim();
  if (!cleanCode) throw new Error('Verification code is required.');
- if (email) {
+ if (!email) throw new Error('No email address associated with this session. Please log in again.');
+
+ const cleanEmail = email.trim();
+
  const { data, error } = await supabase.auth.verifyOtp({
- email: email.trim(),
+ email: cleanEmail,
  token: cleanCode,
  type: 'signup',
  });
  if (!error && data?.session) {
  return { verified: true };
  }
- // Also try 'email' type
+
+ // Also try 'email' type, since some Supabase project configurations
+ // deliver the signup code under the generic email OTP type.
  const { data: emailData, error: emailError } = await supabase.auth.verifyOtp({
- email: email.trim(),
+ email: cleanEmail,
  token: cleanCode,
  type: 'email',
  });
  if (!emailError && emailData?.session) {
  return { verified: true };
  }
- if (error) {
- throw new Error(error.message || 'Invalid verification code. Please check your email.');
- }
- }
 
- try {
- const { data } = await api.post('/auth/verify-email', { code: cleanCode, email });
- return data;
- } catch (err: any) {
- throw new Error(err?.response?.data?.message || err?.message || 'Email verification failed.');
- }
+ throw new Error(error?.message || emailError?.message || 'Invalid verification code. Please check your email.');
 }
 
 export async function verifySchool(schoolId: string): Promise<{ status: string }> {
@@ -452,6 +375,23 @@ export async function verifySchool(schoolId: string): Promise<{ status: string }
         matriculation_number: schoolId.trim(),
         verification_status: 'pending',
       }).eq('id', authUser.user.id);
+
+      // Also land the request in the `verifications` table - this is the
+      // only table app/(admin)/verification-requests.tsx reads, so without
+      // this call the profile flips to "pending" but no admin ever sees a
+      // request to review.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username, campus_code')
+        .eq('id', authUser.user.id)
+        .maybeSingle();
+      await submitVerificationRequest({
+        userId: authUser.user.id,
+        applicantName: profile?.full_name || profile?.username || 'Campus Applicant',
+        documentType: 'Student ID',
+        documentReference: schoolId.trim(),
+        institutionClaimed: profile?.campus_code || 'University Campus',
+      });
     }
     return { status: 'pending' };
   } catch {
@@ -474,6 +414,22 @@ export async function verifyAlumniStatus(payload: {
         matriculation_number: payload.studentId?.trim() || null,
         verification_status: 'pending',
       }).eq('id', authUser.user.id);
+
+      // Also land the request in the `verifications` table - see the note
+      // in verifySchool() above; without this, admin's verification queue
+      // never sees alumni submissions either.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username, campus_code')
+        .eq('id', authUser.user.id)
+        .maybeSingle();
+      await submitVerificationRequest({
+        userId: authUser.user.id,
+        applicantName: profile?.full_name || profile?.username || 'Campus Applicant',
+        documentType: 'Alumni Certificate',
+        documentReference: `Graduation year: ${payload.graduationYear}${payload.studentId ? `, Student ID: ${payload.studentId.trim()}` : ''}`,
+        institutionClaimed: profile?.campus_code || 'University Campus',
+      });
     }
     return { status: 'pending' };
   } catch {
@@ -481,22 +437,33 @@ export async function verifyAlumniStatus(payload: {
   }
 }
 
-// POST /auth/mfa/verify
+// Real Supabase TOTP MFA verification via supabase.auth.mfa - no custom
+// backend involved. There is currently no enrollment UI anywhere in the app
+// (supabase.auth.mfa.enroll() is never called), so listFactors() will
+// normally come back empty and this honestly reports that MFA isn't set up
+// rather than silently trying a nonexistent custom endpoint.
 export async function verifyMfaCode(code: string): Promise<{ verified: boolean }> {
  const cleanCode = code.trim();
  if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
  throw new Error('Please enter a valid 6-digit numeric security code.');
  }
 
- // Check Supabase MFA factors if enrolled
- try {
  const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
- if (!factorsError && factors?.totp && factors.totp.length > 0) {
- const activeFactor = factors.totp[0];
+ if (factorsError) {
+ throw new Error(factorsError.message || 'Could not verify MFA status. Please try again.');
+ }
+ const activeFactor = factors?.totp?.[0];
+ if (!activeFactor) {
+ throw new Error('Two-factor authentication is not set up for this account yet.');
+ }
+
  const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
  factorId: activeFactor.id,
  });
- if (!challengeError && challenge) {
+ if (challengeError || !challenge) {
+ throw new Error(challengeError?.message || 'Could not start an MFA challenge. Please try again.');
+ }
+
  const { error: verifyError } = await supabase.auth.mfa.verify({
  factorId: activeFactor.id,
  challengeId: challenge.id,
@@ -506,28 +473,96 @@ export async function verifyMfaCode(code: string): Promise<{ verified: boolean }
  throw new Error('Invalid MFA 2FA verification code. Please check your authenticator app.');
  }
  return { verified: true };
- }
- }
- } catch (err: any) {
- if (err?.message?.includes('Invalid MFA')) throw err;
- }
-
- try {
- const { data } = await api.post('/auth/mfa/verify', { code: cleanCode });
- return data;
- } catch (err: any) {
- throw new Error(err?.response?.data?.message || err?.message || 'Invalid MFA 2FA verification code.');
- }
 }
 
-// POST /auth/mfa/resend
+// There is no custom backend to dispatch MFA codes through, and Supabase's
+// supported MFA factor here is TOTP: codes are generated locally by the
+// user's authenticator app on a rolling basis, not sent out by the server,
+// so there is nothing for a "resend" to trigger. Report that honestly
+// instead of silently calling the dead /auth/mfa/resend endpoint.
 export async function resendMfaCode(): Promise<{ sent: boolean }> {
- try {
- const { data } = await api.post('/auth/mfa/resend');
- return data;
- } catch {
- return { sent: true };
+ const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+ if (!factorsError && factors?.totp && factors.totp.length > 0) {
+ throw new Error('Authenticator codes refresh automatically in your authenticator app and cannot be resent - open the app for your current code.');
  }
+ throw new Error('Two-factor authentication is not set up for this account yet.');
+}
+
+// ---------------------------------------------------------------------------
+// TOTP MFA enrollment (Settings > Security self-service). These are additive
+// - verifyMfaCode/resendMfaCode above remain the login-challenge path. All
+// four wrap supabase.auth.mfa directly; no custom backend involved.
+// ---------------------------------------------------------------------------
+
+export interface MfaEnrollmentResult {
+ factorId: string;
+ /** Base32 TOTP secret for manual entry into Google Authenticator, Authy, etc. */
+ secret: string;
+ /** Raw SVG markup Supabase returns for a scannable QR code. Not rendered by
+ * this app today (would need an SVG-rendering dependency) - the `secret`
+ * above is the primary, always-available enrollment path. */
+ qrCodeSvg: string;
+}
+
+// POST-equivalent: supabase.auth.mfa.enroll - starts TOTP enrollment and
+// returns the secret/QR data needed to add the factor to an authenticator
+// app. The factor is "unverified" until confirmMfaEnrollment() succeeds.
+export async function enrollMfaFactor(): Promise<MfaEnrollmentResult> {
+ const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+ if (error || !data) {
+ throw new Error(error?.message || 'Could not start two-factor authentication setup. Please try again.');
+ }
+ return {
+ factorId: data.id,
+ secret: data.totp.secret,
+ qrCodeSvg: data.totp.qr_code,
+ };
+}
+
+// Confirms a freshly-enrolled TOTP factor by challenging it and verifying a
+// code from the user's authenticator app - this proves the user actually has
+// the factor working before we treat enrollment as complete. An enrolled
+// factor that is never confirmed stays "unverified" on Supabase's side and
+// is not used for login challenges.
+export async function confirmMfaEnrollment(factorId: string, code: string): Promise<{ verified: boolean }> {
+ const cleanCode = code.trim();
+ if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
+ throw new Error('Please enter a valid 6-digit numeric code from your authenticator app.');
+ }
+
+ const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId });
+ if (challengeError || !challenge) {
+ throw new Error(challengeError?.message || 'Could not start verification. Please try again.');
+ }
+
+ const { error: verifyError } = await supabase.auth.mfa.verify({
+ factorId,
+ challengeId: challenge.id,
+ code: cleanCode,
+ });
+ if (verifyError) {
+ throw new Error('Invalid code. Please check your authenticator app and try again.');
+ }
+ return { verified: true };
+}
+
+// Lists the current user's enrolled MFA factors so the UI can show
+// enrollment status (e.g. "Two-Factor Authentication is active").
+export async function listMfaFactors() {
+ const { data, error } = await supabase.auth.mfa.listFactors();
+ if (error) {
+ throw new Error(error.message || 'Could not load two-factor authentication status.');
+ }
+ return data;
+}
+
+// Removes an enrolled TOTP factor, turning 2FA back off for this account.
+export async function unenrollMfaFactor(factorId: string): Promise<{ success: boolean }> {
+ const { error } = await supabase.auth.mfa.unenroll({ factorId });
+ if (error) {
+ throw new Error(error.message || 'Could not disable two-factor authentication. Please try again.');
+ }
+ return { success: true };
 }
 
 // POST /auth/refresh - PRD Section 15.1.
@@ -542,4 +577,72 @@ export async function refresh(refreshToken: string) {
 export async function logout() {
  await supabase.auth.signOut().catch(() => {});
  await api.post('/auth/logout').catch(() => {});
+}
+
+// ---------------------------------------------------------------------------
+// Admin "View As / Support Mode" impersonation. Additive - does not touch any
+// login/register/logout flow above.
+//
+// The `admin-impersonate-user` Supabase Edge Function (deployed separately)
+// mints a one-time magiclink token for the target user server-side, after
+// verifying the caller is really an admin. This function then redeems that
+// token via supabase.auth.verifyOtp() to obtain an actual session for the
+// target user.
+//
+// Deliberately does NOT call supabase.auth.setSession() itself - the caller
+// (AuthContext.beginImpersonation) must back up the *admin's own* current
+// session first, before this function's verifyOtp() call replaces the
+// client's active Supabase session with the target user's.
+// ---------------------------------------------------------------------------
+
+export interface StartImpersonationResult {
+ /** Raw session object from supabase.auth.verifyOtp() for the target user. */
+ targetSession: NonNullable<Awaited<ReturnType<typeof supabase.auth.verifyOtp>>['data']['session']>;
+ email: string;
+ targetName?: string;
+ /** ISO timestamp - when this impersonation grant expires. */
+ expiresAt: string;
+}
+
+export async function startImpersonation(targetUserId: string): Promise<StartImpersonationResult> {
+ const cleanTargetUserId = targetUserId?.trim();
+ if (!cleanTargetUserId) {
+ throw new Error('A target user is required to start impersonation.');
+ }
+
+ const { data, error } = await supabase.functions.invoke('admin-impersonate-user', {
+ body: { targetUserId: cleanTargetUserId },
+ });
+
+ if (error) {
+ throw new Error(error.message || 'Could not start impersonation. Please try again.');
+ }
+ const payload = data as
+ | { email: string; tokenHash: string; targetUserId: string; targetName?: string; expiresAt: string }
+ | { error: string }
+ | null;
+ if (!payload || 'error' in payload) {
+ throw new Error((payload as any)?.error || 'Could not start impersonation. Please try again.');
+ }
+ const { email, tokenHash, targetName, expiresAt } = payload;
+ if (!email || !tokenHash || !expiresAt) {
+ throw new Error('Impersonation service returned an incomplete response.');
+ }
+
+ const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
+ email,
+ token: tokenHash,
+ type: 'magiclink',
+ });
+
+ if (otpError || !otpData?.session) {
+ throw new Error(otpError?.message || 'Could not establish a session for the target user.');
+ }
+
+ return {
+ targetSession: otpData.session,
+ email,
+ targetName,
+ expiresAt,
+ };
 }

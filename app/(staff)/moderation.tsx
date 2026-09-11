@@ -95,9 +95,9 @@ export default function StaffModerationScreen() {
       </View>
 
  {activeTab === 'reports' ? (
- <ModerationQueue institutionCode={profile?.institutionCode} emptyTitle="Your campus queue is clear" />
+ <ModerationQueue institutionCode={profile?.institutionCode} emptyTitle="Your campus queue is clear" role="staff" />
  ) : (
- <ApprovalsModerationTab />
+ <ApprovalsModerationTab scope="staff" campusCode={profile?.institutionCode} />
  )}
  </ScreenContainer>
  );

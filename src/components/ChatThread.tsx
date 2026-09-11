@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import { Alert, FlatList, Image, KeyboardAvoidingView, Linking, Platform, Pressable, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
 import { TypingIndicator } from './TypingIndicator';
@@ -13,6 +15,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
 import { listMessages, sendMessage, listConversations, markConversationAsRead } from '@/api/messaging';
+import { uploadMediaFile } from '@/api/storage';
 import {
   startCallInChat,
   isCallMessage,
@@ -25,6 +28,11 @@ import { haptics } from '@/utils/haptics';
 
 interface OutgoingMessage extends Message {
   failed?: boolean;
+  mediaUrl?: string;
+}
+
+function isImageUrl(url: string): boolean {
+  return /\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(url);
 }
 
 export function ChatThread({ conversationId }: { conversationId: string }) {
@@ -65,6 +73,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const [replyingTo, setReplyingTo] = useState<OutgoingMessage | null>(null);
   const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
   const [activeCall, setActiveCall] = useState<CallDetails | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   const allMessages: OutgoingMessage[] = [...(data?.items ?? []), ...pending];
 
@@ -101,7 +110,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
     }
   }
 
-  async function handleSend(contentToSend?: string) {
+  async function handleSend(contentToSend?: string, mediaUrl?: string) {
     const content = (contentToSend ?? draft).trim();
     if (!content) return;
     haptics.medium();
@@ -117,11 +126,12 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       messageType: 'text',
       status: 'sent',
       sentAt: new Date().toISOString(),
+      mediaUrl,
     };
     setPending((prev) => [...prev, optimistic]);
 
     try {
-      await sendMessage(conversationId, outgoingContent);
+      await sendMessage(conversationId, outgoingContent, mediaUrl);
       setPending((prev) => prev.filter((m) => m.id !== optimistic.id));
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
@@ -132,6 +142,69 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       setPending((prev) =>
         prev.map((m) => (m.id === optimistic.id ? { ...m, status: 'failed', failed: true } : m)),
       );
+    }
+  }
+
+  async function handlePickAndSendPhoto() {
+    setAttachmentSheetOpen(false);
+    try {
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Permission Needed', 'Allow photo library access to send a study photo.');
+          return;
+        }
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      setUploadingAttachment(true);
+      haptics.light();
+      const publicUrl = await uploadMediaFile('resources', asset.uri, 'chat_attachments');
+      const fileName = asset.fileName || 'Study Photo';
+      await handleSend(`📷 Shared a photo: ${fileName}`, publicUrl);
+    } catch (err) {
+      console.warn('[ChatThread] Photo attachment failed:', err);
+      haptics.error();
+      Alert.alert('Upload Failed', 'Could not send the photo. Please try again.');
+    } finally {
+      setUploadingAttachment(false);
+    }
+  }
+
+  async function handlePickAndSendDocument() {
+    setAttachmentSheetOpen(false);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'text/plain',
+        ],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      setUploadingAttachment(true);
+      haptics.light();
+      const publicUrl = await uploadMediaFile('resources', asset.uri, 'chat_attachments', asset.name);
+      const sizeLabel = asset.size ? ` (${(asset.size / (1024 * 1024)).toFixed(1)} MB)` : '';
+      await handleSend(`📎 Attached: ${asset.name}${sizeLabel}`, publicUrl);
+    } catch (err) {
+      console.warn('[ChatThread] Document attachment failed:', err);
+      haptics.error();
+      Alert.alert('Upload Failed', 'Could not send the document. Please try again.');
+    } finally {
+      setUploadingAttachment(false);
     }
   }
 
@@ -331,6 +404,32 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                   borderColor: colors.border,
                 }}
               >
+                {item.mediaUrl && isImageUrl(item.mediaUrl) ? (
+                  <Image
+                    source={{ uri: item.mediaUrl }}
+                    style={{ width: 200, height: 150, borderRadius: 12, marginBottom: 6, backgroundColor: colors.divider }}
+                    resizeMode="cover"
+                  />
+                ) : item.mediaUrl ? (
+                  <Pressable
+                    onPress={() => Linking.openURL(item.mediaUrl!)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : colors.background,
+                      borderRadius: 10,
+                      paddingVertical: 6,
+                      paddingHorizontal: 8,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <Ionicons name="document-text" size={16} color={isMe ? '#FFFFFF' : colors.brandPrimary} />
+                    <AppText variant="caption" tone={isMe ? 'inverse' : 'brand'} style={{ textDecorationLine: 'underline' }}>
+                      Open attachment
+                    </AppText>
+                  </Pressable>
+                ) : null}
                 <AppText
                   variant="bodySmall"
                   tone={isMe ? 'inverse' : 'primary'}
@@ -485,36 +584,21 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         </Pressable>
 
         <Pressable
-          onPress={() => {
-            setAttachmentSheetOpen(false);
-            handleSend('Shared Study Diagram: [Past Question Solution CSC301.png]');
-          }}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+          onPress={handlePickAndSendPhoto}
+          disabled={uploadingAttachment}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, opacity: uploadingAttachment ? 0.5 : 1 }}
         >
           <Ionicons name="image-outline" size={18} color={colors.brandPrimary} />
           <AppText weight="medium">Send Study Photo / Diagram</AppText>
         </Pressable>
 
         <Pressable
-          onPress={() => {
-            setAttachmentSheetOpen(false);
-            handleSend('Attached PDF: CSC301_Complete_Lecture_Slides.pdf (2.4 MB)');
-          }}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+          onPress={handlePickAndSendDocument}
+          disabled={uploadingAttachment}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, opacity: uploadingAttachment ? 0.5 : 1 }}
         >
           <Ionicons name="document-attach-outline" size={18} color={colors.brandPrimary} />
-          <AppText weight="medium">Attach Course PDF Lecture Notes</AppText>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            setAttachmentSheetOpen(false);
-            handleSend('Meet me at: Faculty of Science, Large Lecture Theatre (LT2)');
-          }}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
-        >
-          <Ionicons name="location-outline" size={18} color={colors.brandPrimary} />
-          <AppText weight="medium">Share Campus Location / LT Hall</AppText>
+          <AppText weight="medium">Attach Course PDF / Lecture Notes</AppText>
         </Pressable>
       </ActionSheetModal>
 

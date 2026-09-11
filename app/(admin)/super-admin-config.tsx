@@ -30,7 +30,6 @@ type ModalKey =
   | 'toxicityThresholds'
   | 'cloudStorage'
   | 'globalPush'
-  | 'impersonator'
   | null;
 
 export default function SuperAdminConfigScreen() {
@@ -60,6 +59,10 @@ export default function SuperAdminConfigScreen() {
   const [cloudStoragePdfMb, setCloudStoragePdfMb] = useState('25');
   const [pushTitle, setPushTitle] = useState('');
   const [pushBody, setPushBody] = useState('');
+  const [zegoAppId, setZegoAppId] = useState('');
+  const [zegoServerSecret, setZegoServerSecret] = useState('');
+  const [openAiKey, setOpenAiKey] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
 
   // Hydrate settings on mount from local storage / remote cache
   useEffect(() => {
@@ -96,6 +99,26 @@ export default function SuperAdminConfigScreen() {
         const cachedMaintenance = localStorage.getItem('lioris_setting_maintenance_mode');
         if (cachedMaintenance) {
           setMaintenanceMode(JSON.parse(cachedMaintenance) === true);
+        }
+
+        const cachedToxicity = localStorage.getItem('lioris_setting_toxicity_thresholds');
+        if (cachedToxicity) {
+          const parsed = JSON.parse(cachedToxicity);
+          if (typeof parsed.scoreLimit === 'number') setToxicityScoreLimit(parsed.scoreLimit);
+        }
+
+        const cachedWebrtc = localStorage.getItem('lioris_setting_webrtc_keys');
+        if (cachedWebrtc) {
+          const parsed = JSON.parse(cachedWebrtc);
+          if (parsed.zegoAppId) setZegoAppId(parsed.zegoAppId);
+          if (parsed.zegoServerSecret) setZegoServerSecret(parsed.zegoServerSecret);
+        }
+
+        const cachedAiKeys = localStorage.getItem('lioris_setting_ai_service_keys');
+        if (cachedAiKeys) {
+          const parsed = JSON.parse(cachedAiKeys);
+          if (parsed.openAiKey) setOpenAiKey(parsed.openAiKey);
+          if (parsed.geminiKey) setGeminiKey(parsed.geminiKey);
         }
       } catch {}
     }
@@ -299,6 +322,75 @@ export default function SuperAdminConfigScreen() {
     }
   }
 
+  async function handleSaveToxicityThresholds() {
+    setIsSaving(true);
+    try {
+      const config = { scoreLimit: toxicityScoreLimit };
+      await persistSetting('toxicity_thresholds', config, 'AI moderation toxicity sensitivity threshold');
+      await recordAuditLogEntry({
+        action: 'toxicity_thresholds_deployed',
+        summary: `Updated automated toxicity threshold to ${toxicityScoreLimit}/100`,
+        targetType: 'platform_config',
+        targetId: 'toxicity_thresholds',
+        reason: 'Super admin adjusted AI moderation sensitivity',
+      });
+      Alert.alert('Thresholds Saved', 'Toxicity scoring threshold updated in the database.');
+      setActiveModal(null);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not save toxicity thresholds.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleSaveWebrtcKeys() {
+    setIsSaving(true);
+    try {
+      const keys = {
+        zegoAppId: zegoAppId.trim(),
+        zegoServerSecret: zegoServerSecret.trim(),
+      };
+      await persistSetting('webrtc_keys', keys, 'ZegoCloud/Agora Audio/Video Call provider keys');
+      await recordAuditLogEntry({
+        action: 'platform_config_updated',
+        summary: 'Updated WebRTC/Video SDK provider credentials',
+        targetType: 'platform_config',
+        targetId: 'webrtc_keys',
+        reason: 'Video SDK provider configuration update',
+      });
+      Alert.alert('Keys Saved', 'WebRTC/Video SDK credentials updated in the database.');
+      setActiveModal(null);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not save WebRTC keys.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleSaveAiKeys() {
+    setIsSaving(true);
+    try {
+      const keys = {
+        openAiKey: openAiKey.trim(),
+        geminiKey: geminiKey.trim(),
+      };
+      await persistSetting('ai_service_keys', keys, 'OpenAI / Gemini integration keys');
+      await recordAuditLogEntry({
+        action: 'platform_config_updated',
+        summary: 'Updated AI service provider credentials',
+        targetType: 'platform_config',
+        targetId: 'ai_service_keys',
+        reason: 'AI service provider configuration update',
+      });
+      Alert.alert('Keys Saved', 'AI service credentials updated in the database.');
+      setActiveModal(null);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not save AI service keys.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   /**
    * Maintenance mode is platform-wide, so a failed write has to be
    * reported - the toggle flipping on screen is not evidence it stuck.
@@ -449,9 +541,6 @@ export default function SuperAdminConfigScreen() {
  Alert.alert('Preview As', 'Use the "Preview As" selector on the main Workdesk screen to switch the active role label.')
  }
  />
- <Row
- title="Role Impersonator"description="Support shadow-login into a real user session, time-boxed and audit-logged."actionLabel="Impersonate"tone="critical"onPress={() => setActiveModal('impersonator')}
- />
  <ToggleRow
  title="Maintenance Mode Kill Switch"description="Force offline mode & disable DB writes."value={maintenanceMode}
  onValueChange={confirmMaintenanceMode}
@@ -590,6 +679,53 @@ export default function SuperAdminConfigScreen() {
       >
         <AppText variant="bodySmall" style={{ marginBottom: spacing.sm }}>
           Endowment balance and disbursement approvals are securely managed in accordance with university senate guidelines.
+        </AppText>
+      </AdminConfigModal>
+
+      {/* 9. WebRTC / Video SDK Keys */}
+      <AdminConfigModal
+        visible={activeModal === 'webrtcKeys'}
+        onClose={() => setActiveModal(null)}
+        title="WebRTC/Video SDK Keys"
+        description="ZegoCloud/Agora Audio/Video Call provider keys."
+        onConfirm={handleSaveWebrtcKeys}
+        confirmLabel={isSaving ? 'Saving...' : 'Save Keys'}
+      >
+        <AppTextField label="Zego App ID" value={zegoAppId} onChangeText={setZegoAppId} placeholder="e.g. 1234567890" autoCapitalize="none" />
+        <AppTextField label="Zego Server Secret" value={zegoServerSecret} onChangeText={setZegoServerSecret} placeholder="Server secret" autoCapitalize="none" />
+      </AdminConfigModal>
+
+      {/* 10. AI Service Keys */}
+      <AdminConfigModal
+        visible={activeModal === 'aiKeys'}
+        onClose={() => setActiveModal(null)}
+        title="AI Service Keys"
+        description="OpenAI / Gemini integration keys."
+        onConfirm={handleSaveAiKeys}
+        confirmLabel={isSaving ? 'Saving...' : 'Save Keys'}
+      >
+        <AppTextField label="OpenAI API Key" value={openAiKey} onChangeText={setOpenAiKey} placeholder="sk-..." autoCapitalize="none" />
+        <AppTextField label="Gemini API Key" value={geminiKey} onChangeText={setGeminiKey} placeholder="AIza..." autoCapitalize="none" />
+      </AdminConfigModal>
+
+      {/* 11. Automated Toxicity Thresholds */}
+      <AdminConfigModal
+        visible={activeModal === 'toxicityThresholds'}
+        onClose={() => setActiveModal(null)}
+        title="Automated Toxicity Thresholds"
+        description="AI moderation sensitivity scoring metrics."
+        onConfirm={handleSaveToxicityThresholds}
+        confirmLabel={isSaving ? 'Saving...' : 'Save Threshold'}
+      >
+        <AppTextField
+          label="Toxicity Score Limit (0-100)"
+          value={String(toxicityScoreLimit)}
+          onChangeText={(v) => setToxicityScoreLimit(Math.max(0, Math.min(100, Number(v.replace(/[^0-9]/g, '')) || 0)))}
+          keyboardType="numeric"
+          placeholder="80"
+        />
+        <AppText tone="secondary" variant="caption" style={{ marginTop: spacing.xs }}>
+          Content scoring at or above this value is automatically flagged for review.
         </AppText>
       </AdminConfigModal>
     </ScreenContainer>

@@ -106,6 +106,13 @@ export async function publishAnnouncement(
  // the announcement itself from being reported as published, since the
  // announcement row above is what actually matters and already succeeded.
  try {
+ // Paginate through every matching profile (instead of a single capped
+ // page) so campuses with more matching users than one page don't
+ // silently lose everyone past the old hardcoded cap.
+ const pageSize = 1000;
+ let offset = 0;
+ const targetIds: string[] = [];
+ for (;;) {
  let query = supabase.from('profiles').select('id');
  if (userCampus && userCampus !== 'GLOBAL') {
  query = query.or(`campus_code.eq.${userCampus},campus_code.eq.GLOBAL`);
@@ -117,17 +124,44 @@ export async function publishAnnouncement(
  } else if (payload.audienceScope === 'staff') {
  query = query.eq('role', 'staff');
  }
- const { data: targetUsers } = await query.limit(200);
- if (targetUsers && targetUsers.length > 0) {
- const notifs = targetUsers.map((u: any) => ({
- recipient_id: u.id,
+ const { data: page, error: pageError } = await query.range(offset, offset + pageSize - 1);
+ if (pageError) {
+ console.warn('[Announcements] Target profile page fetch error:', pageError.message);
+ break;
+ }
+ if (!page || page.length === 0) break;
+ targetIds.push(...page.map((u: any) => u.id));
+ if (page.length < pageSize) break;
+ offset += pageSize;
+ }
+
+ let notifiedCount = 0;
+ if (targetIds.length > 0) {
+ const notifs = targetIds.map((id) => ({
+ recipient_id: id,
  type: 'announcement',
  title: payload.priority === 'critical' ? ` ${payload.title}` : payload.title,
  body: payload.content,
  is_read: false,
  }));
- await supabase.from('notifications').insert(notifs);
+ // Still bulk-insert (not one row at a time), just chunked so a single
+ // request doesn't try to carry every recipient across every page.
+ const insertChunkSize = 500;
+ for (let i = 0; i < notifs.length; i += insertChunkSize) {
+ const chunk = notifs.slice(i, i + insertChunkSize);
+ const { error: insertError } = await supabase.from('notifications').insert(chunk);
+ if (insertError) {
+ console.warn('[Announcements] Fan-out insert chunk error:', insertError.message);
+ } else {
+ notifiedCount += chunk.length;
  }
+ }
+ }
+ // Kept as a console.warn (this fan-out must never throw and block the
+ // already-saved announcement above), but now reports how many of the
+ // matched recipients actually got notified vs. how many were attempted,
+ // instead of only surfacing raw errors with no sense of overall impact.
+ console.warn(`[Announcements] Notification fan-out: ${notifiedCount}/${targetIds.length} recipients notified.`);
  } catch (err) {
  console.warn('[Announcements] Failed to fan out notifications:', err);
  }

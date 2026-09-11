@@ -77,6 +77,37 @@ export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
  }
 }
 
+// Best-effort lookup of the user an enforcement decision actually lands on
+// (the content/account owner), never the reporter. Mirrors the same
+// post/event/user target resolution the moderation queue UI uses, so it
+// works purely from data already on the report row - no UI wiring needed.
+async function resolveActionedUserId(target: Report): Promise<string | null> {
+ try {
+ if (target.targetType === 'user') {
+ return target.targetId && target.targetId !== 'unknown' ? target.targetId : null;
+ }
+ if (target.targetType === 'post') {
+ const { data } = await supabase.from('posts').select('author_id').eq('id', target.targetId).maybeSingle();
+ return data?.author_id ?? null;
+ }
+ if (target.targetType === 'event') {
+ const { data } = await supabase.from('events').select('creator_id').eq('id', target.targetId).maybeSingle();
+ return data?.creator_id ?? null;
+ }
+ } catch {
+ // Notifying the actioned user is best-effort - never let a lookup
+ // failure here block the moderation decision itself.
+ }
+ return null;
+}
+
+const TARGET_TYPE_LABEL: Record<Report['targetType'], string> = {
+ post: 'post',
+ message: 'message',
+ event: 'event',
+ user: 'account',
+};
+
 // PATCH /reports/{id}
 export async function resolveReport(
  id: string,
@@ -101,6 +132,43 @@ export async function resolveReport(
  ? `Thanks for the report - we took action on the ${target.targetType} you flagged.`
  : `We reviewed the ${target.targetType} you reported and didn't find a policy violation this time.`,
  });
+
+ // Fairness/transparency: also tell the person the decision actually
+ // landed on that something changed, so content disappearing or an
+ // account changing doesn't come out of nowhere. Reports stay anonymous -
+ // this never mentions the reporter, only the outcome + reason category.
+ if (action === 'resolved') {
+ const actionedUserId = await resolveActionedUserId(target);
+ if (actionedUserId && actionedUserId !== target.reporterId) {
+ const label = TARGET_TYPE_LABEL[target.targetType] ?? target.targetType;
+ createNotification({
+ recipientId: actionedUserId,
+ type: 'moderation',
+ title:
+ target.targetType === 'user'
+ ? 'Your account has been actioned by campus moderation'
+ : `Your ${label} was removed`,
+ body:
+ target.targetType === 'user'
+ ? `Campus moderation has taken action on your account for violating community guidelines (reason: ${target.reason}). Contact support if you believe this is an error.`
+ : `Your ${label} was removed for violating community guidelines (reason: ${target.reason}). If you believe this was a mistake, contact support.`,
+ });
+ }
+ }
+ }
+
+ // Fetch the full row up front - update() below only echoes back the
+ // columns it writes, and the vast majority of reports resolved through
+ // the admin queue were never created this session (so the local cache
+ // fallback below has nothing for them). Without this, both the reporter
+ // notification above and the actioned-user notification would silently
+ // operate on a fabricated "unknown" target for every real report.
+ let dbRow: any = null;
+ try {
+ const { data } = await supabase.from('moderation_queue').select('*').eq('id', id).maybeSingle();
+ dbRow = data;
+ } catch {
+ // fall back to local cache / fabricated defaults below
  }
 
  try {
@@ -127,7 +195,22 @@ export async function resolveReport(
  return updated;
  });
 
+ const fromDb: Report | null = dbRow
+ ? {
+ id: dbRow.id,
+ reporterId: dbRow.reporter_id || 'unknown',
+ targetType: (dbRow.item_type === 'comment' ? 'message' : dbRow.item_type) as Report['targetType'],
+ targetId: dbRow.item_id,
+ reason: dbRow.reason,
+ status: action,
+ assignedAdminId: dbRow.assigned_admin_id,
+ createdAt: dbRow.created_at,
+ institutionCode: dbRow.campus_code,
+ }
+ : null;
+
  const result: Report =
+ fromDb ??
  updated ?? {
  id,
  reporterId: 'unknown',

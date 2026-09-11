@@ -1,5 +1,6 @@
 import React, { useState } from'react';
 import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { ScreenContainer } from'@/components/ScreenContainer';
 import { AppHeader } from'@/components/AppHeader';
@@ -17,8 +18,11 @@ import { EmptyState } from'@/components/EmptyState';
 import { ShimmerCardList } from'@/components/ShimmerSkeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { recordAuditLogEntry } from '@/api/auditLog';
+import { recordAuditLogEntry, listAuditLogEntries } from '@/api/auditLog';
+import { grantVerification } from '@/api/profile';
+import { AuditLogEntry } from '@/api/types';
 import { haptics } from '@/utils/haptics';
+import { useAuth } from '@/auth/AuthContext';
 
 interface DirectoryUser {
  id: string;
@@ -41,6 +45,8 @@ const CAMPUS_FILTERS = ['All Campuses', 'UI', 'UNILAG', 'OAU', 'FUNAAB'];
 export default function UserDirectoryScreen() {
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
+ const { beginImpersonation } = useAuth();
+ const [isImpersonating, setIsImpersonating] = useState(false);
  const [query, setQuery] = useState('');
  const [role, setRole] = useState('All Roles');
  const [campus, setCampus] = useState('All Campuses');
@@ -83,6 +89,31 @@ export default function UserDirectoryScreen() {
  // Selected User Actions & Details Drawer
  const [selectedUser, setSelectedUser] = useState<DirectoryUser | null>(null);
  const [detailModalUser, setDetailModalUser] = useState<DirectoryUser | null>(null);
+ const [userAuditEntries, setUserAuditEntries] = useState<AuditLogEntry[]>([]);
+ const [userAuditLoading, setUserAuditLoading] = useState(false);
+
+ React.useEffect(() => {
+ if (!detailModalUser) {
+ setUserAuditEntries([]);
+ return;
+ }
+ let cancelled = false;
+ setUserAuditLoading(true);
+ listAuditLogEntries({ involvingUserId: detailModalUser.id })
+ .then((entries) => {
+ if (!cancelled) setUserAuditEntries(entries.slice(0, 5));
+ })
+ .catch((err) => {
+ console.warn('[UserDirectory] Audit trail load error:', err);
+ if (!cancelled) setUserAuditEntries([]);
+ })
+ .finally(() => {
+ if (!cancelled) setUserAuditLoading(false);
+ });
+ return () => {
+ cancelled = true;
+ };
+ }, [detailModalUser]);
 
  // Create User Modal State
  const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -212,12 +243,10 @@ export default function UserDirectoryScreen() {
  }
  }
 
- async function handleToggleSuspend(target: DirectoryUser) {
- haptics.medium();
- const nextSuspended = !target.suspended;
- setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, suspended: nextSuspended } : u)));
-
- try {
+ // Core suspend/restore mutation - shared between the single-item toggle
+ // below and the bulk suspend flow, so both go through Supabase the same
+ // way (RPC first, direct column update as a fallback).
+ async function setSuspendedCore(target: DirectoryUser, nextSuspended: boolean) {
  const { supabase } = await import('@/api/supabase');
  if (nextSuspended) {
  const { error } = await supabase.rpc('suspend_user_account', {
@@ -225,11 +254,32 @@ export default function UserDirectoryScreen() {
  p_reason: 'Administrative security suspension from User Directory',
  });
  if (error) {
- await supabase.from('profiles').update({ is_suspended: true }).eq('id', target.id);
+ const { error: fallbackError } = await supabase.from('profiles').update({ is_suspended: true }).eq('id', target.id);
+ if (fallbackError) throw fallbackError;
  }
  } else {
- await supabase.from('profiles').update({ is_suspended: false }).eq('id', target.id);
+ const { error } = await supabase.from('profiles').update({ is_suspended: false }).eq('id', target.id);
+ if (error) throw error;
  }
+ }
+
+ // Core verify mutation - there was no existing single-item "verify" action
+ // in this screen (only suspend/role-change/wipe), so this is the shared
+ // primitive both the new single-item and bulk verify actions call.
+ async function verifyUserCore(target: DirectoryUser) {
+ const { supabase } = await import('@/api/supabase');
+ const { error } = await supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', target.id);
+ if (error) throw error;
+ grantVerification(target.id);
+ }
+
+ async function handleToggleSuspend(target: DirectoryUser) {
+ haptics.medium();
+ const nextSuspended = !target.suspended;
+ setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, suspended: nextSuspended } : u)));
+
+ try {
+ await setSuspendedCore(target, nextSuspended);
  } catch (err) {
  console.warn('[UserDirectory] Supabase suspend error:', err);
  }
@@ -250,7 +300,158 @@ export default function UserDirectoryScreen() {
  );
  }
 
- async function handleMutateRole(target: DirectoryUser, targetRole: DirectoryUser['role']) {
+ async function handleVerifyUser(target: DirectoryUser) {
+ haptics.medium();
+ setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, isVerified: true } : u)));
+
+ try {
+ await verifyUserCore(target);
+ } catch (err) {
+ console.warn('[UserDirectory] Supabase verify error:', err);
+ }
+
+ recordAuditLogEntry({
+ action: 'verification_approved',
+ summary: `Granted verified badge to @${target.username} (${target.fullName}) from User Directory`,
+ targetType: 'user',
+ targetId: target.id,
+ institutionCode: target.campus,
+ reason: 'Administrative verification grant',
+ });
+
+ setSelectedUser(null);
+ Alert.alert('User Verified', `${target.fullName}'s verified badge has been activated.`);
+ }
+
+ // Bulk selection state - lets an admin suspend or verify many directory
+ // users at once instead of one at a time. Role changes and permanent
+ // deletion are deliberately NOT bulk-enabled here - those stay single-item
+ // with their existing confirmation friction since they're higher risk
+ // (account termination, admin-role grants).
+ const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+ const [bulkProcessing, setBulkProcessing] = useState(false);
+
+ function toggleUserSelected(id: string) {
+ haptics.light();
+ setSelectedUserIds((prev) => {
+ const next = new Set(prev);
+ if (next.has(id)) next.delete(id);
+ else next.add(id);
+ return next;
+ });
+ }
+
+ function clearUserSelection() {
+ setSelectedUserIds(new Set());
+ }
+
+ function getSelectedUsers(): DirectoryUser[] {
+ return users.filter((u) => selectedUserIds.has(u.id));
+ }
+
+ async function handleBulkSuspend() {
+ // Only acts on currently-unsuspended selected users - re-suspending an
+ // already-suspended account is a no-op that would just muddy the count.
+ const targets = getSelectedUsers().filter((u) => !u.suspended);
+ if (targets.length === 0 || bulkProcessing) {
+ if (targets.length === 0) Alert.alert('Nothing to Suspend', 'All selected users are already suspended.');
+ return;
+ }
+ haptics.medium();
+ setBulkProcessing(true);
+
+ let succeeded = 0;
+ let failed = 0;
+ for (const target of targets) {
+ try {
+ await setSuspendedCore(target, true);
+ setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, suspended: true } : u)));
+ recordAuditLogEntry({
+ action: 'user_suspended',
+ summary: `Suspended user account @${target.username} (${target.fullName}) via bulk action`,
+ targetType: 'user',
+ targetId: target.id,
+ institutionCode: target.campus,
+ reason: 'Policy enforcement suspension (bulk)',
+ });
+ succeeded += 1;
+ } catch (err) {
+ console.warn('[UserDirectory] Bulk suspend error for', target.id, err);
+ failed += 1;
+ }
+ }
+
+ setBulkProcessing(false);
+ clearUserSelection();
+ if (failed > 0) haptics.error();
+ else haptics.success();
+
+ Alert.alert(
+ 'Bulk Suspend Complete',
+ failed > 0 ? `${succeeded} suspended, ${failed} failed. Retry the failed ones individually.` : `${succeeded} user${succeeded === 1 ? '' : 's'} suspended.`,
+ );
+ }
+
+ async function handleBulkVerify() {
+ const targets = getSelectedUsers().filter((u) => !u.isVerified);
+ if (targets.length === 0 || bulkProcessing) {
+ if (targets.length === 0) Alert.alert('Nothing to Verify', 'All selected users are already verified.');
+ return;
+ }
+ haptics.medium();
+ setBulkProcessing(true);
+
+ let succeeded = 0;
+ let failed = 0;
+ for (const target of targets) {
+ try {
+ await verifyUserCore(target);
+ setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, isVerified: true } : u)));
+ recordAuditLogEntry({
+ action: 'verification_approved',
+ summary: `Granted verified badge to @${target.username} (${target.fullName}) via bulk action`,
+ targetType: 'user',
+ targetId: target.id,
+ institutionCode: target.campus,
+ reason: 'Administrative verification grant (bulk)',
+ });
+ succeeded += 1;
+ } catch (err) {
+ console.warn('[UserDirectory] Bulk verify error for', target.id, err);
+ failed += 1;
+ }
+ }
+
+ setBulkProcessing(false);
+ clearUserSelection();
+ if (failed > 0) haptics.error();
+ else haptics.success();
+
+ Alert.alert(
+ 'Bulk Verify Complete',
+ failed > 0 ? `${succeeded} verified, ${failed} failed. Retry the failed ones individually.` : `${succeeded} user${succeeded === 1 ? '' : 's'} verified.`,
+ );
+ }
+
+ function handleMutateRole(target: DirectoryUser, targetRole: DirectoryUser['role']) {
+ const isGrantingAdmin = targetRole === 'Admin';
+ Alert.alert(
+ isGrantingAdmin ? 'Grant FULL Admin Access?' : `Change Role to ${targetRole}?`,
+ isGrantingAdmin
+ ? `Grant FULL ADMIN access to ${target.fullName}? This gives them complete platform control, including the ability to modify other users, moderate content, and change platform-wide settings.`
+ : `Change ${target.fullName}'s role from ${target.role} to ${targetRole}? This immediately changes their permissions on the platform.`,
+ [
+ { text: 'Cancel', style: 'cancel' },
+ {
+ text: isGrantingAdmin ? 'Grant Admin Access' : 'Confirm Change',
+ style: isGrantingAdmin ? 'destructive' : 'default',
+ onPress: () => performRoleMutation(target, targetRole),
+ },
+ ],
+ );
+ }
+
+ async function performRoleMutation(target: DirectoryUser, targetRole: DirectoryUser['role']) {
  haptics.medium();
  setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, role: targetRole } : u)));
 
@@ -274,34 +475,91 @@ export default function UserDirectoryScreen() {
  Alert.alert('Role Mutated', `${target.fullName} is now assigned the ${targetRole} role.`);
  }
 
- async function handleWipeAccount(target: DirectoryUser) {
- haptics.error();
+ function handleImpersonate(target: DirectoryUser) {
+ haptics.medium();
  Alert.alert(
- 'Wipe Account Permanently?',
- `Are you sure you want to permanently delete all profile data for ${target.fullName}? This cannot be undone.`,
+ 'View As (Support Mode)?',
+ `This will temporarily switch your session to view the app as ${target.fullName} (@${target.username}) for support purposes.\n\n` +
+ `You will see exactly what they see, including their private data. This is time-boxed and automatically ends in 15 minutes, ` +
+ `and is fully audit-logged - both starting and ending this session are recorded against your admin account.`,
  [
  { text: 'Cancel', style: 'cancel' },
  {
- text: 'Wipe & Revoke',
+ text: 'View As User',
+ style: 'destructive',
+ onPress: () => confirmImpersonate(target),
+ },
+ ],
+ );
+ }
+
+ async function confirmImpersonate(target: DirectoryUser) {
+ if (isImpersonating) return;
+ setIsImpersonating(true);
+ try {
+ setSelectedUser(null);
+ await beginImpersonation(target.id);
+ } catch (err: any) {
+ console.warn('[UserDirectory] beginImpersonation error:', err);
+ Alert.alert('Could Not Start Support Mode', err?.message || 'Unable to start impersonation. Please try again.');
+ } finally {
+ setIsImpersonating(false);
+ }
+ }
+
+ async function handleWipeAccount(target: DirectoryUser) {
+ haptics.error();
+ Alert.alert(
+ 'Permanently Delete Account?',
+ `This will PERMANENTLY delete ${target.fullName}'s (@${target.username}) login credentials and all profile data (name, matric record, department, trust score, etc.).\n\n` +
+ `${target.fullName} will be immediately signed out and will NO LONGER be able to log in - this action cannot be undone and cannot be reversed by re-provisioning a profile.\n\n` +
+ `To confirm you understand this is irreversible, tap "Delete Forever" below.`,
+ [
+ { text: 'Cancel', style: 'cancel' },
+ {
+ text: 'Delete Forever',
+ style: 'destructive',
+ onPress: () => confirmWipeAccount(target),
+ },
+ ],
+ );
+ }
+
+ async function confirmWipeAccount(target: DirectoryUser) {
+ // Second confirmation step for a fully irreversible action: the admin
+ // must explicitly re-confirm the target's identity before we proceed.
+ Alert.alert(
+ 'Final Confirmation',
+ `Type-check: you are about to permanently erase ${target.fullName} (${target.email}).\n\nThis cannot be undone. Proceed?`,
+ [
+ { text: 'Cancel', style: 'cancel' },
+ {
+ text: 'Permanently Delete',
  style: 'destructive',
  onPress: async () => {
- setUsers((prev) => prev.filter((u) => u.id !== target.id));
  try {
  const { supabase } = await import('@/api/supabase');
- await supabase.from('profiles').delete().eq('id', target.id);
- } catch (err) {
- console.warn('[UserDirectory] Supabase wipe error:', err);
- }
- recordAuditLogEntry({
- action: 'user_account_deleted',
- summary: `Wiped all account profile data and sessions for ${target.fullName} (@${target.username})`,
- targetType: 'user',
- targetId: target.id,
- institutionCode: target.campus,
- reason: 'GDPR / Right to be forgotten wipe request',
+ const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+ body: { targetUserId: target.id },
  });
+
+ if (error || (data && data.error)) {
+ const message = (data && data.error) || error?.message || 'Unknown error';
+ console.warn('[UserDirectory] admin-delete-user error:', message);
+ Alert.alert('Deletion Failed', `Could not fully delete ${target.fullName}'s account: ${message}`);
+ return;
+ }
+
+ setUsers((prev) => prev.filter((u) => u.id !== target.id));
  setSelectedUser(null);
- Alert.alert('Account Wiped ', `${target.fullName}'s profile was deleted from campus nodes.`);
+ Alert.alert(
+ 'Account Permanently Deleted',
+ `${target.fullName}'s login credentials and profile data have been permanently removed.`,
+ );
+ } catch (err: any) {
+ console.warn('[UserDirectory] admin-delete-user invoke error:', err);
+ Alert.alert('Deletion Failed', `Could not reach the deletion service: ${err?.message || 'Unknown error'}`);
+ }
  },
  },
  ],
@@ -328,6 +586,26 @@ export default function UserDirectoryScreen() {
           />
         </View>
       </View>
+
+      {/* Bulk Action Bar - only appears once the admin has checked at least one user */}
+      {selectedUserIds.size > 0 && (
+        <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: colors.pastelPrimaryBg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <View style={{ flex: 1, minWidth: 120 }}>
+              <AppText weight="bold" variant="bodySmall">{selectedUserIds.size} selected</AppText>
+            </View>
+            <View style={{ flexShrink: 0 }}>
+              <AppButton label="Clear" variant="ghost" size="sm" onPress={clearUserSelection} disabled={bulkProcessing} />
+            </View>
+            <View style={{ flexShrink: 0, minWidth: 130 }}>
+              <AppButton label="Bulk Suspend" variant="secondary" size="sm" loading={bulkProcessing} onPress={handleBulkSuspend} />
+            </View>
+            <View style={{ flexShrink: 0, minWidth: 120 }}>
+              <AppButton label="Bulk Verify" size="sm" loading={bulkProcessing} onPress={handleBulkVerify} />
+            </View>
+          </View>
+        </SolidCard>
+      )}
 
       {loading && users.length === 0 ? (
         <ShimmerCardList count={isDesktop ? 6 : 4} />
@@ -426,6 +704,20 @@ export default function UserDirectoryScreen() {
                   <SolidCard radius={18} style={{ borderWidth: 1, borderColor: item.suspended ? `${colors.critical}50` : colors.border }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Pressable
+                        onPress={() => toggleUserSelected(item.id)}
+                        hitSlop={8}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selectedUserIds.has(item.id) }}
+                        accessibilityLabel={`Select ${item.fullName}`}
+                        style={{ flexShrink: 0, marginRight: spacing.xs }}
+                      >
+                        <Ionicons
+                          name={selectedUserIds.has(item.id) ? 'checkbox' : 'square-outline'}
+                          size={20}
+                          color={selectedUserIds.has(item.id) ? colors.brandPrimary : colors.textSecondary}
+                        />
+                      </Pressable>
+                      <Pressable
                         onPress={() => setDetailModalUser(item)}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
                       >
@@ -496,6 +788,20 @@ export default function UserDirectoryScreen() {
             renderItem={({ item }) => (
               <SolidCard radius={18} style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: item.suspended ? `${colors.critical}50` : colors.border }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Pressable
+                    onPress={() => toggleUserSelected(item.id)}
+                    hitSlop={8}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selectedUserIds.has(item.id) }}
+                    accessibilityLabel={`Select ${item.fullName}`}
+                    style={{ flexShrink: 0, marginRight: spacing.xs }}
+                  >
+                    <Ionicons
+                      name={selectedUserIds.has(item.id) ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={selectedUserIds.has(item.id) ? colors.brandPrimary : colors.textSecondary}
+                    />
+                  </Pressable>
                   <Pressable
                     onPress={() => setDetailModalUser(item)}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
@@ -604,12 +910,32 @@ export default function UserDirectoryScreen() {
               </AppText>
             </Pressable>
 
+            {!selectedUser.isVerified && (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+                onPress={() => handleVerifyUser(selectedUser)}
+              >
+                <Ionicons name="shield-checkmark-outline" size={18} color={colors.brandPrimary} />
+                <AppText tone="brand" weight="bold">Grant Verified Badge</AppText>
+              </Pressable>
+            )}
+
+            {selectedUser.role !== 'Admin' && (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+                onPress={() => handleImpersonate(selectedUser)}
+              >
+                <Ionicons name="eye-outline" size={18} color={colors.brandPrimary} />
+                <AppText tone="brand" weight="bold">View As (Support Mode)</AppText>
+              </Pressable>
+            )}
+
             <Pressable
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
               onPress={() => handleWipeAccount(selectedUser)}
             >
               <Ionicons name="trash-outline" size={18} color={colors.critical} />
-              <AppText tone="critical">Wipe All Account Records & Sessions</AppText>
+              <AppText tone="critical">Wipe Profile Data (login account not deleted)</AppText>
             </Pressable>
           </View>
         )}
@@ -663,6 +989,40 @@ export default function UserDirectoryScreen() {
  <AppText tone="secondary"variant="caption">Joined Date</AppText>
  <AppText weight="bold"variant="caption">{detailModalUser.joinedDate}</AppText>
  </View>
+ </View>
+
+ <View style={{ marginBottom: spacing.md }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+ <AppText variant="bodySmall" weight="bold">Recent Activity & Audit Trail</AppText>
+ <Pressable onPress={() => { setDetailModalUser(null); router.push('/(admin)/audit-logs'); }}>
+ <AppText variant="caption" tone="brand" weight="bold">View Full Log</AppText>
+ </Pressable>
+ </View>
+ {userAuditLoading ? (
+ <AppText tone="secondary" variant="caption">Loading activity...</AppText>
+ ) : userAuditEntries.length === 0 ? (
+ <AppText tone="secondary" variant="caption">No audit log entries involving this user yet.</AppText>
+ ) : (
+ <View style={{ gap: spacing.xs }}>
+ {userAuditEntries.map((entry) => (
+ <View
+ key={entry.id}
+ style={{
+ backgroundColor: colors.pastelPrimaryBg,
+ padding: spacing.sm,
+ borderRadius: 12,
+ }}
+ >
+ <AppText variant="caption" weight="bold" numberOfLines={2}>
+ {entry.summary}
+ </AppText>
+ <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 2 }}>
+ {entry.actorName} • {new Date(entry.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+ </AppText>
+ </View>
+ ))}
+ </View>
+ )}
  </View>
 
  <AppButton label="Close Record"onPress={() => setDetailModalUser(null)} fullWidth />

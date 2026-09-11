@@ -14,6 +14,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { listReports, resolveReport } from '@/api/moderation';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { deletePost } from '@/api/posts';
+import { purgeEvent } from '@/api/events';
 import { Report } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 
@@ -29,19 +30,25 @@ const TARGET_FILTERS = ['All Flags', 'Posts', 'Messages', 'Events', 'Users'];
 interface ModerationQueueProps {
  institutionCode?: string;
  emptyTitle?: string;
+ /** Admin gets full punitive power (shadowban/permaban); staff is restricted to lesser actions. Defaults to 'admin' for existing unscoped call sites. */
+ role?: 'admin' | 'staff';
 }
 
-export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear' }: ModerationQueueProps) {
+type PunishmentType = 'warn' | 'takedown' | 'mute' | 'escalate' | 'shadowban' | 'permaban';
+
+export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear', role = 'admin' }: ModerationQueueProps) {
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
  const queryClient = useQueryClient();
  const [submittingId, setSubmittingId] = useState<string | null>(null);
  const [filterType, setFilterType] = useState('All Flags');
+ const canPermaban = role === 'admin';
 
  // Takedown & Action Modal State
  const [actionModalReport, setActionModalReport] = useState<Report | null>(null);
- const [punishmentType, setPunishmentType] = useState<'warn' | 'takedown' | 'shadowban' | 'permaban'>('takedown');
+ const [punishmentType, setPunishmentType] = useState<PunishmentType>('takedown');
  const [adminModNote, setAdminModNote] = useState('');
+ const [applyingPenalty, setApplyingPenalty] = useState(false);
 
  const { data: reports, isLoading } = useQuery({
  queryKey: ['reports', 'open', institutionCode ?? 'all'],
@@ -78,6 +85,12 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
 
  async function handleConfirmTakedown() {
  if (!actionModalReport) return;
+ // Defense in depth: staff must never be able to trigger permaban/shadowban even if
+ // punishmentType somehow held a stale privileged value (the UI already hides these options).
+ if (!canPermaban && (punishmentType === 'permaban' || punishmentType === 'shadowban')) {
+ Alert.alert('Not Permitted', 'Account suspension is an admin-only action. Please escalate this report instead.');
+ return;
+ }
  haptics.medium();
  const report = actionModalReport;
     let actionLabel = 'Content removed and warning issued';
@@ -86,6 +99,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
       targetUserId = report.targetId;
     }
 
+    setApplyingPenalty(true);
     try {
       const { supabase } = await import('@/api/supabase');
 
@@ -106,15 +120,41 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
       }
 
-      // If user ban/suspension or reported user target, enforce is_suspended on target user profile via RPC
-      if (punishmentType === 'permaban' || punishmentType === 'shadowban' || report.targetType === 'user') {
+      // Execute targeted removal if event, and identify the event's organizer as the violator.
+      if (report.targetType === 'event' && report.targetId) {
+        try {
+          const { data: eventRow } = await supabase.from('events').select('creator_id').eq('id', report.targetId).maybeSingle();
+          if (eventRow?.creator_id) {
+            targetUserId = eventRow.creator_id;
+          }
+        } catch {
+          // ignore
+        }
+
+        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+          await purgeEvent(report.targetId);
+          actionLabel = 'Event purged from campus calendar';
+        }
+      }
+
+      // If user ban/suspension or reported user target, enforce is_suspended on target user profile via RPC.
+      // Only reachable for admins (staff is blocked above and the UI never offers these options to staff).
+      if (canPermaban && (punishmentType === 'permaban' || punishmentType === 'shadowban' || report.targetType === 'user')) {
         if (targetUserId && targetUserId !== 'unknown') {
           await supabase.rpc('suspend_user_account', {
             p_target_user_id: targetUserId,
             p_reason: adminModNote.trim() || `Punishment for report: ${report.reason}`,
           });
         }
-      }await resolveReport(report.id, 'resolved');
+      }
+
+      if (punishmentType === 'mute') {
+        actionLabel = 'Content flagged and author temporarily muted for 24 hours';
+      } else if (punishmentType === 'escalate') {
+        actionLabel = 'Report escalated to admin for further review (no action taken by staff)';
+      }
+
+      await resolveReport(report.id, 'resolved');
 
       recordAuditLogEntry({
  action: 'report_resolved',
@@ -130,7 +170,12 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  setActionModalReport(null);
  setAdminModNote('');
  Alert.alert('Moderation Action Applied', `${actionLabel}. Decision logged to the public campus audit ledger.`);
- } catch {}
+ } catch (err) {
+ console.warn('[ModerationQueue] Failed to apply enforcement action:', err);
+ Alert.alert('Action Failed', 'We could not apply this moderation action. Please check your connection and try again.');
+ } finally {
+ setApplyingPenalty(false);
+ }
  }
 
   return (
@@ -283,12 +328,20 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  Select disciplinary penalty for report on {actionModalReport?.targetType}:
  </AppText>
 
- {[
+ {(canPermaban
+ ? [
  { id: 'warn'as const, title: 'Official Warning', desc: 'Issue formal warning to user without deleting content.' },
  { id: 'takedown'as const, title: 'Purge & Take Down Content', desc: 'Immediately remove content and issue community strike.' },
  { id: 'shadowban'as const, title: '7-Day Account Shadowban', desc: 'Purge content and suppress author visibility for 7 days.' },
  { id: 'permaban'as const, title: 'Permanent Account Termination', desc: 'Wipe user account and blacklist university email domain.' },
- ].map((p) => {
+ ]
+ : [
+ { id: 'warn'as const, title: 'Official Warning', desc: 'Issue formal warning to user without deleting content.' },
+ { id: 'takedown'as const, title: 'Purge & Take Down Content', desc: 'Immediately remove content and issue community strike.' },
+ { id: 'mute'as const, title: 'Temporary 24-Hour Mute', desc: 'Restrict author from posting for 24 hours. No account suspension.' },
+ { id: 'escalate'as const, title: 'Escalate to Admin', desc: 'Flag this report for an administrator to apply account-level enforcement.' },
+ ]
+ ).map((p) => {
  const isSelected = punishmentType === p.id;
  return (
  <Pressable
@@ -323,10 +376,10 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
 
  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
  <View style={{ flex: 1 }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setActionModalReport(null)} fullWidth />
+ <AppButton label="Cancel"variant="ghost"onPress={() => setActionModalReport(null)} disabled={applyingPenalty} fullWidth />
  </View>
  <View style={{ flex: 2 }}>
- <AppButton label="Apply Penalty & Log Audit"onPress={handleConfirmTakedown} fullWidth />
+ <AppButton label="Apply Penalty & Log Audit"onPress={handleConfirmTakedown} loading={applyingPenalty} fullWidth />
  </View>
  </View>
  </View>

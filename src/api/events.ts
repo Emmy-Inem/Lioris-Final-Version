@@ -9,6 +9,17 @@ import { getInstitutionForEmail } from './institutions';
 
 let locallyCreatedEvents: CampusEvent[] = [];
 
+// Maps the DB's event_status_type enum ('upcoming' | 'ongoing' | 'completed' |
+// 'cancelled' | 'pending_approval') onto the app-facing approvalStatus. Every
+// real status value must land somewhere sane - only 'pending_approval' is
+// pending and only 'cancelled'/'rejected' is rejected; everything else
+// (upcoming/ongoing/completed, and any future status) is a published event.
+function mapApprovalStatus(status: string | null | undefined): 'pending' | 'approved' | 'rejected' {
+ if (status === 'pending_approval') return 'pending';
+ if (status === 'cancelled' || status === 'rejected') return 'rejected';
+ return 'approved';
+}
+
 export interface EventsQuery {
  scope?: 'student' | 'alumni' | 'global';
  category?: string;
@@ -121,10 +132,15 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
           capacity: row.capacity,
           rsvpCount: row.registered_count || 0,
           isRsvpd,
-          approvalStatus: row.status === 'cancelled' ? 'rejected' : 'approved',
+          approvalStatus: mapApprovalStatus(row.status),
           visibilityScope: (row.visibility_scope as any) || 'global',
           campusCode: row.campus_code || 'GLOBAL',
           coverImageUrl: row.banner_url,
+          venueType: row.venue_type || 'physical',
+          virtualLink: row.virtual_link ?? null,
+          isSpotlight: !!row.is_spotlight,
+          ticketPrice: row.ticket_price != null ? Number(row.ticket_price) : undefined,
+          targetCohort: row.target_cohort ?? undefined,
         };
       });
 
@@ -182,10 +198,15 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
         capacity: data.capacity,
         rsvpCount: data.registered_count || 0,
         isRsvpd,
-        approvalStatus: data.status === 'cancelled' ? 'rejected' : 'approved',
+        approvalStatus: mapApprovalStatus(data.status),
         visibilityScope: data.visibility_scope || 'global',
         campusCode: data.campus_code || 'GLOBAL',
         coverImageUrl: data.banner_url,
+        venueType: data.venue_type || 'physical',
+        virtualLink: data.virtual_link ?? null,
+        isSpotlight: !!data.is_spotlight,
+        ticketPrice: data.ticket_price != null ? Number(data.ticket_price) : undefined,
+        targetCohort: data.target_cohort ?? undefined,
       };
     }
   } catch (err) {
@@ -205,6 +226,12 @@ export interface CreateEventPayload {
  endAt: string;
  imageUrl?: string | null;
  sponsored?: boolean;
+ venueType?: 'physical' | 'virtual' | 'external';
+ virtualLink?: string | null;
+ capacity?: number | null;
+ isSpotlight?: boolean;
+ ticketPrice?: number;
+ targetCohort?: string;
 }
 
 /**
@@ -214,6 +241,21 @@ export interface CreateEventPayload {
  */
 export async function createEvent(payload: CreateEventPayload): Promise<CampusEvent> {
  const eventId = generateUUID();
+
+ // Dates must come from the caller - no fabricated fallback. A missing or
+ // invalid start/end must fail loudly instead of silently publishing an
+ // event with a made-up date.
+ if (!payload.startAt || !payload.endAt) {
+ throw new Error('Event start and end date/time are required.');
+ }
+ const startDate = new Date(payload.startAt);
+ const endDate = new Date(payload.endAt);
+ if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+ throw new Error('Event start and end date/time must be valid dates.');
+ }
+ if (endDate < startDate) {
+ throw new Error('Event end date/time cannot be before the start date/time.');
+ }
 
  let permanentImageUrl: string | null = payload.imageUrl || null;
  if (payload.imageUrl && !payload.imageUrl.startsWith('http://') && !payload.imageUrl.startsWith('https://')) {
@@ -236,16 +278,22 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  throw new Error('You need to be signed in to publish an event.');
  }
 
- let campusCode = payload.campusCode;
- if (!campusCode) {
  const { data: profile } = await supabase
  .from('profiles')
- .select('campus_code')
+ .select('campus_code, role')
  .eq('id', organizerId)
  .maybeSingle();
- campusCode = profile?.campus_code || 'GLOBAL';
- }
+
+ let campusCode = payload.campusCode;
+ if (!campusCode) campusCode = profile?.campus_code || 'GLOBAL';
  if (!campusCode) campusCode = 'GLOBAL';
+
+ // Admin/staff-created events are auto-approved (they're the moderators);
+ // everyone else's events start out pending review so they show up in the
+ // admin "Pending Review" moderation queue instead of going live unchecked.
+ const creatorRole = profile?.role || 'student';
+ const isAutoApproved = creatorRole === 'admin' || creatorRole === 'staff';
+ const initialStatus = isAutoApproved ? 'upcoming' : 'pending_approval';
 
  const { error } = await supabase.from('events').insert({
  id: eventId,
@@ -260,6 +308,13 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  end_time: payload.endAt,
  banner_url: permanentImageUrl,
  registered_count: 0,
+ status: initialStatus,
+ venue_type: payload.venueType || 'physical',
+ virtual_link: payload.virtualLink ?? null,
+ capacity: payload.capacity ?? null,
+ is_spotlight: payload.isSpotlight ?? false,
+ ticket_price: payload.ticketPrice ?? 0,
+ target_cohort: payload.targetCohort ?? null,
  });
 
  if (error) {
@@ -271,14 +326,16 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  id: eventId,
  organizerId,
  rsvpCount: 0,
- capacity: null,
  isRsvpd: false,
- approvalStatus: 'approved' as const,
+ approvalStatus: mapApprovalStatus(initialStatus),
  ...payload,
  category: (payload.category as any) || 'academic',
  visibilityScope: (payload.visibilityScope as any) || 'global',
  campusCode,
  coverImageUrl: permanentImageUrl,
+ venueType: payload.venueType || 'physical',
+ capacity: payload.capacity ?? null,
+ isSpotlight: payload.isSpotlight ?? false,
  };
 
  locallyCreatedEvents = [created, ...locallyCreatedEvents];
@@ -337,6 +394,12 @@ export async function updateEvent(id: string, updates: Partial<CampusEvent>): Pr
  if (updates.startAt) dbPayload.start_time = updates.startAt;
  if (updates.endAt) dbPayload.end_time = updates.endAt;
  if (updates.coverImageUrl) dbPayload.banner_url = updates.coverImageUrl;
+ if (updates.capacity !== undefined) dbPayload.capacity = updates.capacity;
+ if (updates.isSpotlight !== undefined) dbPayload.is_spotlight = updates.isSpotlight;
+ if (updates.venueType !== undefined) dbPayload.venue_type = updates.venueType;
+ if (updates.virtualLink !== undefined) dbPayload.virtual_link = updates.virtualLink;
+ if (updates.ticketPrice !== undefined) dbPayload.ticket_price = updates.ticketPrice;
+ if (updates.targetCohort !== undefined) dbPayload.target_cohort = updates.targetCohort;
 
  if (Object.keys(dbPayload).length > 0) {
  await supabase.from('events').update(dbPayload).eq('id', id);
@@ -357,7 +420,7 @@ export async function approveEvent(id: string) {
  console.warn('[Events] Supabase approveEvent error:', err);
  }
  await recordAuditLogEntry({
- action: 'event_approval_revoked',
+ action: 'event_approved',
  summary: `Approved and published event listing: "${target?.title ?? id}"`,
  targetType: 'event',
  targetId: id,

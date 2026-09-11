@@ -55,15 +55,31 @@ export async function recordAuditLogEntry(payload: RecordAuditLogEntryPayload): 
 export interface AuditLogQuery {
  action?: AuditLogAction;
  institutionCode?: string;
+ /**
+  * Scopes results to entries where this id appears either as the actor
+  * (who performed the action) or the target (who/what it was done to) -
+  * e.g. pass a user's profile id to get their full activity trail: both
+  * actions they took as an admin, and actions taken against their account.
+  */
+ involvingUserId?: string;
 }
 
 export async function listAuditLogEntries(query: AuditLogQuery = {}): Promise<AuditLogEntry[]> {
  try {
- const { data, error } = await supabase
+ let queryBuilder = supabase
  .from('audit_logs')
  .select('*, profiles:actor_id(full_name, role)')
  .order('created_at', { ascending: false })
  .limit(100);
+
+ if (query.involvingUserId) {
+ queryBuilder = queryBuilder.or(`actor_id.eq.${query.involvingUserId},entity_id.eq.${query.involvingUserId}`);
+ }
+ if (query.action) {
+ queryBuilder = queryBuilder.eq('action', query.action);
+ }
+
+ const { data, error } = await queryBuilder;
 
  if (!error && data && data.length > 0) {
  return data.map((row: any) => ({

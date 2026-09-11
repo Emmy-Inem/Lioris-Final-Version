@@ -20,6 +20,50 @@ const CATEGORY_LABELS: Record<string, EventCategory> = {
 };
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>;
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const START_TIME_PICKS: Array<{ label: string; value: string }> = [
+ { label: '9:00 AM', value: '09:00' },
+ { label: '12:00 PM', value: '12:00' },
+ { label: '3:00 PM', value: '15:00' },
+ { label: '6:00 PM', value: '18:00' },
+];
+
+const DURATION_PICKS: Array<{ label: string; minutes: number }> = [
+ { label: '1 hr', minutes: 60 },
+ { label: '1.5 hr', minutes: 90 },
+ { label: '2 hr', minutes: 120 },
+ { label: '3 hr', minutes: 180 },
+];
+
+function pad2(n: number): string {
+ return n < 10 ? `0${n}` : `${n}`;
+}
+
+function toDateInput(d: Date): string {
+ return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function toTimeInput(d: Date): string {
+ return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function nextWeekendDate(): Date {
+ const d = new Date();
+ const day = d.getDay(); // 0 = Sun ... 6 = Sat
+ const daysUntilSat = (6 - day + 7) % 7 || 7;
+ d.setDate(d.getDate() + daysUntilSat);
+ return d;
+}
+
+function addMinutesToTime(time: string, minutes: number): string {
+ const [h, m] = time.split(':').map(Number);
+ const total = h * 60 + m + minutes;
+ const wrapped = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+ return `${pad2(Math.floor(wrapped / 60))}:${pad2(wrapped % 60)}`;
+}
+
 interface PublishEventModalProps {
  visible: boolean;
  onClose: () => void;
@@ -37,6 +81,38 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
  const [bannerUri, setBannerUri] = useState<string | null>(null);
+
+ // Date/time - there is no calendar picker component anywhere in this
+ // codebase to reuse, so this is a real (if simple) text-input based
+ // picker with quick-pick shortcuts, rather than a hardcoded fake date.
+ const [eventDate, setEventDate] = useState('');
+ const [startTime, setStartTime] = useState('');
+ const [endTime, setEndTime] = useState('');
+
+ // Venue - wired to the real venueType/virtualLink fields instead of just
+ // toggling a display string.
+ const [location, setLocation] = useState('');
+ const [virtualLink, setVirtualLink] = useState('');
+
+ function applyQuickDate(d: Date) {
+   setEventDate(toDateInput(d));
+   haptics.light();
+ }
+
+ function applyQuickStartTime(value: string) {
+   setStartTime(value);
+   haptics.light();
+ }
+
+ function applyQuickDuration(minutes: number) {
+   if (!TIME_RE.test(startTime)) {
+     setErrorMessage('Pick a start time first, then choose a duration.');
+     haptics.error();
+     return;
+   }
+   setEndTime(addMinutesToTime(startTime, minutes));
+   haptics.light();
+ }
 
  async function pickBanner() {
    if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -84,27 +160,79 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
  haptics.error();
  return;
  }
+
+ if (!DATE_RE.test(eventDate)) {
+ setErrorMessage('Please pick or enter a valid event date (YYYY-MM-DD).');
+ haptics.error();
+ return;
+ }
+ if (!TIME_RE.test(startTime)) {
+ setErrorMessage('Please pick or enter a valid start time (HH:MM, 24-hour).');
+ haptics.error();
+ return;
+ }
+ if (!TIME_RE.test(endTime)) {
+ setErrorMessage('Please pick or enter a valid end time (HH:MM, 24-hour).');
+ haptics.error();
+ return;
+ }
+
+ const startAtDate = new Date(`${eventDate}T${startTime}:00`);
+ const endAtDate = new Date(`${eventDate}T${endTime}:00`);
+ if (isNaN(startAtDate.getTime()) || isNaN(endAtDate.getTime())) {
+ setErrorMessage('That date/time could not be understood. Please double-check it.');
+ haptics.error();
+ return;
+ }
+ if (endAtDate <= startAtDate) {
+ setErrorMessage('End time must be after the start time.');
+ haptics.error();
+ return;
+ }
+
+ const venueType = eventType === 'Lioris Live Event (In-App)'
+   ? 'virtual'
+   : eventType === 'Physical Event'
+   ? 'physical'
+   : 'external';
+
+ if (venueType === 'virtual' && !virtualLink.trim()) {
+ setErrorMessage('Please add a meeting link for the in-app live event.');
+ haptics.error();
+ return;
+ }
+ if (venueType !== 'virtual' && !location.trim()) {
+ setErrorMessage('Please enter a location for the event.');
+ haptics.error();
+ return;
+ }
+
  haptics.medium();
  setSubmitting(true);
  try {
- const startAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString();
- const endAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3 + 1000 * 60 * 90).toISOString();
  await createEvent({
  title: title.trim(),
  description: description.trim() || 'No description provided.',
  category: CATEGORY_LABELS[category],
- location: eventType === 'Lioris Live Event (In-App)' ? 'Lioris Live (In-App)' : 'Campus Main Hall',
+ location: venueType === 'virtual' ? 'Lioris Live (In-App)' : location.trim(),
  visibilityScope: 'campus',
- startAt,
- endAt,
+ startAt: startAtDate.toISOString(),
+ endAt: endAtDate.toISOString(),
  sponsored,
  imageUrl: bannerUri || null,
+ venueType,
+ virtualLink: venueType === 'virtual' ? virtualLink.trim() : null,
  });
  onPublish();
  onClose();
  setTitle('');
  setDescription('');
  setBannerUri(null);
+ setEventDate('');
+ setStartTime('');
+ setEndTime('');
+ setLocation('');
+ setVirtualLink('');
  setErrorMessage(null);
  } catch (err: any) {
  haptics.error();
@@ -196,14 +324,126 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
  </View>
 
  {eventType === 'Lioris Live Event (In-App)' ? (
- <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.lg }}>
+ <>
+ <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm }}>
  <AppText variant="bodySmall"style={{ color: colors.sectionLabel }}>
- Lioris Live: This event will be hosted natively on the Lioris streaming
- framework within the app. A live room will be generated 15 minutes before the
- start time.
+ Lioris Live: This event will be marked as an in-app live event. Add the
+ meeting link students should join at the start time.
  </AppText>
  </View>
- ) : null}
+ <AppTextField
+ label="Meeting Link"
+ placeholder="https://meet.google.com/xxx-xxxx-xxx"
+ value={virtualLink}
+ onChangeText={setVirtualLink}
+ autoCapitalize="none"
+ autoCorrect={false}
+ />
+ </>
+ ) : (
+ <AppTextField
+ label={eventType === 'Physical Event' ? 'Venue / Location' : 'External Location or Link'}
+ placeholder={eventType === 'Physical Event' ? 'e.g. Campus Main Hall' : 'e.g. Off-campus venue or event page URL'}
+ value={location}
+ onChangeText={setLocation}
+ />
+ )}
+
+ <AppText weight="bold"variant="bodySmall"style={{ marginBottom: spacing.sm, marginTop: spacing.sm }}>
+ Date & Time:
+ </AppText>
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm }}>
+ {[
+ { label: 'Today', date: new Date() },
+ { label: 'Tomorrow', date: new Date(Date.now() + 86400000) },
+ { label: 'This Weekend', date: nextWeekendDate() },
+ ].map((pick) => (
+ <Pressable
+ key={pick.label}
+ onPress={() => applyQuickDate(pick.date)}
+ accessibilityRole="button"accessibilityLabel={`Set date to ${pick.label}`}
+ style={{
+ paddingHorizontal: spacing.md,
+ paddingVertical: spacing.xs,
+ borderRadius: radius.pill,
+ borderWidth: 1,
+ borderColor: colors.border,
+ backgroundColor: eventDate === toDateInput(pick.date) ? colors.pastelPrimaryBg : 'transparent',
+ }}
+ >
+ <AppText variant="caption"weight="semiBold"tone={eventDate === toDateInput(pick.date) ? 'brand' : 'secondary'}>
+ {pick.label}
+ </AppText>
+ </Pressable>
+ ))}
+ </View>
+ <AppTextField
+ label="Date (YYYY-MM-DD)"
+ placeholder="2026-09-18"
+ value={eventDate}
+ onChangeText={setEventDate}
+ autoCapitalize="none"
+ autoCorrect={false}
+ />
+
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm }}>
+ {START_TIME_PICKS.map((pick) => (
+ <Pressable
+ key={pick.value}
+ onPress={() => applyQuickStartTime(pick.value)}
+ accessibilityRole="button"accessibilityLabel={`Set start time to ${pick.label}`}
+ style={{
+ paddingHorizontal: spacing.md,
+ paddingVertical: spacing.xs,
+ borderRadius: radius.pill,
+ borderWidth: 1,
+ borderColor: colors.border,
+ backgroundColor: startTime === pick.value ? colors.pastelPrimaryBg : 'transparent',
+ }}
+ >
+ <AppText variant="caption"weight="semiBold"tone={startTime === pick.value ? 'brand' : 'secondary'}>
+ {pick.label}
+ </AppText>
+ </Pressable>
+ ))}
+ </View>
+ <AppTextField
+ label="Start Time (24-hour HH:MM)"
+ placeholder="14:00"
+ value={startTime}
+ onChangeText={setStartTime}
+ autoCapitalize="none"
+ autoCorrect={false}
+ />
+
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm }}>
+ {DURATION_PICKS.map((pick) => (
+ <Pressable
+ key={pick.label}
+ onPress={() => applyQuickDuration(pick.minutes)}
+ accessibilityRole="button"accessibilityLabel={`Set duration to ${pick.label}`}
+ style={{
+ paddingHorizontal: spacing.md,
+ paddingVertical: spacing.xs,
+ borderRadius: radius.pill,
+ borderWidth: 1,
+ borderColor: colors.border,
+ }}
+ >
+ <AppText variant="caption"weight="semiBold"tone="secondary">
+ {pick.label}
+ </AppText>
+ </Pressable>
+ ))}
+ </View>
+ <AppTextField
+ label="End Time (24-hour HH:MM)"
+ placeholder="15:30"
+ value={endTime}
+ onChangeText={setEndTime}
+ autoCapitalize="none"
+ autoCorrect={false}
+ />
 
  <Pressable
  onPress={pickBanner}
@@ -269,7 +509,7 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
  />
  <View style={{ flex: 1 }}>
  <AppText weight="semiBold"tone="brand">
- Feature as Sponsored Event 
+ Feature as Sponsored Event
  </AppText>
  <AppText tone="secondary"variant="caption">
  Place this event under the top Showcase & Sponsored carousel

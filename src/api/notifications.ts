@@ -68,11 +68,30 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  console.warn('[Notifications] Supabase persistence error:', error.message);
  }
  } else {
- // Broadcast to all active profiles
- const { data: profiles } = await supabase.from('profiles').select('id').limit(100);
- if (profiles && profiles.length > 0) {
- const rows = profiles.map((p) => ({
- recipient_id: p.id,
+ // Broadcast to all active profiles - paginate through every page of
+ // profiles (instead of a single capped page) so campuses with more
+ // than one page of users don't silently lose everyone past the cap.
+ const pageSize = 1000;
+ let offset = 0;
+ const allProfileIds: string[] = [];
+ for (;;) {
+ const { data: page, error: pageError } = await supabase
+ .from('profiles')
+ .select('id')
+ .range(offset, offset + pageSize - 1);
+ if (pageError) {
+ console.warn('[Notifications] Broadcast profile page fetch error:', pageError.message);
+ break;
+ }
+ if (!page || page.length === 0) break;
+ allProfileIds.push(...page.map((p) => p.id));
+ if (page.length < pageSize) break;
+ offset += pageSize;
+ }
+
+ if (allProfileIds.length > 0) {
+ const rows = allProfileIds.map((id) => ({
+ recipient_id: id,
  sender_id: notificationSenderId,
  title: payload.title,
  body: payload.body,
@@ -80,7 +99,17 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  action_url: payload.deepLinkPath,
  is_read: false,
  }));
- await supabase.from('notifications').insert(rows);
+ // Still bulk-insert (not one row at a time), just chunked so a single
+ // request doesn't try to carry every recipient across every page.
+ const insertChunkSize = 500;
+ for (let i = 0; i < rows.length; i += insertChunkSize) {
+ const { error: insertError } = await supabase
+ .from('notifications')
+ .insert(rows.slice(i, i + insertChunkSize));
+ if (insertError) {
+ console.warn('[Notifications] Broadcast insert chunk error:', insertError.message);
+ }
+ }
  }
  }
  } catch (err) {

@@ -10,12 +10,13 @@ import { SolidCard } from'./SolidCard';
 import { AppButton } from'./AppButton';
 import { Badge } from'./Badge';
 import { Avatar } from'./Avatar';
+import { AppTextField } from'./AppTextField';
 import { ImageViewerModal } from'./ImageViewerModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { getEvent, rsvpToEvent } from '@/api/events';
+import { getEvent, rsvpToEvent, updateEvent, purgeEvent } from '@/api/events';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { CampusMapModal } from './CampusMapModal';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -60,6 +61,18 @@ export function EventDetailScreen() {
   const [campusMapOpen, setCampusMapOpen] = useState(false);
   const { isFeatureEnabled } = useFeatureFlags();
 
+  // Organizer-only management (Edit / Cancel). Only the event's own
+  // creator gets these - admins already have a separate admin-only
+  // moderation surface for every other event.
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editStartAt, setEditStartAt] = useState('');
+  const [editEndAt, setEditEndAt] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [cancellingEvent, setCancellingEvent] = useState(false);
+
   /**
    * Opens (or creates) the real conversation with this event's organizer.
    * This used to push a hardcoded `messages/conv-1`, which is not a
@@ -97,6 +110,94 @@ export function EventDetailScreen() {
   const hasCapacity = capacity !== null;
   const remainingSpots = hasCapacity ? Math.max(0, capacity - currentRsvpCount) : null;
   const filledPercent = hasCapacity ? Math.min(100, Math.round((currentRsvpCount / capacity) * 100)) : 0;
+
+  const isOwner = !!user?.id && !!event?.organizerId && user.id === event.organizerId;
+
+  /** "YYYY-MM-DDTHH:mm" for a plain text datetime input - local time, no seconds. */
+  function toLocalInputValue(iso?: string | null) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function handleOpenEdit() {
+    if (!event) return;
+    haptics.light();
+    setEditTitle(event.title ?? '');
+    setEditDescription(event.description ?? '');
+    setEditLocation(event.location ?? '');
+    setEditStartAt(toLocalInputValue(event.startAt));
+    setEditEndAt(toLocalInputValue(event.endAt));
+    setEditModalOpen(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!event) return;
+    if (!editTitle.trim()) {
+      toast.show('Event title cannot be empty.');
+      return;
+    }
+    const startDate = editStartAt ? new Date(editStartAt) : null;
+    const endDate = editEndAt ? new Date(editEndAt) : null;
+    if ((editStartAt && (!startDate || isNaN(startDate.getTime()))) || (editEndAt && (!endDate || isNaN(endDate.getTime())))) {
+      toast.show('Please enter valid start and end times.');
+      return;
+    }
+    haptics.medium();
+    setSavingEdit(true);
+    try {
+      await updateEvent(event.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        location: editLocation.trim(),
+        startAt: startDate ? startDate.toISOString() : event.startAt,
+        endAt: endDate ? endDate.toISOString() : event.endAt,
+      });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events', 'detail', event.id] });
+      haptics.success();
+      toast.success('Event details updated.');
+      setEditModalOpen(false);
+    } catch {
+      haptics.error();
+      toast.error('Could not save changes. Please try again.');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  function handleCancelEvent() {
+    if (!event) return;
+    haptics.light();
+    Alert.alert(
+      'Cancel This Event?',
+      `This will permanently remove "${event.title}" and cannot be undone.`,
+      [
+        { text: 'Keep Event', style: 'cancel' },
+        {
+          text: 'Cancel Event',
+          style: 'destructive',
+          onPress: async () => {
+            setCancellingEvent(true);
+            try {
+              await purgeEvent(event.id);
+              queryClient.invalidateQueries({ queryKey: ['events'] });
+              haptics.success();
+              toast.success('Event cancelled.');
+              router.back();
+            } catch {
+              haptics.error();
+              toast.error('Could not cancel this event. Please try again.');
+            } finally {
+              setCancellingEvent(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   async function handleToggleRsvp() {
     if (!event) return;
@@ -317,7 +418,7 @@ export function EventDetailScreen() {
 
                   <View style={{ backgroundColor: 'rgba(0,0,0,0.75)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: radius.pill }}>
                     <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11 }}>
-                      {hasCapacity ? ` /  Registered` : ` Registered`}
+                      {hasCapacity ? `${currentRsvpCount} / ${capacity} Registered` : `${currentRsvpCount} Registered`}
                     </AppText>
                   </View>
                 </View>
@@ -549,6 +650,28 @@ export function EventDetailScreen() {
                   onPress={handleLaunchMaps}
                 />
               </SolidCard>
+
+              {/* Organizer-only Management Card */}
+              {isOwner ? (
+                <SolidCard radius={20} style={{ padding: spacing.lg, marginBottom: spacing.lg }}>
+                  <AppText weight="bold" variant="h3" style={{ marginBottom: spacing.sm }}>
+                    Manage Your Event
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
+                    You're the organizer of this event.
+                  </AppText>
+                  <View style={{ gap: spacing.sm }}>
+                    <AppButton label="Edit Event" variant="secondary" icon="create-outline" onPress={handleOpenEdit} />
+                    <AppButton
+                      label="Cancel Event"
+                      variant="ghost"
+                      icon="trash-outline"
+                      loading={cancellingEvent}
+                      onPress={handleCancelEvent}
+                    />
+                  </View>
+                </SolidCard>
+              ) : null}
             </View>
           </View>
         ) : (
@@ -609,7 +732,7 @@ export function EventDetailScreen() {
 
                 <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
                   <AppText variant="caption" weight="bold" tone="inverse">
-                    {hasCapacity ? ` /  Registered` : ` Registered`}
+                    {hasCapacity ? `${currentRsvpCount} / ${capacity} Registered` : `${currentRsvpCount} Registered`}
                   </AppText>
                 </View>
               </View>
@@ -621,6 +744,25 @@ export function EventDetailScreen() {
               <AppText variant="h2" weight="bold" style={{ fontSize: isDesktop ? 24 : 20, lineHeight: isDesktop ? 30 : 26, marginBottom: spacing.xs }}>
                 {event.title}
               </AppText>
+
+              {/* Organizer-only Management Row */}
+              {isOwner ? (
+                <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+                  <View style={{ flex: 1 }}>
+                    <AppButton label="Edit Event" variant="secondary" size="sm" icon="create-outline" onPress={handleOpenEdit} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppButton
+                      label="Cancel Event"
+                      variant="ghost"
+                      size="sm"
+                      icon="trash-outline"
+                      loading={cancellingEvent}
+                      onPress={handleCancelEvent}
+                    />
+                  </View>
+                </View>
+              ) : null}
 
               {/* Date & Location Pill Highlights */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap', marginBottom: spacing.md }}>
@@ -768,31 +910,9 @@ export function EventDetailScreen() {
                     Program Schedule & Timeline
                   </AppText>
 
-                  {[
-                    { time: '09:30 AM', title: 'Arrival & QR Check-in', desc: 'Badge pick-up at Entrance Foyer & Welcome coffee.' },
-                    { time: '10:00 AM', title: 'Keynote & Opening Remarks', desc: 'Dean Welcome Address & Industry Guest introduction.' },
-                    { time: '11:15 AM', title: 'Interactive Technical Session', desc: 'Hands-on live demo, architectural teardown & workshop.' },
-                    { time: '01:00 PM', title: 'Networking Lunch & Peer Huddle', desc: 'Faculty plaza refreshments and alumni mentor discussions.' },
-                    { time: '02:30 PM', title: 'Closing Showcase & Awards', desc: 'Certificate distribution and closing photography.' },
-                  ].map((item, index) => (
-                    <View key={index} style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md, alignItems: 'flex-start' }}>
-                      <View style={{ alignItems: 'center' }}>
-                        <View style={{ backgroundColor: colors.brandPrimary, width: 12, height: 12, borderRadius: 6 }} />
-                        {index < 4 ? <View style={{ width: 2, height: 42, backgroundColor: colors.border, marginVertical: 2 }} /> : null}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <AppText weight="bold" variant="caption" tone="brand">
-                          {item.time}
-                        </AppText>
-                        <AppText weight="bold" variant="bodySmall">
-                          {item.title}
-                        </AppText>
-                        <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                          {item.desc}
-                        </AppText>
-                      </View>
-                    </View>
-                  ))}
+                  <AppText tone="secondary" variant="bodySmall">
+                    No detailed agenda provided for this event.
+                  </AppText>
                 </SolidCard>
               )}
 
@@ -849,6 +969,79 @@ export function EventDetailScreen() {
  imageSource={heroImageSource}
  caption={`${event.title} - ${event.location}`}
  />
+
+      {/* Organizer-only Edit Event Modal - minimal inline form covering the
+          fields a non-admin organizer may reasonably change themselves. */}
+      <Modal visible={editModalOpen} transparent animationType="fade" onRequestClose={() => setEditModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 480,
+              maxHeight: '85%',
+              backgroundColor: colors.background,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <AppText weight="bold" variant="h3">
+                Edit Event
+              </AppText>
+              <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <AppTextField
+                label="Title"
+                value={editTitle}
+                onChangeText={setEditTitle}
+                placeholder="Event title"
+              />
+              <AppTextField
+                label="Description"
+                value={editDescription}
+                onChangeText={setEditDescription}
+                placeholder="Event description"
+                multiline
+                numberOfLines={4}
+                style={{ minHeight: 90, textAlignVertical: 'top' }}
+              />
+              <AppTextField
+                label="Location / Venue"
+                value={editLocation}
+                onChangeText={setEditLocation}
+                placeholder="Campus Main Hall"
+              />
+              <AppTextField
+                label="Start Time"
+                value={editStartAt}
+                onChangeText={setEditStartAt}
+                placeholder="YYYY-MM-DDTHH:mm"
+              />
+              <AppTextField
+                label="End Time"
+                value={editEndAt}
+                onChangeText={setEditEndAt}
+                placeholder="YYYY-MM-DDTHH:mm"
+              />
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Cancel" variant="ghost" onPress={() => setEditModalOpen(false)} fullWidth />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Save Changes" variant="primary" loading={savingEdit} onPress={handleSaveEdit} fullWidth />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
  </ScreenContainer>
  );
 }

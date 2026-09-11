@@ -23,7 +23,17 @@ const EVENT_COVER_PRESETS = [
 ];
 
 const EVENT_CATEGORIES: EventCategory[] = ['academic', 'career', 'alumni', 'student', 'seminar', 'workshop'];
-const VENUE_TYPES: NonNullable<CampusEvent['venueType']>[] = ['Physical Auditorium', 'Virtual (Google Meet/Zoom)', 'Hybrid Room'];
+const VENUE_TYPES: NonNullable<CampusEvent['venueType']>[] = ['physical', 'virtual', 'external'];
+const VENUE_TYPE_LABELS: Record<NonNullable<CampusEvent['venueType']>, string> = {
+ physical: 'Physical',
+ virtual: 'Virtual',
+ external: 'External',
+};
+
+function parseTicketPrice(value: string): number {
+ const parsed = parseFloat(value.replace(/[^0-9.]/g, ''));
+ return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export function EventsModerationTab() {
  const { colors, spacing, radius, isDark } = useTheme();
@@ -39,11 +49,11 @@ export function EventsModerationTab() {
  const [formTitle, setFormTitle] = useState('');
  const [formDesc, setFormDesc] = useState('');
  const [formCategory, setFormCategory] = useState<EventCategory>('academic');
- const [formVenueType, setFormVenueType] = useState<CampusEvent['venueType']>('Physical Auditorium');
+ const [formVenueType, setFormVenueType] = useState<NonNullable<CampusEvent['venueType']>>('physical');
  const [formLocation, setFormLocation] = useState('');
  const [formVirtualLink, setFormVirtualLink] = useState('');
  const [formCapacity, setFormCapacity] = useState('150');
- const [formTicketPrice, setFormTicketPrice] = useState('Free');
+ const [formTicketPrice, setFormTicketPrice] = useState('0');
  const [formCover, setFormCover] = useState('event_tech_hackathon');
  const [formSponsored, setFormSponsored] = useState(false);
  const [formSpotlight, setFormSpotlight] = useState(true);
@@ -79,11 +89,11 @@ export function EventsModerationTab() {
  setFormTitle('');
  setFormDesc('');
  setFormCategory('academic');
- setFormVenueType('Physical Auditorium');
+ setFormVenueType('physical');
  setFormLocation('Faculty of Science Main Auditorium');
  setFormVirtualLink('');
  setFormCapacity('200');
- setFormTicketPrice('Free');
+ setFormTicketPrice('0');
  setFormCover('event_tech_hackathon');
  setFormSponsored(true);
  setFormSpotlight(true);
@@ -99,11 +109,11 @@ export function EventsModerationTab() {
  setFormTitle(event.title);
  setFormDesc(event.description);
  setFormCategory(event.category);
- setFormVenueType(event.venueType || 'Physical Auditorium');
+ setFormVenueType(event.venueType || 'physical');
  setFormLocation(event.location);
  setFormVirtualLink(event.virtualLink || '');
  setFormCapacity(event.capacity ? String(event.capacity) : '150');
- setFormTicketPrice(event.ticketPrice || 'Free');
+ setFormTicketPrice(event.ticketPrice != null ? String(event.ticketPrice) : '0');
  setFormCover(event.coverImageUrl || 'event_tech_hackathon');
  setFormSponsored(!!event.sponsored);
  setFormSpotlight(!!event.isSpotlight);
@@ -131,7 +141,7 @@ export function EventsModerationTab() {
  location: formLocation.trim(),
  virtualLink: formVirtualLink.trim() || null,
  capacity: Number(formCapacity) || 150,
- ticketPrice: formTicketPrice.trim() || 'Free',
+ ticketPrice: parseTicketPrice(formTicketPrice),
  coverImageUrl: formCover,
  sponsored: formSponsored,
  isSpotlight: formSpotlight,
@@ -158,6 +168,12 @@ export function EventsModerationTab() {
  endAt: formEndAt || new Date(Date.now() + 7200000).toISOString(),
  imageUrl: formCover,
  sponsored: formSponsored,
+ venueType: formVenueType,
+ virtualLink: formVirtualLink.trim() || null,
+ capacity: Number(formCapacity) || 150,
+ isSpotlight: formSpotlight,
+ ticketPrice: parseTicketPrice(formTicketPrice),
+ targetCohort: formTargetCohort.trim(),
  });
  Alert.alert('Event Published', `"${formTitle.trim()}"is now live on the campus calendar.`);
  }
@@ -362,7 +378,7 @@ export function EventsModerationTab() {
  </View>
 
  <AppText tone="brand"variant="caption"weight="bold"style={{ marginTop: 2 }}>
- {event.category.toUpperCase()} • {event.venueType || 'Physical'} • {event.rsvpCount} RSVPs {event.capacity ? `/ ${event.capacity} seats` : ''}
+ {event.category.toUpperCase()} • {VENUE_TYPE_LABELS[event.venueType || 'physical']} • {event.rsvpCount} RSVPs {event.capacity ? `/ ${event.capacity} seats` : ''}
  </AppText>
 
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -406,7 +422,7 @@ export function EventsModerationTab() {
 
  <View style={{ backgroundColor: colors.divider, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill }}>
  <AppText variant="caption"weight="bold">
- {event.ticketPrice || 'Free'}
+ {event.ticketPrice ? `NGN ${event.ticketPrice.toLocaleString()}` : 'Free'}
  </AppText>
  </View>
 
@@ -518,7 +534,7 @@ export function EventsModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={formVenueType === v ? 'brand' : 'secondary'} numberOfLines={1}>
- {v.split(' ')[0]}
+ {VENUE_TYPE_LABELS[v]}
  </AppText>
  </Pressable>
  ))}

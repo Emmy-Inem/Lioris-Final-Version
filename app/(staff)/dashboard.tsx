@@ -58,8 +58,8 @@ export default function StaffDashboard() {
       : 'UI';
 
   const { data: openReports } = useQuery({
-    queryKey: ['reports', 'open'],
-    queryFn: () => listReports({ status: 'open' }),
+    queryKey: ['reports', 'open', effectiveCampus],
+    queryFn: () => listReports({ status: 'open', institutionCode: effectiveCampus }),
   });
 
   const { data: pendingResources } = useQuery({

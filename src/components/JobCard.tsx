@@ -40,25 +40,31 @@ export function JobCard({ job }: { job: JobListing }) {
   }
 
   async function handleSubmitApplication() {
+    // NOTE: There is no application-persistence table/record in the backend -
+    // this only sends a best-effort notification to the job poster. We only
+    // report success when that notification actually goes through, so the
+    // "Applied" state honestly reflects whether the poster was notified,
+    // not a formally tracked application record.
+    if (!job.posterId) {
+      toast.error('This listing has no reachable poster, so interest cannot be sent right now.');
+      return;
+    }
     setSubmitting(true);
     try {
-      if (job.posterId) {
-        await createNotification({
-          recipientId: job.posterId,
-          type: 'message',
-          title: `New Candidate: ${job.title}`,
-          body: `${user?.fullName || 'A student'} applied for ${job.title} at ${job.company}.${coverNote.trim() ? ` Pitch: "${coverNote.trim()}"` : ''}`,
-          deepLinkPath: `/${user?.role || 'student'}/jobs`,
-        });
-      }
+      await createNotification({
+        recipientId: job.posterId,
+        type: 'message',
+        title: `New Candidate: ${job.title}`,
+        body: `${user?.fullName || 'A student'} is interested in ${job.title} at ${job.company}.${coverNote.trim() ? ` Pitch: "${coverNote.trim()}"` : ''}`,
+        deepLinkPath: `/${user?.role || 'student'}/jobs`,
+      });
       setApplied(true);
       setModalOpen(false);
       haptics.success();
-      toast.success(`Application submitted to ${job.company} for ${job.title}!`);
+      toast.success(`${job.company} has been notified of your interest in ${job.title}!`);
     } catch {
-      setApplied(true);
-      setModalOpen(false);
-      toast.success(`Application submitted to ${job.company} for ${job.title}!`);
+      haptics.error();
+      toast.error('Could not notify the poster right now. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -123,7 +129,7 @@ export function JobCard({ job }: { job: JobListing }) {
             />
           )}
           <AppButton
-            label={applied ? 'Applied' : 'Apply Now'}
+            label={applied ? 'Interest Sent' : 'Notify Poster of Interest'}
             variant={applied ? 'secondary' : 'primary'}
             size="sm"
             disabled={applied}
@@ -151,7 +157,7 @@ export function JobCard({ job }: { job: JobListing }) {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <AppText variant="h3" weight="bold" numberOfLines={2}>
-                  Apply for {job.title}
+                  Notify Poster: {job.title}
                 </AppText>
                 <AppText tone="secondary" variant="bodySmall">
                   {job.company} • {job.location}
@@ -167,7 +173,8 @@ export function JobCard({ job }: { job: JobListing }) {
                 VERIFIED STUDENT CANDIDATE
               </AppText>
               <AppText variant="caption" tone="secondary">
-                Your verified campus credentials and university profile will be attached to this application.
+                This sends a notification with your profile and pitch directly to the poster - it is not a formally
+                tracked application, so following up with them is recommended.
               </AppText>
             </View>
 
@@ -226,7 +233,7 @@ export function JobCard({ job }: { job: JobListing }) {
               </View>
               <View style={{ flex: 2 }}>
                 <AppButton
-                  label="Submit Application"
+                  label="Notify Poster"
                   variant="primary"
                   loading={submitting}
                   fullWidth

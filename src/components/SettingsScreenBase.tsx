@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, Switch, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import * as SecureStore from 'expo-secure-store';
 import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
@@ -19,7 +20,41 @@ import { useCampusScope } from '@/hooks/useCampusScope';
 import { getMyProfile } from '@/api/profile';
 import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
+import { submitReport } from '@/api/moderation';
+import * as authApi from '@/api/auth';
 import { haptics } from '@/utils/haptics';
+
+// Cross-platform local persistence for lightweight UI preference toggles.
+// Mirrors the pattern already used in ThemeProvider.tsx: web uses
+// localStorage, native uses expo-secure-store (raw `localStorage` is a
+// no-op on native and was silently losing these settings there).
+// NOTE: this is still device-local only - there is no backend column/table
+// wired up for notification or biometric preferences yet, so these settings
+// do not sync across devices or actually gate server-side push delivery.
+// Server-side sync is a known follow-up once a preferences table/column
+// exists to persist to.
+const isWeb = Platform.OS === 'web';
+
+async function getStoredPref(key: string): Promise<string | null> {
+  try {
+    if (isWeb) {
+      return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+    }
+    return await SecureStore.getItemAsync(key);
+  } catch {
+    return null;
+  }
+}
+
+async function setStoredPref(key: string, value: string): Promise<void> {
+  try {
+    if (isWeb) {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+      return;
+    }
+    await SecureStore.setItemAsync(key, value);
+  } catch {}
+}
 
 const ALL_SETTINGS_SECTIONS = [
   { key: 'account', label: 'Account', fullLabel: 'Account & Profile', icon: 'person-outline' as const },
@@ -102,34 +137,145 @@ export function SettingsScreen() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // Two-Factor Authentication (TOTP) Enrollment
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaChecking, setMfaChecking] = useState(true);
+  const [mfaEnrolling, setMfaEnrolling] = useState(false);
+  const [mfaConfirming, setMfaConfirming] = useState(false);
+  const [mfaDisabling, setMfaDisabling] = useState(false);
+  const [mfaPendingFactorId, setMfaPendingFactorId] = useState<string | null>(null);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+  const [mfaConfirmCode, setMfaConfirmCode] = useState('');
+  const [mfaError, setMfaError] = useState<string | null>(null);
+
   // Legal Modal State
   const [activeLegalDoc, setActiveLegalDoc] = useState<LegalPolicy | null>(null);
 
+  // Contact Support / Report a Problem
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
+  const [supportMessage, setSupportMessage] = useState('');
+  const [submittingSupport, setSubmittingSupport] = useState(false);
+
   // Hydrate preferences on mount
   useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
+    (async () => {
       try {
-        const notifs = localStorage.getItem('lioris_setting_notifications');
+        const notifs = await getStoredPref('lioris_setting_notifications');
         if (notifs) {
           const parsed = JSON.parse(notifs);
           if (typeof parsed.push === 'boolean') setPushEnabled(parsed.push);
           if (typeof parsed.announcements === 'boolean') setAnnouncementAlerts(parsed.announcements);
           if (typeof parsed.events === 'boolean') setEventAlerts(parsed.events);
         }
-        const bio = localStorage.getItem('lioris_setting_biometrics');
+        const bio = await getStoredPref('lioris_setting_biometrics');
         if (bio) {
           setBiometricShield(JSON.parse(bio) === true);
         }
       } catch {}
+    })();
+  }, []);
+
+  // Load current Two-Factor Authentication enrollment status
+  const refreshMfaStatus = React.useCallback(async () => {
+    setMfaChecking(true);
+    try {
+      const factors = await authApi.listMfaFactors();
+      const activeFactor = factors?.totp?.find((f) => f.status === 'verified') || factors?.totp?.[0] || null;
+      setMfaFactorId(activeFactor?.id ?? null);
+    } catch {
+      setMfaFactorId(null);
+    } finally {
+      setMfaChecking(false);
     }
   }, []);
 
-  function saveNotifPreference(updated: { push: boolean; announcements: boolean; events: boolean }) {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('lioris_setting_notifications', JSON.stringify(updated));
-      } catch {}
+  useEffect(() => {
+    if (!user) return;
+    refreshMfaStatus();
+  }, [user?.id, refreshMfaStatus]);
+
+  function resetMfaEnrollmentFlow() {
+    setMfaPendingFactorId(null);
+    setMfaSecret(null);
+    setMfaConfirmCode('');
+    setMfaError(null);
+  }
+
+  async function handleStartMfaEnrollment() {
+    haptics.light();
+    setMfaError(null);
+    setMfaEnrolling(true);
+    try {
+      const result = await authApi.enrollMfaFactor();
+      setMfaPendingFactorId(result.factorId);
+      setMfaSecret(result.secret);
+    } catch (err: any) {
+      haptics.error();
+      toast.error(err?.message || 'Could not start two-factor authentication setup.');
+    } finally {
+      setMfaEnrolling(false);
     }
+  }
+
+  async function handleConfirmMfaEnrollment() {
+    if (!mfaPendingFactorId) return;
+    if (mfaConfirmCode.trim().length !== 6) {
+      setMfaError('Please enter the complete 6-digit code from your authenticator app.');
+      return;
+    }
+    setMfaError(null);
+    setMfaConfirming(true);
+    haptics.medium();
+    try {
+      await authApi.confirmMfaEnrollment(mfaPendingFactorId, mfaConfirmCode.trim());
+      haptics.success();
+      toast.success('Two-Factor Authentication is now active on your account.');
+      resetMfaEnrollmentFlow();
+      await refreshMfaStatus();
+    } catch (err: any) {
+      haptics.error();
+      setMfaError(err?.message || 'Invalid code. Please try again.');
+    } finally {
+      setMfaConfirming(false);
+    }
+  }
+
+  function handleCancelMfaEnrollment() {
+    haptics.light();
+    resetMfaEnrollmentFlow();
+  }
+
+  function handleTurnOffMfa() {
+    if (!mfaFactorId) return;
+    Alert.alert(
+      'Turn Off Two-Factor Authentication?',
+      'This reduces the security of your account. You will only need your password to sign in afterward.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Turn Off',
+          style: 'destructive',
+          onPress: async () => {
+            setMfaDisabling(true);
+            try {
+              await authApi.unenrollMfaFactor(mfaFactorId);
+              haptics.success();
+              toast.info('Two-Factor Authentication has been turned off.');
+              await refreshMfaStatus();
+            } catch (err: any) {
+              haptics.error();
+              toast.error(err?.message || 'Could not turn off two-factor authentication.');
+            } finally {
+              setMfaDisabling(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function saveNotifPreference(updated: { push: boolean; announcements: boolean; events: boolean }) {
+    setStoredPref('lioris_setting_notifications', JSON.stringify(updated));
   }
 
   function handleTogglePush(next: boolean) {
@@ -156,12 +302,37 @@ export function SettingsScreen() {
   function handleToggleBiometrics(next: boolean) {
     haptics.light();
     setBiometricShield(next);
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('lioris_setting_biometrics', JSON.stringify(next));
-      } catch {}
-    }
+    setStoredPref('lioris_setting_biometrics', JSON.stringify(next));
     toast.info(next ? 'Biometric security lock activated' : 'Biometric security lock disabled');
+  }
+
+  async function handleSubmitSupportRequest() {
+    if (!supportMessage.trim()) {
+      toast.error('Please describe your issue before submitting.');
+      return;
+    }
+    setSubmittingSupport(true);
+    try {
+      // There is no dedicated "general support" report target, so we reuse
+      // submitReport with targetType 'user' pointed at the reporter's own
+      // account - the closest existing sentinel for an account/technical
+      // issue that isn't tied to a specific post or event - and prefix the
+      // reason so admins can tell it apart from a user-on-user report in the
+      // moderation queue.
+      await submitReport({
+        targetType: 'user',
+        targetId: user?.id || 'unknown',
+        reason: `[Support Request] ${supportMessage.trim()}`,
+        institutionCode: homeInstitutionCode,
+      });
+      setSupportMessage('');
+      setSupportModalOpen(false);
+      toast.success('Your message has been sent to the admin team.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not send your message. Please try again.');
+    } finally {
+      setSubmittingSupport(false);
+    }
   }
 
   async function handleUpdatePassword() {
@@ -394,7 +565,15 @@ export function SettingsScreen() {
                   </View>
                 </View>
 
-                <View style={{ paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <View style={{ paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                  <AppButton
+                    label="Contact Support / Report a Problem"
+                    variant="secondary"
+                    onPress={() => {
+                      haptics.light();
+                      setSupportModalOpen(true);
+                    }}
+                  />
                   <AppButton
                     label="Log Out of Workspace"
                     variant="secondary"
@@ -569,6 +748,104 @@ export function SettingsScreen() {
                     onValueChange={handleToggleBiometrics}
                     trackColor={{ false: colors.divider, true: colors.brandPrimary }}
                   />
+                </View>
+
+                {/* Two-Factor Authentication (TOTP) */}
+                <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">Two-Factor Authentication</AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                      Require a 6-digit code from an authenticator app when signing in
+                    </AppText>
+                  </View>
+
+                  {mfaChecking ? (
+                    <AppText tone="secondary" variant="caption">Checking status…</AppText>
+                  ) : mfaFactorId && !mfaPendingFactorId ? (
+                    <View style={{ gap: spacing.sm }}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 8,
+                          backgroundColor: colors.pastelPrimaryBg,
+                          borderRadius: radius.md,
+                          padding: spacing.sm,
+                          borderWidth: 1,
+                          borderColor: `${colors.brandPrimary}22`,
+                        }}
+                      >
+                        <Ionicons name="shield-checkmark" size={18} color={colors.brandPrimary} />
+                        <AppText tone="brand" weight="bold" variant="bodySmall">
+                          Two-Factor Authentication is active
+                        </AppText>
+                      </View>
+                      <AppButton
+                        label={mfaDisabling ? 'Turning off…' : 'Turn Off'}
+                        variant="secondary"
+                        onPress={handleTurnOffMfa}
+                        loading={mfaDisabling}
+                      />
+                    </View>
+                  ) : mfaPendingFactorId && mfaSecret ? (
+                    <View style={{ gap: spacing.sm }}>
+                      <AppText tone="secondary" variant="caption">
+                        Enter this code into Google Authenticator, Authy, or a similar app:
+                      </AppText>
+                      <View
+                        style={{
+                          backgroundColor: colors.surface,
+                          borderRadius: radius.sm,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          padding: spacing.sm,
+                        }}
+                      >
+                        <TextInput
+                          value={mfaSecret}
+                          editable={false}
+                          selectTextOnFocus
+                          style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 14, color: colors.textPrimary }}
+                        />
+                      </View>
+                      <AppText tone="secondary" variant="caption">
+                        Then enter the 6-digit code it generates to confirm setup:
+                      </AppText>
+                      <AppTextField
+                        label="6-Digit Code"
+                        value={mfaConfirmCode}
+                        onChangeText={(t) => setMfaConfirmCode(t.replace(/[^0-9]/g, '').slice(0, 6))}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        placeholder="000000"
+                      />
+                      {mfaError && (
+                        <AppText style={{ color: '#EF4444', fontSize: 12, lineHeight: 16 }}>
+                          {mfaError}
+                        </AppText>
+                      )}
+                      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                        <View style={{ flex: 1 }}>
+                          <AppButton label="Cancel" variant="secondary" onPress={handleCancelMfaEnrollment} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <AppButton
+                            label={mfaConfirming ? 'Confirming…' : 'Confirm'}
+                            onPress={handleConfirmMfaEnrollment}
+                            loading={mfaConfirming}
+                            disabled={mfaConfirmCode.length < 6}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <AppButton
+                      label={mfaEnrolling ? 'Starting setup…' : 'Set Up Two-Factor Authentication'}
+                      variant="secondary"
+                      onPress={handleStartMfaEnrollment}
+                      loading={mfaEnrolling}
+                    />
+                  )}
                 </View>
 
                 <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
@@ -800,6 +1077,74 @@ export function SettingsScreen() {
 
             <View style={{ paddingTop: spacing.sm }}>
               <AppButton label="Close Document" variant="secondary" onPress={() => setActiveLegalDoc(null)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Contact Support / Report a Problem Modal */}
+      <Modal
+        visible={supportModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSupportModalOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md }}>
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: 20,
+              padding: spacing.lg,
+              width: '100%',
+              maxWidth: 420,
+              gap: spacing.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <AppText variant="h3" weight="bold">
+              Contact Support
+            </AppText>
+            <AppText tone="secondary" variant="bodySmall">
+              Describe your issue and it will be sent straight to the admin team's moderation queue.
+            </AppText>
+            <TextInput
+              value={supportMessage}
+              onChangeText={setSupportMessage}
+              placeholder="What's going on? Include as much detail as you can..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              numberOfLines={5}
+              style={{
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 12,
+                padding: 12,
+                color: colors.textPrimary,
+                fontSize: 13,
+                minHeight: 110,
+                textAlignVertical: 'top',
+              }}
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label="Cancel"
+                  variant="secondary"
+                  onPress={() => {
+                    setSupportModalOpen(false);
+                    setSupportMessage('');
+                  }}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={submittingSupport ? 'Sending...' : 'Send to Admins'}
+                  onPress={handleSubmitSupportRequest}
+                  loading={submittingSupport}
+                />
+              </View>
             </View>
           </View>
         </View>

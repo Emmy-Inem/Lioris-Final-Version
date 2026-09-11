@@ -125,9 +125,9 @@ export interface CampusEvent {
  sponsored?: boolean;
  isSpotlight?: boolean;
  coverImageUrl?: string | null;
- venueType?: 'Physical Auditorium' | 'Virtual (Google Meet/Zoom)' | 'Hybrid Room';
+ venueType?: 'physical' | 'virtual' | 'external';
  virtualLink?: string | null;
- ticketPrice?: string;
+ ticketPrice?: number;
  speakers?: { name: string; title: string }[];
  targetCohort?: string;
  rsvpDeadline?: string;
@@ -258,12 +258,14 @@ export interface Report {
 export type AuditLogAction =
  | 'report_resolved'
  | 'report_dismissed'
+ | 'event_approved'
  | 'event_approval_revoked'
  | 'event_purged'
  | 'verification_approved'
  | 'verification_rejected'
  | 'escrow_funds_released'
  | 'impersonation_started'
+ | 'impersonation_ended'
  | 'user_blocked'
  | 'user_suspended'
  | 'user_unsuspended'

@@ -18,6 +18,12 @@ export const ONBOARDING_STEPS: Record<Extract<UserRole, 'student' | 'alumni'>, s
  ],
  alumni: [
  '/(auth)/verify-alumni',
+ // Without this step, alumni profiles never got `department` set, and
+ // AuthContext previously used `Boolean(profile.department)` as its sole
+ // onboarding-complete signal - so an alumni user who finished onboarding
+ // got routed straight back into it on their next login (see AuthContext's
+ // `login()` for the corresponding fallback fix).
+ '/(auth)/onboarding/choose-department',
  '/(auth)/onboarding/complete-profile',
  '/(auth)/onboarding/select-interests',
  '/(auth)/onboarding/upload-photo',

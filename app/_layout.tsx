@@ -13,6 +13,7 @@ import { AuthProvider } from'@/auth/AuthContext';
 import { queryClient } from'@/api/queryClient';
 import { ErrorBoundary } from'@/components/ErrorBoundary';
 import { OfflineBanner, setupNetworkAwareQueries } from'@/components/OfflineBanner';
+import { ImpersonationBanner } from'@/components/ImpersonationBanner';
 import { addNotificationResponseListener } from'@/notifications/push';
 
 import { loadBlockedUserIds } from '@/api/connections';
@@ -237,6 +238,7 @@ export default function RootLayout() {
  <ToastProvider>
  <FeatureFlagsProvider>
  <StatusBarForTheme />
+ <ImpersonationBanner />
  <OfflineBanner />
  <ErrorBoundary>
  <Slot />

@@ -63,7 +63,26 @@ export async function listConversations(): Promise<Conversation[]> {
 
     if (error) throw error;
 
-    const dbConvs: Conversation[] = (data ?? []).map((row: any) => {
+    // Exclude channels the current user has archived for themselves.
+    // Archiving does NOT delete the shared channel (that would destroy it
+    // for the other participant); it just hides it from this user's list.
+    // Depends on `chat_channel_archives` (migration supabase_fix_audit_2026.sql).
+    let archivedChannelIds = new Set<string>();
+    if (currentUserId) {
+      try {
+        const { data: archivedRows } = await supabase
+          .from('chat_channel_archives')
+          .select('channel_id')
+          .eq('user_id', currentUserId);
+        archivedChannelIds = new Set((archivedRows ?? []).map((r: any) => r.channel_id));
+      } catch (archiveErr) {
+        console.warn('[Messaging] Failed to load archived channels:', archiveErr);
+      }
+    }
+
+    const nonArchivedData = (data ?? []).filter((row: any) => !archivedChannelIds.has(row.id));
+
+    const dbConvs: Conversation[] = nonArchivedData.map((row: any) => {
       const msgs = (row.chat_messages ?? []).slice().sort(
         (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
@@ -154,8 +173,30 @@ export async function listConversations(): Promise<Conversation[]> {
 }
 
 export async function archiveConversation(id: string): Promise<void> {
+  // IMPORTANT: `chat_channels` rows are SHARED between both DM participants.
+  // This used to call `.delete()` on the channel, which destroyed it for the
+  // other participant too (not just "archived" it for the caller). Instead,
+  // record a per-user archive marker in `chat_channel_archives` (channel_id,
+  // user_id) and filter archived channels out of `listConversations` for
+  // that user only. This depends on the `chat_channel_archives` table (with
+  // RLS allowing a user to read/write only their own rows) being created via
+  // migration `supabase_fix_audit_2026.sql`.
   try {
-    await supabase.from('chat_channels').delete().eq('id', id);
+    const { data: authData } = await supabase.auth.getUser();
+    let currentUserId = authData?.user?.id;
+    if (!currentUserId) {
+      const stored = await getSessionUser();
+      if (stored?.id) currentUserId = stored.id;
+    }
+
+    if (currentUserId) {
+      await supabase
+        .from('chat_channel_archives')
+        .upsert(
+          { channel_id: id, user_id: currentUserId },
+          { onConflict: 'channel_id,user_id', ignoreDuplicates: true },
+        );
+    }
   } catch {
     // Session fallback
   }
@@ -281,7 +322,7 @@ export async function listMessages(
     if (error) throw error;
 
     if (data && data.length > 0) {
-      const dbMsgs: Message[] = data.map((row: any) => ({
+      const dbMsgs: (Message & { mediaUrl?: string })[] = data.map((row: any) => ({
         id: row.id,
         conversationId: row.channel_id,
         senderId: row.sender_id || 'me',
@@ -289,6 +330,9 @@ export async function listMessages(
         messageType: row.message_type || 'text',
         status: row.is_read ? 'read' : 'sent',
         sentAt: row.created_at,
+        // `media_url` is a pre-existing column on chat_messages used to reference
+        // real uploaded attachments (photos/documents) sent from ChatThread.
+        mediaUrl: row.media_url ?? undefined,
       }));
 
       // Merge with local state
@@ -312,7 +356,11 @@ export async function listMessages(
 export async function sendMessage(
   conversationId: string,
   content: string,
-): Promise<Message> {
+  // Optional real attachment URL (e.g. a photo or document uploaded to Supabase
+  // Storage via `uploadMediaFile`). Persisted to the pre-existing
+  // `chat_messages.media_url` column — additive, no schema change required.
+  mediaUrl?: string,
+): Promise<Message & { mediaUrl?: string }> {
   const msgId = generateUUID();
   const now = new Date().toISOString();
 
@@ -324,7 +372,7 @@ export async function sendMessage(
     if (stored?.id) currentSenderId = stored.id;
   }
 
-  const newMessage: Message = {
+  const newMessage: Message & { mediaUrl?: string } = {
     id: msgId,
     conversationId,
     senderId: currentSenderId || 'me',
@@ -332,6 +380,7 @@ export async function sendMessage(
     messageType: 'text',
     status: 'sent',
     sentAt: now,
+    mediaUrl,
   };
 
   if (currentSenderId) {
@@ -348,6 +397,7 @@ export async function sendMessage(
       channel_id: conversationId,
       sender_id: currentSenderId,
       content,
+      media_url: mediaUrl ?? null,
       is_read: false,
       created_at: now,
     });

@@ -39,34 +39,87 @@ export default function VerificationRequestsScreen() {
   const [customRejectNote, setCustomRejectNote] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // Bulk selection state - lets an admin approve/reject many pending
+  // requests at once instead of one card at a time.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRejectModalOpen, setBulkRejectModalOpen] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+
+  function toggleSelected(id: string) {
+    haptics.light();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function invalidateVerificationQueries() {
+    queryClient.invalidateQueries({ queryKey: ['verification-requests'] });
+    queryClient.invalidateQueries({ queryKey: ['profile'] });
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  }
+
+  // Core mutation logic shared by both the single-item and bulk approve
+  // flows - throws on failure so callers can decide how to surface it
+  // (an Alert for a single item, a tallied summary for a bulk run).
+  async function approveRequestCore(req: VerificationRequest) {
+    await respondToVerificationRequest(req.id, 'approved');
+    grantVerification(req.userId);
+
+    recordAuditLogEntry({
+      action: 'verification_approved',
+      summary: `Approved verified badge for ${req.applicantName} (${req.institutionClaimed} - ${req.documentReference})`,
+      targetType: 'verification_request',
+      targetId: req.id,
+      institutionCode: req.institutionClaimed,
+      reason: 'Document verified against registrar criteria',
+    });
+
+    createNotification({
+      recipientId: req.userId,
+      type: 'system',
+      title: 'Campus Verification Approved',
+      body: 'Congratulations! Your identity has been verified. The official verified badge is now active on your profile.',
+      deepLinkPath: '/(student)/profile',
+    });
+  }
+
+  // Core mutation logic shared by both the single-item and bulk reject
+  // flows.
+  async function rejectRequestCore(req: VerificationRequest, finalReason: string) {
+    await respondToVerificationRequest(req.id, 'rejected');
+    markVerificationRejected(req.userId);
+
+    recordAuditLogEntry({
+      action: 'verification_rejected',
+      summary: `Rejected verification for ${req.applicantName} (${req.institutionClaimed}): ${finalReason}`,
+      targetType: 'verification_request',
+      targetId: req.id,
+      institutionCode: req.institutionClaimed,
+      reason: finalReason,
+    });
+
+    createNotification({
+      recipientId: req.userId,
+      type: 'system',
+      title: 'Verification Request Update',
+      body: `Your verification submission was not approved: ${finalReason}. You may re-apply with clear documentation.`,
+      deepLinkPath: '/(student)/profile',
+    });
+  }
+
   async function handleApprove(req: VerificationRequest) {
     haptics.medium();
     setProcessingId(req.id);
     try {
-      await respondToVerificationRequest(req.id, 'approved');
-      grantVerification(req.userId);
-
-      recordAuditLogEntry({
-        action: 'verification_approved',
-        summary: `Approved verified badge for ${req.applicantName} (${req.institutionClaimed} - ${req.documentReference})`,
-        targetType: 'verification_request',
-        targetId: req.id,
-        institutionCode: req.institutionClaimed,
-        reason: 'Document verified against registrar criteria',
-      });
-
-      createNotification({
-        recipientId: req.userId,
-        type: 'system',
-        title: 'Campus Verification Approved',
-        body: 'Congratulations! Your identity has been verified. The official verified badge is now active on your profile.',
-        deepLinkPath: '/(student)/profile',
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['verification-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-
+      await approveRequestCore(req);
+      invalidateVerificationQueries();
       Alert.alert('Verification Granted', `${req.applicantName}'s verified identity badge has been activated.`);
     } catch (err: any) {
       // Without this the rejection was unhandled: the spinner cleared and
@@ -89,29 +142,8 @@ export default function VerificationRequestsScreen() {
     const finalReason = customRejectNote.trim() ? `${selectedRejectReason}: ${customRejectNote.trim()}` : selectedRejectReason;
 
     try {
-      await respondToVerificationRequest(req.id, 'rejected');
-      markVerificationRejected(req.userId);
-
-      recordAuditLogEntry({
-        action: 'verification_rejected',
-        summary: `Rejected verification for ${req.applicantName} (${req.institutionClaimed}): ${finalReason}`,
-        targetType: 'verification_request',
-        targetId: req.id,
-        institutionCode: req.institutionClaimed,
-        reason: finalReason,
-      });
-
-      createNotification({
-        recipientId: req.userId,
-        type: 'system',
-        title: 'Verification Request Update',
-        body: `Your verification submission was not approved: ${finalReason}. You may re-apply with clear documentation.`,
-        deepLinkPath: '/(student)/profile',
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['verification-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      await rejectRequestCore(req, finalReason);
+      invalidateVerificationQueries();
 
       setRejectModalRequest(null);
       setCustomRejectNote('');
@@ -125,6 +157,76 @@ export default function VerificationRequestsScreen() {
         err?.message || `${req.applicantName}'s verification could not be rejected. Please try again.`,
       );
     }
+  }
+
+  function getSelectedRequests(): VerificationRequest[] {
+    return (requests ?? []).filter((r) => selectedIds.has(r.id));
+  }
+
+  async function handleBulkApprove() {
+    const targets = getSelectedRequests();
+    if (targets.length === 0 || bulkProcessing) return;
+    haptics.medium();
+    setBulkProcessing(true);
+
+    let succeeded = 0;
+    let failed = 0;
+    // Sequential (not Promise.all) so we don't hammer Supabase with a
+    // burst of concurrent writes, and so a failure on one item doesn't
+    // obscure whether the others made it through.
+    for (const req of targets) {
+      try {
+        await approveRequestCore(req);
+        succeeded += 1;
+      } catch (err) {
+        failed += 1;
+      }
+    }
+
+    invalidateVerificationQueries();
+    setBulkProcessing(false);
+    clearSelection();
+
+    if (failed > 0) haptics.error();
+    else haptics.success();
+
+    Alert.alert(
+      'Bulk Approve Complete',
+      failed > 0 ? `${succeeded} approved, ${failed} failed. Retry the failed ones individually.` : `${succeeded} verification request${succeeded === 1 ? '' : 's'} approved.`,
+    );
+  }
+
+  async function handleConfirmBulkReject() {
+    const targets = getSelectedRequests();
+    if (targets.length === 0 || bulkProcessing) return;
+    haptics.medium();
+    const finalReason = customRejectNote.trim() ? `${selectedRejectReason}: ${customRejectNote.trim()}` : selectedRejectReason;
+    setBulkProcessing(true);
+
+    let succeeded = 0;
+    let failed = 0;
+    for (const req of targets) {
+      try {
+        await rejectRequestCore(req, finalReason);
+        succeeded += 1;
+      } catch (err) {
+        failed += 1;
+      }
+    }
+
+    invalidateVerificationQueries();
+    setBulkProcessing(false);
+    setBulkRejectModalOpen(false);
+    setCustomRejectNote('');
+    clearSelection();
+
+    if (failed > 0) haptics.error();
+    else haptics.success();
+
+    Alert.alert(
+      'Bulk Reject Complete',
+      failed > 0 ? `${succeeded} rejected, ${failed} failed. Retry the failed ones individually.` : `${succeeded} verification request${succeeded === 1 ? '' : 's'} rejected.`,
+    );
   }
 
   return (
@@ -150,12 +252,46 @@ export default function VerificationRequestsScreen() {
 
         <View style={{ height: spacing.md }} />
 
+        {/* Bulk Action Bar - only appears once the admin has checked at least one request */}
+        {selectedIds.size > 0 && (
+          <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: colors.pastelPrimaryBg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+              <View style={{ flex: 1, minWidth: 120 }}>
+                <AppText weight="bold" variant="bodySmall">{selectedIds.size} selected</AppText>
+              </View>
+              <View style={{ flexShrink: 0 }}>
+                <AppButton label="Clear" variant="ghost" size="sm" onPress={clearSelection} disabled={bulkProcessing} />
+              </View>
+              <View style={{ flexShrink: 0, minWidth: 110 }}>
+                <AppButton label="Bulk Reject" variant="secondary" size="sm" loading={bulkProcessing} onPress={() => setBulkRejectModalOpen(true)} />
+              </View>
+              <View style={{ flexShrink: 0, minWidth: 130 }}>
+                <AppButton label="Bulk Approve" size="sm" loading={bulkProcessing} onPress={handleBulkApprove} />
+              </View>
+            </View>
+          </SolidCard>
+        )}
+
         <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
           {requests?.map((req) => (
             <View key={req.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : undefined}>
               <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs, gap: spacing.sm }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                    <Pressable
+                      onPress={() => toggleSelected(req.id)}
+                      hitSlop={8}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selectedIds.has(req.id) }}
+                      accessibilityLabel={`Select ${req.applicantName}`}
+                      style={{ flexShrink: 0 }}
+                    >
+                      <Ionicons
+                        name={selectedIds.has(req.id) ? 'checkbox' : 'square-outline'}
+                        size={22}
+                        color={selectedIds.has(req.id) ? colors.brandPrimary : colors.textSecondary}
+                      />
+                    </Pressable>
                     <View style={{ flexShrink: 0 }}>
                       <Avatar name={req.applicantName} size={42} role="student" />
                     </View>
@@ -351,6 +487,76 @@ export default function VerificationRequestsScreen() {
  </View>
  </View>
  </Modal>
+
+      {/* Bulk Rejection Reason Modal - same reason picker, applied to every selected request */}
+      <Modal visible={bulkRejectModalOpen} transparent animationType="slide" onRequestClose={() => setBulkRejectModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setBulkRejectModalOpen(false)} />
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+                  Decline {selectedIds.size} Verification Submission{selectedIds.size === 1 ? '' : 's'}
+                </AppText>
+              </View>
+              <Pressable onPress={() => setBulkRejectModalOpen(false)} hitSlop={8} style={{ flexShrink: 0 }}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+              Select an official rejection reason to send to all {selectedIds.size} selected applicant{selectedIds.size === 1 ? '' : 's'}:
+            </AppText>
+
+            {REJECTION_REASONS.map((reason) => {
+              const isSelected = selectedRejectReason === reason;
+              return (
+                <Pressable
+                  key={reason}
+                  onPress={() => setSelectedRejectReason(reason)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    paddingVertical: 10,
+                    paddingHorizontal: spacing.md,
+                    borderRadius: radius.md,
+                    backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface,
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.brandPrimary : colors.border,
+                    marginBottom: spacing.xs,
+                  }}
+                >
+                  <Ionicons
+                    name={isSelected ? 'radio-button-on' : 'radio-button-off'}
+                    size={16}
+                    color={isSelected ? colors.brandPrimary : colors.textSecondary}
+                  />
+                  <AppText variant="bodySmall" weight={isSelected ? 'bold' : 'regular'} tone={isSelected ? 'brand' : 'primary'} style={{ flex: 1 }}>
+                    {reason}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+
+            <AppTextField
+              label="Additional Guidance Note (Optional)"
+              placeholder="e.g. Please take a clear photo showing matric number and expiration year."
+              value={customRejectNote}
+              onChangeText={setCustomRejectNote}
+            />
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Cancel" variant="ghost" onPress={() => setBulkRejectModalOpen(false)} disabled={bulkProcessing} fullWidth />
+              </View>
+              <View style={{ flex: 2 }}>
+                <AppButton label="Confirm Bulk Rejection & Notify" variant="secondary" loading={bulkProcessing} onPress={handleConfirmBulkReject} fullWidth />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
  </ScreenContainer>
  );
 }

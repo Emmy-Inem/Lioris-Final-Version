@@ -963,9 +963,6 @@ export default function StudentDashboard() {
                         <AppText variant="caption" weight="bold" numberOfLines={1}>
                           {post.authorName ?? 'Student'}
                         </AppText>
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }} numberOfLines={1}>
-                          {post.department ?? 'Computer Science'}
-                        </AppText>
                       </View>
                     </View>
                     <View style={{ flexShrink: 0 }}>
@@ -984,7 +981,7 @@ export default function StudentDashboard() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name="heart-outline" size={14} color={colors.textSecondary} />
                       <AppText variant="caption" tone="secondary">
-                        {post.upvotesCount ?? 0}
+                        {post.likesCount ?? 0}
                       </AppText>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
