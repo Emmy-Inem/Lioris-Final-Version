@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, Pressable, Platform, StyleSheet } from 'react-native';
+import { View, Pressable, Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -21,12 +21,23 @@ export interface FloatingLiquidGlassTabBarProps {
   insets?: any;
 }
 
+const SPRING_CONFIG = {
+  damping: 22,
+  stiffness: 200,
+  mass: 0.7,
+};
+
+const PILL_PADDING_H = 6;
+const PILL_HEIGHT = 54;
+const TAB_HEIGHT = 42;
+
 function getRouteLabel(route: any, descriptor: any): string {
   const options = descriptor?.options || {};
   if (options.tabBarLabel !== undefined && typeof options.tabBarLabel === 'string') {
     return options.tabBarLabel;
   }
   if (options.title !== undefined && typeof options.title === 'string') {
+    if (options.title === 'Alumni Events') return 'Events';
     return options.title;
   }
   return route.name;
@@ -112,42 +123,22 @@ function TabItem({
   const labelScale = useSharedValue(isFocused ? 1 : 0.85);
 
   useEffect(() => {
-    itemX.value = withSpring(targetX, {
-      damping: 22,
-      stiffness: 200,
-      mass: 0.7,
-    });
-    itemWidth.value = withSpring(targetWidth, {
-      damping: 22,
-      stiffness: 200,
-      mass: 0.7,
-    });
+    itemX.value = withSpring(targetX, SPRING_CONFIG);
+    itemWidth.value = withSpring(targetWidth, SPRING_CONFIG);
 
     if (isFocused) {
       labelOpacity.value = withTiming(1, {
         duration: 200,
         easing: Easing.out(Easing.quad),
       });
-      labelWidth.value = withSpring(labelWidthEstimate, {
-        damping: 22,
-        stiffness: 200,
-        mass: 0.7,
-      });
-      labelScale.value = withSpring(1, {
-        damping: 22,
-        stiffness: 200,
-        mass: 0.7,
-      });
+      labelWidth.value = withSpring(labelWidthEstimate, SPRING_CONFIG);
+      labelScale.value = withSpring(1, SPRING_CONFIG);
     } else {
       labelOpacity.value = withTiming(0, {
         duration: 130,
         easing: Easing.in(Easing.quad),
       });
-      labelWidth.value = withSpring(0, {
-        damping: 22,
-        stiffness: 200,
-        mass: 0.7,
-      });
+      labelWidth.value = withSpring(0, SPRING_CONFIG);
       labelScale.value = withTiming(0.85, { duration: 130 });
     }
   }, [targetX, targetWidth, isFocused, labelWidthEstimate]);
@@ -175,7 +166,7 @@ function TabItem({
         accessibilityLabel={label}
         hitSlop={4}
       >
-        <Ionicons name={iconName} size={19} color={iconColor} />
+        <Ionicons name={iconName} size={18} color={iconColor} />
 
         <Animated.View style={[styles.labelWrapper, animatedLabelStyle]}>
           <AppText
@@ -187,6 +178,7 @@ function TabItem({
               fontSize: 12,
               letterSpacing: 0.2,
               paddingLeft: 6,
+              ...(Platform.OS === 'web' ? ({ whiteSpace: 'nowrap' } as any) : {}),
             }}
           >
             {label}
@@ -200,6 +192,7 @@ function TabItem({
 export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: FloatingLiquidGlassTabBarProps) {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { width: windowWidth } = useWindowDimensions();
   const safeAreaInsets = useSafeAreaInsets();
 
   if (isDesktop) return null;
@@ -246,12 +239,13 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
         activeWidth: 0,
         selectorX: 0,
         totalContentWidth: 0,
+        targetPillWidth: 0,
         labels: [],
         icons: [],
       };
     }
 
-    const inactiveWidth = N <= 4 ? 44 : 40;
+    const inactiveWidth = 42;
     const gap = 6;
 
     const labels: string[] = [];
@@ -264,8 +258,9 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
       const label = getRouteLabel(route, descriptor);
       const isFocused = i === activeIndex;
       const icon = getRouteIcon(route.name, label, isFocused);
-      const lWidth = Math.round(label.length * 8.5) + 12;
-      const aWidth = 19 + 6 + 26 + Math.round(label.length * 7.5);
+      const lWidth = Math.round(label.length * 7.5) + 12;
+      // Active width: 18px icon + 6px text padding + 24px container padding (12 left + 12 right) + text width
+      const aWidth = 18 + 6 + 24 + Math.round(label.length * 7.5);
 
       labels.push(label);
       icons.push(icon);
@@ -286,6 +281,9 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
     }
 
     const totalContentWidth = currentX - gap;
+    // The navigation pill size adjusts dynamically to snugly hug the tabs with 6px padding on both sides
+    const maxPillWidth = Math.min(windowWidth - 24, 380);
+    const targetPillWidth = Math.min(totalContentWidth + PILL_PADDING_H * 2, maxPillWidth);
 
     return {
       tabWidths,
@@ -294,33 +292,28 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
       activeWidth: tabWidths[activeIndex] ?? inactiveWidth,
       selectorX: tabPositions[activeIndex] ?? 0,
       totalContentWidth,
+      targetPillWidth,
       labels,
       icons,
     };
-  }, [visibleRoutes, activeIndex, descriptors]);
+  }, [visibleRoutes, activeIndex, descriptors, windowWidth]);
 
-  // Animated selector values
+  // Animated shared values
+  const pillWidth = useSharedValue(layoutInfo.targetPillWidth);
   const selectorX = useSharedValue(layoutInfo.selectorX);
   const selectorWidth = useSharedValue(layoutInfo.activeWidth);
   const trackWidth = useSharedValue(layoutInfo.totalContentWidth);
 
   useEffect(() => {
-    selectorX.value = withSpring(layoutInfo.selectorX, {
-      damping: 22,
-      stiffness: 200,
-      mass: 0.7,
-    });
-    selectorWidth.value = withSpring(layoutInfo.activeWidth, {
-      damping: 22,
-      stiffness: 200,
-      mass: 0.7,
-    });
-    trackWidth.value = withSpring(layoutInfo.totalContentWidth, {
-      damping: 22,
-      stiffness: 200,
-      mass: 0.7,
-    });
-  }, [layoutInfo.selectorX, layoutInfo.activeWidth, layoutInfo.totalContentWidth]);
+    pillWidth.value = withSpring(layoutInfo.targetPillWidth, SPRING_CONFIG);
+    selectorX.value = withSpring(layoutInfo.selectorX, SPRING_CONFIG);
+    selectorWidth.value = withSpring(layoutInfo.activeWidth, SPRING_CONFIG);
+    trackWidth.value = withSpring(layoutInfo.totalContentWidth, SPRING_CONFIG);
+  }, [layoutInfo.targetPillWidth, layoutInfo.selectorX, layoutInfo.activeWidth, layoutInfo.totalContentWidth]);
+
+  const animatedPillStyle = useAnimatedStyle(() => ({
+    width: pillWidth.value,
+  }));
 
   const animatedSelectorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: selectorX.value }],
@@ -333,10 +326,11 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
 
   return (
     <View style={[styles.floatingWrapper, { bottom: bottomInset }]} pointerEvents="box-none">
-      <View
+      <Animated.View
         {...({ dataSet: { component: 'floating-liquid-glass-bar' } } as any)}
         style={[
           styles.glassPill,
+          animatedPillStyle,
           {
             backgroundColor: isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.92)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
@@ -387,7 +381,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
                 iconName={layoutInfo.icons[index] || 'ellipse-outline'}
                 isFocused={isFocused}
                 targetX={layoutInfo.tabPositions[index] ?? 0}
-                targetWidth={layoutInfo.tabWidths[index] ?? 40}
+                targetWidth={layoutInfo.tabWidths[index] ?? 42}
                 labelWidthEstimate={layoutInfo.labelWidths[index] ?? 80}
                 isDark={isDark}
                 onPress={onPress}
@@ -395,7 +389,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
             );
           })}
         </Animated.View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -414,12 +408,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '92%',
-    maxWidth: 390,
-    height: 58,
-    borderRadius: 29,
+    height: PILL_HEIGHT,
+    borderRadius: PILL_HEIGHT / 2,
     borderWidth: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: PILL_PADDING_H,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -428,15 +420,15 @@ const styles = StyleSheet.create({
   },
   trackContainer: {
     position: 'relative',
-    height: 44,
+    height: TAB_HEIGHT,
     alignSelf: 'center',
   },
   slidingSelectorPill: {
     position: 'absolute',
     top: 0,
     left: 0,
-    height: 44,
-    borderRadius: 22,
+    height: TAB_HEIGHT,
+    borderRadius: TAB_HEIGHT / 2,
     zIndex: 1,
     // Strictly NO glow or blurred neon shadows
     shadowColor: '#000',
@@ -449,8 +441,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    height: 44,
-    borderRadius: 22,
+    height: TAB_HEIGHT,
+    borderRadius: TAB_HEIGHT / 2,
     zIndex: 2,
   },
   tabPressable: {
@@ -459,8 +451,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
-    borderRadius: 22,
+    paddingHorizontal: 12,
+    borderRadius: TAB_HEIGHT / 2,
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
   },
   labelWrapper: {
@@ -469,3 +461,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 });
+
