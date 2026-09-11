@@ -8,6 +8,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -154,7 +156,7 @@ function TabItem({
     transform: [{ scale: labelScale.value }],
   }));
 
-  const iconColor = isFocused ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B';
+  const iconColor = isFocused ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475569';
 
   return (
     <Animated.View style={[styles.tabItemContainer, animatedContainerStyle]}>
@@ -332,19 +334,43 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
           styles.glassPill,
           animatedPillStyle,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.92)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.52)' : 'rgba(255, 255, 255, 0.58)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.65)',
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              backdropFilter: 'blur(30px) saturate(210%) brightness(108%) contrast(102%)',
+              WebkitBackdropFilter: 'blur(30px) saturate(210%) brightness(108%) contrast(102%)',
               boxShadow: isDark
-                ? '0 12px 30px -4px rgba(0, 0, 0, 0.50)'
-                : '0 12px 30px -4px rgba(15, 23, 42, 0.10)',
+                ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.45), inset 0 0 14px 0 rgba(255, 255, 255, 0.04), 0 20px 40px -8px rgba(0, 0, 0, 0.55), 0 6px 16px -2px rgba(0, 0, 0, 0.35)'
+                : 'inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.90), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.06), inset 0 0 14px 0 rgba(255, 255, 255, 0.35), 0 18px 38px -6px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.06)',
             } as any),
         ]}
       >
+        {/* Native Liquid Blur Engine */}
+        {Platform.OS !== 'web' && (
+          <BlurView
+            intensity={85}
+            tint={isDark ? 'systemThinMaterialDark' : 'systemThinMaterialLight'}
+            blurMethod="dimezisBlurViewSdk31Plus"
+            style={[StyleSheet.absoluteFill, { borderRadius: PILL_HEIGHT / 2, overflow: 'hidden' }]}
+          />
+        )}
+
+        {/* Liquid Surface Meniscus Reflection Overlay */}
+        <LinearGradient
+          colors={
+            isDark
+              ? ['rgba(255, 255, 255, 0.14)', 'rgba(255, 255, 255, 0.03)', 'transparent', 'rgba(255, 255, 255, 0.06)']
+              : ['rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.18)', 'transparent', 'rgba(255, 255, 255, 0.22)']
+          }
+          locations={[0, 0.35, 0.7, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={[StyleSheet.absoluteFill, { borderRadius: PILL_HEIGHT / 2, overflow: 'hidden' }]}
+          pointerEvents="none"
+        />
+
         <Animated.View style={[styles.trackContainer, animatedTrackStyle]}>
           {/* Active Sliding Selector Pill - strictly NO glow */}
           <Animated.View
@@ -353,6 +379,10 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
               {
                 backgroundColor: colors.brandPrimary,
               },
+              Platform.OS === 'web' &&
+                ({
+                  boxShadow: 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.35), 0 3px 10px rgba(0, 0, 0, 0.18)',
+                } as any),
               animatedSelectorStyle,
             ]}
           />
@@ -405,6 +435,7 @@ const styles = StyleSheet.create({
     zIndex: 99999,
   },
   glassPill: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -413,15 +444,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: PILL_PADDING_H,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 18,
+    elevation: 8,
   },
   trackContainer: {
     position: 'relative',
     height: TAB_HEIGHT,
     alignSelf: 'center',
+    zIndex: 2,
   },
   slidingSelectorPill: {
     position: 'absolute',
@@ -430,12 +462,12 @@ const styles = StyleSheet.create({
     height: TAB_HEIGHT,
     borderRadius: TAB_HEIGHT / 2,
     zIndex: 1,
-    // Strictly NO glow or blurred neon shadows
+    // Strictly NO glow or blurred neon shadows - crisp physical depth
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
   },
   tabItemContainer: {
     position: 'absolute',
