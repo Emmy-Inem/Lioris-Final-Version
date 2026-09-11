@@ -23,13 +23,17 @@ import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 import { AcademicLibraryModal } from '@/components/AcademicLibraryModal';
 import { ResearchPapersModal } from '@/components/ResearchPapersModal';
 import { AICopilotModal } from '@/components/AICopilotModal';
+import { ResourceReaderModal } from '@/components/ResourceReaderModal';
+import { useResourceBookmarks } from '@/utils/resourceBookmarks';
+import { Resource } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 const RESOURCE_CATEGORIES = [
- { id: 'all', label: 'All Files', filter: 'All Types', icon: 'document-text-outline' as const },
- { id: 'past_questions', label: 'Past Questions', filter: 'Past Questions', icon: 'help-circle-outline' as const },
- { id: 'notes', label: 'Course Notes', filter: 'Notes', icon: 'book-outline' as const },
- { id: 'projects', label: 'Projects & Code', filter: 'Projects', icon: 'code-slash-outline' as const },
+  { id: 'all', label: 'All Files', filter: 'All Types', icon: 'document-text-outline' as const },
+  { id: 'past_questions', label: 'Past Questions', filter: 'Past Questions', icon: 'help-circle-outline' as const },
+  { id: 'notes', label: 'Course Notes', filter: 'Notes', icon: 'book-outline' as const },
+  { id: 'projects', label: 'Projects & Code', filter: 'Projects', icon: 'code-slash-outline' as const },
+  { id: 'bookmarked', label: 'Bookmarked', filter: 'Bookmarked', icon: 'bookmark' as const },
 ];
 
 export default function ResourcesScreen() {
@@ -47,7 +51,9 @@ export default function ResourcesScreen() {
   const [researchModalOpen, setResearchModalOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotPrompt, setCopilotPrompt] = useState<string | undefined>(undefined);
+  const [readingResource, setReadingResource] = useState<Resource | null>(null);
   const { isFeatureEnabled } = useFeatureFlags();
+  const { bookmarkedIds } = useResourceBookmarks();
 
  const { campusCode, homeInstitutionCode } = useCampusScope();
   const effectiveCampus =
@@ -67,10 +73,20 @@ export default function ResourcesScreen() {
  queryFn: () =>
  listResources({
  q: debouncedQuery || undefined,
- category: filters.resourceType === 'All Types' ? undefined : (filters.resourceType as any),
+ category:
+   filters.resourceType === 'All Types' || filters.resourceType === 'Bookmarked'
+     ? undefined
+     : (filters.resourceType as any),
  department: filters.department === 'All Depts' ? undefined : filters.department,
  campusCode,
  }),
+ });
+
+ const displayedResources = (resources ?? []).filter((r) => {
+   if (filters.resourceType === 'Bookmarked') {
+     return bookmarkedIds.includes(r.id);
+   }
+   return true;
  });
 
  async function handleUpload(payload: UploadAcademicPayload) {
@@ -672,44 +688,55 @@ export default function ResourcesScreen() {
           {/* Academic Files Count */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <AppText variant="h3" weight="bold">
-              Academic Files ({(resources ?? []).length})
+              {filters.resourceType === 'Bookmarked' ? 'Bookmarked Notes' : 'Academic Files'} ({displayedResources.length})
             </AppText>
           </View>
 
           {/* Multi-Column Responsive Grid with Non-Stretching Cards */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-            {(resources ?? []).map((res) => (
+            {displayedResources.map((res) => (
               <View key={res.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
-                <ResourceCard resource={res} />
+                <ResourceCard resource={res} onPreview={setReadingResource} />
               </View>
             ))}
           </View>
 
-          {(resources ?? []).length === 0 && !isLoading ? (
-            <EmptyState title="No resources found" description="Try a different search query or upload a file for your department." />
+          {displayedResources.length === 0 && !isLoading ? (
+            <EmptyState
+              title={filters.resourceType === 'Bookmarked' ? 'No Bookmarked Notes' : 'No resources found'}
+              description={
+                filters.resourceType === 'Bookmarked'
+                  ? 'Tap the bookmark icon on any course note or paper to save it here for fast revision.'
+                  : 'Try a different search query or upload a file for your department.'
+              }
+            />
           ) : null}
         </ScrollView>
       ) : (
         /* Mobile Single Column FlatList */
         <FlatList
-          data={resources ?? []}
+          data={displayedResources}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={renderHeader}
           initialNumToRender={8}
           maxToRenderPerBatch={8}
           contentContainerStyle={{ paddingBottom: 130 }}
-          renderItem={({ item }) => <ResourceCard resource={item} />}
+          renderItem={({ item }) => <ResourceCard resource={item} onPreview={setReadingResource} />}
           showsVerticalScrollIndicator={false}
           onRefresh={refetch}
           refreshing={isRefetching}
           ListEmptyComponent={
             !isLoading ? (
               <EmptyState
-                icon="book-outline"
-                title="No Academic Resources Found"
-                description="Try searching for another course code or upload study materials for your peers."
-                actionLabel="Upload Study Material"
-                onAction={() => setUploadModalOpen(true)}
+                icon={filters.resourceType === 'Bookmarked' ? 'bookmark-outline' : 'book-outline'}
+                title={filters.resourceType === 'Bookmarked' ? 'No Bookmarked Notes' : 'No Academic Resources Found'}
+                description={
+                  filters.resourceType === 'Bookmarked'
+                    ? 'Tap the bookmark icon on any course note to keep it handy for quick reading.'
+                    : 'Try searching for another course code or upload study materials for your peers.'
+                }
+                actionLabel={filters.resourceType === 'Bookmarked' ? undefined : 'Upload Study Material'}
+                onAction={filters.resourceType === 'Bookmarked' ? undefined : () => setUploadModalOpen(true)}
               />
             ) : null
           }
@@ -735,6 +762,15 @@ export default function ResourcesScreen() {
           setCopilotPrompt(undefined);
         }}
         initialPrompt={copilotPrompt}
+      />
+      <ResourceReaderModal
+        visible={!!readingResource}
+        resource={readingResource}
+        onClose={() => setReadingResource(null)}
+        onSendToCopilot={(p) => {
+          setCopilotPrompt(p);
+          setCopilotOpen(true);
+        }}
       />
     </ScreenContainer>
   );

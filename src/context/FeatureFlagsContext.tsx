@@ -21,7 +21,8 @@ export type FeatureKey =
   | 'campus_radio'
   | 'campus_map'
   | 'ai_study_copilot'
-  | 'currency_converter';
+  | 'currency_converter'
+  | 'forum_trends';
 
 export interface FeatureFlagMeta {
   key: FeatureKey;
@@ -95,6 +96,14 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Engagement & XP',
     tier: 'P0',
     description: 'Allows community forum threads, student voting polls, and departmental discussions.',
+    defaultOn: true,
+  },
+  {
+    key: 'forum_trends',
+    label: 'Currently Threading & Forum Trends',
+    category: 'Engagement & XP',
+    tier: 'P1',
+    description: 'Displays live trending campus discussions, hot hashtags, and popular thread topics in the forum feed.',
     defaultOn: true,
   },
   {

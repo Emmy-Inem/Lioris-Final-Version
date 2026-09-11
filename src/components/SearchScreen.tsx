@@ -10,6 +10,8 @@ import { EmptyState } from './EmptyState';
 import { PostCard } from './PostCard';
 import { EventCard } from './EventCard';
 import { ResourceCard } from './ResourceCard';
+import { ResourceReaderModal } from './ResourceReaderModal';
+import { Resource } from '@/api/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts } from '@/api/posts';
@@ -24,6 +26,7 @@ export function SearchScreen() {
   const { isDesktop } = useResponsive();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<SearchTab>('posts');
+  const [readingResource, setReadingResource] = useState<Resource | null>(null);
   const trimmed = query.trim();
   const debouncedTrimmed = useDebouncedValue(trimmed);
 
@@ -128,7 +131,7 @@ export function SearchScreen() {
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
             {(resources ?? []).map((item) => (
               <View key={item.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : { marginBottom: spacing.sm }}>
-                <ResourceCard resource={item} />
+                <ResourceCard resource={item} onPreview={setReadingResource} />
               </View>
             ))}
           </View>
@@ -137,6 +140,12 @@ export function SearchScreen() {
           ) : null}
         </ScrollView>
       )}
+
+      <ResourceReaderModal
+        visible={!!readingResource}
+        resource={readingResource}
+        onClose={() => setReadingResource(null)}
+      />
     </ScreenContainer>
   );
 }
