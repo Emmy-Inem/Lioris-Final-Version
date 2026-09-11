@@ -116,6 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const fullName = demoMatch?.fullName || profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
           
           const storedUser = await getSessionUser();
+          const activeRole =
+            storedUser?.actualRole === 'admin' && storedUser?.role
+              ? (storedUser.role as UserRole)
+              : role;
           const isOnboarded =
             storedUser?.onboardingComplete ??
             (Boolean(profile?.department) || role === 'admin' || role === 'staff');
@@ -124,10 +128,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: session.user.id,
             fullName,
             email: userEmail,
-            role,
+            role: activeRole,
             actualRole: role,
             onboardingComplete: isOnboarded,
-            mfaVerified: !roleRequiresMfa(role),
+            mfaVerified: !roleRequiresMfa(activeRole),
           };
           await persist(nextUser);
           await setTokens(session.access_token, session.refresh_token ?? session.access_token);
@@ -161,6 +165,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const fullName = demoMatch?.fullName || profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
         
         const storedUser = await getSessionUser();
+        const activeRole =
+          storedUser?.actualRole === 'admin' && storedUser?.role
+            ? (storedUser.role as UserRole)
+            : role;
         const isOnboarded =
           storedUser?.onboardingComplete ??
           (Boolean(profile?.department) || role === 'admin' || role === 'staff');
@@ -169,10 +177,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: session.user.id,
           fullName,
           email: userEmail,
-          role,
+          role: activeRole,
           actualRole: role,
           onboardingComplete: isOnboarded,
-          mfaVerified: !roleRequiresMfa(role),
+          mfaVerified: !roleRequiresMfa(activeRole),
         };
         await persist(nextUser);
         await setTokens(session.access_token, session.refresh_token ?? session.access_token);

@@ -51,7 +51,7 @@ export default function AdminFeatureControlsScreen() {
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
           <View style={{ flex: 1, paddingRight: spacing.sm }}>
-            <AppText variant="h1" weight="bold">
+            <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
               Feature Controls
             </AppText>
             <AppText tone="secondary" variant="caption">

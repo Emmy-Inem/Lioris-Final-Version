@@ -128,7 +128,7 @@ export default function ModerationAuditLogScreen() {
  return (
  <ScreenContainer glow={false}>
  {!isDesktop && <AppHeader />}
- <AppText variant="h1"weight="bold"style={{ paddingTop: isDesktop ? spacing.xs : spacing.lg, marginBottom: spacing.xs }}>
+ <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold"style={{ paddingTop: isDesktop ? spacing.xs : spacing.lg, marginBottom: spacing.xs }}>
  Moderation & Admin Action Log
  </AppText>
  <AppText tone="secondary"style={{ marginBottom: spacing.lg }}>

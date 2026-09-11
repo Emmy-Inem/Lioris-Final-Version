@@ -343,7 +343,7 @@ export default function SuperAdminConfigScreen() {
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
       <View style={{ marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
-        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+        <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
           Super Admin Configuration
         </AppText>
       </View>
@@ -600,7 +600,7 @@ function Section({ number, title, emoji, children }: { number: number; title: st
  const { spacing } = useTheme();
  return (
  <View style={{ marginBottom: spacing.lg }}>
- <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }} numberOfLines={1}>
+ <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }} numberOfLines={2}>
  {number}. {title} {emoji}
  </AppText>
  <SolidCard>{children}</SolidCard>

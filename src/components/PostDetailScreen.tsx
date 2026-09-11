@@ -65,6 +65,16 @@ export function PostDetailScreen() {
   const [bookmarked, setBookmarked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const isAuthor = Boolean(
+    user?.id &&
+      post &&
+      (post.authorId === user.id ||
+        post.authorId === 'student-me' ||
+        post.authorId === 'me' ||
+        (user.fullName && post.authorName.toLowerCase() === user.fullName.toLowerCase()) ||
+        post.authorName === 'You'),
+  );
+
  // Discussion reply state
  const [newReply, setNewReply] = useState('');
  const [attachedReplyMedia, setAttachedReplyMedia] = useState<string | null>(null);
@@ -301,10 +311,6 @@ export function PostDetailScreen() {
  style={{ width: '100%', height: 240, borderRadius: 20, overflow: 'hidden', marginBottom: spacing.md, position: 'relative' }}
  >
  <Image source={postImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- <View style={{ position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
- <Ionicons name="expand"size={14} color="#FFFFFF" />
- <AppText variant="caption"weight="bold"tone="inverse">Expand</AppText>
- </View>
  </Pressable>
  ) : null}
 
@@ -677,6 +683,44 @@ export function PostDetailScreen() {
  <Ionicons name="share-social-outline"size={18} color={colors.textPrimary} />
  <AppText weight="medium">Share Thread Link</AppText>
  </Pressable>
+
+ {/* Author Delete Thread Control */}
+ {isAuthor && !(user?.role === 'admin' || user?.role === 'staff') && (
+ <>
+ <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
+ <Pressable
+ onPress={() => {
+ setMenuOpen(false);
+ Alert.alert(
+ 'Delete Your Post',
+ 'Are you sure you want to permanently delete this thread? This cannot be undone.',
+ [
+ { text: 'Cancel', style: 'cancel' },
+ {
+ text: 'Delete Post',
+ style: 'destructive',
+ onPress: async () => {
+ try {
+ await deletePost(post.id);
+ await queryClient.invalidateQueries({ queryKey: ['feed'] });
+ haptics.medium();
+ Alert.alert('Post Deleted', 'Your thread has been deleted.');
+ router.back();
+ } catch (err: any) {
+ Alert.alert('Error', err?.message || 'Could not delete post.');
+ }
+ },
+ },
+ ],
+ );
+ }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ >
+ <Ionicons name="trash-outline" size={18} color={colors.critical} />
+ <AppText style={{ color: colors.critical }} weight="bold">Delete My Post</AppText>
+ </Pressable>
+ </>
+ )}
 
  {/* Direct Admin Moderation Controls */}
  {(user?.role === 'admin' || user?.role === 'staff') && (

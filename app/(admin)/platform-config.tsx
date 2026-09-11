@@ -91,15 +91,17 @@ export default function PlatformConfigScreen() {
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
       >
         {/* Page Title & Badges */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: spacing.sm }}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
-              Staff & Admin Workdesk
+        <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'flex-start' : 'flex-start', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: 8 }}>
+          <View style={{ flex: 1, minWidth: 0, width: '100%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, flexWrap: 'wrap' }}>
+              <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+                Staff & Admin Workdesk
+              </AppText>
+              <Badge label="Lioris Root Admin" tone="critical" />
+            </View>
+            <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ marginTop: 2 }}>
+              Centralized university moderation, live nodes & control tower
             </AppText>
-            <AppText tone="secondary" numberOfLines={2}>Centralized university moderation, live nodes & control tower</AppText>
-          </View>
-          <View style={{ flexShrink: 0 }}>
-            <Badge label="Lioris Root Admin" tone="critical" />
           </View>
         </View>
 

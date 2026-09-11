@@ -126,13 +126,13 @@ export default function AuditLogsScreen() {
       {!isDesktop && <AppHeader />}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs, gap: spacing.sm }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
             System Audit Trail
           </AppText>
           <AppText tone="secondary" numberOfLines={2}>Immutable ledger of administrative and security events</AppText>
         </View>
         <View style={{ flexShrink: 0 }}>
-          <AppButton label="Export CSV" variant="secondary" onPress={handleExportCsv} />
+          <AppButton label="Export CSV" variant="secondary" size={isDesktop ? 'md' : 'sm'} onPress={handleExportCsv} />
         </View>
       </View>
 

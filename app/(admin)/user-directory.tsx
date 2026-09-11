@@ -312,17 +312,17 @@ export default function UserDirectoryScreen() {
       {!isDesktop && <AppHeader />}
 
       {/* Header & Quick Action Row */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: spacing.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: spacing.sm }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
             User Directory
           </AppText>
-          <AppText tone="secondary" numberOfLines={2}>Manage identities, matric records & role privileges</AppText>
+          <AppText tone="secondary" variant="caption" numberOfLines={1}>Manage identities, matric records & role privileges</AppText>
         </View>
         <View style={{ flexShrink: 0 }}>
           <AppButton
-            label="+ Provision User"
-            size={isDesktop ? 'md' : 'sm'}
+            label={isDesktop ? '+ Provision User' : '+ Provision'}
+            size="sm"
             onPress={() => setCreateModalOpen(true)}
           />
         </View>

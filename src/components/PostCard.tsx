@@ -68,6 +68,14 @@ export function PostCard({ post }: { post: Post }) {
  const [reportReason, setReportReason] = useState('');
 
  const isGlobalPost = post.visibilityScope === 'global' || post.scopeVisibility === 'global';
+ const isAuthor = Boolean(
+   user?.id &&
+     (post.authorId === user.id ||
+       post.authorId === 'student-me' ||
+       post.authorId === 'me' ||
+       (user.fullName && post.authorName.toLowerCase() === user.fullName.toLowerCase()) ||
+       post.authorName === 'You'),
+ );
 
  async function handleToggleLike() {
  haptics.light();
@@ -200,11 +208,6 @@ export function PostCard({ post }: { post: Post }) {
  </View>
  </View>
  ) : null}
-
- <View style={{ position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
- <Ionicons name="expand"size={12} color="#FFFFFF" />
- <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>Expand</AppText>
- </View>
  </Pressable>
  ) : null}
 
@@ -322,7 +325,7 @@ export function PostCard({ post }: { post: Post }) {
  borderTopColor: colors.divider,
  }}
  >
- {/* Upvote / Like Pill */}
+ {/* Upvote / Like Action */}
  <Pressable
  onPress={handleToggleLike}
  accessibilityRole="button"accessibilityLabel={liked ? 'Remove like' : 'Like thread'}
@@ -330,8 +333,6 @@ export function PostCard({ post }: { post: Post }) {
  flexDirection: 'row',
  alignItems: 'center',
  gap: 6,
- backgroundColor: liked ? colors.pastelPrimaryBg : 'transparent',
- borderRadius: radius.pill,
  paddingHorizontal: spacing.sm,
  paddingVertical: 6,
  }}
@@ -402,6 +403,43 @@ export function PostCard({ post }: { post: Post }) {
  <Ionicons name="share-social-outline"size={18} color={colors.textPrimary} />
  <AppText weight="medium">Share Thread Link</AppText>
  </Pressable>
+
+ {/* Author Delete Thread Control */}
+ {isAuthor && !(user?.role === 'admin' || user?.role === 'staff') && (
+ <>
+ <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
+ <Pressable
+ onPress={() => {
+ setMenuOpen(false);
+ Alert.alert(
+ 'Delete Your Post',
+ 'Are you sure you want to delete this thread from the community? This cannot be undone.',
+ [
+ { text: 'Cancel', style: 'cancel' },
+ {
+ text: 'Delete Post',
+ style: 'destructive',
+ onPress: async () => {
+ try {
+ await deletePost(post.id);
+ await queryClient.invalidateQueries({ queryKey: ['feed'] });
+ haptics.medium();
+ Alert.alert('Post Deleted', 'Your thread has been removed from the community feed.');
+ } catch (err: any) {
+ Alert.alert('Error', err?.message || 'Could not delete post.');
+ }
+ },
+ },
+ ],
+ );
+ }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ >
+ <Ionicons name="trash-outline" size={18} color={colors.critical} />
+ <AppText style={{ color: colors.critical }} weight="bold">Delete My Post</AppText>
+ </Pressable>
+ </>
+ )}
 
  {/* Direct Admin Moderation Controls */}
  {(user?.role === 'admin' || user?.role === 'staff') && (

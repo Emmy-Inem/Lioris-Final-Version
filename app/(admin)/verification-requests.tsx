@@ -136,12 +136,12 @@ export default function VerificationRequestsScreen() {
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs, gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs, gap: spacing.sm }}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+            <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
               Verify Credentials
             </AppText>
-            <AppText tone="secondary" numberOfLines={2}>Review student matriculation records & government ID certificates</AppText>
+            <AppText tone="secondary" variant="caption" numberOfLines={1}>Review student matriculation records & IDs</AppText>
           </View>
           <View style={{ flexShrink: 0 }}>
             <Badge label={`${requests?.length ?? 0} Pending`} tone="brand" />
@@ -185,17 +185,19 @@ export default function VerificationRequestsScreen() {
                   </View>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.xs }}>
+                <View style={{ flexDirection: 'row', gap: 6, marginTop: spacing.xs }}>
                   <View style={{ flex: 1 }}>
                     <AppButton
                       label="Inspect"
                       variant="ghost"
+                      size="sm"
                       onPress={() => setInspectDocRequest(req)}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
                     <AppButton
                       label="Approve"
+                      size="sm"
                       loading={processingId === req.id}
                       onPress={() => handleApprove(req)}
                     />
@@ -204,6 +206,7 @@ export default function VerificationRequestsScreen() {
                     <AppButton
                       label="Reject"
                       variant="secondary"
+                      size="sm"
                       onPress={() => setRejectModalRequest(req)}
                     />
                   </View>

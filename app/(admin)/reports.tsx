@@ -15,10 +15,10 @@ export default function AdminReportsScreen() {
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.sm }}>
-        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+        <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
           Incident Reports & Safety
         </AppText>
-        <AppText tone="secondary" numberOfLines={2}>
+        <AppText tone="secondary" variant="caption" numberOfLines={2}>
           Review community flagged threads, chat harassment, and policy violations
         </AppText>
       </View>

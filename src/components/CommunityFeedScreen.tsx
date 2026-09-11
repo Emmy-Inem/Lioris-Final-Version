@@ -15,6 +15,7 @@ import { DiscussionWorkspacesModal } from './DiscussionWorkspacesModal';
 
 import { ActionSheetModal } from './ActionSheetModal';
 import { AnnouncementsWidget } from './AnnouncementsWidget';
+import { router, useSegments } from 'expo-router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -23,6 +24,7 @@ import { getMyProfile } from '@/api/profile';
 import { useViewScope } from '@/hooks/useViewScope';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
+import { haptics } from '@/utils/haptics';
 import { ShimmerCardList } from './ShimmerSkeleton';
 import { UserProfileQuickViewModal, QuickViewUser } from './UserProfileQuickViewModal';
 import { EmptyState } from './EmptyState';
@@ -45,7 +47,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { user } = useAuth();
   const { isFeatureEnabled } = useFeatureFlags();
  const { isDesktop } = useResponsive();
- const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
+  const segments = useSegments();
+  const roleGroup = segments[0] ?? '(student)';
 
   const toast = useToast();
   const [quickViewUser, setQuickViewUser] = useState<QuickViewUser | null>(null);
@@ -94,9 +98,24 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  posts = posts.filter((p) => !!p.poll);
  }
 
- posts = [...posts].sort((a, b) =>
- sortBy === 'popular' ? b.likesCount - a.likesCount : b.createdAt.localeCompare(a.createdAt),
- );
+  posts = [...posts].sort((a, b) =>
+    sortBy === 'popular' ? b.likesCount - a.likesCount : b.createdAt.localeCompare(a.createdAt),
+  );
+
+  // Top Trending Discussions & Hot Topics
+  const trendingTopics = React.useMemo(() => {
+    const sorted = [...(rawPosts ?? [])].sort(
+      (a, b) => (b.likesCount + (b.commentsCount ?? 0) * 2) - (a.likesCount + (a.commentsCount ?? 0) * 2),
+    );
+    const topPosts = sorted.slice(0, 5);
+    const hotTags = [
+      { id: 'tag-1', title: '#TechHackathon', category: 'Tech Hub', engagement: '🔥 42 active' },
+      { id: 'tag-2', title: '#FinalsRevision', category: 'Academic', engagement: '📚 118 students' },
+      { id: 'tag-3', title: '#HostelAllocations', category: 'Housing', engagement: '⚡ Hot topic' },
+      { id: 'tag-4', title: '#CampusSportsFest', category: 'Social', engagement: '🏆 28 teams' },
+    ];
+    return { topPosts, hotTags };
+  }, [rawPosts]);
 
  async function handlePublish(payload: {
  title: string;
@@ -138,10 +157,32 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
       {/* Screen Title & Scope Switcher in 1 Unified Clean Row */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
-        <View style={{ flexShrink: 1, minWidth: 0 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 }}>
           <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
             Campus Forum
           </AppText>
+          <Pressable
+            onPress={() => {
+              haptics.medium();
+              setComposerOpen(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Create new thread"
+            style={{
+              backgroundColor: colors.brandPrimary,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: radius.pill,
+            }}
+          >
+            <Ionicons name="add" size={14} color="#FFFFFF" />
+            <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11 }}>
+              + New Thread
+            </AppText>
+          </Pressable>
         </View>
 
         {!isDesktop && (
@@ -236,6 +277,88 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             {sortBy === 'latest' ? 'Latest' : 'Top'}
           </AppText>
         </Pressable>
+      </View>
+
+      {/* 🔥 Currently Threading Section */}
+      <View style={{ marginBottom: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Ionicons name="flame" size={15} color="#EF4444" />
+            <AppText weight="bold" variant="caption" style={{ letterSpacing: 0.5, textTransform: 'uppercase', color: '#EF4444' }}>
+              Currently Threading
+            </AppText>
+          </View>
+          <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+            Live Discussions
+          </AppText>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingRight: 16 }}
+          style={{ width: '100%', flexGrow: 0 }}
+          {...({ 'data-horizontal-scroll': 'true' } as any)}
+        >
+          {trendingTopics.topPosts.length > 0 ? (
+            trendingTopics.topPosts.map((tp) => (
+              <Pressable
+                key={tp.id}
+                onPress={() => router.push(`/${roleGroup}/post/${tp.id}` as any)}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 14,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  maxWidth: 220,
+                  minWidth: 160,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                  <Ionicons name="flame" size={12} color="#EF4444" />
+                  <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }} numberOfLines={1}>
+                    {tp.category}
+                  </AppText>
+                </View>
+                <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ fontSize: 12 }}>
+                  {tp.title}
+                </AppText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+                    ❤️ {tp.likesCount}
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+                    💬 {tp.commentsCount ?? 0}
+                  </AppText>
+                </View>
+              </Pressable>
+            ))
+          ) : (
+            trendingTopics.hotTags.map((ht) => (
+              <Pressable
+                key={ht.id}
+                onPress={() => setQuery(ht.title.replace('#', ''))}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 14,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <AppText weight="bold" variant="caption" tone="brand">
+                  {ht.title}
+                </AppText>
+                <AppText tone="secondary" variant="caption" style={{ fontSize: 10, marginTop: 2 }}>
+                  {ht.engagement}
+                </AppText>
+              </Pressable>
+            ))
+          )}
+        </ScrollView>
       </View>
 
       {/* Horizontal Channel Filter Pills */}
@@ -602,9 +725,44 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  })}
  </ActionSheetModal>
 
- <PublishThreadModal visible={composerOpen} onClose={() => setComposerOpen(false)} onPublish={handlePublish} />
- <DiscussionWorkspacesModal visible={workspacesOpen} onClose={() => setWorkspacesOpen(false)} />
-   <UserProfileQuickViewModal user={quickViewUser} visible={!!quickViewUser} onClose={() => setQuickViewUser(null)} />
-    </ScreenContainer>
- );
+    <PublishThreadModal visible={composerOpen} onClose={() => setComposerOpen(false)} onPublish={handlePublish} />
+    <DiscussionWorkspacesModal visible={workspacesOpen} onClose={() => setWorkspacesOpen(false)} />
+    <UserProfileQuickViewModal user={quickViewUser} visible={!!quickViewUser} onClose={() => setQuickViewUser(null)} />
+
+    {/* Floating Action Button (FAB) for Instant Thread Creation on Mobile */}
+    {!isDesktop && (
+      <Pressable
+        onPress={() => {
+          haptics.medium();
+          setComposerOpen(true);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Create new thread"
+        style={{
+          position: 'absolute',
+          bottom: 86,
+          right: 18,
+          backgroundColor: colors.brandPrimary,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderRadius: radius.pill,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 6,
+          elevation: 8,
+          zIndex: 999,
+        }}
+      >
+        <Ionicons name="add" size={20} color="#FFFFFF" />
+        <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 13 }}>
+          New Thread
+        </AppText>
+      </Pressable>
+    )}
+  </ScreenContainer>
+  );
 }

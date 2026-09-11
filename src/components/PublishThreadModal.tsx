@@ -13,6 +13,16 @@ import { haptics } from '@/utils/haptics';
 
 const CHANNELS = ['Tech Hub', 'Academic', 'Polls', 'Housing', 'Social', 'Lost & Found'] as const;
 
+const STUDENT_GIFS = [
+  { label: 'Mind Blown 🤯', url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
+  { label: 'Aced It 🎉', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
+  { label: 'Exam Mood 📚', url: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif' },
+  { label: 'Need Coffee ☕', url: 'https://media.giphy.com/media/oZEBLugoTNRxS/giphy.gif' },
+  { label: 'Coding Grind 💻', url: 'https://media.giphy.com/media/ule4akeXnY9A50XDUS/giphy.gif' },
+  { label: 'Eureka! 💡', url: 'https://media.giphy.com/media/3ohzdQ1IynzclJldUQ/giphy.gif' },
+  { label: 'Study Squad 🤝', url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif' },
+];
+
 interface PublishThreadModalProps {
   visible: boolean;
   onClose: () => void;
@@ -48,6 +58,26 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['Option A', 'Option B']);
 
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+
+  function handleGenerateAiArt() {
+    const seed = topic.trim() || content.trim() || channel;
+    if (!seed) {
+      Alert.alert('Topic Needed', 'Type a headline or what is on your mind first so the AI knows what to illustrate.');
+      return;
+    }
+    haptics.medium();
+    setGeneratingAi(true);
+    const cleanPrompt = encodeURIComponent(`${seed} university campus modern vibrant digital art`);
+    const aiUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=800&height=450&nologo=true&seed=${Date.now()}`;
+    setCustomMediaUri(aiUrl);
+    setTimeout(() => {
+      setGeneratingAi(false);
+      haptics.light();
+    }, 400);
+  }
+
   // Web file input ref
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -58,6 +88,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setAttachPoll(false);
     setPollQuestion('');
     setPollOptions(['Option A', 'Option B']);
+    setGeneratingAi(false);
+    setShowGifPicker(false);
     setErrorMessage(null);
   }
 
@@ -259,26 +291,75 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               </View>
             ) : null}
 
-            {/* Action Row: Add Photo + Add Poll */}
-            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+            {/* Action Row: Photo + AI Art + GIFs + Poll */}
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.sm, flexWrap: 'wrap' }}>
               <Pressable
                 onPress={handlePickImage}
                 style={{
                   flex: 1,
+                  minWidth: '22%',
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 6,
-                  paddingVertical: 10,
+                  gap: 4,
+                  paddingVertical: 9,
+                  paddingHorizontal: 8,
                   borderRadius: radius.md,
                   borderWidth: 1,
-                  borderColor: customMediaUri ? colors.brandPrimary : colors.border,
-                  backgroundColor: customMediaUri ? colors.pastelPrimaryBg : colors.surface,
+                  borderColor: customMediaUri && !customMediaUri.includes('pollinations') && !customMediaUri.includes('giphy') ? colors.brandPrimary : colors.border,
+                  backgroundColor: customMediaUri && !customMediaUri.includes('pollinations') && !customMediaUri.includes('giphy') ? colors.pastelPrimaryBg : colors.surface,
                 }}
               >
-                <Ionicons name="image-outline" size={18} color={customMediaUri ? colors.brandPrimary : colors.textSecondary} />
-                <AppText variant="caption" weight="bold" tone={customMediaUri ? 'brand' : 'secondary'}>
-                  {customMediaUri ? 'Photo Added' : 'Add Photo'}
+                <Ionicons name="image-outline" size={16} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" numberOfLines={1}>
+                  Photo
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                onPress={handleGenerateAiArt}
+                disabled={generatingAi}
+                style={{
+                  flex: 1,
+                  minWidth: '22%',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  paddingVertical: 9,
+                  paddingHorizontal: 8,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: customMediaUri?.includes('pollinations') ? '#8B5CF6' : colors.border,
+                  backgroundColor: customMediaUri?.includes('pollinations') ? 'rgba(139,92,246,0.12)' : colors.surface,
+                }}
+              >
+                <Ionicons name="sparkles" size={15} color="#8B5CF6" />
+                <AppText variant="caption" weight="bold" style={{ color: '#8B5CF6' }} numberOfLines={1}>
+                  {generatingAi ? 'Generating...' : 'AI Art ✨'}
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                onPress={() => { haptics.light(); setShowGifPicker((v) => !v); }}
+                style={{
+                  flex: 1,
+                  minWidth: '22%',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  paddingVertical: 9,
+                  paddingHorizontal: 8,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: showGifPicker || customMediaUri?.includes('giphy') ? '#EC4899' : colors.border,
+                  backgroundColor: showGifPicker || customMediaUri?.includes('giphy') ? 'rgba(236,72,153,0.12)' : colors.surface,
+                }}
+              >
+                <Ionicons name="happy-outline" size={16} color="#EC4899" />
+                <AppText variant="caption" weight="bold" style={{ color: '#EC4899' }} numberOfLines={1}>
+                  GIFs
                 </AppText>
               </Pressable>
 
@@ -286,23 +367,58 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 onPress={() => { haptics.light(); setAttachPoll((v) => !v); }}
                 style={{
                   flex: 1,
+                  minWidth: '22%',
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 6,
-                  paddingVertical: 10,
+                  gap: 4,
+                  paddingVertical: 9,
+                  paddingHorizontal: 8,
                   borderRadius: radius.md,
                   borderWidth: 1,
                   borderColor: attachPoll ? '#10B981' : colors.border,
                   backgroundColor: attachPoll ? 'rgba(16,185,129,0.08)' : colors.surface,
                 }}
               >
-                <Ionicons name="bar-chart-outline" size={18} color={attachPoll ? '#10B981' : colors.textSecondary} />
-                <AppText variant="caption" weight="bold" style={{ color: attachPoll ? '#10B981' : colors.textSecondary }}>
-                  {attachPoll ? 'Poll On' : 'Add Poll'}
+                <Ionicons name="bar-chart-outline" size={16} color={attachPoll ? '#10B981' : colors.textSecondary} />
+                <AppText variant="caption" weight="bold" style={{ color: attachPoll ? '#10B981' : colors.textSecondary }} numberOfLines={1}>
+                  Poll
                 </AppText>
               </Pressable>
             </View>
+
+            {/* Reaction GIFs Picker */}
+            {showGifPicker && (
+              <View style={{ marginBottom: spacing.md, backgroundColor: colors.surface, padding: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border }}>
+                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
+                  TAP A REACTION GIF TO ATTACH:
+                </AppText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                  {STUDENT_GIFS.map((gif) => (
+                    <Pressable
+                      key={gif.label}
+                      onPress={() => {
+                        haptics.medium();
+                        setCustomMediaUri(gif.url);
+                        setShowGifPicker(false);
+                      }}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: radius.pill,
+                        backgroundColor: customMediaUri === gif.url ? colors.pastelPrimaryBg : colors.background,
+                        borderWidth: 1,
+                        borderColor: customMediaUri === gif.url ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <AppText variant="caption" weight="semiBold">
+                        {gif.label}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
             {/* Poll Fields */}
             {attachPoll && (
