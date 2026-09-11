@@ -70,6 +70,9 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
  support_ticket_resolved: 'success',
  system_cleanup_executed: 'warning',
  profile_updated: 'brand',
+ event_updated: 'brand',
+ event_spotlight_enabled: 'success',
+ event_spotlight_disabled: 'neutral',
 };
 
 const ACTION_LABEL: Record<AuditLogAction, string> = {
@@ -78,6 +81,9 @@ const ACTION_LABEL: Record<AuditLogAction, string> = {
  event_approved: 'Event approved',
  event_approval_revoked: 'Event approval revoked',
  event_purged: 'Event purged',
+ event_updated: 'Event details updated',
+ event_spotlight_enabled: 'Event spotlight featured',
+ event_spotlight_disabled: 'Event spotlight removed',
  verification_approved: 'Verification approved',
  verification_rejected: 'Verification rejected',
  escrow_funds_released: 'Escrow funds released',

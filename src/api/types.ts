@@ -106,6 +106,25 @@ export type EventCategory =
  | 'seminar'
  | 'workshop';
 
+export interface EventAgendaItem {
+  time: string;
+  title: string;
+  speaker?: string;
+  description?: string;
+}
+
+export interface EventAttendeeInfo {
+  userId: string;
+  fullName: string;
+  name?: string;
+  avatarUrl?: string | null;
+  role?: string;
+  matricNumber?: string;
+  department?: string;
+  registeredAt: string;
+  ticketCode?: string;
+}
+
 export interface CampusEvent {
  id: string;
  organizerId: string;
@@ -132,6 +151,9 @@ export interface CampusEvent {
  targetCohort?: string;
  rsvpDeadline?: string;
  campusCode?: string;
+ agenda?: EventAgendaItem[];
+ isVenueVerified?: boolean;
+ venueCoordinates?: { latitude: number; longitude: number };
 }
 
 export type ConnectionStatus = 'none' | 'pending' | 'accepted' | 'declined' | 'blocked';
@@ -261,6 +283,9 @@ export type AuditLogAction =
  | 'event_approved'
  | 'event_approval_revoked'
  | 'event_purged'
+ | 'event_updated'
+ | 'event_spotlight_enabled'
+ | 'event_spotlight_disabled'
  | 'verification_approved'
  | 'verification_rejected'
  | 'escrow_funds_released'

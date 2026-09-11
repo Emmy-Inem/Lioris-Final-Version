@@ -1,4 +1,4 @@
-import { CampusEvent } from './types';
+import { CampusEvent, EventAttendeeInfo } from './types';
 import { recordAuditLogEntry } from './auditLog';
 import { getSessionUser } from '@/auth/tokenStorage';
 import { supabase } from './supabase';
@@ -189,8 +189,6 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
 
 export async function getEvent(id?: string | null): Promise<CampusEvent | null> {
   if (!id) return null;
-  const found = [...locallyCreatedEvents].find((e) => e.id === id);
-  if (found) return found;
   try {
     const { data: authData } = await supabase.auth.getUser();
     const currentUserId = authData?.user?.id;
@@ -202,7 +200,7 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
       .single();
     if (!error && data) {
       const isRsvpd = currentUserId ? (data.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
-      return {
+      const freshEvent: CampusEvent = {
         id: data.id,
         organizerId: data.creator_id,
         organizerName: data.profiles?.full_name || 'Campus Event Organizer',
@@ -225,11 +223,17 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
         ticketPrice: data.ticket_price != null ? Number(data.ticket_price) : undefined,
         targetCohort: data.target_cohort ?? undefined,
       };
+      locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, ...freshEvent } : e));
+      return freshEvent;
     }
   } catch (err) {
     console.warn('[Events] Supabase getEvent error:', err);
   }
- return null;
+
+  const found = [...locallyCreatedEvents].find((e) => e.id === id);
+  if (found) return found;
+
+  return null;
 }
 
 export interface CreateEventPayload {
@@ -413,22 +417,74 @@ export async function updateEvent(id: string, updates: Partial<CampusEvent>): Pr
  if (updates.location) dbPayload.venue = updates.location;
  if (updates.startAt) dbPayload.start_time = updates.startAt;
  if (updates.endAt) dbPayload.end_time = updates.endAt;
- if (updates.coverImageUrl) dbPayload.banner_url = updates.coverImageUrl;
- if (updates.capacity !== undefined) dbPayload.capacity = updates.capacity;
- if (updates.isSpotlight !== undefined) dbPayload.is_spotlight = updates.isSpotlight;
- if (updates.venueType !== undefined) dbPayload.venue_type = updates.venueType;
- if (updates.virtualLink !== undefined) dbPayload.virtual_link = updates.virtualLink;
- if (updates.ticketPrice !== undefined) dbPayload.ticket_price = updates.ticketPrice;
- if (updates.targetCohort !== undefined) dbPayload.target_cohort = updates.targetCohort;
+    if (updates.coverImageUrl) dbPayload.banner_url = updates.coverImageUrl;
+    if (updates.capacity !== undefined) dbPayload.capacity = updates.capacity;
+    if (updates.isSpotlight !== undefined) dbPayload.is_spotlight = updates.isSpotlight;
+    if (updates.venueType !== undefined) dbPayload.venue_type = updates.venueType;
+    if (updates.virtualLink !== undefined) dbPayload.virtual_link = updates.virtualLink;
+    if (updates.ticketPrice !== undefined) dbPayload.ticket_price = updates.ticketPrice;
+    if (updates.targetCohort !== undefined) dbPayload.target_cohort = updates.targetCohort;
+    if (updates.campusCode) dbPayload.campus_code = updates.campusCode.toUpperCase();
+    if (updates.visibilityScope) dbPayload.visibility_scope = updates.visibilityScope;
+    if (updates.sponsored !== undefined) dbPayload.sponsored = updates.sponsored;
+    if (updates.approvalStatus) {
+      dbPayload.status =
+        updates.approvalStatus === 'approved'
+          ? 'upcoming'
+          : updates.approvalStatus === 'pending'
+          ? 'pending_approval'
+          : 'cancelled';
+    }
 
- if (Object.keys(dbPayload).length > 0) {
- await supabase.from('events').update(dbPayload).eq('id', id);
- }
- } catch (err) {
- console.warn('[Events] Supabase updateEvent error:', err);
- }
+    if (Object.keys(dbPayload).length > 0) {
+      await supabase.from('events').update(dbPayload).eq('id', id);
+    }
+  } catch (err) {
+    console.warn('[Events] Supabase updateEvent error:', err);
+  }
 
- return updated;
+  return updated;
+}
+
+export async function listEventAttendees(eventId: string): Promise<EventAttendeeInfo[]> {
+  try {
+    const { data, error } = await supabase
+      .from('event_attendees')
+      .select('user_id, ticket_code, registered_at, profiles:user_id(full_name, avatar_url, role, matric_number, department)')
+      .eq('event_id', eventId)
+      .order('registered_at', { ascending: false });
+
+    if (!error && data) {
+      return data.map((row: any) => ({
+        userId: row.user_id,
+        fullName: row.profiles?.full_name || 'Registered Student',
+        avatarUrl: row.profiles?.avatar_url,
+        role: row.profiles?.role || 'student',
+        matricNumber: row.profiles?.matric_number,
+        department: row.profiles?.department,
+        registeredAt: row.registered_at,
+        ticketCode: row.ticket_code,
+      }));
+    }
+  } catch (err) {
+    console.warn('[Events] listEventAttendees error:', err);
+  }
+  return [];
+}
+
+export async function setEventSpotlight(id: string, isSpotlight: boolean) {
+  locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, isSpotlight } : e));
+  try {
+    await supabase.from('events').update({ is_spotlight: isSpotlight }).eq('id', id);
+  } catch (err) {
+    console.warn('[Events] setEventSpotlight error:', err);
+  }
+  await recordAuditLogEntry({
+    action: isSpotlight ? 'event_spotlight_enabled' : 'event_spotlight_disabled',
+    summary: `${isSpotlight ? 'Enabled' : 'Disabled'} spotlight featured status on event "${id}"`,
+    targetType: 'event',
+    targetId: id,
+  });
 }
 
 export async function approveEvent(id: string) {

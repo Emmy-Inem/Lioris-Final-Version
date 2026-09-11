@@ -56,6 +56,9 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
   support_ticket_resolved: 'success',
   system_cleanup_executed: 'warning',
   profile_updated: 'brand',
+  event_updated: 'brand',
+  event_spotlight_enabled: 'success',
+  event_spotlight_disabled: 'neutral',
 };
 
 export default function AuditLogsScreen() {

@@ -13,6 +13,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { createEvent } from '@/api/events';
 import { EventCategory } from '@/api/types';
+import { VerifiedCampusLocationPicker } from './VerifiedCampusLocationPicker';
 import { haptics } from '@/utils/haptics';
 
 const EVENT_TYPES = ['Lioris Live Event (In-App)', 'Physical Event', 'External Event'] as const;
@@ -477,17 +478,24 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
 
             {eventType === 'Lioris Live Event (In-App)' ? (
               <AppTextField
-                label="Virtual Meeting Link"
+                label="Virtual Meeting Link (Zoom, Google Meet, Teams)"
                 placeholder="https://meet.google.com/xxx-xxxx-xxx or Zoom URL"
                 value={virtualLink}
                 onChangeText={setVirtualLink}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+            ) : eventType === 'Physical Event' ? (
+              <VerifiedCampusLocationPicker
+                campusCode={targetCampus}
+                value={location}
+                onChangeLocation={(loc) => setLocation(loc)}
+                placeholder="Search verified campus halls & auditoriums..."
+              />
             ) : (
               <AppTextField
-                label={eventType === 'Physical Event' ? 'Physical Venue / Hall' : 'External Location or Portal URL'}
-                placeholder={eventType === 'Physical Event' ? 'e.g. Faculty of Science Large Hall' : 'e.g. Landmark Centre, Lagos'}
+                label="External Venue Address / URL"
+                placeholder="e.g. Landmark Centre, Victoria Island, Lagos"
                 value={location}
                 onChangeText={setLocation}
               />

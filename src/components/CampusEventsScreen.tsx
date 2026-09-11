@@ -73,8 +73,11 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
     queryFn: () => listEvents({ ...(scope ? { scope } : {}), campusCode: queryCampus }),
   });
 
-  const featuredEvents: CampusEvent[] = (events ?? []).filter((e) => e.sponsored || e.rsvpCount >= 15);
-  const carouselData = featuredEvents.length > 0 ? featuredEvents : (events ?? []).slice(0, 3);
+  // Only events explicitly spotlighted or sponsored by administrators appear in the Featured Carousel
+  const featuredEvents: CampusEvent[] = (events ?? []).filter(
+    (e) => (e.isSpotlight || e.sponsored) && e.approvalStatus === 'approved'
+  );
+  const carouselData = featuredEvents;
 
   // Auto-scroll carousel timer (pauses when user is dragging)
   useEffect(() => {

@@ -1,19 +1,20 @@
-import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
-import { Image } from'expo-image';
-import { Ionicons } from'@expo/vector-icons';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
-import { SolidCard } from'@/components/SolidCard';
-import { AppText } from'@/components/AppText';
-import { AppTextField } from'@/components/AppTextField';
-import { Badge } from'@/components/Badge';
-import { AppButton } from'@/components/AppButton';
-import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listEvents, createEvent, updateEvent, revokeEventApproval, approveEvent, purgeEvent } from'@/api/events';
-import { CampusEvent, EventCategory } from'@/api/types';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { haptics } from'@/utils/haptics';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { SolidCard } from '@/components/SolidCard';
+import { AppText } from '@/components/AppText';
+import { AppTextField } from '@/components/AppTextField';
+import { Badge } from '@/components/Badge';
+import { AppButton } from '@/components/AppButton';
+import { EmptyState } from '@/components/EmptyState';
+import { useTheme } from '@/theme/ThemeProvider';
+import { listEvents, createEvent, updateEvent, revokeEventApproval, approveEvent, purgeEvent, listEventAttendees } from '@/api/events';
+import { CampusEvent, EventCategory } from '@/api/types';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { haptics } from '@/utils/haptics';
+import { VerifiedCampusLocationPicker } from '@/components/VerifiedCampusLocationPicker';
 
 const EVENT_COVER_PRESETS = [
  { id: 'event_tech_hackathon', label: 'Hackathon & Tech', src: require('../../../assets/images/event_tech_hackathon.jpg') },
@@ -64,6 +65,12 @@ export function EventsModerationTab() {
 
  // Attendee Roster Modal State
  const [rosterEvent, setRosterEvent] = useState<CampusEvent | null>(null);
+
+ const { data: eventAttendees = [], isLoading: isLoadingAttendees } = useQuery({
+ queryKey: ['event-attendees', rosterEvent?.id],
+ queryFn: () => (rosterEvent ? listEventAttendees(rosterEvent.id) : Promise.resolve([])),
+ enabled: !!rosterEvent,
+ });
 
  const { data: allEvents = [], isLoading, refetch } = useQuery({
  queryKey: ['events', 'admin-all-with-pending'],
@@ -540,15 +547,32 @@ export function EventsModerationTab() {
  ))}
  </View>
 
- <AppTextField
- label="Venue / Hall Location"placeholder="e.g. University Main Auditorium, Faculty of Technology"value={formLocation}
- onChangeText={setFormLocation}
- />
+  {formVenueType === 'physical' ? (
+    <View style={{ marginBottom: spacing.md }}>
+      <VerifiedCampusLocationPicker
+        campusCode={editingEvent?.campusCode || 'UI'}
+        value={formLocation}
+        onChangeLocation={(loc) => setFormLocation(loc)}
+        placeholder="Select or search verified campus venue..."
+      />
+    </View>
+  ) : (
+    <AppTextField
+      label={formVenueType === 'virtual' ? 'Platform / Online Venue' : 'External Venue / Address'}
+      placeholder={formVenueType === 'virtual' ? 'e.g. Google Meet / Zoom / YouTube Live' : 'e.g. Landmark Event Centre, Victoria Island'}
+      value={formLocation}
+      onChangeText={setFormLocation}
+    />
+  )}
 
- <AppTextField
- label="Virtual Meeting Link (Optional)"placeholder="https://meet.google.com/xyz or Zoom link"value={formVirtualLink}
- onChangeText={setFormVirtualLink}
- />
+  {formVenueType === 'virtual' && (
+    <AppTextField
+      label="Virtual Meeting Link (Required)"
+      placeholder="https://meet.google.com/xyz or Zoom link"
+      value={formVirtualLink}
+      onChangeText={setFormVirtualLink}
+    />
+  )}
 
  {/* Category Selector */}
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
@@ -669,22 +693,47 @@ export function EventsModerationTab() {
  {rosterEvent.rsvpCount} students registered • Capacity: {rosterEvent.capacity || 'Unlimited'}
  </AppText>
 
- <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
- CHECKED-IN ROSTER:
- </AppText>
- {(rosterEvent.attendeeNames && rosterEvent.attendeeNames.length > 0
- ? rosterEvent.attendeeNames
- : ['Inem Emmanuel', 'Chioma Okonkwo', 'Adekunle Gold', 'Folake Adeleke', 'Amina Yusuf']
- ).map((name, i) => (
- <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
- <AppText variant="bodySmall"weight="semiBold">
- {i + 1}. {name}
- </AppText>
- <Badge label="Confirmed"tone="success" />
- </View>
- ))}
- </View>
+  <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md }}>
+    <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+      CHECKED-IN & REGISTERED ROSTER:
+    </AppText>
+    {isLoadingAttendees ? (
+      <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color={colors.brandPrimary} />
+        <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
+          Loading registered students...
+        </AppText>
+      </View>
+    ) : eventAttendees.length > 0 ? (
+      eventAttendees.map((att, i) => (
+        <View key={att.userId || i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: i < eventAttendees.length - 1 ? 1 : 0, borderBottomColor: colors.border }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+              <AppText variant="caption" weight="bold" tone="inverse">
+                {(att.fullName || att.name || 'S').charAt(0).toUpperCase()}
+              </AppText>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <AppText variant="bodySmall" weight="semiBold" numberOfLines={1}>
+                {att.fullName || att.name || 'Student'}
+              </AppText>
+              <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                {att.matricNumber || att.department || att.role}
+              </AppText>
+            </View>
+          </View>
+          <Badge label="Confirmed" tone="success" />
+        </View>
+      ))
+    ) : (
+      <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+        <Ionicons name="people-outline" size={28} color={colors.textSecondary} />
+        <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
+          No students registered yet for this event.
+        </AppText>
+      </View>
+    )}
+  </View>
  </ScrollView>
  ) : null}
 
