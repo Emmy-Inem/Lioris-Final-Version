@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
+import { GlassCard } from '@/components/GlassCard';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -78,16 +78,13 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
   }
 
   return (
-    <SolidCard
+    <GlassCard
       radius={20}
-      style={[
-        styles.card,
-        {
-          borderColor: colors.border,
-          backgroundColor: colors.surface,
-          marginBottom: spacing.md,
-        },
-      ]}
+      padded={false}
+      style={{
+        marginBottom: spacing.md,
+      }}
+      contentStyle={styles.card}
     >
       {loading && !weather ? (
         <View style={styles.loadingContainer}>
@@ -111,8 +108,8 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
                 style={[
                   styles.switchChip,
                   {
-                    borderColor: colors.border,
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                    borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)',
                     borderWidth: 1,
                   },
                 ]}
@@ -166,14 +163,14 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
           </View>
 
           {/* Walking / Transit Advice */}
-          <View style={[styles.adviceBox, { backgroundColor: `${colors.brandPrimary}08` }]}>
+          <View style={[styles.adviceBox, { backgroundColor: isDark ? 'rgba(124, 58, 237, 0.12)' : 'rgba(124, 58, 237, 0.08)', borderWidth: 1, borderColor: isDark ? 'rgba(167, 139, 250, 0.20)' : 'rgba(124, 58, 237, 0.12)' }]}>
             <AppText variant="caption" style={{ lineHeight: 16, color: colors.textPrimary }}>
               {weather.transitAdvice}
             </AppText>
           </View>
         </View>
       ) : null}
-    </SolidCard>
+    </GlassCard>
   );
 }
 

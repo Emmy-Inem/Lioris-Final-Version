@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { SolidCard } from '@/components/SolidCard';
+import { GlassCard } from '@/components/GlassCard';
 import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { AICopilotModal } from '@/components/AICopilotModal';
@@ -119,13 +120,11 @@ export default function AlumniDashboard() {
         }}
       >
         {/* 1. Hero Alumni Fellow Banner */}
-        <SolidCard
+        <GlassCard
           radius={22}
+          padded={false}
           style={{
             overflow: 'hidden',
-            padding: 0,
-            borderWidth: 1,
-            borderColor: colors.border,
           }}
         >
           <View style={{ height: isDesktop ? 160 : 115, position: 'relative', width: '100%' }}>
@@ -148,7 +147,7 @@ export default function AlumniDashboard() {
             <View style={{ position: 'absolute', top: 12, left: 12, right: 12, flexDirection: 'row' }}>
               <View
                 style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.70)',
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.55)',
                   borderRadius: radius.pill,
                   paddingHorizontal: 10,
                   paddingVertical: 4,
@@ -156,6 +155,8 @@ export default function AlumniDashboard() {
                   alignItems: 'center',
                   gap: 6,
                   maxWidth: '100%',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.25)',
                 }}
               >
                 <Ionicons name="school" size={13} color="#FCD34D" style={{ flexShrink: 0 }} />
@@ -166,7 +167,7 @@ export default function AlumniDashboard() {
             </View>
           </View>
 
-          <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
+          <View style={{ padding: isDesktop ? spacing.lg : 14 }}>
             <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0, width: '100%' }}>
                 <Avatar name={fullName} uri={profile?.avatarUrl} size={isDesktop ? 52 : 44} role="alumni" />
@@ -219,7 +220,7 @@ export default function AlumniDashboard() {
               </View>
             </View>
           </View>
-        </SolidCard>
+        </GlassCard>
 
         {/* Alma Mater Live Campus Weather */}
         {isFeatureEnabled('live_weather') && <CampusWeatherWidget />}
@@ -229,13 +230,11 @@ export default function AlumniDashboard() {
 
         {/* AI Career & Mentorship Assistant Banner */}
         {isFeatureEnabled('ai_study_copilot') && (
-          <SolidCard
+          <GlassCard
             radius={20}
-            style={{
+            padded={false}
+            contentStyle={{
               padding: spacing.md,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -245,7 +244,7 @@ export default function AlumniDashboard() {
                     width: 38,
                     height: 38,
                     borderRadius: 12,
-                    backgroundColor: `${colors.brandPrimary}15`,
+                    backgroundColor: `${colors.brandPrimary}20`,
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexShrink: 0,
@@ -277,7 +276,7 @@ export default function AlumniDashboard() {
                 </AppText>
               </Pressable>
             </View>
-          </SolidCard>
+          </GlassCard>
         )}
 
         {/* 2. Quick Alumni Action Hub (Responsive Grid) */}
@@ -299,9 +298,10 @@ export default function AlumniDashboard() {
                 onPress={() => router.push('/(alumni)/messages')}
                 style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 10 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -321,7 +321,7 @@ export default function AlumniDashboard() {
                       Mentees & fellows
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -333,9 +333,10 @@ export default function AlumniDashboard() {
                 }}
                 style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 10 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -355,7 +356,7 @@ export default function AlumniDashboard() {
                       Live rate converter
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
             {isFeatureEnabled('career_page') && (
@@ -363,9 +364,10 @@ export default function AlumniDashboard() {
                 onPress={() => router.push('/(alumni)/jobs')}
                 style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 10 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -385,7 +387,7 @@ export default function AlumniDashboard() {
                       Post & find jobs
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -394,9 +396,10 @@ export default function AlumniDashboard() {
                 onPress={() => router.push('/(alumni)/mentorship')}
                 style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 10 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -416,7 +419,7 @@ export default function AlumniDashboard() {
                       {pendingMentees.length > 0 ? `${pendingMentees.length} requests` : 'Guide students'}
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -425,9 +428,10 @@ export default function AlumniDashboard() {
                 onPress={() => router.push('/(alumni)/events-list' as any)}
                 style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 10 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -447,7 +451,7 @@ export default function AlumniDashboard() {
                       Reunions & talks
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -456,9 +460,10 @@ export default function AlumniDashboard() {
                 onPress={() => router.push('/(alumni)/marketplace' as any)}
                 style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 10 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -478,7 +483,7 @@ export default function AlumniDashboard() {
                       Books & gear
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -486,9 +491,10 @@ export default function AlumniDashboard() {
               onPress={() => router.push('/(alumni)/forum')}
               style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
             >
-              <SolidCard
+              <GlassCard
                 radius={16}
-                style={{
+                padded={false}
+                contentStyle={{
                   padding: isDesktop ? 10 : 10,
                   flexDirection: isDesktop ? 'row' : 'column',
                   alignItems: isDesktop ? 'center' : 'flex-start',
@@ -508,16 +514,17 @@ export default function AlumniDashboard() {
                     Fellowship feed
                   </AppText>
                 </View>
-              </SolidCard>
+              </GlassCard>
             </Pressable>
 
             <Pressable
               onPress={() => router.push('/(alumni)/network' as any)}
               style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
             >
-              <SolidCard
+              <GlassCard
                 radius={16}
-                style={{
+                padded={false}
+                contentStyle={{
                   padding: isDesktop ? 10 : 10,
                   flexDirection: isDesktop ? 'row' : 'column',
                   alignItems: isDesktop ? 'center' : 'flex-start',
@@ -537,7 +544,7 @@ export default function AlumniDashboard() {
                     Fellow directory
                   </AppText>
                 </View>
-              </SolidCard>
+              </GlassCard>
             </Pressable>
           </View>
         </View>

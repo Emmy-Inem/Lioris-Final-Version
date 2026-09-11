@@ -62,60 +62,72 @@ export function AppHeader() {
       : 'UI';
   const homeInstitutionName = getInstitutionByCode(homeInstitutionCode)?.name ?? 'University of Ibadan';
 
- return (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- justifyContent: 'space-between',
- paddingTop: spacing.xs,
- paddingBottom: spacing.sm,
- zIndex: 10,
- }}
- >
- <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
- <LiorisLogo size={26} variant="symbol" />
- <View style={{ marginLeft: 3 }}>
- <LiorisLogo size={18} variant="wordmark" />
- </View>
- {showWorkspaceSwitcher ? (
- <Pressable
- onPress={() => {
- haptics.light();
- setScopeModalOpen(true);
- }}
- accessibilityRole="button"
- accessibilityLabel={`Workspace scope: ${scope === 'campus' ? homeInstitutionCode : 'Global'}`}
- accessibilityHint="Opens the workspace scope switcher"
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 3,
- backgroundColor: colors.pastelPrimaryBg,
- borderRadius: radius.pill,
- paddingHorizontal: 7,
- paddingVertical: 3,
- marginLeft: 8,
- borderWidth: 1,
- borderColor: `${colors.brandPrimary}25`,
- flexShrink: 0,
- }}
- >
- <Ionicons
- name={scope === 'campus' ? 'school-outline' : 'globe-outline'}
- size={11}
- color={colors.brandPrimary}
- />
- <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 10 }}>
- {scope === 'campus' ? homeInstitutionCode : 'Global'}
- </AppText>
- <Ionicons name="chevron-down" size={10} color={colors.brandPrimary} />
- </Pressable>
- ) : null}
- </View>
+  return (
+    <View
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: spacing.xs,
+          paddingBottom: spacing.sm,
+          zIndex: 10,
+        },
+      ]}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
+        <LiorisLogo size={26} variant="symbol" />
+        <View style={{ marginLeft: 3 }}>
+          <LiorisLogo size={18} variant="wordmark" />
+        </View>
+        {showWorkspaceSwitcher ? (
+          <Pressable
+            onPress={() => {
+              haptics.light();
+              setScopeModalOpen(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Workspace scope: ${scope === 'campus' ? homeInstitutionCode : 'Global'}`}
+            accessibilityHint="Opens the workspace scope switcher"
+            style={[
+              {
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                backgroundColor: isDark ? 'rgba(124, 58, 237, 0.18)' : 'rgba(124, 58, 237, 0.10)',
+                borderRadius: radius.pill,
+                paddingHorizontal: 9,
+                paddingVertical: 4,
+                marginLeft: 8,
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(167, 139, 250, 0.35)' : 'rgba(124, 58, 237, 0.25)',
+                flexShrink: 0,
+              },
+              Platform.OS === 'web' &&
+                ({
+                  backdropFilter: 'blur(16px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                  boxShadow: isDark
+                    ? 'inset 0 1px 1px rgba(255, 255, 255, 0.15)'
+                    : 'inset 0 1px 1px rgba(255, 255, 255, 0.60), 0 2px 6px rgba(124, 58, 237, 0.08)',
+                } as any),
+            ]}
+          >
+            <Ionicons
+              name={scope === 'campus' ? 'school' : 'globe'}
+              size={12}
+              color={colors.brandPrimary}
+            />
+            <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 10.5 }}>
+              {scope === 'campus' ? homeInstitutionCode : 'Global'}
+            </AppText>
+            <Ionicons name="chevron-down" size={10} color={colors.brandPrimary} />
+          </Pressable>
+        ) : null}
+      </View>
 
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-        {/* Direct Messages Button (Replaces Theme Toggle) */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        {/* Direct Messages Button */}
         {messagingEnabled && (
           <Pressable
             hitSlop={8}
@@ -125,17 +137,29 @@ export function AppHeader() {
               haptics.light();
               router.push(`/${roleGroup}/messages` as any);
             }}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
+            style={[
+              {
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+              },
+              Platform.OS === 'web' &&
+                ({
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  boxShadow: isDark
+                    ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12)'
+                    : 'inset 0 1px 1px #fff, 0 2px 6px rgba(0,0,0,0.06)',
+                } as any),
+            ]}
           >
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textPrimary} />
+            <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.textPrimary} />
             {unreadMessagesCount > 0 && (
               <View
                 style={{
@@ -166,78 +190,107 @@ export function AppHeader() {
           </Pressable>
         )}
 
- {/* Global Search Button */}
- <Pressable
- hitSlop={8}
- accessibilityRole="button" accessibilityLabel="Search" onPress={() => {
- haptics.light();
- router.push(`/${roleGroup}/search` as any);
- }}
- style={{
- width: 32,
- height: 32,
- borderRadius: 16,
- backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
- alignItems: 'center',
- justifyContent: 'center',
- }}
- >
- <Ionicons name="search" size={18} color={colors.textPrimary} />
- </Pressable>
+        {/* Global Search Button */}
+        <Pressable
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Search"
+          onPress={() => {
+            haptics.light();
+            router.push(`/${roleGroup}/search` as any);
+          }}
+          style={[
+            {
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+            Platform.OS === 'web' &&
+              ({
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: isDark
+                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12)'
+                  : 'inset 0 1px 1px #fff, 0 2px 6px rgba(0,0,0,0.06)',
+              } as any),
+          ]}
+        >
+          <Ionicons name="search" size={17} color={colors.textPrimary} />
+        </Pressable>
 
- {/* Notifications Bell Button */}
- <Pressable
- hitSlop={8}
- accessibilityRole="button" accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
- onPress={() => {
- haptics.light();
- router.push(`/${roleGroup}/notifications` as any);
- }}
- style={{
- width: 32,
- height: 32,
- borderRadius: 16,
- backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
- alignItems: 'center',
- justifyContent: 'center',
- }}
- >
- <View>
- <Ionicons name="notifications-outline" size={18} color={colors.textPrimary} />
- {unreadCount > 0 ? (
- <View
- style={{
- position: 'absolute',
- top: -3,
- right: -3,
- minWidth: 14,
- height: 14,
- borderRadius: 7,
- backgroundColor: colors.critical,
- alignItems: 'center',
- justifyContent: 'center',
- paddingHorizontal: 3,
- }}
- >
- <AppText style={{ fontSize: 9, color: '#FFFFFF' }} weight="bold">
- {unreadCount}
- </AppText>
- </View>
- ) : null}
- </View>
- </Pressable>
+        {/* Notifications Bell Button */}
+        <Pressable
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+          onPress={() => {
+            haptics.light();
+            router.push(`/${roleGroup}/notifications` as any);
+          }}
+          style={[
+            {
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+            Platform.OS === 'web' &&
+              ({
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: isDark
+                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12)'
+                  : 'inset 0 1px 1px #fff, 0 2px 6px rgba(0,0,0,0.06)',
+              } as any),
+          ]}
+        >
+          <View>
+            <Ionicons name="notifications-outline" size={17} color={colors.textPrimary} />
+            {unreadCount > 0 ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -3,
+                  right: -3,
+                  minWidth: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: colors.critical,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 3,
+                }}
+              >
+                <AppText style={{ fontSize: 9, color: '#FFFFFF' }} weight="bold">
+                  {unreadCount}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+        </Pressable>
 
- {/* Profile Avatar Pill */}
- <Pressable
- onPress={() => {
- haptics.light();
- router.push(`/${roleGroup}/profile` as any);
- }}
- accessibilityRole="button" accessibilityLabel="Open profile" style={{ marginLeft: 2 }}
- >
- <Avatar name={user?.fullName ?? 'You'} uri={profile?.avatarUrl} size={32} />
- </Pressable>
- </View>
+        {/* Profile Avatar Pill */}
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            router.push(`/${roleGroup}/profile` as any);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Open profile"
+          style={{ marginLeft: 2 }}
+        >
+          <Avatar name={user?.fullName ?? 'You'} uri={profile?.avatarUrl} size={32} />
+        </Pressable>
+      </View>
 
  <ChangeWorkspaceScopeModal
  visible={scopeModalOpen}

@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { SolidCard } from '@/components/SolidCard';
+import { GlassCard } from '@/components/GlassCard';
 import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { AICopilotModal } from '@/components/AICopilotModal';
@@ -111,13 +112,11 @@ export default function StaffDashboard() {
         }}
       >
         {/* 1. Hero Faculty Card */}
-        <SolidCard
+        <GlassCard
           radius={22}
+          padded={false}
           style={{
             overflow: 'hidden',
-            padding: 0,
-            borderWidth: 1,
-            borderColor: colors.border,
           }}
         >
           <View style={{ height: isDesktop ? 160 : 120, position: 'relative', width: '100%' }}>
@@ -140,13 +139,15 @@ export default function StaffDashboard() {
             <View style={{ position: 'absolute', top: 14, left: 16 }}>
               <View
                 style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.55)',
                   borderRadius: radius.pill,
                   paddingHorizontal: 12,
                   paddingVertical: 5,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.25)',
                 }}
               >
                 <Ionicons name="school" size={14} color="#68D391" style={{ flexShrink: 0 }} />
@@ -159,7 +160,7 @@ export default function StaffDashboard() {
             </View>
           </View>
 
-          <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
+          <View style={{ padding: isDesktop ? spacing.lg : 14 }}>
             <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0 }}>
                 <View style={{ flexShrink: 0 }}>
@@ -191,7 +192,7 @@ export default function StaffDashboard() {
               </View>
             </View>
           </View>
-        </SolidCard>
+        </GlassCard>
 
         {/* Live Weather & Transit Widget */}
         {isFeatureEnabled('live_weather') && <CampusWeatherWidget />}
@@ -201,13 +202,11 @@ export default function StaffDashboard() {
 
         {/* AI Faculty Teaching Copilot Banner */}
         {isFeatureEnabled('ai_study_copilot') && (
-          <SolidCard
+          <GlassCard
             radius={20}
-            style={{
+            padded={false}
+            contentStyle={{
               padding: spacing.md,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -217,7 +216,7 @@ export default function StaffDashboard() {
                     width: 38,
                     height: 38,
                     borderRadius: 12,
-                    backgroundColor: `${colors.brandPrimary}15`,
+                    backgroundColor: `${colors.brandPrimary}20`,
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexShrink: 0,
@@ -249,7 +248,7 @@ export default function StaffDashboard() {
                 </AppText>
               </Pressable>
             </View>
-          </SolidCard>
+          </GlassCard>
         )}
 
         {/* 2. Urgent Safety & Content Moderation Alerts */}
@@ -304,9 +303,10 @@ export default function StaffDashboard() {
                 onPress={() => router.push('/(staff)/messages')}
                 style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -326,7 +326,7 @@ export default function StaffDashboard() {
                       Faculty chat
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -338,9 +338,10 @@ export default function StaffDashboard() {
                 }}
                 style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -360,16 +361,17 @@ export default function StaffDashboard() {
                       Rate converter
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
             <Pressable
               onPress={() => router.push('/(staff)/announcements')}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
-              <SolidCard
+              <GlassCard
                 radius={16}
-                style={{
+                padded={false}
+                contentStyle={{
                   padding: isDesktop ? 12 : 10,
                   flexDirection: isDesktop ? 'row' : 'column',
                   alignItems: isDesktop ? 'center' : 'flex-start',
@@ -389,16 +391,17 @@ export default function StaffDashboard() {
                     Post notices
                   </AppText>
                 </View>
-              </SolidCard>
+              </GlassCard>
             </Pressable>
 
             <Pressable
               onPress={() => router.push('/(staff)/moderation')}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
-              <SolidCard
+              <GlassCard
                 radius={16}
-                style={{
+                padded={false}
+                contentStyle={{
                   padding: isDesktop ? 12 : 10,
                   flexDirection: isDesktop ? 'row' : 'column',
                   alignItems: isDesktop ? 'center' : 'flex-start',
@@ -418,16 +421,17 @@ export default function StaffDashboard() {
                     {openReportsCount > 0 ? `${openReportsCount} flags` : 'Queue clear'}
                   </AppText>
                 </View>
-              </SolidCard>
+              </GlassCard>
             </Pressable>
 
             <Pressable
               onPress={() => router.push('/(staff)/events-list' as any)}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
-              <SolidCard
+              <GlassCard
                 radius={16}
-                style={{
+                padded={false}
+                contentStyle={{
                   padding: isDesktop ? 12 : 10,
                   flexDirection: isDesktop ? 'row' : 'column',
                   alignItems: isDesktop ? 'center' : 'flex-start',
@@ -447,16 +451,17 @@ export default function StaffDashboard() {
                     Seminars & talks
                   </AppText>
                 </View>
-              </SolidCard>
+              </GlassCard>
             </Pressable>
 
             <Pressable
               onPress={() => router.push('/(staff)/forum')}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
-              <SolidCard
+              <GlassCard
                 radius={16}
-                style={{
+                padded={false}
+                contentStyle={{
                   padding: isDesktop ? 12 : 10,
                   flexDirection: isDesktop ? 'row' : 'column',
                   alignItems: isDesktop ? 'center' : 'flex-start',
@@ -476,7 +481,7 @@ export default function StaffDashboard() {
                     Academic feed
                   </AppText>
                 </View>
-              </SolidCard>
+              </GlassCard>
             </Pressable>
           </View>
         </View>

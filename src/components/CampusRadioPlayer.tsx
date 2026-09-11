@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, TextInput, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
+import { GlassCard } from '@/components/GlassCard';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -18,7 +18,7 @@ import {
 const CATEGORIES = ['All', 'Campus & Education', 'News & Talk', 'Music & Culture', 'Study & Lo-Fi'] as const;
 
 export function CampusRadioPlayer() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
 
@@ -96,9 +96,17 @@ export function CampusRadioPlayer() {
         style={[
           styles.minimizedPill,
           {
-            backgroundColor: colors.surface,
-            borderColor: radioState.isPlaying ? colors.brandPrimary : colors.border,
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.70)' : 'rgba(255, 255, 255, 0.75)',
+            borderColor: radioState.isPlaying ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.10)',
           },
+          Platform.OS === 'web' &&
+            ({
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              boxShadow: isDark
+                ? 'inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 14px rgba(0,0,0,0.35)'
+                : 'inset 0 1px 1px #fff, 0 4px 14px rgba(0,0,0,0.08)',
+            } as any),
         ]}
       >
         <Ionicons
@@ -117,16 +125,13 @@ export function CampusRadioPlayer() {
   }
 
   return (
-    <SolidCard
+    <GlassCard
       radius={20}
-      style={[
-        styles.playerCard,
-        {
-          borderColor: radioState.isPlaying ? colors.brandPrimary + '60' : colors.border,
-          backgroundColor: colors.surface,
-          marginBottom: spacing.md,
-        },
-      ]}
+      padded={false}
+      style={{
+        marginBottom: spacing.md,
+      }}
+      contentStyle={styles.playerCard}
     >
       {/* Top Header Row */}
       <View style={styles.topRow}>
@@ -309,7 +314,7 @@ export function CampusRadioPlayer() {
           </Pressable>
         </View>
       </View>
-    </SolidCard>
+    </GlassCard>
   );
 }
 

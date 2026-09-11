@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { SolidCard } from '@/components/SolidCard';
+import { GlassCard } from '@/components/GlassCard';
 import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { AICopilotModal } from '@/components/AICopilotModal';
@@ -280,13 +281,11 @@ export default function StudentDashboard() {
         }}
       >
         {/* 1. Student Identity & Hero Banner Card */}
-        <SolidCard
+        <GlassCard
           radius={22}
+          padded={false}
           style={{
             overflow: 'hidden',
-            padding: 0,
-            borderWidth: 1,
-            borderColor: colors.border,
           }}
         >
           <View style={{ height: isDesktop ? 160 : 120, position: 'relative', width: '100%' }}>
@@ -315,7 +314,7 @@ export default function StudentDashboard() {
             >
               <View
                 style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.55)',
                   borderRadius: radius.pill,
                   paddingHorizontal: 10,
                   paddingVertical: 5,
@@ -323,6 +322,8 @@ export default function StudentDashboard() {
                   alignItems: 'center',
                   gap: 5,
                   maxWidth: '65%',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.25)',
                 }}
               >
                 <Ionicons name="school" size={13} color="#68D391" />
@@ -337,13 +338,15 @@ export default function StudentDashboard() {
                   setPhotoPickerOpen(true);
                 }}
                 style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.55)',
                   borderRadius: radius.pill,
                   paddingHorizontal: 10,
                   paddingVertical: 5,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 5,
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.25)',
                 }}
               >
                 <Ionicons name="camera-outline" size={13} color="#FFFFFF" />
@@ -354,7 +357,7 @@ export default function StudentDashboard() {
             </View>
           </View>
 
-          <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
+          <View style={{ padding: isDesktop ? spacing.lg : 14 }}>
             <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} uri={profile?.avatarUrl} size={48} />
@@ -389,7 +392,7 @@ export default function StudentDashboard() {
               </View>
             </View>
           </View>
-        </SolidCard>
+        </GlassCard>
 
         {/* Live Campus Weather & Transit Widget */}
         <CampusWeatherWidget campusCode={effectiveCampus} />
@@ -399,13 +402,11 @@ export default function StudentDashboard() {
 
         {/* AI Campus Study Copilot Quick Launcher */}
         {isFeatureEnabled('ai_study_copilot') && (
-          <SolidCard
+          <GlassCard
             radius={18}
-            style={{
+            padded={false}
+            contentStyle={{
               padding: spacing.md,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -415,7 +416,7 @@ export default function StudentDashboard() {
                     width: 36,
                     height: 36,
                     borderRadius: 18,
-                    backgroundColor: `${colors.brandPrimary}15`,
+                    backgroundColor: `${colors.brandPrimary}20`,
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexShrink: 0,
@@ -448,7 +449,7 @@ export default function StudentDashboard() {
                 </AppText>
               </Pressable>
             </View>
-          </SolidCard>
+          </GlassCard>
         )}
 
         {/* Gamification & Streaks (Feature Flagged) */}
@@ -466,9 +467,10 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/messages')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -484,7 +486,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Direct Messages</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Chats & calls</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -496,9 +498,10 @@ export default function StudentDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -514,7 +517,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>FX Converter</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Live rates & NGN</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
             {isFeatureEnabled('academic_resources') && (
@@ -522,9 +525,10 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/resources')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -540,7 +544,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Resources</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Past Qs & notes</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -549,9 +553,10 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/study-groups')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -567,7 +572,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Study Pods</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Course revision</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -575,9 +580,10 @@ export default function StudentDashboard() {
               onPress={() => router.push('/(student)/feed')}
               style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
             >
-              <SolidCard
+              <GlassCard
                 radius={16}
-                style={{
+                padded={false}
+                contentStyle={{
                   padding: isDesktop ? 12 : 10,
                   flexDirection: isDesktop ? 'row' : 'column',
                   alignItems: isDesktop ? 'center' : 'flex-start',
@@ -593,7 +599,7 @@ export default function StudentDashboard() {
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Forum</AppText>
                   <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Ask questions</AppText>
                 </View>
-              </SolidCard>
+              </GlassCard>
             </Pressable>
 
             {isFeatureEnabled('campus_events') && (
@@ -601,9 +607,10 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/events-list')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -619,7 +626,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Events & RSVPs</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Talks & summits</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -628,9 +635,10 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/marketplace')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -646,7 +654,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Marketplace</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Buy, sell & swap</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -655,9 +663,10 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/jobs')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -673,7 +682,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Career & Jobs</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Internships & gigs</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -682,9 +691,10 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/mentorship')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -700,7 +710,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Mentorship</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Alumni advisors</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -709,9 +719,10 @@ export default function StudentDashboard() {
                 onPress={() => router.push('/(student)/calendar')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -727,7 +738,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>My Schedule</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Timetable & tests</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
 
@@ -739,9 +750,10 @@ export default function StudentDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
+                <GlassCard
                   radius={16}
-                  style={{
+                  padded={false}
+                  contentStyle={{
                     padding: isDesktop ? 12 : 10,
                     flexDirection: isDesktop ? 'row' : 'column',
                     alignItems: isDesktop ? 'center' : 'flex-start',
@@ -757,7 +769,7 @@ export default function StudentDashboard() {
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Map & POIs</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>ATMs, halls & food</AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             )}
           </View>
@@ -1013,7 +1025,7 @@ export default function StudentDashboard() {
                   onPress={() => handleOpenPortal(portal.url)}
                   style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
                 >
-                  <SolidCard radius={16} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <GlassCard radius={16} padded={false} contentStyle={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
                       <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.brandPrimary} />
                     </View>
@@ -1026,7 +1038,7 @@ export default function StudentDashboard() {
                       </AppText>
                     </View>
                     <Ionicons name="open-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
-                  </SolidCard>
+                  </GlassCard>
                 </Pressable>
               ))}
             </View>

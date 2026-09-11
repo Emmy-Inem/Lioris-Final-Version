@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Dimensions, FlatList, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { SolidCard } from './SolidCard';
+import { GlassCard } from './GlassCard';
 import { EmptyState } from './EmptyState';
 import { ShimmerCardList } from './ShimmerSkeleton';
 import { useToast } from '@/context/ToastContext';
@@ -235,20 +236,46 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                 haptics.light();
                 setFilter(f.key);
               }}
-              style={{
-                backgroundColor: active ? colors.brandPrimary : colors.surface,
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-                borderRadius: radius.pill,
-                borderWidth: 1,
-                borderColor: active ? colors.brandPrimary : colors.border,
-              }}
+              style={[
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  backgroundColor: active
+                    ? colors.brandPrimary
+                    : isDark
+                    ? 'rgba(15, 23, 42, 0.65)'
+                    : 'rgba(255, 255, 255, 0.70)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: radius.pill,
+                  borderWidth: 1,
+                  borderColor: active
+                    ? colors.brandPrimary
+                    : isDark
+                    ? 'rgba(255, 255, 255, 0.16)'
+                    : 'rgba(255, 255, 255, 0.75)',
+                },
+                Platform.OS === 'web' && !active &&
+                  ({
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                    boxShadow: isDark
+                      ? 'inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.25)'
+                      : 'inset 0 1px 1.5px rgba(255, 255, 255, 0.90), 0 2px 8px rgba(15, 23, 42, 0.05)',
+                  } as any),
+              ]}
             >
+              <Ionicons
+                name={f.icon}
+                size={13}
+                color={active ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+              />
               <AppText
                 variant="caption"
                 weight={active ? 'bold' : 'medium'}
                 tone={active ? 'inverse' : 'secondary'}
-                style={{ fontSize: 11 }}
+                style={{ fontSize: 11.5 }}
               >
                 {f.label}
               </AppText>
@@ -316,7 +343,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           ) : null}
 
           {/* Filter & Search Toolbar */}
-          <SolidCard radius={18} style={{ padding: spacing.md, marginBottom: spacing.lg }}>
+          <GlassCard radius={18} padded={false} contentStyle={{ padding: spacing.md }} style={{ marginBottom: spacing.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
               {/* Search Field */}
               <View
@@ -389,7 +416,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                 })}
               </ScrollView>
             </View>
-          </SolidCard>
+          </GlassCard>
 
           {/* Events Count */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>

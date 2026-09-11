@@ -42,7 +42,7 @@ export default function AdminDashboard() {
  const [resourcesModalOpen, setResourcesModalOpen] = useState(false);
 
   return (
-    <ScreenContainer glow={true}>
+    <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <ScrollView
         style={{ flex: 1, width: '100%', minHeight: 0 }}
@@ -55,26 +55,45 @@ export default function AdminDashboard() {
           {/* Main Left/Center Column */}
           <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>
             {/* Admin Control Tower Banner Header */}
-            <View style={{ marginBottom: spacing.md, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surface }}>
+            <GlassCard
+              radius={24}
+              padded={false}
+              style={{ marginBottom: spacing.md, overflow: 'hidden' }}
+            >
               <View style={{ width: '100%', height: isDesktop ? 160 : 145, position: 'relative' }}>
                 <Image
                   source={require('../../assets/images/hero_student_3d.jpg')}
                   style={{ width: '100%', height: '100%' }}
                   contentFit="cover"
                 />
-                <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(10, 19, 38, 0.82)' }} />
+                <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: isDark ? 'rgba(10, 19, 38, 0.78)' : 'rgba(15, 23, 42, 0.70)' }} />
 
                 <View style={{ position: 'absolute', top: 16, left: 16, right: 16, bottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                      <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11, letterSpacing: 0.5, color: '#FCA5A5' }}>
-                        ROOT ADMIN
-                      </AppText>
-                      <AppText variant="caption" tone="inverse" style={{ opacity: 0.9 }}>
-                        • Multi-Campus Hub
-                      </AppText>
+                      <View
+                        style={{
+                          backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.55)',
+                          borderRadius: radius.pill,
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          borderWidth: 1,
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.25)',
+                        }}
+                      >
+                        <Ionicons name="shield" size={13} color="#FCA5A5" />
+                        <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11, letterSpacing: 0.5, color: '#FCA5A5' }}>
+                          ROOT ADMIN
+                        </AppText>
+                        <AppText variant="caption" tone="inverse" style={{ opacity: 0.9 }}>
+                          • Multi-Campus Hub
+                        </AppText>
+                      </View>
                     </View>
-                    <AppText variant="h1" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 22 }}>
+                    <AppText variant="h1" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 22, marginTop: 4 }}>
                       Welcome, {user?.fullName?.split(' ')[0] ?? 'Admin'}
                     </AppText>
                   </View>
@@ -82,20 +101,21 @@ export default function AdminDashboard() {
                   <Avatar name={user?.fullName ?? 'Root Administrator'} uri={profile?.avatarUrl} size={56} role="admin" />
                 </View>
               </View>
-            </View>
+            </GlassCard>
 
             {/* Urgent Administrative Alerts */}
             {(pendingVerificationsCount > 0 || openReportsCount > 0) && (
               <View style={{ gap: spacing.xs, marginBottom: spacing.sm }}>
                 {pendingVerificationsCount > 0 && (
                   <Pressable onPress={() => router.push('/(admin)/verification-requests')}>
-                    <SolidCard
+                    <GlassCard
                       radius={16}
-                      style={{
+                      padded={false}
+                      contentStyle={{
                         padding: 12,
-                        backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5',
+                        backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)',
                         borderWidth: 1,
-                        borderColor: '#10B981',
+                        borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.3)',
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -113,19 +133,20 @@ export default function AdminDashboard() {
                         </View>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color="#10B981" />
-                    </SolidCard>
+                    </GlassCard>
                   </Pressable>
                 )}
 
                 {openReportsCount > 0 && (
                   <Pressable onPress={() => router.push('/(admin)/moderation-queue')}>
-                    <SolidCard
+                    <GlassCard
                       radius={16}
-                      style={{
+                      padded={false}
+                      contentStyle={{
                         padding: 12,
-                        backgroundColor: isDark ? '#2E1A1A' : '#FEF2F2',
+                        backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.08)',
                         borderWidth: 1,
-                        borderColor: '#EF4444',
+                        borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.3)',
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -143,7 +164,7 @@ export default function AdminDashboard() {
                         </View>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color="#EF4444" />
-                    </SolidCard>
+                    </GlassCard>
                   </Pressable>
                 )}
               </View>
@@ -176,12 +197,11 @@ export default function AdminDashboard() {
                   }}
                   style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
                 >
-                  <SolidCard
-                    frosted
-                    style={{
-                      borderRadius: 18,
+                  <GlassCard
+                    radius={18}
+                    padded={false}
+                    contentStyle={{
                       padding: 12,
-                      backgroundColor: colors.surface,
                       height: 118,
                       justifyContent: 'space-between',
                     }}
@@ -195,7 +215,7 @@ export default function AdminDashboard() {
                         Student & staff chat
                       </AppText>
                     </View>
-                  </SolidCard>
+                  </GlassCard>
                 </Pressable>
               )}
 
@@ -207,12 +227,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -233,7 +252,7 @@ export default function AdminDashboard() {
                       Matric & alumni IDs
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 2. Moderation Queue */}
@@ -244,12 +263,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -270,7 +288,7 @@ export default function AdminDashboard() {
                       Reported campus content
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 3. Feature Switches */}
@@ -281,12 +299,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -300,7 +317,7 @@ export default function AdminDashboard() {
                       Toggle campus modules
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 4. User Directory */}
@@ -311,12 +328,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -330,7 +346,7 @@ export default function AdminDashboard() {
                       Manage all accounts
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 5. Command Desk & Alerts */}
@@ -341,12 +357,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -360,7 +375,7 @@ export default function AdminDashboard() {
                       System params & alerts
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 6. Security Audit Logs */}
@@ -371,12 +386,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -390,7 +404,7 @@ export default function AdminDashboard() {
                       Forensic activity logs
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 7. Academic Resources */}
@@ -401,12 +415,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -420,7 +433,7 @@ export default function AdminDashboard() {
                       Past papers & notes
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 8. Events Hub & Gatherings */}
@@ -431,12 +444,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -450,7 +462,7 @@ export default function AdminDashboard() {
                       Campus events & summits
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 9. Super Admin System Configuration */}
@@ -461,12 +473,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -480,7 +491,7 @@ export default function AdminDashboard() {
                       Multi-tenant & security
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 9. Support & Ticket Desk */}
@@ -491,12 +502,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -510,7 +520,7 @@ export default function AdminDashboard() {
                       Triage & 1-click remedies
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 10. Unified Content Desk */}
@@ -521,12 +531,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -540,7 +549,7 @@ export default function AdminDashboard() {
                       Global posts & media
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
 
               {/* 11. System Health Console */}
@@ -551,12 +560,11 @@ export default function AdminDashboard() {
                 }}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
               >
-                <SolidCard
-                  frosted
-                  style={{
-                    borderRadius: 18,
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
                     padding: 12,
-                    backgroundColor: colors.surface,
                     height: 118,
                     justifyContent: 'space-between',
                   }}
@@ -570,7 +578,7 @@ export default function AdminDashboard() {
                       Live ping & sync cleanup
                     </AppText>
                   </View>
-                </SolidCard>
+                </GlassCard>
               </Pressable>
             </View>
           </View>
@@ -579,7 +587,7 @@ export default function AdminDashboard() {
           {isDesktop && (
             <View style={{ width: isWideDesktop ? 340 : 280, flexShrink: 0, gap: spacing.md }}>
               {/* Primary Admin Workdesk Actions */}
-              <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <GlassCard radius={20} padded={false} contentStyle={{ padding: spacing.md }}>
                 <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
                   Executive Workdesk
                 </AppText>
@@ -606,7 +614,7 @@ export default function AdminDashboard() {
                       haptics.light();
                       router.push('/(admin)/moderation-queue');
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 8 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)', gap: 8 }}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
                       <Ionicons name="shield-half" size={20} color={colors.critical} style={{ flexShrink: 0 }} />
@@ -626,10 +634,10 @@ export default function AdminDashboard() {
                     )}
                   </Pressable>
                 </View>
-              </SolidCard>
+              </GlassCard>
 
               {/* Quick Admin Tools */}
-              <SolidCard radius={20} style={{ padding: spacing.md }}>
+              <GlassCard radius={20} padded={false} contentStyle={{ padding: spacing.md }}>
                 <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
                   Administration Tools
                 </AppText>
@@ -649,7 +657,7 @@ export default function AdminDashboard() {
                         haptics.light();
                         router.push(item.route as any);
                       }}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 8 }}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)', gap: 8 }}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
                         <Ionicons name={item.icon} size={18} color={colors.textPrimary} style={{ flexShrink: 0 }} />
@@ -662,7 +670,7 @@ export default function AdminDashboard() {
                     </Pressable>
                   ))}
                 </View>
-              </SolidCard>
+              </GlassCard>
             </View>
           )}
         </View>

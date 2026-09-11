@@ -80,7 +80,7 @@ export default function PlatformConfigScreen() {
   }
 
   return (
-    <ScreenContainer glow={true}>
+    <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
 
       {/* Unified Main ScrollView for entire Admin Desk */}
@@ -107,13 +107,12 @@ export default function PlatformConfigScreen() {
 
         {/* Preview Workspace As Role Switcher - Root Admins only, see isSuperAdmin above */}
         {isSuperAdmin && (
-        <SolidCard
-          frosted
+        <GlassCard
           radius={20}
-          style={{
+          padded={false}
+          contentStyle={{
+            padding: spacing.md,
             marginBottom: spacing.md,
-            backgroundColor: colors.pastelPrimaryBg,
-            borderColor: `${colors.brandPrimary}40`,
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
@@ -151,13 +150,13 @@ export default function PlatformConfigScreen() {
                   style={{
                     flex: 1,
                     minWidth: '47%',
-                    backgroundColor: active ? colors.brandPrimary : colors.surface,
+                    backgroundColor: active ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.70)',
                     borderRadius: radius.md,
                     paddingVertical: spacing.sm,
                     paddingHorizontal: spacing.sm,
                     alignItems: 'center',
                     borderWidth: 1,
-                    borderColor: active ? colors.brandPrimary : colors.border,
+                    borderColor: active ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
                     marginBottom: 4,
                   }}
                 >
@@ -168,16 +167,16 @@ export default function PlatformConfigScreen() {
               );
             })}
           </View>
-        </SolidCard>
+        </GlassCard>
         )}
 
         {/* Active Workspace Scope Frosted Card */}
-        <SolidCard
-          frosted
-          style={{
+        <GlassCard
+          radius={20}
+          padded={false}
+          contentStyle={{
+            padding: spacing.md,
             marginBottom: spacing.lg,
-            backgroundColor: colors.pastelPrimaryBg,
-            borderColor: `${colors.brandPrimary}30`,
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
@@ -197,12 +196,12 @@ export default function PlatformConfigScreen() {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: colors.surface,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.70)',
               borderRadius: radius.md,
               paddingHorizontal: spacing.md,
               paddingVertical: spacing.md,
               borderWidth: 1,
-              borderColor: colors.border,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -238,7 +237,7 @@ export default function PlatformConfigScreen() {
               ))}
             </View>
           ) : null}
-        </SolidCard>
+        </GlassCard>
 
  {/* Quick Ecosystem Action Tiles */}
  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -261,122 +260,130 @@ export default function PlatformConfigScreen() {
  />
  </View>
 
- {/* Feature Controls & Kill Switches Banner */}
- <Pressable
- onPress={() => {
- haptics.light();
- router.push('/(admin)/feature-controls');
- }}
- accessibilityRole="button"
- accessibilityLabel="Open Feature Controls and Kill Switches"
- >
- <SolidCard
- radius={18}
- style={{
- marginBottom: spacing.md,
- backgroundColor: colors.pastelPrimaryBg,
- borderWidth: 1,
- borderColor: colors.brandPrimary,
- }}
- >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
- <View
- style={{
- width: 44,
- height: 44,
- borderRadius: 22,
- backgroundColor: colors.surface,
- alignItems: 'center',
- justifyContent: 'center',
- borderWidth: 1,
- borderColor: `${colors.brandPrimary}40`,
- }}
- >
- <Ionicons name="options-outline" size={22} color={colors.brandPrimary} />
- </View>
- <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches</AppText>
-                    <Badge label="Runtime Modular" tone="brand" />
-                  </View>
- <AppText tone="secondary" variant="caption">
- Temporarily toggle XP gamification, career page, marketplace, utility cards & more
- </AppText>
- </View>
- <Ionicons name="chevron-forward" size={18} color={colors.brandPrimary} />
- </View>
- </SolidCard>
- </Pressable>
+  {/* Feature Controls & Kill Switches Banner */}
+  <Pressable
+    onPress={() => {
+      haptics.light();
+      router.push('/(admin)/feature-controls');
+    }}
+    accessibilityRole="button"
+    accessibilityLabel="Open Feature Controls and Kill Switches"
+  >
+    <GlassCard
+      radius={18}
+      padded={false}
+      contentStyle={{
+        padding: spacing.md,
+        marginBottom: spacing.md,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: `${colors.brandPrimary}20`,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: `${colors.brandPrimary}40`,
+          }}
+        >
+          <Ionicons name="options-outline" size={22} color={colors.brandPrimary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches</AppText>
+            <Badge label="Runtime Modular" tone="brand" />
+          </View>
+          <AppText tone="secondary" variant="caption">
+            Temporarily toggle XP gamification, career page, marketplace, utility cards & more
+          </AppText>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.brandPrimary} />
+      </View>
+    </GlassCard>
+  </Pressable>
 
- {/* Super Admin Config Banner */}
- <Pressable
- onPress={() => {
- haptics.light();
- router.push('/(admin)/super-admin-config');
- }}
- accessibilityRole="button"accessibilityLabel="Open Super Admin Configuration"
- >
- <GlassCard
- style={{ marginBottom: spacing.lg }}
- >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
- <View
- style={{
- width: 44,
- height: 44,
- borderRadius: 22,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- }}
- >
- <Ionicons name="construct"size={22} color={colors.brandPrimary} />
- </View>
- <View style={{ flex: 1 }}>
- <AppText weight="bold"variant="bodySmall">Super Admin Configuration</AppText>
- <AppText tone="secondary"variant="caption">
- Multi-tenant federation, escrow payouts, biometrics & root settings
- </AppText>
- </View>
- <Ionicons name="chevron-forward"size={18} color={colors.textSecondary} />
- </View>
- </GlassCard>
- </Pressable>
+  {/* Super Admin Config Banner */}
+  <Pressable
+    onPress={() => {
+      haptics.light();
+      router.push('/(admin)/super-admin-config');
+    }}
+    accessibilityRole="button"
+    accessibilityLabel="Open Super Admin Configuration"
+  >
+    <GlassCard
+      radius={18}
+      padded={false}
+      contentStyle={{
+        padding: spacing.md,
+        marginBottom: spacing.lg,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: `${colors.brandPrimary}20`,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: `${colors.brandPrimary}40`,
+          }}
+        >
+          <Ionicons name="construct" size={22} color={colors.brandPrimary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <AppText weight="bold" variant="bodySmall">Super Admin Configuration</AppText>
+          <AppText tone="secondary" variant="caption">
+            Multi-tenant federation, escrow payouts, biometrics & root settings
+          </AppText>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </View>
+    </GlassCard>
+  </Pressable>
 
- {/* Workdesk Tabs Horizontal Selector */}
- <ScrollView
- horizontal
- showsHorizontalScrollIndicator={false}
- contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 2 }}
- style={{ marginBottom: spacing.lg }}
- >
- {WORKDESK_TABS.map((t) => {
- const selected = tab === t;
- return (
- <Pressable
- key={t}
- onPress={() => {
- haptics.light();
- setTab(t);
- }}
- accessibilityRole="tab"accessibilityState={{ selected }}
- accessibilityLabel={t}
- style={{
- paddingVertical: 8,
- paddingHorizontal: spacing.md,
- borderRadius: radius.pill,
- backgroundColor: selected ? colors.brandPrimary : colors.pastelPrimaryBg,
- borderWidth: 1,
- borderColor: selected ? colors.brandPrimary : colors.border,
- }}
- >
- <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'brand'}>
- {t}
- </AppText>
- </Pressable>
- );
- })}
- </ScrollView>
+  {/* Workdesk Tabs Horizontal Selector */}
+  <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 2 }}
+    style={{ marginBottom: spacing.lg }}
+  >
+    {WORKDESK_TABS.map((t) => {
+      const selected = tab === t;
+      return (
+        <Pressable
+          key={t}
+          onPress={() => {
+            haptics.light();
+            setTab(t);
+          }}
+          accessibilityRole="tab"
+          accessibilityState={{ selected }}
+          accessibilityLabel={t}
+          style={{
+            paddingVertical: 8,
+            paddingHorizontal: spacing.md,
+            borderRadius: radius.pill,
+            backgroundColor: selected ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.70)',
+            borderWidth: 1,
+            borderColor: selected ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.85)',
+          }}
+        >
+          <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'brand'}>
+            {t}
+          </AppText>
+        </Pressable>
+      );
+    })}
+  </ScrollView>
 
         <View style={{ minHeight: 200 }}>
           {tab === 'Feature Flags' ? <FeatureFlagsTab /> : null}
@@ -499,14 +506,22 @@ function EcosystemTile({
       accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
       style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 220 : '47%' }}
     >
-      <SolidCard radius={18} frosted style={{ minHeight: isDesktop ? 110 : 100, justifyContent: 'space-between', padding: isDesktop ? spacing.lg : 12 }}>
+      <GlassCard
+        radius={18}
+        padded={false}
+        contentStyle={{
+          minHeight: isDesktop ? 110 : 100,
+          justifyContent: 'space-between',
+          padding: isDesktop ? spacing.lg : 12,
+        }}
+      >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, gap: spacing.xs }}>
           <View
             style={{
               width: 34,
               height: 34,
               borderRadius: 17,
-              backgroundColor: colors.pastelPrimaryBg,
+              backgroundColor: `${colors.brandPrimary}20`,
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
@@ -530,7 +545,7 @@ function EcosystemTile({
             {description}
           </AppText>
         </View>
-      </SolidCard>
+      </GlassCard>
     </Pressable>
   );
 }

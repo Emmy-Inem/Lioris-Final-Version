@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Pressable, Modal, ScrollView } from 'react-native';
+import { View, Pressable, Modal, ScrollView, Platform } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
+import { GlassCard } from './GlassCard';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
@@ -35,7 +36,7 @@ export function AnnouncementsWidget({
  showWhenEmpty?: boolean;
  emptyMessage?: string;
 }) {
- const { colors, spacing, radius } = useTheme();
+ const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
@@ -94,105 +95,121 @@ export function AnnouncementsWidget({
  const displayItems = critical ? [critical, ...activeAnnouncements.filter((a) => a.id !== critical.id)] : activeAnnouncements;
  const topAnnouncement = displayItems[0];
 
- if (compact) {
- return (
- <View style={{ marginBottom: spacing.md }}>
- <Pressable
- onPress={() => setSelectedAnnouncement(topAnnouncement)}
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- backgroundColor: topAnnouncement.priority === 'critical' ? '#FEE2E2' : colors.surface,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- borderRadius: radius.md,
- borderLeftWidth: 4,
- borderLeftColor: topAnnouncement.priority === 'critical' ? '#DC2626' : colors.brandPrimary,
- gap: spacing.sm,
- }}
- >
- <Ionicons
- name={topAnnouncement.priority === 'critical' ? 'alert-circle' : 'megaphone'}
- size={18}
- color={topAnnouncement.priority === 'critical' ? '#DC2626' : colors.brandPrimary}
- />
- <View style={{ flex: 1 }}>
- <AppText
- variant="caption"
- weight="bold"
- style={{ color: topAnnouncement.priority === 'critical' ? '#991B1B' : colors.textPrimary }}
- numberOfLines={1}
- >
- {topAnnouncement.title}
- </AppText>
- <AppText
- variant="caption"
- tone="secondary"
- numberOfLines={1}
- style={{ fontSize: 11 }}
- >
- {topAnnouncement.content}
- </AppText>
- </View>
- <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
- </Pressable>
+  if (compact) {
+    return (
+      <View style={{ marginBottom: spacing.md }}>
+        <Pressable
+          onPress={() => setSelectedAnnouncement(topAnnouncement)}
+          style={[
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: topAnnouncement.priority === 'critical'
+                ? (isDark ? 'rgba(239, 68, 68, 0.20)' : 'rgba(254, 226, 226, 0.85)')
+                : (isDark ? 'rgba(15, 23, 42, 0.60)' : 'rgba(255, 255, 255, 0.70)'),
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: topAnnouncement.priority === 'critical'
+                ? (isDark ? 'rgba(239, 68, 68, 0.40)' : 'rgba(239, 68, 68, 0.30)')
+                : (isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.80)'),
+              borderLeftWidth: 4,
+              borderLeftColor: topAnnouncement.priority === 'critical' ? '#DC2626' : colors.brandPrimary,
+              gap: spacing.sm,
+            },
+            Platform.OS === 'web' &&
+              ({
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                boxShadow: isDark
+                  ? 'inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0,0,0,0.30)'
+                  : 'inset 0 1px 1px #fff, 0 4px 12px rgba(0,0,0,0.06)',
+              } as any),
+          ]}
+        >
+          <Ionicons
+            name={topAnnouncement.priority === 'critical' ? 'alert-circle' : 'megaphone'}
+            size={18}
+            color={topAnnouncement.priority === 'critical' ? '#DC2626' : colors.brandPrimary}
+          />
+          <View style={{ flex: 1 }}>
+            <AppText
+              variant="caption"
+              weight="bold"
+              style={{ color: topAnnouncement.priority === 'critical' ? '#991B1B' : colors.textPrimary }}
+              numberOfLines={1}
+            >
+              {topAnnouncement.title}
+            </AppText>
+            <AppText
+              variant="caption"
+              tone="secondary"
+              numberOfLines={1}
+              style={{ fontSize: 11 }}
+            >
+              {topAnnouncement.content}
+            </AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
+        </Pressable>
 
- {/* Full Details Modal */}
- <Modal
- visible={!!selectedAnnouncement}
- transparent
- animationType="fade"
- onRequestClose={() => setSelectedAnnouncement(null)}
- >
- <View
- style={{
- flex: 1,
- backgroundColor: 'rgba(0,0,0,0.5)',
- justifyContent: 'center',
- alignItems: 'center',
- padding: spacing.lg,
- }}
- >
- <SolidCard radius={20} style={{ width: '100%', maxWidth: 440, padding: spacing.lg }}>
- {selectedAnnouncement && (
- <>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <Badge
- label={selectedAnnouncement.priority.toUpperCase()}
- tone={PRIORITY_TONE[selectedAnnouncement.priority]}
- />
- <Pressable onPress={() => setSelectedAnnouncement(null)}>
- <Ionicons name="close" size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+        {/* Full Details Modal */}
+        <Modal
+          visible={!!selectedAnnouncement}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedAnnouncement(null)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: spacing.lg,
+            }}
+          >
+            <GlassCard radius={20} style={{ width: '100%', maxWidth: 440 }}>
+              {selectedAnnouncement && (
+                <>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                    <Badge
+                      label={selectedAnnouncement.priority.toUpperCase()}
+                      tone={PRIORITY_TONE[selectedAnnouncement.priority]}
+                    />
+                    <Pressable onPress={() => setSelectedAnnouncement(null)}>
+                      <Ionicons name="close" size={22} color={colors.textSecondary} />
+                    </Pressable>
+                  </View>
 
- <AppText variant="h2" weight="bold" style={{ marginBottom: spacing.xs }}>
- {selectedAnnouncement.title}
- </AppText>
+                  <AppText variant="h2" weight="bold" style={{ marginBottom: spacing.xs }}>
+                    {selectedAnnouncement.title}
+                  </AppText>
 
- <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
- Posted by {selectedAnnouncement.authorName} • {new Date(selectedAnnouncement.publishedAt).toLocaleDateString()}
- </AppText>
+                  <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
+                    Posted by {selectedAnnouncement.authorName} • {new Date(selectedAnnouncement.publishedAt).toLocaleDateString()}
+                  </AppText>
 
- <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 250, marginBottom: spacing.lg }} showsVerticalScrollIndicator={false}>
- <AppText variant="bodySmall" style={{ lineHeight: 22 }}>
- {selectedAnnouncement.content}
- </AppText>
- </ScrollView>
+                  <ScrollView style={{ flex: 1, width: '100%', maxHeight: 250, marginBottom: spacing.lg }} showsVerticalScrollIndicator={false}>
+                    <AppText variant="bodySmall" style={{ lineHeight: 22 }}>
+                      {selectedAnnouncement.content}
+                    </AppText>
+                  </ScrollView>
 
- <AppButton
- label="Dismiss"
- variant="primary"
- onPress={() => setSelectedAnnouncement(null)}
- />
- </>
- )}
- </SolidCard>
- </View>
- </Modal>
- </View>
- );
- }
+                  <AppButton
+                    label="Dismiss"
+                    variant="primary"
+                    onPress={() => setSelectedAnnouncement(null)}
+                  />
+                </>
+              )}
+            </GlassCard>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
 
  return (
  <View style={{ marginBottom: spacing.lg }}>
@@ -214,7 +231,7 @@ export function AnnouncementsWidget({
 
  <View style={{ gap: spacing.sm }}>
  {activeAnnouncements.slice(0, 3).map((item) => (
- <SolidCard key={item.id} radius={16}>
+ <GlassCard key={item.id} radius={16}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
  <Badge label={item.priority.toUpperCase()} tone={PRIORITY_TONE[item.priority]} />
  <Pressable
@@ -243,7 +260,7 @@ export function AnnouncementsWidget({
  </AppText>
  </Pressable>
  </View>
- </SolidCard>
+ </GlassCard>
  ))}
  </View>
 

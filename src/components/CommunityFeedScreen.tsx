@@ -1,12 +1,13 @@
 import React, { useState } from'react';
-import { FlatList, Pressable, ScrollView, TextInput, View } from'react-native';
-import Animated, { FadeInUp } from'react-native-reanimated';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'./ScreenContainer';
-import { AppHeader } from'./AppHeader';
-import { AppText } from'./AppText';
-import { SolidCard } from'./SolidCard';
+import { FlatList, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from './ScreenContainer';
+import { AppHeader } from './AppHeader';
+import { AppText } from './AppText';
+import { SolidCard } from './SolidCard';
+import { GlassCard } from './GlassCard';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { PostCard } from './PostCard';
@@ -364,20 +365,38 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               onPress={() => setSelectedChannel(ch.category)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              style={{
-                backgroundColor: selected ? colors.brandPrimary : colors.surface,
-                borderRadius: radius.pill,
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-                borderWidth: 1,
-                borderColor: selected ? colors.brandPrimary : colors.border,
-              }}
+              style={[
+                {
+                  backgroundColor: selected
+                    ? colors.brandPrimary
+                    : isDark
+                    ? 'rgba(15, 23, 42, 0.65)'
+                    : 'rgba(255, 255, 255, 0.70)',
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 13,
+                  paddingVertical: 6,
+                  borderWidth: 1,
+                  borderColor: selected
+                    ? colors.brandPrimary
+                    : isDark
+                    ? 'rgba(255, 255, 255, 0.16)'
+                    : 'rgba(255, 255, 255, 0.75)',
+                },
+                Platform.OS === 'web' && !selected &&
+                  ({
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                    boxShadow: isDark
+                      ? 'inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.25)'
+                      : 'inset 0 1px 1.5px rgba(255, 255, 255, 0.90), 0 2px 8px rgba(15, 23, 42, 0.05)',
+                  } as any),
+              ]}
             >
               <AppText
                 variant="caption"
                 weight={selected ? 'bold' : 'medium'}
                 tone={selected ? 'inverse' : 'secondary'}
-                style={{ fontSize: 11 }}
+                style={{ fontSize: 11.5 }}
               >
                 {ch.label}
               </AppText>
@@ -393,7 +412,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         accessibilityLabel="Start a new thread or create a poll"
         style={{ marginTop: 2, marginBottom: spacing.sm }}
       >
-        <SolidCard backgroundColor={colors.surface} radius={16} style={{ padding: 10 }}>
+        <GlassCard radius={16} padded={false} contentStyle={{ padding: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Avatar name={user?.fullName ?? 'You'} size={34} role={user?.role} />
             <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7 }}>
@@ -414,13 +433,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <Ionicons name="add" size={18} color="#FFFFFF" />
             </View>
           </View>
-        </SolidCard>
+        </GlassCard>
       </Pressable>
     </View>
   );
 
   return (
-    <ScreenContainer glow={true}>
+    <ScreenContainer glow={false}>
       {isDesktop ? (
         <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30, alignItems: 'flex-start' }}>
           {/* Main Feed Column */}
@@ -487,7 +506,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             </View>
 
             {/* Quick Desktop Composer Box */}
-            <SolidCard radius={18} style={{ padding: spacing.md, marginBottom: spacing.md }}>
+            <GlassCard radius={18} padded={false} contentStyle={{ padding: spacing.md }} style={{ marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: spacing.sm }}>
                 <Avatar name={user?.fullName || 'User'} uri={profile?.avatarUrl} size={42} />
                 <Pressable
@@ -545,7 +564,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </AppText>
                 </Pressable>
               </View>
-            </SolidCard>
+            </GlassCard>
 
 
 
