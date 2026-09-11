@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -8,6 +8,7 @@ import {
   TextInput,
   Linking,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
@@ -17,12 +18,16 @@ import { AppButton } from '@/components/AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { useToast } from '@/context/ToastContext';
 import {
   CAMPUS_LANDMARKS,
+  CAMPUS_CENTERS,
   CampusLandmark,
   searchLandmarks,
   getOsmEmbedUrl,
   getDirectionsUrl,
+  fetchOverpassCampusAmenities,
+  formatDistanceAndEta,
 } from '@/api/campusMap';
 
 interface CampusMapModalProps {
@@ -34,13 +39,16 @@ interface CampusMapModalProps {
 
 const CATEGORY_FILTERS = [
   'All',
-  'Lecture Hall',
-  'Library',
-  'Administrative',
-  'Hostel',
+  'ATM & Bank',
   'Food & Social',
   'Medical',
+  'Library',
+  'Lecture Hall',
+  'Administrative',
+  'Hostel',
 ];
+
+const AVAILABLE_CAMPUSES = ['UI', 'UNILAG', 'OAU', 'UNN', 'CU', 'FUNAAB', 'FUTA', 'ABU'];
 
 export function CampusMapModal({
   visible,
@@ -51,18 +59,41 @@ export function CampusMapModal({
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
+  const toast = useToast();
 
+  const [activeCampus, setActiveCampus] = useState(campusFilter.toUpperCase());
   const [query, setQuery] = useState(initialLandmarkName || '');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedLandmark, setSelectedLandmark] = useState<CampusLandmark>(
-    CAMPUS_LANDMARKS[0]
-  );
+  const [landmarks, setLandmarks] = useState<CampusLandmark[]>(CAMPUS_LANDMARKS);
+  const [selectedLandmark, setSelectedLandmark] = useState<CampusLandmark>(CAMPUS_LANDMARKS[0]);
+  const [loadingOsm, setLoadingOsm] = useState(false);
 
   const isEnabled = isFeatureEnabled('campus_map');
 
+  useEffect(() => {
+    if (visible && isEnabled) {
+      loadAmenities(activeCampus);
+    }
+  }, [visible, activeCampus, isEnabled]);
+
+  async function loadAmenities(campusCode: string) {
+    setLoadingOsm(true);
+    try {
+      const results = await fetchOverpassCampusAmenities(campusCode);
+      setLandmarks(results);
+      if (results.length > 0) {
+        setSelectedLandmark(results[0]);
+      }
+    } catch {
+      // fallback handled inside fetchOverpassCampusAmenities
+    } finally {
+      setLoadingOsm(false);
+    }
+  }
+
   if (!isEnabled) return null;
 
-  const allLandmarks = searchLandmarks(query, campusFilter);
+  const allLandmarks = searchLandmarks(query, activeCampus, landmarks);
   const filtered =
     selectedCategory === 'All'
       ? allLandmarks
@@ -85,8 +116,8 @@ export function CampusMapModal({
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              width: isDesktop ? 720 : '94%',
-              maxHeight: isDesktop ? '90%' : '94%',
+              width: isDesktop ? 760 : '95%',
+              maxHeight: isDesktop ? '92%' : '95%',
             },
           ]}
         >
@@ -98,9 +129,10 @@ export function CampusMapModal({
                 <AppText variant="h3" weight="bold">
                   Campus Map & Hall Locator
                 </AppText>
+                <Badge label="OpenStreetMap Live" tone="brand" />
               </View>
               <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                OpenStreetMap navigation for academic halls & landmarks
+                Interactive amenities, ATMs, clinics, food spots & faculty navigation
               </AppText>
             </View>
             <Pressable
@@ -110,6 +142,40 @@ export function CampusMapModal({
             >
               <Ionicons name="close" size={18} color={colors.textPrimary} />
             </Pressable>
+          </View>
+
+          {/* Campus Selector Bar */}
+          <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {AVAILABLE_CAMPUSES.map((cCode) => {
+                const isCurrent = activeCampus === cCode;
+                const cInfo = CAMPUS_CENTERS[cCode];
+                return (
+                  <Pressable
+                    key={cCode}
+                    onPress={() => {
+                      setActiveCampus(cCode);
+                      loadAmenities(cCode);
+                    }}
+                    style={[
+                      styles.campusPill,
+                      {
+                        backgroundColor: isCurrent ? colors.brandPrimary : colors.background,
+                        borderColor: isCurrent ? colors.brandPrimary : colors.border,
+                      },
+                    ]}
+                  >
+                    <AppText
+                      variant="caption"
+                      weight={isCurrent ? 'bold' : 'regular'}
+                      style={{ color: isCurrent ? '#ffffff' : colors.textPrimary }}
+                    >
+                      {cInfo?.name ? `${cCode} - ${cInfo.name.split(' ')[0]}` : cCode}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
 
           {/* Interactive Map View */}
@@ -131,22 +197,71 @@ export function CampusMapModal({
                 </AppText>
               </View>
             )}
+
+            {/* Selected Landmark Quick Overlay Banner */}
+            <View style={[styles.selectedBanner, { backgroundColor: `${colors.surface}f0`, borderColor: colors.border }]}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                  {selectedLandmark.name}
+                </AppText>
+                <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                  {selectedLandmark.walkingTip || selectedLandmark.description}
+                </AppText>
+              </View>
+              <Pressable
+                onPress={() => openDirections(selectedLandmark)}
+                style={[styles.directionBtn, { backgroundColor: colors.brandPrimary }]}
+              >
+                <Ionicons name="navigate" size={14} color="#ffffff" />
+                <AppText variant="caption" weight="bold" style={{ color: '#ffffff' }}>
+                  Directions
+                </AppText>
+              </Pressable>
+            </View>
           </View>
 
-          {/* Search Bar */}
-          <View style={[styles.searchBar, { borderColor: colors.border, backgroundColor: colors.background }]}>
-            <Ionicons name="search" size={18} color={colors.textSecondary} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search hall, faculty, or hostel..."
-              placeholderTextColor={colors.textSecondary}
-              style={[styles.searchInput, { color: colors.textPrimary }]}
-            />
+          {/* Search Bar & Overpass Live Refresh */}
+          <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginTop: 10, alignItems: 'center' }}>
+            <View style={[styles.searchBar, { flex: 1, borderColor: colors.border, backgroundColor: colors.background }]}>
+              <Ionicons name="search" size={16} color={colors.textSecondary} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search ATM, clinic, cafeteria, faculty..."
+                placeholderTextColor={colors.textSecondary}
+                style={[styles.searchInput, { color: colors.textPrimary }]}
+              />
+              {query.length > 0 && (
+                <Pressable onPress={() => setQuery('')}>
+                  <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                </Pressable>
+              )}
+            </View>
+
+            <Pressable
+              onPress={() => {
+                toast.info('Querying OpenStreetMap Overpass servers...');
+                loadAmenities(activeCampus);
+              }}
+              disabled={loadingOsm}
+              style={[
+                styles.refreshBtn,
+                {
+                  backgroundColor: `${colors.brandPrimary}15`,
+                  borderColor: `${colors.brandPrimary}40`,
+                },
+              ]}
+            >
+              {loadingOsm ? (
+                <ActivityIndicator size="small" color={colors.brandPrimary} />
+              ) : (
+                <Ionicons name="refresh" size={16} color={colors.brandPrimary} />
+              )}
+            </Pressable>
           </View>
 
           {/* Categories */}
-          <View style={{ marginBottom: 8 }}>
+          <View style={{ paddingHorizontal: 16, marginTop: 8, marginBottom: 8 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
               {CATEGORY_FILTERS.map((cat) => {
                 const isSelected = selectedCategory === cat;
@@ -176,47 +291,68 @@ export function CampusMapModal({
           </View>
 
           {/* Landmarks List */}
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-            {filtered.map((item) => {
-              const isSelected = item.id === selectedLandmark.id;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => setSelectedLandmark(item)}
-                  style={[
-                    styles.landmarkItem,
-                    {
-                      borderColor: isSelected ? colors.brandPrimary : colors.border,
-                      backgroundColor: isSelected ? `${colors.brandPrimary}08` : colors.surface,
-                    },
-                  ]}
-                >
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
-                        {item.name}
-                      </AppText>
-                      {item.shortCode && <Badge label={item.shortCode} tone="neutral" />}
-                    </View>
-                    <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ marginTop: 2 }}>
-                      {item.description}
-                    </AppText>
-                    {item.walkingTip && (
-                      <AppText variant="caption" style={{ color: colors.brandPrimary, marginTop: 2, fontSize: 11 }}>
-                        📍 {item.walkingTip}
-                      </AppText>
-                    )}
-                  </View>
+          <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} contentContainerStyle={{ gap: 8, paddingBottom: 16 }}>
+            {filtered.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+                <Ionicons name="location-outline" size={32} color={colors.textSecondary} />
+                <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 8 }}>
+                  No amenities found matching "{query}" in {selectedCategory}.
+                </AppText>
+              </View>
+            ) : (
+              filtered.map((item) => {
+                const isSelected = item.id === selectedLandmark.id;
+                const distanceInfo = item.distanceMeters ? formatDistanceAndEta(item.distanceMeters) : null;
 
-                  <AppButton
-                    label="Directions"
-                    size="sm"
-                    variant="ghost"
-                    onPress={() => openDirections(item)}
-                  />
-                </Pressable>
-              );
-            })}
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => setSelectedLandmark(item)}
+                    style={[
+                      styles.landmarkItem,
+                      {
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                        backgroundColor: isSelected ? `${colors.brandPrimary}08` : colors.surface,
+                      },
+                    ]}
+                  >
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                          {item.name}
+                        </AppText>
+                        {item.shortCode && <Badge label={item.shortCode} tone="neutral" />}
+                        {item.isOsmLive && <Badge label="OSM Live" tone="success" />}
+                      </View>
+
+                      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                        {item.category} • {item.description}
+                      </AppText>
+
+                      {distanceInfo && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                          <Ionicons name="walk-outline" size={12} color={colors.brandPrimary} />
+                          <AppText variant="caption" tone="primary" weight="medium">
+                            {distanceInfo.distanceText} ({distanceInfo.etaText})
+                          </AppText>
+                        </View>
+                      )}
+                    </View>
+
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        openDirections(item);
+                      }}
+                      hitSlop={8}
+                      style={[styles.actionIconBtn, { backgroundColor: `${colors.brandPrimary}15` }]}
+                    >
+                      <Ionicons name="navigate" size={16} color={colors.brandPrimary} />
+                    </Pressable>
+                  </Pressable>
+                );
+              })
+            )}
           </ScrollView>
         </View>
       </View>
@@ -227,70 +363,117 @@ export function CampusMapModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
   },
   modalContainer: {
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 16,
-    flex: 1,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    marginBottom: 10,
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  campusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   mapFrame: {
-    height: 180,
-    borderRadius: 14,
+    height: 200,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: 10,
+    position: 'relative',
   },
   nativeMapPlaceholder: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  selectedBanner: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  directionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
-    marginBottom: 8,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    height: '100%',
+    fontSize: 13,
+    padding: 0,
+  },
+  refreshBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterChip: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 14,
+    borderRadius: 8,
     borderWidth: 1,
   },
   landmarkItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 10,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    gap: 8,
+    gap: 10,
+  },
+  actionIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

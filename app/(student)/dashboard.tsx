@@ -11,6 +11,7 @@ import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { AICopilotModal } from '@/components/AICopilotModal';
 import { CurrencyConverterModal } from '@/components/CurrencyConverterModal';
+import { CampusMapModal } from '@/components/CampusMapModal';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Avatar } from '@/components/Avatar';
@@ -59,6 +60,7 @@ export default function StudentDashboard() {
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
+  const [campusMapOpen, setCampusMapOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -738,6 +740,36 @@ export default function StudentDashboard() {
                 </SolidCard>
               </Pressable>
             )}
+
+            {isFeatureEnabled('campus_map') && (
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setCampusMapOpen(true);
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard
+                  radius={16}
+                  style={{
+                    padding: isDesktop ? 12 : 10,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                    gap: isDesktop ? 10 : 8,
+                    minHeight: isDesktop ? 68 : 84,
+                  }}
+                >
+                  <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="map" size={isDesktop ? 18 : 16} color={colors.brandPrimary} />
+                  </View>
+                  <View style={{ width: '100%' }}>
+                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Map & POIs</AppText>
+                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>ATMs, halls & food</AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -1145,6 +1177,7 @@ export default function StudentDashboard() {
       </Modal>
       <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
       <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
+      <CampusMapModal visible={campusMapOpen} onClose={() => setCampusMapOpen(false)} campusFilter={effectiveCampus} />
     </ScreenContainer>
   );
 }

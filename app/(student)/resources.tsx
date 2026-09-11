@@ -21,6 +21,8 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 import { AcademicLibraryModal } from '@/components/AcademicLibraryModal';
+import { ResearchPapersModal } from '@/components/ResearchPapersModal';
+import { AICopilotModal } from '@/components/AICopilotModal';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 const RESOURCE_CATEGORIES = [
@@ -42,6 +44,9 @@ export default function ResourcesScreen() {
  const [filterModalOpen, setFilterModalOpen] = useState(false);
  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
   const [libraryModalOpen, setLibraryModalOpen] = useState(false);
+  const [researchModalOpen, setResearchModalOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotPrompt, setCopilotPrompt] = useState<string | undefined>(undefined);
   const { isFeatureEnabled } = useFeatureFlags();
 
  const { campusCode, homeInstitutionCode } = useCampusScope();
@@ -162,6 +167,26 @@ export default function ResourcesScreen() {
               </AppText>
             </Pressable>
           )}
+
+          <Pressable
+            onPress={() => setResearchModalOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Search Research Papers & Thesis"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              backgroundColor: colors.brandPrimary,
+              borderRadius: radius.pill,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+            }}
+          >
+            <Ionicons name="school" size={13} color="#ffffff" />
+            <AppText weight="bold" variant="caption" style={{ color: '#ffffff', fontSize: 11 }}>
+              Research Hub
+            </AppText>
+          </Pressable>
 
           <Pressable
             onPress={() => setUploadModalOpen(true)}
@@ -695,6 +720,22 @@ export default function ResourcesScreen() {
       <LibraryFilterModal visible={filterModalOpen} onClose={() => setFilterModalOpen(false)} filters={filters} onApply={setFilters} />
       <ManageResourcesModal visible={adminManageOpen} onClose={() => setAdminManageOpen(false)} />
       <AcademicLibraryModal visible={libraryModalOpen} onClose={() => setLibraryModalOpen(false)} />
+      <ResearchPapersModal
+        visible={researchModalOpen}
+        onClose={() => setResearchModalOpen(false)}
+        onSendToCopilot={(p) => {
+          setCopilotPrompt(p);
+          setCopilotOpen(true);
+        }}
+      />
+      <AICopilotModal
+        visible={copilotOpen}
+        onClose={() => {
+          setCopilotOpen(false);
+          setCopilotPrompt(undefined);
+        }}
+        initialPrompt={copilotPrompt}
+      />
     </ScreenContainer>
   );
 }

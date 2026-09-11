@@ -4,11 +4,14 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  TextInput,
   Pressable,
+  TextInput,
   ActivityIndicator,
+  Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
@@ -21,12 +24,14 @@ import {
   askAiStudyCopilot,
   CopilotMode,
   CopilotResponse,
+  MultimodalAttachment,
 } from '@/api/aiCopilot';
 
 interface AICopilotModalProps {
   visible: boolean;
   onClose: () => void;
   initialCourse?: string;
+  initialPrompt?: string;
 }
 
 interface ChatMessage {
@@ -36,26 +41,29 @@ interface ChatMessage {
   mode?: CopilotMode;
   source?: string;
   timestamp: string;
+  imageUri?: string;
 }
 
 const INITIAL_GREETING: ChatMessage = {
   id: 'welcome',
   sender: 'ai',
-  text: 'Hello! I am your AI Study Copilot powered by Google Gemini and academic reasoning algorithms. Ask me to explain a tough concept, break down a past question step-by-step, or generate an exam revision quiz!',
+  text: 'Hello! I am your AI Study Copilot powered by Google Gemini 2.0 Flash and academic reasoning algorithms. Ask me to explain a concept, break down a past question, generate flashcards, or attach a photo of chalkboard math and diagrams for instant step-by-step solving!',
   source: 'Academic Reasoning Engine',
   timestamp: 'Just now',
 };
 
-const QUICK_PROMPTS: { label: string; mode: CopilotMode; text: string }[] = [
-  { label: 'Explain Concept', mode: 'explain', text: 'Explain the principles of Object-Oriented Design simply' },
-  { label: 'Past Question', mode: 'past_question', text: 'Break down a past question on Dijkstra Shortest Path' },
-  { label: 'Revision Quiz', mode: 'quiz', text: 'Generate 3 high-yield questions on Operating Systems memory paging' },
-  { label: 'Study Schedule', mode: 'schedule', text: 'Create a 3-day exam timetable for engineering finals' },
+const QUICK_PROMPTS: { label: string; mode: CopilotMode; text: string; icon: any }[] = [
+  { label: 'Explain Concept', mode: 'explain', text: 'Explain the principles of Object-Oriented Design simply', icon: 'bulb-outline' },
+  { label: 'Solve Math / Diagram', mode: 'math_solve', text: 'Solve this chalkboard math / physics problem step-by-step with LaTeX equations', icon: 'calculator-outline' },
+  { label: 'Past Question', mode: 'past_question', text: 'Break down a past question on Dijkstra Shortest Path', icon: 'help-circle-outline' },
+  { label: 'Active Flashcards', mode: 'flashcards', text: 'Generate 4 active-recall study flashcards for quick revision', icon: 'albums-outline' },
+  { label: 'Revision Quiz', mode: 'quiz', text: 'Generate 3 high-yield questions on Operating Systems memory paging', icon: 'school-outline' },
+  { label: 'Study Schedule', mode: 'schedule', text: 'Create a 3-day exam timetable for engineering finals', icon: 'calendar-outline' },
 ];
 
 /**
  * Elegant native text formatting component that renders structured headings,
- * callout quotes, bullet points, numbered steps, and bold terms without raw markdown symbols.
+ * callout quotes, bullet points, numbered steps, and LaTeX mathematical formula blocks.
  */
 function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUser: boolean; colors: any }) {
   if (isUser) {
@@ -69,7 +77,7 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
   const lines = text.split('\n');
 
   function renderInline(line: string, keyPrefix: string) {
-    const parts = line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+    const parts = line.split(/(\*\*[^*]+\*\*|`[^`]+`|\\\([^\]]+\\\))/g);
     return parts.map((part, idx) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         return (
@@ -80,24 +88,40 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
       }
       if (part.startsWith('`') && part.endsWith('`')) {
         return (
-          <AppText
+          <View
             key={keyPrefix + '-' + idx}
-            variant="caption"
-            weight="bold"
             style={{
-              backgroundColor: colors.pastelPrimaryBg,
-              color: colors.brandPrimary,
+              backgroundColor: colors.border + '30',
               paddingHorizontal: 4,
               paddingVertical: 1,
               borderRadius: 4,
+              alignSelf: 'center',
             }}
           >
-            {part.slice(1, -1)}
+            <AppText
+              variant="caption"
+              weight="medium"
+              style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: colors.brandPrimary }}
+            >
+              {part.slice(1, -1)}
+            </AppText>
+          </View>
+        );
+      }
+      if (part.startsWith('\\(') && part.endsWith('\\)')) {
+        return (
+          <AppText
+            key={keyPrefix + '-' + idx}
+            weight="bold"
+            variant="bodySmall"
+            style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: colors.brandPrimary }}
+          >
+            {part.slice(2, -2)}
           </AppText>
         );
       }
       return (
-        <AppText key={keyPrefix + '-' + idx} variant="bodySmall" tone="primary" style={{ lineHeight: 20 }}>
+        <AppText key={keyPrefix + '-' + idx} variant="bodySmall" tone="primary">
           {part}
         </AppText>
       );
@@ -105,118 +129,133 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
   }
 
   return (
-    <View style={{ gap: 4, marginTop: 4 }}>
-      {lines.map((rawLine, idx) => {
+    <View style={{ gap: 4 }}>
+      {lines.map((rawLine, lineIndex) => {
         const line = rawLine.trim();
-        if (!line) return <View key={idx} style={{ height: 4 }} />;
+        if (!line) return <View key={lineIndex} style={{ height: 4 }} />;
 
-        // Header 3 (### )
-        if (line.startsWith('### ')) {
-          const headingText = line.replace('### ', '');
-          return (
-            <View key={idx} style={{ marginTop: 8, marginBottom: 2 }}>
-              <AppText variant="h3" weight="bold" style={{ color: colors.brandPrimary }}>
-                {headingText}
-              </AppText>
-            </View>
-          );
-        }
-
-        // Header 4 (#### )
-        if (line.startsWith('#### ')) {
-          const headingText = line.replace('#### ', '');
-          return (
-            <View key={idx} style={{ marginTop: 6, marginBottom: 2 }}>
-              <AppText variant="bodySmall" weight="bold" tone="primary">
-                {headingText}
-              </AppText>
-            </View>
-          );
-        }
-
-        // Divider (---)
-        if (line === '---') {
+        // LaTeX Display Formula Block
+        if (line.startsWith('\\\[') || line.endsWith('\\\]') || line.includes('\\boxed') || line.startsWith('$$')) {
+          const formulaClean = line
+            .replace(/\\\(/g, '')
+            .replace(/\\\)/g, '')
+            .replace(/\\\[/g, '')
+            .replace(/\\\]/g, '')
+            .replace(/\$\$/g, '')
+            .trim();
           return (
             <View
-              key={idx}
+              key={lineIndex}
               style={{
-                height: 1,
-                backgroundColor: colors.border,
-                marginVertical: 6,
+                backgroundColor: colors.brandPrimary + '10',
+                borderColor: colors.brandPrimary + '35',
+                borderWidth: 1,
+                borderRadius: 8,
+                padding: 10,
+                marginVertical: 4,
+                alignItems: 'center',
               }}
-            />
+            >
+              <AppText
+                variant="bodySmall"
+                weight="bold"
+                style={{
+                  fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                  color: colors.brandPrimary,
+                  letterSpacing: 0.5,
+                  textAlign: 'center',
+                }}
+              >
+                {formulaClean}
+              </AppText>
+            </View>
           );
         }
 
-        // Blockquote (> )
+        // Heading 3: ###
+        if (line.startsWith('### ')) {
+          return (
+            <View key={lineIndex} style={{ marginTop: 8, marginBottom: 2 }}>
+              <AppText variant="bodySmall" weight="bold" style={{ fontSize: 14, color: colors.brandPrimary }}>
+                {line.slice(4)}
+              </AppText>
+            </View>
+          );
+        }
+
+        // Heading 4: ####
+        if (line.startsWith('#### ')) {
+          return (
+            <View key={lineIndex} style={{ marginTop: 6, marginBottom: 2 }}>
+              <AppText variant="caption" weight="bold" style={{ fontSize: 12.5, color: colors.textPrimary }}>
+                {line.slice(5)}
+              </AppText>
+            </View>
+          );
+        }
+
+        // Callout Quote: >
         if (line.startsWith('> ')) {
-          const quoteText = line.replace(/^>\s*/, '');
           return (
             <View
-              key={idx}
+              key={lineIndex}
               style={{
                 borderLeftWidth: 3,
                 borderLeftColor: colors.brandPrimary,
-                backgroundColor: colors.pastelPrimaryBg,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 6,
+                paddingLeft: 10,
+                paddingVertical: 2,
                 marginVertical: 4,
+                backgroundColor: colors.brandPrimary + '08',
+                borderRadius: 4,
               }}
             >
-              <AppText variant="bodySmall" weight="medium" tone="primary" style={{ fontStyle: 'italic' }}>
-                {quoteText}
+              <AppText variant="caption" tone="secondary" style={{ fontStyle: 'italic', lineHeight: 18 }}>
+                {line.slice(2)}
               </AppText>
             </View>
           );
         }
 
-        // Bullet item (* or -)
+        // Bullet list item
         if (line.startsWith('* ') || line.startsWith('- ')) {
-          const itemContent = line.replace(/^[*-]\s+/, '');
           return (
-            <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginVertical: 2 }}>
-              <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} style={{ marginTop: 3 }} />
-              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
-                {renderInline(itemContent, 'bullet-' + idx)}
-              </View>
-            </View>
-          );
-        }
-
-        // Numbered list item (e.g. 1. or 2.)
-        const numMatch = line.match(/^(\d+)\.\s+(.*)/);
-        if (numMatch) {
-          const num = numMatch[1];
-          const itemContent = numMatch[2];
-          return (
-            <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginVertical: 2 }}>
+            <View key={lineIndex} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingLeft: 4 }}>
               <View
                 style={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  backgroundColor: colors.brandPrimary + '20',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginTop: 2,
+                  width: 5,
+                  height: 5,
+                  borderRadius: 2.5,
+                  backgroundColor: colors.brandPrimary,
+                  marginTop: 7,
+                  flexShrink: 0,
                 }}
-              >
-                <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 10 }}>
-                  {num}
-                </AppText>
-              </View>
-              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
-                {renderInline(itemContent, 'num-' + idx)}
+              />
+              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+                {renderInline(line.slice(2), `bullet-${lineIndex}`)}
               </View>
             </View>
           );
         }
 
-        // Standard paragraph
+        // Numbered list item
+        const numMatch = line.match(/^(\d+)\.\s+(.*)/);
+        if (numMatch) {
+          return (
+            <View key={lineIndex} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingLeft: 2 }}>
+              <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, width: 18, marginTop: 1 }}>
+                {`${numMatch[1]}.`}
+              </AppText>
+              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+                {renderInline(numMatch[2], `num-${lineIndex}`)}
+              </View>
+            </View>
+          );
+        }
+
+        // Standard Paragraph Line
         return (
-          <View key={idx} style={{ flexDirection: 'row', flexWrap: 'wrap', marginVertical: 1 }}>
-            {renderInline(line, 'para-' + idx)}
+          <View key={lineIndex} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+            {renderInline(line, `p-${lineIndex}`)}
           </View>
         );
       })}
@@ -228,16 +267,22 @@ export function AICopilotModal({
   visible,
   onClose,
   initialCourse,
+  initialPrompt,
 }: AICopilotModalProps) {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const toast = useToast();
 
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(initialPrompt || '');
   const [activeMode, setActiveMode] = useState<CopilotMode>('explain');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_GREETING]);
+  const [attachedImage, setAttachedImage] = useState<{
+    base64: string;
+    mimeType: string;
+    previewUri: string;
+  } | null>(null);
 
   const isEnabled = isFeatureEnabled('ai_study_copilot');
 
@@ -247,29 +292,96 @@ export function AICopilotModal({
     haptics.medium();
     setMessages([INITIAL_GREETING]);
     setPrompt('');
+    setAttachedImage(null);
     setActiveMode('explain');
     toast.success('Started a fresh AI study session');
   }
 
+  async function handlePickPhoto() {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.onchange = (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        document.body.removeChild(input);
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target?.result as string;
+          if (dataUrl) {
+            setAttachedImage({
+              base64: dataUrl,
+              mimeType: file.type || 'image/jpeg',
+              previewUri: dataUrl,
+            });
+            haptics.light();
+            toast.info('Attached image for multimodal analysis');
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+      return;
+    }
+
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return;
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        base64: true,
+      });
+      if (!res.canceled && res.assets[0]) {
+        const asset = res.assets[0];
+        setAttachedImage({
+          base64: asset.base64 || '',
+          mimeType: asset.mimeType || 'image/jpeg',
+          previewUri: asset.uri,
+        });
+        toast.info('Attached image for multimodal analysis');
+      }
+    } catch {
+      toast.warning('Unable to attach photo');
+    }
+  }
+
   async function handleSend(customText?: string, mode?: CopilotMode) {
     const textToSend = customText || prompt;
-    if (!textToSend.trim()) return;
+    if (!textToSend.trim() && !attachedImage) return;
 
     const chosenMode = mode || activeMode;
+    const currentAttachment = attachedImage;
+
     const userMsg: ChatMessage = {
       id: 'user-' + Date.now(),
       sender: 'user',
-      text: textToSend,
+      text: textToSend || (chosenMode === 'math_solve' ? 'Please solve this handwritten math / equation' : 'Analyze this image'),
       mode: chosenMode,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      imageUri: currentAttachment?.previewUri,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setPrompt('');
+    setAttachedImage(null);
     setLoading(true);
 
     try {
-      const res: CopilotResponse = await askAiStudyCopilot(textToSend, chosenMode, initialCourse);
+      const payloadAttachment: MultimodalAttachment | undefined = currentAttachment
+        ? { base64: currentAttachment.base64, mimeType: currentAttachment.mimeType }
+        : undefined;
+
+      const res: CopilotResponse = await askAiStudyCopilot(
+        userMsg.text,
+        chosenMode,
+        initialCourse,
+        payloadAttachment
+      );
+
       const aiMsg: ChatMessage = {
         id: 'ai-' + Date.now(),
         sender: 'ai',
@@ -295,12 +407,12 @@ export function AICopilotModal({
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              width: isDesktop ? 700 : '95%',
-              maxHeight: isDesktop ? '88%' : '92%',
+              width: isDesktop ? 720 : '95%',
+              maxHeight: isDesktop ? '90%' : '94%',
             },
           ]}
         >
-          {/* Header Bar */}
+          {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.divider }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -308,139 +420,239 @@ export function AICopilotModal({
                 <AppText variant="h3" weight="bold">
                   AI Academic Study Copilot
                 </AppText>
+                <Badge label="Gemini 2.0 Flash" tone="brand" />
               </View>
               <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                {initialCourse ? 'Focus Course: ' + initialCourse : 'Powered by Google Gemini & Academic Heuristic Engine'}
+                {initialCourse ? `Focus: ${initialCourse} • Multimodal Math & Exam Revision` : 'Multimodal Math, chalkboard diagrams & exam revision'}
               </AppText>
             </View>
 
-            {/* Action Buttons: New Chat & Close */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Pressable
                 onPress={handleNewConversation}
                 hitSlop={8}
-                style={[styles.headerActionBtn, { backgroundColor: colors.pastelPrimaryBg }]}
+                style={[styles.headerActionBtn, { backgroundColor: colors.brandPrimary + '15' }]}
               >
-                <Ionicons name="refresh-outline" size={16} color={colors.brandPrimary} />
-                {isDesktop && (
-                  <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11, marginLeft: 4 }}>
-                    New Chat
-                  </AppText>
-                )}
+                <Ionicons name="refresh" size={14} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, marginLeft: 4 }}>
+                  New
+                </AppText>
               </Pressable>
 
               <Pressable
                 onPress={onClose}
                 hitSlop={12}
-                style={[styles.closeBtn, { backgroundColor: colors.divider }]}
+                style={[styles.closeBtn, { backgroundColor: colors.textSecondary + '15' }]}
               >
                 <Ionicons name="close" size={18} color={colors.textPrimary} />
               </Pressable>
             </View>
           </View>
 
-          {/* Quick Starter Chips */}
-          <View style={{ marginBottom: 8 }}>
+          {/* Quick Prompts Carousel */}
+          <View style={{ marginBottom: 10 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-              {QUICK_PROMPTS.map((qp) => (
-                <Pressable
-                  key={qp.label}
-                  onPress={() => {
-                    setActiveMode(qp.mode);
-                    handleSend(qp.text, qp.mode);
-                  }}
-                  style={[styles.quickChip, { backgroundColor: colors.brandPrimary + '15' }]}
-                >
-                  <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary }}>
-                    ⚡ {qp.label}
-                  </AppText>
-                </Pressable>
-              ))}
+              {QUICK_PROMPTS.map((qp) => {
+                const isSelected = activeMode === qp.mode;
+                return (
+                  <Pressable
+                    key={qp.mode}
+                    onPress={() => {
+                      haptics.light();
+                      setActiveMode(qp.mode);
+                      if (!prompt) {
+                        setPrompt(qp.text);
+                      }
+                    }}
+                    style={[
+                      styles.quickChip,
+                      {
+                        backgroundColor: isSelected ? colors.brandPrimary : colors.border + '35',
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                        borderWidth: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={qp.icon}
+                      size={13}
+                      color={isSelected ? '#ffffff' : colors.brandPrimary}
+                    />
+                    <AppText
+                      variant="caption"
+                      weight={isSelected ? 'bold' : 'regular'}
+                      style={{ color: isSelected ? '#ffffff' : colors.textPrimary }}
+                    >
+                      {qp.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </View>
 
-          {/* Messages Thread */}
+          {/* Chat Messages */}
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingVertical: 8, gap: 12 }}
+            contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
             showsVerticalScrollIndicator={false}
           >
-            {messages.map((msg) => (
-              <View
-                key={msg.id}
-                style={[
-                  styles.msgContainer,
-                  msg.sender === 'user' ? styles.userMsgRow : styles.aiMsgRow,
-                ]}
-              >
-                <SolidCard
-                  radius={16}
+            {messages.map((msg) => {
+              const isUser = msg.sender === 'user';
+              return (
+                <View
+                  key={msg.id}
                   style={[
-                    styles.msgBubble,
-                    msg.sender === 'user'
-                      ? { backgroundColor: colors.brandPrimary, alignSelf: 'flex-end' }
-                      : { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 },
+                    styles.msgContainer,
+                    isUser ? styles.userMsgRow : styles.aiMsgRow,
                   ]}
                 >
-                  <View style={styles.msgHeader}>
-                    <AppText
-                      variant="caption"
-                      weight="bold"
-                      style={{ color: msg.sender === 'user' ? '#ffffff' : colors.textPrimary }}
-                    >
-                      {msg.sender === 'user' ? 'You' : 'Study Copilot'}
-                    </AppText>
-                    {msg.source && <Badge label={msg.source} tone="brand" />}
-                  </View>
+                  <View
+                    style={[
+                      styles.msgBubble,
+                      {
+                        backgroundColor: isUser ? colors.brandPrimary : colors.background,
+                        borderColor: isUser ? colors.brandPrimary : colors.border,
+                        borderRadius: radius.lg,
+                        borderBottomRightRadius: isUser ? 4 : radius.lg,
+                        borderBottomLeftRadius: isUser ? radius.lg : 4,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    {/* Header for AI response */}
+                    {!isUser && (
+                      <View style={styles.msgHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="sparkles" size={13} color={colors.brandPrimary} />
+                          <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
+                            Study Copilot
+                          </AppText>
+                          {msg.source && <Badge label={msg.source} tone="neutral" />}
+                        </View>
+                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                          {msg.timestamp}
+                        </AppText>
+                      </View>
+                    )}
 
-                  {/* Rich Formatted Content */}
-                  <FormattedAcademicContent text={msg.text} isUser={msg.sender === 'user'} colors={colors} />
-                </SolidCard>
-              </View>
-            ))}
+                    {/* Image Attachment Preview if user sent photo */}
+                    {isUser && msg.imageUri && (
+                      <View style={{ marginBottom: 6, borderRadius: 8, overflow: 'hidden' }}>
+                        <Image source={{ uri: msg.imageUri }} style={{ width: 180, height: 120 }} resizeMode="cover" />
+                      </View>
+                    )}
+
+                    {/* Message Body */}
+                    <FormattedAcademicContent text={msg.text} isUser={isUser} colors={colors} />
+                  </View>
+                </View>
+              );
+            })}
 
             {loading && (
-              <View style={styles.loadingBubble}>
-                <ActivityIndicator size="small" color={colors.brandPrimary} />
-                <AppText variant="caption" tone="secondary" style={{ marginLeft: 8 }}>
-                  Analyzing academic concepts & deriving explanation...
-                </AppText>
+              <View style={[styles.msgContainer, styles.aiMsgRow]}>
+                <View
+                  style={[
+                    styles.loadingBubble,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                      borderRadius: radius.lg,
+                    },
+                  ]}
+                >
+                  <ActivityIndicator size="small" color={colors.brandPrimary} style={{ marginRight: 8 }} />
+                  <AppText variant="caption" tone="secondary">
+                    Gemini 2.0 Flash analyzing equations and synthesizing academic response...
+                  </AppText>
+                </View>
               </View>
             )}
           </ScrollView>
 
-          {/* Bottom Chat Controls: Clear History link & Input Bar */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, paddingHorizontal: 4 }}>
-            <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-              Tips: Tap chips above or ask for exam solutions
-            </AppText>
-            {messages.length > 1 && (
-              <Pressable onPress={handleNewConversation} hitSlop={6} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                <Ionicons name="trash-outline" size={12} color={colors.textSecondary} />
-                <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                  Clear History
+          {/* Attached Photo Preview Bar */}
+          {attachedImage && (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                padding: 6,
+                borderRadius: 8,
+                backgroundColor: colors.background,
+                borderWidth: 1,
+                borderColor: colors.brandPrimary + '50',
+                marginBottom: 6,
+              }}
+            >
+              <Image
+                source={{ uri: attachedImage.previewUri }}
+                style={{ width: 40, height: 40, borderRadius: 6 }}
+                resizeMode="cover"
+              />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText variant="caption" weight="bold" numberOfLines={1}>
+                  Photo Attached
                 </AppText>
+                <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                  Chalkboard / Diagram ready for multimodal solving
+                </AppText>
+              </View>
+              <Pressable
+                onPress={() => setAttachedImage(null)}
+                hitSlop={8}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
               </Pressable>
-            )}
-          </View>
+            </View>
+          )}
 
           {/* Input Bar */}
           <View style={[styles.inputBar, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <Pressable
+              onPress={handlePickPhoto}
+              hitSlop={8}
+              style={{ padding: 4, marginRight: 4 }}
+              accessibilityLabel="Attach chalkboard or diagram photo"
+            >
+              <Ionicons
+                name="camera"
+                size={20}
+                color={attachedImage ? colors.brandPrimary : colors.textSecondary}
+              />
+            </Pressable>
+
             <TextInput
               value={prompt}
               onChangeText={setPrompt}
               onSubmitEditing={() => handleSend()}
-              placeholder="Ask anything (e.g. explain normalisation in databases)..."
+              placeholder={
+                activeMode === 'math_solve'
+                  ? 'Attach chalkboard photo or paste formula...'
+                  : activeMode === 'flashcards'
+                  ? 'Enter topic or attach notes for flashcards...'
+                  : 'Ask anything (e.g. solve Dijkstra algorithm)...'
+              }
               placeholderTextColor={colors.textSecondary}
               returnKeyType="send"
               style={[styles.textInput, { color: colors.textPrimary }]}
             />
+
             <Pressable
               onPress={() => handleSend()}
-              disabled={!prompt.trim() || loading}
+              disabled={(!prompt.trim() && !attachedImage) || loading}
               style={[
                 styles.sendBtn,
-                { backgroundColor: prompt.trim() ? colors.brandPrimary : colors.border },
+                {
+                  backgroundColor:
+                    prompt.trim() || attachedImage ? colors.brandPrimary : colors.border,
+                },
               ]}
             >
               <Ionicons name="arrow-up" size={18} color="#ffffff" />
@@ -458,9 +670,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 12,
   },
   modalContainer: {
-    borderRadius: 22,
+    borderRadius: 20,
     borderWidth: 1,
     padding: 16,
     flex: 1,
@@ -471,7 +684,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: 10,
     borderBottomWidth: 1,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   headerActionBtn: {
     flexDirection: 'row',
@@ -503,14 +716,14 @@ const styles = StyleSheet.create({
   },
   msgBubble: {
     maxWidth: '94%',
-    padding: 14,
+    padding: 12,
   },
   msgHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   loadingBubble: {
     flexDirection: 'row',
@@ -522,13 +735,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     height: 46,
   },
   textInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13.5,
     height: '100%',
+    paddingHorizontal: 4,
   },
   sendBtn: {
     width: 32,
