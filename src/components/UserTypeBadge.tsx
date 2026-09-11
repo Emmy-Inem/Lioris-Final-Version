@@ -27,25 +27,22 @@ const LABEL_BY_ROLE: Record<UserRole, string> = {
  */
 export function UserTypeBadge({ role }: { role: UserRole }) {
  const { isDark } = useTheme();
- const { bg, text } = roleBadgeColors[role][isDark ? 'dark' : 'light'];
+ const { text } = roleBadgeColors[role][isDark ? 'dark' : 'light'];
 
  return (
  <View
  style={{
  flexDirection: 'row',
  alignItems: 'center',
- gap: 4,
- backgroundColor: bg,
- borderRadius: 8,
- borderWidth: 1,
- borderColor: `${text}59`, // ~35% alpha
- paddingHorizontal: 12,
- paddingVertical: 4,
+ gap: 3,
+ paddingHorizontal: 4,
+ paddingVertical: 1,
+ borderRadius: 4,
  alignSelf: 'flex-start',
  }}
  >
  <Ionicons name={ICON_BY_ROLE[role]} size={11} color={text} />
- <AppText variant="caption"weight="bold"style={{ color: text, fontSize: 9 }}>
+ <AppText variant="caption" weight="medium" style={{ color: text, fontSize: 10 }}>
  {LABEL_BY_ROLE[role]}
  </AppText>
  </View>

@@ -11,6 +11,7 @@ import { SolidCard } from'@/components/SolidCard';
 import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { UserTypeBadge } from'@/components/UserTypeBadge';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { ActionSheetModal } from'@/components/ActionSheetModal';
 import { EmptyState } from'@/components/EmptyState';
 import { ShimmerCardList } from'@/components/ShimmerSkeleton';
@@ -436,7 +437,7 @@ export default function UserDirectoryScreen() {
                             </AppText>
                             <UserTypeBadge role={item.role.toLowerCase() as any} />
                             {item.isVerified && (
-                              <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+                              <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
                             )}
                           </View>
                           <AppText tone="secondary" variant="caption" numberOfLines={1}>
@@ -507,7 +508,7 @@ export default function UserDirectoryScreen() {
                         </AppText>
                         <UserTypeBadge role={item.role.toLowerCase() as any} />
                         {item.isVerified && (
-                          <Ionicons name="checkmark-circle" size={14} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+                          <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
                         )}
                       </View>
                       <AppText tone="secondary" variant="caption" numberOfLines={1}>

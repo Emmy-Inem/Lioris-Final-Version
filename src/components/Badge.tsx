@@ -11,16 +11,8 @@ interface BadgeProps {
 }
 
 export function Badge({ label, tone = 'neutral' }: BadgeProps) {
- const { colors, radius, spacing } = useTheme();
+ const { colors, isDark } = useTheme();
 
- const bg: Record<BadgeTone, string> = {
- neutral: colors.divider,
- brand: `${colors.brandPrimary}22`,
- accent: `${colors.brandAccent}22`,
- success: `${colors.success}22`,
- warning: `${colors.warning}22`,
- critical: `${colors.critical}22`,
- };
  const fg: Record<BadgeTone, string> = {
  neutral: colors.textSecondary,
  brand: colors.brandPrimary,
@@ -34,13 +26,15 @@ export function Badge({ label, tone = 'neutral' }: BadgeProps) {
  <View
  style={{
  alignSelf: 'flex-start',
- backgroundColor: bg[tone],
- borderRadius: radius.pill,
- paddingHorizontal: spacing.sm,
- paddingVertical: 4,
+ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.035)',
+ borderWidth: 1,
+ borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+ borderRadius: 6,
+ paddingHorizontal: 7,
+ paddingVertical: 2,
  }}
  >
- <AppText variant="caption"weight="semiBold"style={{ color: fg[tone] }}>
+ <AppText variant="caption" weight="medium" style={{ color: fg[tone], fontSize: 10.5 }}>
  {label}
  </AppText>
  </View>

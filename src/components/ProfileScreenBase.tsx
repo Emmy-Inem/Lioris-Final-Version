@@ -14,6 +14,7 @@ import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { PostCard } from './PostCard';
 import { Badge } from './Badge';
+import { VerifiedBadge } from './VerifiedBadge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -414,8 +415,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             <AppText weight="bold" numberOfLines={1} style={{ flexShrink: 1, fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
               {profile.fullName}
             </AppText>
-            {profile.verificationStatus === 'verified' ? (
-              <Ionicons name="checkmark-circle" size={18} color={colors.brandPrimary} />
+            {profile.verificationStatus === 'verified' || user?.role === 'admin' ? (
+              <VerifiedBadge size={18} role={user?.role} name={profile.fullName} />
             ) : null}
           </View>
           <AppText tone="brand" weight="semiBold" variant="bodySmall">

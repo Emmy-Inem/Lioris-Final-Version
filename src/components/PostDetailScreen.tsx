@@ -10,6 +10,7 @@ import { AppText } from'./AppText';
 import { Avatar } from'./Avatar';
 import { Badge } from'./Badge';
 import { UserTypeBadge } from'./UserTypeBadge';
+import { VerifiedBadge } from './VerifiedBadge';
 import { SolidCard } from'./SolidCard';
 import { AppTextField } from'./AppTextField';
 import { AppButton } from'./AppButton';
@@ -278,8 +279,10 @@ export function PostDetailScreen() {
  <AppText weight="bold" variant="body" numberOfLines={1}>
  {post.authorName}
  </AppText>
- <Ionicons name="checkmark-circle"size={16} color={colors.brandPrimary} />
- <UserTypeBadge role={post.authorRole} />
+ <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} />
+ <AppText tone="secondary" variant="caption" style={{ fontSize: 12 }}>
+ • {post.authorRole === 'student' ? 'Student' : post.authorRole === 'alumni' ? 'Alumni' : 'Staff'}
+ </AppText>
  </View>
  <AppText tone="secondary"variant="caption">
  {timeAgo(post.createdAt)} | {post.institutionCode ?? 'University of Ibadan'}

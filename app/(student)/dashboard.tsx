@@ -16,6 +16,7 @@ import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
 import { EventCard } from '@/components/EventCard';
@@ -358,11 +359,14 @@ export default function StudentDashboard() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} uri={profile?.avatarUrl} size={48} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 18 : 16, lineHeight: isDesktop ? 22 : 20 }}>
                       Welcome back, {firstName}
                     </AppText>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
+                    {profile?.verificationStatus === 'verified' || user?.role === 'admin' ? (
+                      <VerifiedBadge size={16} name={profile?.fullName || firstName} role={user?.role} />
+                    ) : null}
+                    <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
                   <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11 }}>
                     {/* "UI Node" as a fallback asserted University of Ibadan for
@@ -370,32 +374,18 @@ export default function StudentDashboard() {
                     {[profile?.department, profile?.institutionCode].filter(Boolean).join(' • ') ||
                       'Complete your profile'}
                   </AppText>
-                </View>
-              </View>
 
-              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                {profile?.verificationStatus === 'verified' ? (
-                  <Badge label="✓ Verified Student" tone="success" />
-                ) : profile?.verificationStatus === 'pending' ? (
-                  <Badge label="⏳ Verification In Review" tone="brand" />
-                ) : (
-                  <Pressable
-                    onPress={() => router.push('/(student)/profile')}
-                    style={{
-                      backgroundColor: colors.pastelPrimaryBg,
-                      borderRadius: radius.pill,
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderWidth: 1,
-                      borderColor: colors.brandPrimary,
-                    }}
-                  >
-                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-                      Verify Student ID →
-                    </AppText>
-                  </Pressable>
-                )}
-                <Badge label="Active Term" tone="brand" />
+                  {profile?.verificationStatus !== 'verified' && user?.role !== 'admin' ? (
+                    <Pressable
+                      onPress={() => router.push('/(student)/profile')}
+                      style={{ alignSelf: 'flex-start', marginTop: 4 }}
+                    >
+                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11, textDecorationLine: 'underline' }}>
+                        Verify student ID →
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             </View>
           </View>

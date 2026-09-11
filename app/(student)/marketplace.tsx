@@ -69,9 +69,9 @@ export default function MarketplaceScreen() {
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill }}>
-                <Ionicons name="shield-checkmark" size={16} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" tone="brand">Campus Escrow Protected</AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Ionicons name="shield-checkmark" size={15} color={colors.brandPrimary} />
+                <AppText variant="caption" tone="secondary" weight="semiBold">Campus Escrow Protected</AppText>
               </View>
 
               <Pressable

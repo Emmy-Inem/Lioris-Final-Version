@@ -9,6 +9,7 @@ import { AppText } from'./AppText';
 import { Avatar } from'./Avatar';
 import { Badge } from'./Badge';
 import { UserTypeBadge } from'./UserTypeBadge';
+import { VerifiedBadge } from './VerifiedBadge';
 import { AppTextField } from'./AppTextField';
 import { AppButton } from'./AppButton';
 import { ActionSheetModal } from'./ActionSheetModal';
@@ -133,17 +134,14 @@ export function PostCard({ post }: { post: Post }) {
  >
  <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={44} role={post.authorRole} />
  <View style={{ flex: 1, minWidth: 0 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
  <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
  {post.authorName}
  </AppText>
- <Ionicons name="checkmark-circle"size={14} color={colors.brandPrimary} />
- <UserTypeBadge role={post.authorRole} />
- <View style={{ backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 9 }}>
- {post.authorRole === 'student' ? '300L CS' : post.authorRole === 'alumni' ? "Alumni'21" : 'Staff Advisor'}
+ <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} />
+ <AppText tone="secondary"variant="caption"style={{ fontSize: 11 }}>
+ • {post.authorRole === 'student' ? 'Student' : post.authorRole === 'alumni' ? "Alumni'21" : 'Staff Advisor'}
  </AppText>
- </View>
  </View>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
  <AppText tone="secondary"variant="caption">
