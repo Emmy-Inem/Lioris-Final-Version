@@ -17,7 +17,7 @@ import { Badge } from './Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getMyProfile, markVerificationPending, updateMyProfile, updateProfileImages, uploadAvatarImage } from '@/api/profile';
+import { getMyProfile, markVerificationPending, updateMyProfile, updateProfileImages, uploadAvatarImage, uploadCoverImage } from '@/api/profile';
 import { listMyPosts } from '@/api/posts';
 import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
@@ -133,41 +133,134 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  }
  }
 
- const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
- async function handlePickCustomAvatar() {
- if (!user) return;
- const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
- if (!permission.granted) {
- Alert.alert('Permission Required', 'Please grant photo library access to upload a profile picture.');
- return;
- }
- const result = await ImagePicker.launchImageLibraryAsync({
- mediaTypes: ['images'],
- allowsEditing: true,
- aspect: [1, 1],
- quality: 0.8,
- });
- if (!result.canceled && result.assets[0]?.uri) {
- setUploadingAvatar(true);
- try {
- const res = await fetch(result.assets[0].uri);
- const blob = await res.blob();
- const publicUrl = await uploadAvatarImage(user.id, blob, 'jpg');
- await updateProfileImages(user.id, { avatarUrl: publicUrl });
- await queryClient.invalidateQueries({ queryKey: ['profile'] });
- setPhotoPickerOpen(false);
- Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
- } catch (err: any) {
- Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
- } finally {
- setUploadingAvatar(false);
- }
- }
- }
+  async function handlePickCustomAvatar() {
+    if (!user) return;
 
- const handleSelectAvatar = handleSelectPresetAvatar;
- const handleSelectCover = handleSelectPresetCover;
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      // Web: use hidden file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.onchange = async (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        document.body.removeChild(input);
+        if (!file) return;
+        setUploadingAvatar(true);
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const ext = file.name.split('.').pop() || 'jpg';
+          const publicUrl = await uploadAvatarImage(user.id, arrayBuffer, ext);
+          await updateProfileImages(user.id, { avatarUrl: publicUrl });
+          await queryClient.invalidateQueries({ queryKey: ['profile'] });
+          setPhotoPickerOpen(false);
+          Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
+        } catch (err: any) {
+          Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
+        } finally {
+          setUploadingAvatar(false);
+        }
+      };
+      input.click();
+      return;
+    }
+
+    // Native
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please grant photo library access to upload a profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      setUploadingAvatar(true);
+      try {
+        const res = await fetch(result.assets[0].uri);
+        const blob = await res.blob();
+        const publicUrl = await uploadAvatarImage(user.id, blob, 'jpg');
+        await updateProfileImages(user.id, { avatarUrl: publicUrl });
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        setPhotoPickerOpen(false);
+        Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
+      } catch (err: any) {
+        Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
+      } finally {
+        setUploadingAvatar(false);
+      }
+    }
+  }
+
+  async function handlePickCustomCover() {
+    if (!user) return;
+
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      // Web: use hidden file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.onchange = async (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        document.body.removeChild(input);
+        if (!file) return;
+        setUploadingCover(true);
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const ext = file.name.split('.').pop() || 'jpg';
+          const publicUrl = await uploadCoverImage(user.id, arrayBuffer, ext);
+          await updateProfileImages(user.id, { coverUrl: publicUrl });
+          await queryClient.invalidateQueries({ queryKey: ['profile'] });
+          setPhotoPickerOpen(false);
+          Alert.alert('Cover Updated', 'Your custom campus banner is now live.');
+        } catch (err: any) {
+          Alert.alert('Upload Failed', err?.message || 'Could not upload cover image.');
+        } finally {
+          setUploadingCover(false);
+        }
+      };
+      input.click();
+      return;
+    }
+
+    // Native
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please grant photo library access to upload a cover image.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      setUploadingCover(true);
+      try {
+        const res = await fetch(result.assets[0].uri);
+        const blob = await res.blob();
+        const publicUrl = await uploadCoverImage(user.id, blob, 'jpg');
+        await updateProfileImages(user.id, { coverUrl: publicUrl });
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        setPhotoPickerOpen(false);
+        Alert.alert('Cover Updated', 'Your custom campus banner is now live.');
+      } catch (err: any) {
+        Alert.alert('Upload Failed', err?.message || 'Could not upload cover image.');
+      } finally {
+        setUploadingCover(false);
+      }
+    }
+  }
 
  async function handleSubmitVerification(data: {
  institutionClaimed: string;
@@ -205,7 +298,14 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  );
  }
 
- const activeCover = COVER_PRESETS.find((c) => c.id === profile.coverUrl)?.src ?? require('../../assets/images/campus_students_photo.jpg');
+  const activeCover = profile.coverUrl
+    ? (COVER_PRESETS.find((c) => c.id === profile.coverUrl)?.src
+       ?? (profile.coverUrl.startsWith('http') ? { uri: profile.coverUrl } : null)
+       ?? require('../../assets/images/campus_students_photo.jpg'))
+    : require('../../assets/images/campus_students_photo.jpg');
+
+  const handleSelectAvatar = handleSelectPresetAvatar;
+  const handleSelectCover = handleSelectPresetCover;
 
  return (
  <ScreenContainer noPadding glow={true}>
@@ -503,15 +603,26 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           </View>
 
           <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
-            {/* Custom Photo Upload */}
-            <View style={{ marginBottom: spacing.md }}>
-              <AppButton
-                label="Upload Custom Photo"
-                variant="secondary"
-                onPress={handlePickCustomAvatar}
-                loading={uploadingAvatar}
-                fullWidth
-              />
+            {/* Custom Upload Buttons */}
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={uploadingAvatar ? 'Uploading...' : '📷 Upload DP'}
+                  variant="secondary"
+                  onPress={handlePickCustomAvatar}
+                  loading={uploadingAvatar}
+                  fullWidth
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={uploadingCover ? 'Uploading...' : '🖼️ Upload Cover'}
+                  variant="secondary"
+                  onPress={handlePickCustomCover}
+                  loading={uploadingCover}
+                  fullWidth
+                />
+              </View>
             </View>
 
             {/* Avatar Selector */}

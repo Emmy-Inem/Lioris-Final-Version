@@ -241,6 +241,32 @@ export async function uploadAvatarImage(
  return avatarUrl;
 }
 
+export async function uploadCoverImage(
+ userId: string,
+ imageBlob: Blob | ArrayBuffer,
+ fileExt = 'jpg',
+): Promise<string> {
+ const filePath = `${userId}/cover_${Date.now()}.${fileExt}`;
+ const { error } = await supabase.storage.from('campus-media').upload(filePath, imageBlob, {
+   contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
+   upsert: true,
+ });
+ if (error) {
+   console.warn('[Profile] Upload cover error:', error.message);
+ }
+ const { data: publicUrlData } = supabase.storage.from('campus-media').getPublicUrl(filePath);
+ const coverUrl = publicUrlData?.publicUrl || filePath;
+
+ try {
+   await supabase.from('profiles').update({ banner_url: coverUrl }).eq('id', userId);
+ } catch {
+   // fallback
+ }
+
+ await updateProfileImages(userId, { coverUrl });
+ return coverUrl;
+}
+
 export async function updateProfileImages(
  userId: string,
  updates: { avatarUrl?: string | null; coverUrl?: string | null },

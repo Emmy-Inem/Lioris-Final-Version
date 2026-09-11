@@ -73,7 +73,7 @@ export function Avatar({ name, uri, size = 44, role }: AvatarProps) {
  source={imageSource}
  style={{ width: '100%', height: '100%' }}
  contentFit="cover"transition={200}
- cachePolicy="memory-disk"
+ cachePolicy="disk"
  />
  </View>
  );
