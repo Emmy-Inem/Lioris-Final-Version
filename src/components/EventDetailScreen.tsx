@@ -41,7 +41,7 @@ import {
   listEventAttendees,
 } from '@/api/events';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
-import { CAMPUS_LANDMARKS, CampusLandmark } from '@/api/campusMap';
+import { CAMPUS_LANDMARKS, CAMPUS_CENTERS, CampusLandmark } from '@/api/campusMap';
 import { EventAttendeeInfo, EventCategory, EventAgendaItem } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 
@@ -55,7 +55,6 @@ const EVENT_MEDIA_MAP: Record<string, any> = {
 };
 
 const CATEGORIES = ['Academic', 'Career', 'Workshop', 'Seminar', 'Social', 'Alumni'] as const;
-const CAMPUS_NODES = ['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'] as const;
 const VENUE_FORMATS = ['Physical Event', 'Lioris Live Event (In-App)', 'External Event'] as const;
 
 export function EventDetailScreen() {
@@ -125,6 +124,11 @@ export function EventDetailScreen() {
   const [rosterAttendees, setRosterAttendees] = useState<EventAttendeeInfo[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [rosterSearch, setRosterSearch] = useState('');
+
+  // Agenda Editor State
+  const [agendaEditorOpen, setAgendaEditorOpen] = useState(false);
+  const [editAgendaItems, setEditAgendaItems] = useState<EventAgendaItem[]>([]);
+  const [savingAgenda, setSavingAgenda] = useState(false);
 
   // Verified Landmark Matcher
   const matchedLandmark = useMemo(() => {
@@ -205,6 +209,47 @@ export function EventDetailScreen() {
     setEditIsSpotlight(!!event.isSpotlight);
     setEditSponsored(!!event.sponsored);
     setEditModalOpen(true);
+  }
+
+  function handleOpenAgendaEditor() {
+    if (!event) return;
+    haptics.light();
+    setEditAgendaItems(event.agenda ? [...event.agenda.map(a => ({ ...a }))] : []);
+    setAgendaEditorOpen(true);
+  }
+
+  function handleAddAgendaItem() {
+    haptics.light();
+    setEditAgendaItems(prev => [...prev, { time: '', title: '', speaker: '', description: '' }]);
+  }
+
+  function handleRemoveAgendaItem(index: number) {
+    haptics.light();
+    setEditAgendaItems(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function handleUpdateAgendaItem(index: number, field: keyof EventAgendaItem, value: string) {
+    setEditAgendaItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  }
+
+  async function handleSaveAgenda() {
+    if (!event) return;
+    const cleanedAgenda = editAgendaItems.filter(item => item.time.trim() && item.title.trim());
+    haptics.medium();
+    setSavingAgenda(true);
+    try {
+      await updateEvent(event.id, { agenda: cleanedAgenda } as any);
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
+      await queryClient.invalidateQueries({ queryKey: ['events', 'detail', event.id] });
+      haptics.success();
+      toast.success('Event schedule updated successfully.');
+      setAgendaEditorOpen(false);
+    } catch {
+      haptics.error();
+      toast.error('Could not save schedule. Please try again.');
+    } finally {
+      setSavingAgenda(false);
+    }
   }
 
   async function handleSaveEdit() {
@@ -380,7 +425,9 @@ export function EventDetailScreen() {
   function handleLaunchMaps() {
     if (!event) return;
     haptics.light();
-    const query = encodeURIComponent(`${event.location} ${event.campusCode || ''} University Campus`);
+    const query = matchedLandmark
+      ? `${matchedLandmark.latitude},${matchedLandmark.longitude}`
+      : encodeURIComponent(`${event.location} ${event.campusCode || ''} University Campus`);
     const mapsUrl =
       Platform.OS === 'ios'
         ? `maps://?q=${query}`
@@ -552,71 +599,71 @@ export function EventDetailScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* ADMINISTRATIVE & ORGANIZER COMMAND BAR */}
+      {/* DESKTOP ADMINISTRATIVE & ORGANIZER COMMAND BAR */}
       {/* ========================================================================= */}
-      {canManage && (
-        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.md, marginBottom: spacing.md }}>
-          <SolidCard
-            frosted
-            style={{
-              padding: spacing.md,
-              borderWidth: 1.5,
-              borderColor: colors.brandPrimary,
-              borderRadius: radius.lg,
-              gap: 10,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="shield-checkmark" size={18} color={colors.brandPrimary} />
-                <AppText weight="bold" variant="caption" tone="brand" style={{ letterSpacing: 0.8 }}>
-                  ADMINISTRATIVE CONTROL & MODERATION HUB
-                </AppText>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                {event.isSpotlight && <Badge label="FEATURED SPOTLIGHT" tone="brand" />}
-                <Badge
-                  label={
-                    event.approvalStatus === 'pending'
-                      ? 'PENDING REVIEW'
-                      : event.approvalStatus === 'approved'
-                      ? 'APPROVED & LIVE'
-                      : 'REVOKED'
-                  }
-                  tone={
-                    event.approvalStatus === 'pending'
-                      ? 'warning'
-                      : event.approvalStatus === 'approved'
-                      ? 'success'
-                      : 'critical'
-                  }
-                />
-              </View>
-            </View>
-
-            {/* Quick Action Control Buttons */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
-              <View style={{ flex: 1, minWidth: 120 }}>
-                <AppButton
-                  label="Edit All Details"
-                  size="sm"
-                  variant="secondary"
-                  icon="create-outline"
-                  onPress={handleOpenEdit}
-                />
+      {isDesktop && (
+        isAdmin ? (
+          <View style={{ paddingHorizontal: 0, marginBottom: spacing.md }}>
+            <SolidCard
+              frosted
+              style={{
+                padding: spacing.md,
+                borderWidth: 1.5,
+                borderColor: colors.brandPrimary,
+                borderRadius: radius.lg,
+                gap: 10,
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="shield-checkmark" size={18} color={colors.brandPrimary} />
+                  <AppText weight="bold" variant="caption" tone="brand" style={{ letterSpacing: 0.8 }}>
+                    ADMINISTRATIVE CONTROL & MODERATION HUB
+                  </AppText>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                  {event.isSpotlight && <Badge label="FEATURED SPOTLIGHT" tone="brand" />}
+                  <Badge
+                    label={
+                      event.approvalStatus === 'pending'
+                        ? 'PENDING REVIEW'
+                        : event.approvalStatus === 'approved'
+                        ? 'APPROVED & LIVE'
+                        : 'REVOKED'
+                    }
+                    tone={
+                      event.approvalStatus === 'pending'
+                        ? 'warning'
+                        : event.approvalStatus === 'approved'
+                        ? 'success'
+                        : 'critical'
+                    }
+                  />
+                </View>
               </View>
 
-              <View style={{ flex: 1, minWidth: 130 }}>
-                <AppButton
-                  label={event.isSpotlight ? 'Featured ★' : 'Feature Event ★'}
-                  size="sm"
-                  variant={event.isSpotlight ? 'primary' : 'secondary'}
-                  loading={actingSpotlight}
-                  onPress={handleToggleSpotlight}
-                />
-              </View>
+              {/* Quick Action Control Buttons */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
+                <View style={{ flex: 1, minWidth: 120 }}>
+                  <AppButton
+                    label="Edit All Details"
+                    size="sm"
+                    variant="secondary"
+                    icon="create-outline"
+                    onPress={handleOpenEdit}
+                  />
+                </View>
 
-              {isAdmin && (
+                <View style={{ flex: 1, minWidth: 130 }}>
+                  <AppButton
+                    label={event.isSpotlight ? 'Featured ★' : 'Feature Event ★'}
+                    size="sm"
+                    variant={event.isSpotlight ? 'primary' : 'secondary'}
+                    loading={actingSpotlight}
+                    onPress={handleToggleSpotlight}
+                  />
+                </View>
+
                 <View style={{ flex: 1, minWidth: 110 }}>
                   <AppButton
                     label={event.approvalStatus === 'approved' ? 'Revoke Approval' : 'Approve & Publish'}
@@ -626,35 +673,97 @@ export function EventDetailScreen() {
                     onPress={handleToggleApproval}
                   />
                 </View>
-              )}
 
-              <View style={{ flex: 1, minWidth: 125 }}>
-                <AppButton
-                  label={`Roster (${currentRsvpCount})`}
-                  size="sm"
-                  variant="secondary"
-                  icon="people-outline"
-                  onPress={handleOpenRoster}
-                />
+                <View style={{ flex: 1, minWidth: 125 }}>
+                  <AppButton
+                    label={`Roster (${currentRsvpCount})`}
+                    size="sm"
+                    variant="secondary"
+                    icon="people-outline"
+                    onPress={handleOpenRoster}
+                  />
+                </View>
+
+                <Pressable
+                  onPress={handleCancelEvent}
+                  hitSlop={8}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: radius.md,
+                    backgroundColor: isDark ? '#374151' : '#FEE2E2',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                </Pressable>
+              </View>
+            </SolidCard>
+          </View>
+        ) : isOwner ? (
+          <View style={{ paddingHorizontal: 0, marginBottom: spacing.md }}>
+            <SolidCard
+              frosted
+              style={{
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: radius.lg,
+                gap: 10,
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="settings-outline" size={18} color={colors.textSecondary} />
+                  <AppText weight="bold" variant="caption" tone="secondary" style={{ letterSpacing: 0.8 }}>
+                    YOUR EVENT CONTROLS
+                  </AppText>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                  <Badge
+                    label={
+                      event.approvalStatus === 'pending'
+                        ? 'PENDING REVIEW'
+                        : event.approvalStatus === 'approved'
+                        ? 'APPROVED'
+                        : 'REVOKED'
+                    }
+                    tone={
+                      event.approvalStatus === 'pending'
+                        ? 'warning'
+                        : event.approvalStatus === 'approved'
+                        ? 'success'
+                        : 'critical'
+                    }
+                  />
+                </View>
               </View>
 
-              <Pressable
-                onPress={handleCancelEvent}
-                hitSlop={8}
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: radius.md,
-                  backgroundColor: isDark ? '#374151' : '#FEE2E2',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
-              </Pressable>
-            </View>
-          </SolidCard>
-        </View>
+              {/* Quick Action Control Buttons */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
+                <View style={{ flex: 1, minWidth: 120 }}>
+                  <AppButton
+                    label="Edit My Event"
+                    size="sm"
+                    variant="secondary"
+                    icon="create-outline"
+                    onPress={handleOpenEdit}
+                  />
+                </View>
+                <View style={{ flex: 1, minWidth: 125 }}>
+                  <AppButton
+                    label={`View Roster (${currentRsvpCount})`}
+                    size="sm"
+                    variant="secondary"
+                    icon="people-outline"
+                    onPress={handleOpenRoster}
+                  />
+                </View>
+              </View>
+            </SolidCard>
+          </View>
+        ) : null
       )}
 
       {/* ========================================================================= */}
@@ -838,11 +947,11 @@ export function EventDetailScreen() {
                   </AppText>
                   {canManage && (
                     <AppButton
-                      label="Edit Schedule"
+                      label={isAdmin ? 'Edit Schedule' : 'Edit My Schedule'}
                       size="sm"
                       variant="ghost"
                       icon="create-outline"
-                      onPress={handleOpenEdit}
+                      onPress={handleOpenAgendaEditor}
                     />
                   )}
                 </View>
@@ -886,7 +995,7 @@ export function EventDetailScreen() {
                           label="Add Program Agenda"
                           variant="secondary"
                           size="sm"
-                          onPress={handleOpenEdit}
+                          onPress={handleOpenAgendaEditor}
                         />
                       </View>
                     )}
@@ -916,16 +1025,24 @@ export function EventDetailScreen() {
                       style={{ border: 0, width: '100%', height: '100%' }}
                       loading="lazy"
                       allowFullScreen
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(
-                        event.location + ' ' + (event.campusCode || '') + ' University Campus'
-                      )}&t=&z=16&ie=UTF8&iwloc=&output=embed`}
+                      src={matchedLandmark
+                        ? `https://maps.google.com/maps?q=${matchedLandmark.latitude},${matchedLandmark.longitude}&t=&z=17&ie=UTF8&iwloc=&output=embed`
+                        : `https://maps.google.com/maps?q=${encodeURIComponent(
+                            event.location + ' ' + (event.campusCode || '') + ' University Campus'
+                          )}&t=&z=16&ie=UTF8&iwloc=&output=embed`
+                      }
                     />
                   ) : (
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.pastelPrimaryBg }}>
                       <Ionicons name="location" size={44} color={colors.brandPrimary} />
                       <AppText weight="bold" variant="h3" style={{ marginTop: spacing.xs, textAlign: 'center' }}>
-                        {event.location}
+                        {matchedLandmark ? matchedLandmark.name : event.location}
                       </AppText>
+                      {matchedLandmark && (
+                        <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 4 }}>
+                          GPS: {matchedLandmark.latitude.toFixed(4)}, {matchedLandmark.longitude.toFixed(4)}
+                        </AppText>
+                      )}
                       <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 4, marginBottom: spacing.md }}>
                         {event.campusCode ? `${event.campusCode} Campus Venue` : 'Campus Location'} • Tap below to navigate
                       </AppText>
@@ -933,6 +1050,30 @@ export function EventDetailScreen() {
                     </View>
                   )}
                 </View>
+
+                {/* Venue details card synced with campus POI data */}
+                {matchedLandmark && (
+                  <SolidCard style={{ padding: spacing.md, borderWidth: 1, borderColor: '#10B981', backgroundColor: isDark ? '#064E3B20' : '#ECFDF5' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <Badge label="VERIFIED VENUE" tone="success" />
+                      <Badge label={matchedLandmark.category} tone="brand" />
+                      {matchedLandmark.shortCode && <Badge label={matchedLandmark.shortCode} tone="neutral" />}
+                    </View>
+                    <AppText weight="bold" variant="h3">{matchedLandmark.name}</AppText>
+                    <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>{matchedLandmark.description}</AppText>
+                    {matchedLandmark.walkingTip && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                        <Ionicons name="navigate-circle" size={16} color={colors.brandPrimary} />
+                        <AppText variant="caption" tone="brand" weight="bold">
+                          Walking Directions: {matchedLandmark.walkingTip}
+                        </AppText>
+                      </View>
+                    )}
+                    <AppText variant="caption" tone="secondary" style={{ marginTop: 4 }}>
+                      Coordinates: {matchedLandmark.latitude.toFixed(5)}°N, {matchedLandmark.longitude.toFixed(5)}°E
+                    </AppText>
+                  </SolidCard>
+                )}
 
                 <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
                   <AppButton
@@ -1033,7 +1174,11 @@ export function EventDetailScreen() {
         /* ========================================================================= */
         /* MOBILE VIEW */
         /* ========================================================================= */
-        <>
+        <ScrollView
+          style={{ flex: 1, width: '100%' }}
+          contentContainerStyle={{ paddingBottom: 160 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Top Hero Banner */}
           <View style={{ width: '100%', height: 260, position: 'relative', backgroundColor: colors.surface }}>
             <Pressable onPress={() => setLightboxOpen(true)} style={{ width: '100%', height: '100%' }}>
@@ -1093,7 +1238,162 @@ export function EventDetailScreen() {
           </View>
 
           {/* Content Body */}
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, width: '100%' }}>
+          <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md, width: '100%' }}>
+            {/* Mobile Admin / Organizer Command Hub */}
+            {isAdmin ? (
+              <SolidCard
+                frosted
+                style={{
+                  padding: spacing.sm,
+                  borderWidth: 1.5,
+                  borderColor: colors.brandPrimary,
+                  borderRadius: radius.md,
+                  gap: 8,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="shield-checkmark" size={16} color={colors.brandPrimary} />
+                    <AppText weight="bold" variant="caption" tone="brand" style={{ letterSpacing: 0.6, fontSize: 11 }}>
+                      ADMIN MODERATION HUB
+                    </AppText>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+                    {event.isSpotlight && <Badge label="FEATURED" tone="brand" />}
+                    <Badge
+                      label={
+                        event.approvalStatus === 'pending'
+                          ? 'PENDING'
+                          : event.approvalStatus === 'approved'
+                          ? 'APPROVED'
+                          : 'REVOKED'
+                      }
+                      tone={
+                        event.approvalStatus === 'pending'
+                          ? 'warning'
+                          : event.approvalStatus === 'approved'
+                          ? 'success'
+                          : 'critical'
+                      }
+                    />
+                  </View>
+                </View>
+
+                {/* Mobile Admin Action Buttons */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                  <View style={{ flex: 1, minWidth: 90 }}>
+                    <AppButton
+                      label="Edit"
+                      size="sm"
+                      variant="secondary"
+                      icon="create-outline"
+                      onPress={handleOpenEdit}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 105 }}>
+                    <AppButton
+                      label={event.isSpotlight ? 'Featured ★' : 'Feature ★'}
+                      size="sm"
+                      variant={event.isSpotlight ? 'primary' : 'secondary'}
+                      loading={actingSpotlight}
+                      onPress={handleToggleSpotlight}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 95 }}>
+                    <AppButton
+                      label={event.approvalStatus === 'approved' ? 'Revoke' : 'Approve'}
+                      size="sm"
+                      variant={event.approvalStatus === 'approved' ? 'ghost' : 'primary'}
+                      loading={actingApproval}
+                      onPress={handleToggleApproval}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 95 }}>
+                    <AppButton
+                      label={`Roster (${currentRsvpCount})`}
+                      size="sm"
+                      variant="secondary"
+                      icon="people-outline"
+                      onPress={handleOpenRoster}
+                    />
+                  </View>
+                  <Pressable
+                    onPress={handleCancelEvent}
+                    hitSlop={8}
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: radius.sm,
+                      backgroundColor: isDark ? '#374151' : '#FEE2E2',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                  </Pressable>
+                </View>
+              </SolidCard>
+            ) : isOwner ? (
+              <SolidCard
+                frosted
+                style={{
+                  padding: spacing.sm,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: radius.md,
+                  gap: 8,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="settings-outline" size={16} color={colors.textSecondary} />
+                    <AppText weight="bold" variant="caption" tone="secondary" style={{ letterSpacing: 0.6, fontSize: 11 }}>
+                      YOUR EVENT CONTROLS
+                    </AppText>
+                  </View>
+                  <Badge
+                    label={
+                      event.approvalStatus === 'pending'
+                        ? 'PENDING REVIEW'
+                        : event.approvalStatus === 'approved'
+                        ? 'APPROVED'
+                        : 'REVOKED'
+                    }
+                    tone={
+                      event.approvalStatus === 'pending'
+                        ? 'warning'
+                        : event.approvalStatus === 'approved'
+                        ? 'success'
+                        : 'critical'
+                    }
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <AppButton
+                      label="Edit My Event"
+                      size="sm"
+                      variant="secondary"
+                      icon="create-outline"
+                      onPress={handleOpenEdit}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppButton
+                      label={`View Roster (${currentRsvpCount})`}
+                      size="sm"
+                      variant="secondary"
+                      icon="people-outline"
+                      onPress={handleOpenRoster}
+                    />
+                  </View>
+                </View>
+              </SolidCard>
+            ) : null}
+
             <AppText variant="h2" weight="bold" style={{ fontSize: 22, lineHeight: 28, marginBottom: 4 }}>
               {event.title}
             </AppText>
@@ -1190,7 +1490,7 @@ export function EventDetailScreen() {
 
             {/* Tab 1: Overview */}
             {activeTab === 'overview' && (
-              <View style={{ gap: spacing.md, marginBottom: 150 }}>
+              <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
                 <SolidCard style={{ padding: spacing.md }}>
                   <AppText weight="bold" variant="h3" style={{ marginBottom: spacing.xs }}>
                     About This Event
@@ -1248,15 +1548,15 @@ export function EventDetailScreen() {
 
             {/* Tab 2: Agenda */}
             {activeTab === 'agenda' && (
-              <SolidCard style={{ padding: spacing.md, marginBottom: 150 }}>
+              <SolidCard style={{ padding: spacing.md, marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
                   <AppText weight="bold" variant="h3">
                     Program Schedule
                   </AppText>
                   {canManage && (
-                    <Pressable onPress={handleOpenEdit}>
+                    <Pressable onPress={handleOpenAgendaEditor}>
                       <AppText variant="caption" weight="bold" tone="brand">
-                        Edit Schedule
+                        {isOwner && !isAdmin ? 'Edit My Schedule' : 'Edit Schedule'}
                       </AppText>
                     </Pressable>
                   )}
@@ -1280,6 +1580,11 @@ export function EventDetailScreen() {
                               {stage.speaker}
                             </AppText>
                           )}
+                          {stage.description && (
+                            <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                              {stage.description}
+                            </AppText>
+                          )}
                         </View>
                       </View>
                     ))}
@@ -1290,6 +1595,16 @@ export function EventDetailScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 4 }}>
                       Program timeline not announced yet.
                     </AppText>
+                    {canManage && (
+                      <View style={{ marginTop: spacing.sm }}>
+                        <AppButton
+                          label={isOwner && !isAdmin ? 'Add My Schedule' : 'Add Program Agenda'}
+                          variant="secondary"
+                          size="sm"
+                          onPress={handleOpenAgendaEditor}
+                        />
+                      </View>
+                    )}
                   </View>
                 )}
               </SolidCard>
@@ -1297,7 +1612,7 @@ export function EventDetailScreen() {
 
             {/* Tab 3: Campus Map */}
             {activeTab === 'map' && (
-              <View style={{ gap: spacing.md, marginBottom: 150 }}>
+              <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
                 <View
                   style={{
                     height: 280,
@@ -1316,20 +1631,48 @@ export function EventDetailScreen() {
                       style={{ border: 0, width: '100%', height: '100%' }}
                       loading="lazy"
                       allowFullScreen
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(
-                        event.location + ' ' + (event.campusCode || '') + ' University Campus'
-                      )}&t=&z=16&ie=UTF8&iwloc=&output=embed`}
+                      src={matchedLandmark
+                        ? `https://maps.google.com/maps?q=${matchedLandmark.latitude},${matchedLandmark.longitude}&t=&z=17&ie=UTF8&iwloc=&output=embed`
+                        : `https://maps.google.com/maps?q=${encodeURIComponent(
+                            event.location + ' ' + (event.campusCode || '') + ' University Campus'
+                          )}&t=&z=16&ie=UTF8&iwloc=&output=embed`
+                      }
                     />
                   ) : (
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.pastelPrimaryBg }}>
                       <Ionicons name="location" size={40} color={colors.brandPrimary} />
                       <AppText weight="bold" style={{ marginTop: 6, textAlign: 'center' }}>
-                        {event.location}
+                        {matchedLandmark ? matchedLandmark.name : event.location}
                       </AppText>
+                      {matchedLandmark && (
+                        <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 4 }}>
+                          GPS: {matchedLandmark.latitude.toFixed(4)}, {matchedLandmark.longitude.toFixed(4)}
+                        </AppText>
+                      )}
                       <AppButton label="Open in Google Maps" size="sm" onPress={handleLaunchMaps} />
                     </View>
                   )}
                 </View>
+
+                {/* Venue details card synced with campus POI data */}
+                {matchedLandmark && (
+                  <SolidCard style={{ padding: spacing.md, borderWidth: 1, borderColor: '#10B981', backgroundColor: isDark ? '#064E3B20' : '#ECFDF5' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <Badge label="VERIFIED VENUE" tone="success" />
+                      {matchedLandmark.shortCode && <Badge label={matchedLandmark.shortCode} tone="neutral" />}
+                    </View>
+                    <AppText weight="bold" style={{ fontSize: 16 }}>{matchedLandmark.name}</AppText>
+                    <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>{matchedLandmark.description}</AppText>
+                    {matchedLandmark.walkingTip && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                        <Ionicons name="navigate-circle" size={16} color={colors.brandPrimary} />
+                        <AppText variant="caption" tone="brand" weight="bold">
+                          Directions: {matchedLandmark.walkingTip}
+                        </AppText>
+                      </View>
+                    )}
+                  </SolidCard>
+                )}
 
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <View style={{ flex: 1 }}>
@@ -1354,7 +1697,7 @@ export function EventDetailScreen() {
               </View>
             )}
           </View>
-        </>
+        </ScrollView>
       )}
 
       {/* ========================================================================= */}
@@ -1823,6 +2166,146 @@ export function EventDetailScreen() {
         initialLandmarkName={event.location}
         campusFilter={event.campusCode || 'UI'}
       />
+      {/* AGENDA SCHEDULE EDITOR MODAL */}
+      <Modal visible={agendaEditorOpen} transparent animationType="slide" onRequestClose={() => setAgendaEditorOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setAgendaEditorOpen(false)} />
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing.lg,
+              maxHeight: '90%',
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Ionicons name="time-outline" size={20} color={colors.brandPrimary} />
+                <AppText weight="bold" variant="h2">
+                  Edit Event Schedule
+                </AppText>
+              </View>
+              <Pressable onPress={() => setAgendaEditorOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ width: '100%', marginBottom: spacing.md }}>
+              {editAgendaItems.length > 0 ? (
+                <View style={{ gap: spacing.md }}>
+                  {editAgendaItems.map((item, idx) => (
+                    <View
+                      key={idx}
+                      style={{
+                        padding: spacing.md,
+                        backgroundColor: colors.background,
+                        borderRadius: radius.md,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        gap: spacing.xs,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <AppText weight="bold" variant="caption" tone="brand">
+                          SESSION {idx + 1}
+                        </AppText>
+                        <Pressable
+                          onPress={() => handleRemoveAgendaItem(idx)}
+                          hitSlop={8}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 14,
+                            backgroundColor: isDark ? '#374151' : '#FEE2E2',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                        </Pressable>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                        <View style={{ width: 100 }}>
+                          <AppTextField
+                            label="Time"
+                            placeholder="e.g. 10:00 AM"
+                            value={item.time}
+                            onChangeText={(v) => handleUpdateAgendaItem(idx, 'time', v)}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <AppTextField
+                            label="Session Title"
+                            placeholder="e.g. Opening Keynote"
+                            value={item.title}
+                            onChangeText={(v) => handleUpdateAgendaItem(idx, 'title', v)}
+                          />
+                        </View>
+                      </View>
+
+                      <AppTextField
+                        label="Speaker (Optional)"
+                        placeholder="e.g. Prof. Adeyemi"
+                        value={item.speaker ?? ''}
+                        onChangeText={(v) => handleUpdateAgendaItem(idx, 'speaker', v)}
+                      />
+
+                      <AppTextField
+                        label="Description (Optional)"
+                        placeholder="Brief session details..."
+                        value={item.description ?? ''}
+                        onChangeText={(v) => handleUpdateAgendaItem(idx, 'description', v)}
+                        multiline
+                        numberOfLines={2}
+                        style={{ minHeight: 50, textAlignVertical: 'top' }}
+                      />
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={{ paddingVertical: 30, alignItems: 'center' }}>
+                  <Ionicons name="time-outline" size={40} color={colors.textSecondary} />
+                  <AppText tone="secondary" variant="bodySmall" style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+                    No sessions added yet. Tap below to build your event timeline.
+                  </AppText>
+                </View>
+              )}
+
+              <Pressable
+                onPress={handleAddAgendaItem}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  paddingVertical: 12,
+                  marginTop: spacing.md,
+                  borderWidth: 1.5,
+                  borderColor: colors.brandPrimary,
+                  borderRadius: radius.md,
+                  borderStyle: 'dashed',
+                }}
+              >
+                <Ionicons name="add-circle-outline" size={18} color={colors.brandPrimary} />
+                <AppText weight="bold" variant="bodySmall" tone="brand">
+                  Add New Session
+                </AppText>
+              </Pressable>
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Cancel" variant="ghost" onPress={() => setAgendaEditorOpen(false)} fullWidth />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Save Schedule" variant="primary" loading={savingAgenda} onPress={handleSaveAgenda} fullWidth />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }

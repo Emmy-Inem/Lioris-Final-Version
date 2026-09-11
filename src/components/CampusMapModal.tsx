@@ -19,6 +19,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/auth/AuthContext';
 import {
   CAMPUS_LANDMARKS,
   CAMPUS_CENTERS,
@@ -60,8 +61,10 @@ export function CampusMapModal({
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
 
-  const [activeCampus, setActiveCampus] = useState(campusFilter.toUpperCase());
+  const [activeCampus, setActiveCampus] = useState((campusFilter || 'UI').toUpperCase());
   const [query, setQuery] = useState(initialLandmarkName || '');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [landmarks, setLandmarks] = useState<CampusLandmark[]>(CAMPUS_LANDMARKS);
@@ -69,6 +72,12 @@ export function CampusMapModal({
   const [loadingOsm, setLoadingOsm] = useState(false);
 
   const isEnabled = isFeatureEnabled('campus_map');
+
+  useEffect(() => {
+    if (campusFilter) {
+      setActiveCampus(campusFilter.toUpperCase());
+    }
+  }, [campusFilter]);
 
   useEffect(() => {
     if (visible && isEnabled) {
@@ -144,39 +153,48 @@ export function CampusMapModal({
             </Pressable>
           </View>
 
-          {/* Campus Selector Bar */}
-          <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-              {AVAILABLE_CAMPUSES.map((cCode) => {
-                const isCurrent = activeCampus === cCode;
-                const cInfo = CAMPUS_CENTERS[cCode];
-                return (
-                  <Pressable
-                    key={cCode}
-                    onPress={() => {
-                      setActiveCampus(cCode);
-                      loadAmenities(cCode);
-                    }}
-                    style={[
-                      styles.campusPill,
-                      {
-                        backgroundColor: isCurrent ? colors.brandPrimary : colors.background,
-                        borderColor: isCurrent ? colors.brandPrimary : colors.border,
-                      },
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      weight={isCurrent ? 'bold' : 'regular'}
-                      style={{ color: isCurrent ? '#ffffff' : colors.textPrimary }}
+          {/* Campus Selector Bar - Strictly restricted to Administrators */}
+          {isAdmin ? (
+            <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {AVAILABLE_CAMPUSES.map((cCode) => {
+                  const isCurrent = activeCampus === cCode;
+                  const cInfo = CAMPUS_CENTERS[cCode];
+                  return (
+                    <Pressable
+                      key={cCode}
+                      onPress={() => {
+                        setActiveCampus(cCode);
+                        loadAmenities(cCode);
+                      }}
+                      style={[
+                        styles.campusPill,
+                        {
+                          backgroundColor: isCurrent ? colors.brandPrimary : colors.background,
+                          borderColor: isCurrent ? colors.brandPrimary : colors.border,
+                        },
+                      ]}
                     >
-                      {cInfo?.name ? `${cCode} - ${cInfo.name.split(' ')[0]}` : cCode}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
+                      <AppText
+                        variant="caption"
+                        weight={isCurrent ? 'bold' : 'regular'}
+                        style={{ color: isCurrent ? '#ffffff' : colors.textPrimary }}
+                      >
+                        {cInfo?.name ? `${cCode} - ${cInfo.name.split(' ')[0]}` : cCode}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : (
+            <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="school" size={15} color={colors.brandPrimary} />
+              <AppText variant="caption" weight="bold" tone="brand">
+                {CAMPUS_CENTERS[activeCampus]?.name ?? `${activeCampus} Campus`} • Campus Amenities & Landmarks
+              </AppText>
+            </View>
+          )}
 
           {/* Interactive Map View */}
           <View style={[styles.mapFrame, { borderColor: colors.border, backgroundColor: colors.background }]}>

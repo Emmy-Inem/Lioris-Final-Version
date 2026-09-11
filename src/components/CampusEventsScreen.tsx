@@ -27,12 +27,9 @@ import { haptics } from '@/utils/haptics';
 
 const STUDENT_EVENT_FILTERS = [
   { key: 'all', label: 'All Events', icon: 'calendar-outline' as const },
-  { key: 'rsvp', label: 'My RSVPs', icon: 'checkmark-circle-outline' as const },
-  { key: 'pending', label: 'Under Review', icon: 'time-outline' as const },
-  { key: 'academic', label: 'Academic', icon: 'school-outline' as const },
-  { key: 'workshop', label: 'Workshops & Tech', icon: 'code-slash-outline' as const },
-  { key: 'career', label: 'Career Fairs', icon: 'briefcase-outline' as const },
-  { key: 'on-campus', label: 'On Campus', icon: 'location-outline' as const },
+  { key: 'on-campus', label: 'On Campus', icon: 'business-outline' as const },
+  { key: 'off-campus', label: 'Off Campus', icon: 'globe-outline' as const },
+  { key: 'virtual', label: 'Virtual Event', icon: 'videocam-outline' as const },
 ] as const;
 
 const ALUMNI_EVENT_FILTERS = [
@@ -105,12 +102,14 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
         return false;
       }
     }
-    if (filter === 'rsvp') return e.isRsvpd;
-    if (filter === 'pending') return e.approvalStatus === 'pending';
-    if (filter === 'on-campus') return !e.location.toLowerCase().includes('online');
-    if (filter === 'academic') return e.category.toLowerCase().includes('academic') || e.category.toLowerCase().includes('seminar');
-    if (filter === 'workshop') return e.category.toLowerCase().includes('workshop') || e.category.toLowerCase().includes('tech');
-    if (filter === 'career') return e.category.toLowerCase().includes('career');
+    
+    const locLower = (e.location || '').toLowerCase();
+    const isVirtual = locLower.includes('online') || locLower.includes('virtual') || locLower.includes('zoom') || locLower.includes('meet');
+    
+    if (filter === 'on-campus') return e.venueType === 'physical' || !isVirtual;
+    if (filter === 'off-campus') return e.venueType === 'external';
+    if (filter === 'virtual') return e.venueType === 'virtual' || isVirtual;
+
     if (filter === 'reunions') {
       const text = `${e.title} ${e.description}`.toLowerCase();
       return text.includes('reunion') || text.includes('homecoming') || text.includes('alumni');
