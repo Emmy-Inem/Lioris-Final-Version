@@ -22,26 +22,26 @@ import { listEvents, EventsQuery } from '@/api/events';
 import { CampusEvent } from '@/api/types';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useAuth } from '@/auth/AuthContext';
+import { getInstitutionByCode } from '@/api/institutions';
 import { haptics } from '@/utils/haptics';
 
-const EVENT_FILTERS = [
+const STUDENT_EVENT_FILTERS = [
   { key: 'all', label: 'All Events', icon: 'calendar-outline' as const },
   { key: 'rsvp', label: 'My RSVPs', icon: 'checkmark-circle-outline' as const },
   { key: 'pending', label: 'Under Review', icon: 'time-outline' as const },
-  { key: 'on-campus', label: 'On Campus', icon: 'location-outline' as const },
   { key: 'academic', label: 'Academic', icon: 'school-outline' as const },
-  { key: 'workshop', label: 'Workshops', icon: 'code-slash-outline' as const },
+  { key: 'workshop', label: 'Workshops & Tech', icon: 'code-slash-outline' as const },
+  { key: 'career', label: 'Career Fairs', icon: 'briefcase-outline' as const },
+  { key: 'on-campus', label: 'On Campus', icon: 'location-outline' as const },
 ] as const;
 
-const CAMPUS_FILTER_OPTIONS = [
-  { code: 'ALL', label: 'All Campuses' },
-  { code: 'UI', label: 'UI' },
-  { code: 'UNILAG', label: 'UNILAG' },
-  { code: 'OAU', label: 'OAU' },
-  { code: 'FUNAAB', label: 'FUNAAB' },
-  { code: 'CU', label: 'CU' },
-  { code: 'GLOBAL', label: 'Global' },
-];
+const ALUMNI_EVENT_FILTERS = [
+  { key: 'all', label: 'All Alumni Events', icon: 'calendar-outline' as const },
+  { key: 'reunions', label: 'Reunions & Homecomings', icon: 'people-outline' as const },
+  { key: 'networking', label: 'Networking & Galas', icon: 'wine-outline' as const },
+  { key: 'mentorship', label: 'Mentorship Mixers', icon: 'ribbon-outline' as const },
+  { key: 'rsvp', label: 'My RSVPs', icon: 'checkmark-circle-outline' as const },
+] as const;
 
 export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -53,24 +53,29 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const { user } = useAuth();
   const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
 
-  const [filter, setFilter] = useState<(typeof EVENT_FILTERS)[number]['key']>('all');
+  const isAlumniScope = scope === 'alumni' || roleGroup === '(alumni)';
+  const activeFilters = isAlumniScope ? ALUMNI_EVENT_FILTERS : STUDENT_EVENT_FILTERS;
+
+  const [filter, setFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [publishModalOpen, setPublishModalOpen] = useState(false);
-  const { campusCode } = useCampusScope();
+  const { campusCode, homeInstitutionCode } = useCampusScope();
 
-  // Admin/Staff can switch between "ALL" or specific campus
-  const [selectedCampus, setSelectedCampus] = useState<string>(isStaffOrAdmin ? 'ALL' : (campusCode || 'ALL'));
+  // Strictly bind to the current workspace's university institution
+  const currentCampus = (campusCode && campusCode !== 'GLOBAL') ? campusCode : (homeInstitutionCode || 'UI');
+  const institution = getInstitutionByCode(currentCampus);
+  const institutionName = institution?.name ?? 'University of Ibadan';
 
   // Automatic Horizontal Carousel State
   const [activeSlide, setActiveSlide] = useState(0);
   const carouselRef = useRef<FlatList>(null);
   const isInteracting = useRef(false);
 
-  const queryCampus = isStaffOrAdmin ? (selectedCampus === 'ALL' ? undefined : selectedCampus) : campusCode;
+  const queryScope: EventsQuery['scope'] = isAlumniScope ? 'alumni' : (scope ?? 'student');
 
   const { data: events, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['events', scope ?? 'all', 'full', queryCampus ?? 'all'],
-    queryFn: () => listEvents({ ...(scope ? { scope } : {}), campusCode: queryCampus }),
+    queryKey: ['events', queryScope, 'full', currentCampus],
+    queryFn: () => listEvents({ scope: queryScope, campusCode: currentCampus }),
   });
 
   // Only events explicitly spotlighted or sponsored by administrators appear in the Featured Carousel
@@ -105,6 +110,19 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
     if (filter === 'on-campus') return !e.location.toLowerCase().includes('online');
     if (filter === 'academic') return e.category.toLowerCase().includes('academic') || e.category.toLowerCase().includes('seminar');
     if (filter === 'workshop') return e.category.toLowerCase().includes('workshop') || e.category.toLowerCase().includes('tech');
+    if (filter === 'career') return e.category.toLowerCase().includes('career');
+    if (filter === 'reunions') {
+      const text = `${e.title} ${e.description}`.toLowerCase();
+      return text.includes('reunion') || text.includes('homecoming') || text.includes('alumni');
+    }
+    if (filter === 'networking') {
+      const text = `${e.title} ${e.description}`.toLowerCase();
+      return text.includes('network') || text.includes('dinner') || text.includes('gala') || text.includes('mixer');
+    }
+    if (filter === 'mentorship') {
+      const text = `${e.title} ${e.description}`.toLowerCase();
+      return text.includes('mentor');
+    }
     return true;
   });
 
@@ -119,9 +137,17 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
       {/* Screen Title & Post Event Button */}
       <View style={{ marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
+        {/* Workspace Campus Badge */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+          <Ionicons name={isAlumniScope ? 'ribbon' : 'school'} size={14} color={colors.brandPrimary} />
+          <AppText variant="caption" weight="bold" tone="brand" numberOfLines={1}>
+            {institutionName} • {isAlumniScope ? 'Alumni Network' : 'Campus Hub'}
+          </AppText>
+        </View>
+
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
           <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
-            Events Hub
+            {isAlumniScope ? 'Alumni Events & Reunions' : 'Campus Events'}
           </AppText>
 
           <Pressable
@@ -130,7 +156,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               setPublishModalOpen(true);
             }}
             accessibilityRole="button"
-            accessibilityLabel="Host Event"
+            accessibilityLabel={isAlumniScope ? 'Host Alumni Event' : 'Host Event'}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -144,57 +170,17 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           >
             <Ionicons name="add" size={15} color="#FFFFFF" />
             <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
-              Host Event
+              {isAlumniScope ? 'Host Alumni Event' : 'Host Event'}
             </AppText>
           </Pressable>
         </View>
 
         <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 3 }}>
-          Workshops, career fairs, academic symposiums & campus gatherings
+          {isAlumniScope
+            ? 'Exclusive homecomings, class reunions, networking galas & alumni chapters'
+            : 'Workshops, career fairs, academic symposiums & student campus gatherings'}
         </AppText>
       </View>
-
-      {/* Campus Selector for Staff & Admin Roles */}
-      {isStaffOrAdmin && (
-        <View style={{ marginBottom: spacing.sm }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 6, paddingRight: 16 }}
-            style={{ width: '100%', flexGrow: 0 }}
-          >
-            {CAMPUS_FILTER_OPTIONS.map((c) => {
-              const active = selectedCampus === c.code;
-              return (
-                <Pressable
-                  key={c.code}
-                  onPress={() => {
-                    haptics.light();
-                    setSelectedCampus(c.code);
-                  }}
-                  style={{
-                    backgroundColor: active ? colors.brandPrimary : colors.surface,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: radius.pill,
-                    borderWidth: 1,
-                    borderColor: active ? colors.brandPrimary : colors.border,
-                  }}
-                >
-                  <AppText
-                    variant="caption"
-                    weight={active ? 'bold' : 'medium'}
-                    tone={active ? 'inverse' : 'secondary'}
-                    style={{ fontSize: 11 }}
-                  >
-                    {c.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
 
       {/* Section: Automatic & Manual Stackable Spotlight Events Carousel */}
       {filter === 'all' && !searchQuery && carouselData.length > 0 ? (
@@ -217,7 +203,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       >
         <Ionicons name="search-outline" size={16} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
         <TextInput
-          placeholder="Search campus events, hackathons, seminars..."
+          placeholder={isAlumniScope ? 'Search alumni reunions, dinners, homecomings...' : 'Search campus events, hackathons, seminars...'}
           placeholderTextColor={colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -241,7 +227,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
         contentContainerStyle={{ gap: 6, paddingRight: 16, paddingBottom: 4 }}
         style={{ width: '100%', flexGrow: 0 }}
       >
-        {EVENT_FILTERS.map((f) => {
+        {activeFilters.map((f) => {
           const active = filter === f.key;
           return (
             <Pressable
@@ -278,23 +264,34 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
     <ScreenContainer glow={false}>
       {isDesktop ? (
         <ScrollView
-          style={{ flex: 1, width: '100%' }}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 150 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: spacing.lg, paddingBottom: 60 }}
         >
-          {/* Top Header Bar */}
+          {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View>
-              <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
-                Campus Events & Gatherings
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Ionicons name={isAlumniScope ? 'ribbon' : 'school'} size={16} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" tone="brand">
+                  {institutionName} • {isAlumniScope ? 'Alumni Network' : 'Student Campus Hub'}
+                </AppText>
+              </View>
+              <AppText variant="h1" weight="bold">
+                {isAlumniScope ? 'Alumni Events & Reunions' : 'Campus Events'}
               </AppText>
-              <AppText tone="secondary" variant="bodySmall">
-                Official workshops, academic symposiums, tech hackathons & alumni mixers
+              <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
+                {isAlumniScope
+                  ? 'Exclusive alumni homecomings, networking dinners, reunions & chapter meetings'
+                  : 'Workshops, hackathons, academic seminars and university gatherings'}
               </AppText>
             </View>
 
             <Pressable
-              onPress={() => setPublishModalOpen(true)}
+              onPress={() => {
+                haptics.light();
+                setPublishModalOpen(true);
+              }}
               style={{
                 backgroundColor: colors.brandPrimary,
                 borderRadius: radius.pill,
@@ -307,7 +304,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
             >
               <Ionicons name="add" size={18} color="#FFFFFF" />
               <AppText variant="bodySmall" weight="bold" tone="inverse">
-                Host New Event
+                {isAlumniScope ? 'Host Alumni Event' : 'Host New Event'}
               </AppText>
             </Pressable>
           </View>
@@ -342,7 +339,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                 <TextInput
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholder="Search campus events, webinars, workshops..."
+                  placeholder={isAlumniScope ? 'Search alumni reunions, dinners, homecomings...' : 'Search campus events, webinars, workshops...'}
                   placeholderTextColor={colors.textSecondary}
                   style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                 />
@@ -353,43 +350,9 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                 ) : null}
               </View>
 
-              {/* Campus Filters for Staff/Admin */}
-              {isStaffOrAdmin && (
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {CAMPUS_FILTER_OPTIONS.map((c) => {
-                    const active = selectedCampus === c.code;
-                    return (
-                      <Pressable
-                        key={c.code}
-                        onPress={() => {
-                          haptics.light();
-                          setSelectedCampus(c.code);
-                        }}
-                        style={{
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: radius.pill,
-                          backgroundColor: active ? colors.brandPrimary : colors.background,
-                          borderWidth: 1,
-                          borderColor: active ? colors.brandPrimary : colors.border,
-                        }}
-                      >
-                        <AppText
-                          variant="caption"
-                          weight={active ? 'bold' : 'medium'}
-                          style={{ color: active ? '#FFFFFF' : colors.textSecondary, fontSize: 11 }}
-                        >
-                          {c.label}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-
               {/* Filter Pills */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
-                {EVENT_FILTERS.map((f) => {
+                {activeFilters.map((f) => {
                   const active = filter === f.key;
                   return (
                     <Pressable
@@ -432,51 +395,71 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           {/* Events Count */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <AppText variant="h3" weight="bold">
-              Upcoming Events ({filtered.length})
+              {isAlumniScope ? 'Alumni Calendar' : 'Upcoming Events'} ({filtered.length})
             </AppText>
           </View>
 
           {/* Multi-Column Responsive Grid with Non-Stretching Cards */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-            {filtered.map((item, index) => (
-              <Animated.View
-                key={item.id}
-                entering={FadeInUp.delay(index * 30).duration(200)}
-                style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}
+            {filtered.map((event) => (
+              <View
+                key={event.id}
+                style={{
+                  width: 320,
+                  maxWidth: '100%',
+                }}
               >
-                <EventCard event={item} />
-              </Animated.View>
+                <EventCard event={event} />
+              </View>
             ))}
           </View>
 
-          {filtered.length === 0 && !isLoading ? (
-            <EmptyState title="No events found" description="Try changing your search filter or post the first campus event!" />
-          ) : null}
+          {filtered.length === 0 && !isLoading && (
+            <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+              <Ionicons name={isAlumniScope ? 'ribbon-outline' : 'calendar-outline'} size={48} color={colors.textSecondary} />
+              <AppText variant="h3" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
+                {isAlumniScope ? 'No Alumni Events Scheduled' : 'No Campus Events Found'}
+              </AppText>
+              <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', maxWidth: 400 }}>
+                {searchQuery
+                  ? `No events matching "${searchQuery}" in the ${institutionName} directory.`
+                  : isAlumniScope
+                  ? `There are no upcoming alumni reunions or events scheduled for ${institutionName} at this time.`
+                  : `There are no student campus events scheduled for ${institutionName} at this time.`}
+              </AppText>
+            </View>
+          )}
         </ScrollView>
       ) : (
-        /* Mobile Single Column FlatList */
+        /* Mobile Feed with Sticky Header and Horizontal Carousel */
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInUp.delay(index * 40).duration(200)}>
-              <EventCard event={item} />
+          renderItem={({ item }) => (
+            <Animated.View entering={FadeInUp.duration(200)}>
+              <View style={{ marginBottom: 12 }}>
+                <EventCard event={item} />
+              </View>
             </Animated.View>
           )}
           ListHeaderComponent={renderHeader}
-          refreshing={isRefetching}
-          onRefresh={refetch}
           showsVerticalScrollIndicator={false}
+          onRefresh={refetch}
+          refreshing={isRefetching}
           contentContainerStyle={{ paddingBottom: 150 }}
           ListEmptyComponent={
             !isLoading ? (
               <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
+                <Ionicons name={isAlumniScope ? 'ribbon-outline' : 'calendar-outline'} size={48} color={colors.textSecondary} />
                 <AppText variant="h3" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
-                  No events found
+                  {isAlumniScope ? 'No Alumni Events Scheduled' : 'No events found'}
                 </AppText>
-                <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center' }}>
-                  Try changing your search filter or host the first campus event!
+                <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.lg }}>
+                  {searchQuery
+                    ? `No events matching "${searchQuery}" in the ${institutionName} directory.`
+                    : isAlumniScope
+                    ? `There are no upcoming alumni reunions or events scheduled for ${institutionName} at this time.`
+                    : `Try changing your search filter or host the first campus event for ${institutionName}!`}
                 </AppText>
               </View>
             ) : (
@@ -488,6 +471,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
       <PublishEventModal
         visible={publishModalOpen}
+        defaultScope={isAlumniScope ? 'alumni' : 'student'}
+        defaultCategory={isAlumniScope ? 'Alumni' : 'Academic'}
         onClose={() => setPublishModalOpen(false)}
         onPublish={() => {
           queryClient.invalidateQueries({ queryKey: ['events'] });

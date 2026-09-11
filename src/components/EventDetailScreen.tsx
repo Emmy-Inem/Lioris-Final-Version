@@ -1508,30 +1508,17 @@ export function EventDetailScreen() {
                 placeholder="e.g. Annual Faculty Hackathon & Innovation Summit"
               />
 
-              {/* Scope & Campus Node Selector */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs, marginTop: spacing.xs }}>
-                CAMPUS NODE & VISIBILITY
-              </AppText>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
-                {CAMPUS_NODES.map((c) => {
-                  const active = editCampus === c;
-                  return (
-                    <Pressable
-                      key={c}
-                      onPress={() => setEditCampus(c)}
-                      style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: radius.pill,
-                        backgroundColor: active ? colors.brandPrimary : colors.pastelPrimaryBg,
-                      }}
-                    >
-                      <AppText variant="caption" weight="bold" tone={active ? 'inverse' : 'brand'} style={{ fontSize: 11 }}>
-                        {c}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
+              {/* University Workspace Indicator (Locked to Workspace) */}
+              <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: spacing.xs }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="school" size={15} color={colors.brandPrimary} />
+                  <AppText variant="caption" weight="bold" tone="brand">
+                    Campus Workspace: {event?.campusCode || editCampus || 'UI'}
+                  </AppText>
+                </View>
+                <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>
+                  Scoped strictly to verified members of this university workspace.
+                </AppText>
               </View>
 
               {/* Event Category Selector */}

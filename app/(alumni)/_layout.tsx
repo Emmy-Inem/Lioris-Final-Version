@@ -62,7 +62,7 @@ export default function AlumniLayout() {
     name="events-list"
     options={{
       href: isFeatureEnabled('campus_events') ? undefined : null,
-      title: 'Events',
+      title: 'Alumni Events',
       tabBarIcon: ({ focused, size }) => (
         <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} size={size} />
       ),

@@ -58,11 +58,11 @@ function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: s
     } else if (query.scope === 'campus') {
       results = results.filter((e) => e.visibilityScope === 'campus');
     } else if (query.scope === 'student') {
-      // Student portal: include all student-accessible events (not restricted to alumni-only), whether campus or global
-      results = results.filter((e) => e.category !== 'alumni');
+      // Student portal: ONLY student campus events. Alumni events are strictly hidden.
+      results = results.filter((e) => e.category !== 'alumni' && e.targetCohort !== 'Alumni' && e.targetCohort !== 'Alumni & Postgraduates');
     } else if (query.scope === 'alumni') {
-      // Alumni portal: show alumni category, or campus / global events
-      results = results.filter((e) => e.category === 'alumni' || e.visibilityScope === 'global' || e.visibilityScope === 'campus');
+      // Alumni portal: ONLY alumni events (reunions, homecomings, networking galas, mentorship mixers).
+      results = results.filter((e) => e.category === 'alumni' || e.targetCohort === 'Alumni' || e.targetCohort === 'Alumni & Postgraduates');
     }
   }
   if (query.category) {
@@ -129,10 +129,14 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     const dbEvents: CampusEvent[] = (data ?? [])
       .filter((row: any) => !isUserBlocked(row.creator_id))
       .filter((row: any) => {
-        if (isStaffOrAdmin && (!query.campusCode || query.campusCode === 'ALL' || query.campusCode === 'all')) return true;
-        if (!userCampus || userCampus === 'GLOBAL' || userCampus === 'ALL' || userCampus === 'all') return true;
+        // Strict university workspace isolation:
+        // Only members of that university see that university's events.
         const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
-        return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
+        const activeCampus = (userCampus || 'UI').toUpperCase();
+        if (activeCampus !== 'GLOBAL' && rowCampus !== 'GLOBAL' && rowCampus !== activeCampus) {
+          return false;
+        }
+        return true;
       })
       .map((row: any) => {
         const isRsvpd = currentUserId ? (row.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
@@ -166,17 +170,12 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     // mock-data toggle is on).
     const pool = [...locallyCreatedEvents];
     const merged = [...dbEvents];
+    const activeCampus = (userCampus || 'UI').toUpperCase();
     for (const e of pool) {
       if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
-        if (isStaffOrAdmin && (!query.campusCode || query.campusCode === 'ALL' || query.campusCode === 'all')) {
+        const eCampus = (e.campusCode || 'GLOBAL').toUpperCase();
+        if (activeCampus === 'GLOBAL' || eCampus === 'GLOBAL' || eCampus === activeCampus) {
           merged.push(e);
-        } else if (!userCampus || userCampus === 'GLOBAL' || userCampus === 'ALL' || userCampus === 'all') {
-          merged.push(e);
-        } else {
-          const eCampus = (e.campusCode || 'GLOBAL').toUpperCase();
-          if (eCampus === userCampus.toUpperCase() || eCampus === 'GLOBAL') {
-            merged.push(e);
-          }
         }
       }
     }

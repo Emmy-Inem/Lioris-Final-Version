@@ -13,6 +13,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { createEvent } from '@/api/events';
 import { EventCategory } from '@/api/types';
+import { getInstitutionByCode } from '@/api/institutions';
 import { VerifiedCampusLocationPicker } from './VerifiedCampusLocationPicker';
 import { haptics } from '@/utils/haptics';
 
@@ -81,21 +82,31 @@ interface PublishEventModalProps {
   visible: boolean;
   onClose: () => void;
   onPublish: () => void;
+  defaultScope?: 'student' | 'alumni';
+  defaultCategory?: (typeof CATEGORIES)[number] | string;
 }
 
-export function PublishEventModal({ visible, onClose, onPublish }: PublishEventModalProps) {
+export function PublishEventModal({ visible, onClose, onPublish, defaultScope, defaultCategory }: PublishEventModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
-  const { campusCode: defaultCampus } = useCampusScope();
+  const { campusCode: defaultCampus, homeInstitutionCode } = useCampusScope();
 
   const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
+  const isAlumniHost = defaultScope === 'alumni' || user?.role === 'alumni';
+
+  // Strictly bind to the current workspace's university institution
+  const activeCampus = (defaultCampus && defaultCampus !== 'GLOBAL') ? defaultCampus : (homeInstitutionCode || 'UI');
+  const institution = getInstitutionByCode(activeCampus);
+  const institutionName = institution?.name ?? 'University of Ibadan';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventType, setEventType] = useState<(typeof EVENT_TYPES)[number]>('Lioris Live Event (In-App)');
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('Academic');
-  const [targetCampus, setTargetCampus] = useState<string>(defaultCampus || 'UI');
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>(
+    (defaultCategory as any) || (isAlumniHost ? 'Alumni' : 'Academic')
+  );
+  const targetCampus = activeCampus;
   const [visibilityScope, setVisibilityScope] = useState<'campus' | 'global'>('campus');
   const [sponsored, setSponsored] = useState(false);
   const [capacity, setCapacity] = useState('');
@@ -385,43 +396,31 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
               })}
             </View>
 
-            {visibilityScope === 'campus' && (
-              <View style={{ marginBottom: spacing.md }}>
-                <AppText variant="caption" weight="semiBold" tone="secondary" style={{ marginBottom: spacing.xs }}>
-                  Select University Campus Node:
+            {/* University Workspace Node (Locked to Current Campus) */}
+            <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="school" size={15} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" tone="brand">
+                  University Workspace: {institutionName} ({targetCampus})
                 </AppText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {CAMPUSES.filter((c) => c.code !== 'GLOBAL').map((c) => {
-                    const selected = targetCampus === c.code;
-                    return (
-                      <Pressable
-                        key={c.code}
-                        onPress={() => setTargetCampus(c.code)}
-                        style={{
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: radius.pill,
-                          backgroundColor: selected ? colors.brandPrimary : colors.surface,
-                          borderWidth: 1,
-                          borderColor: selected ? colors.brandPrimary : colors.border,
-                        }}
-                      >
-                        <AppText variant="caption" weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'secondary'}>
-                          {c.label}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
               </View>
-            )}
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>
+                {visibilityScope === 'campus'
+                  ? `This event will be published exclusively to verified members of ${institutionName}.`
+                  : 'This event will be published across the global university federation.'}
+              </AppText>
+            </View>
 
             {/* Event Category */}
             <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.xs, marginTop: spacing.xs }}>
               Event Category:
             </AppText>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
-              {CATEGORIES.map((cat) => {
+              {CATEGORIES.filter((cat) => {
+                // Students should only see campus student categories, not Alumni
+                if (!isAlumniHost && !isStaffOrAdmin && cat === 'Alumni') return false;
+                return true;
+              }).map((cat) => {
                 const selected = category === cat;
                 return (
                   <Pressable
