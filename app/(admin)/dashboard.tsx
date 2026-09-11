@@ -423,7 +423,37 @@ export default function AdminDashboard() {
                 </SolidCard>
               </Pressable>
 
-              {/* 8. Super Admin System Configuration */}
+              {/* 8. Events Hub & Gatherings */}
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/events-list' as any);
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 118,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="calendar-outline" size={22} color="#EC4899" />
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                      Events Hub
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                      Campus events & summits
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+
+              {/* 9. Super Admin System Configuration */}
               <Pressable
                 onPress={() => {
                   haptics.light();

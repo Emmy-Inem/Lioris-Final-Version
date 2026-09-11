@@ -114,7 +114,7 @@ export interface CampusEvent {
  description: string;
  category: EventCategory;
  location: string;
- visibilityScope: 'global' | 'student' | 'alumni';
+ visibilityScope: 'global' | 'campus' | 'student' | 'alumni';
  startAt: string;
  endAt: string;
  capacity?: number | null;

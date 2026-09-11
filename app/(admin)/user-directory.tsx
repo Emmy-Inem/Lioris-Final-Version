@@ -1217,25 +1217,25 @@ export default function UserDirectoryScreen() {
  <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
  TARGET UNIVERSITY CAMPUS NODE
  </AppText>
- <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.lg }}>
- {['UI', 'UNILAG', 'OAU', 'FUNAAB'].map((c) => (
- <Pressable
- key={c}
- onPress={() => setNewCampus(c)}
- style={{
- flex: 1,
- paddingVertical: 10,
- borderRadius: radius.md,
- backgroundColor: newCampus === c ? colors.brandPrimary : colors.pastelPrimaryBg,
- alignItems: 'center',
- }}
- >
- <AppText weight="bold"tone={newCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
- {c}
- </AppText>
- </Pressable>
- ))}
- </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.lg }}>
+                  {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
+                    <Pressable
+                      key={c}
+                      onPress={() => setNewCampus(c)}
+                      style={{
+                        width: '31%',
+                        paddingVertical: 10,
+                        borderRadius: radius.md,
+                        backgroundColor: newCampus === c ? colors.brandPrimary : colors.pastelPrimaryBg,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <AppText weight="bold" tone={newCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+                        {c}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
 
  <AppButton
  label="Provision & Issue Credentials"onPress={handleCreateUser}
@@ -1313,13 +1313,13 @@ export default function UserDirectoryScreen() {
                 <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
                   CAMPUS NODE
                 </AppText>
-                <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
                   {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
                     <Pressable
                       key={c}
                       onPress={() => setEditCampus(c)}
                       style={{
-                        flex: 1,
+                        width: '31%',
                         paddingVertical: 8,
                         borderRadius: radius.md,
                         backgroundColor: editCampus === c ? colors.brandPrimary : colors.pastelPrimaryBg,

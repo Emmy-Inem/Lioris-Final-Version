@@ -137,32 +137,57 @@ export function EventCard({ event }: { event: CampusEvent }) {
  onPressOut={() => (cardScale.value = withTiming(1, { duration: 120 }))}
  style={{ width: '100%', height: 130, position: 'relative' }}
  >
- <Image source={eventImage} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm, flexDirection: 'row', gap: 6 }}>
- <VisibilityBadge
- visibility={event.visibilityScope || 'campus'}
- campusCode={event.campusCode}
- />
- {event.sponsored ? (
- <Badge label="SPONSORED" tone="brand" />
- ) : null}
- </View>
- <View
- style={{
- position: 'absolute',
- top: spacing.sm,
- right: spacing.sm,
- backgroundColor: 'rgba(15, 23, 42, 0.75)',
- paddingHorizontal: 8,
- paddingVertical: 3,
- borderRadius: radius.sm,
- }}
- >
- <AppText variant="caption" weight="semiBold" tone="inverse" style={{ fontSize: 11 }}>
- {event.category}
- </AppText>
- </View>
- </Pressable>
+        <Image source={eventImage} style={{ width: '100%', height: 130 }} contentFit="cover" />
+        <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm, flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+          <VisibilityBadge
+            visibility={event.visibilityScope || 'campus'}
+            campusCode={event.campusCode}
+          />
+          {event.approvalStatus === 'pending' && (
+            <Badge label="PENDING REVIEW" tone="warning" />
+          )}
+          {event.sponsored ? (
+            <Badge label="SPONSORED" tone="brand" />
+          ) : null}
+        </View>
+        <View
+          style={{
+            position: 'absolute',
+            top: spacing.sm,
+            right: spacing.sm,
+            flexDirection: 'row',
+            gap: 4,
+            alignItems: 'center',
+          }}
+        >
+          {event.ticketPrice && event.ticketPrice > 0 ? (
+            <View
+              style={{
+                backgroundColor: 'rgba(16, 185, 129, 0.9)',
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: radius.sm,
+              }}
+            >
+              <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
+                NGN {event.ticketPrice.toLocaleString()}
+              </AppText>
+            </View>
+          ) : null}
+          <View
+            style={{
+              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: radius.sm,
+            }}
+          >
+            <AppText variant="caption" weight="semiBold" tone="inverse" style={{ fontSize: 11 }}>
+              {event.category}
+            </AppText>
+          </View>
+        </View>
+      </Pressable>
 
  <View style={{ padding: spacing.md }}>
  {/* Date Box + Title & Quick Actions */}
@@ -252,25 +277,29 @@ export function EventCard({ event }: { event: CampusEvent }) {
  borderTopColor: colors.divider,
  }}
  >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
- <Ionicons name="people"size={16} color={colors.brandPrimary} />
- <AppText variant="caption"weight="bold"tone="brand" numberOfLines={1}>
- {rsvpCount} attending{event.capacity ? ` (${event.capacity} max)` : ''}
- </AppText>
- </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+          <Ionicons name="people" size={16} color={colors.brandPrimary} />
+          <AppText variant="caption" weight="bold" tone="brand" numberOfLines={1}>
+            {rsvpCount} attending{event.capacity ? ` (${event.capacity} max)` : ''}
+          </AppText>
+        </View>
 
- <View style={{ flexShrink: 0 }}>
- <AppButton
- label={rsvpd ? 'Going' : isFull ? 'Join Waitlist' : 'RSVP'}
- variant={rsvpd ? 'secondary' : 'primary'}
- onPress={handleRsvp}
- loading={submitting}
- />
- </View>
- </View>
- </View>
- </SolidCard>
- </Animated.View>
+        <View style={{ flexShrink: 0 }}>
+          {event.approvalStatus === 'pending' ? (
+            <Badge label="Under Review" tone="warning" />
+          ) : (
+            <AppButton
+              label={rsvpd ? 'Going' : isFull ? 'Join Waitlist' : 'RSVP'}
+              variant={rsvpd ? 'secondary' : 'primary'}
+              onPress={handleRsvp}
+              loading={submitting}
+            />
+          )}
+        </View>
+      </View>
+    </View>
+  </SolidCard>
+</Animated.View>
 
  <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
  <Pressable

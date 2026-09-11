@@ -446,12 +446,12 @@ export function EventsModerationTab() {
  <View style={{ flexDirection: 'row', gap: spacing.xs }}>
  <View style={{ flex: 1 }}>
  <AppButton
- label="Edit Details"variant="secondary"onPress={() => handleOpenEdit(event)}
+ label="Edit"variant="secondary"onPress={() => handleOpenEdit(event)}
  />
  </View>
  <View style={{ flex: 1 }}>
  <AppButton
- label={isApproved ? 'Revoke' : 'Approve & Publish'}
+ label={isApproved ? 'Revoke' : 'Approve'}
  variant={isApproved ? 'ghost' : 'primary'}
  loading={actingId === event.id}
  onPress={() => handleToggleApproval(event)}

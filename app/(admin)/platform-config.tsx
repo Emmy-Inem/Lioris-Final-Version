@@ -491,46 +491,46 @@ function EcosystemTile({
  const { isDesktop } = useResponsive();
  return (
  <Pressable
- onPress={() => {
- haptics.light();
- onPress();
- }}
- accessibilityRole="button"
- accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
- style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '48%', minWidth: isDesktop ? 220 : '48%' }}
- >
- <SolidCard radius={18} frosted style={{ minHeight: 110, justifyContent: 'space-between', padding: isDesktop ? spacing.lg : spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs, gap: spacing.xs }}>
- <View
- style={{
- width: 36,
- height: 36,
- borderRadius: 18,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- flexShrink: 0,
- }}
- >
- <Ionicons name={icon} size={18} color={colors.brandPrimary} />
- </View>
- {badge ? (
- <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2, flexShrink: 0 }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 10 }} numberOfLines={1}>
- {badge}
- </AppText>
- </View>
- ) : null}
- </View>
- <View style={{ flex: 1, minWidth: 0 }}>
- <AppText weight="bold"variant="bodySmall" numberOfLines={1}>
- {label}
- </AppText>
- <AppText tone="secondary"variant="caption"numberOfLines={2}>
- {description}
- </AppText>
- </View>
- </SolidCard>
- </Pressable>
- );
+      onPress={() => {
+        haptics.light();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
+      style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 220 : '47%' }}
+    >
+      <SolidCard radius={18} frosted style={{ minHeight: isDesktop ? 110 : 100, justifyContent: 'space-between', padding: isDesktop ? spacing.lg : 12 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, gap: spacing.xs }}>
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: colors.pastelPrimaryBg,
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Ionicons name={icon} size={17} color={colors.brandPrimary} />
+          </View>
+          {badge ? (
+            <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, maxWidth: 90 }}>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9.5 }} numberOfLines={1}>
+                {badge}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ fontSize: 13 }}>
+            {label}
+          </AppText>
+          <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11, marginTop: 1 }}>
+            {description}
+          </AppText>
+        </View>
+      </SolidCard>
+    </Pressable>
+  );
 }

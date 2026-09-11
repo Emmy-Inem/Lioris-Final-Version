@@ -120,6 +120,7 @@ export function DesktopSidebar() {
     { id: 'platform-config', label: 'Admin Command Desk', href: '/(admin)/platform-config', icon: 'shield' },
     { id: 'audit-logs', label: 'Security Audit Logs', href: '/(admin)/audit-logs', icon: 'key' },
     { id: 'super-admin-config', label: 'System Configuration', href: '/(admin)/super-admin-config', icon: 'construct' },
+    { id: 'events', label: 'Events Hub', href: '/(admin)/events-list', icon: 'calendar', flagKey: 'campus_events' },
     { id: 'forum', label: 'Campus Forum', href: '/(admin)/forum', icon: 'chatbubbles' },
     { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Alerts', href: '/(admin)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },

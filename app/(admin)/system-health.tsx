@@ -103,11 +103,11 @@ export default function SystemHealthScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.md }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.md }}>
         {/* Connection Status Card */}
         <SolidCard frosted style={{ padding: spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 200 }}>
               <View
                 style={{
                   width: 48,
@@ -116,6 +116,7 @@ export default function SystemHealthScreen() {
                   backgroundColor: isOptimal ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  flexShrink: 0,
                 }}
               >
                 <Ionicons
@@ -124,11 +125,11 @@ export default function SystemHealthScreen() {
                   color={isOptimal ? '#10B981' : '#EF4444'}
                 />
               </View>
-              <View>
-                <AppText weight="bold" style={{ fontSize: 18 }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 18 : 16 }}>
                   Supabase PostgreSQL: {isOptimal ? 'Online & Optimal' : 'Degraded Response'}
                 </AppText>
-                <AppText tone="secondary" variant="caption">
+                <AppText tone="secondary" variant="caption" numberOfLines={1}>
                   Target Host: fdtnbluslkabwsmspbem.supabase.co
                 </AppText>
               </View>

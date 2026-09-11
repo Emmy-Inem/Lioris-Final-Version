@@ -21,64 +21,82 @@ function mapApprovalStatus(status: string | null | undefined): 'pending' | 'appr
 }
 
 export interface EventsQuery {
- scope?: 'student' | 'alumni' | 'global';
- category?: string;
- q?: string;
- sponsored?: boolean;
- approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
- campusCode?: string;
+  scope?: 'student' | 'alumni' | 'global' | 'campus' | 'all';
+  category?: string;
+  q?: string;
+  sponsored?: boolean;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
+  campusCode?: string;
 }
 
-function filterEvents(pool: CampusEvent[], query: EventsQuery): CampusEvent[] {
- let results = pool.filter((e) => !isUserBlocked(e.organizerId));
+function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: string, isStaffOrAdmin: boolean = false): CampusEvent[] {
+  let results = pool.filter((e) => !isUserBlocked(e.organizerId));
 
- if (query.approvalStatus && query.approvalStatus !== 'all') {
- results = results.filter((e) => e.approvalStatus === query.approvalStatus);
- } else if (!query.approvalStatus) {
- results = results.filter((e) => e.approvalStatus !== 'rejected');
- }
+  if (query.approvalStatus && query.approvalStatus !== 'all') {
+    results = results.filter((e) => e.approvalStatus === query.approvalStatus);
+  } else if (!query.approvalStatus) {
+    // If no specific approval status was requested:
+    // Admin / Staff see all events except explicitly rejected ones.
+    // Regular students see approved events, plus any unapproved events they themselves submitted.
+    if (isStaffOrAdmin) {
+      results = results.filter((e) => e.approvalStatus !== 'rejected');
+    } else {
+      results = results.filter((e) => e.approvalStatus === 'approved' || (currentUserId && e.organizerId === currentUserId));
+    }
+  }
 
- if (query.campusCode && query.campusCode !== 'GLOBAL') {
- results = results.filter(
- (e) => !e.campusCode || e.campusCode === 'GLOBAL' || e.campusCode === query.campusCode,
- );
- }
+  if (query.campusCode && query.campusCode !== 'GLOBAL' && query.campusCode !== 'ALL' && query.campusCode !== 'all') {
+    const targetCampus = query.campusCode.toUpperCase();
+    results = results.filter(
+      (e) => !e.campusCode || e.campusCode.toUpperCase() === 'GLOBAL' || e.campusCode.toUpperCase() === targetCampus,
+    );
+  }
 
- if (query.scope) {
- results = results.filter((e) => e.visibilityScope === query.scope || e.visibilityScope === 'global');
- }
- if (query.category) {
- results = results.filter((e) => e.category === query.category);
- }
- if (query.sponsored !== undefined) {
- results = results.filter((e) => !!e.sponsored === query.sponsored);
- }
+  if (query.scope && query.scope !== 'all') {
+    if (query.scope === 'global') {
+      results = results.filter((e) => e.visibilityScope === 'global');
+    } else if (query.scope === 'campus') {
+      results = results.filter((e) => e.visibilityScope === 'campus');
+    } else if (query.scope === 'student') {
+      // Student portal: include all student-accessible events (not restricted to alumni-only), whether campus or global
+      results = results.filter((e) => e.category !== 'alumni');
+    } else if (query.scope === 'alumni') {
+      // Alumni portal: show alumni category, or campus / global events
+      results = results.filter((e) => e.category === 'alumni' || e.visibilityScope === 'global' || e.visibilityScope === 'campus');
+    }
+  }
+  if (query.category) {
+    results = results.filter((e) => e.category === query.category);
+  }
+  if (query.sponsored !== undefined) {
+    results = results.filter((e) => !!e.sponsored === query.sponsored);
+  }
 
- if (query.q) {
- const q = query.q.toLowerCase();
- results = results
- .filter(
- (e) =>
- e.title.toLowerCase().includes(q) ||
- e.description.toLowerCase().includes(q) ||
- e.location.toLowerCase().includes(q) ||
- e.category.toLowerCase().includes(q),
- )
- .sort((a, b) => {
- const aExact = a.title.toLowerCase() === q ? 0 : 1;
- const bExact = b.title.toLowerCase() === q ? 0 : 1;
- return aExact - bExact;
- });
- }
+  if (query.q) {
+    const q = query.q.toLowerCase();
+    results = results
+      .filter(
+        (e) =>
+          e.title.toLowerCase().includes(q) ||
+          e.description.toLowerCase().includes(q) ||
+          e.location.toLowerCase().includes(q) ||
+          e.category.toLowerCase().includes(q),
+      )
+      .sort((a, b) => {
+        const aExact = a.title.toLowerCase() === q ? 0 : 1;
+        const bExact = b.title.toLowerCase() === q ? 0 : 1;
+        return aExact - bExact;
+      });
+  }
 
- return results;
+  return results;
 }
 
 export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]> {
- try {
- const { data: authData } = await supabase.auth.getUser();
- let userCampus = query.campusCode;
- let userRole = 'student';
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let userCampus = query.campusCode;
+    let userRole = 'student';
 
     if (authData?.user?.id) {
       const { data: prof } = await supabase
@@ -99,7 +117,6 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     }
 
     const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
-
     const currentUserId = authData?.user?.id;
 
     const { data, error } = await supabase
@@ -112,8 +129,8 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     const dbEvents: CampusEvent[] = (data ?? [])
       .filter((row: any) => !isUserBlocked(row.creator_id))
       .filter((row: any) => {
-        if (isStaffOrAdmin && !query.campusCode) return true;
-        if (!userCampus || userCampus === 'GLOBAL') return true;
+        if (isStaffOrAdmin && (!query.campusCode || query.campusCode === 'ALL' || query.campusCode === 'all')) return true;
+        if (!userCampus || userCampus === 'GLOBAL' || userCampus === 'ALL' || userCampus === 'all') return true;
         const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
         return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
       })
@@ -151,9 +168,9 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     const merged = [...dbEvents];
     for (const e of pool) {
       if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
-        if (isStaffOrAdmin && !query.campusCode) {
+        if (isStaffOrAdmin && (!query.campusCode || query.campusCode === 'ALL' || query.campusCode === 'all')) {
           merged.push(e);
-        } else if (!userCampus || userCampus === 'GLOBAL') {
+        } else if (!userCampus || userCampus === 'GLOBAL' || userCampus === 'ALL' || userCampus === 'all') {
           merged.push(e);
         } else {
           const eCampus = (e.campusCode || 'GLOBAL').toUpperCase();
@@ -163,7 +180,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
         }
       }
     }
-    return filterEvents(merged, { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
+    return filterEvents(merged, { ...query, campusCode: userCampus }, currentUserId, isStaffOrAdmin);
   } catch (err) {
     console.warn('[Events] Supabase listEvents error, showing local pool only:', err);
     return filterEvents([...locallyCreatedEvents], query);
@@ -284,16 +301,17 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  .eq('id', organizerId)
  .maybeSingle();
 
- let campusCode = payload.campusCode;
- if (!campusCode) campusCode = profile?.campus_code || 'GLOBAL';
- if (!campusCode) campusCode = 'GLOBAL';
+  let campusCode = payload.campusCode;
+  if (!campusCode) campusCode = profile?.campus_code || 'GLOBAL';
+  if (!campusCode) campusCode = 'GLOBAL';
+  campusCode = campusCode.trim().toUpperCase();
 
- // Admin/staff-created events are auto-approved (they're the moderators);
- // everyone else's events start out pending review so they show up in the
- // admin "Pending Review" moderation queue instead of going live unchecked.
- const creatorRole = profile?.role || 'student';
- const isAutoApproved = creatorRole === 'admin' || creatorRole === 'staff';
- const initialStatus = isAutoApproved ? 'upcoming' : 'pending_approval';
+  // Admin/staff-created events are auto-approved (they're the moderators);
+  // everyone else's events start out pending review so they show up in the
+  // admin "Pending Review" moderation queue instead of going live unchecked.
+  const creatorRole = profile?.role || 'student';
+  const isAutoApproved = creatorRole === 'admin' || creatorRole === 'staff';
+  const initialStatus = isAutoApproved ? 'upcoming' : 'pending_approval';
 
   const dbVisibilityScope = payload.visibilityScope === 'campus' ? 'campus' : 'global';
 
@@ -307,22 +325,22 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
     venue: payload.location || 'Campus Auditorium',
     visibility_scope: dbVisibilityScope,
     start_time: payload.startAt,
- end_time: payload.endAt,
- banner_url: permanentImageUrl,
- registered_count: 0,
- status: initialStatus,
- venue_type: payload.venueType || 'physical',
- virtual_link: payload.virtualLink ?? null,
- capacity: payload.capacity ?? null,
- is_spotlight: payload.isSpotlight ?? false,
- ticket_price: payload.ticketPrice ?? 0,
- target_cohort: payload.targetCohort ?? null,
- });
+    end_time: payload.endAt,
+    banner_url: permanentImageUrl,
+    registered_count: 0,
+    status: initialStatus,
+    venue_type: payload.venueType || 'physical',
+    virtual_link: payload.virtualLink ?? null,
+    capacity: payload.capacity ?? null,
+    is_spotlight: payload.isSpotlight ?? false,
+    ticket_price: payload.ticketPrice ?? 0,
+    target_cohort: payload.targetCohort ?? null,
+  });
 
- if (error) {
- console.warn('[Events] Supabase create event error:', error.message);
- throw new Error('Could not publish this event. Please try again.');
- }
+  if (error) {
+    console.warn('[Events] Supabase create event error:', error.message);
+    throw new Error(error.message || 'Could not publish this event. Please try again.');
+  }
 
  const created: CampusEvent = {
  id: eventId,

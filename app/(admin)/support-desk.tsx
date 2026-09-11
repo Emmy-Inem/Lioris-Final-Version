@@ -334,14 +334,14 @@ export default function SupportDeskScreen() {
           data={tickets ?? []}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.sm }}
+          contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.sm }}
           renderItem={({ item }) => (
             <SolidCard frosted style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
                   <Avatar name={item.userName} size={38} role={(item.userRole as any) || 'student'} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
                       <AppText weight="bold" numberOfLines={1} style={{ fontSize: 14 }}>
                         {item.userName}
                       </AppText>

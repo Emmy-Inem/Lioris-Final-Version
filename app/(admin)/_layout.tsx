@@ -92,6 +92,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="system-health" options={{ href: null }} />
       <Tabs.Screen name="messages" options={{ href: null }} />
       <Tabs.Screen name="events" options={{ href: null }} />
+      <Tabs.Screen name="events-list" options={{ href: null }} />
       <Tabs.Screen name="events/[id]" options={{ href: null }} />
       <Tabs.Screen name="post/[id]" options={{ href: null }} />
     </Tabs>

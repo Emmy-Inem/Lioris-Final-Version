@@ -179,32 +179,34 @@ export default function ContentDeskScreen() {
       </View>
 
       {/* Tab Navigation */}
-      <View style={{ flexDirection: 'row', gap: spacing.xs, marginVertical: spacing.sm }}>
-        {(['posts', 'resources', 'events', 'comments'] as const).map((tab) => (
-          <Pressable
-            key={tab}
-            onPress={() => {
-              haptics.light();
-              setActiveTab(tab);
-            }}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 7,
-              borderRadius: radius.pill,
-              backgroundColor: activeTab === tab ? colors.brandPrimary : colors.surface,
-              borderWidth: 1,
-              borderColor: activeTab === tab ? colors.brandPrimary : colors.border,
-            }}
-          >
-            <AppText
-              variant="caption"
-              weight="bold"
-              style={{ color: activeTab === tab ? '#FFFFFF' : colors.textSecondary }}
+      <View style={{ marginVertical: spacing.sm }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs }}>
+          {(['posts', 'resources', 'events', 'comments'] as const).map((tab) => (
+            <Pressable
+              key={tab}
+              onPress={() => {
+                haptics.light();
+                setActiveTab(tab);
+              }}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                borderRadius: radius.pill,
+                backgroundColor: activeTab === tab ? colors.brandPrimary : colors.surface,
+                borderWidth: 1,
+                borderColor: activeTab === tab ? colors.brandPrimary : colors.border,
+              }}
             >
-              {tab.toUpperCase()}
-            </AppText>
-          </Pressable>
-        ))}
+              <AppText
+                variant="caption"
+                weight="bold"
+                style={{ color: activeTab === tab ? '#FFFFFF' : colors.textSecondary }}
+              >
+                {tab.toUpperCase()}
+              </AppText>
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
 
       {/* Search Input Bar */}
@@ -250,7 +252,7 @@ export default function ContentDeskScreen() {
           data={items ?? []}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.sm }}
+          contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.sm }}
           renderItem={({ item }) => (
             <SolidCard frosted style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
