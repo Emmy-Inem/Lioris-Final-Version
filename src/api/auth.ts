@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
 import { submitVerificationRequest } from './verification';
+import { recordAuditLogEntry } from './auditLog';
 
 export interface LoginPayload {
  email: string;
@@ -410,8 +411,8 @@ export async function verifyAlumniStatus(payload: {
     const { data: authUser } = await supabase.auth.getUser();
     if (authUser?.user?.id) {
       await supabase.from('profiles').update({
-        graduation_year: payload.graduationYear,
-        matriculation_number: payload.studentId?.trim() || null,
+        level: `Class of ${payload.graduationYear}`,
+        student_id_number: payload.studentId?.trim() || null,
         verification_status: 'pending',
       }).eq('id', authUser.user.id);
 
@@ -639,10 +640,60 @@ export async function startImpersonation(targetUserId: string): Promise<StartImp
  throw new Error(otpError?.message || 'Could not establish a session for the target user.');
  }
 
- return {
- targetSession: otpData.session,
- email,
- targetName,
- expiresAt,
- };
+  return {
+    targetSession: otpData.session,
+    email,
+    targetName,
+    expiresAt,
+  };
+}
+
+export async function adminTriggerPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: 'https://lioris.app/(auth)/login',
+    });
+    if (error) throw error;
+
+    await recordAuditLogEntry({
+      action: 'policy_updated',
+      summary: `Admin initiated a password reset email for user ${email}`,
+      targetType: 'user',
+      targetId: email,
+    });
+
+    return { success: true, message: `Password reset email dispatched to ${email}.` };
+  } catch (err: any) {
+    console.error('[Auth] Password reset failed:', err);
+    return { success: false, message: err.message || 'Failed to dispatch password reset email.' };
+  }
+}
+
+export async function adminUpdateUserProfile(
+  userId: string,
+  updates: Record<string, any>,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    await recordAuditLogEntry({
+      action: 'profile_updated',
+      summary: `Admin updated profile records for user ${userId}: ${Object.keys(updates).join(', ')}`,
+      targetType: 'user',
+      targetId: userId,
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[Auth] adminUpdateUserProfile failed:', err);
+    return { success: false, error: err.message || 'Failed to update user profile.' };
+  }
 }

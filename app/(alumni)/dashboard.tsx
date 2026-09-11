@@ -13,6 +13,7 @@ import { CurrencyConverterModal } from '@/components/CurrencyConverterModal';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
@@ -174,10 +175,13 @@ export default function AlumniDashboard() {
                     <AppText
                       weight="bold"
                       numberOfLines={1}
-                      style={{ fontSize: isDesktop ? 22 : 16, lineHeight: isDesktop ? 28 : 22, flexShrink: 1 }}
+                      style={{ fontSize: isDesktop ? 20 : 16, lineHeight: isDesktop ? 26 : 22, flexShrink: 1 }}
                     >
-                      Welcome, {fullName}
+                      {fullName}
                     </AppText>
+                    {profile?.verificationStatus === 'verified' && (
+                      <VerifiedBadge role="alumni" size={14} />
+                    )}
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
                   <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11.5, fontWeight: '500' }}>
@@ -190,11 +194,9 @@ export default function AlumniDashboard() {
               </View>
 
               <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: isDesktop ? 0 : 4 }}>
-                {profile?.verificationStatus === 'verified' ? (
-                  <Badge label="✓ Verified Alumni" tone="success" />
-                ) : profile?.verificationStatus === 'pending' ? (
+                {profile?.verificationStatus === 'pending' ? (
                   <Badge label="⏳ Verification In Review" tone="brand" />
-                ) : (
+                ) : profile?.verificationStatus !== 'verified' ? (
                   <Pressable
                     onPress={() => router.push('/(alumni)/profile')}
                     style={{
@@ -210,7 +212,7 @@ export default function AlumniDashboard() {
                       Verify Alumni Credentials →
                     </AppText>
                   </Pressable>
-                )}
+                ) : null}
                 {profile?.graduationYear ? (
                   <Badge label={`Class of '${String(profile.graduationYear).slice(-2)}`} tone="brand" />
                 ) : null}
@@ -510,7 +512,7 @@ export default function AlumniDashboard() {
             </Pressable>
 
             <Pressable
-              onPress={() => router.push('/(alumni)/connection-requests')}
+              onPress={() => router.push('/(alumni)/network' as any)}
               style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
             >
               <SolidCard

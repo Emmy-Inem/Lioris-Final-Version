@@ -41,26 +41,50 @@ function webDelete(key: string) {
  }
 }
 
+const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+};
+
+const memoryTokenCache: Record<string, string> = {};
+
 export async function setTokens(accessToken: string, refreshToken: string) {
- if (isWeb) {
- webSet(ACCESS_TOKEN_KEY, accessToken);
- webSet(REFRESH_TOKEN_KEY, refreshToken);
- return;
- }
- await Promise.all([
- SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken),
- SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken),
- ]);
+  memoryTokenCache[ACCESS_TOKEN_KEY] = accessToken;
+  memoryTokenCache[REFRESH_TOKEN_KEY] = refreshToken;
+  if (isWeb) {
+    webSet(ACCESS_TOKEN_KEY, accessToken);
+    webSet(REFRESH_TOKEN_KEY, refreshToken);
+    return;
+  }
+  try {
+    await Promise.all([
+      SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken, SECURE_STORE_OPTIONS),
+      SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken, SECURE_STORE_OPTIONS),
+    ]);
+  } catch {
+    // Retained in memoryTokenCache
+  }
 }
 
 export async function getAccessToken() {
- if (isWeb) return webGet(ACCESS_TOKEN_KEY);
- return SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+  if (isWeb) return webGet(ACCESS_TOKEN_KEY);
+  try {
+    const val = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY, SECURE_STORE_OPTIONS);
+    if (val !== null) memoryTokenCache[ACCESS_TOKEN_KEY] = val;
+    return val ?? memoryTokenCache[ACCESS_TOKEN_KEY] ?? null;
+  } catch {
+    return memoryTokenCache[ACCESS_TOKEN_KEY] ?? null;
+  }
 }
 
 export async function getRefreshToken() {
- if (isWeb) return webGet(REFRESH_TOKEN_KEY);
- return SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+  if (isWeb) return webGet(REFRESH_TOKEN_KEY);
+  try {
+    const val = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY, SECURE_STORE_OPTIONS);
+    if (val !== null) memoryTokenCache[REFRESH_TOKEN_KEY] = val;
+    return val ?? memoryTokenCache[REFRESH_TOKEN_KEY] ?? null;
+  } catch {
+    return memoryTokenCache[REFRESH_TOKEN_KEY] ?? null;
+  }
 }
 
 // Persisted session-user shape. onboardingComplete/onboardingStep are
@@ -70,54 +94,77 @@ export async function getRefreshToken() {
 // mid-onboarding"and resume at the right step after a reload. Replace
 // with a real server-tracked status once a backend exists.
 export interface StoredSessionUser {
- id: string;
- fullName: string;
- email?: string;
- role: string;
- onboardingComplete: boolean;
- onboardingStep?: string;
- mfaVerified?: boolean;
- /**
-  * The real, database-verified role behind an active "Preview Workspace As
-  * Role" selection - always the role Supabase actually authenticated this
-  * person as, never overwritten by previewing another role. `role` above
-  * is the role being *displayed*; `actualRole` is who they really are, and
-  * is what gates who can use the Role Switcher at all. Optional only for
-  * backward-compatibility with sessions stored before this field existed
-  * (treat a missing value as equal to `role`).
-  */
- actualRole?: string;
+  id: string;
+  fullName: string;
+  email?: string;
+  role: string;
+  onboardingComplete: boolean;
+  onboardingStep?: string;
+  mfaVerified?: boolean;
+  /**
+   * The real, database-verified role behind an active "Preview Workspace As
+   * Role" selection - always the role Supabase actually authenticated this
+   * person as, never overwritten by previewing another role. `role` above
+   * is the role being *displayed*; `actualRole` is who they really are, and
+   * is what gates who can use the Role Switcher at all. Optional only for
+   * backward-compatibility with sessions stored before this field existed
+   * (treat a missing value as equal to `role`).
+   */
+  actualRole?: string;
 }
 
 export async function setSessionUser(user: StoredSessionUser) {
- const value = JSON.stringify(user);
- if (isWeb) {
- webSet(SESSION_USER_KEY, value);
- return;
- }
- await SecureStore.setItemAsync(SESSION_USER_KEY, value);
+  const value = JSON.stringify(user);
+  memoryTokenCache[SESSION_USER_KEY] = value;
+  if (isWeb) {
+    webSet(SESSION_USER_KEY, value);
+    return;
+  }
+  try {
+    await SecureStore.setItemAsync(SESSION_USER_KEY, value, SECURE_STORE_OPTIONS);
+  } catch {
+    // Retained in memoryTokenCache
+  }
 }
 
 export async function getSessionUser(): Promise<StoredSessionUser | null> {
- const raw = isWeb ? webGet(SESSION_USER_KEY) : await SecureStore.getItemAsync(SESSION_USER_KEY);
- if (!raw) return null;
- try {
- return JSON.parse(raw);
- } catch {
- return null;
- }
+  let raw: string | null = null;
+  if (isWeb) {
+    raw = webGet(SESSION_USER_KEY);
+  } else {
+    try {
+      raw = await SecureStore.getItemAsync(SESSION_USER_KEY, SECURE_STORE_OPTIONS);
+      if (raw !== null) memoryTokenCache[SESSION_USER_KEY] = raw;
+    } catch {
+      raw = memoryTokenCache[SESSION_USER_KEY] ?? null;
+    }
+  }
+  if (!raw) raw = memoryTokenCache[SESSION_USER_KEY] ?? null;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 export async function clearTokens() {
- if (isWeb) {
- webDelete(ACCESS_TOKEN_KEY);
- webDelete(REFRESH_TOKEN_KEY);
- webDelete(SESSION_USER_KEY);
- return;
- }
- await Promise.all([
- SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
- SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
- SecureStore.deleteItemAsync(SESSION_USER_KEY),
- ]);
+  delete memoryTokenCache[ACCESS_TOKEN_KEY];
+  delete memoryTokenCache[REFRESH_TOKEN_KEY];
+  delete memoryTokenCache[SESSION_USER_KEY];
+  if (isWeb) {
+    webDelete(ACCESS_TOKEN_KEY);
+    webDelete(REFRESH_TOKEN_KEY);
+    webDelete(SESSION_USER_KEY);
+    return;
+  }
+  try {
+    await Promise.all([
+      SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY, SECURE_STORE_OPTIONS),
+      SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY, SECURE_STORE_OPTIONS),
+      SecureStore.deleteItemAsync(SESSION_USER_KEY, SECURE_STORE_OPTIONS),
+    ]);
+  } catch {
+    // Ignore native cleanup errors
+  }
 }

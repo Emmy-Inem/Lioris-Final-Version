@@ -50,6 +50,12 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
   storage_quotas_enforced: 'warning',
   global_push_broadcast: 'critical',
   maintenance_mode_toggled: 'critical',
+  item_moderated: 'warning',
+  policy_updated: 'brand',
+  support_ticket_updated: 'brand',
+  support_ticket_resolved: 'success',
+  system_cleanup_executed: 'warning',
+  profile_updated: 'brand',
 };
 
 export default function AuditLogsScreen() {

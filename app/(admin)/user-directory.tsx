@@ -20,6 +20,9 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { recordAuditLogEntry, listAuditLogEntries } from '@/api/auditLog';
 import { grantVerification } from '@/api/profile';
+import { adminTriggerPasswordReset, adminUpdateUserProfile } from '@/api/auth';
+import { adminDirectVerifyUser } from '@/api/verification';
+import { useToast } from '@/context/ToastContext';
 import { AuditLogEntry } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { useAuth } from '@/auth/AuthContext';
@@ -67,7 +70,7 @@ export default function UserDirectoryScreen() {
  role: (p.role ? p.role.charAt(0).toUpperCase() + p.role.slice(1) : 'Student') as any,
  campus: p.campus_code || 'UI',
  department: p.department || 'General Studies',
- matricNo: p.student_id_number || 'STU/2024/001',
+ matricNo: p.student_id_number || 'Not Assigned',
  suspended: p.is_suspended ?? false,
  isVerified: p.verification_status === 'verified',
  trustScore: p.trust_score ? Math.round(Number(p.trust_score)) : 85,
@@ -123,6 +126,95 @@ export default function UserDirectoryScreen() {
  const [newDepartment, setNewDepartment] = useState('Computer Science');
  const [newRole, setNewRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
  const [newCampus, setNewCampus] = useState('UI');
+
+  // Edit User Modal State
+  const toast = useToast();
+  const [editModalUser, setEditModalUser] = useState<DirectoryUser | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editMatric, setEditMatric] = useState('');
+  const [editCampus, setEditCampus] = useState('UI');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editRole, setEditRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
+  const [editVerified, setEditVerified] = useState(false);
+  const [editSuspended, setEditSuspended] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+
+  function openEditModal(target: DirectoryUser) {
+    setEditModalUser(target);
+    setEditFullName(target.fullName);
+    setEditMatric(target.matricNo === 'Not Assigned' ? '' : target.matricNo);
+    setEditCampus(target.campus || 'UI');
+    setEditDepartment(target.department);
+    setEditRole(target.role);
+    setEditVerified(target.isVerified);
+    setEditSuspended(target.suspended);
+  }
+
+  async function handleSaveEditedUser() {
+    if (!editModalUser) return;
+    if (!editFullName.trim()) {
+      Alert.alert('Validation Error', 'Full Name cannot be empty.');
+      return;
+    }
+    haptics.medium();
+    setEditSaving(true);
+    try {
+      const res = await adminUpdateUserProfile(editModalUser.id, {
+        full_name: editFullName.trim(),
+        student_id_number: editMatric.trim() || null,
+        campus_code: editCampus,
+        department: editDepartment.trim() || 'General Studies',
+        role: editRole.toLowerCase(),
+        is_suspended: editSuspended,
+        is_verified: editVerified,
+        verification_status: editVerified ? 'verified' : 'unverified',
+      });
+
+      if (res.success) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === editModalUser.id
+              ? {
+                  ...u,
+                  fullName: editFullName.trim(),
+                  matricNo: editMatric.trim() || 'Not Assigned',
+                  campus: editCampus,
+                  department: editDepartment.trim() || 'General Studies',
+                  role: editRole,
+                  isVerified: editVerified,
+                  suspended: editSuspended,
+                }
+              : u,
+          ),
+        );
+        toast.success(`Profile updated for ${editFullName.trim()}.`);
+        setEditModalUser(null);
+      } else {
+        toast.error(res.error || 'Failed to update user profile.');
+      }
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function handleSendPasswordResetFromModal() {
+    if (!editModalUser?.email) {
+      toast.error('No email address linked to this user account.');
+      return;
+    }
+    haptics.medium();
+    setEditSaving(true);
+    try {
+      const res = await adminTriggerPasswordReset(editModalUser.email);
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setEditSaving(false);
+    }
+  }
 
  const filtered = users.filter((u) => {
  const matchesRole = role === 'All Roles' || u.role === role;
@@ -872,6 +964,17 @@ export default function UserDirectoryScreen() {
             <Pressable
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
               onPress={() => {
+                openEditModal(selectedUser);
+                setSelectedUser(null);
+              }}
+            >
+              <Ionicons name="create-outline" size={18} color={colors.brandPrimary} />
+              <AppText tone="brand" weight="bold">Edit Profile & Credentials (Matric, Role, Campus)</AppText>
+            </Pressable>
+
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+              onPress={() => {
                 setDetailModalUser(selectedUser);
                 setSelectedUser(null);
               }}
@@ -1025,7 +1128,24 @@ export default function UserDirectoryScreen() {
  )}
  </View>
 
- <AppButton label="Close Record"onPress={() => setDetailModalUser(null)} fullWidth />
+                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                  <View style={{ flex: 1 }}>
+                    <AppButton
+                      label="Edit Profile"
+                      onPress={() => {
+                        openEditModal(detailModalUser);
+                        setDetailModalUser(null);
+                      }}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppButton
+                      label="Close Record"
+                      variant="secondary"
+                      onPress={() => setDetailModalUser(null)}
+                    />
+                  </View>
+                </View>
  </SolidCard>
  )}
  </View>
@@ -1124,7 +1244,160 @@ export default function UserDirectoryScreen() {
  </ScrollView>
  </View>
  </View>
- </Modal>
- </ScreenContainer>
+        </Modal>
+
+        {/* Edit User Profile & Credentials Modal */}
+        <Modal visible={!!editModalUser} transparent animationType="slide" onRequestClose={() => setEditModalUser(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+            <Pressable style={{ flex: 1 }} onPress={() => setEditModalUser(null)} />
+            <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                  <Ionicons name="create-outline" size={20} color={colors.brandPrimary} />
+                  <AppText variant="h2" weight="bold">
+                    Edit User Profile & Credentials
+                  </AppText>
+                </View>
+                <Pressable onPress={() => setEditModalUser(null)} hitSlop={8}>
+                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%', marginBottom: spacing.md }}>
+                <AppTextField
+                  label="Full Legal Name"
+                  placeholder="Full Name"
+                  value={editFullName}
+                  onChangeText={setEditFullName}
+                />
+
+                <AppTextField
+                  label="Matriculation / Student ID"
+                  placeholder="e.g. UI/2024/001"
+                  value={editMatric}
+                  onChangeText={setEditMatric}
+                />
+
+                <AppTextField
+                  label="Department & Faculty"
+                  placeholder="e.g. Computer Science"
+                  value={editDepartment}
+                  onChangeText={setEditDepartment}
+                />
+
+                {/* Role Selection */}
+                <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
+                  ASSIGNED ROLE & PERMISSIONS
+                </AppText>
+                <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+                  {(['Student', 'Alumni', 'Staff', 'Admin'] as const).map((r) => (
+                    <Pressable
+                      key={r}
+                      onPress={() => setEditRole(r)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: radius.md,
+                        backgroundColor: editRole === r ? colors.brandPrimary : colors.pastelPrimaryBg,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <AppText weight="bold" tone={editRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+                        {r}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+
+                {/* Campus Instance Selection */}
+                <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                  CAMPUS NODE
+                </AppText>
+                <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+                  {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
+                    <Pressable
+                      key={c}
+                      onPress={() => setEditCampus(c)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        borderRadius: radius.md,
+                        backgroundColor: editCampus === c ? colors.brandPrimary : colors.pastelPrimaryBg,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <AppText weight="bold" tone={editCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 11 }}>
+                        {c}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+
+                {/* Verification Badge Toggle & Password Reset */}
+                <View style={{ padding: spacing.md, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, marginBottom: spacing.md, gap: 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View>
+                      <AppText weight="bold">Official Verification Badge</AppText>
+                      <AppText tone="secondary" variant="caption">Shows social-proof verification tick</AppText>
+                    </View>
+                    <Pressable
+                      onPress={() => setEditVerified(!editVerified)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: radius.pill,
+                        backgroundColor: editVerified ? colors.brandPrimary : colors.surface,
+                        borderWidth: 1,
+                        borderColor: editVerified ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <AppText weight="bold" style={{ color: editVerified ? '#FFF' : colors.textSecondary, fontSize: 12 }}>
+                        {editVerified ? 'VERIFIED' : 'UNVERIFIED'}
+                      </AppText>
+                    </Pressable>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View>
+                      <AppText weight="bold">Account Access Status</AppText>
+                      <AppText tone="secondary" variant="caption">Controls login suspension</AppText>
+                    </View>
+                    <Pressable
+                      onPress={() => setEditSuspended(!editSuspended)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: radius.pill,
+                        backgroundColor: editSuspended ? colors.critical : colors.surface,
+                        borderWidth: 1,
+                        borderColor: editSuspended ? colors.critical : colors.border,
+                      }}
+                    >
+                      <AppText weight="bold" style={{ color: editSuspended ? '#FFF' : colors.textSecondary, fontSize: 12 }}>
+                        {editSuspended ? 'SUSPENDED' : 'ACTIVE'}
+                      </AppText>
+                    </Pressable>
+                  </View>
+
+                  <AppButton
+                    label="Dispatch Password Reset Email"
+                    variant="secondary"
+                    size="sm"
+                    onPress={handleSendPasswordResetFromModal}
+                    loading={editSaving}
+                  />
+                </View>
+
+                <AppButton
+                  label="Save & Commit Profile Changes"
+                  onPress={handleSaveEditedUser}
+                  loading={editSaving}
+                  fullWidth
+                />
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </ScreenContainer>
  );
 }

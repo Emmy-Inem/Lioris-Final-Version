@@ -64,6 +64,12 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
  storage_quotas_enforced: 'warning',
  global_push_broadcast: 'critical',
  maintenance_mode_toggled: 'critical',
+ item_moderated: 'warning',
+ policy_updated: 'brand',
+ support_ticket_updated: 'brand',
+ support_ticket_resolved: 'success',
+ system_cleanup_executed: 'warning',
+ profile_updated: 'brand',
 };
 
 const ACTION_LABEL: Record<AuditLogAction, string> = {
@@ -98,6 +104,12 @@ const ACTION_LABEL: Record<AuditLogAction, string> = {
  storage_quotas_enforced: 'Storage limits enforced',
  global_push_broadcast: 'Global push notification broadcast',
  maintenance_mode_toggled: 'Maintenance mode toggled',
+ item_moderated: 'Content item moderated or removed',
+ policy_updated: 'Policy or credential updated',
+ support_ticket_updated: 'Support ticket updated',
+ support_ticket_resolved: 'Support ticket resolved',
+ system_cleanup_executed: 'System cleanup executed',
+ profile_updated: 'User profile records updated',
 };
 
 function formatTimestamp(iso: string) {

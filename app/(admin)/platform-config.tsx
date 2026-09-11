@@ -65,7 +65,7 @@ export default function PlatformConfigScreen() {
     });
 
     recordAuditLogEntry({
-      action: 'escrow_funds_released',
+      action: 'global_push_broadcast',
       summary: `Broadcast Flash Alert sent: "${broadcastTitle}" to ${broadcastTarget.toUpperCase()}`,
       targetType: 'user',
       targetId: 'broadcast-flash',

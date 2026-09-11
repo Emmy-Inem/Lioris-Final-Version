@@ -39,7 +39,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  const isOwnListing = item.sellerId === 'me' || (!!user?.id && item.sellerId === user.id);
   const { isFeatureEnabled } = useFeatureFlags();
   const showConverter = isFeatureEnabled('currency_converter');
-  const numericPrice = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
+  const numericPrice = parseFloat(String(item.price ?? '').replace(/[^0-9.]/g, '')) || 0;
 
  async function handleToggleWishlist() {
  haptics.light();

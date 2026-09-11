@@ -56,7 +56,7 @@ export function JobCard({ job }: { job: JobListing }) {
         type: 'message',
         title: `New Candidate: ${job.title}`,
         body: `${user?.fullName || 'A student'} is interested in ${job.title} at ${job.company}.${coverNote.trim() ? ` Pitch: "${coverNote.trim()}"` : ''}`,
-        deepLinkPath: `/${user?.role || 'student'}/jobs`,
+        deepLinkPath: `/(${user?.role || 'student'})/jobs`,
       });
       setApplied(true);
       setModalOpen(false);

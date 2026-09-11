@@ -15,7 +15,7 @@ import { DiscussionWorkspacesModal } from './DiscussionWorkspacesModal';
 
 import { ActionSheetModal } from './ActionSheetModal';
 import { AnnouncementsWidget } from './AnnouncementsWidget';
-import { router, useSegments } from 'expo-router';
+import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -51,13 +51,20 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const segments = useSegments();
   const roleGroup = segments[0] ?? '(student)';
 
+  const params = useLocalSearchParams<{ category?: string }>();
   const toast = useToast();
   const [quickViewUser, setQuickViewUser] = useState<QuickViewUser | null>(null);
- const [query, setQuery] = useState('');
- const debouncedQuery = useDebouncedValue(query);
- const [composerOpen, setComposerOpen] = useState(false);
- const [workspacesOpen, setWorkspacesOpen] = useState(false);
- const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [workspacesOpen, setWorkspacesOpen] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(params.category || null);
+
+  React.useEffect(() => {
+    if (params.category) {
+      setSelectedChannel(params.category);
+    }
+  }, [params.category]);
 
  const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
  const [sortModalOpen, setSortModalOpen] = useState(false);

@@ -295,16 +295,18 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  const isAutoApproved = creatorRole === 'admin' || creatorRole === 'staff';
  const initialStatus = isAutoApproved ? 'upcoming' : 'pending_approval';
 
- const { error } = await supabase.from('events').insert({
- id: eventId,
- creator_id: organizerId,
- campus_code: campusCode,
- title: payload.title,
- description: payload.description,
- category: payload.category || 'Academic',
- venue: payload.location || 'Campus Auditorium',
- visibility_scope: payload.visibilityScope || 'global',
- start_time: payload.startAt,
+  const dbVisibilityScope = payload.visibilityScope === 'campus' ? 'campus' : 'global';
+
+  const { error } = await supabase.from('events').insert({
+    id: eventId,
+    creator_id: organizerId,
+    campus_code: campusCode,
+    title: payload.title,
+    description: payload.description,
+    category: payload.category || 'Academic',
+    venue: payload.location || 'Campus Auditorium',
+    visibility_scope: dbVisibilityScope,
+    start_time: payload.startAt,
  end_time: payload.endAt,
  banner_url: permanentImageUrl,
  registered_count: 0,

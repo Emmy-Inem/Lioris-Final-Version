@@ -248,7 +248,12 @@ export async function submitReport(payload: {
  throw new Error('You need to be signed in to submit a report.');
  }
 
- const itemType = payload.targetType === 'message' ? 'comment' : payload.targetType;
+  const itemType =
+    payload.targetType === 'message'
+      ? 'comment'
+      : payload.targetType === 'user'
+      ? 'user_profile'
+      : payload.targetType;
 
  let targetCampus = payload.institutionCode;
  if (!targetCampus) {

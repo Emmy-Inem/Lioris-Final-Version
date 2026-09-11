@@ -451,6 +451,96 @@ export default function AdminDashboard() {
                   </View>
                 </SolidCard>
               </Pressable>
+
+              {/* 9. Support & Ticket Desk */}
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/support-desk' as any);
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 118,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="help-buoy-outline" size={22} color="#06B6D4" />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Support Desk
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Triage & 1-click remedies
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+
+              {/* 10. Unified Content Desk */}
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/content-desk' as any);
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 118,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="layers-outline" size={22} color="#8B5CF6" />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Content Desk
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Global posts & media
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
+
+              {/* 11. System Health Console */}
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/system-health' as any);
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <SolidCard
+                  frosted
+                  style={{
+                    borderRadius: 18,
+                    padding: 12,
+                    backgroundColor: colors.surface,
+                    height: 118,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Ionicons name="pulse-outline" size={22} color="#10B981" />
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      System Health
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      Live ping & sync cleanup
+                    </AppText>
+                  </View>
+                </SolidCard>
+              </Pressable>
             </View>
           </View>
 
@@ -514,7 +604,10 @@ export default function AdminDashboard() {
                 </AppText>
                 <View style={{ gap: spacing.xs }}>
                   {[
-                    { icon: 'people-outline' as const, label: 'User Directory', desc: 'Browse all campus members', route: '/(admin)/user-directory' },
+                    { icon: 'help-buoy-outline' as const, label: 'Support & Ticket Desk', desc: '1-click user issue remediation', route: '/(admin)/support-desk' },
+                    { icon: 'layers-outline' as const, label: 'Unified Content Desk', desc: 'Manage discussions & resources', route: '/(admin)/content-desk' },
+                    { icon: 'pulse-outline' as const, label: 'Database & System Health', desc: 'Live ping & integrity sync', route: '/(admin)/system-health' },
+                    { icon: 'people-outline' as const, label: 'User Directory', desc: 'Browse and edit campus members', route: '/(admin)/user-directory' },
                     { icon: 'checkmark-done-circle-outline' as const, label: 'Student Verifications', desc: 'Review pending ID submissions', route: '/(admin)/verification-requests' },
                     { icon: 'list-outline' as const, label: 'Security Audit Logs', desc: 'Immutable compliance trail', route: '/(admin)/audit-logs' },
                     { icon: 'toggle-outline' as const, label: 'Feature Flags', desc: 'Toggle modules & features', route: '/(admin)/feature-controls' },

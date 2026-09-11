@@ -49,6 +49,11 @@ export function RoleGate({
  }
 
  if (user.role !== allow) {
+  if (user.actualRole === 'admin') {
+   // Root Admin has full access across all portals (student, staff, alumni)
+   // to audit, inspect, and assist users without being kicked out.
+   return <>{children}</>;
+  }
  // Wrong role for this group - bounce through the resolver route,
  // which will send them to their actual dashboard.
  return <Redirect href="/" />;

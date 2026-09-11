@@ -286,7 +286,13 @@ export type AuditLogAction =
  | 'toxicity_thresholds_deployed'
  | 'storage_quotas_enforced'
  | 'global_push_broadcast'
- | 'maintenance_mode_toggled';
+ | 'maintenance_mode_toggled'
+ | 'item_moderated'
+ | 'policy_updated'
+ | 'support_ticket_updated'
+ | 'support_ticket_resolved'
+ | 'system_cleanup_executed'
+ | 'profile_updated';
 
 export interface AuditLogEntry {
  id: string;
@@ -295,7 +301,7 @@ export interface AuditLogEntry {
  actorRole: UserRole;
  action: AuditLogAction;
  summary: string;
- targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution';
+ targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system';
  targetId: string;
  reason?: string;
  institutionCode?: string;

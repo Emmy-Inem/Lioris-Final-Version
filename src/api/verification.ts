@@ -167,20 +167,20 @@ export async function respondToVerificationRequest(
  })
  .eq('id', id);
 
- if (status === 'approved' && reqRow?.user_id) {
- await supabase
- .from('profiles')
- .update({ verification_status: 'verified' })
- .eq('id', reqRow.user_id);
- } else if (status === 'rejected' && reqRow?.user_id) {
- await supabase
- .from('profiles')
- .update({ verification_status: 'none' })
- .eq('id', reqRow.user_id);
- }
- } catch (err) {
- console.warn('[Verification] Status update backend warning:', err);
- }
+  if (status === 'approved' && reqRow?.user_id) {
+    await supabase
+      .from('profiles')
+      .update({ verification_status: 'verified', is_verified: true })
+      .eq('id', reqRow.user_id);
+  } else if (status === 'rejected' && reqRow?.user_id) {
+    await supabase
+      .from('profiles')
+      .update({ verification_status: 'unverified', is_verified: false })
+      .eq('id', reqRow.user_id);
+  }
+  } catch (err) {
+    console.warn('[Verification] Status update backend warning:', err);
+  }
 
  if (!updated) {
     try {
@@ -228,4 +228,40 @@ export async function respondToVerificationRequest(
   }
 
   return updated;
+}
+
+export async function adminDirectVerifyUser(userId: string, isVerified: boolean): Promise<boolean> {
+  try {
+    const status = isVerified ? 'verified' : 'unverified';
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        is_verified: isVerified,
+        verification_status: status,
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    await recordAuditLogEntry({
+      action: isVerified ? 'verification_approved' : 'verification_rejected',
+      summary: `Admin manually ${isVerified ? 'granted' : 'revoked'} verification status for user ${userId}`,
+      targetType: 'user',
+      targetId: userId,
+    });
+
+    await createNotification({
+      recipientId: userId,
+      type: 'system',
+      title: isVerified ? 'Account Verified' : 'Verification Status Updated',
+      body: isVerified
+        ? 'A platform administrator has verified your account. Your profile now proudly displays the verification badge!'
+        : 'Your account verification status has been updated by an administrator.',
+    });
+
+    return true;
+  } catch (err) {
+    console.error('[Verification] adminDirectVerifyUser failed:', err);
+    return false;
+  }
 }

@@ -81,12 +81,14 @@ export default function VerificationRequestsScreen() {
       reason: 'Document verified against registrar criteria',
     });
 
+    const targetRole = req.documentType === 'Staff ID' ? 'staff' : req.documentType === 'Alumni Certificate' ? 'alumni' : 'student';
+
     createNotification({
       recipientId: req.userId,
       type: 'system',
       title: 'Campus Verification Approved',
       body: 'Congratulations! Your identity has been verified. The official verified badge is now active on your profile.',
-      deepLinkPath: '/(student)/profile',
+      deepLinkPath: `/(${targetRole})/profile`,
     });
   }
 
@@ -105,12 +107,14 @@ export default function VerificationRequestsScreen() {
       reason: finalReason,
     });
 
+    const targetRole = req.documentType === 'Staff ID' ? 'staff' : req.documentType === 'Alumni Certificate' ? 'alumni' : 'student';
+
     createNotification({
       recipientId: req.userId,
       type: 'system',
       title: 'Verification Request Update',
       body: `Your verification submission was not approved: ${finalReason}. You may re-apply with clear documentation.`,
-      deepLinkPath: '/(student)/profile',
+      deepLinkPath: `/(${targetRole})/profile`,
     });
   }
 

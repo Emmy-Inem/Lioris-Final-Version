@@ -83,7 +83,8 @@ export function DesktopSidebar() {
     { id: 'events', label: 'Alumni Events', href: '/(alumni)/events-list', icon: 'calendar', flagKey: 'campus_events' },
     { id: 'marketplace', label: 'Campus Trade', href: '/(alumni)/marketplace', icon: 'cart', flagKey: 'marketplace' },
     { id: 'forum', label: 'Global Forum', href: '/(alumni)/forum', icon: 'chatbubbles' },
-    { id: 'connections', label: 'Alumni Network', href: '/(alumni)/connection-requests', icon: 'people' },
+    { id: 'network', label: 'Alumni Network', href: '/(alumni)/network', icon: 'people' },
+    { id: 'connections', label: 'Connection Requests', href: '/(alumni)/connection-requests', icon: 'person-add' },
     { id: 'messages', label: 'Messages', href: '/(alumni)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Notifications', href: '/(alumni)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
     { id: 'profile', label: 'My Alumni Profile', href: '/(alumni)/profile', icon: 'person' },
@@ -109,6 +110,9 @@ export function DesktopSidebar() {
 
   const adminNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Executive Dashboard', href: '/(admin)/dashboard', icon: 'pie-chart' },
+    { id: 'support-desk', label: 'Support & Tickets', href: '/(admin)/support-desk', icon: 'help-buoy' },
+    { id: 'content-desk', label: 'Content Desk', href: '/(admin)/content-desk', icon: 'layers' },
+    { id: 'system-health', label: 'Database Health', href: '/(admin)/system-health', icon: 'pulse' },
     { id: 'verification-requests', label: 'Student Verifications', href: '/(admin)/verification-requests', icon: 'checkmark-done-circle' },
     { id: 'moderation-queue', label: 'Moderation Queue', href: '/(admin)/moderation-queue', icon: 'flag' },
     { id: 'feature-controls', label: 'Feature Switches', href: '/(admin)/feature-controls', icon: 'toggle' },

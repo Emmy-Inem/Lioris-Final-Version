@@ -204,30 +204,34 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
- const [user, setUser] = useState<SessionUser | null>(null);
- const [isLoading, setIsLoading] = useState(true);
- const [impersonation, setImpersonation] = useState<ImpersonationState>(DEFAULT_IMPERSONATION);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [impersonation, setImpersonation] = useState<ImpersonationState>(DEFAULT_IMPERSONATION);
+  const userRef = React.useRef<SessionUser | null>(null);
+  userRef.current = user;
 
- useEffect(() => {
- let mounted = true;
+  useEffect(() => {
+    let mounted = true;
 
- async function initAuth() {
- // 1. Check local session tokens
- const token = await getAccessToken();
- if (token) {
- const stored = await getSessionUser();
- if (mounted && stored) {
- const isOnboarding = stored.onboardingComplete === false && Boolean(stored.onboardingStep);
- setUser({
- ...stored,
- role: stored.role as UserRole,
- actualRole: (stored.actualRole ?? stored.role) as UserRole,
- onboardingComplete: !isOnboarding,
- mfaVerified: stored.mfaVerified ?? !roleRequiresMfa(stored.role as UserRole),
- } as SessionUser);
- loadBlockedUserIds().catch(() => {});
- }
- }
+    async function initAuth() {
+      // 1. Check local session tokens
+      const token = await getAccessToken();
+      if (token) {
+        const stored = await getSessionUser();
+        if (mounted && stored) {
+          const isOnboarding = stored.onboardingComplete === false && Boolean(stored.onboardingStep);
+          const initialUser = {
+            ...stored,
+            role: stored.role as UserRole,
+            actualRole: (stored.actualRole ?? stored.role) as UserRole,
+            onboardingComplete: !isOnboarding,
+            mfaVerified: stored.mfaVerified ?? !roleRequiresMfa(stored.role as UserRole),
+          } as SessionUser;
+          userRef.current = initialUser;
+          setUser(initialUser);
+          loadBlockedUserIds().catch(() => {});
+        }
+      }
 
       // 2. Check active Supabase OAuth session
       try {
@@ -251,10 +255,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           const storedUser = await getSessionUser();
           const activeRole =
-            storedUser?.actualRole === 'admin' && storedUser?.role
-              ? (storedUser.role as UserRole)
+            (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
+            (storedUser?.actualRole === 'admin' && storedUser?.role)
+              ? ((userRef.current?.role || storedUser?.role) as UserRole)
               : role;
           const isOnboarded =
+            userRef.current?.onboardingComplete ??
             storedUser?.onboardingComplete ??
             (Boolean(profile?.department) || role === 'admin' || role === 'staff');
 
@@ -269,6 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           await persist(nextUser);
           await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+          userRef.current = nextUser;
           setUser(nextUser);
           loadBlockedUserIds().catch(() => {});
         }
@@ -281,8 +288,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    // 3. Supabase Auth State Change Listener for Google OAuth callbacks
+    // 3. Supabase Auth State Change Listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Crucial: on screen unlock or background token refresh, DO NOT overwrite active role or profile!
+      if (event === 'TOKEN_REFRESHED' && session) {
+        await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
+        userRef.current = null;
+        setUser(null);
+        return;
+      }
+
       if (session?.user && mounted) {
         const userEmail = session.user.email ?? '';
 
@@ -293,17 +311,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', session.user.id)
           .maybeSingle();
 
-        // Authorization role must come from `profiles.role` only - see the
-        // matching comment in initAuth above.
+        // Authorization role must come from `profiles.role` only
         const role = (profile?.role || 'student') as UserRole;
         const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
         
         const storedUser = await getSessionUser();
         const activeRole =
-          storedUser?.actualRole === 'admin' && storedUser?.role
-            ? (storedUser.role as UserRole)
+          (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
+          (storedUser?.actualRole === 'admin' && storedUser?.role)
+            ? ((userRef.current?.role || storedUser?.role) as UserRole)
             : role;
         const isOnboarded =
+          userRef.current?.onboardingComplete ??
           storedUser?.onboardingComplete ??
           (Boolean(profile?.department) || role === 'admin' || role === 'staff');
 
@@ -318,6 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         await persist(nextUser);
         await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+        userRef.current = nextUser;
         setUser(nextUser);
         loadBlockedUserIds().catch(() => {});
       }
