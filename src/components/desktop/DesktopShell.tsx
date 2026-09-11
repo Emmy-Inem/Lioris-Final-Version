@@ -31,13 +31,15 @@ export function DesktopShell({ children }: DesktopShellProps) {
 }
 
 const styles = StyleSheet.create({
- rootContainer: {
- flex: 1,
- flexDirection: 'row',
- width: '100%',
- height: '100%',
- overflow: 'hidden',
- },
+  rootContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    width: '100%',
+    height: '100%',
+    maxHeight: '100%',
+    minHeight: 0,
+    overflow: 'hidden',
+  },
  mainArea: {
  flex: 1,
  height: '100%',

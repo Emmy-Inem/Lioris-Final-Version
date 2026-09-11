@@ -81,54 +81,56 @@ export function DesktopTopBar() {
  c.subtitle.toLowerCase().includes(searchQuery.toLowerCase()),
  );
 
- return (
- <View
- style={[
- styles.topBar,
- {
- backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : '#FFFFFF',
- borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.07)',
- },
- ]}
- >
- {/* Left: Global Search Bar (with Command+K hint) */}
- <Pressable
- onPress={() => setCommandPaletteOpen(true)}
- style={[
- styles.searchBar,
- {
- backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
- borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
- },
- ]}
- >
- <Ionicons name="search" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
- <TextInput
- placeholder="Search campus discussions, courses, events, past questions... (⌘K)"
- placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
- value={searchQuery}
- onChangeText={setSearchQuery}
- onSubmitEditing={handleSearchSubmit}
- style={[
- styles.searchInput,
- {
- color: isDark ? '#F8FAFC' : '#0172A',
- },
- ]}
- />
- <View
- style={[
- styles.shortcutBadge,
- {
- backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
- },
- ]}
- >
- <AppText variant="caption" style={{ fontSize: 10, color: isDark ? '#94A3B8' : '#64748B', fontWeight: 'bold' }}>
- ⌘K
- </AppText>
- </View>
- </Pressable>
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+
+  return (
+    <View
+      style={[
+        styles.topBar,
+        {
+          backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : '#FFFFFF',
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.07)',
+        },
+      ]}
+    >
+      {/* Left: Global Search Bar (with Command+K hint) */}
+      <Pressable
+        onPress={() => setCommandPaletteOpen(true)}
+        style={[
+          styles.searchBar,
+          {
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+          },
+        ]}
+      >
+        <Ionicons name="search" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+        <TextInput
+          placeholder="Search campus discussions, courses, events..."
+          placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSubmitEditing={handleSearchSubmit}
+          style={[
+            styles.searchInput,
+            {
+              color: isDark ? '#F8FAFC' : '#0F172A',
+            },
+          ]}
+        />
+        <View
+          style={[
+            styles.shortcutBadge,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+            },
+          ]}
+        >
+          <AppText variant="caption" style={{ fontSize: 10, color: isDark ? '#94A3B8' : '#64748B', fontWeight: 'bold' }}>
+            {isMac ? '⌘K' : 'Ctrl K'}
+          </AppText>
+        </View>
+      </Pressable>
 
  {/* Right Controls */}
  <View style={styles.rightSection}>
@@ -436,42 +438,44 @@ export function DesktopTopBar() {
 }
 
 const styles = StyleSheet.create({
- topBar: {
- height: 64,
- paddingHorizontal: 28,
- borderBottomWidth: 1,
- flexDirection: 'row',
- alignItems: 'center',
- justifyContent: 'space-between',
- gap: 20,
- zIndex: 20,
- },
- searchBar: {
- flex: 1,
- maxWidth: 560,
- height: 42,
- borderRadius: 10,
- borderWidth: 1,
- flexDirection: 'row',
- alignItems: 'center',
- paddingHorizontal: 14,
- gap: 10,
- },
- searchInput: {
- flex: 1,
- fontSize: 14,
- outlineStyle: 'none' as any,
- },
- shortcutBadge: {
- paddingHorizontal: 7,
- paddingVertical: 2,
- borderRadius: 6,
- },
- rightSection: {
- flexDirection: 'row',
- alignItems: 'center',
- gap: 16,
- },
+  topBar: {
+    height: 56,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+    zIndex: 20,
+  },
+  searchBar: {
+    flex: 1,
+    maxWidth: 500,
+    minWidth: 180,
+    height: 38,
+    borderRadius: 9,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13.5,
+    outlineStyle: 'none' as any,
+  },
+  shortcutBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexShrink: 0,
+  },
  roleSwitchBtn: {
  flexDirection: 'row',
  alignItems: 'center',

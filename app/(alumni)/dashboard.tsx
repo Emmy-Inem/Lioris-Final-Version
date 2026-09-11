@@ -109,8 +109,8 @@ export default function AlumniDashboard() {
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <ScrollView
-        style={{ flex: 1, width: '100%' }}
-        showsVerticalScrollIndicator={false}
+        style={{ flex: 1, width: '100%', minHeight: 0 }}
+        showsVerticalScrollIndicator={isDesktop ? true : false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingTop: isDesktop ? spacing.lg : spacing.sm,

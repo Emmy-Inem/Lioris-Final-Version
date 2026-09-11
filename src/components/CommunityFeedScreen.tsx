@@ -46,7 +46,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
   const { isFeatureEnabled } = useFeatureFlags();
- const { isDesktop } = useResponsive();
+  const { isDesktop, isWideDesktop } = useResponsive();
   const queryClient = useQueryClient();
   const segments = useSegments();
   const roleGroup = segments[0] ?? '(student)';
@@ -563,7 +563,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   <PostCard post={item} />
                 </Animated.View>
               )}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
               onRefresh={refetch}
               refreshing={isRefetching}
               ListEmptyComponent={
@@ -595,7 +595,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </View>
 
           {/* Right Sidebar: Hubs, Mentors & Guidelines */}
-          <View style={{ width: 320, gap: spacing.md }}>
+          <View style={{ width: isWideDesktop ? 320 : 280, flexShrink: 0, gap: spacing.md }}>
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                 <AppText variant="h3" weight="bold">

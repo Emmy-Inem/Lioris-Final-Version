@@ -16,7 +16,7 @@ interface CampusWeatherWidgetProps {
 }
 
 export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeatherWidgetProps) {
-  const { colors, spacing } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
@@ -108,9 +108,16 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
               <Pressable
                 onPress={cycleCampus}
                 hitSlop={8}
-                style={[styles.switchChip, { backgroundColor: `${colors.brandPrimary}15` }]}
+                style={[
+                  styles.switchChip,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                    borderWidth: 1,
+                  },
+                ]}
               >
-                <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 10 }}>
+                <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 10.5 }}>
                   {weather.campus.shortName} ▾
                 </AppText>
               </Pressable>
@@ -194,9 +201,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   switchChip: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: 6,
     marginLeft: 6,
   },
   mainRow: {

@@ -270,8 +270,8 @@ export default function StudentDashboard() {
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <ScrollView
-        style={{ flex: 1, width: '100%' }}
-        showsVerticalScrollIndicator={false}
+        style={{ flex: 1, width: '100%', minHeight: 0 }}
+        showsVerticalScrollIndicator={isDesktop ? true : false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
@@ -480,7 +480,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="chatbubble-ellipses" size={isDesktop ? 18 : 16} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Direct Messages</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Chats & calls</AppText>
                   </View>
@@ -510,7 +510,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="cash-outline" size={isDesktop ? 18 : 16} color="#10B981" />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>FX Converter</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Live rates & NGN</AppText>
                   </View>
@@ -536,7 +536,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="folder-open" size={isDesktop ? 18 : 16} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Resources</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Past Qs & notes</AppText>
                   </View>
@@ -563,7 +563,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="people" size={isDesktop ? 18 : 16} color="#10B981" />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Study Pods</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Course revision</AppText>
                   </View>
@@ -589,7 +589,7 @@ export default function StudentDashboard() {
                 <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="chatbubbles" size={isDesktop ? 18 : 16} color="#EC4899" />
                 </View>
-                <View style={{ width: '100%' }}>
+                <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Forum</AppText>
                   <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Ask questions</AppText>
                 </View>
@@ -615,7 +615,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="calendar" size={isDesktop ? 18 : 16} color="#3B82F6" />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Events & RSVPs</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Talks & summits</AppText>
                   </View>
@@ -642,7 +642,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#2D261A' : '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="cart" size={isDesktop ? 18 : 16} color="#F59E0B" />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Marketplace</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Buy, sell & swap</AppText>
                   </View>
@@ -669,7 +669,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1F2937' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="briefcase" size={isDesktop ? 18 : 16} color="#6366F1" />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Career & Jobs</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Internships & gigs</AppText>
                   </View>
@@ -696,7 +696,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#271F38' : '#F3E8FF', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="ribbon" size={isDesktop ? 18 : 16} color="#A855F7" />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Mentorship</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Alumni advisors</AppText>
                   </View>
@@ -723,7 +723,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1F2E2B' : '#E6FFFA', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="time" size={isDesktop ? 18 : 16} color="#0D9488" />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>My Schedule</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Timetable & tests</AppText>
                   </View>
@@ -753,7 +753,7 @@ export default function StudentDashboard() {
                   <View style={{ width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32, borderRadius: 8, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="map" size={isDesktop ? 18 : 16} color={colors.brandPrimary} />
                   </View>
-                  <View style={{ width: '100%' }}>
+                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Map & POIs</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>ATMs, halls & food</AppText>
                   </View>

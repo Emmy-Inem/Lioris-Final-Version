@@ -140,19 +140,21 @@ export function DesktopSidebar() {
       ? profile.institutionName
       : 'University of Ibadan';
 
- return (
- <View
- style={[
- styles.sidebar,
- {
- width: collapsed ? 74 : 260,
- backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : '#FFFFFF',
- borderRightColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
- },
- ]}
- >
- {/* Brand & Logo Header */}
- <View style={[styles.brandHeader, { paddingHorizontal: collapsed ? 12 : 16 }]}>
+  return (
+    <View
+      style={[
+        styles.sidebar,
+        {
+          width: collapsed ? 72 : 256,
+          minWidth: collapsed ? 72 : 256,
+          maxWidth: collapsed ? 72 : 256,
+          backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : '#FFFFFF',
+          borderRightColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+        },
+      ]}
+    >
+      {/* Brand & Logo Header */}
+      <View style={[styles.brandHeader, { paddingHorizontal: collapsed ? 10 : 14 }]}>
  <View style={[styles.logoRow, { justifyContent: collapsed ? 'center' : 'space-between' }]}>
         <Pressable
           onPress={() => router.push(role === 'admin' ? ('/(admin)/platform-config' as any) : (`/(${role})/dashboard` as any))}
@@ -266,22 +268,40 @@ export function DesktopSidebar() {
  )}
  </View>
 
- {/* Navigation List */}
- <ScrollView
- showsVerticalScrollIndicator={false}
- contentContainerStyle={{ paddingVertical: spacing.sm, paddingHorizontal: collapsed ? 8 : spacing.sm }}
- style={{ flex: 1 }}
- >
- {!collapsed && (
- <AppText
- variant="caption"
- weight="bold"
- tone="secondary"
- style={{ paddingHorizontal: spacing.sm, marginBottom: spacing.xs, textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.8 }}
- >
- Navigation
- </AppText>
- )}
+      {/* Navigation List */}
+      <ScrollView
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          width: '100%',
+          overflowY: 'auto' as any,
+        }}
+        contentContainerStyle={{
+          paddingVertical: 6,
+          paddingHorizontal: collapsed ? 6 : 8,
+          flexGrow: 1,
+        }}
+      >
+        {!collapsed && (
+          <AppText
+            variant="caption"
+            weight="bold"
+            tone="secondary"
+            style={{
+              paddingHorizontal: 10,
+              marginBottom: 4,
+              marginTop: 2,
+              textTransform: 'uppercase',
+              fontSize: 10,
+              letterSpacing: 0.8,
+            }}
+          >
+            Navigation
+          </AppText>
+        )}
 
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== `/(${role})/dashboard` && item.href !== '/(admin)/platform-config' && pathname.startsWith(item.href));
@@ -295,8 +315,8 @@ export function DesktopSidebar() {
                 styles.navButton,
                 {
                   justifyContent: collapsed ? 'center' : 'flex-start',
-                  paddingHorizontal: collapsed ? 0 : 12,
-                  paddingVertical: collapsed ? 12 : 9,
+                  paddingHorizontal: collapsed ? 0 : 10,
+                  paddingVertical: collapsed ? 10 : 7,
                   backgroundColor: isActive
                     ? colors.brandPrimary
                     : hovered
@@ -308,10 +328,10 @@ export function DesktopSidebar() {
                 },
               ]}
             >
-              <View style={{ position: 'relative' }}>
+              <View style={{ position: 'relative', flexShrink: 0 }}>
                 <Ionicons
                   name={item.icon}
-                  size={19}
+                  size={18}
                   color={isActive ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
                 />
                 {collapsed && item.badgeCount && item.badgeCount > 0 ? (
@@ -321,10 +341,12 @@ export function DesktopSidebar() {
 
               {!collapsed && (
                 <AppText
-                  variant="bodySmall"
+                  numberOfLines={1}
                   weight={isActive ? 'bold' : 'medium'}
                   style={{
                     flex: 1,
+                    minWidth: 0,
+                    fontSize: 13,
                     color: isActive ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B',
                   }}
                 >
@@ -338,6 +360,7 @@ export function DesktopSidebar() {
                     styles.badge,
                     {
                       backgroundColor: isActive ? '#FFFFFF' : colors.brandPrimary,
+                      flexShrink: 0,
                     },
                   ]}
                 >
@@ -365,9 +388,10 @@ export function DesktopSidebar() {
           {
             flexDirection: collapsed ? 'column' : 'row',
             alignItems: 'center',
-            gap: collapsed ? 10 : 0,
-            padding: collapsed ? 10 : 12,
+            gap: collapsed ? 8 : 4,
+            padding: collapsed ? 8 : 10,
             borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+            flexShrink: 0,
           },
         ]}
       >
@@ -375,173 +399,183 @@ export function DesktopSidebar() {
           onPress={() => router.push(`/(${role})/profile` as any)}
           style={[styles.userCard, { justifyContent: collapsed ? 'center' : 'flex-start' }]}
         >
- <Avatar
- name={user?.fullName || 'User'}
- uri={profile?.avatarUrl}
- size={collapsed ? 34 : 38}
- />
- {!collapsed && (
- <View style={{ flex: 1, marginLeft: spacing.xs }}>
- <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
- {user?.fullName || 'Campus Member'}
- </AppText>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
- <View
- style={{
- paddingHorizontal: 6,
- paddingVertical: 1,
- borderRadius: 4,
- backgroundColor: colors.pastelPrimaryBg,
- }}
- >
- <AppText
- variant="caption"
- weight="bold"
- tone="brand"
- style={{ fontSize: 9, textTransform: 'capitalize' }}
- >
- {role}
- </AppText>
- </View>
- <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
- {profile?.department || 'Member'}
- </AppText>
- </View>
- </View>
- )}
- </Pressable>
+          <Avatar
+            name={user?.fullName || 'User'}
+            uri={profile?.avatarUrl}
+            size={collapsed ? 32 : 36}
+          />
+          {!collapsed && (
+            <View style={{ flex: 1, marginLeft: 8, minWidth: 0 }}>
+              <AppText variant="bodySmall" weight="bold" numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 16 }}>
+                {user?.fullName || 'Campus Member'}
+              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <View
+                  style={{
+                    paddingHorizontal: 5,
+                    paddingVertical: 1,
+                    borderRadius: 4,
+                    backgroundColor: colors.pastelPrimaryBg,
+                    flexShrink: 0,
+                  }}
+                >
+                  <AppText
+                    variant="caption"
+                    weight="bold"
+                    tone="brand"
+                    style={{ fontSize: 9, textTransform: 'capitalize' }}
+                  >
+                    {role}
+                  </AppText>
+                </View>
+                <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5, flex: 1, minWidth: 0 }}>
+                  {profile?.department || 'Member'}
+                </AppText>
+              </View>
+            </View>
+          )}
+        </Pressable>
 
- <View style={[styles.footerControls, { flexDirection: collapsed ? 'column' : 'row' }]}>
- <Pressable
- onPress={toggleTheme}
- accessibilityRole="button"
- accessibilityLabel="Toggle Theme"
- style={({ hovered }: any) => [
- styles.iconBtn,
- {
- backgroundColor: hovered
- ? isDark
- ? 'rgba(255,255,255,0.1)'
- : 'rgba(0,0,0,0.06)'
- : 'transparent',
- },
- ]}
- >
- <Ionicons
- name={isDark ? 'sunny' : 'moon'}
- size={18}
- color={isDark ? '#FCD34D' : '#475569'}
- />
- </Pressable>
+        <View style={[styles.footerControls, { flexDirection: collapsed ? 'column' : 'row', flexShrink: 0 }]}>
+          <Pressable
+            onPress={toggleTheme}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle Theme"
+            style={({ hovered }: any) => [
+              styles.iconBtn,
+              {
+                backgroundColor: hovered
+                  ? isDark
+                    ? 'rgba(255,255,255,0.1)'
+                    : 'rgba(0,0,0,0.06)'
+                  : 'transparent',
+              },
+            ]}
+          >
+            <Ionicons
+              name={isDark ? 'sunny' : 'moon'}
+              size={16}
+              color={isDark ? '#FCD34D' : '#475569'}
+            />
+          </Pressable>
 
- <Pressable
- onPress={async () => {
- await logout();
- router.replace('/(auth)/login');
- }}
- accessibilityRole="button"
- accessibilityLabel="Log out"
- style={({ hovered }: any) => [
- styles.iconBtn,
- {
- backgroundColor: hovered
- ? 'rgba(239, 68, 68, 0.12)'
- : 'transparent',
- },
- ]}
- >
- <Ionicons name="log-out-outline" size={18} color="#EF4444" />
- </Pressable>
- </View>
- </View>
- </View>
- );
+          <Pressable
+            onPress={async () => {
+              await logout();
+              router.replace('/(auth)/login');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+            style={({ hovered }: any) => [
+              styles.iconBtn,
+              {
+                backgroundColor: hovered
+                  ? 'rgba(239, 68, 68, 0.12)'
+                  : 'transparent',
+              },
+            ]}
+          >
+            <Ionicons name="log-out-outline" size={16} color="#EF4444" />
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
- sidebar: {
- height: '100%',
- borderRightWidth: 1,
- display: 'flex',
- flexDirection: 'column',
- transitionProperty: 'width' as any,
- transitionDuration: '200ms' as any,
- },
- brandHeader: {
- paddingVertical: 14,
- borderBottomWidth: 1,
- borderBottomColor: 'rgba(150, 150, 150, 0.12)',
- },
- logoRow: {
- flexDirection: 'row',
- alignItems: 'center',
- marginBottom: 8,
- },
- collapseBtn: {
- width: 28,
- height: 28,
- borderRadius: 6,
- alignItems: 'center',
- justifyContent: 'center',
- },
- campusPill: {
- flexDirection: 'row',
- alignItems: 'center',
- gap: 6,
- paddingHorizontal: 10,
- paddingVertical: 5,
- borderRadius: 8,
- borderWidth: 1,
- marginTop: 4,
- },
- activeDot: {
- width: 7,
- height: 7,
- borderRadius: 4,
- backgroundColor: '#10B981',
- },
- navButton: {
- flexDirection: 'row',
- alignItems: 'center',
- gap: 12,
- marginVertical: 2,
- },
- badge: {
- paddingHorizontal: 6,
- paddingVertical: 2,
- borderRadius: 10,
- alignItems: 'center',
- justifyContent: 'center',
- minWidth: 18,
- },
- miniBadgeDot: {
- position: 'absolute',
- top: -2,
- right: -2,
- width: 8,
- height: 8,
- borderRadius: 4,
- backgroundColor: '#EF4444',
- borderWidth: 1,
- borderColor: '#FFFFFF',
- },
- footer: {
- borderTopWidth: 1,
- justifyContent: 'space-between',
- },
- userCard: {
- flexDirection: 'row',
- alignItems: 'center',
- },
- footerControls: {
- alignItems: 'center',
- gap: 2,
- },
- iconBtn: {
- width: 32,
- height: 32,
- borderRadius: 6,
- alignItems: 'center',
- justifyContent: 'center',
- },
+  sidebar: {
+    height: '100%',
+    maxHeight: '100%',
+    minHeight: 0,
+    flexShrink: 0,
+    borderRightWidth: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    transitionProperty: 'width' as any,
+    transitionDuration: '200ms' as any,
+  },
+  brandHeader: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(150, 150, 150, 0.12)',
+    flexShrink: 0,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  collapseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  campusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 2,
+  },
+  activeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+  },
+  navButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 1,
+  },
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 18,
+  },
+  miniBadgeDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  footer: {
+    borderTopWidth: 1,
+    justifyContent: 'space-between',
+    flexShrink: 0,
+  },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+  footerControls: {
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 0,
+  },
+  iconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

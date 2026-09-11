@@ -28,7 +28,7 @@ import { haptics } from '@/utils/haptics';
 
 export default function AdminDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
-  const { isDesktop } = useResponsive();
+  const { isDesktop, isWideDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
   const { data: profile } = useQuery({ queryKey: ['profile', 'me', user?.id], queryFn: () => getMyProfile(user!), enabled: !!user });
@@ -44,15 +44,16 @@ export default function AdminDashboard() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
-      <ScrollView style={{ flex: 1, width: '100%' }}
-        showsVerticalScrollIndicator={false}
+      <ScrollView
+        style={{ flex: 1, width: '100%', minHeight: 0 }}
+        showsVerticalScrollIndicator={isDesktop ? true : false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 140, paddingTop: isDesktop ? spacing.md : 0 }}
       >
         <View style={isDesktop ? { flexDirection: 'row', gap: 24, alignItems: 'flex-start' } : undefined}>
           {/* Main Left/Center Column */}
-          <View style={isDesktop ? { flex: 1 } : undefined}>
+          <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>
             {/* Admin Control Tower Banner Header */}
             <View style={{ marginBottom: spacing.md, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surface }}>
               <View style={{ width: '100%', height: isDesktop ? 160 : 145, position: 'relative' }}>
@@ -186,11 +187,11 @@ export default function AdminDashboard() {
                     }}
                   >
                     <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.brandPrimary} />
-                    <View>
-                      <AppText weight="bold" variant="bodySmall">
+                    <View style={{ minWidth: 0 }}>
+                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                         Direct Messages
                       </AppText>
-                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                         Student & staff chat
                       </AppText>
                     </View>
@@ -224,11 +225,11 @@ export default function AdminDashboard() {
                       <Badge label="Cleared" tone="success" />
                     )}
                   </View>
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       ID Verifications
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Matric & alumni IDs
                     </AppText>
                   </View>
@@ -261,11 +262,11 @@ export default function AdminDashboard() {
                       <Badge label="Safe" tone="success" />
                     )}
                   </View>
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Moderation Queue
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Reported campus content
                     </AppText>
                   </View>
@@ -291,11 +292,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="options-outline" size={22} color={colors.brandPrimary} />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Feature Switches
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Toggle campus modules
                     </AppText>
                   </View>
@@ -321,11 +322,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="people-outline" size={22} color="#8B5CF6" />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       User Directory
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Manage all accounts
                     </AppText>
                   </View>
@@ -351,11 +352,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="settings-outline" size={22} color={colors.brandPrimary} />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Command Desk
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       System params & alerts
                     </AppText>
                   </View>
@@ -381,11 +382,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="key-outline" size={22} color="#F59E0B" />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Security Audit
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Forensic activity logs
                     </AppText>
                   </View>
@@ -411,11 +412,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="folder-open-outline" size={22} color={colors.brandAccent} />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Academic Resources
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Past papers & notes
                     </AppText>
                   </View>
@@ -441,11 +442,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="construct-outline" size={22} color="#3B82F6" />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       System Config
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Multi-tenant & security
                     </AppText>
                   </View>
@@ -471,11 +472,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="help-buoy-outline" size={22} color="#06B6D4" />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Support Desk
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Triage & 1-click remedies
                     </AppText>
                   </View>
@@ -501,11 +502,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="layers-outline" size={22} color="#8B5CF6" />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Content Desk
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Global posts & media
                     </AppText>
                   </View>
@@ -531,11 +532,11 @@ export default function AdminDashboard() {
                   }}
                 >
                   <Ionicons name="pulse-outline" size={22} color="#10B981" />
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       System Health
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Live ping & sync cleanup
                     </AppText>
                   </View>
@@ -546,7 +547,7 @@ export default function AdminDashboard() {
 
           {/* Right Sticky Column on Desktop */}
           {isDesktop && (
-            <View style={{ width: 360, gap: spacing.md }}>
+            <View style={{ width: isWideDesktop ? 340 : 280, flexShrink: 0, gap: spacing.md }}>
               {/* Primary Admin Workdesk Actions */}
               <SolidCard radius={20} style={{ padding: spacing.md }}>
                 <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.sm }}>
@@ -558,16 +559,16 @@ export default function AdminDashboard() {
                       haptics.light();
                       router.push('/(admin)/platform-config');
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, borderWidth: 1, borderColor: `${colors.brandPrimary}40` }}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, borderWidth: 1, borderColor: `${colors.brandPrimary}40`, gap: 8 }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                      <Ionicons name="settings" size={20} color={colors.brandPrimary} />
-                      <View>
-                        <AppText weight="bold" variant="bodySmall" tone="brand">Admin Desk & Broadcast</AppText>
-                        <AppText tone="secondary" variant="caption">System params & alerts</AppText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                      <Ionicons name="settings" size={20} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <AppText weight="bold" variant="bodySmall" tone="brand" numberOfLines={1}>Admin Desk & Broadcast</AppText>
+                        <AppText tone="secondary" variant="caption" numberOfLines={1}>System params & alerts</AppText>
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.brandPrimary} />
+                    <Ionicons name="chevron-forward" size={16} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
                   </Pressable>
 
                   <Pressable
@@ -575,23 +576,23 @@ export default function AdminDashboard() {
                       haptics.light();
                       router.push('/(admin)/moderation-queue');
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 8 }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                      <Ionicons name="shield-half" size={20} color={colors.critical} />
-                      <View>
-                        <AppText weight="bold" variant="bodySmall">Moderation Queue</AppText>
-                        <AppText tone="secondary" variant="caption">Content review & reports</AppText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                      <Ionicons name="shield-half" size={20} color={colors.critical} style={{ flexShrink: 0 }} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <AppText weight="bold" variant="bodySmall" numberOfLines={1}>Moderation Queue</AppText>
+                        <AppText tone="secondary" variant="caption" numberOfLines={1}>Content review & reports</AppText>
                       </View>
                     </View>
                     {(openReports?.length ?? 0) > 0 ? (
-                      <View style={{ backgroundColor: colors.critical, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
+                      <View style={{ backgroundColor: colors.critical, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill, flexShrink: 0 }}>
                         <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
                           {openReports?.length} new
                         </AppText>
                       </View>
                     ) : (
-                      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                     )}
                   </Pressable>
                 </View>
@@ -618,16 +619,16 @@ export default function AdminDashboard() {
                         haptics.light();
                         router.push(item.route as any);
                       }}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 8 }}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                        <Ionicons name={item.icon} size={18} color={colors.textPrimary} />
-                        <View>
-                          <AppText weight="bold" variant="bodySmall">{item.label}</AppText>
-                          <AppText tone="secondary" variant="caption">{item.desc}</AppText>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                        <Ionicons name={item.icon} size={18} color={colors.textPrimary} style={{ flexShrink: 0 }} />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <AppText weight="bold" variant="bodySmall" numberOfLines={1}>{item.label}</AppText>
+                          <AppText tone="secondary" variant="caption" numberOfLines={1}>{item.desc}</AppText>
                         </View>
                       </View>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                     </Pressable>
                   ))}
                 </View>
