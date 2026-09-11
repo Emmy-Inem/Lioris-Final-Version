@@ -233,18 +233,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // 2. Check active Supabase OAuth session
+      // 2. Check active Supabase OAuth session with failsafe timeout
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null } }), 4000)
+        );
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
         if (session?.user && mounted) {
           const userEmail = session.user.email ?? '';
 
-          // Securely query verified database profile for role
-          const { data: profile } = await supabase
+          // Securely query verified database profile for role with 3s timeout
+          const profilePromise = supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .maybeSingle();
+          const profileTimeout = new Promise<{ data: null }>((resolve) =>
+            setTimeout(() => resolve({ data: null }), 3000)
+          );
+          const { data: profile } = await Promise.race([profilePromise, profileTimeout]);
 
           // Authorization role must come from `profiles.role` only -
           // `user_metadata` is client-writable via supabase.auth.updateUser()

@@ -1,25 +1,29 @@
-import'react-native-gesture-handler';
-import React, { useCallback, useEffect } from'react';
-import { GestureHandlerRootView } from'react-native-gesture-handler';
-import { SafeAreaProvider } from'react-native-safe-area-context';
-import { QueryClientProvider } from'@tanstack/react-query';
-import * as SplashScreen from'expo-splash-screen';
-import { Slot, router } from'expo-router';
-import { StatusBar } from'expo-status-bar';
+import 'react-native-gesture-handler';
+import React, { useEffect, useState } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClientProvider } from '@tanstack/react-query';
+import * as SplashScreen from 'expo-splash-screen';
+import { Slot, router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
-import { ThemeProvider, useTheme } from'@/theme/ThemeProvider';
-import { useLoadFonts } from'@/theme/useLoadFonts';
-import { AuthProvider } from'@/auth/AuthContext';
-import { queryClient } from'@/api/queryClient';
-import { ErrorBoundary } from'@/components/ErrorBoundary';
-import { OfflineBanner, setupNetworkAwareQueries } from'@/components/OfflineBanner';
-import { ImpersonationBanner } from'@/components/ImpersonationBanner';
-import { addNotificationResponseListener } from'@/notifications/push';
+import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
+import { useLoadFonts } from '@/theme/useLoadFonts';
+import { AuthProvider } from '@/auth/AuthContext';
+import { queryClient } from '@/api/queryClient';
+import { ErrorBoundary, RouteErrorBoundary } from '@/components/ErrorBoundary';
+import { AppLoadingScreen } from '@/components/AppLoadingScreen';
+import { OfflineBanner, setupNetworkAwareQueries } from '@/components/OfflineBanner';
+import { ImpersonationBanner } from '@/components/ImpersonationBanner';
+import { addNotificationResponseListener } from '@/notifications/push';
 
 import { loadBlockedUserIds } from '@/api/connections';
 
 import { FeatureFlagsProvider } from '@/context/FeatureFlagsContext';
 import { ToastProvider } from '@/context/ToastContext';
+
+// Export root ErrorBoundary for Expo Router file-system routing
+export { RouteErrorBoundary as ErrorBoundary };
 
 SplashScreen.preventAutoHideAsync().catch(() => {
  // No-op: harmless if called more than once (e.g. fast refresh in dev).
@@ -29,17 +33,28 @@ setupNetworkAwareQueries();
 
 export default function RootLayout() {
  const { fontsLoaded, fontError } = useLoadFonts();
-
- const onLayoutRootView = useCallback(async () => {
- if (fontsLoaded || fontError) {
- await SplashScreen.hideAsync();
- }
- }, [fontsLoaded, fontError]);
-
-
+ const [appIsReady, setAppIsReady] = React.useState(false);
 
  useEffect(() => {
- onLayoutRootView();
+ let timer: ReturnType<typeof setTimeout> | undefined;
+
+ if (fontsLoaded || fontError) {
+ SplashScreen.hideAsync().catch(() => {});
+ setAppIsReady(true);
+ } else {
+ // 1.8s failsafe: never allow splash screen to hang for more than 1.8 seconds
+ timer = setTimeout(() => {
+ SplashScreen.hideAsync().catch(() => {});
+ setAppIsReady(true);
+ }, 1800);
+ }
+
+ return () => {
+ if (timer) clearTimeout(timer);
+ };
+ }, [fontsLoaded, fontError]);
+
+ useEffect(() => {
  loadBlockedUserIds().catch(() => {
  // background load
  });
@@ -215,19 +230,24 @@ export default function RootLayout() {
         window.removeEventListener('wheel', handleGlobalWheel);
       };
     }
- }, [onLayoutRootView]);
+  }, []);
 
- useEffect(() => {
- const subscription = addNotificationResponseListener((path) => {
- router.push(path as any);
- });
- return () => subscription.remove();
- }, []);
+  useEffect(() => {
+    const subscription = addNotificationResponseListener((path) => {
+      router.push(path as any);
+    });
+    return () => subscription.remove();
+  }, []);
 
- if (!fontsLoaded && !fontError) {
- // Splash screen is still showing - render nothing underneath it.
- return null;
- }
+  if (!appIsReady) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <AppLoadingScreen message="Launching Lioris Campus Platform..." />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    );
+  }
 
  return (
  <GestureHandlerRootView style={{ flex: 1 }}>
