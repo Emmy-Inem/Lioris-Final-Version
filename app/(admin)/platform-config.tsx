@@ -18,7 +18,8 @@ import { UserProfilesTab } from'@/components/admin/UserProfilesTab';
 import { ResourcesModerationTab } from'@/components/admin/ResourcesModerationTab';
 import { ApprovalsModerationTab } from'@/components/admin/ApprovalsModerationTab';
 import { FeatureFlagsTab } from '@/components/admin/FeatureFlagsTab';
-import { ManagePortalLinksModal } from'@/components/admin/ManagePortalLinksModal';
+import { ManagePortalLinksModal } from '@/components/admin/ManagePortalLinksModal';
+import { LiquidGlassCustomizerModal } from '@/components/admin/LiquidGlassCustomizerModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
@@ -43,6 +44,7 @@ export default function PlatformConfigScreen() {
   const [institutionPickerOpen, setInstitutionPickerOpen] = useState(false);
   const [portalLinksModalOpen, setPortalLinksModalOpen] = useState(false);
   const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
+  const [liquidGlassModalOpen, setLiquidGlassModalOpen] = useState(false);
 
   // Broadcast Alert Form State
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -253,6 +255,13 @@ export default function PlatformConfigScreen() {
  <EcosystemTile
  icon="shield-outline"label="Ecosystem Safety"description="Moderation & Reports"badge={`${openReports?.length ?? 0} Pending`}
  onPress={() => router.push('/(admin)/moderation-queue')}
+ />
+ <EcosystemTile
+ icon="color-wand-outline"
+ label="Liquid Glass Studio"
+ description="iOS 26 glass refraction"
+ badge="Live Tuning"
+ onPress={() => setLiquidGlassModalOpen(true)}
  />
  <EcosystemTile
  icon="checkmark-circle-outline"label="Verify Credentials"description="Review uploaded files"badge={String(pendingVerifications?.length ?? 0)}
@@ -477,6 +486,11 @@ export default function PlatformConfigScreen() {
  </View>
  </View>
  </Modal>
+
+      <LiquidGlassCustomizerModal
+        visible={liquidGlassModalOpen}
+        onClose={() => setLiquidGlassModalOpen(false)}
+      />
  </ScreenContainer>
  );
 }
@@ -516,19 +530,7 @@ function EcosystemTile({
         }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, gap: spacing.xs }}>
-          <View
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              backgroundColor: `${colors.brandPrimary}20`,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Ionicons name={icon} size={17} color={colors.brandPrimary} />
-          </View>
+          <Ionicons name={icon} size={22} color={colors.brandPrimary} />
           {badge ? (
             <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, maxWidth: 90 }}>
               <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9.5 }} numberOfLines={1}>

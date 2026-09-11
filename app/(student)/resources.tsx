@@ -268,19 +268,10 @@ export default function ResourcesScreen() {
                 }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: colors.pastelPrimaryBg,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Ionicons name={portal.icon || 'link-outline'} size={14} color={colors.brandPrimary} />
-                  </View>
-                  <Badge label={portal.category || 'Portal'} tone="accent" />
+                  <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.brandPrimary} />
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {portal.category || 'Portal'}
+                  </AppText>
                 </View>
 
                 <View style={{ marginVertical: 4 }}>

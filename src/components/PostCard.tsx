@@ -143,15 +143,16 @@ export function PostCard({ post }: { post: Post }) {
  • {post.authorRole === 'student' ? 'Student' : post.authorRole === 'alumni' ? "Alumni'21" : 'Staff Advisor'}
  </AppText>
  </View>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
- <AppText tone="secondary"variant="caption">
- {timeAgo(post.createdAt)}
- </AppText>
- <AppText tone="secondary"variant="caption">|</AppText>
- <AppText tone="brand"variant="caption"weight="semiBold">
- {post.category}
- </AppText>
- </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                    <View style={{ backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5 }}>
+                      <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
+                        c/{post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}
+                      </AppText>
+                    </View>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
+                      • {timeAgo(post.createdAt)}
+                    </AppText>
+                  </View>
  </View>
  </Pressable>
 

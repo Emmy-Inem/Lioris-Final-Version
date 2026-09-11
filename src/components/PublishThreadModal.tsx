@@ -13,6 +13,15 @@ import { haptics } from '@/utils/haptics';
 
 const CHANNELS = ['Tech Hub', 'Academic', 'Polls', 'Housing', 'Social', 'Lost & Found'] as const;
 
+const SUB_FORUM_COMMUNITIES = [
+  { name: 'Tech Hub', slug: 'c/tech', icon: 'code-slash' as const, moderator: 'Tech Guild & GDSC Leads' },
+  { name: 'Academic', slug: 'c/academic', icon: 'school' as const, moderator: 'Faculty Reps & TAs' },
+  { name: 'Polls', slug: 'c/polls', icon: 'stats-chart' as const, moderator: 'Student Union SUG' },
+  { name: 'Housing', slug: 'c/housing', icon: 'home' as const, moderator: 'Hall Wardens' },
+  { name: 'Social', slug: 'c/social', icon: 'football' as const, moderator: 'Directorate of Socials' },
+  { name: 'Lost & Found', slug: 'c/lost-found', icon: 'search' as const, moderator: 'Campus Marshal Desk' },
+] as const;
+
 const STUDENT_GIFS = [
   { label: 'Mind Blown 🤯', url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
   { label: 'Aced It 🎉', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
@@ -462,24 +471,32 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               </SolidCard>
             )}
 
-            {/* Channel Selector */}
-            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-              Topic Channel
-            </AppText>
+            {/* Community / Sub-Forum Selector */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                Post Into Community
+              </AppText>
+              <AppText variant="caption" tone="brand" weight="bold" style={{ fontSize: 11 }}>
+                🛡️ {SUB_FORUM_COMMUNITIES.find((c) => c.name === channel)?.moderator}
+              </AppText>
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 8, paddingRight: 4, marginBottom: spacing.md }}
               style={{ flexGrow: 0 }}
             >
-              {CHANNELS.map((ch) => {
-                const selected = channel === ch;
+              {SUB_FORUM_COMMUNITIES.map((com) => {
+                const selected = channel === com.name;
                 return (
                   <Pressable
-                    key={ch}
-                    onPress={() => { haptics.light(); setChannel(ch); }}
+                    key={com.name}
+                    onPress={() => { haptics.light(); setChannel(com.name); }}
                     style={{
-                      paddingHorizontal: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 12,
                       paddingVertical: 7,
                       borderRadius: radius.pill,
                       borderWidth: 1,
@@ -487,8 +504,9 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                       backgroundColor: selected ? colors.brandPrimary : colors.surface,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
-                      {ch}
+                    <Ionicons name={com.icon} size={13} color={selected ? '#FFFFFF' : colors.brandPrimary} />
+                    <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'primary'}>
+                      {com.slug}
                     </AppText>
                   </Pressable>
                 );

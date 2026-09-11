@@ -1,11 +1,12 @@
-import React, { useState } from'react';
-import { FlatList, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import React, { useState } from 'react';
+import { FlatList, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
+import { AppButton } from './AppButton';
 import { SolidCard } from './SolidCard';
 import { GlassCard } from './GlassCard';
 import { Avatar } from './Avatar';
@@ -33,15 +34,161 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
-const CHANNELS = [
-  { id: 'all', label: 'All Threads', category: null, icon: 'chatbubbles' as const },
-  { id: 'polls', label: 'Polls & Votes', category: 'Polls', icon: 'stats-chart' as const, flagKey: 'discussion_workspaces' as const },
-  { id: 'tech', label: 'Tech & Code Hub', category: 'Tech Hub', icon: 'code-slash' as const },
-  { id: 'academic', label: 'Academic & Courses', category: 'Academic', icon: 'school' as const },
-  { id: 'housing', label: 'Hostel & Housing', category: 'Housing', icon: 'home' as const },
-  { id: 'social', label: 'Campus Life & Sports', category: 'Social', icon: 'people' as const },
-  { id: 'lost', label: 'Lost & Found', category: 'Lost & Found', icon: 'search' as const },
+export interface CampusSubForum {
+  id: string;
+  slug: string;
+  label: string;
+  category: string | null;
+  icon: keyof typeof Ionicons.glyphMap;
+  flagKey?: string;
+  description: string;
+  moderatorBadge: string;
+  moderatorTitle: string;
+  membersCount: number;
+  onlineCount: number;
+  rules: string[];
+  bannerColor: string;
+  accentColor: string;
+}
+
+export const CAMPUS_SUB_FORUMS: CampusSubForum[] = [
+  {
+    id: 'all',
+    slug: 'c/all',
+    label: 'All Campus Feed',
+    category: null,
+    icon: 'planet-outline',
+    description: 'Unified feed aggregating student discussions, academic questions, and polls across all campus faculties.',
+    moderatorBadge: 'Campus Moderation Desk',
+    moderatorTitle: 'Verified Faculty Staff & Student Union Council',
+    membersCount: 4850,
+    onlineCount: 128,
+    rules: [
+      'Maintain civil and constructive student discourse at all times.',
+      'Tag your threads with the accurate community space.',
+      'No hate speech, unverified rumors, or academic dishonesty.',
+    ],
+    bannerColor: '#3B82F6',
+    accentColor: '#2563EB',
+  },
+  {
+    id: 'tech',
+    slug: 'c/tech',
+    label: 'Tech & Code Hub',
+    category: 'Tech Hub',
+    icon: 'code-slash',
+    description: 'Software engineering, AI projects, hackathons, debugging queries, and developer tooling.',
+    moderatorBadge: 'Developer Guild Lead',
+    moderatorTitle: 'Department Tech Reps & GDSC Campus Leads',
+    membersCount: 1840,
+    onlineCount: 42,
+    rules: [
+      'Provide code context, error logs, or reproducible snippets.',
+      'Respect peer developers of all experience levels.',
+      'No unauthorized course test/exam solution leaks.',
+    ],
+    bannerColor: '#6366F1',
+    accentColor: '#4F46E5',
+  },
+  {
+    id: 'academic',
+    slug: 'c/academic',
+    label: 'Academic & Courses',
+    category: 'Academic',
+    icon: 'school',
+    description: 'Course registration, lecture notes, syllabus revision, past questions, and departmental discussions.',
+    moderatorBadge: 'Academic Board',
+    moderatorTitle: 'Department Representatives & Course TAs',
+    membersCount: 3200,
+    onlineCount: 86,
+    rules: [
+      'Include course codes in thread titles (e.g. [CSC 301]).',
+      'Verify exam dates and senate timetables before announcing.',
+      'Strict university academic integrity rules apply.',
+    ],
+    bannerColor: '#059669',
+    accentColor: '#047857',
+  },
+  {
+    id: 'polls',
+    slug: 'c/polls',
+    label: 'Polls & Votes',
+    category: 'Polls',
+    icon: 'stats-chart',
+    flagKey: 'discussion_workspaces',
+    description: 'Campus voting, student union surveys, canteen ratings, and real-time student opinion referendums.',
+    moderatorBadge: 'Electoral Commission',
+    moderatorTitle: 'Student Union Government (SUG) Secretariat',
+    membersCount: 4120,
+    onlineCount: 94,
+    rules: [
+      'Keep poll questions clear, balanced, and constructive.',
+      'One poll per topic to avoid voter fatigue and split results.',
+      'Zero manipulation, multi-voting, or vote brigading.',
+    ],
+    bannerColor: '#8B5CF6',
+    accentColor: '#7C3AED',
+  },
+  {
+    id: 'housing',
+    slug: 'c/housing',
+    label: 'Hostel & Housing',
+    category: 'Housing',
+    icon: 'home',
+    description: 'Hall of residence allocations, off-campus apartments, roommate matching, and maintenance updates.',
+    moderatorBadge: 'Hall Committee',
+    moderatorTitle: 'Hall Wardens & Student Hall Executives',
+    membersCount: 1650,
+    onlineCount: 31,
+    rules: [
+      'Never pay agent inspection fees or deposits upfront.',
+      'Provide exact hostel/apartment location and verified rental costs.',
+      'Report misleading accommodation ads immediately.',
+    ],
+    bannerColor: '#EA580C',
+    accentColor: '#C2410C',
+  },
+  {
+    id: 'social',
+    slug: 'c/social',
+    label: 'Campus Life & Sports',
+    category: 'Social',
+    icon: 'football',
+    description: 'Hostel football leagues, dinner awards, cultural days, music festivals, and student clubs.',
+    moderatorBadge: 'Directorate of Socials',
+    moderatorTitle: 'Student Union Social & Sports Directors',
+    membersCount: 2900,
+    onlineCount: 67,
+    rules: [
+      'Celebrate campus rivalries with respect and sportsmanship.',
+      'State event venue, ticket fees (if any), and timing clearly.',
+      'No personal harassment or bullying of fellow students.',
+    ],
+    bannerColor: '#EC4899',
+    accentColor: '#DB2777',
+  },
+  {
+    id: 'lost',
+    slug: 'c/lost-found',
+    label: 'Lost & Found',
+    category: 'Lost & Found',
+    icon: 'search',
+    description: 'Find lost student ID cards, flash drives, wallets, glasses, backpacks, and lecture notes.',
+    moderatorBadge: 'Security Desk',
+    moderatorTitle: 'Campus Marshal Helpdesk & Student Affairs',
+    membersCount: 1420,
+    onlineCount: 19,
+    rules: [
+      'Turn in valuable items (laptops, wallets) to Hall Porters or DSA.',
+      'Do not display full bank card numbers or BVN/NIN in photos.',
+      'Claimants must show student identification upon pickup.',
+    ],
+    bannerColor: '#0284C7',
+    accentColor: '#0369A1',
+  },
 ];
+
+const CHANNELS = CAMPUS_SUB_FORUMS;
 
 export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -60,6 +207,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [workspacesOpen, setWorkspacesOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(params.category || null);
+  const [rulesModalOpen, setRulesModalOpen] = useState(false);
+  const [subForumsDirectoryOpen, setSubForumsDirectoryOpen] = useState(false);
+
+  const activeSubForum = CAMPUS_SUB_FORUMS.find((sf) => sf.category === selectedChannel) ?? CAMPUS_SUB_FORUMS[0];
 
   React.useEffect(() => {
     if (params.category) {
@@ -349,6 +500,21 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         </View>
       )}
 
+      {/* Sub-Forums Navigation Bar */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, paddingHorizontal: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="planet-outline" size={15} color={colors.brandPrimary} />
+          <AppText weight="bold" variant="caption" tone="brand" style={{ letterSpacing: 0.5, textTransform: 'uppercase', fontSize: 11 }}>
+            Campus Communities
+          </AppText>
+        </View>
+        <Pressable onPress={() => setSubForumsDirectoryOpen(true)} hitSlop={8}>
+          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+            Browse All ({CAMPUS_SUB_FORUMS.length - 1}) →
+          </AppText>
+        </Pressable>
+      </View>
+
       {/* Horizontal Channel Filter Pills */}
       <ScrollView
         horizontal
@@ -367,13 +533,16 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               accessibilityState={{ selected }}
               style={[
                 {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
                   backgroundColor: selected
                     ? colors.brandPrimary
                     : isDark
                     ? 'rgba(30, 41, 59, 0.60)'
                     : 'rgba(255, 255, 255, 0.70)',
                   borderRadius: radius.pill,
-                  paddingHorizontal: 13,
+                  paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderWidth: 1,
                   borderColor: selected
@@ -392,6 +561,11 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   } as any),
               ]}
             >
+              <Ionicons
+                name={ch.icon}
+                size={13}
+                color={selected ? '#FFFFFF' : colors.textSecondary}
+              />
               <AppText
                 variant="caption"
                 weight={selected ? 'bold' : 'medium'}
@@ -405,6 +579,103 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         })}
       </ScrollView>
 
+      {/* Reddit-Style Sub-Forum Space Banner when a specific community is active */}
+      {selectedChannel !== null && (
+        <GlassCard
+          radius={18}
+          padded={false}
+          contentStyle={{ padding: 12, marginBottom: spacing.sm, borderLeftWidth: 4, borderLeftColor: activeSubForum.accentColor }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  backgroundColor: `${activeSubForum.accentColor}18`,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name={activeSubForum.icon} size={20} color={activeSubForum.accentColor} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <AppText weight="bold" style={{ fontSize: 14 }}>
+                    {activeSubForum.label}
+                  </AppText>
+                  <View style={{ backgroundColor: `${activeSubForum.accentColor}20`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
+                    <AppText weight="bold" style={{ color: activeSubForum.accentColor, fontSize: 10 }}>
+                      {activeSubForum.slug}
+                    </AppText>
+                  </View>
+                </View>
+                <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
+                  👥 {activeSubForum.membersCount.toLocaleString()} members • 🟢 {activeSubForum.onlineCount} online
+                </AppText>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => setSelectedChannel(null)}
+              hitSlop={8}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 3,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: radius.pill,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+              }}
+            >
+              <Ionicons name="arrow-back" size={12} color={colors.textSecondary} />
+              <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 10.5 }}>
+                All Feed
+              </AppText>
+            </Pressable>
+          </View>
+
+          <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, lineHeight: 16, marginBottom: 8 }}>
+            {activeSubForum.description}
+          </AppText>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 6,
+              paddingHorizontal: 8,
+              backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              borderRadius: 8,
+              gap: 8,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
+              <Ionicons name="shield-checkmark" size={13} color={colors.brandPrimary} />
+              <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>
+                <AppText weight="bold" tone="primary" style={{ fontSize: 10.5 }}>
+                  Moderated by:
+                </AppText>{' '}
+                {activeSubForum.moderatorTitle}
+              </AppText>
+            </View>
+            <Pressable
+              onPress={() => setRulesModalOpen(true)}
+              hitSlop={8}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 }}
+            >
+              <Ionicons name="document-text-outline" size={12} color={colors.brandPrimary} />
+              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10.5 }}>
+                Rules ({activeSubForum.rules.length})
+              </AppText>
+            </Pressable>
+          </View>
+        </GlassCard>
+      )}
+
       {/* Interactive Quick Thread Composer Bar */}
       <Pressable
         onPress={() => setComposerOpen(true)}
@@ -414,10 +685,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       >
         <GlassCard radius={16} padded={false} contentStyle={{ padding: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <Avatar name={user?.fullName ?? 'You'} size={34} role={user?.role} />
+            <Avatar name={user?.fullName ?? 'You'} uri={profile?.avatarUrl} size={34} role={user?.role} />
             <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7 }}>
               <AppText tone="secondary" variant="bodySmall" style={{ fontSize: 12 }}>
-                Start a discussion or create a poll...
+                {selectedChannel ? `Post in ${activeSubForum.slug}...` : 'Start a discussion or create a poll...'}
               </AppText>
             </View>
             <View
@@ -505,6 +776,102 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               </Pressable>
             </View>
 
+            {/* Desktop Reddit-Style Sub-Forum Space Banner */}
+            {selectedChannel !== null && (
+              <GlassCard
+                radius={18}
+                padded={false}
+                contentStyle={{ padding: spacing.md, marginBottom: spacing.md, borderLeftWidth: 4, borderLeftColor: activeSubForum.accentColor }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        backgroundColor: `${activeSubForum.accentColor}18`,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name={activeSubForum.icon} size={24} color={activeSubForum.accentColor} />
+                    </View>
+                    <View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <AppText weight="bold" variant="h3">
+                          {activeSubForum.label}
+                        </AppText>
+                        <View style={{ backgroundColor: `${activeSubForum.accentColor}20`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
+                          <AppText weight="bold" style={{ color: activeSubForum.accentColor, fontSize: 11 }}>
+                            {activeSubForum.slug}
+                          </AppText>
+                        </View>
+                      </View>
+                      <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, marginTop: 2 }}>
+                        👥 {activeSubForum.membersCount.toLocaleString()} members • 🟢 {activeSubForum.onlineCount} online
+                      </AppText>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    onPress={() => setSelectedChannel(null)}
+                    hitSlop={8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: radius.pill,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                    }}
+                  >
+                    <Ionicons name="arrow-back" size={13} color={colors.textSecondary} />
+                    <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 11 }}>
+                      All Campus Feed
+                    </AppText>
+                  </Pressable>
+                </View>
+
+                <AppText tone="secondary" variant="bodySmall" style={{ fontSize: 13, lineHeight: 18, marginBottom: 10 }}>
+                  {activeSubForum.description}
+                </AppText>
+
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                    borderRadius: 10,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                    <Ionicons name="shield-checkmark" size={15} color={colors.brandPrimary} />
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11.5 }}>
+                      <AppText weight="bold" tone="primary" style={{ fontSize: 11.5 }}>
+                        Moderated by:
+                      </AppText>{' '}
+                      {activeSubForum.moderatorTitle}
+                    </AppText>
+                  </View>
+                  <Pressable
+                    onPress={() => setRulesModalOpen(true)}
+                    hitSlop={8}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <Ionicons name="document-text-outline" size={13} color={colors.brandPrimary} />
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11.5 }}>
+                      Community Rules ({activeSubForum.rules.length})
+                    </AppText>
+                  </Pressable>
+                </View>
+              </GlassCard>
+            )}
+
             {/* Quick Desktop Composer Box */}
             <GlassCard radius={18} padded={false} contentStyle={{ padding: spacing.md }} style={{ marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: spacing.sm }}>
@@ -520,7 +887,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <AppText tone="secondary" variant="bodySmall">
-                    What's on your mind? Share an update or start a thread...
+                    {selectedChannel ? `What's on your mind for ${activeSubForum.slug}? Share with cohort...` : "What's on your mind? Share an update or start a thread..."}
                   </AppText>
                 </Pressable>
               </View>
@@ -615,40 +982,123 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
           {/* Right Sidebar: Hubs, Mentors & Guidelines */}
           <View style={{ width: isWideDesktop ? 320 : 280, flexShrink: 0, gap: spacing.md }}>
-            <SolidCard radius={18} style={{ padding: spacing.md }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                <AppText variant="h3" weight="bold">
-                  Discussion Hubs
+            {selectedChannel !== null ? (
+              <SolidCard radius={18} style={{ padding: spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
+                  <Ionicons name={activeSubForum.icon} size={18} color={activeSubForum.accentColor} />
+                  <AppText variant="h3" weight="bold">
+                    About {activeSubForum.slug}
+                  </AppText>
+                </View>
+                <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm, lineHeight: 16 }}>
+                  {activeSubForum.description}
                 </AppText>
-                <Pressable onPress={() => setWorkspacesOpen(true)}>
-                  <AppText variant="caption" weight="bold" tone="brand">Explore →</AppText>
+
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.xs, marginBottom: spacing.sm, gap: 4 }}>
+                  <AppText variant="caption" weight="bold" tone="primary">
+                    🛡️ Moderated by:
+                  </AppText>
+                  <AppText variant="caption" tone="secondary">
+                    {activeSubForum.moderatorTitle}
+                  </AppText>
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      {activeSubForum.membersCount.toLocaleString()}
+                    </AppText>
+                    <AppText variant="caption" tone="secondary">Members</AppText>
+                  </View>
+                  <View>
+                    <AppText weight="bold" variant="bodySmall" style={{ color: '#10B981' }}>
+                      {activeSubForum.onlineCount}
+                    </AppText>
+                    <AppText variant="caption" tone="secondary">Online</AppText>
+                  </View>
+                </View>
+
+                <Pressable
+                  onPress={() => setRulesModalOpen(true)}
+                  style={{
+                    backgroundColor: colors.pastelPrimaryBg,
+                    paddingVertical: 7,
+                    borderRadius: radius.pill,
+                    alignItems: 'center',
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="brand">
+                    View Space Rules ({activeSubForum.rules.length}) →
+                  </AppText>
                 </Pressable>
-              </View>
-              <AppText tone="secondary" variant="caption">
-                No active discussion hubs for this workspace yet.
-              </AppText>
-            </SolidCard>
+              </SolidCard>
+            ) : (
+              <SolidCard radius={18} style={{ padding: spacing.md }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                  <AppText variant="h3" weight="bold">
+                    Campus Communities
+                  </AppText>
+                  <Pressable onPress={() => setSubForumsDirectoryOpen(true)}>
+                    <AppText variant="caption" weight="bold" tone="brand">All ({CAMPUS_SUB_FORUMS.length - 1}) →</AppText>
+                  </Pressable>
+                </View>
+                <View style={{ gap: 8 }}>
+                  {CAMPUS_SUB_FORUMS.filter((sf) => sf.id !== 'all').map((sf) => (
+                    <Pressable
+                      key={sf.id}
+                      onPress={() => setSelectedChannel(sf.category)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 6,
+                        borderBottomWidth: 1,
+                        borderBottomColor: colors.divider,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                        <Ionicons name={sf.icon} size={15} color={sf.accentColor} />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <AppText weight="bold" variant="caption" numberOfLines={1}>
+                            {sf.label}
+                          </AppText>
+                          <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }} numberOfLines={1}>
+                            {sf.moderatorBadge}
+                          </AppText>
+                        </View>
+                      </View>
+                      <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                        {sf.membersCount.toLocaleString()}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              </SolidCard>
+            )}
 
             <SolidCard radius={18} style={{ padding: spacing.md }}>
               <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
-                Community Rules
+                {selectedChannel !== null ? `${activeSubForum.label} Rules` : 'Community Rules'}
               </AppText>
               <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
-                Lioris is a verified academic community. Keep discussions constructive, helpful, and respectful.
+                {selectedChannel !== null
+                  ? `Guidelines enforced by ${activeSubForum.moderatorBadge}.`
+                  : 'Lioris is a verified academic community. Keep discussions constructive, helpful, and respectful.'}
               </AppText>
               <View style={{ gap: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
-                  <AppText variant="caption" tone="secondary">Be helpful & respectful</AppText>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
-                  <AppText variant="caption" tone="secondary">No academic dishonesty</AppText>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
-                  <AppText variant="caption" tone="secondary">Report spam to Campus Staff</AppText>
-                </View>
+                {(selectedChannel !== null ? activeSubForum.rules : [
+                  'Maintain civil and constructive discourse.',
+                  'No academic dishonesty or exam leaks.',
+                  'Report violations to campus moderators.',
+                ]).map((rule, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
+                    <AppText variant="caption" tone="secondary" numberOfLines={2}>
+                      {rule}
+                    </AppText>
+                  </View>
+                ))}
               </View>
             </SolidCard>
           </View>
@@ -734,6 +1184,162 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     <PublishThreadModal visible={composerOpen} onClose={() => setComposerOpen(false)} onPublish={handlePublish} />
     <DiscussionWorkspacesModal visible={workspacesOpen} onClose={() => setWorkspacesOpen(false)} />
     <UserProfileQuickViewModal user={quickViewUser} visible={!!quickViewUser} onClose={() => setQuickViewUser(null)} />
+
+    {/* Sub-Forum Rules & Guidelines Modal */}
+    <Modal visible={rulesModalOpen} transparent animationType="fade" onRequestClose={() => setRulesModalOpen(false)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setRulesModalOpen(false)} />
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 480,
+            backgroundColor: colors.surface,
+            borderRadius: 20,
+            padding: spacing.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="shield-checkmark" size={20} color={activeSubForum.accentColor} />
+              <View>
+                <AppText variant="h3" weight="bold">
+                  {activeSubForum.label} Rules
+                </AppText>
+                <AppText variant="caption" tone="secondary">
+                  {activeSubForum.slug} • Moderated Space
+                </AppText>
+              </View>
+            </View>
+            <Pressable onPress={() => setRulesModalOpen(false)} hitSlop={8}>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          <View style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md }}>
+            <AppText variant="caption" tone="secondary" style={{ lineHeight: 17 }}>
+              <AppText weight="bold" tone="primary">
+                Moderator Attribution:
+              </AppText>{' '}
+              {activeSubForum.moderatorTitle}. Submissions violating these rules are subject to review and moderation.
+            </AppText>
+          </View>
+
+          <View style={{ gap: 10, marginBottom: spacing.lg }}>
+            {activeSubForum.rules.map((rule, idx) => (
+              <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                <View
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: `${activeSubForum.accentColor}20`,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: 1,
+                  }}
+                >
+                  <AppText weight="bold" style={{ color: activeSubForum.accentColor, fontSize: 11 }}>
+                    {idx + 1}
+                  </AppText>
+                </View>
+                <AppText variant="bodySmall" style={{ flex: 1, lineHeight: 18 }}>
+                  {rule}
+                </AppText>
+              </View>
+            ))}
+          </View>
+
+          <AppButton label="Understood, Close" onPress={() => setRulesModalOpen(false)} />
+        </View>
+      </View>
+    </Modal>
+
+    {/* Campus Sub-Forums Directory Modal */}
+    <Modal visible={subForumsDirectoryOpen} transparent animationType="slide" onRequestClose={() => setSubForumsDirectoryOpen(false)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setSubForumsDirectoryOpen(false)} />
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            padding: spacing.lg,
+            maxHeight: '85%',
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="planet" size={22} color={colors.brandPrimary} />
+              <View>
+                <AppText variant="h3" weight="bold">
+                  Campus Communities & Sub-Forums
+                </AppText>
+                <AppText variant="caption" tone="secondary">
+                  Select a dedicated space to view discussions & rules
+                </AppText>
+              </View>
+            </View>
+            <Pressable onPress={() => setSubForumsDirectoryOpen(false)} hitSlop={8}>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 20 }}>
+            {CAMPUS_SUB_FORUMS.map((sf) => {
+              const isSelected = selectedChannel === sf.category || (sf.id === 'all' && selectedChannel === null);
+              return (
+                <Pressable
+                  key={sf.id}
+                  onPress={() => {
+                    haptics.light();
+                    setSelectedChannel(sf.category);
+                    setSubForumsDirectoryOpen(false);
+                  }}
+                  style={{
+                    padding: spacing.md,
+                    borderRadius: radius.md,
+                    backgroundColor: isSelected ? `${colors.brandPrimary}12` : colors.background,
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.brandPrimary : colors.border,
+                    gap: 6,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name={sf.icon} size={18} color={sf.accentColor} />
+                      <AppText weight="bold" variant="bodySmall">
+                        {sf.label}
+                      </AppText>
+                      <View style={{ backgroundColor: `${sf.accentColor}20`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
+                        <AppText weight="bold" style={{ color: sf.accentColor, fontSize: 10 }}>
+                          {sf.slug}
+                        </AppText>
+                      </View>
+                    </View>
+                    <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                      👥 {sf.membersCount.toLocaleString()}
+                    </AppText>
+                  </View>
+
+                  <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ lineHeight: 16 }}>
+                    {sf.description}
+                  </AppText>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <Ionicons name="shield-checkmark" size={12} color={colors.brandPrimary} />
+                    <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5 }}>
+                      {sf.moderatorBadge}: {sf.moderatorTitle}
+                    </AppText>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
 
     {/* Floating Action Button (FAB) - Compact Floating Plus Icon */}
     <Pressable

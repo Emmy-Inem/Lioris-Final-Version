@@ -21,6 +21,7 @@ import { loadBlockedUserIds } from '@/api/connections';
 
 import { FeatureFlagsProvider } from '@/context/FeatureFlagsContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { LiquidGlassProvider } from '@/context/LiquidGlassContext';
 
 // Export root ErrorBoundary for Expo Router file-system routing
 export { RouteErrorBoundary as ErrorBoundary };
@@ -255,6 +256,7 @@ export default function RootLayout() {
  <QueryClientProvider client={queryClient}>
  <AuthProvider>
  <ThemeProvider>
+ <LiquidGlassProvider>
  <ToastProvider>
  <FeatureFlagsProvider>
  <StatusBarForTheme />
@@ -265,6 +267,7 @@ export default function RootLayout() {
  </ErrorBoundary>
  </FeatureFlagsProvider>
  </ToastProvider>
+ </LiquidGlassProvider>
  </ThemeProvider>
  </AuthProvider>
  </QueryClientProvider>

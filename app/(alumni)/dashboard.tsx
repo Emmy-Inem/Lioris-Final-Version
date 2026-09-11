@@ -310,9 +310,7 @@ export default function AlumniDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1F2937' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="chatbubble-ellipses" size={16} color={colors.brandPrimary} />
-                  </View>
+                  <Ionicons name="chatbubble-ellipses" size={20} color={colors.brandPrimary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Direct Messages
@@ -345,9 +343,7 @@ export default function AlumniDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="cash-outline" size={16} color="#10B981" />
-                  </View>
+                  <Ionicons name="cash-outline" size={20} color="#10B981" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       FX & Endowments
@@ -376,9 +372,7 @@ export default function AlumniDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="briefcase" size={16} color={colors.brandPrimary} />
-                  </View>
+                  <Ionicons name="briefcase" size={20} color={colors.brandPrimary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Careers
@@ -408,9 +402,7 @@ export default function AlumniDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="people" size={16} color="#10B981" />
-                  </View>
+                  <Ionicons name="people" size={20} color="#10B981" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Mentorship
@@ -440,9 +432,7 @@ export default function AlumniDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="calendar" size={16} color="#3B82F6" />
-                  </View>
+                  <Ionicons name="calendar" size={20} color="#3B82F6" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Events
@@ -472,9 +462,7 @@ export default function AlumniDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#2D2319' : '#FEF3C7', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="cart" size={16} color="#D97706" />
-                  </View>
+                  <Ionicons name="cart" size={20} color="#D97706" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Campus Trade
@@ -503,9 +491,7 @@ export default function AlumniDashboard() {
                   justifyContent: 'center',
                 }}
               >
-                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="chatbubbles" size={16} color="#EC4899" />
-                </View>
+                <Ionicons name="chatbubbles" size={20} color="#EC4899" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Global Forum
@@ -533,9 +519,7 @@ export default function AlumniDashboard() {
                   justifyContent: 'center',
                 }}
               >
-                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#2A1F3D' : '#F5F3FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="people-circle" size={16} color="#8B5CF6" />
-                </View>
+                <Ionicons name="people-circle" size={20} color="#8B5CF6" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Alumni Network

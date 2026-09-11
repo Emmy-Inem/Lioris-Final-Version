@@ -315,9 +315,7 @@ export default function StaffDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1F2937' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="chatbubble-ellipses" size={16} color={colors.brandPrimary} />
-                  </View>
+                  <Ionicons name="chatbubble-ellipses" size={20} color={colors.brandPrimary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Direct Messages
@@ -350,9 +348,7 @@ export default function StaffDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1C2E2A' : '#ECFDF5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name="cash-outline" size={16} color="#10B981" />
-                  </View>
+                  <Ionicons name="cash-outline" size={20} color="#10B981" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Grant & FX Rates
@@ -380,9 +376,7 @@ export default function StaffDashboard() {
                   justifyContent: 'center',
                 }}
               >
-                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="megaphone" size={16} color={colors.brandPrimary} />
-                </View>
+                <Ionicons name="megaphone" size={20} color={colors.brandPrimary} />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Broadcast
@@ -410,9 +404,7 @@ export default function StaffDashboard() {
                   justifyContent: 'center',
                 }}
               >
-                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#2E1F1A' : '#FEF2F2', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="shield-checkmark" size={16} color="#EF4444" />
-                </View>
+                <Ionicons name="shield-checkmark" size={20} color="#EF4444" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Moderation
@@ -440,9 +432,7 @@ export default function StaffDashboard() {
                   justifyContent: 'center',
                 }}
               >
-                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#1E293B' : '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="calendar" size={16} color="#3B82F6" />
-                </View>
+                <Ionicons name="calendar" size={20} color="#3B82F6" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Faculty Events
@@ -470,9 +460,7 @@ export default function StaffDashboard() {
                   justifyContent: 'center',
                 }}
               >
-                <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: isDark ? '#2E1F30' : '#FDF2F8', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ionicons name="chatbubbles" size={16} color="#EC4899" />
-                </View>
+                <Ionicons name="chatbubbles" size={20} color="#EC4899" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Faculty Forum

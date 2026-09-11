@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { haptics } from '@/utils/haptics';
 
 export interface FloatingLiquidGlassTabBarProps {
@@ -196,6 +197,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
   const { isDesktop } = useResponsive();
   const { width: windowWidth } = useWindowDimensions();
   const safeAreaInsets = useSafeAreaInsets();
+  const { settings, getGlassBackground, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
 
   if (isDesktop) return null;
 
@@ -334,13 +336,13 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
           styles.glassPill,
           animatedPillStyle,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.06)',
+            backgroundColor: getGlassBackground(isDark),
+            borderColor: getGlassBorderColor(isDark),
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(24px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              backdropFilter: getBackdropFilterString(),
+              WebkitBackdropFilter: getBackdropFilterString(),
               boxShadow: isDark
                 ? 'inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 4px 20px -2px rgba(0, 0, 0, 0.35)'
                 : 'inset 0 1px 0 0 rgba(255, 255, 255, 0.80), 0 4px 20px -2px rgba(15, 23, 42, 0.06)',
@@ -350,7 +352,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
         {/* Native Liquid Blur Engine */}
         {Platform.OS !== 'web' && (
           <BlurView
-            intensity={85}
+            intensity={Math.round(settings.blurIntensity * 3.2)}
             tint={isDark ? 'dark' : 'light'}
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[StyleSheet.absoluteFill, { borderRadius: PILL_HEIGHT / 2, overflow: 'hidden' }]}
@@ -360,7 +362,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
         {/* Liquid Surface Meniscus Reflection Overlay - only in light mode to avoid dark mode white glow */}
         {!isDark && (
           <LinearGradient
-            colors={['rgba(255, 255, 255, 0.45)', 'rgba(255, 255, 255, 0.08)', 'transparent']}
+            colors={[`rgba(255, 255, 255, ${settings.specularShine})`, `rgba(255, 255, 255, ${(settings.specularShine * 0.25).toFixed(2)})`, 'transparent']}
             locations={[0, 0.3, 1]}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}

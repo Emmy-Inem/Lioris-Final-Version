@@ -3,6 +3,7 @@ import { Platform, StyleSheet, View, ViewProps } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useLiquidGlass } from '@/context/LiquidGlassContext';
 
 export interface GlassCardProps extends ViewProps {
   padded?: boolean;
@@ -27,6 +28,7 @@ export function GlassCard({
   ...rest
 }: GlassCardProps) {
   const { colors, spacing, radius: radiusTokens, isDark } = useTheme();
+  const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
   const cornerRadius = radius ?? radiusTokens.glass ?? 20;
 
   return (
@@ -50,14 +52,16 @@ export function GlassCard({
           styles.container,
           {
             borderRadius: cornerRadius,
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : colors.border,
+            borderColor: getGlassBorderColor(isDark),
             borderWidth: 1,
-            backgroundColor: isDark ? 'rgba(19, 30, 49, 0.82)' : 'rgba(255, 255, 255, 0.92)',
+            backgroundColor: isDark
+              ? `rgba(19, 30, 49, ${Math.min(0.88, settings.translucency * 1.5).toFixed(2)})`
+              : `rgba(255, 255, 255, ${Math.min(0.92, settings.translucency * 1.6).toFixed(2)})`,
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              backdropFilter: getBackdropFilterString(),
+              WebkitBackdropFilter: getBackdropFilterString(),
               boxShadow: isDark
                 ? 'inset 0 1px 0 0 rgba(255, 255, 255, 0.04)'
                 : 'inset 0 1px 0 0 rgba(255, 255, 255, 0.70)',
