@@ -22,6 +22,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { listReports } from '@/api/moderation';
 import { listVerificationRequests } from '@/api/verification';
+import { getMyProfile } from '@/api/profile';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 import { haptics } from '@/utils/haptics';
 
@@ -30,6 +31,7 @@ export default function AdminDashboard() {
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
+  const { data: profile } = useQuery({ queryKey: ['profile', 'me', user?.id], queryFn: () => getMyProfile(user!), enabled: !!user });
   const { data: openReports } = useQuery({ queryKey: ['reports', 'open'], queryFn: () => listReports({ status: 'open' }) });
   const { data: pendingVerifications } = useQuery({ queryKey: ['verifications', 'pending'], queryFn: listVerificationRequests });
 
@@ -76,7 +78,7 @@ export default function AdminDashboard() {
                     </AppText>
                   </View>
 
-                  <Avatar name={user?.fullName ?? 'Root Administrator'} size={56} role="admin" />
+                  <Avatar name={user?.fullName ?? 'Root Administrator'} uri={profile?.avatarUrl} size={56} role="admin" />
                 </View>
               </View>
             </View>

@@ -163,7 +163,7 @@ export default function StaffDashboard() {
             <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0 }}>
                 <View style={{ flexShrink: 0 }}>
-                  <Avatar name={fullName} size={isDesktop ? 56 : 46} role="staff" />
+                  <Avatar name={fullName} uri={profile?.avatarUrl} size={isDesktop ? 56 : 46} role="staff" />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

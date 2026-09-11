@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import * as DocumentPicker from 'expo-document-picker';
@@ -62,6 +62,28 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
  async function handlePickFile() {
+ if (Platform.OS === 'web' && typeof document !== 'undefined') {
+ const input = document.createElement('input');
+ input.type = 'file';
+ input.accept = '.pdf,.zip,.rar,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,image/*';
+ input.style.display = 'none';
+ document.body.appendChild(input);
+ input.onchange = (e: Event) => {
+ const file = (e.target as HTMLInputElement).files?.[0];
+ document.body.removeChild(input);
+ if (!file) return;
+ setSelectedFile({
+ name: file.name,
+ size: file.size,
+ mimeType: file.type,
+ file: file,
+ });
+ if (errorMessage) setErrorMessage(null);
+ };
+ input.click();
+ return;
+ }
+
  try {
  const result = await DocumentPicker.getDocumentAsync({
  type: [
@@ -112,6 +134,10 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  }
  if (!courseCode.trim()) {
  setErrorMessage('Please enter the target course code (e.g. CSC 301).');
+ return;
+ }
+ if (!selectedFile) {
+ setErrorMessage('Please attach a document or file to share.');
  return;
  }
 

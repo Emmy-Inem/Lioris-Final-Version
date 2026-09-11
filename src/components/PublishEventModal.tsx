@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { Modal, Pressable, ScrollView, View } from'react-native';
+import { Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from'expo-image';
 import * as ImagePicker from'expo-image-picker';
 import { Ionicons } from'@expo/vector-icons';
@@ -39,15 +39,42 @@ export function PublishEventModal({ visible, onClose, onPublish }: PublishEventM
  const [bannerUri, setBannerUri] = useState<string | null>(null);
 
  async function pickBanner() {
- const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
- if (!permission.granted) return;
- const result = await ImagePicker.launchImageLibraryAsync({
- mediaTypes: ImagePicker.MediaTypeOptions.Images,
- allowsEditing: true,
- aspect: [16, 9],
- quality: 0.8,
- });
- if (!result.canceled && result.assets[0]) setBannerUri(result.assets[0].uri);
+   if (Platform.OS === 'web' && typeof document !== 'undefined') {
+     const input = document.createElement('input');
+     input.type = 'file';
+     input.accept = 'image/*';
+     input.style.display = 'none';
+     document.body.appendChild(input);
+     input.onchange = (e: Event) => {
+       const file = (e.target as HTMLInputElement).files?.[0];
+       document.body.removeChild(input);
+       if (!file) return;
+       const reader = new FileReader();
+       reader.onload = (ev) => {
+         const dataUrl = ev.target?.result as string;
+         if (dataUrl) {
+           setBannerUri(dataUrl);
+           haptics.light();
+         }
+       };
+       reader.readAsDataURL(file);
+     };
+     input.click();
+     return;
+   }
+
+   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+   if (!permission.granted) return;
+   const result = await ImagePicker.launchImageLibraryAsync({
+     mediaTypes: ImagePicker.MediaTypeOptions.Images,
+     allowsEditing: true,
+     aspect: [16, 9],
+     quality: 0.8,
+   });
+   if (!result.canceled && result.assets[0]) {
+     setBannerUri(result.assets[0].uri);
+     haptics.light();
+   }
  }
 
  async function handleHost() {

@@ -168,7 +168,7 @@ export default function AlumniDashboard() {
           <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
             <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0, width: '100%' }}>
-                <Avatar name={fullName} size={isDesktop ? 52 : 44} role="alumni" />
+                <Avatar name={fullName} uri={profile?.avatarUrl} size={isDesktop ? 52 : 44} role="alumni" />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <AppText

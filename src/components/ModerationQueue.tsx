@@ -80,30 +80,41 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  if (!actionModalReport) return;
  haptics.medium();
  const report = actionModalReport;
- let actionLabel = 'Content removed and warning issued';
- let targetUserId = report.reporterId;
+    let actionLabel = 'Content removed and warning issued';
+    let targetUserId: string | null = null;
+    if (report.targetType === 'user') {
+      targetUserId = report.targetId;
+    }
 
- try {
- const { supabase } = await import('@/api/supabase');
+    try {
+      const { supabase } = await import('@/api/supabase');
 
- // Execute targeted removal if post
- if (report.targetType === 'post' && report.targetId) {
- if (punishmentType === 'takedown' || punishmentType === 'permaban') {
- await deletePost(report.targetId);
- actionLabel = 'Post purged from campus feed';
- }
- }
+      // Execute targeted removal if post, and identify the post's author as the violator
+      if (report.targetType === 'post' && report.targetId) {
+        try {
+          const { data: postRow } = await supabase.from('posts').select('author_id').eq('id', report.targetId).maybeSingle();
+          if (postRow?.author_id) {
+            targetUserId = postRow.author_id;
+          }
+        } catch {
+          // ignore
+        }
 
- // If user ban/suspension or reported user target, enforce is_suspended on target user profile via RPC
- if (punishmentType === 'permaban' || punishmentType === 'shadowban' || report.targetType === 'user') {
- if (targetUserId && targetUserId !== 'unknown') {
- await supabase.rpc('suspend_user_account', {
- p_target_user_id: targetUserId,
- p_reason: adminModNote.trim() || `Punishment for report: ${report.reason}`,
- });
- }
- }
-      await resolveReport(report.id, 'resolved');
+        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+          await deletePost(report.targetId);
+          actionLabel = 'Post purged from campus feed';
+        }
+      }
+
+      // If user ban/suspension or reported user target, enforce is_suspended on target user profile via RPC
+      if (punishmentType === 'permaban' || punishmentType === 'shadowban' || report.targetType === 'user') {
+        if (targetUserId && targetUserId !== 'unknown') {
+          await supabase.rpc('suspend_user_account', {
+            p_target_user_id: targetUserId,
+            p_reason: adminModNote.trim() || `Punishment for report: ${report.reason}`,
+          });
+        }
+      }await resolveReport(report.id, 'resolved');
 
       recordAuditLogEntry({
  action: 'report_resolved',

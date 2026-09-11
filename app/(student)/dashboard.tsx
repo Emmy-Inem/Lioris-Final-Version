@@ -23,7 +23,8 @@ import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useCampusScope } from '@/hooks/useCampusScope';
-import { getMyProfile, updateProfileImages } from '@/api/profile';
+import * as ImagePicker from 'expo-image-picker';
+import { getMyProfile, updateProfileImages, uploadAvatarImage, uploadCoverImage } from '@/api/profile';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
 import { listResources } from '@/api/resources';
@@ -103,12 +104,20 @@ export default function StudentDashboard() {
   });
 
   const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Student';
-  const activeCover = COVER_PRESETS.find((c) => c.id === profile?.coverUrl)?.src ?? require('../../assets/images/campus_students_photo.jpg');
+  const activeCover = profile?.coverUrl
+    ? (COVER_PRESETS.find((c) => c.id === profile.coverUrl)?.src
+       ?? (profile.coverUrl.startsWith('http') ? { uri: profile.coverUrl } : null)
+       ?? require('../../assets/images/campus_students_photo.jpg'))
+    : require('../../assets/images/campus_students_photo.jpg');
+
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   async function handleSelectAvatar(presetId: string) {
     if (!user) return;
     await updateProfileImages(user.id, { avatarUrl: presetId });
     await queryClient.invalidateQueries({ queryKey: ['profile'] });
+    await queryClient.invalidateQueries({ queryKey: ['feed'] });
     setPhotoPickerOpen(false);
   }
 
@@ -117,6 +126,128 @@ export default function StudentDashboard() {
     await updateProfileImages(user.id, { coverUrl: presetId });
     await queryClient.invalidateQueries({ queryKey: ['profile'] });
     setPhotoPickerOpen(false);
+  }
+
+  async function handlePickCustomAvatar() {
+    if (!user) return;
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.onchange = async (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        document.body.removeChild(input);
+        if (!file) return;
+        setUploadingAvatar(true);
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const ext = file.name.split('.').pop() || 'jpg';
+          const publicUrl = await uploadAvatarImage(user.id, arrayBuffer, ext);
+          await updateProfileImages(user.id, { avatarUrl: publicUrl });
+          await queryClient.invalidateQueries({ queryKey: ['profile'] });
+          await queryClient.invalidateQueries({ queryKey: ['feed'] });
+          setPhotoPickerOpen(false);
+          Alert.alert('Photo Uploaded', 'Your profile avatar has been updated.');
+        } catch (err: any) {
+          Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
+        } finally {
+          setUploadingAvatar(false);
+        }
+      };
+      input.click();
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please grant photo library access.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      setUploadingAvatar(true);
+      try {
+        const res = await fetch(result.assets[0].uri);
+        const blob = await res.blob();
+        const publicUrl = await uploadAvatarImage(user.id, blob, 'jpg');
+        await updateProfileImages(user.id, { avatarUrl: publicUrl });
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        await queryClient.invalidateQueries({ queryKey: ['feed'] });
+        setPhotoPickerOpen(false);
+        Alert.alert('Photo Uploaded', 'Your profile avatar has been updated.');
+      } catch (err: any) {
+        Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
+      } finally {
+        setUploadingAvatar(false);
+      }
+    }
+  }
+
+  async function handlePickCustomCover() {
+    if (!user) return;
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.onchange = async (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        document.body.removeChild(input);
+        if (!file) return;
+        setUploadingCover(true);
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const ext = file.name.split('.').pop() || 'jpg';
+          const publicUrl = await uploadCoverImage(user.id, arrayBuffer, ext);
+          await updateProfileImages(user.id, { coverUrl: publicUrl });
+          await queryClient.invalidateQueries({ queryKey: ['profile'] });
+          setPhotoPickerOpen(false);
+          Alert.alert('Cover Updated', 'Your campus banner has been updated.');
+        } catch (err: any) {
+          Alert.alert('Upload Failed', err?.message || 'Could not upload cover image.');
+        } finally {
+          setUploadingCover(false);
+        }
+      };
+      input.click();
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please grant photo library access.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      setUploadingCover(true);
+      try {
+        const res = await fetch(result.assets[0].uri);
+        const blob = await res.blob();
+        const publicUrl = await uploadCoverImage(user.id, blob, 'jpg');
+        await updateProfileImages(user.id, { coverUrl: publicUrl });
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        setPhotoPickerOpen(false);
+        Alert.alert('Cover Updated', 'Your campus banner has been updated.');
+      } catch (err: any) {
+        Alert.alert('Upload Failed', err?.message || 'Could not upload cover image.');
+      } finally {
+        setUploadingCover(false);
+      }
+    }
   }
 
   function handleOpenPortal(url: string) {
@@ -223,7 +354,7 @@ export default function StudentDashboard() {
           <View style={{ padding: isDesktop ? spacing.lg : 14, backgroundColor: colors.surface }}>
             <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} size={48} />
+                <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} uri={profile?.avatarUrl} size={48} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 18 : 16, lineHeight: isDesktop ? 22 : 20 }}>
@@ -920,8 +1051,30 @@ export default function StudentDashboard() {
             </View>
 
             <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
+              {/* Custom Upload Buttons */}
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+                <View style={{ flex: 1 }}>
+                  <AppButton
+                    label={uploadingAvatar ? 'Uploading...' : '📷 Upload DP'}
+                    variant="secondary"
+                    onPress={handlePickCustomAvatar}
+                    loading={uploadingAvatar}
+                    fullWidth
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppButton
+                    label={uploadingCover ? 'Uploading...' : '🖼️ Upload Cover'}
+                    variant="secondary"
+                    onPress={handlePickCustomCover}
+                    loading={uploadingCover}
+                    fullWidth
+                  />
+                </View>
+              </View>
+
               <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
-                CHOOSE AVATAR PHOTO
+                OR CHOOSE AVATAR PRESET
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
                 {AVATAR_PRESETS.map((preset) => {

@@ -1,5 +1,5 @@
-import React, { useState } from'react';
-import { Pressable, View } from'react-native';
+import React, { useState } from 'react';
+import { Platform, Pressable, View } from 'react-native';
 import { Image } from'expo-image';
 import * as ImagePicker from'expo-image-picker';
 import { Ionicons } from'@expo/vector-icons';
@@ -21,6 +21,27 @@ export default function UploadPhotoScreen() {
  const [submitting, setSubmitting] = useState(false);
 
  async function pickFromLibrary() {
+ if (Platform.OS === 'web' && typeof document !== 'undefined') {
+ const input = document.createElement('input');
+ input.type = 'file';
+ input.accept = 'image/*';
+ input.style.display = 'none';
+ document.body.appendChild(input);
+ input.onchange = (e: Event) => {
+ const file = (e.target as HTMLInputElement).files?.[0];
+ document.body.removeChild(input);
+ if (!file) return;
+ const reader = new FileReader();
+ reader.onload = (ev) => {
+ const dataUrl = ev.target?.result as string;
+ if (dataUrl) setPhotoUri(dataUrl);
+ };
+ reader.readAsDataURL(file);
+ };
+ input.click();
+ return;
+ }
+
  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
  if (!permission.granted) return;
  const result = await ImagePicker.launchImageLibraryAsync({

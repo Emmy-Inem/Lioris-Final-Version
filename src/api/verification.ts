@@ -41,9 +41,18 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
  }
 
  if (authUserId) {
- if (payload.photoBlob) {
+ let photoBlobToUpload = payload.photoBlob;
+ if (!photoBlobToUpload && payload.documentPhotoUri) {
+ try {
+ const resp = await fetch(payload.documentPhotoUri);
+ photoBlobToUpload = await resp.blob();
+ } catch {
+ // keep URI as is
+ }
+ }
+ if (photoBlobToUpload) {
  const filePath = `${authUserId}/${reqId}.jpg`;
- await supabase.storage.from('verifications').upload(filePath, payload.photoBlob, {
+ await supabase.storage.from('verifications').upload(filePath, photoBlobToUpload, {
  contentType: 'image/jpeg',
  upsert: true,
  });
@@ -162,6 +171,11 @@ export async function respondToVerificationRequest(
  await supabase
  .from('profiles')
  .update({ verification_status: 'verified' })
+ .eq('id', reqRow.user_id);
+ } else if (status === 'rejected' && reqRow?.user_id) {
+ await supabase
+ .from('profiles')
+ .update({ verification_status: 'none' })
  .eq('id', reqRow.user_id);
  }
  } catch (err) {

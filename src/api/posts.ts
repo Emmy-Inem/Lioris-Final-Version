@@ -128,6 +128,7 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
         authorId: row.author_id,
         authorName: row.profiles?.full_name || row.author_name || 'Campus Student',
         authorRole: (row.profiles?.role || row.author_role || 'student') as any,
+        authorAvatarUrl: row.profiles?.avatar_url || null,
         title: row.title,
         content: row.content,
         category: row.category || 'General',
@@ -189,6 +190,7 @@ export async function listMyPosts(userId?: string): Promise<Post[]> {
           authorId: row.author_id,
           authorName: row.profiles?.full_name || 'You',
           authorRole: (row.profiles?.role || 'student') as any,
+          authorAvatarUrl: row.profiles?.avatar_url || null,
           title: row.title,
           content: row.content,
           category: row.category || 'General',
@@ -378,14 +380,16 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  authorName = authorName || 'Campus Student';
  authorRole = authorRole || 'student';
 
- if (!authorCampus) {
- const { data: profile } = await supabase
- .from('profiles')
- .select('campus_code')
- .eq('id', authorId)
- .maybeSingle();
- authorCampus = profile?.campus_code || 'GLOBAL';
- }
+  let authorAvatarUrl: string | null = authData?.user?.user_metadata?.avatar_url || null;
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('campus_code, avatar_url')
+    .eq('id', authorId)
+    .maybeSingle();
+  if (profile?.avatar_url) authorAvatarUrl = profile.avatar_url;
+  if (!authorCampus) {
+    authorCampus = profile?.campus_code || 'GLOBAL';
+  }
 
  const isExplicitlyGlobal = scopeVisibility === 'global' || payload.visibilityScope === 'global';
  const campusCode = authorCampus || 'GLOBAL';
@@ -418,6 +422,7 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  authorId,
  authorName,
  authorRole: authorRole as any,
+ authorAvatarUrl: authorAvatarUrl || null,
  likesCount: 0,
  commentsCount: 0,
  repostsCount: 0,

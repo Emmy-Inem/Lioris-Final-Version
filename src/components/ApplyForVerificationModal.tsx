@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from'react';
-import { Modal, Pressable, View } from'react-native';
-import { Image } from'expo-image';
-import * as ImagePicker from'expo-image-picker';
-import { Ionicons } from'@expo/vector-icons';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
-import { AppText } from'./AppText';
-import { AppTextField } from'./AppTextField';
-import { AppButton } from'./AppButton';
-import { useTheme } from'@/theme/ThemeProvider';
-import { haptics } from'@/utils/haptics';
+import React, { useEffect, useState } from 'react';
+import { Modal, Platform, Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { AppText } from './AppText';
+import { AppTextField } from './AppTextField';
+import { AppButton } from './AppButton';
+import { useTheme } from '@/theme/ThemeProvider';
+import { haptics } from '@/utils/haptics';
 
 const DOCUMENT_TYPES = ['Student ID', 'Admission Letter', 'Staff ID', 'Alumni Certificate'] as const;
 
@@ -55,6 +55,31 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
  }));
 
  async function pickDocumentPhoto() {
+ if (Platform.OS === 'web' && typeof document !== 'undefined') {
+ const input = document.createElement('input');
+ input.type = 'file';
+ input.accept = 'image/*';
+ input.style.display = 'none';
+ document.body.appendChild(input);
+ input.onchange = (e: Event) => {
+ const file = (e.target as HTMLInputElement).files?.[0];
+ document.body.removeChild(input);
+ if (!file) return;
+ const reader = new FileReader();
+ reader.onload = (ev) => {
+ const dataUrl = ev.target?.result as string;
+ if (dataUrl) {
+ setDocumentPhotoUri(dataUrl);
+ haptics.light();
+ if (errorMessage) setErrorMessage(null);
+ }
+ };
+ reader.readAsDataURL(file);
+ };
+ input.click();
+ return;
+ }
+
  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
  if (!permission.granted) return;
  const result = await ImagePicker.launchImageLibraryAsync({
@@ -64,6 +89,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
  if (!result.canceled && result.assets[0]) {
  setDocumentPhotoUri(result.assets[0].uri);
  if (errorMessage) setErrorMessage(null);
+ haptics.light();
  }
  }
 
