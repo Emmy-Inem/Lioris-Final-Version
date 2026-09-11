@@ -96,16 +96,16 @@ export function CampusRadioPlayer() {
         style={[
           styles.minimizedPill,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.70)' : 'rgba(255, 255, 255, 0.75)',
-            borderColor: radioState.isPlaying ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.10)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+            borderColor: radioState.isPlaying ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
           },
           Platform.OS === 'web' &&
             ({
               backdropFilter: 'blur(20px) saturate(180%)',
               WebkitBackdropFilter: 'blur(20px) saturate(180%)',
               boxShadow: isDark
-                ? 'inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 14px rgba(0,0,0,0.35)'
-                : 'inset 0 1px 1px #fff, 0 4px 14px rgba(0,0,0,0.08)',
+                ? 'inset 0 1px 0 rgba(255,255,255,0.05)'
+                : 'inset 0 1px 1px #fff',
             } as any),
         ]}
       >

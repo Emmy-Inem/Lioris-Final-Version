@@ -334,16 +334,16 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
           styles.glassPill,
           animatedPillStyle,
           {
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.52)' : 'rgba(255, 255, 255, 0.58)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.65)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.06)',
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(30px) saturate(210%) brightness(108%) contrast(102%)',
-              WebkitBackdropFilter: 'blur(30px) saturate(210%) brightness(108%) contrast(102%)',
+              backdropFilter: 'blur(24px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
               boxShadow: isDark
-                ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.45), inset 0 0 14px 0 rgba(255, 255, 255, 0.04), 0 20px 40px -8px rgba(0, 0, 0, 0.55), 0 6px 16px -2px rgba(0, 0, 0, 0.35)'
-                : 'inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.90), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.06), inset 0 0 14px 0 rgba(255, 255, 255, 0.35), 0 18px 38px -6px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.06)',
+                ? 'inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 4px 20px -2px rgba(0, 0, 0, 0.35)'
+                : 'inset 0 1px 0 0 rgba(255, 255, 255, 0.80), 0 4px 20px -2px rgba(15, 23, 42, 0.06)',
             } as any),
         ]}
       >
@@ -351,25 +351,23 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
         {Platform.OS !== 'web' && (
           <BlurView
             intensity={85}
-            tint={isDark ? 'systemThinMaterialDark' : 'systemThinMaterialLight'}
+            tint={isDark ? 'dark' : 'light'}
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[StyleSheet.absoluteFill, { borderRadius: PILL_HEIGHT / 2, overflow: 'hidden' }]}
           />
         )}
 
-        {/* Liquid Surface Meniscus Reflection Overlay */}
-        <LinearGradient
-          colors={
-            isDark
-              ? ['rgba(255, 255, 255, 0.14)', 'rgba(255, 255, 255, 0.03)', 'transparent', 'rgba(255, 255, 255, 0.06)']
-              : ['rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.18)', 'transparent', 'rgba(255, 255, 255, 0.22)']
-          }
-          locations={[0, 0.35, 0.7, 1]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={[StyleSheet.absoluteFill, { borderRadius: PILL_HEIGHT / 2, overflow: 'hidden' }]}
-          pointerEvents="none"
-        />
+        {/* Liquid Surface Meniscus Reflection Overlay - only in light mode to avoid dark mode white glow */}
+        {!isDark && (
+          <LinearGradient
+            colors={['rgba(255, 255, 255, 0.45)', 'rgba(255, 255, 255, 0.08)', 'transparent']}
+            locations={[0, 0.3, 1]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={[StyleSheet.absoluteFill, { borderRadius: PILL_HEIGHT / 2, overflow: 'hidden' }]}
+            pointerEvents="none"
+          />
+        )}
 
         <Animated.View style={[styles.trackContainer, animatedTrackStyle]}>
           {/* Active Sliding Selector Pill - strictly NO glow */}
@@ -444,10 +442,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: PILL_PADDING_H,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 0,
   },
   trackContainer: {
     position: 'relative',
@@ -464,10 +462,10 @@ const styles = StyleSheet.create({
     zIndex: 1,
     // Strictly NO glow or blurred neon shadows - crisp physical depth
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 0,
   },
   tabItemContainer: {
     position: 'absolute',

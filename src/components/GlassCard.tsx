@@ -35,11 +35,11 @@ export function GlassCard({
         styles.shadowWrapper,
         {
           borderRadius: cornerRadius,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: isDark ? 0.28 : 0.08,
-          shadowRadius: 18,
-          elevation: 6,
+          shadowColor: 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
         },
         style,
       ]}
@@ -50,16 +50,17 @@ export function GlassCard({
           styles.container,
           {
             borderRadius: cornerRadius,
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.65)',
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.52)' : 'rgba(255, 255, 255, 0.58)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : colors.border,
+            borderWidth: 1,
+            backgroundColor: isDark ? 'rgba(19, 30, 49, 0.82)' : 'rgba(255, 255, 255, 0.92)',
           },
           Platform.OS === 'web' &&
             ({
-              backdropFilter: 'blur(30px) saturate(210%) brightness(108%) contrast(102%)',
-              WebkitBackdropFilter: 'blur(30px) saturate(210%) brightness(108%) contrast(102%)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
               boxShadow: isDark
-                ? 'inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.40), 0 16px 36px -6px rgba(0, 0, 0, 0.45)'
-                : 'inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.90), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.05), 0 16px 36px -6px rgba(15, 23, 42, 0.10)',
+                ? 'inset 0 1px 0 0 rgba(255, 255, 255, 0.04)'
+                : 'inset 0 1px 0 0 rgba(255, 255, 255, 0.70)',
             } as any),
         ]}
       >
@@ -67,21 +68,17 @@ export function GlassCard({
         {Platform.OS !== 'web' && (
           <BlurView
             intensity={intensity}
-            tint={isDark ? 'systemThinMaterialDark' : 'systemThinMaterialLight'}
+            tint={isDark ? 'dark' : 'light'}
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[StyleSheet.absoluteFill, { borderRadius: cornerRadius, overflow: 'hidden' }]}
           />
         )}
 
-        {/* Liquid Surface Meniscus Reflection Overlay */}
-        {highlight && (
+        {/* Liquid Surface Meniscus Reflection Overlay - only in light mode for crisp physical glass depth without dark mode white glow */}
+        {highlight && !isDark && (
           <LinearGradient
-            colors={
-              isDark
-                ? ['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.03)', 'transparent', 'rgba(255, 255, 255, 0.05)']
-                : ['rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.16)', 'transparent', 'rgba(255, 255, 255, 0.18)']
-            }
-            locations={[0, 0.35, 0.7, 1]}
+            colors={['rgba(255, 255, 255, 0.35)', 'rgba(255, 255, 255, 0.05)', 'transparent']}
+            locations={[0, 0.25, 1]}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={[StyleSheet.absoluteFill, { borderRadius: cornerRadius, overflow: 'hidden' }]}

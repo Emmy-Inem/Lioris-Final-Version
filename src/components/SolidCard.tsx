@@ -43,7 +43,7 @@ export function SolidCard({
         {
           borderRadius: cornerRadius,
           backgroundColor: defaultBg,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : colors.border,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : colors.border,
           borderWidth: 1,
           overflow: 'hidden',
         },
@@ -53,7 +53,7 @@ export function SolidCard({
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             boxShadow: isDark
-              ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+              ? 'inset 0 1px 0 rgba(255, 255, 255, 0.04)'
               : 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
           } as any),
         padded && { padding: spacing.lg },

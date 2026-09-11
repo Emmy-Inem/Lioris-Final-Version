@@ -216,10 +216,10 @@ export function VerifiedCampusLocationPicker({
                 padding: spacing.sm,
                 maxHeight: 260,
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 4,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+                elevation: 2,
               }}
             >
               {/* Category Filter Pills */}

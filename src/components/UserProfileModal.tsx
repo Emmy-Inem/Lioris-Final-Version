@@ -216,10 +216,10 @@ export function UserProfileModal({
  alignItems: 'center',
  justifyContent: 'center',
  shadowColor: '#000',
- shadowOffset: { width: 0, height: 4 },
- shadowOpacity: 0.18,
- shadowRadius: 8,
- elevation: 6,
+ shadowOffset: { width: 0, height: 2 },
+ shadowOpacity: 0.06,
+ shadowRadius: 4,
+ elevation: 1,
  }}
  >
  <Avatar name={effectiveName} uri={effectiveAvatar} size={80} role={effectiveRole} />

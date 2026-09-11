@@ -113,7 +113,7 @@ export function AnnouncementsWidget({
               borderWidth: 1,
               borderColor: topAnnouncement.priority === 'critical'
                 ? (isDark ? 'rgba(239, 68, 68, 0.40)' : 'rgba(239, 68, 68, 0.30)')
-                : (isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.80)'),
+                : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'),
               borderLeftWidth: 4,
               borderLeftColor: topAnnouncement.priority === 'critical' ? '#DC2626' : colors.brandPrimary,
               gap: spacing.sm,
@@ -123,8 +123,8 @@ export function AnnouncementsWidget({
                 backdropFilter: 'blur(20px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                 boxShadow: isDark
-                  ? 'inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0,0,0,0.30)'
-                  : 'inset 0 1px 1px #fff, 0 4px 12px rgba(0,0,0,0.06)',
+                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.04)'
+                  : 'inset 0 1px 1px #fff',
               } as any),
           ]}
         >

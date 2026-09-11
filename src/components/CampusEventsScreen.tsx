@@ -244,7 +244,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                   backgroundColor: active
                     ? colors.brandPrimary
                     : isDark
-                    ? 'rgba(15, 23, 42, 0.65)'
+                    ? 'rgba(30, 41, 59, 0.60)'
                     : 'rgba(255, 255, 255, 0.70)',
                   paddingHorizontal: 12,
                   paddingVertical: 6,
@@ -253,16 +253,16 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                   borderColor: active
                     ? colors.brandPrimary
                     : isDark
-                    ? 'rgba(255, 255, 255, 0.16)'
-                    : 'rgba(255, 255, 255, 0.75)',
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.08)',
                 },
                 Platform.OS === 'web' && !active &&
                   ({
                     backdropFilter: 'blur(20px) saturate(180%)',
                     WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                     boxShadow: isDark
-                      ? 'inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.25)'
-                      : 'inset 0 1px 1.5px rgba(255, 255, 255, 0.90), 0 2px 8px rgba(15, 23, 42, 0.05)',
+                      ? 'inset 0 1px 0 rgba(255, 255, 255, 0.04)'
+                      : 'inset 0 1px 1px rgba(255, 255, 255, 0.80)',
                   } as any),
               ]}
             >

@@ -127,7 +127,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               right: isDesktop ? 32 : 16,
               maxWidth: isDesktop ? 420 : undefined,
               backgroundColor: isDark ? '#1E293B' : '#0F172A',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.08)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.08)',
             },
           ]}
         >
@@ -184,10 +184,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
     overflow: 'hidden',
   },
   toastInner: {

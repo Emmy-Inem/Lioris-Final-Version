@@ -217,9 +217,9 @@ export default function ResourcesScreen() {
               paddingHorizontal: 12,
               paddingVertical: 6,
               shadowColor: colors.brandPrimary,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.3,
-              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.15,
+              shadowRadius: 3,
             }}
           >
             <Ionicons name="cloud-upload-outline" size={14} color="#FFFFFF" />

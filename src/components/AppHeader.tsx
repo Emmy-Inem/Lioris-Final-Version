@@ -108,8 +108,8 @@ export function AppHeader() {
                   backdropFilter: 'blur(16px) saturate(180%)',
                   WebkitBackdropFilter: 'blur(16px) saturate(180%)',
                   boxShadow: isDark
-                    ? 'inset 0 1px 1px rgba(255, 255, 255, 0.15)'
-                    : 'inset 0 1px 1px rgba(255, 255, 255, 0.60), 0 2px 6px rgba(124, 58, 237, 0.08)',
+                    ? 'none'
+                    : 'inset 0 1px 1px rgba(255, 255, 255, 0.60)',
                 } as any),
             ]}
           >
@@ -142,9 +142,9 @@ export function AppHeader() {
                 width: 34,
                 height: 34,
                 borderRadius: 17,
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
+                backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
                 borderWidth: 1,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
@@ -154,8 +154,8 @@ export function AppHeader() {
                   backdropFilter: 'blur(16px)',
                   WebkitBackdropFilter: 'blur(16px)',
                   boxShadow: isDark
-                    ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12)'
-                    : 'inset 0 1px 1px #fff, 0 2px 6px rgba(0,0,0,0.06)',
+                    ? 'none'
+                    : 'inset 0 1px 1px #fff',
                 } as any),
             ]}
           >
@@ -204,9 +204,9 @@ export function AppHeader() {
               width: 34,
               height: 34,
               borderRadius: 17,
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
               borderWidth: 1,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
               alignItems: 'center',
               justifyContent: 'center',
             },
@@ -215,8 +215,8 @@ export function AppHeader() {
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
                 boxShadow: isDark
-                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12)'
-                  : 'inset 0 1px 1px #fff, 0 2px 6px rgba(0,0,0,0.06)',
+                  ? 'none'
+                  : 'inset 0 1px 1px #fff',
               } as any),
           ]}
         >
@@ -237,9 +237,9 @@ export function AppHeader() {
               width: 34,
               height: 34,
               borderRadius: 17,
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.75)',
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
               borderWidth: 1,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
               alignItems: 'center',
               justifyContent: 'center',
             },
@@ -248,8 +248,8 @@ export function AppHeader() {
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
                 boxShadow: isDark
-                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.12)'
-                  : 'inset 0 1px 1px #fff, 0 2px 6px rgba(0,0,0,0.06)',
+                  ? 'none'
+                  : 'inset 0 1px 1px #fff',
               } as any),
           ]}
         >

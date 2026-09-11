@@ -189,8 +189,8 @@ export const darkColors: ThemeColors = {
  // frostedCard dark: vertical gradient 92% slate-900 -> 96% deep navy
  glassSurfaceTop: 'rgba(23, 37, 66, 0.94)',
  glassSurfaceBottom: 'rgba(12, 22, 42, 0.97)',
- glassBorderStart: 'rgba(255, 255, 255, 0.14)',
- glassBorderEnd: 'rgba(255, 255, 255, 0.06)',
+ glassBorderStart: 'rgba(255, 255, 255, 0.08)',
+ glassBorderEnd: 'rgba(255, 255, 255, 0.04)',
  glassShadowColor: 'rgba(0, 0, 0, 0.15)',
 
  textPrimary: '#FFFFFF',
@@ -214,8 +214,8 @@ export const darkColors: ThemeColors = {
  lavenderBg: 'rgba(109, 93, 174, 0.26)',
  lavenderText: '#D8B4FE',
 
- border: 'rgba(255, 255, 255, 0.12)',
- divider: 'rgba(255, 255, 255, 0.08)',
+ border: 'rgba(255, 255, 255, 0.08)',
+ divider: 'rgba(255, 255, 255, 0.06)',
 
  success: '#22C55E',
  warning: '#FBBF24',
@@ -228,8 +228,8 @@ export const darkColors: ThemeColors = {
  tabActive: '#2DD4BF',
  tabActivePillBg: 'rgba(45, 212, 191, 0.18)',
 
- glowBlobPrimary: 'rgba(45, 212, 191, 0.16)',
- glowBlobAccent: 'rgba(251, 146, 60, 0.10)',
+ glowBlobPrimary: 'rgba(45, 212, 191, 0.10)',
+ glowBlobAccent: 'rgba(251, 146, 60, 0.06)',
 } as const;
 
 export const roleBadgeColors = {

@@ -102,9 +102,9 @@ export function VerifiedBadge({
               borderColor: colors.border,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 16,
-              elevation: 10,
+              shadowOpacity: 0.1,
+              shadowRadius: 10,
+              elevation: 3,
             }}
           >
             <View style={{ marginBottom: spacing.md, transform: [{ scale: 1.6 }] }}>

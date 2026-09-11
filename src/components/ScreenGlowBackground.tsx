@@ -34,9 +34,9 @@ export function ScreenGlowBackground({ children }: { children: React.ReactNode }
               height: '420px',
               borderRadius: '50%',
               background: isDark
-                ? 'radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, rgba(15, 23, 42, 0) 70%)'
-                : 'radial-gradient(circle, rgba(167, 139, 250, 0.16) 0%, rgba(255, 255, 255, 0) 70%)',
-              filter: 'blur(50px)',
+                ? 'radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, rgba(15, 23, 42, 0) 70%)'
+                : 'radial-gradient(circle, rgba(167, 139, 250, 0.08) 0%, rgba(255, 255, 255, 0) 70%)',
+              filter: 'blur(60px)',
             }}
           />
           {/* Bottom-Left Soft Ambient Glass Glow */}
@@ -49,9 +49,9 @@ export function ScreenGlowBackground({ children }: { children: React.ReactNode }
               height: '380px',
               borderRadius: '50%',
               background: isDark
-                ? 'radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(15, 23, 42, 0) 70%)'
-                : 'radial-gradient(circle, rgba(147, 197, 253, 0.18) 0%, rgba(255, 255, 255, 0) 70%)',
-              filter: 'blur(50px)',
+                ? 'radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, rgba(15, 23, 42, 0) 70%)'
+                : 'radial-gradient(circle, rgba(147, 197, 253, 0.09) 0%, rgba(255, 255, 255, 0) 70%)',
+              filter: 'blur(60px)',
             }}
           />
         </div>

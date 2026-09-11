@@ -17,7 +17,7 @@ interface ScreenContainerProps extends ViewProps {
 export function ScreenContainer({
  edges = ['top'],
  noPadding,
- glow = true,
+ glow = false,
  scrollable = false,
  fluidWidth = false,
  contentContainerStyle,

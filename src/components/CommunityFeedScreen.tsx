@@ -370,7 +370,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   backgroundColor: selected
                     ? colors.brandPrimary
                     : isDark
-                    ? 'rgba(15, 23, 42, 0.65)'
+                    ? 'rgba(30, 41, 59, 0.60)'
                     : 'rgba(255, 255, 255, 0.70)',
                   borderRadius: radius.pill,
                   paddingHorizontal: 13,
@@ -379,16 +379,16 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   borderColor: selected
                     ? colors.brandPrimary
                     : isDark
-                    ? 'rgba(255, 255, 255, 0.16)'
-                    : 'rgba(255, 255, 255, 0.75)',
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.08)',
                 },
                 Platform.OS === 'web' && !selected &&
                   ({
                     backdropFilter: 'blur(20px) saturate(180%)',
                     WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                     boxShadow: isDark
-                      ? 'inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.25)'
-                      : 'inset 0 1px 1.5px rgba(255, 255, 255, 0.90), 0 2px 8px rgba(15, 23, 42, 0.05)',
+                      ? 'inset 0 1px 0 rgba(255, 255, 255, 0.04)'
+                      : 'inset 0 1px 1px rgba(255, 255, 255, 0.80)',
                   } as any),
               ]}
             >
@@ -754,10 +754,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.28,
-        shadowRadius: 6,
-        elevation: 8,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+        elevation: 2,
         zIndex: 999,
       }}
     >
