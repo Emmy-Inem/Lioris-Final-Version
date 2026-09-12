@@ -10,7 +10,9 @@ import { AppButton } from '@/components/AppButton';
 import { PublishThreadModal } from '@/components/PublishThreadModal';
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications';
 import { createPost } from '@/api/posts';
+import { getMyProfile } from '@/api/profile';
 import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
+import { useToast } from '@/context/ToastContext';
 
 const RAW_QUICK_COMMANDS: { id: string; title: string; subtitle: string; icon: any; href: string; flagKey?: FeatureKey }[] = [
   { id: 'feed', title: 'Campus Forum & Discussions', subtitle: 'Browse student threads, polls and queries', icon: 'chatbubbles-outline', href: '/(student)/feed' },
@@ -27,18 +29,25 @@ export function DesktopTopBar() {
  const { colors, isDark } = useTheme();
  const { user, switchRole } = useAuth();
   const { flags, isFeatureEnabled } = useFeatureFlags();
- const queryClient = useQueryClient();
- const [composerOpen, setComposerOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [composerOpen, setComposerOpen] = useState(false);
  const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
  const [searchQuery, setSearchQuery] = useState('');
 
- const { data: notifications } = useQuery({
- queryKey: ['notifications', user?.id],
- queryFn: () => listNotifications(),
- enabled: !!user?.id,
- });
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+
+  const { data: notifications } = useQuery({
+    queryKey: ['notifications', user?.id],
+    queryFn: () => listNotifications(),
+    enabled: !!user?.id,
+  });
 
  const unreadNotifications = (notifications ?? []).filter((n: any) => !n.isRead && !n.read);
  const unreadCount = unreadNotifications.length;
@@ -424,13 +433,16 @@ export function DesktopTopBar() {
  <PublishThreadModal
  visible={composerOpen}
  onClose={() => setComposerOpen(false)}
- onPublish={async (payload) => {
- if (!user) return;
- await createPost({
- ...payload,
- });
- setComposerOpen(false);
- }}
+        onPublish={async (payload) => {
+          if (!user) return;
+          await createPost({
+            ...payload,
+            authorInstitutionCode: profile?.institutionCode || 'UI',
+          });
+          await queryClient.invalidateQueries({ queryKey: ['feed'] });
+          toast.success('Forum discussion published successfully!');
+          setComposerOpen(false);
+        }}
  />
  )}
  </View>

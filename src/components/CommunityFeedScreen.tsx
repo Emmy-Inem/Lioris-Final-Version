@@ -193,6 +193,7 @@ const CHANNELS = CAMPUS_SUB_FORUMS;
 export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { isFeatureEnabled } = useFeatureFlags();
   const { isDesktop, isWideDesktop } = useResponsive();
   const queryClient = useQueryClient();
@@ -715,6 +716,72 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30, alignItems: 'flex-start' }}>
           {/* Main Feed Column */}
           <View style={{ flex: 1, minWidth: 0 }}>
+            {/* Desktop Screen Title & Actions Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md, flexWrap: 'wrap', gap: spacing.sm }}>
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <AppText weight="bold" style={{ fontSize: 24, lineHeight: 30 }}>
+                    Campus Community Forum
+                  </AppText>
+                  {user?.role === 'admin' && (
+                    <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
+                      <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 10 }}>ADMIN HUB</AppText>
+                    </View>
+                  )}
+                </View>
+                <AppText tone="secondary" variant="caption" style={{ fontSize: 12, marginTop: 2 }}>
+                  {user?.role === 'admin'
+                    ? 'Global campus discourse desk — publish announcements, pin updates, and moderate spaces.'
+                    : 'Connect, ask questions, exchange notes, and participate in campus votes.'}
+                </AppText>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                {/* Scope Switcher for desktop */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    backgroundColor: colors.surface,
+                    borderRadius: radius.pill,
+                    padding: 3,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  {(['campus', 'global'] as const).map((s) => {
+                    const selected = viewScope === s;
+                    return (
+                      <Pressable
+                        key={s}
+                        onPress={() => setViewScope(s)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 5,
+                          borderRadius: radius.pill,
+                          backgroundColor: selected ? colors.brandPrimary : 'transparent',
+                        }}
+                      >
+                        <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
+                          {s === 'campus' ? 'My Campus' : 'Global Network'}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/* Primary New Thread / Broadcast Button */}
+                <AppButton
+                  label={user?.role === 'admin' ? '+ Post Admin Thread' : '+ Start Discussion'}
+                  variant="primary"
+                  icon="add-circle-outline"
+                  onPress={() => {
+                    haptics.light();
+                    setComposerOpen(true);
+                  }}
+                />
+              </View>
+            </View>
+
             {/* Desktop Channel Pills & Sort Bar */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8, paddingRight: spacing.sm }}>
@@ -874,6 +941,27 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
             {/* Quick Desktop Composer Box */}
             <GlassCard radius={18} padded={false} contentStyle={{ padding: spacing.md }} style={{ marginBottom: spacing.md }}>
+              {isAdmin && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: radius.sm,
+                    marginBottom: spacing.sm,
+                    borderWidth: 1,
+                    borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : '#BFDBFE',
+                  }}
+                >
+                  <Ionicons name="shield-checkmark" size={14} color="#3B82F6" />
+                  <AppText variant="caption" weight="bold" style={{ color: '#2563EB', fontSize: 11.5 }}>
+                    🛡️ Posting as Campus Administrator (Verified Official Broadcast Mode)
+                  </AppText>
+                </View>
+              )}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: spacing.sm }}>
                 <Avatar name={user?.fullName || 'User'} uri={profile?.avatarUrl} size={42} />
                 <Pressable
@@ -887,7 +975,11 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <AppText tone="secondary" variant="bodySmall">
-                    {selectedChannel ? `What's on your mind for ${activeSubForum.slug}? Share with cohort...` : "What's on your mind? Share an update or start a thread..."}
+                    {isAdmin
+                      ? 'Publish an official campus announcement or thread...'
+                      : selectedChannel
+                      ? `What's on your mind for ${activeSubForum.slug}? Share with cohort...`
+                      : "What's on your mind? Share an update or start a thread..."}
                   </AppText>
                 </Pressable>
               </View>
@@ -927,7 +1019,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <AppText variant="caption" weight="bold" tone="inverse">
-                    + Post Thread
+                    {isAdmin ? '+ Post Announcement' : '+ Post Thread'}
                   </AppText>
                 </Pressable>
               </View>
@@ -981,7 +1073,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </View>
 
           {/* Right Sidebar: Hubs, Mentors & Guidelines */}
-          <View style={{ width: isWideDesktop ? 320 : 280, flexShrink: 0, gap: spacing.md }}>
+          <View
+            style={[
+              { width: isWideDesktop ? 320 : 280, flexShrink: 0, gap: spacing.md },
+              Platform.OS === 'web' ? ({ position: 'sticky', top: 16 } as any) : {},
+            ]}
+          >
             {selectedChannel !== null ? (
               <SolidCard radius={18} style={{ padding: spacing.md }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>

@@ -8,6 +8,7 @@ import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
 import { SolidCard } from './SolidCard';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 
@@ -54,6 +55,8 @@ interface PublishThreadModalProps {
 export function PublishThreadModal({ visible, onClose, onPublish }: PublishThreadModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [topic, setTopic] = useState('');
   const [content, setContent] = useState('');
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]>('Academic');
@@ -61,6 +64,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const [customMediaUri, setCustomMediaUri] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pinToTop, setPinToTop] = useState(false);
 
   // Poll state
   const [attachPoll, setAttachPoll] = useState(false);
@@ -99,6 +103,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setPollOptions(['Option A', 'Option B']);
     setGeneratingAi(false);
     setShowGifPicker(false);
+    setPinToTop(false);
     setErrorMessage(null);
   }
 
@@ -194,7 +199,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
         category: channel,
         visibilityScope: visibility === 'Campus Only' ? 'student' : 'global',
         scopeVisibility: visibility === 'Campus Only' ? 'campus' : 'global',
-        sponsored: false,
+        sponsored: isAdmin && pinToTop ? true : false,
         postFormat: 'Thread',
         imageUrl: customMediaUri ?? undefined,
         pollQuestion: attachPoll && pollQuestion.trim() ? pollQuestion.trim() : undefined,
@@ -247,12 +252,56 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="create-outline" size={20} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold">New Post</AppText>
+                <AppText variant="h3" weight="bold">
+                  {isAdmin ? 'Admin Campus Thread / Broadcast' : 'New Post'}
+                </AppText>
               </View>
               <Pressable onPress={onClose} hitSlop={8}>
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
+
+            {/* Admin Broadcast Badge & Controls */}
+            {isAdmin && (
+              <View
+                style={{
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.10)' : '#FEF2F2',
+                  borderRadius: radius.md,
+                  padding: spacing.md,
+                  marginBottom: spacing.md,
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(239, 68, 68, 0.28)' : '#FCA5A5',
+                  gap: 6,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="shield-checkmark" size={16} color="#EF4444" />
+                    <AppText weight="bold" variant="caption" style={{ color: '#EF4444', letterSpacing: 0.5, textTransform: 'uppercase', fontSize: 11 }}>
+                      Official Admin Communication
+                    </AppText>
+                  </View>
+                  <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.pill }}>
+                    <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 9.5 }}>ROOT ADMIN</AppText>
+                  </View>
+                </View>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 11, lineHeight: 15 }}>
+                  Publishing as University Platform Administrator. Your thread will display a verified badge across student, staff, and alumni feeds.
+                </AppText>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    setPinToTop((p) => !p);
+                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, alignSelf: 'flex-start' }}
+                >
+                  <Ionicons name={pinToTop ? 'checkbox' : 'square-outline'} size={18} color={colors.brandPrimary} />
+                  <AppText variant="caption" weight="bold" tone={pinToTop ? 'brand' : 'secondary'} style={{ fontSize: 11.5 }}>
+                    📌 Pin to Top of Campus Forum
+                  </AppText>
+                </Pressable>
+              </View>
+            )}
 
             {/* Optional Headline */}
             <AppTextField

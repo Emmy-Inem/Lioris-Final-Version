@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useViewScope } from '@/hooks/useViewScope';
@@ -11,6 +11,10 @@ import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { LiorisLogo } from '@/components/LiorisLogo';
+import { PublishThreadModal } from '@/components/PublishThreadModal';
+import { createPost } from '@/api/posts';
+import { useToast } from '@/context/ToastContext';
+import { haptics } from '@/utils/haptics';
 import { getMyProfile } from '@/api/profile';
 import { listConversations } from '@/api/messaging';
 import { listNotifications } from '@/api/notifications';
@@ -28,7 +32,10 @@ export function DesktopSidebar() {
  const { user, logout } = useAuth();
  const { scope: viewScope, setScope: setViewScope } = useViewScope();
  const pathname = usePathname();
+ const queryClient = useQueryClient();
+ const toast = useToast();
  const [collapsed, setCollapsed] = useState(false);
+ const [composerOpen, setComposerOpen] = useState(false);
 
  const { data: profile } = useQuery({
  queryKey: ['profile', 'me', user?.id],
@@ -269,6 +276,47 @@ export function DesktopSidebar() {
  )}
  </View>
 
+      {/* Quick Create Thread / Discussion Action Button */}
+      <View style={{ paddingHorizontal: collapsed ? 8 : 14, marginVertical: 8 }}>
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setComposerOpen(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={role === 'admin' ? 'Post official announcement or thread' : 'Start new discussion'}
+          style={({ hovered }: any) => [
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              backgroundColor: colors.brandPrimary,
+              paddingVertical: 9,
+              paddingHorizontal: collapsed ? 0 : 12,
+              borderRadius: radius.pill,
+              height: 40,
+              width: collapsed ? 40 : '100%',
+              alignSelf: 'center',
+              opacity: hovered ? 0.92 : 1,
+            },
+            Platform.OS === 'web' && ({
+              boxShadow: isDark
+                ? '0 2px 10px rgba(59, 130, 246, 0.35)'
+                : '0 2px 8px rgba(37, 99, 235, 0.25)',
+              cursor: 'pointer',
+            } as any),
+          ]}
+        >
+          <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+          {!collapsed && (
+            <AppText variant="bodySmall" weight="bold" style={{ color: '#FFFFFF', fontSize: 12.5 }}>
+              {role === 'admin' ? '+ Post Announcement' : '+ New Thread'}
+            </AppText>
+          )}
+        </Pressable>
+      </View>
+
       {/* Navigation List */}
       <ScrollView
         showsVerticalScrollIndicator={true}
@@ -480,6 +528,24 @@ export function DesktopSidebar() {
           </Pressable>
         </View>
       </View>
+
+      {/* Quick Composer Modal */}
+      {composerOpen && (
+        <PublishThreadModal
+          visible={composerOpen}
+          onClose={() => setComposerOpen(false)}
+          onPublish={async (payload) => {
+            if (!user) return;
+            await createPost({
+              ...payload,
+              authorInstitutionCode: profile?.institutionCode || 'UI',
+            });
+            await queryClient.invalidateQueries({ queryKey: ['feed'] });
+            toast.success('Discussion thread published successfully!');
+            setComposerOpen(false);
+          }}
+        />
+      )}
     </View>
   );
 }

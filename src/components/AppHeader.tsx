@@ -24,8 +24,6 @@ export function AppHeader() {
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
 
- if (isDesktop) return null;
-
  const segments = useSegments();
  const roleGroup = segments[0] || '(student)';
  const [scopeModalOpen, setScopeModalOpen] = useState(false);
@@ -61,6 +59,8 @@ export function AppHeader() {
       ? profile.institutionCode
       : 'UI';
   const homeInstitutionName = getInstitutionByCode(homeInstitutionCode)?.name ?? 'University of Ibadan';
+
+  if (isDesktop) return null;
 
   return (
     <View

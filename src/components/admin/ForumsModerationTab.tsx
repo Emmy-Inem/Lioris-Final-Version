@@ -8,11 +8,13 @@ import { AppTextField } from'@/components/AppTextField';
 import { Badge } from'@/components/Badge';
 import { AppButton } from'@/components/AppButton';
 import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listFeedPosts, deletePost, updatePost } from'@/api/posts';
-import { Post } from'@/api/types';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { haptics } from'@/utils/haptics';
+import { useTheme } from '@/theme/ThemeProvider';
+import { listFeedPosts, deletePost, updatePost, createPost } from '@/api/posts';
+import { Post } from '@/api/types';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { PublishThreadModal } from '@/components/PublishThreadModal';
+import { useToast } from '@/context/ToastContext';
+import { haptics } from '@/utils/haptics';
 
 const WORKSPACES = ['All Forums', 'Tech Hub', 'Housing', 'Social', 'Academics'];
 
@@ -34,13 +36,15 @@ const MODERATORS: Record<string, ModeratorRow[]> = {
 };
 
 export function ForumsModerationTab() {
- const { colors, spacing, radius, isDark } = useTheme();
- const queryClient = useQueryClient();
- const [section, setSection] = useState<'threads' | 'matrix'>('threads');
- const [selectedWorkspace, setSelectedWorkspace] = useState('All Forums');
- const [searchQuery, setSearchQuery] = useState('');
- const [modQuery, setModQuery] = useState('');
- const [actingId, setActingId] = useState<string | null>(null);
+  const { colors, spacing, radius, isDark } = useTheme();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [newThreadModalOpen, setNewThreadModalOpen] = useState(false);
+  const [section, setSection] = useState<'threads' | 'matrix'>('threads');
+  const [selectedWorkspace, setSelectedWorkspace] = useState('All Forums');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [modQuery, setModQuery] = useState('');
+  const [actingId, setActingId] = useState<string | null>(null);
 
  const [modState, setModState] = useState<Record<string, boolean>>({
  '@inememmanuel': true,
@@ -125,10 +129,31 @@ export function ForumsModerationTab() {
 
  const activeMods = Object.values(modState).filter(Boolean).length;
 
- return (
- <View>
- {/* Top Segmented Controls */}
- <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+  return (
+    <View>
+      {/* Admin Action Header */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, flexWrap: 'wrap', gap: spacing.sm }}>
+        <View style={{ flex: 1, minWidth: 200 }}>
+          <AppText variant="h3" weight="bold">
+            Campus Forums & Discourse Control
+          </AppText>
+          <AppText variant="caption" tone="secondary">
+            Publish official announcements, oversee community discourse, and configure moderators.
+          </AppText>
+        </View>
+        <AppButton
+          label="+ Post Official Thread"
+          variant="primary"
+          icon="megaphone-outline"
+          onPress={() => {
+            haptics.light();
+            setNewThreadModalOpen(true);
+          }}
+        />
+      </View>
+
+      {/* Top Segmented Controls */}
+      <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
  <Pressable
  onPress={() => {
  haptics.light();
@@ -323,6 +348,17 @@ export function ForumsModerationTab() {
  })}
  </View>
  )}
- </View>
- );
+      {/* Admin Publish Thread Modal */}
+      <PublishThreadModal
+        visible={newThreadModalOpen}
+        onClose={() => setNewThreadModalOpen(false)}
+        onPublish={async (payload) => {
+          await createPost(payload);
+          await queryClient.invalidateQueries({ queryKey: ['feed'] });
+          await refetch();
+          toast.success('Official announcement published to campus forum!');
+        }}
+      />
+    </View>
+  );
 }

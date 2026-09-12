@@ -22,10 +22,6 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  const { colors, spacing, radius, isDark } = useTheme();
  const { isFeatureEnabled } = useFeatureFlags();
  const [activeIndex, setActiveIndex] = useState(0);
-
- if (!isFeatureEnabled('campus_events')) {
- return null;
- }
  const scrollRef = useRef<ScrollView>(null);
  const isInteracting = useRef(false);
  const resumeTimeout = useRef<any>(null);
@@ -52,7 +48,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  return () => clearInterval(interval);
  }, [displayEvents.length, itemStride]);
 
- if (displayEvents.length === 0) return null;
+ if (!isFeatureEnabled('campus_events') || displayEvents.length === 0) return null;
 
  function scrollToSlide(index: number) {
  haptics.light();

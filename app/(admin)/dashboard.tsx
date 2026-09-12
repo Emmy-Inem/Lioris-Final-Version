@@ -552,6 +552,38 @@ export default function AdminDashboard() {
                 </GlassCard>
               </Pressable>
 
+              {/* 11. Campus Forum Hub & Official Threads */}
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(admin)/forum' as any);
+                }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 160 : '47%' }}
+              >
+                <GlassCard
+                  radius={18}
+                  padded={false}
+                  contentStyle={{
+                    padding: 12,
+                    height: 118,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Ionicons name="chatbubbles-outline" size={22} color={colors.brandPrimary} />
+                    <Badge label="+ New Thread" tone="brand" />
+                  </View>
+                  <View style={{ minWidth: 0 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                      Campus Forum
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                      Post official threads & polls
+                    </AppText>
+                  </View>
+                </GlassCard>
+              </Pressable>
+
               {/* 11. System Health Console */}
               <Pressable
                 onPress={() => {

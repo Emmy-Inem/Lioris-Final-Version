@@ -264,6 +264,13 @@ export default function PlatformConfigScreen() {
  onPress={() => setLiquidGlassModalOpen(true)}
  />
  <EcosystemTile
+   icon="chatbubbles-outline"
+   label="Campus Forum Hub"
+   description="Official threads & discourse"
+   badge="Live Forum"
+   onPress={() => router.push('/(admin)/forum' as any)}
+ />
+ <EcosystemTile
  icon="checkmark-circle-outline"label="Verify Credentials"description="Review uploaded files"badge={String(pendingVerifications?.length ?? 0)}
  onPress={() => router.push('/(admin)/verification-requests')}
  />

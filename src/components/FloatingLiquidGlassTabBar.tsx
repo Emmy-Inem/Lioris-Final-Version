@@ -199,8 +199,6 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
   const safeAreaInsets = useSafeAreaInsets();
   const { settings, getGlassBackground, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
 
-  if (isDesktop) return null;
-
   // Active route
   const currentRoute = state.routes[state.index];
   const currentDescriptor = descriptors[currentRoute?.key];
@@ -214,8 +212,6 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
     currentRoute?.name?.includes('chat') ||
     currentRoute?.name === 'messages' ||
     currentRoute?.name?.startsWith('messages/');
-
-  if (isHiddenRoute) return null;
 
   // Filter only visible routes (href !== null)
   const visibleRoutes = state.routes.filter((route: any) => {
@@ -327,6 +323,10 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
   const animatedTrackStyle = useAnimatedStyle(() => ({
     width: trackWidth.value,
   }));
+
+  if (isDesktop || isHiddenRoute || visibleRoutes.length === 0) {
+    return null;
+  }
 
   return (
     <View style={[styles.floatingWrapper, { bottom: bottomInset }]} pointerEvents="box-none">
