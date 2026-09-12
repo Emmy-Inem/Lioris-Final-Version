@@ -106,11 +106,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       setProposeCommunityOpen(false);
       setNewCommunityName('');
       setNewCommunityDescription('');
-      if (created.approvalStatus === 'pending') {
-        toast.info(`"${created.label}" submitted! It will appear once a root admin approves it.`);
-      } else {
-        toast.success(`"${created.label}" is live.`);
-      }
+      toast.info(`"${created.label}" submitted! It will appear once a root admin approves it.`);
     } catch (err: any) {
       toast.error(err?.message || 'Could not submit this community. Please try again.');
     } finally {
@@ -1395,9 +1391,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             </Pressable>
           </View>
           <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
-            {isAdmin
-              ? 'As a root admin your community goes live instantly.'
-              : 'A root admin reviews new communities before they go live - your posts, though, never wait on anyone.'}
+            A root admin reviews every proposed community before it goes live - your posts, though, never wait on anyone.
           </AppText>
           <AppTextField
             label="Community Name"

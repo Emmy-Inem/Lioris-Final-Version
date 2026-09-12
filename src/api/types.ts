@@ -290,6 +290,7 @@ export type AuditLogAction =
  | 'verification_rejected'
  | 'community_approved'
  | 'community_rejected'
+ | 'community_deleted'
  | 'escrow_funds_released'
  | 'impersonation_started'
  | 'impersonation_ended'

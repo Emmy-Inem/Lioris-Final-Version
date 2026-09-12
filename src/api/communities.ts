@@ -104,9 +104,21 @@ function slugify(label: string): string {
 /**
  * Throws if there's no identifiable proposer or the insert fails, instead of
  * quietly reporting a community as proposed when it was never saved.
- * Auto-approves when the proposer is a root admin, since admins ARE the
- * approval authority - everyone else's proposal is held for review (see
- * ForumsModerationTab's "Pending Communities" queue).
+ *
+ * Every proposal - including a root admin's own - starts 'pending' and must
+ * go through ForumsModerationTab's approval queue. This used to auto-approve
+ * when the proposer's `profiles.role` was 'admin', which sounds right in
+ * isolation but breaks the moment "Preview Workspace As Role" is in play:
+ * that feature only changes which portal UI renders (see
+ * AuthContext.tsx's `role` vs `actualRole`) - the underlying Supabase auth
+ * session, and therefore `profiles.role` for that session, is always the
+ * real admin account. So an admin previewing the Student portal would have
+ * every "student" proposal instantly published, with no way to tell from
+ * the UI that approval was silently skipped. Removing the bypass here means
+ * this can never again depend on who happens to be signed in - the RLS
+ * INSERT policy on forum_communities enforces the same rule server-side
+ * (approval_status must be 'pending' unless the request is an admin's), so
+ * a non-pending value sent by a modified/malicious client is rejected too.
  */
 export async function proposeCommunity(payload: ProposeCommunityPayload): Promise<ForumCommunityRecord> {
   const { data: authData } = await supabase.auth.getUser();
@@ -119,9 +131,6 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
     throw new Error('You need to be signed in to propose a community.');
   }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle();
-  const isAdmin = profile?.role === 'admin';
-
   const slug = slugify(payload.label);
   const row = {
     slug,
@@ -132,7 +141,7 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
     accent_color: payload.accentColor || '#2563EB',
     banner_color: payload.accentColor || '#3B82F6',
     created_by: userId,
-    approval_status: isAdmin ? 'approved' : 'pending',
+    approval_status: 'pending',
   };
 
   const { data, error } = await supabase.from('forum_communities').insert(row).select('*').maybeSingle();
@@ -162,5 +171,21 @@ export async function rejectCommunity(id: string, reason?: string): Promise<void
   if (error) {
     console.warn('[Communities] rejectCommunity error:', error.message);
     throw new Error('Could not reject this community. Please try again.');
+  }
+}
+
+/**
+ * Root-admin-only (enforced by the forum_communities DELETE RLS policy, not
+ * just this check) - permanently removes a community, live or pending.
+ * Posts already published into it keep their `category` text as-is (posts
+ * reference a community by category string, not a foreign key), so deleting
+ * a community only removes it from the directory/composer going forward; it
+ * does not touch or hide existing threads.
+ */
+export async function deleteCommunity(id: string): Promise<void> {
+  const { error } = await supabase.from('forum_communities').delete().eq('id', id);
+  if (error) {
+    console.warn('[Communities] deleteCommunity error:', error.message);
+    throw new Error('Could not delete this community. Please try again.');
   }
 }

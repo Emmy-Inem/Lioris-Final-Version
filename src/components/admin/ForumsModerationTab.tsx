@@ -10,7 +10,7 @@ import { AppButton } from'@/components/AppButton';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { listFeedPosts, deletePost, updatePost, createPost } from '@/api/posts';
-import { listPendingCommunities, approveCommunity, rejectCommunity, ForumCommunityRecord } from '@/api/communities';
+import { listCommunities, approveCommunity, rejectCommunity, deleteCommunity, ForumCommunityRecord } from '@/api/communities';
 import { Post } from '@/api/types';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { PublishThreadModal } from '@/components/PublishThreadModal';
@@ -20,20 +20,35 @@ import { haptics } from '@/utils/haptics';
 
 const WORKSPACES = ['All Forums', ...FORUM_COMMUNITIES.filter((c) => c.category).map((c) => c.category as string)];
 
+const COMMUNITY_STATUS_FILTERS = ['All', 'Pending', 'Approved', 'Rejected'] as const;
+type CommunityStatusFilter = (typeof COMMUNITY_STATUS_FILTERS)[number];
+
+const COMMUNITY_STATUS_ORDER: Record<ForumCommunityRecord['approvalStatus'], number> = {
+  pending: 0,
+  approved: 1,
+  rejected: 2,
+};
+
 export function ForumsModerationTab() {
   const { colors, spacing, radius } = useTheme();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [newThreadModalOpen, setNewThreadModalOpen] = useState(false);
-  const [section, setSection] = useState<'pending' | 'threads'>('pending');
+  const [section, setSection] = useState<'communities' | 'threads'>('communities');
   const [selectedWorkspace, setSelectedWorkspace] = useState('All Forums');
   const [searchQuery, setSearchQuery] = useState('');
   const [actingId, setActingId] = useState<string | null>(null);
+  const [communityStatusFilter, setCommunityStatusFilter] = useState<CommunityStatusFilter>('All');
 
-  const { data: pendingCommunities = [], isLoading: loadingPending, refetch: refetchPending } = useQuery({
-    queryKey: ['communities', 'admin-pending'],
-    queryFn: () => listPendingCommunities(),
+  const { data: communities = [], isLoading: loadingCommunities, refetch: refetchCommunities } = useQuery({
+    queryKey: ['communities', 'admin-all'],
+    queryFn: () => listCommunities(),
   });
+
+  const filteredCommunities = communities
+    .filter((c) => communityStatusFilter === 'All' || c.approvalStatus === communityStatusFilter.toLowerCase())
+    .slice()
+    .sort((a, b) => COMMUNITY_STATUS_ORDER[a.approvalStatus] - COMMUNITY_STATUS_ORDER[b.approvalStatus]);
 
   const { data: posts = [], isLoading, refetch } = useQuery({
     queryKey: ['feed', 'admin-forums-moderation'],
@@ -55,7 +70,7 @@ export function ForumsModerationTab() {
   async function refreshEverything() {
     await queryClient.invalidateQueries({ queryKey: ['feed'] });
     await queryClient.invalidateQueries({ queryKey: ['communities'] });
-    await Promise.all([refetch(), refetchPending()]);
+    await Promise.all([refetch(), refetchCommunities()]);
   }
 
   async function handleApproveCommunity(community: ForumCommunityRecord) {
@@ -104,6 +119,40 @@ export function ForumsModerationTab() {
               toast.info(`"${community.label}" was rejected.`);
             } catch (err: any) {
               toast.error(err?.message || 'Could not reject this community.');
+            } finally {
+              setActingId(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function handleDeleteCommunityConfirm(community: ForumCommunityRecord) {
+    haptics.error();
+    Alert.alert(
+      'Delete Community?',
+      `"${community.label}" will be permanently removed from the Forum directory. This cannot be undone. Existing posts already published under this community keep their category tag - only the community itself (and the ability to join or post into it going forward) is removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Permanently',
+          style: 'destructive',
+          onPress: async () => {
+            setActingId(community.id);
+            try {
+              await deleteCommunity(community.id);
+              recordAuditLogEntry({
+                action: 'community_deleted',
+                summary: `Deleted community: "${community.label}"`,
+                targetType: 'community',
+                targetId: community.id,
+                reason: `Removed by admin (was ${community.approvalStatus}).`,
+              });
+              await refreshEverything();
+              toast.info(`"${community.label}" was permanently deleted.`);
+            } catch (err: any) {
+              toast.error(err?.message || 'Could not delete this community.');
             } finally {
               setActingId(null);
             }
@@ -174,7 +223,7 @@ export function ForumsModerationTab() {
             Forums & Discourse Control
           </AppText>
           <AppText variant="caption" tone="secondary">
-            Approve pending communities, publish official announcements, and oversee discourse. Posts themselves are instant - no approval needed.
+            Approve, reject, or permanently remove communities, publish official announcements, and oversee discourse. Posts themselves are instant - no approval needed.
           </AppText>
         </View>
         <AppButton
@@ -193,18 +242,18 @@ export function ForumsModerationTab() {
         <Pressable
           onPress={() => {
             haptics.light();
-            setSection('pending');
+            setSection('communities');
           }}
           style={{
             flex: 1,
             paddingVertical: 8,
             alignItems: 'center',
             borderRadius: radius.pill,
-            backgroundColor: section === 'pending' ? colors.brandPrimary : colors.divider,
+            backgroundColor: section === 'communities' ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText variant="caption" weight="bold" tone={section === 'pending' ? 'inverse' : 'secondary'}>
-            Pending Communities ({pendingCommunities.length})
+          <AppText variant="caption" weight="bold" tone={section === 'communities' ? 'inverse' : 'secondary'}>
+            Communities ({communities.length})
           </AppText>
         </Pressable>
 
@@ -227,47 +276,131 @@ export function ForumsModerationTab() {
         </Pressable>
       </View>
 
-      {section === 'pending' ? (
+      {section === 'communities' ? (
         <View>
-          {pendingCommunities.map((community) => (
-            <SolidCard key={community.id} radius={18} frosted style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.warning}40` }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
-                <View style={{ flex: 1, marginRight: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name={community.icon} size={18} color={community.accentColor} />
-                  <AppText weight="bold" variant="body">
-                    {community.label}
+          {/* Status Filter Pills */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.md }}
+            style={{ flex: 1, minWidth: 0 }}
+          >
+            {COMMUNITY_STATUS_FILTERS.map((f) => {
+              const selected = communityStatusFilter === f;
+              return (
+                <Pressable
+                  key={f}
+                  onPress={() => {
+                    haptics.light();
+                    setCommunityStatusFilter(f);
+                  }}
+                  style={{
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: 5,
+                    borderRadius: radius.pill,
+                    backgroundColor: selected ? colors.brandPrimary : colors.divider,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                    {f}
                   </AppText>
-                </View>
-                <Badge label="Pending Review" tone="warning" />
-              </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
-              <AppText tone="secondary" variant="bodySmall" numberOfLines={3} style={{ marginBottom: spacing.md }}>
-                {community.description}
-              </AppText>
+          {filteredCommunities.map((community) => {
+            const badge =
+              community.approvalStatus === 'pending'
+                ? { label: 'Pending Review', tone: 'warning' as const }
+                : community.approvalStatus === 'approved'
+                ? { label: 'Approved', tone: 'success' as const }
+                : { label: 'Rejected', tone: 'critical' as const };
+            const borderColor =
+              community.approvalStatus === 'pending'
+                ? `${colors.warning}40`
+                : community.approvalStatus === 'rejected'
+                ? `${colors.critical}30`
+                : colors.border;
 
-              <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-                <View style={{ flex: 1 }}>
-                  <AppButton
-                    label="Approve"
-                    variant="primary"
-                    loading={actingId === community.id}
-                    onPress={() => handleApproveCommunity(community)}
-                  />
+            return (
+              <SolidCard key={community.id} radius={18} frosted style={{ marginBottom: spacing.md, borderWidth: 1, borderColor }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+                  <View style={{ flex: 1, marginRight: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name={community.icon} size={18} color={community.accentColor} />
+                    <AppText weight="bold" variant="body">
+                      {community.label}
+                    </AppText>
+                  </View>
+                  <Badge label={badge.label} tone={badge.tone} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <AppButton
-                    label="Reject"
-                    variant="secondary"
-                    loading={actingId === community.id}
-                    onPress={() => handleRejectCommunityConfirm(community)}
-                  />
-                </View>
-              </View>
-            </SolidCard>
-          ))}
 
-          {!loadingPending && pendingCommunities.length === 0 ? (
-            <EmptyState title="No communities awaiting approval" description="Every proposed community has been reviewed." />
+                <AppText
+                  tone="secondary"
+                  variant="bodySmall"
+                  numberOfLines={3}
+                  style={{ marginBottom: community.approvalStatus === 'rejected' && community.rejectionReason ? spacing.xs : spacing.md }}
+                >
+                  {community.description}
+                </AppText>
+
+                {community.approvalStatus === 'rejected' && community.rejectionReason ? (
+                  <AppText tone="secondary" variant="caption" style={{ fontStyle: 'italic', marginBottom: spacing.md }}>
+                    Reason: {community.rejectionReason}
+                  </AppText>
+                ) : null}
+
+                <View style={{ flexDirection: 'row', gap: spacing.xs, justifyContent: community.approvalStatus === 'pending' ? 'flex-start' : 'flex-end' }}>
+                  {community.approvalStatus === 'pending' ? (
+                    <>
+                      <View style={{ flex: 1 }}>
+                        <AppButton
+                          label="Approve"
+                          variant="primary"
+                          loading={actingId === community.id}
+                          onPress={() => handleApproveCommunity(community)}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <AppButton
+                          label="Reject"
+                          variant="secondary"
+                          loading={actingId === community.id}
+                          onPress={() => handleRejectCommunityConfirm(community)}
+                        />
+                      </View>
+                    </>
+                  ) : null}
+                  <Pressable
+                    onPress={() => handleDeleteCommunityConfirm(community)}
+                    disabled={actingId === community.id}
+                    hitSlop={8}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.divider,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: actingId === community.id ? 0.5 : 1,
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={colors.critical} />
+                  </Pressable>
+                </View>
+              </SolidCard>
+            );
+          })}
+
+          {!loadingCommunities && filteredCommunities.length === 0 ? (
+            <EmptyState
+              title={communityStatusFilter === 'All' ? 'No communities yet' : `No ${communityStatusFilter.toLowerCase()} communities`}
+              description={
+                communityStatusFilter === 'Pending'
+                  ? 'Every proposed community has been reviewed.'
+                  : 'Try a different status filter.'
+              }
+            />
           ) : null}
         </View>
       ) : (

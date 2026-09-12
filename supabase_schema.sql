@@ -250,8 +250,12 @@ CREATE POLICY "Communities viewable when approved or own or admin" ON forum_comm
     created_by = auth.uid() OR
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
+-- approval_status = 'pending' is enforced here, not just client-side in
+-- src/api/communities.ts - every proposal, including a root admin's own,
+-- must go through the separate admin-only UPDATE policy below to go live.
 CREATE POLICY "Authenticated users can propose communities" ON forum_communities FOR INSERT TO authenticated WITH CHECK (
     created_by = auth.uid() AND
+    approval_status = 'pending' AND
     NOT (SELECT COALESCE(is_suspended, false) FROM profiles WHERE id = auth.uid())
 );
 CREATE POLICY "Admins moderate communities" ON forum_communities FOR UPDATE TO authenticated USING (

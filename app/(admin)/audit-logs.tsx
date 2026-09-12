@@ -28,6 +28,7 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
   verification_rejected: 'neutral',
   community_approved: 'success',
   community_rejected: 'neutral',
+  community_deleted: 'critical',
   escrow_funds_released: 'critical',
   impersonation_started: 'critical',
   impersonation_ended: 'neutral',

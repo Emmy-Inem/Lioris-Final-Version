@@ -29,7 +29,7 @@ const FILTERS: Array<{ label: string; actions?: AuditLogAction[] }> = [
  { label: 'Reports', actions: ['report_resolved', 'report_dismissed'] },
  { label: 'Events', actions: ['event_approval_revoked', 'event_purged'] },
  { label: 'Verification', actions: ['verification_approved', 'verification_rejected'] },
- { label: 'Communities', actions: ['community_approved', 'community_rejected'] },
+ { label: 'Communities', actions: ['community_approved', 'community_rejected', 'community_deleted'] },
  { label: 'High-Risk', actions: ['escrow_funds_released', 'impersonation_started'] },
 ];
 
@@ -43,6 +43,7 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
  verification_rejected: 'neutral',
  community_approved: 'success',
  community_rejected: 'neutral',
+ community_deleted: 'critical',
  escrow_funds_released: 'critical',
  impersonation_started: 'critical',
  impersonation_ended: 'neutral',
@@ -91,6 +92,7 @@ const ACTION_LABEL: Record<AuditLogAction, string> = {
  verification_rejected: 'Verification rejected',
  community_approved: 'Community approved',
  community_rejected: 'Community rejected',
+ community_deleted: 'Community deleted',
  escrow_funds_released: 'Escrow funds released',
  impersonation_started: 'Impersonation started',
  impersonation_ended: 'Impersonation ended',
