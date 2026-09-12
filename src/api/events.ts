@@ -309,12 +309,21 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
   if (!campusCode) campusCode = 'GLOBAL';
   campusCode = campusCode.trim().toUpperCase();
 
-  // Admin/staff-created events are auto-approved (they're the moderators);
-  // everyone else's events start out pending review so they show up in the
-  // admin "Pending Review" moderation queue instead of going live unchecked.
-  const creatorRole = profile?.role || 'student';
-  const isAutoApproved = creatorRole === 'admin' || creatorRole === 'staff';
-  const initialStatus = isAutoApproved ? 'upcoming' : 'pending_approval';
+  // Every event starts pending review, regardless of the creator's role.
+  // This used to auto-approve when profiles.role was 'admin'/'staff', which
+  // sounds right in isolation but breaks the moment "Preview Workspace As
+  // Role" is in play (see AuthContext.tsx's `role` vs `actualRole`): that
+  // feature only changes which portal UI renders - the underlying Supabase
+  // session, and therefore profiles.role for that session, is always the
+  // real account. An admin previewing the Student portal would have had
+  // every "student" event instantly published live with no review step,
+  // same bug class already fixed for src/api/communities.ts's
+  // proposeCommunity. The `events` table's INSERT RLS policy enforces
+  // status = 'pending_approval' server-side too, so this can't be bypassed
+  // by a modified client either - approval always goes through the
+  // moderation queue's admin/staff-only UPDATE path (approveEvent /
+  // revokeEventApproval).
+  const initialStatus = 'pending_approval';
 
   const dbVisibilityScope = payload.visibilityScope === 'campus' ? 'campus' : 'global';
 

@@ -334,8 +334,8 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 8,
-                backgroundColor: isStaffOrAdmin ? 'rgba(16, 185, 129, 0.1)' : colors.pastelPrimaryBg,
-                borderColor: isStaffOrAdmin ? '#10B981' : colors.brandPrimary,
+                backgroundColor: colors.pastelPrimaryBg,
+                borderColor: colors.brandPrimary,
                 borderWidth: 1,
                 borderRadius: radius.md,
                 paddingHorizontal: spacing.md,
@@ -343,14 +343,10 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
                 marginBottom: spacing.md,
               }}
             >
-              <Ionicons
-                name={isStaffOrAdmin ? 'shield-checkmark' : 'information-circle'}
-                size={18}
-                color={isStaffOrAdmin ? '#10B981' : colors.brandPrimary}
-              />
+              <Ionicons name="information-circle" size={18} color={colors.brandPrimary} />
               <AppText variant="caption" style={{ flex: 1, lineHeight: 16 }}>
                 {isStaffOrAdmin
-                  ? 'Official / Staff Event: This event will be published immediately to live campus feeds.'
+                  ? 'Official / Staff Event: submitted for moderation review - approve it from the Events tab once it appears in the queue.'
                   : 'Student Organizer: This event will be submitted for campus moderation review before appearing live.'}
               </AppText>
             </View>
@@ -662,7 +658,7 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
           {/* Action Bar */}
           <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingVertical: spacing.sm }}>
             <AppButton label="Cancel" variant="ghost" onPress={onClose} />
-            <AppButton label={isStaffOrAdmin ? 'Publish Event' : 'Submit Event'} onPress={handleHost} loading={submitting} />
+            <AppButton label="Submit Event" onPress={handleHost} loading={submitting} />
           </View>
         </View>
       </View>

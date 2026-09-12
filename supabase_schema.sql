@@ -621,9 +621,34 @@ CREATE POLICY "Authors, admins and staff can update posts" ON posts FOR UPDATE T
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = posts.campus_code)))
 );
 CREATE POLICY "Authors, admins and staff can delete posts" ON posts FOR DELETE TO authenticated USING (
-    auth.uid() = author_id OR 
+    auth.uid() = author_id OR
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = posts.campus_code)))
 );
+
+-- The UPDATE policy above lets an author edit their own post (title,
+-- content, etc.), but "Pin as Announcement" is meant to be an admin/staff
+-- moderation action, not something an author can flip on their own post
+-- directly - RLS can't express a per-column exception within one UPDATE
+-- policy, so this is a trigger: it silently reverts an `is_pinned` change
+-- unless the actor is an admin, or staff on that post's own campus (the
+-- same authority the UPDATE policy already grants for other changes).
+CREATE OR REPLACE FUNCTION enforce_post_pin_authority() RETURNS TRIGGER AS $$
+DECLARE
+  actor_role TEXT;
+  actor_campus TEXT;
+BEGIN
+  IF NEW.is_pinned IS DISTINCT FROM OLD.is_pinned THEN
+    SELECT role, campus_code INTO actor_role, actor_campus FROM profiles WHERE id = auth.uid();
+    IF NOT (actor_role = 'admin' OR (actor_role = 'staff' AND actor_campus = OLD.campus_code)) THEN
+      NEW.is_pinned := OLD.is_pinned;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS trg_enforce_post_pin_authority ON posts;
+CREATE TRIGGER trg_enforce_post_pin_authority BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION enforce_post_pin_authority();
 
 -- Post Likes
 CREATE POLICY "Post likes are viewable by authenticated users" ON post_likes FOR SELECT TO authenticated USING (true);
@@ -655,18 +680,51 @@ CREATE POLICY "Events viewable by campus or global" ON events FOR SELECT TO auth
     campus_code = (SELECT campus_code FROM profiles WHERE id = auth.uid()) OR
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
 );
+-- status = 'pending_approval' is enforced here, not just client-side in
+-- src/api/events.ts - every new event, including an admin/staff's own,
+-- starts in the moderation queue. Approving it is a separate UPDATE (see
+-- the trigger below), gated on the real actor, not on what the row said at
+-- insert time.
 CREATE POLICY "Users can create events" ON events FOR INSERT TO authenticated WITH CHECK (
     auth.uid() = creator_id AND
+    status = 'pending_approval' AND
     NOT (SELECT COALESCE(is_suspended, false) FROM profiles WHERE id = auth.uid())
 );
 CREATE POLICY "Creators, admins and staff can modify events" ON events FOR UPDATE TO authenticated USING (
-    auth.uid() = creator_id OR 
+    auth.uid() = creator_id OR
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = events.campus_code)))
 );
 CREATE POLICY "Creators, admins and staff can delete events" ON events FOR DELETE TO authenticated USING (
-    auth.uid() = creator_id OR 
+    auth.uid() = creator_id OR
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND (role = 'admin' OR (role = 'staff' AND campus_code = events.campus_code)))
 );
+
+-- The UPDATE policy above lets a creator modify their own event's row (so
+-- they can edit title/description/etc. while it's pending), but that same
+-- permissiveness would let them also flip their own `status` straight to
+-- 'upcoming' - self-approving. RLS's USING/WITH CHECK can't express "allow
+-- this column to change only for some actors, but allow other columns to
+-- change for everyone" in one policy, so this is a trigger instead: it
+-- silently reverts a `status` change unless the actor is an admin, or staff
+-- on that event's own campus - the same authority the UPDATE policy already
+-- grants, just enforced per-column.
+CREATE OR REPLACE FUNCTION enforce_event_status_authority() RETURNS TRIGGER AS $$
+DECLARE
+  actor_role TEXT;
+  actor_campus TEXT;
+BEGIN
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    SELECT role, campus_code INTO actor_role, actor_campus FROM profiles WHERE id = auth.uid();
+    IF NOT (actor_role = 'admin' OR (actor_role = 'staff' AND actor_campus = OLD.campus_code)) THEN
+      NEW.status := OLD.status;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS trg_enforce_event_status_authority ON events;
+CREATE TRIGGER trg_enforce_event_status_authority BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION enforce_event_status_authority();
 
 -- Event Attendees
 CREATE POLICY "Event attendees viewable by authenticated users" ON event_attendees FOR SELECT TO authenticated USING (true);

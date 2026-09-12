@@ -179,6 +179,68 @@ VALUES
 ON CONFLICT (slug) DO NOTHING;
 
 
+-- ============================================================================
+-- STEP 5 - Close two more client-side-only approval/authority gaps found in
+-- the same audit that caught forum_communities' bypass: events auto-approval
+-- and post pinning were both enforced only by which screen's UI called them,
+-- not by the database, so either could be triggered directly (e.g. by an
+-- admin's session while "Preview Workspace As Role" is showing a different
+-- portal, or by a modified client calling the REST API directly).
+-- ============================================================================
+
+-- events: every new event now starts 'pending_approval' regardless of the
+-- creator's role (src/api/events.ts createEvent no longer auto-approves
+-- admin/staff) - enforce it server-side too.
+DROP POLICY IF EXISTS "Users can create events" ON events;
+CREATE POLICY "Users can create events" ON events FOR INSERT TO authenticated WITH CHECK (
+    auth.uid() = creator_id AND
+    status = 'pending_approval' AND
+    NOT (SELECT COALESCE(is_suspended, false) FROM profiles WHERE id = auth.uid())
+);
+
+-- events.status: a creator can still edit their own pending event's other
+-- fields, but can no longer self-approve by flipping `status` directly -
+-- only an admin, or staff on that event's own campus, can.
+CREATE OR REPLACE FUNCTION enforce_event_status_authority() RETURNS TRIGGER AS $$
+DECLARE
+  actor_role TEXT;
+  actor_campus TEXT;
+BEGIN
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    SELECT role, campus_code INTO actor_role, actor_campus FROM profiles WHERE id = auth.uid();
+    IF NOT (actor_role = 'admin' OR (actor_role = 'staff' AND actor_campus = OLD.campus_code)) THEN
+      NEW.status := OLD.status;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS trg_enforce_event_status_authority ON events;
+CREATE TRIGGER trg_enforce_event_status_authority BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION enforce_event_status_authority();
+
+-- posts.is_pinned: an author can still edit their own post, but can no
+-- longer pin/unpin it themselves - only an admin, or staff on that post's
+-- own campus, can (mirrors the UI's admin/staff-only Pin button).
+CREATE OR REPLACE FUNCTION enforce_post_pin_authority() RETURNS TRIGGER AS $$
+DECLARE
+  actor_role TEXT;
+  actor_campus TEXT;
+BEGIN
+  IF NEW.is_pinned IS DISTINCT FROM OLD.is_pinned THEN
+    SELECT role, campus_code INTO actor_role, actor_campus FROM profiles WHERE id = auth.uid();
+    IF NOT (actor_role = 'admin' OR (actor_role = 'staff' AND actor_campus = OLD.campus_code)) THEN
+      NEW.is_pinned := OLD.is_pinned;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS trg_enforce_post_pin_authority ON posts;
+CREATE TRIGGER trg_enforce_post_pin_authority BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION enforce_post_pin_authority();
+
+
 -- ---------------------------------------------------------------------------
 -- Verification. Every row should read OK.
 -- ---------------------------------------------------------------------------
@@ -192,6 +254,14 @@ UNION ALL
 SELECT 'forum_communities table',
        CASE WHEN EXISTS (SELECT 1 FROM information_schema.tables
                          WHERE table_schema = 'public' AND table_name = 'forum_communities')
+            THEN 'OK' ELSE 'MISSING' END
+UNION ALL
+SELECT 'trg_enforce_event_status_authority trigger',
+       CASE WHEN EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_enforce_event_status_authority')
+            THEN 'OK' ELSE 'MISSING' END
+UNION ALL
+SELECT 'trg_enforce_post_pin_authority trigger',
+       CASE WHEN EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_enforce_post_pin_authority')
             THEN 'OK' ELSE 'MISSING' END
 UNION ALL
 SELECT 'post_likes table',
