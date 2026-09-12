@@ -265,7 +265,7 @@ export default function PlatformConfigScreen() {
  />
  <EcosystemTile
    icon="chatbubbles-outline"
-   label="Campus Forum Hub"
+   label="Forum Hub"
    description="Official threads & discourse"
    badge="Live Forum"
    onPress={() => router.push('/(admin)/forum' as any)}

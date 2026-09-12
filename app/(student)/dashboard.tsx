@@ -586,7 +586,7 @@ export default function StudentDashboard() {
               >
                 <Ionicons name="chatbubbles" size={isDesktop ? 22 : 20} color="#EC4899" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Forum</AppText>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Forum</AppText>
                   <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Ask questions</AppText>
                 </View>
               </GlassCard>

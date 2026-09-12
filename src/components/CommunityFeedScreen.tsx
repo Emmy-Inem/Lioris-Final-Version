@@ -13,182 +13,50 @@ import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { PostCard } from './PostCard';
 import { PublishThreadModal } from './PublishThreadModal';
-import { DiscussionWorkspacesModal } from './DiscussionWorkspacesModal';
 
 import { ActionSheetModal } from './ActionSheetModal';
-import { AnnouncementsWidget } from './AnnouncementsWidget';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts, createPost } from '@/api/posts';
+import { listCommunities, proposeCommunity, ForumCommunityRecord } from '@/api/communities';
 import { getMyProfile } from '@/api/profile';
 import { useViewScope } from '@/hooks/useViewScope';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
-import { ShimmerCardList } from './ShimmerSkeleton';
 import { UserProfileQuickViewModal, QuickViewUser } from './UserProfileQuickViewModal';
-import { EmptyState } from './EmptyState';
+import { AppTextField } from './AppTextField';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
-export interface CampusSubForum {
-  id: string;
-  slug: string;
-  label: string;
-  category: string | null;
-  icon: keyof typeof Ionicons.glyphMap;
-  flagKey?: string;
-  description: string;
-  moderatorBadge: string;
-  moderatorTitle: string;
-  membersCount: number;
-  onlineCount: number;
-  rules: string[];
-  bannerColor: string;
-  accentColor: string;
+// Virtual, always-present tile meaning "no category filter" - not a real row
+// in forum_communities, so it's never subject to approval.
+const ALL_THREADS_CHANNEL: ForumCommunityRecord = {
+  id: 'all',
+  slug: 'c/all',
+  label: 'All Threads',
+  category: '',
+  icon: 'planet-outline',
+  description: 'Unified feed aggregating student discussions, academic questions, and polls across every space.',
+  moderatorBadge: 'Moderation Desk',
+  moderatorTitle: 'Verified Faculty Staff & Student Union Council',
+  rules: [
+    'Maintain civil and constructive discourse at all times.',
+    'Tag your threads with the accurate community space.',
+    'No hate speech, unverified rumors, or academic dishonesty.',
+  ],
+  bannerColor: '#3B82F6',
+  accentColor: '#2563EB',
+  approvalStatus: 'approved',
+};
+
+function findActiveChannel(channels: ForumCommunityRecord[], selected: string | null): ForumCommunityRecord {
+  if (selected === null) return channels.find((c) => c.id === 'all') ?? channels[0];
+  return channels.find((c) => c.category === selected) ?? channels[0];
 }
-
-export const CAMPUS_SUB_FORUMS: CampusSubForum[] = [
-  {
-    id: 'all',
-    slug: 'c/all',
-    label: 'All Campus Feed',
-    category: null,
-    icon: 'planet-outline',
-    description: 'Unified feed aggregating student discussions, academic questions, and polls across all campus faculties.',
-    moderatorBadge: 'Campus Moderation Desk',
-    moderatorTitle: 'Verified Faculty Staff & Student Union Council',
-    membersCount: 4850,
-    onlineCount: 128,
-    rules: [
-      'Maintain civil and constructive student discourse at all times.',
-      'Tag your threads with the accurate community space.',
-      'No hate speech, unverified rumors, or academic dishonesty.',
-    ],
-    bannerColor: '#3B82F6',
-    accentColor: '#2563EB',
-  },
-  {
-    id: 'tech',
-    slug: 'c/tech',
-    label: 'Tech & Code Hub',
-    category: 'Tech Hub',
-    icon: 'code-slash',
-    description: 'Software engineering, AI projects, hackathons, debugging queries, and developer tooling.',
-    moderatorBadge: 'Developer Guild Lead',
-    moderatorTitle: 'Department Tech Reps & GDSC Campus Leads',
-    membersCount: 1840,
-    onlineCount: 42,
-    rules: [
-      'Provide code context, error logs, or reproducible snippets.',
-      'Respect peer developers of all experience levels.',
-      'No unauthorized course test/exam solution leaks.',
-    ],
-    bannerColor: '#6366F1',
-    accentColor: '#4F46E5',
-  },
-  {
-    id: 'academic',
-    slug: 'c/academic',
-    label: 'Academic & Courses',
-    category: 'Academic',
-    icon: 'school',
-    description: 'Course registration, lecture notes, syllabus revision, past questions, and departmental discussions.',
-    moderatorBadge: 'Academic Board',
-    moderatorTitle: 'Department Representatives & Course TAs',
-    membersCount: 3200,
-    onlineCount: 86,
-    rules: [
-      'Include course codes in thread titles (e.g. [CSC 301]).',
-      'Verify exam dates and senate timetables before announcing.',
-      'Strict university academic integrity rules apply.',
-    ],
-    bannerColor: '#059669',
-    accentColor: '#047857',
-  },
-  {
-    id: 'polls',
-    slug: 'c/polls',
-    label: 'Polls & Votes',
-    category: 'Polls',
-    icon: 'stats-chart',
-    flagKey: 'discussion_workspaces',
-    description: 'Campus voting, student union surveys, canteen ratings, and real-time student opinion referendums.',
-    moderatorBadge: 'Electoral Commission',
-    moderatorTitle: 'Student Union Government (SUG) Secretariat',
-    membersCount: 4120,
-    onlineCount: 94,
-    rules: [
-      'Keep poll questions clear, balanced, and constructive.',
-      'One poll per topic to avoid voter fatigue and split results.',
-      'Zero manipulation, multi-voting, or vote brigading.',
-    ],
-    bannerColor: '#8B5CF6',
-    accentColor: '#7C3AED',
-  },
-  {
-    id: 'housing',
-    slug: 'c/housing',
-    label: 'Hostel & Housing',
-    category: 'Housing',
-    icon: 'home',
-    description: 'Hall of residence allocations, off-campus apartments, roommate matching, and maintenance updates.',
-    moderatorBadge: 'Hall Committee',
-    moderatorTitle: 'Hall Wardens & Student Hall Executives',
-    membersCount: 1650,
-    onlineCount: 31,
-    rules: [
-      'Never pay agent inspection fees or deposits upfront.',
-      'Provide exact hostel/apartment location and verified rental costs.',
-      'Report misleading accommodation ads immediately.',
-    ],
-    bannerColor: '#EA580C',
-    accentColor: '#C2410C',
-  },
-  {
-    id: 'social',
-    slug: 'c/social',
-    label: 'Campus Life & Sports',
-    category: 'Social',
-    icon: 'football',
-    description: 'Hostel football leagues, dinner awards, cultural days, music festivals, and student clubs.',
-    moderatorBadge: 'Directorate of Socials',
-    moderatorTitle: 'Student Union Social & Sports Directors',
-    membersCount: 2900,
-    onlineCount: 67,
-    rules: [
-      'Celebrate campus rivalries with respect and sportsmanship.',
-      'State event venue, ticket fees (if any), and timing clearly.',
-      'No personal harassment or bullying of fellow students.',
-    ],
-    bannerColor: '#EC4899',
-    accentColor: '#DB2777',
-  },
-  {
-    id: 'lost',
-    slug: 'c/lost-found',
-    label: 'Lost & Found',
-    category: 'Lost & Found',
-    icon: 'search',
-    description: 'Find lost student ID cards, flash drives, wallets, glasses, backpacks, and lecture notes.',
-    moderatorBadge: 'Security Desk',
-    moderatorTitle: 'Campus Marshal Helpdesk & Student Affairs',
-    membersCount: 1420,
-    onlineCount: 19,
-    rules: [
-      'Turn in valuable items (laptops, wallets) to Hall Porters or DSA.',
-      'Do not display full bank card numbers or BVN/NIN in photos.',
-      'Claimants must show student identification upon pickup.',
-    ],
-    bannerColor: '#0284C7',
-    accentColor: '#0369A1',
-  },
-];
-
-const CHANNELS = CAMPUS_SUB_FORUMS;
 
 export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -206,12 +74,49 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [workspacesOpen, setWorkspacesOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(params.category || null);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
   const [subForumsDirectoryOpen, setSubForumsDirectoryOpen] = useState(false);
+  const [proposeCommunityOpen, setProposeCommunityOpen] = useState(false);
+  const [newCommunityName, setNewCommunityName] = useState('');
+  const [newCommunityDescription, setNewCommunityDescription] = useState('');
+  const [submittingCommunity, setSubmittingCommunity] = useState(false);
 
-  const activeSubForum = CAMPUS_SUB_FORUMS.find((sf) => sf.category === selectedChannel) ?? CAMPUS_SUB_FORUMS[0];
+  const { data: fetchedCommunities } = useQuery({
+    queryKey: ['communities'],
+    queryFn: listCommunities,
+  });
+  const CHANNELS = React.useMemo(
+    () => [ALL_THREADS_CHANNEL, ...(fetchedCommunities ?? [])],
+    [fetchedCommunities],
+  );
+
+  const activeSubForum = findActiveChannel(CHANNELS, selectedChannel);
+
+  async function handleProposeCommunity() {
+    if (!newCommunityName.trim()) return;
+    haptics.medium();
+    setSubmittingCommunity(true);
+    try {
+      const created = await proposeCommunity({
+        label: newCommunityName.trim(),
+        description: newCommunityDescription.trim(),
+      });
+      await queryClient.invalidateQueries({ queryKey: ['communities'] });
+      setProposeCommunityOpen(false);
+      setNewCommunityName('');
+      setNewCommunityDescription('');
+      if (created.approvalStatus === 'pending') {
+        toast.info(`"${created.label}" submitted! It will appear once a root admin approves it.`);
+      } else {
+        toast.success(`"${created.label}" is live.`);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not submit this community. Please try again.');
+    } finally {
+      setSubmittingCommunity(false);
+    }
+  }
 
   React.useEffect(() => {
     if (params.category) {
@@ -258,23 +163,42 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  posts = posts.filter((p) => !!p.poll);
  }
 
-  posts = [...posts].sort((a, b) =>
-    sortBy === 'popular' ? b.likesCount - a.likesCount : b.createdAt.localeCompare(a.createdAt),
-  );
+  // Pinned announcements always float to the top regardless of sort order -
+  // previously isPinned only drove a badge in ForumsModerationTab and had
+  // zero effect on the feed itself, so "pinning" a thread never actually
+  // pinned anything a student would see.
+  posts = [...posts].sort((a, b) => {
+    if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
+    return sortBy === 'popular' ? b.likesCount - a.likesCount : b.createdAt.localeCompare(a.createdAt);
+  });
 
-  // Top Trending Discussions & Hot Topics
+  // Unfiltered-by-channel pool, used only to compute real per-community
+  // stats for the directory/sidebar (thread counts, active contributors) -
+  // replaces the fabricated membersCount/onlineCount numbers that used to
+  // be hardcoded on every community.
+  const { data: allCommunityPosts } = useQuery({
+    queryKey: ['feed', scope, 'community-stats', viewScope, viewerInstitutionCode],
+    queryFn: () => listFeedPosts({ scope, viewScope, viewerInstitutionCode }),
+  });
+
+  const communityStats = React.useMemo(() => {
+    const stats = new Map<string, { threads: number; contributors: number }>();
+    const pool = allCommunityPosts ?? [];
+    for (const community of CHANNELS) {
+      const matches = community.id === 'all' ? pool : pool.filter((p) => p.category === community.category);
+      stats.set(community.id, { threads: matches.length, contributors: new Set(matches.map((p) => p.authorId)).size });
+    }
+    return stats;
+  }, [allCommunityPosts, CHANNELS]);
+
+  // Top Trending Discussions - real engagement only. Previously fell back to
+  // 4 fabricated "#TechHackathon"-style tags with made-up engagement counts
+  // whenever there weren't yet 5 real posts to rank.
   const trendingTopics = React.useMemo(() => {
     const sorted = [...(rawPosts ?? [])].sort(
       (a, b) => (b.likesCount + (b.commentsCount ?? 0) * 2) - (a.likesCount + (a.commentsCount ?? 0) * 2),
     );
-    const topPosts = sorted.slice(0, 5);
-    const hotTags = [
-      { id: 'tag-1', title: '#TechHackathon', category: 'Tech Hub', engagement: '🔥 42 active' },
-      { id: 'tag-2', title: '#FinalsRevision', category: 'Academic', engagement: '📚 118 students' },
-      { id: 'tag-3', title: '#HostelAllocations', category: 'Housing', engagement: '⚡ Hot topic' },
-      { id: 'tag-4', title: '#CampusSportsFest', category: 'Social', engagement: '🏆 28 teams' },
-    ];
-    return { topPosts, hotTags };
+    return { topPosts: sorted.slice(0, 5) };
   }, [rawPosts]);
 
  async function handlePublish(payload: {
@@ -284,6 +208,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  visibilityScope: 'student' | 'global';
  scopeVisibility: 'campus' | 'global';
  sponsored: boolean;
+ isPinned?: boolean;
  courseTags?: string;
  postFormat: 'Thread' | 'Rapid-Fire Conversation';
  imageUrl?: string;
@@ -309,6 +234,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  authorInstitutionCode: viewerInstitutionCode,
  });
  queryClient.invalidateQueries({ queryKey: ['feed'] });
+ toast.success('Thread published.');
  }
 
   const renderHeader = () => (
@@ -319,7 +245,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 }}>
           <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
-            Campus Forum
+            Forum
           </AppText>
         </View>
 
@@ -475,27 +401,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </Pressable>
               ))
             ) : (
-              trendingTopics.hotTags.map((ht) => (
-                <Pressable
-                  key={ht.id}
-                  onPress={() => setQuery(ht.title.replace('#', ''))}
-                  style={{
-                    backgroundColor: colors.surface,
-                    borderRadius: 14,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <AppText weight="bold" variant="caption" tone="brand">
-                    {ht.title}
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ fontSize: 10, marginTop: 2 }}>
-                    {ht.engagement}
-                  </AppText>
-                </Pressable>
-              ))
+              <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
+                No trending threads yet - be the first to start one.
+              </AppText>
             )}
           </ScrollView>
         </View>
@@ -506,12 +414,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Ionicons name="planet-outline" size={15} color={colors.brandPrimary} />
           <AppText weight="bold" variant="caption" tone="brand" style={{ letterSpacing: 0.5, textTransform: 'uppercase', fontSize: 11 }}>
-            Campus Communities
+            Communities
           </AppText>
         </View>
         <Pressable onPress={() => setSubForumsDirectoryOpen(true)} hitSlop={8}>
           <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-            Browse All ({CAMPUS_SUB_FORUMS.length - 1}) →
+            Browse All ({CHANNELS.length - 1}) →
           </AppText>
         </Pressable>
       </View>
@@ -613,7 +521,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </View>
                 </View>
                 <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
-                  👥 {activeSubForum.membersCount.toLocaleString()} members • 🟢 {activeSubForum.onlineCount} online
+                  💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads • {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
                 </AppText>
               </View>
             </View>
@@ -721,7 +629,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <AppText weight="bold" style={{ fontSize: 24, lineHeight: 30 }}>
-                    Campus Community Forum
+                    Community Forum
                   </AppText>
                   {user?.role === 'admin' && (
                     <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
@@ -731,8 +639,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </View>
                 <AppText tone="secondary" variant="caption" style={{ fontSize: 12, marginTop: 2 }}>
                   {user?.role === 'admin'
-                    ? 'Global campus discourse desk — publish announcements, pin updates, and moderate spaces.'
-                    : 'Connect, ask questions, exchange notes, and participate in campus votes.'}
+                    ? 'Global discourse desk — publish announcements, pin updates, and approve pending threads.'
+                    : 'Connect, ask questions, exchange notes, and participate in polls.'}
                 </AppText>
               </View>
 
@@ -876,7 +784,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         </View>
                       </View>
                       <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, marginTop: 2 }}>
-                        👥 {activeSubForum.membersCount.toLocaleString()} members • 🟢 {activeSubForum.onlineCount} online
+                        💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads • {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
                       </AppText>
                     </View>
                   </View>
@@ -896,7 +804,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   >
                     <Ionicons name="arrow-back" size={13} color={colors.textSecondary} />
                     <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 11 }}>
-                      All Campus Feed
+                      All Feed
                     </AppText>
                   </Pressable>
                 </View>
@@ -1103,15 +1011,15 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
                   <View>
                     <AppText weight="bold" variant="bodySmall">
-                      {activeSubForum.membersCount.toLocaleString()}
+                      {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()}
                     </AppText>
-                    <AppText variant="caption" tone="secondary">Members</AppText>
+                    <AppText variant="caption" tone="secondary">Threads</AppText>
                   </View>
                   <View>
                     <AppText weight="bold" variant="bodySmall" style={{ color: '#10B981' }}>
-                      {activeSubForum.onlineCount}
+                      {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()}
                     </AppText>
-                    <AppText variant="caption" tone="secondary">Online</AppText>
+                    <AppText variant="caption" tone="secondary">Contributors</AppText>
                   </View>
                 </View>
 
@@ -1134,14 +1042,14 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <SolidCard radius={18} style={{ padding: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                   <AppText variant="h3" weight="bold">
-                    Campus Communities
+                    Communities
                   </AppText>
                   <Pressable onPress={() => setSubForumsDirectoryOpen(true)}>
-                    <AppText variant="caption" weight="bold" tone="brand">All ({CAMPUS_SUB_FORUMS.length - 1}) →</AppText>
+                    <AppText variant="caption" weight="bold" tone="brand">All ({CHANNELS.length - 1}) →</AppText>
                   </Pressable>
                 </View>
                 <View style={{ gap: 8 }}>
-                  {CAMPUS_SUB_FORUMS.filter((sf) => sf.id !== 'all').map((sf) => (
+                  {CHANNELS.filter((sf) => sf.id !== 'all').map((sf) => (
                     <Pressable
                       key={sf.id}
                       onPress={() => setSelectedChannel(sf.category)}
@@ -1166,7 +1074,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         </View>
                       </View>
                       <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                        {sf.membersCount.toLocaleString()}
+                        {(communityStats.get(sf.id)?.threads ?? 0).toLocaleString()}
                       </AppText>
                     </Pressable>
                   ))}
@@ -1279,7 +1187,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  </ActionSheetModal>
 
     <PublishThreadModal visible={composerOpen} onClose={() => setComposerOpen(false)} onPublish={handlePublish} />
-    <DiscussionWorkspacesModal visible={workspacesOpen} onClose={() => setWorkspacesOpen(false)} />
     <UserProfileQuickViewModal user={quickViewUser} visible={!!quickViewUser} onClose={() => setQuickViewUser(null)} />
 
     {/* Sub-Forum Rules & Guidelines Modal */}
@@ -1353,7 +1260,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       </View>
     </Modal>
 
-    {/* Campus Sub-Forums Directory Modal */}
+    {/* Communities Directory Modal */}
     <Modal visible={subForumsDirectoryOpen} transparent animationType="slide" onRequestClose={() => setSubForumsDirectoryOpen(false)}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setSubForumsDirectoryOpen(false)} />
@@ -1371,7 +1278,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <Ionicons name="planet" size={22} color={colors.brandPrimary} />
               <View>
                 <AppText variant="h3" weight="bold">
-                  Campus Communities & Sub-Forums
+                  Communities
                 </AppText>
                 <AppText variant="caption" tone="secondary">
                   Select a dedicated space to view discussions & rules
@@ -1384,7 +1291,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 20 }}>
-            {CAMPUS_SUB_FORUMS.map((sf) => {
+            {CHANNELS.map((sf) => {
               const isSelected = selectedChannel === sf.category || (sf.id === 'all' && selectedChannel === null);
               return (
                 <Pressable
@@ -1404,7 +1311,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <Ionicons name={sf.icon} size={18} color={sf.accentColor} />
                       <AppText weight="bold" variant="bodySmall">
                         {sf.label}
@@ -1414,9 +1321,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                           {sf.slug}
                         </AppText>
                       </View>
+                      {sf.approvalStatus === 'pending' ? <Badge label="Pending Review" tone="warning" /> : null}
                     </View>
                     <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                      👥 {sf.membersCount.toLocaleString()}
+                      💬 {(communityStats.get(sf.id)?.threads ?? 0).toLocaleString()}
                     </AppText>
                   </View>
 
@@ -1433,7 +1341,87 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </Pressable>
               );
             })}
+
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setSubForumsDirectoryOpen(false);
+                setProposeCommunityOpen(true);
+              }}
+              style={{
+                padding: spacing.md,
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderStyle: 'dashed',
+                borderColor: colors.brandPrimary,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.brandPrimary} />
+              <AppText weight="bold" tone="brand" variant="bodySmall">
+                Propose a New Community
+              </AppText>
+            </Pressable>
           </ScrollView>
+        </View>
+      </View>
+    </Modal>
+
+    {/* Propose a Community Modal - held for root-admin approval before it
+        becomes a real, postable space (see src/api/communities.ts) */}
+    <Modal visible={proposeCommunityOpen} transparent animationType="fade" onRequestClose={() => setProposeCommunityOpen(false)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setProposeCommunityOpen(false)} />
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 440,
+            backgroundColor: colors.surface,
+            borderRadius: 20,
+            padding: spacing.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+            <AppText variant="h3" weight="bold">
+              Propose a Community
+            </AppText>
+            <Pressable onPress={() => setProposeCommunityOpen(false)} hitSlop={8}>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            {isAdmin
+              ? 'As a root admin your community goes live instantly.'
+              : 'A root admin reviews new communities before they go live - your posts, though, never wait on anyone.'}
+          </AppText>
+          <AppTextField
+            label="Community Name"
+            placeholder="e.g. Photography Club"
+            value={newCommunityName}
+            onChangeText={setNewCommunityName}
+          />
+          <AppTextField
+            label="Description"
+            placeholder="What is this space for?"
+            value={newCommunityDescription}
+            onChangeText={setNewCommunityDescription}
+            multiline
+            numberOfLines={3}
+          />
+          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
+            <AppButton label="Cancel" variant="ghost" onPress={() => setProposeCommunityOpen(false)} />
+            <AppButton
+              label={submittingCommunity ? 'Submitting...' : 'Submit'}
+              loading={submittingCommunity}
+              disabled={!newCommunityName.trim() || submittingCommunity}
+              onPress={handleProposeCommunity}
+            />
+          </View>
         </View>
       </View>
     </Modal>

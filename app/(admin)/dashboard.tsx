@@ -552,7 +552,7 @@ export default function AdminDashboard() {
                 </GlassCard>
               </Pressable>
 
-              {/* 11. Campus Forum Hub & Official Threads */}
+              {/* 11. Forum Hub & Official Threads */}
               <Pressable
                 onPress={() => {
                   haptics.light();
@@ -575,7 +575,7 @@ export default function AdminDashboard() {
                   </View>
                   <View style={{ minWidth: 0 }}>
                     <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
-                      Campus Forum
+                      Forum
                     </AppText>
                     <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
                       Post official threads & polls

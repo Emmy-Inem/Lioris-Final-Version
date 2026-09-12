@@ -558,7 +558,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  <Ionicons name="chatbubbles-outline" size={36} color={colors.textSecondary} style={{ marginBottom: spacing.sm }} />
  <AppText variant="h3" weight="bold" style={{ marginBottom: 4 }}>No Threads Published Yet</AppText>
  <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md, maxWidth: 360 }}>
- Share study questions, poll your cohort, or showcase projects on the Campus Forum!
+ Share study questions, poll your cohort, or showcase projects on the Forum!
  </AppText>
  <AppButton label="Publish First Thread" onPress={() => router.push('./feed' as any)} />
  </SolidCard>

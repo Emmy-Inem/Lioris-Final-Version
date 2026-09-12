@@ -15,7 +15,7 @@ import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import { useToast } from '@/context/ToastContext';
 
 const RAW_QUICK_COMMANDS: { id: string; title: string; subtitle: string; icon: any; href: string; flagKey?: FeatureKey }[] = [
-  { id: 'feed', title: 'Campus Forum & Discussions', subtitle: 'Browse student threads, polls and queries', icon: 'chatbubbles-outline', href: '/(student)/feed' },
+  { id: 'feed', title: 'Forum & Discussions', subtitle: 'Browse student threads, polls and queries', icon: 'chatbubbles-outline', href: '/(student)/feed' },
   { id: 'resources', title: 'Past Questions & Notes Library', subtitle: 'Search and download academic course materials', icon: 'folder-open-outline', href: '/(student)/resources', flagKey: 'academic_resources' },
   { id: 'marketplace', title: 'Campus Marketplace', subtitle: 'Buy/sell textbooks, electronics & lab coats', icon: 'cart-outline', href: '/(student)/marketplace', flagKey: 'marketplace' },
   { id: 'events', title: 'Events & Tech Hackathons', subtitle: 'Upcoming campus workshops, live streams & meetups', icon: 'calendar-outline', href: '/(student)/events-list', flagKey: 'campus_events' },

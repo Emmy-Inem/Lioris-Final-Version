@@ -69,7 +69,7 @@ export function DesktopSidebar() {
 
   const rawStudentNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Dashboard', href: '/(student)/dashboard', icon: 'home' },
-    { id: 'forum', label: 'Campus Forum', href: '/(student)/feed', icon: 'chatbubbles' },
+    { id: 'forum', label: 'Forum', href: '/(student)/feed', icon: 'chatbubbles' },
     { id: 'events', label: 'Events Hub', href: '/(student)/events-list', icon: 'calendar', flagKey: 'campus_events' },
     { id: 'resources', label: 'Resources Library', href: '/(student)/resources', icon: 'folder-open', flagKey: 'academic_resources' },
     { id: 'marketplace', label: 'Marketplace', href: '/(student)/marketplace', icon: 'cart', flagKey: 'marketplace' },
@@ -128,7 +128,7 @@ export function DesktopSidebar() {
     { id: 'audit-logs', label: 'Security Audit Logs', href: '/(admin)/audit-logs', icon: 'key' },
     { id: 'super-admin-config', label: 'System Configuration', href: '/(admin)/super-admin-config', icon: 'construct' },
     { id: 'events', label: 'Events Hub', href: '/(admin)/events-list', icon: 'calendar', flagKey: 'campus_events' },
-    { id: 'forum', label: 'Campus Forum', href: '/(admin)/forum', icon: 'chatbubbles' },
+    { id: 'forum', label: 'Forum', href: '/(admin)/forum', icon: 'chatbubbles' },
     { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Alerts', href: '/(admin)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
     { id: 'settings', label: 'Settings', href: '/(admin)/settings', icon: 'settings' },

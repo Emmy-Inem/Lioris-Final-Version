@@ -736,14 +736,15 @@ export function PostDetailScreen() {
  <Pressable
  onPress={async () => {
  setMenuOpen(false);
- await updatePost(post.id, { sponsored: !post.sponsored });
+ await updatePost(post.id, { isPinned: !post.isPinned });
  await queryClient.invalidateQueries({ queryKey: ['feed'] });
- Alert.alert('Moderation Action', post.sponsored ? 'Thread unpinned.' : 'Thread pinned as official campus announcement.');
+ await queryClient.invalidateQueries({ queryKey: ['post', post.id] });
+ Alert.alert('Moderation Action', post.isPinned ? 'Thread unpinned.' : 'Thread pinned as an official announcement.');
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
  <Ionicons name="pin-outline"size={18} color={colors.brandPrimary} />
- <AppText weight="medium"tone="brand">{post.sponsored ? 'Unpin Announcement' : 'Pin as Campus Announcement'}</AppText>
+ <AppText weight="medium"tone="brand">{post.isPinned ? 'Unpin Announcement' : 'Pin as Announcement'}</AppText>
  </Pressable>
 
  <Pressable

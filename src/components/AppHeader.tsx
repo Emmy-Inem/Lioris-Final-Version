@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+import React from'react';
 import { Platform, Pressable, View } from'react-native';
 import { Ionicons } from'@expo/vector-icons';
 import { router, useSegments } from'expo-router';
@@ -6,28 +6,23 @@ import { useQuery } from'@tanstack/react-query';
 import { AppText } from'./AppText';
 import { Avatar } from'./Avatar';
 import { LiorisLogo } from'./LiorisLogo';
-import { ChangeWorkspaceScopeModal } from'./ChangeWorkspaceScopeModal';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { listNotifications } from '@/api/notifications';
 import { listConversations } from '@/api/messaging';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { getMyProfile } from '@/api/profile';
-import { getInstitutionByCode } from '@/api/institutions';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useViewScope } from '@/hooks/useViewScope';
 import { haptics } from '@/utils/haptics';
 
 export function AppHeader() {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
 
  const segments = useSegments();
  const roleGroup = segments[0] || '(student)';
- const [scopeModalOpen, setScopeModalOpen] = useState(false);
- const { scope, setScope, activeCampusCode } = useViewScope();
 
   const { data: notifications } = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -45,20 +40,12 @@ export function AppHeader() {
     (sum, c) => sum + (c.unreadCount || 0),
     0,
   );
-  const showWorkspaceSwitcher = true;
 
  const { data: profile } = useQuery({
  queryKey: ['profile', 'me', user?.id],
  queryFn: () => getMyProfile(user!),
- enabled: !!user && showWorkspaceSwitcher,
+ enabled: !!user,
  });
-  const homeInstitutionCode =
-    (activeCampusCode && activeCampusCode !== 'GLOBAL')
-      ? activeCampusCode
-      : (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
-      ? profile.institutionCode
-      : 'UI';
-  const homeInstitutionName = getInstitutionByCode(homeInstitutionCode)?.name ?? 'University of Ibadan';
 
   if (isDesktop) return null;
 
@@ -80,50 +67,6 @@ export function AppHeader() {
         <View style={{ marginLeft: 3 }}>
           <LiorisLogo size={18} variant="wordmark" />
         </View>
-        {showWorkspaceSwitcher ? (
-          <Pressable
-            onPress={() => {
-              haptics.light();
-              setScopeModalOpen(true);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`Workspace scope: ${scope === 'campus' ? homeInstitutionCode : 'Global'}`}
-            accessibilityHint="Opens the workspace scope switcher"
-            style={[
-              {
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: isDark ? 'rgba(124, 58, 237, 0.18)' : 'rgba(124, 58, 237, 0.10)',
-                borderRadius: radius.pill,
-                paddingHorizontal: 9,
-                paddingVertical: 4,
-                marginLeft: 8,
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(167, 139, 250, 0.35)' : 'rgba(124, 58, 237, 0.25)',
-                flexShrink: 0,
-              },
-              Platform.OS === 'web' &&
-                ({
-                  backdropFilter: 'blur(16px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-                  boxShadow: isDark
-                    ? 'none'
-                    : 'inset 0 1px 1px rgba(255, 255, 255, 0.60)',
-                } as any),
-            ]}
-          >
-            <Ionicons
-              name={scope === 'campus' ? 'school' : 'globe'}
-              size={12}
-              color={colors.brandPrimary}
-            />
-            <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 10.5 }}>
-              {scope === 'campus' ? homeInstitutionCode : 'Global'}
-            </AppText>
-            <Ionicons name="chevron-down" size={10} color={colors.brandPrimary} />
-          </Pressable>
-        ) : null}
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -291,15 +234,6 @@ export function AppHeader() {
           <Avatar name={user?.fullName ?? 'You'} uri={profile?.avatarUrl} size={32} />
         </Pressable>
       </View>
-
- <ChangeWorkspaceScopeModal
- visible={scopeModalOpen}
- onClose={() => setScopeModalOpen(false)}
- homeInstitution={homeInstitutionName}
- homeInstitutionCode={homeInstitutionCode}
- scope={scope}
- onSelectScope={setScope}
- />
  </View>
  );
 }

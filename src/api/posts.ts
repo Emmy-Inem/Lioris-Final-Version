@@ -80,7 +80,17 @@ function filterPosts(pool: Post[], query: FeedQuery): Post[] {
     });
   }
 
-  if (query.scope) {
+  // 'global' is the broadest portal scope (staff/alumni/admin forum routes all
+  // pass scope="global") and is meant to mean "no audience restriction - show
+  // every thread regardless of who it targets." The old
+  // `p.visibilityScope === query.scope || p.visibilityScope === 'global'` check
+  // collapses to just "=== 'global'" when query.scope IS 'global', which
+  // inverted that intent: it hid every thread posted with the composer's
+  // default "My Campus" audience (audience_scope 'student') from the staff,
+  // alumni, and admin Forum views entirely - those roles could only ever see
+  // threads explicitly marked "All Universities," while students saw
+  // everything. That's most of the real content in the demo data.
+  if (query.scope && query.scope !== 'global') {
     results = results.filter((p) => p.visibilityScope === query.scope || p.visibilityScope === 'global');
   }
   if (query.category) {
@@ -143,9 +153,12 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
         commentsCount: row.comments_count || 0,
         repostsCount: row.reposts_count || 0,
         isLikedByMe: isLiked,
+        isPinned: !!row.is_pinned,
         createdAt: row.created_at,
         imageUrl: row.image_url,
         videoUrl: row.video_url,
+        poll: row.poll_data || undefined,
+        pollQuestion: row.poll_data?.question || undefined,
       };
     });
 
@@ -261,10 +274,14 @@ export async function getPost(id: string): Promise<Post | null> {
       commentsCount: data.comments_count || 0,
       repostsCount: data.reposts_count || 0,
       isLikedByMe: likedByMe,
+      isPinned: !!data.is_pinned,
+      scopeVisibility: data.visibility_scope === 'global' || data.campus_code === 'GLOBAL' ? 'global' : 'campus',
       visibilityScope: (data.audience_scope || 'global') as any,
       imageUrl: data.image_url || undefined,
       videoUrl: data.video_url || undefined,
       courseTags: data.course_tags || undefined,
+      poll: data.poll_data || undefined,
+      pollQuestion: data.poll_data?.question || undefined,
     };
   } catch (err) {
     console.warn('[Posts] getPost error:', err);
@@ -280,6 +297,7 @@ export interface CreatePostPayload {
  scopeVisibility?: 'campus' | 'global';
  authorInstitutionCode?: string;
  sponsored?: boolean;
+ isPinned?: boolean;
  courseTags?: string;
  postFormat?: 'Thread' | 'Rapid-Fire Conversation';
  imageUrl?: string;
@@ -296,6 +314,7 @@ const OPTIONAL_POST_COLUMNS = new Set([
   'category',
   'video_url',
   'image_url',
+  'poll_data',
 ]);
 
 /**
@@ -383,13 +402,17 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
   let authorAvatarUrl: string | null = authData?.user?.user_metadata?.avatar_url || null;
   const { data: profile } = await supabase
     .from('profiles')
-    .select('campus_code, avatar_url')
+    .select('campus_code, avatar_url, role')
     .eq('id', authorId)
     .maybeSingle();
   if (profile?.avatar_url) authorAvatarUrl = profile.avatar_url;
   if (!authorCampus) {
     authorCampus = profile?.campus_code || 'GLOBAL';
   }
+  // The profiles table, not client-supplied auth metadata, is the source of
+  // truth for the author's real role (e.g. the "Staff Advisor" badge on
+  // their threads).
+  authorRole = profile?.role || authorRole;
 
  const isExplicitlyGlobal = scopeVisibility === 'global' || payload.visibilityScope === 'global';
  const campusCode = authorCampus || 'GLOBAL';
@@ -410,6 +433,8 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  audience_scope: payload.visibilityScope || 'global',
  image_url: permanentImageUrl || null,
  video_url: permanentVideoUrl || null,
+ poll_data: payload.poll || null,
+ is_pinned: payload.isPinned || false,
  });
 
  if (error) {
@@ -613,7 +638,18 @@ export async function toggleCommentLike(postId: string, commentId: string, liked
  );
 }
 
+/**
+ * Persists the updated tallies to posts.poll_data (the column already
+ * existed in the schema but nothing ever wrote or read it back, so a poll
+ * vote - and the poll itself - vanished the moment the feed refetched from
+ * Supabase and merged over the local session copy). Note this JSON blob has
+ * no per-viewer vote table, so `isVotedByMe` is shared across everyone who
+ * fetches the row rather than tracked per user - the same known limitation
+ * already documented for reposts in PostDetailScreen.
+ */
 export async function voteOnPoll(postId: string, optionId: string): Promise<void> {
+ let nextPollForPersist: Post['poll'] | null = null;
+
  locallyCreatedPosts = locallyCreatedPosts.map((p) => {
  if (p.id !== postId || !p.poll) return p;
  const hasVoted = p.poll.options.some((o) => o.isVotedByMe);
@@ -621,15 +657,30 @@ export async function voteOnPoll(postId: string, optionId: string): Promise<void
  const nextOptions = p.poll.options.map((opt) =>
  opt.id === optionId ? { ...opt, votes: opt.votes + 1, isVotedByMe: true } : opt,
  );
- return {
- ...p,
- poll: {
- ...p.poll,
- options: nextOptions,
- totalVotes: p.poll.totalVotes + 1,
- },
- };
+ const nextPoll = { ...p.poll, options: nextOptions, totalVotes: p.poll.totalVotes + 1 };
+ nextPollForPersist = nextPoll;
+ return { ...p, poll: nextPoll };
  });
+
+ try {
+ if (!nextPollForPersist) {
+ const { data, error } = await supabase.from('posts').select('poll_data').eq('id', postId).maybeSingle();
+ if (error) throw error;
+ const current: Post['poll'] = data?.poll_data ?? null;
+ if (!current || current.options.some((o) => o.isVotedByMe)) return;
+ nextPollForPersist = {
+ ...current,
+ options: current.options.map((opt) =>
+ opt.id === optionId ? { ...opt, votes: opt.votes + 1, isVotedByMe: true } : opt,
+ ),
+ totalVotes: current.totalVotes + 1,
+ };
+ }
+ const { error: updateError } = await supabase.from('posts').update({ poll_data: nextPollForPersist }).eq('id', postId);
+ if (updateError) console.warn('[Posts] Poll vote persistence error:', updateError.message);
+ } catch (err) {
+ console.warn('[Posts] Poll vote error:', err);
+ }
 }
 
 export async function deletePost(postId: string): Promise<boolean> {

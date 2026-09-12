@@ -3,6 +3,7 @@ import { Alert, Modal, Platform, Pressable, ScrollView, View } from 'react-nativ
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useQuery } from '@tanstack/react-query';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
@@ -11,17 +12,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
-
-const CHANNELS = ['Tech Hub', 'Academic', 'Polls', 'Housing', 'Social', 'Lost & Found'] as const;
-
-const SUB_FORUM_COMMUNITIES = [
-  { name: 'Tech Hub', slug: 'c/tech', icon: 'code-slash' as const, moderator: 'Tech Guild & GDSC Leads' },
-  { name: 'Academic', slug: 'c/academic', icon: 'school' as const, moderator: 'Faculty Reps & TAs' },
-  { name: 'Polls', slug: 'c/polls', icon: 'stats-chart' as const, moderator: 'Student Union SUG' },
-  { name: 'Housing', slug: 'c/housing', icon: 'home' as const, moderator: 'Hall Wardens' },
-  { name: 'Social', slug: 'c/social', icon: 'football' as const, moderator: 'Directorate of Socials' },
-  { name: 'Lost & Found', slug: 'c/lost-found', icon: 'search' as const, moderator: 'Campus Marshal Desk' },
-] as const;
+import { listCommunities } from '@/api/communities';
 
 const STUDENT_GIFS = [
   { label: 'Mind Blown 🤯', url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
@@ -43,6 +34,7 @@ interface PublishThreadModalProps {
     visibilityScope: 'student' | 'global';
     scopeVisibility: 'campus' | 'global';
     sponsored: boolean;
+    isPinned?: boolean;
     courseTags?: string;
     postFormat: 'Thread' | 'Rapid-Fire Conversation';
     imageUrl?: string;
@@ -57,9 +49,10 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const { data: communities = [] } = useQuery({ queryKey: ['communities'], queryFn: listCommunities });
   const [topic, setTopic] = useState('');
   const [content, setContent] = useState('');
-  const [channel, setChannel] = useState<(typeof CHANNELS)[number]>('Academic');
+  const [channel, setChannel] = useState('Academic');
   const [visibility, setVisibility] = useState<'Campus Only' | 'Global Reach'>('Campus Only');
   const [customMediaUri, setCustomMediaUri] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -199,7 +192,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
         category: channel,
         visibilityScope: visibility === 'Campus Only' ? 'student' : 'global',
         scopeVisibility: visibility === 'Campus Only' ? 'campus' : 'global',
-        sponsored: isAdmin && pinToTop ? true : false,
+        sponsored: false,
+        isPinned: isAdmin && pinToTop,
         postFormat: 'Thread',
         imageUrl: customMediaUri ?? undefined,
         pollQuestion: attachPoll && pollQuestion.trim() ? pollQuestion.trim() : undefined,
@@ -253,7 +247,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="create-outline" size={20} color={colors.brandPrimary} />
                 <AppText variant="h3" weight="bold">
-                  {isAdmin ? 'Admin Campus Thread / Broadcast' : 'New Post'}
+                  {isAdmin ? 'Admin Thread / Broadcast' : 'New Post'}
                 </AppText>
               </View>
               <Pressable onPress={onClose} hitSlop={8}>
@@ -286,7 +280,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                   </View>
                 </View>
                 <AppText variant="caption" tone="secondary" style={{ fontSize: 11, lineHeight: 15 }}>
-                  Publishing as University Platform Administrator. Your thread will display a verified badge across student, staff, and alumni feeds.
+                  Publishing as Root Administrator. Your thread will display a verified badge across student, staff, and alumni feeds.
                 </AppText>
                 <Pressable
                   onPress={() => {
@@ -297,7 +291,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 >
                   <Ionicons name={pinToTop ? 'checkbox' : 'square-outline'} size={18} color={colors.brandPrimary} />
                   <AppText variant="caption" weight="bold" tone={pinToTop ? 'brand' : 'secondary'} style={{ fontSize: 11.5 }}>
-                    📌 Pin to Top of Campus Forum
+                    📌 Pin to Top of Forum
                   </AppText>
                 </Pressable>
               </View>
@@ -526,7 +520,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 Post Into Community
               </AppText>
               <AppText variant="caption" tone="brand" weight="bold" style={{ fontSize: 11 }}>
-                🛡️ {SUB_FORUM_COMMUNITIES.find((c) => c.name === channel)?.moderator}
+                🛡️ {communities.find((c) => c.category === channel)?.moderatorBadge}
               </AppText>
             </View>
             <ScrollView
@@ -535,12 +529,12 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               contentContainerStyle={{ gap: 8, paddingRight: 4, marginBottom: spacing.md }}
               style={{ flexGrow: 0 }}
             >
-              {SUB_FORUM_COMMUNITIES.map((com) => {
-                const selected = channel === com.name;
+              {communities.map((com) => {
+                const selected = channel === com.category;
                 return (
                   <Pressable
-                    key={com.name}
-                    onPress={() => { haptics.light(); setChannel(com.name); }}
+                    key={com.id}
+                    onPress={() => { haptics.light(); setChannel(com.category); }}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',

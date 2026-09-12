@@ -288,6 +288,8 @@ export type AuditLogAction =
  | 'event_spotlight_disabled'
  | 'verification_approved'
  | 'verification_rejected'
+ | 'community_approved'
+ | 'community_rejected'
  | 'escrow_funds_released'
  | 'impersonation_started'
  | 'impersonation_ended'
@@ -326,7 +328,7 @@ export interface AuditLogEntry {
  actorRole: UserRole;
  action: AuditLogAction;
  summary: string;
- targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system';
+ targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'community' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system';
  targetId: string;
  reason?: string;
  institutionCode?: string;

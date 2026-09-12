@@ -19,7 +19,7 @@ import { VisibilityBadge } from'./VisibilityBadge';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { Post } from'@/api/types';
-import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
+import { togglePostLike, togglePostRepost, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
 
@@ -50,6 +50,7 @@ export function PostCard({ post }: { post: Post }) {
  const [liked, setLiked] = useState(!!post.isLikedByMe);
  const [likesCount, setLikesCount] = useState(post.likesCount);
  const [reposted, setReposted] = useState(false);
+ const [repostsCount, setRepostsCount] = useState(post.repostsCount);
  const [bookmarked, setBookmarked] = useState(false);
  const [menuOpen, setMenuOpen] = useState(false);
 
@@ -144,6 +145,14 @@ export function PostCard({ post }: { post: Post }) {
  </AppText>
  </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                    {post.isPinned ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                        <Ionicons name="pin" size={10} color={colors.brandPrimary} />
+                        <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
+                          Pinned
+                        </AppText>
+                      </View>
+                    ) : null}
                     <View style={{ backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5 }}>
                       <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
                         c/{post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}
@@ -160,6 +169,7 @@ export function PostCard({ post }: { post: Post }) {
  <VisibilityBadge
  visibility={isGlobalPost ? 'global' : 'campus'}
  campusCode={post.institutionCode}
+ subtle
  />
 
  <Pressable
@@ -203,7 +213,7 @@ export function PostCard({ post }: { post: Post }) {
  </View>
  <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
  <Ionicons name="videocam"size={12} color="#FFFFFF" />
- <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>0:45 Demo</AppText>
+ <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>Video</AppText>
  </View>
  </View>
  ) : null}
@@ -355,22 +365,31 @@ export function PostCard({ post }: { post: Post }) {
  >
  <Ionicons name="chatbubble-outline"size={17} color={colors.textSecondary} />
  <AppText variant="bodySmall"tone="secondary"weight="medium">
- {post.commentsCount ?? 6}
+ {post.commentsCount ?? 0}
  </AppText>
  </Pressable>
 
  {/* Repost / Share to Cohort */}
  <Pressable
- onPress={() => {
+ onPress={async () => {
  haptics.light();
- setReposted((r) => !r);
- Alert.alert(reposted ? 'Removed from Reposts' : 'Reposted', 'Thread amplified to your campus followers.');
+ const next = !reposted;
+ setReposted(next);
+ setRepostsCount((prev) => Math.max(0, prev + (next ? 1 : -1)));
+ try {
+ const serverCount = await togglePostRepost(post.id, next);
+ if (typeof serverCount === 'number') setRepostsCount(serverCount);
+ } catch (err: any) {
+ setReposted(!next);
+ setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
+ Alert.alert('Repost failed', err?.message || 'Please try again.');
+ }
  }}
  accessibilityRole="button"accessibilityLabel="Repost to cohort"style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
  >
  <Ionicons name="repeat"size={18} color={reposted ? colors.brandPrimary : colors.textSecondary} />
  <AppText variant="bodySmall"tone={reposted ? 'brand' : 'secondary'} weight={reposted ? 'bold' : 'regular'}>
- {reposted ? 'Reposted' : 'Repost'}
+ {reposted ? 'Reposted' : repostsCount > 0 ? `${repostsCount}` : 'Repost'}
  </AppText>
  </Pressable>
 
@@ -451,14 +470,14 @@ export function PostCard({ post }: { post: Post }) {
  <Pressable
  onPress={async () => {
  setMenuOpen(false);
- await updatePost(post.id, { sponsored: !post.sponsored });
+ await updatePost(post.id, { isPinned: !post.isPinned });
  await queryClient.invalidateQueries({ queryKey: ['feed'] });
- Alert.alert('Moderation Action', post.sponsored ? 'Thread unpinned.' : 'Thread pinned as official campus announcement.');
+ Alert.alert('Moderation Action', post.isPinned ? 'Thread unpinned.' : 'Thread pinned as an official announcement.');
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
  <Ionicons name="pin-outline"size={18} color={colors.brandPrimary} />
- <AppText weight="medium"tone="brand">{post.sponsored ? 'Unpin Announcement' : 'Pin as Campus Announcement'}</AppText>
+ <AppText weight="medium"tone="brand">{post.isPinned ? 'Unpin Announcement' : 'Pin as Announcement'}</AppText>
  </Pressable>
 
  <Pressable

@@ -12,13 +12,14 @@ import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
+import { ChangeWorkspaceScopeModal } from './ChangeWorkspaceScopeModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { getMyProfile } from '@/api/profile';
-import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import { LAUNCH_INSTITUTIONS, getInstitutionByCode } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
 import { submitReport } from '@/api/moderation';
 import { createSupportTicket, SupportTicketCategory } from '@/api/supportTickets';
@@ -59,6 +60,7 @@ async function setStoredPref(key: string, value: string): Promise<void> {
 
 const ALL_SETTINGS_SECTIONS = [
   { key: 'account', label: 'Account', fullLabel: 'Account & Profile', icon: 'person-outline' as const },
+  { key: 'workspace', label: 'Scope', fullLabel: 'Workspace Scope', icon: 'globe-outline' as const },
   { key: 'appearance', label: 'Theme', fullLabel: 'Theme & Display', icon: 'color-palette-outline' as const },
   { key: 'notifications', label: 'Alerts', fullLabel: 'Notifications', icon: 'notifications-outline' as const },
   { key: 'security', label: 'Security', fullLabel: 'Security & Logins', icon: 'shield-checkmark-outline' as const },
@@ -110,7 +112,8 @@ export function SettingsScreen() {
   const { user, logout, switchRole } = useAuth();
   const { isDesktop } = useResponsive();
   const toast = useToast();
-  const { homeInstitutionCode } = useCampusScope();
+  const { scope, setScope, activeCampusCode, homeInstitutionCode } = useCampusScope();
+  const [workspaceScopeModalOpen, setWorkspaceScopeModalOpen] = useState(false);
 
   const isSuperAdmin = user?.actualRole === 'admin';
   const SETTINGS_SECTIONS = isSuperAdmin
@@ -585,6 +588,61 @@ export function SettingsScreen() {
               </SolidCard>
             )}
 
+            {/* Workspace Scope - moved here from the small pill that used to sit in
+                the app header on every screen, since it's a persistent account
+                preference rather than a per-screen control. */}
+            {activeSection === 'workspace' && (
+              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+                <View>
+                  <AppText variant="h3" weight="bold">
+                    Workspace Scope
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                    Controls which university's Forum threads, marketplace listings, events, and resources you see
+                  </AppText>
+                </View>
+
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: spacing.sm,
+                    backgroundColor: colors.pastelPrimaryBg,
+                    borderRadius: radius.md,
+                    padding: spacing.md,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                    <Ionicons name={scope === 'campus' ? 'school' : 'globe'} size={20} color={colors.brandPrimary} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                        {scope === 'campus'
+                          ? (activeCampusCode && activeCampusCode !== homeInstitutionCode
+                              ? `Exploring ${getInstitutionByCode(activeCampusCode)?.name ?? activeCampusCode}`
+                              : institutionDisplay)
+                          : 'All Lioris Global Feed'}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                        {scope === 'campus' ? 'My Campus Workspace' : 'Cross-university content'}
+                      </AppText>
+                    </View>
+                  </View>
+                  <Badge label={scope === 'campus' ? 'CAMPUS' : 'GLOBAL'} tone="brand" />
+                </View>
+
+                <AppButton
+                  label="Change Workspace Scope"
+                  variant="secondary"
+                  icon="swap-horizontal-outline"
+                  onPress={() => {
+                    haptics.light();
+                    setWorkspaceScopeModalOpen(true);
+                  }}
+                />
+              </SolidCard>
+            )}
+
             {/* 2. Appearance & Theme */}
             {activeSection === 'appearance' && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
@@ -955,6 +1013,16 @@ export function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Workspace Scope Modal */}
+      <ChangeWorkspaceScopeModal
+        visible={workspaceScopeModalOpen}
+        onClose={() => setWorkspaceScopeModalOpen(false)}
+        homeInstitution={institutionDisplay}
+        homeInstitutionCode={homeInstitutionCode}
+        scope={scope}
+        onSelectScope={setScope}
+      />
 
       {/* Password Update Modal */}
       <Modal
