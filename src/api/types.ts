@@ -71,6 +71,7 @@ export interface Post {
  authorAvatarUrl?: string | null;
  authorRole: UserRole;
  authorTrustLevel?: number;
+ authorVerified?: boolean;
  title: string;
  content: string;
  category: string;

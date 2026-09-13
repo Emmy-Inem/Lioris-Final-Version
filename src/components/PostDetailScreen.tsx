@@ -279,7 +279,9 @@ export function PostDetailScreen() {
  <AppText weight="bold" variant="body" numberOfLines={1}>
  {post.authorName}
  </AppText>
+ {post.authorVerified || post.authorRole === 'admin' ? (
  <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} />
+ ) : null}
  <AppText tone="secondary" variant="caption" style={{ fontSize: 12 }}>
  • {post.authorRole === 'student' ? 'Student' : post.authorRole === 'alumni' ? 'Alumni' : 'Staff'}
  </AppText>
