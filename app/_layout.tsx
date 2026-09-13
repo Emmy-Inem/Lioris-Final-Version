@@ -19,7 +19,7 @@ import { addNotificationResponseListener } from '@/notifications/push';
 
 import { loadBlockedUserIds } from '@/api/connections';
 
-import { FeatureFlagsProvider } from '@/context/FeatureFlagsContext';
+import { FeatureFlagsProvider, useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { LiquidGlassProvider } from '@/context/LiquidGlassContext';
 
@@ -259,12 +259,7 @@ export default function RootLayout() {
  <LiquidGlassProvider>
  <ToastProvider>
  <FeatureFlagsProvider>
- <StatusBarForTheme />
- <ImpersonationBanner />
- <OfflineBanner />
- <ErrorBoundary>
- <Slot />
- </ErrorBoundary>
+ <AppShell />
  </FeatureFlagsProvider>
  </ToastProvider>
  </LiquidGlassProvider>
@@ -279,4 +274,33 @@ export default function RootLayout() {
 function StatusBarForTheme() {
  const { isDark } = useTheme();
  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
+
+/**
+ * Screens used to mount and render before the feature-flags fetch resolved,
+ * seeing DEFAULT_FLAGS (every flag on) for that first render. Some consumers
+ * never picked up the corrected values afterward even though the provider's
+ * own state updated correctly (e.g. CommunityFeedScreen's "Currently
+ * Threading" section stayed visible after forum_trends was turned off).
+ * Holding the whole app behind the same loading screen already used for
+ * fonts until flags are known removes the bad first render entirely, so
+ * there's nothing stale left for any consumer to get stuck on.
+ */
+function AppShell() {
+ const { isLoading } = useFeatureFlags();
+
+ if (isLoading) {
+ return <AppLoadingScreen message="Launching Lioris Campus Platform..." />;
+ }
+
+ return (
+ <>
+ <StatusBarForTheme />
+ <ImpersonationBanner />
+ <OfflineBanner />
+ <ErrorBoundary>
+ <Slot />
+ </ErrorBoundary>
+ </>
+ );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
@@ -30,6 +30,17 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  const [description, setDescription] = useState('');
  const [submitting, setSubmitting] = useState(false);
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+ const scrollRef = useRef<ScrollView>(null);
+
+ // The error banner renders at the very top of the form, above every
+ // field - invisible to anyone who has scrolled down to the "Publish"
+ // button at the bottom when validation fails. Scroll back up whenever a
+ // new error appears so it's actually seen instead of looking like the
+ // button silently did nothing.
+ function showError(message: string) {
+ setErrorMessage(message);
+ scrollRef.current?.scrollTo({ y: 0, animated: true });
+ }
 
  function reset() {
  setTitle('');
@@ -46,22 +57,22 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  async function handleSubmit() {
  setErrorMessage(null);
  if (!title.trim()) {
- setErrorMessage('Please enter a role title.');
+ showError('Please enter a role title.');
  haptics.error();
  return;
  }
  if (!company.trim()) {
- setErrorMessage('Please enter the hiring company or organization.');
+ showError('Please enter the hiring company or organization.');
  haptics.error();
  return;
  }
  if (!location.trim()) {
- setErrorMessage('Please specify the location (e.g. Lagos, Ibadan, Remote).');
+ showError('Please specify the location (e.g. Lagos, Ibadan, Remote).');
  haptics.error();
  return;
  }
  if (!applyUrl.trim()) {
- setErrorMessage('Please provide an application URL or email.');
+ showError('Please provide an application URL or email.');
  haptics.error();
  return;
  }
@@ -88,7 +99,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  onClose();
  } catch (err: any) {
  haptics.error();
- setErrorMessage(err?.message || 'Failed to publish job opening. Please try again.');
+ showError(err?.message || 'Failed to publish job opening. Please try again.');
  } finally {
  setSubmitting(false);
  }
@@ -121,7 +132,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  overflow: 'hidden',
  }}
  >
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
+ <ScrollView ref={scrollRef} style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
  <View>
  <AppText variant="h1" weight="bold">

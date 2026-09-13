@@ -250,23 +250,36 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     let mounted = true;
 
-    async function loadFlags() {
+    // The whole app now waits behind isLoading (see AppShell in
+    // app/_layout.tsx) so nothing renders with the wrong DEFAULT_FLAGS.
+    // A failsafe timeout keeps a stalled network request from holding that
+    // gate open indefinitely - same pattern as the font-loading failsafe.
+    const failsafe = setTimeout(() => {
+      if (mounted) setIsLoading(false);
+    }, 4000);
+
+    (async () => {
+      const cached = await getStoredFlags();
+      if (cached && mounted) {
+        try {
+          setFlags((prev) => ({ ...prev, ...JSON.parse(cached) }));
+        } catch {}
+      }
+    })();
+
+    // platform_settings is only readable by the `authenticated` role (RLS).
+    // A single getSession()-then-fetch attempt still raced the client's own
+    // internal auth initialization often enough to matter: getSession()
+    // resolving doesn't guarantee the request layer has the JWT attached
+    // yet, and this effect only ran once, so a lost race meant the whole
+    // session stayed on all-enabled DEFAULT_FLAGS with no retry - some
+    // screens correctly picked up a later fix, others (e.g.
+    // CommunityFeedScreen's "Currently Threading") stayed stuck. Fetching
+    // from onAuthStateChange instead means the fetch only ever fires once
+    // Supabase itself has resolved auth state (it always emits an initial
+    // event, signed-in or signed-out, right after that resolves).
+    const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
       try {
-        const cached = await getStoredFlags();
-        if (cached && mounted) {
-          const parsed = JSON.parse(cached);
-          setFlags((prev) => ({ ...prev, ...parsed }));
-        }
-
-        // platform_settings is only readable by the `authenticated` role
-        // (RLS), and the Supabase client's session restore on boot is
-        // itself async. Querying before it resolves silently returns zero
-        // rows (not an error) rather than the real flags, and since this
-        // effect only runs once, the whole session was then stuck on the
-        // all-enabled DEFAULT_FLAGS with no retry. Waiting for the session
-        // here ensures the request actually carries the user's JWT.
-        await supabase.auth.getSession();
-
         const { data, error } = await supabase
           .from('platform_settings')
           .select('value')
@@ -282,13 +295,12 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
           });
         }
       } catch {
-        // Fallback to defaults
+        // Fallback to defaults/cache
       } finally {
+        clearTimeout(failsafe);
         if (mounted) setIsLoading(false);
       }
-    }
-
-    loadFlags();
+    });
 
     if (isWeb && typeof window !== 'undefined') {
       const handleSync = (e: any) => {
@@ -307,6 +319,8 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
 
       return () => {
         mounted = false;
+        clearTimeout(failsafe);
+        authListener?.subscription?.unsubscribe();
         window.removeEventListener('lioris_feature_flags_sync', handleSync);
         window.removeEventListener('storage', handleSync);
       };
@@ -314,6 +328,8 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
 
     return () => {
       mounted = false;
+      clearTimeout(failsafe);
+      authListener?.subscription?.unsubscribe();
     };
   }, []);
 

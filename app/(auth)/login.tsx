@@ -504,6 +504,38 @@ export default function LoginScreen() {
  </WaveCard>
 
  <View style={{ paddingHorizontal: spacing.lg }}>
+ <SolidCard style={{ padding: spacing.md }}>
+ <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, letterSpacing: 1 }}>
+ QUICK 1-CLICK DEMO ACCOUNTS
+ </AppText>
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+ {[
+ { label: 'Student', email: 'diana.prince@ui.edu.ng' },
+ { label: 'Staff', email: 'dr.adeyemi@ui.edu.ng' },
+ { label: 'Admin', email: 'admin@ui.edu.ng' },
+ { label: 'Alumni', email: 'alumni.adeola@ui.edu.ng' },
+ ].map((demo) => (
+ <Pressable
+ key={demo.label}
+ onPress={() => {
+ setEmail(demo.email);
+ setPassword('password123');
+ }}
+ style={{
+ backgroundColor: colors.pastelPrimaryBg,
+ paddingHorizontal: 10,
+ paddingVertical: 5,
+ borderRadius: radius.pill,
+ }}
+ >
+ <AppText variant="caption" weight="bold" tone="brand">
+ {demo.label}
+ </AppText>
+ </Pressable>
+ ))}
+ </View>
+ </SolidCard>
+
  <SolidCard style={{ alignItems: 'center', marginTop: spacing.lg }}>
  <View
  style={{

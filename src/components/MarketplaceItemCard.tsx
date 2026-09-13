@@ -160,19 +160,9 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  </AppText>
  </View>
  {item.sellerVerified ? (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 2,
- backgroundColor: `${colors.brandPrimary}14`,
- borderRadius: 4,
- paddingHorizontal: 4,
- paddingVertical: 2,
- }}
- >
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
  {trust ? <Ionicons name={trust.icon} size={10} color={trust.color} /> : null}
- <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 7 }}>
+ <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 9, letterSpacing: 0.2 }}>
  Verified
  </AppText>
  </View>
