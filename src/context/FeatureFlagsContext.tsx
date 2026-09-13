@@ -258,6 +258,15 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
           setFlags((prev) => ({ ...prev, ...parsed }));
         }
 
+        // platform_settings is only readable by the `authenticated` role
+        // (RLS), and the Supabase client's session restore on boot is
+        // itself async. Querying before it resolves silently returns zero
+        // rows (not an error) rather than the real flags, and since this
+        // effect only runs once, the whole session was then stuck on the
+        // all-enabled DEFAULT_FLAGS with no retry. Waiting for the session
+        // here ensures the request actually carries the user's JWT.
+        await supabase.auth.getSession();
+
         const { data, error } = await supabase
           .from('platform_settings')
           .select('value')
