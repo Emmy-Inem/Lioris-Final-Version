@@ -155,11 +155,9 @@ export function PostCard({ post }: { post: Post }) {
                         </AppText>
                       </View>
                     ) : null}
-                    <View style={{ backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5 }}>
-                      <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
-                        c/{post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}
-                      </AppText>
-                    </View>
+                    <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
+                      c/{post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}
+                    </AppText>
                     <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                       • {timeAgo(post.createdAt)}
                     </AppText>
