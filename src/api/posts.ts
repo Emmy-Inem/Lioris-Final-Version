@@ -20,8 +20,8 @@ let locallyCreatedPosts: Post[] = [];
  * load when the author join or the likes join isn't resolvable.
  */
 const POST_SELECT_LADDER = [
-  '*, profiles:author_id(full_name, role, avatar_url, campus_code), post_likes(user_id)',
-  '*, profiles:author_id(full_name, role, avatar_url, campus_code)',
+  '*, profiles:author_id(full_name, role, avatar_url, campus_code, verification_status), post_likes(user_id)',
+  '*, profiles:author_id(full_name, role, avatar_url, campus_code, verification_status)',
   '*',
 ] as const;
 
@@ -138,6 +138,7 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
         authorId: row.author_id,
         authorName: row.profiles?.full_name || row.author_name || 'Campus Student',
         authorRole: (row.profiles?.role || row.author_role || 'student') as any,
+        authorVerified: row.profiles?.verification_status === 'verified',
         authorAvatarUrl: row.profiles?.avatar_url || null,
         title: row.title,
         content: row.content,
@@ -193,7 +194,7 @@ export async function listMyPosts(userId?: string): Promise<Post[]> {
     if (targetUid) {
       const { data, error } = await supabase
         .from('posts')
-        .select('*, profiles:author_id(full_name, role, avatar_url, campus_code), post_likes(user_id)')
+        .select('*, profiles:author_id(full_name, role, avatar_url, campus_code, verification_status), post_likes(user_id)')
         .eq('author_id', targetUid)
         .order('created_at', { ascending: false });
 
@@ -203,6 +204,7 @@ export async function listMyPosts(userId?: string): Promise<Post[]> {
           authorId: row.author_id,
           authorName: row.profiles?.full_name || 'You',
           authorRole: (row.profiles?.role || 'student') as any,
+          authorVerified: row.profiles?.verification_status === 'verified',
           authorAvatarUrl: row.profiles?.avatar_url || null,
           title: row.title,
           content: row.content,
@@ -248,7 +250,7 @@ export async function getPost(id: string): Promise<Post | null> {
 
     const { data, error } = await supabase
       .from('posts')
-      .select('*, profiles:author_id(full_name, role, avatar_url, campus_code), post_likes(user_id)')
+      .select('*, profiles:author_id(full_name, role, avatar_url, campus_code, verification_status), post_likes(user_id)')
       .eq('id', id)
       .maybeSingle();
 
@@ -263,6 +265,7 @@ export async function getPost(id: string): Promise<Post | null> {
       id: data.id,
       authorName: data.profiles?.full_name || 'Campus Student',
       authorRole: (data.profiles?.role || 'student') as any,
+      authorVerified: data.profiles?.verification_status === 'verified',
       authorAvatarUrl: data.profiles?.avatar_url || null,
       institutionCode: data.profiles?.campus_code || 'GLOBAL',
       authorId: data.author_id,

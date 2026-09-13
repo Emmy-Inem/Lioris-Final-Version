@@ -2,6 +2,15 @@ import { supabase } from './supabase';
 import { Conversation, Message } from './types';
 import { generateUUID } from '../utils/uuid';
 import { getSessionUser } from '../auth/tokenStorage';
+import { isCallMessage } from './calling';
+
+function toPreviewText(content: string | undefined | null): string {
+  if (!content) return 'Started conversation';
+  if (isCallMessage(content)) {
+    return content.startsWith('📹') ? '📹 Video call' : '📞 Voice call';
+  }
+  return content;
+}
 
 // Real conversations/messages cache for optimistic updates and offline resilience
 let localConversations: Conversation[] = [];
@@ -124,7 +133,7 @@ export async function listConversations(): Promise<Conversation[]> {
         : 0;
 
       const lastMessageAt = latestMsg?.created_at || row.updated_at || row.created_at;
-      const lastMessagePreview = latestMsg?.content || 'Started conversation';
+      const lastMessagePreview = toPreviewText(latestMsg?.content);
 
       return {
         id: row.id,
@@ -427,7 +436,7 @@ export async function sendMessage(
 
   localConversations = localConversations.map((c) =>
     c.id === conversationId
-      ? { ...c, lastMessagePreview: content, lastMessageAt: now }
+      ? { ...c, lastMessagePreview: toPreviewText(content), lastMessageAt: now }
       : c,
   );
 

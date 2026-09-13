@@ -139,7 +139,9 @@ export function PostCard({ post }: { post: Post }) {
  <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
  {post.authorName}
  </AppText>
+ {post.authorVerified || post.authorRole === 'admin' ? (
  <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} />
+ ) : null}
  <AppText tone="secondary"variant="caption"style={{ fontSize: 11 }}>
  • {post.authorRole === 'student' ? 'Student' : post.authorRole === 'alumni' ? "Alumni'21" : 'Staff Advisor'}
  </AppText>

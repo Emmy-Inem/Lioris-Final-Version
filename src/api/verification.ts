@@ -170,12 +170,12 @@ export async function respondToVerificationRequest(
   if (status === 'approved' && reqRow?.user_id) {
     await supabase
       .from('profiles')
-      .update({ verification_status: 'verified', is_verified: true })
+      .update({ verification_status: 'verified' })
       .eq('id', reqRow.user_id);
   } else if (status === 'rejected' && reqRow?.user_id) {
     await supabase
       .from('profiles')
-      .update({ verification_status: 'unverified', is_verified: false })
+      .update({ verification_status: 'unverified' })
       .eq('id', reqRow.user_id);
   }
   } catch (err) {
@@ -236,7 +236,6 @@ export async function adminDirectVerifyUser(userId: string, isVerified: boolean)
     const { error } = await supabase
       .from('profiles')
       .update({
-        is_verified: isVerified,
         verification_status: status,
       })
       .eq('id', userId);
