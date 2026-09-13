@@ -64,7 +64,7 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
   try {
     let q = supabase
       .from('profiles')
-      .select('id, full_name, bio, role, department, avatar_url, campus_code, interests')
+      .select('id, full_name, bio, role, department, avatar_url, campus_code, interests, verification_status')
       .in('role', ['staff', 'alumni', 'admin']);
 
     if (query.q) {
@@ -74,11 +74,18 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
     const { data, error } = await q;
     if (error) throw error;
 
+    // The screen labels this list "Verified Alumni Mentors" - only surface
+    // profiles that actually earned that status (admins are exempt, same
+    // rule as the verified badge elsewhere).
+    const verifiedOnly = (data ?? []).filter(
+      (row: any) => row.verification_status === 'verified' || row.role === 'admin',
+    );
+
     // Real profile fields only. This used to hand every mentor an identical
     // fabricated payload: the same four expertise tags, "4 slots available",
     // a campus code presented as an employer, and a bio asserting the person
     // was a "Verified" mentor.
-    return (data ?? []).map((row: any) => ({
+    return verifiedOnly.map((row: any) => ({
       id: row.id,
       fullName: row.full_name,
       department: row.department || undefined,
