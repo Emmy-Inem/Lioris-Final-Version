@@ -159,6 +159,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  {item.sellerName}
  </AppText>
  </View>
+ {item.sellerVerified ? (
  <View
  style={{
  flexDirection: 'row',
@@ -175,6 +176,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  Verified
  </AppText>
  </View>
+ ) : null}
  </View>
 
  {!isOwnListing ? (

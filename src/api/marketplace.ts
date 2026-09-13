@@ -83,7 +83,7 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
 
  let req = supabase
  .from('marketplace_listings')
- .select('*, seller:profiles(full_name, avatar_url, trust_score, campus_code)')
+ .select('*, seller:profiles(full_name, avatar_url, trust_score, campus_code, role, verification_status)')
  .eq('is_sold', false)
  .order('created_at', { ascending: false });
 
@@ -109,6 +109,7 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  sellerName: row.seller?.full_name || 'Campus Student',
  sellerAvatarUrl: row.seller?.avatar_url || null,
  sellerTrustLevel: Math.max(1, Math.round((row.seller?.trust_score || 80) / 20)),
+ sellerVerified: row.seller?.verification_status === 'verified' || row.seller?.role === 'admin',
  title: row.title,
  description: row.description || '',
  price: row.price_display || `₦${(row.price_kobo / 100).toLocaleString()}`,

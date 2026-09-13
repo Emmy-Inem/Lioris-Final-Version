@@ -364,6 +364,7 @@ export interface MarketplaceListing {
  sellerAvatarUrl?: string | null;
  sellerId: string;
  sellerTrustLevel: number;
+ sellerVerified?: boolean;
  createdAt: string;
 }
 
