@@ -8,6 +8,7 @@ import { AppText } from'@/components/AppText';
 import { AppTextField } from'@/components/AppTextField';
 import { AppButton } from'@/components/AppButton';
 import { ChipSelect } from'@/components/ChipSelect';
+import { DepartmentPicker } from'@/components/DepartmentPicker';
 import { SolidCard } from'@/components/SolidCard';
 import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
@@ -1183,9 +1184,9 @@ export default function UserDirectoryScreen() {
  onChangeText={setNewMatric}
  />
 
- <AppTextField
- label="Department / Faculty"placeholder="e.g. Computer Science"value={newDepartment}
- onChangeText={setNewDepartment}
+ <DepartmentPicker
+ label="Department / Faculty"value={newDepartment || null}
+ onChange={setNewDepartment}
  />
 
  {/* Role Selection */}
@@ -1277,11 +1278,10 @@ export default function UserDirectoryScreen() {
                   onChangeText={setEditMatric}
                 />
 
-                <AppTextField
+                <DepartmentPicker
                   label="Department & Faculty"
-                  placeholder="e.g. Computer Science"
-                  value={editDepartment}
-                  onChangeText={setEditDepartment}
+                  value={editDepartment || null}
+                  onChange={setEditDepartment}
                 />
 
                 {/* Role Selection */}

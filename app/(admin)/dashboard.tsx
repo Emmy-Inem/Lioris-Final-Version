@@ -17,6 +17,7 @@ import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
+import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -73,22 +74,17 @@ export default function AdminDashboard() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                       <View
                         style={{
-                          backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.55)',
-                          borderRadius: radius.pill,
-                          paddingHorizontal: 10,
-                          paddingVertical: 4,
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 6,
-                          borderWidth: 1,
-                          borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.25)',
+                          flexShrink: 1,
                         }}
                       >
-                        <Ionicons name="shield" size={13} color="#FCA5A5" />
-                        <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11, letterSpacing: 0.5, color: '#FCA5A5' }}>
+                        <Ionicons name="shield" size={13} color="#FCA5A5" style={heroTextShadowStyle} />
+                        <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, letterSpacing: 0.5, color: '#FCA5A5' }, heroTextShadowStyle]}>
                           ROOT ADMIN
                         </AppText>
-                        <AppText variant="caption" tone="inverse" style={{ opacity: 0.9 }}>
+                        <AppText variant="caption" tone="inverse" style={[{ opacity: 0.9 }, heroTextShadowStyle]}>
                           • Multi-Campus Hub
                         </AppText>
                       </View>

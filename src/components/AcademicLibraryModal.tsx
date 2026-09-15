@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
+import { FACULTIES } from '@/data/departments';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -31,15 +32,7 @@ interface AcademicLibraryModalProps {
   initialQuery?: string;
 }
 
-const SUBJECT_FILTERS = [
-  'All',
-  'Computer Science',
-  'Engineering',
-  'Medicine',
-  'Law',
-  'Mathematics',
-  'Economics',
-];
+const SUBJECT_FILTERS = ['All', ...FACULTIES.map((f) => f.faculty)];
 
 export function AcademicLibraryModal({
   visible,

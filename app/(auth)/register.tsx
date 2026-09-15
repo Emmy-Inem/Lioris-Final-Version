@@ -151,6 +151,14 @@ export default function RegisterScreen() {
  </AppText>
  </View>
  ) : null}
+ {emailTouched && emailFormatValid && !matchedInstitution ? (
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -spacing.sm, marginBottom: spacing.lg }}>
+ <Ionicons name="information-circle" size={14} color={colors.textSecondary} />
+ <AppText variant="bodySmall" tone="secondary">
+ We're not live at your school yet - you'll be asked to join the waitlist during setup.
+ </AppText>
+ </View>
+ ) : null}
 
  <View>
  <AppTextField

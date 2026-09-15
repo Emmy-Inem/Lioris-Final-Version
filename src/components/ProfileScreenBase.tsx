@@ -9,6 +9,7 @@ import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
+import { DepartmentPicker } from './DepartmentPicker';
 import { Avatar } from './Avatar';
 import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
@@ -713,7 +714,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
  <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, width: '100%',  maxHeight: 380 }}>
  <AppTextField label="Full Name"value={editName} onChangeText={setEditName} />
- <AppTextField label="Department"value={editDepartment} onChangeText={setEditDepartment} />
+ <DepartmentPicker value={editDepartment || null} onChange={setEditDepartment} />
  <AppTextField label="Graduation Year"value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />
  <AppTextField label="Skills & Interests (comma-separated)"value={editInterests} onChangeText={setEditInterests} />
  <AppTextField label="Academic Bio"value={editBio} onChangeText={setEditBio} multiline numberOfLines={3} />
