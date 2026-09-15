@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -817,7 +817,7 @@ export function SettingsScreen() {
                   </View>
 
                   {mfaChecking ? (
-                    <AppText tone="secondary" variant="caption">Checking statusâ€¦</AppText>
+                    <AppText tone="secondary" variant="caption">Checking status…</AppText>
                   ) : mfaFactorId && !mfaPendingFactorId ? (
                     <View style={{ gap: spacing.sm }}>
                       <View
@@ -838,7 +838,7 @@ export function SettingsScreen() {
                         </AppText>
                       </View>
                       <AppButton
-                        label={mfaDisabling ? 'Turning offâ€¦' : 'Turn Off'}
+                        label={mfaDisabling ? 'Turning off…' : 'Turn Off'}
                         variant="secondary"
                         onPress={handleTurnOffMfa}
                         loading={mfaDisabling}
@@ -887,7 +887,7 @@ export function SettingsScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                           <AppButton
-                            label={mfaConfirming ? 'Confirmingâ€¦' : 'Confirm'}
+                            label={mfaConfirming ? 'Confirming…' : 'Confirm'}
                             onPress={handleConfirmMfaEnrollment}
                             loading={mfaConfirming}
                             disabled={mfaConfirmCode.length < 6}
@@ -897,7 +897,7 @@ export function SettingsScreen() {
                     </View>
                   ) : (
                     <AppButton
-                      label={mfaEnrolling ? 'Starting setupâ€¦' : 'Set Up Two-Factor Authentication'}
+                      label={mfaEnrolling ? 'Starting setup…' : 'Set Up Two-Factor Authentication'}
                       variant="secondary"
                       onPress={handleStartMfaEnrollment}
                       loading={mfaEnrolling}
@@ -1057,14 +1057,14 @@ export function SettingsScreen() {
               value={newPassword}
               onChangeText={setNewPassword}
               secureTextEntry
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="••••••••"
             />
             <AppTextField
               label="Confirm Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="••••••••"
             />
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
               <View style={{ flex: 1 }}>

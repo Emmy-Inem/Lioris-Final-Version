@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   Linking,
@@ -285,7 +285,7 @@ export function ResourceReaderModal({
                 </AppText>
                 <View style={{ flexDirection: 'row', gap: spacing.md }}>
                   <AppButton
-                    label="Open In Browser Viewer â†—"
+                    label="Open In Browser Viewer ↗"
                     onPress={() => Linking.openURL(viewerUrl)}
                     variant="primary"
                   />
@@ -333,8 +333,8 @@ export function ResourceReaderModal({
                       Verified Academic Material
                     </AppText>
                     <AppText tone="secondary" variant="caption" style={{ lineHeight: 18 }}>
-                      Course: {resource.courseCode} â€¢ Department: {resource.department}
-                      {'\n'}Author: {resource.authorName} â€¢ Category: {resource.category}
+                      Course: {resource.courseCode} • Department: {resource.department}
+                      {'\n'}Author: {resource.authorName} • Category: {resource.category}
                     </AppText>
                   </View>
 
@@ -342,9 +342,9 @@ export function ResourceReaderModal({
                     Key Examination Takeaways:
                   </AppText>
                   <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 20 }}>
-                    â€¢ Review past exam trends and recommended problem sets associated with {resource.courseCode}.
-                    {'\n'}â€¢ Verify prerequisite formulas and lecture slide references.
-                    {'\n'}â€¢ Bookmark this resource for quick offline reference before finals.
+                    • Review past exam trends and recommended problem sets associated with {resource.courseCode}.
+                    {'\n'}• Verify prerequisite formulas and lecture slide references.
+                    {'\n'}• Bookmark this resource for quick offline reference before finals.
                   </AppText>
                 </View>
               </ScrollView>
@@ -420,14 +420,14 @@ export function ResourceReaderModal({
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
               <View style={{ flex: 1 }}>
                 <AppButton
-                  label={bookmarked ? 'Bookmark Saved â˜…' : 'Bookmark Lecture Note'}
+                  label={bookmarked ? 'Bookmark Saved ★' : 'Bookmark Lecture Note'}
                   variant={bookmarked ? 'secondary' : 'ghost'}
                   onPress={handleToggleBookmark}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <AppButton
-                  label={downloaded ? 'Downloaded âœ“' : 'Download File'}
+                  label={downloaded ? 'Downloaded ✓' : 'Download File'}
                   variant="primary"
                   loading={downloading}
                   onPress={handleDownload}

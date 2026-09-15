@@ -1,4 +1,4 @@
-﻿import React, { useState } from'react';
+import React, { useState } from'react';
 import { Alert, Pressable, ScrollView, View } from'react-native';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -458,7 +458,7 @@ export function ForumsModerationTab() {
                     </AppText>
                   </View>
                   <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    Author: {post.authorName} ({post.authorRole.toUpperCase()}) â€¢ {post.category} â€¢ {post.likesCount} Likes â€¢ {post.commentsCount} Comments
+                    Author: {post.authorName} ({post.authorRole.toUpperCase()}) • {post.category} • {post.likesCount} Likes • {post.commentsCount} Comments
                   </AppText>
                 </View>
                 {post.isPinned ? <Badge label="Pinned" tone="neutral" /> : null}

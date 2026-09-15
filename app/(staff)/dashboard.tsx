@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, View, Pressable, Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -148,7 +148,7 @@ export default function StaffDashboard() {
                 <Ionicons name="school" size={14} color="#68D391" style={[{ flexShrink: 0 }, heroTextShadowStyle]} />
                 <View style={{ flexShrink: 1, minWidth: 0 }}>
                   <AppText variant="caption" weight="bold" tone="inverse" style={heroTextShadowStyle}>
-                    Faculty Console â€¢ {institutionName}
+                    Faculty Console • {institutionName}
                   </AppText>
                 </View>
               </View>
@@ -176,7 +176,7 @@ export default function StaffDashboard() {
                     {profile?.department || 'Department of Computer Science'}
                   </AppText>
                   <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5, opacity: 0.8 }}>
-                    Faculty Member â€¢ {profile?.institutionCode || 'UI Node'}
+                    Faculty Member • {profile?.institutionCode || 'UI Node'}
                   </AppText>
                 </View>
               </View>
@@ -211,13 +211,13 @@ export default function StaffDashboard() {
                     width: 38,
                     height: 38,
                     borderRadius: 12,
-                    backgroundColor: `${colors.brandPrimary}20`,
+                    backgroundColor: colors.divider,
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexShrink: 0,
                   }}
                 >
-                  <Ionicons name="sparkles" size={17} color={colors.brandPrimary} />
+                  <Ionicons name="sparkles" size={17} color={colors.textSecondary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 14 : 13, lineHeight: 16 }}>
@@ -239,7 +239,7 @@ export default function StaffDashboard() {
                 }}
               >
                 <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                  Ask AI â†’
+                  Ask AI →
                 </AppText>
               </Pressable>
             </View>
@@ -310,7 +310,7 @@ export default function StaffDashboard() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="chatbubble-ellipses" size={20} color={colors.brandPrimary} />
+                  <Ionicons name="chatbubble-ellipses" size={20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Direct Messages
@@ -371,7 +371,7 @@ export default function StaffDashboard() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="megaphone" size={20} color={colors.brandPrimary} />
+                <Ionicons name="megaphone" size={20} color={colors.textSecondary} />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Broadcast
@@ -481,7 +481,7 @@ export default function StaffDashboard() {
           action={
             <Pressable onPress={() => router.push('/(staff)/announcements')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
-                + New Notice â†’
+                + New Notice →
               </AppText>
             </Pressable>
           }
@@ -502,7 +502,7 @@ export default function StaffDashboard() {
             </View>
             <Pressable onPress={() => router.push('/(staff)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                All ({events?.length ?? 0}) â†’
+                All ({events?.length ?? 0}) →
               </AppText>
             </Pressable>
           </View>
@@ -540,7 +540,7 @@ export default function StaffDashboard() {
             </View>
             <Pressable onPress={() => router.push('/(staff)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                Forum â†’
+                Forum →
               </AppText>
             </Pressable>
           </View>
@@ -583,7 +583,7 @@ export default function StaffDashboard() {
         {/* 7. Official Faculty & Academic Institutional Portals */}
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs, flex: 1, minWidth: 0 }}>
-            <Ionicons name="school-outline" size={16} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+            <Ionicons name="school-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
             <AppText
               weight="bold"
               numberOfLines={1}
@@ -601,14 +601,14 @@ export default function StaffDashboard() {
               >
                 <SolidCard radius={16} style={{ padding: isDesktop ? 14 : 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name={portal.icon || 'globe-outline'} size={18} color={colors.brandPrimary} />
+                    <Ionicons name={portal.icon || 'globe-outline'} size={18} color={colors.textSecondary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       {portal.title}
                     </AppText>
                     <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
-                      {portal.category} â€¢ Official Faculty Portal
+                      {portal.category} • Official Faculty Portal
                     </AppText>
                   </View>
                   <Ionicons name="open-outline" size={15} color={colors.textSecondary} style={{ flexShrink: 0 }} />

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -352,7 +352,7 @@ export default function SupportDeskScreen() {
                       {item.userCampus && <Badge label={item.userCampus} tone="neutral" />}
                     </View>
                     <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                      {item.userEmail || 'No email registered'} â€¢ {new Date(item.createdAt).toLocaleDateString()}
+                      {item.userEmail || 'No email registered'} • {new Date(item.createdAt).toLocaleDateString()}
                     </AppText>
                   </View>
                 </View>
@@ -432,7 +432,7 @@ export default function SupportDeskScreen() {
                   <View>
                     <AppText variant="h2" weight="bold">Ticket Resolution</AppText>
                     <AppText tone="secondary" variant="caption">
-                      ID: {selectedTicket.id.slice(0, 12)}... â€¢ Submitted {new Date(selectedTicket.createdAt).toLocaleString()}
+                      ID: {selectedTicket.id.slice(0, 12)}... • Submitted {new Date(selectedTicket.createdAt).toLocaleString()}
                     </AppText>
                   </View>
                   <Ionicons
@@ -472,7 +472,7 @@ export default function SupportDeskScreen() {
                 {/* 1-Click Remediation Actions Box */}
                 <View style={{ marginBottom: spacing.md, padding: spacing.md, backgroundColor: isDark ? '#1C1917' : '#FEF3C7', borderRadius: radius.md, borderWidth: 1, borderColor: isDark ? '#44403C' : '#FDE68A' }}>
                   <AppText weight="bold" style={{ color: isDark ? '#FDE68A' : '#92400E', fontSize: 13.5, marginBottom: 8 }}>
-                    âš¡ 1-Click Remediation Actions
+                    ⚡ 1-Click Remediation Actions
                   </AppText>
 
                   {/* Remediation 1: Reassign Matric */}

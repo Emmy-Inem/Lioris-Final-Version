@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
@@ -118,7 +118,7 @@ export function ResourceCard({
           {resource.title}
         </AppText>
         <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11.5, lineHeight: 16, marginTop: 4 }}>
-          {resource.department} â€¢ By {resource.authorName || 'Campus Student'}
+          {resource.department} • By {resource.authorName || 'Campus Student'}
         </AppText>
 
         {resource.description ? (

@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   Linking,
@@ -656,7 +656,7 @@ export function EventDetailScreen() {
 
                 <View style={{ flex: 1, minWidth: 130 }}>
                   <AppButton
-                    label={event.isSpotlight ? 'Featured â˜…' : 'Feature Event â˜…'}
+                    label={event.isSpotlight ? 'Featured ★' : 'Feature Event ★'}
                     size="sm"
                     variant={event.isSpotlight ? 'primary' : 'secondary'}
                     loading={actingSpotlight}
@@ -794,7 +794,7 @@ export function EventDetailScreen() {
                   <Badge label={event.campusCode ? `${event.campusCode} NODE` : 'GLOBAL'} tone="neutral" />
                   {event.ticketPrice ? <Badge label={`NGN ${event.ticketPrice.toLocaleString()}`} tone="neutral" /> : <Badge label="FREE ENTRY" tone="success" />}
                   {event.sponsored ? <Badge label="SPONSORED" tone="neutral" /> : null}
-                  {event.isSpotlight ? <Badge label="FEATURED â˜…" tone="neutral" /> : null}
+                  {event.isSpotlight ? <Badge label="FEATURED ★" tone="neutral" /> : null}
                 </View>
 
                 <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: radius.pill }}>
@@ -833,7 +833,7 @@ export function EventDetailScreen() {
                     {event.location}
                   </AppText>
                   {matchedLandmark && (
-                    <Badge label="âœ“ Verified Campus Venue" tone="success" />
+                    <Badge label="✓ Verified Campus Venue" tone="success" />
                   )}
                 </View>
               </View>
@@ -923,7 +923,7 @@ export function EventDetailScreen() {
                           {event.organizerName || 'Campus Event Organizer'}
                         </AppText>
                         <AppText tone="secondary" variant="caption">
-                          Verified Campus Organizer â€¢ {event.campusCode || 'University'} Host
+                          Verified Campus Organizer • {event.campusCode || 'University'} Host
                         </AppText>
                       </View>
                     </View>
@@ -1044,7 +1044,7 @@ export function EventDetailScreen() {
                         </AppText>
                       )}
                       <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 4, marginBottom: spacing.md }}>
-                        {event.campusCode ? `${event.campusCode} Campus Venue` : 'Campus Location'} â€¢ Tap below to navigate
+                        {event.campusCode ? `${event.campusCode} Campus Venue` : 'Campus Location'} • Tap below to navigate
                       </AppText>
                       <AppButton label="Open in Google Maps" onPress={handleLaunchMaps} />
                     </View>
@@ -1070,7 +1070,7 @@ export function EventDetailScreen() {
                       </View>
                     )}
                     <AppText variant="caption" tone="secondary" style={{ marginTop: 4 }}>
-                      Coordinates: {matchedLandmark.latitude.toFixed(5)}Â°N, {matchedLandmark.longitude.toFixed(5)}Â°E
+                      Coordinates: {matchedLandmark.latitude.toFixed(5)}°N, {matchedLandmark.longitude.toFixed(5)}°E
                     </AppText>
                   </SolidCard>
                 )}
@@ -1226,7 +1226,7 @@ export function EventDetailScreen() {
                 </View>
                 {event.ticketPrice ? <Badge label={`NGN ${event.ticketPrice.toLocaleString()}`} tone="neutral" /> : <Badge label="FREE" tone="success" />}
                 {event.sponsored ? <Badge label="SPONSORED" tone="neutral" /> : null}
-                {event.isSpotlight ? <Badge label="FEATURED â˜…" tone="neutral" /> : null}
+                {event.isSpotlight ? <Badge label="FEATURED ★" tone="neutral" /> : null}
               </View>
 
               <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
@@ -1293,7 +1293,7 @@ export function EventDetailScreen() {
                   </View>
                   <View style={{ flex: 1, minWidth: 105 }}>
                     <AppButton
-                      label={event.isSpotlight ? 'Featured â˜…' : 'Feature â˜…'}
+                      label={event.isSpotlight ? 'Featured ★' : 'Feature ★'}
                       size="sm"
                       variant={event.isSpotlight ? 'primary' : 'secondary'}
                       loading={actingSpotlight}
@@ -1412,7 +1412,7 @@ export function EventDetailScreen() {
                 <AppText weight="bold" variant="bodySmall" tone="primary">
                   {event.location}
                 </AppText>
-                {matchedLandmark && <Badge label="âœ“ Verified" tone="success" />}
+                {matchedLandmark && <Badge label="✓ Verified" tone="success" />}
               </View>
             </View>
 
@@ -1787,7 +1787,7 @@ export function EventDetailScreen() {
                           {item.matricNumber && <Badge label={item.matricNumber} tone="neutral" />}
                         </View>
                         <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                          {item.department || 'Student'} â€¢ {new Date(item.registeredAt).toLocaleDateString()}
+                          {item.department || 'Student'} • {new Date(item.registeredAt).toLocaleDateString()}
                         </AppText>
                       </View>
                     </View>
@@ -2104,7 +2104,7 @@ export function EventDetailScreen() {
                       }}
                     >
                       <AppText weight="bold" style={{ fontSize: 11, color: editIsSpotlight ? '#FFFFFF' : colors.textSecondary }}>
-                        {editIsSpotlight ? 'FEATURED â˜…' : 'STANDARD'}
+                        {editIsSpotlight ? 'FEATURED ★' : 'STANDARD'}
                       </AppText>
                     </Pressable>
                   </View>

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -282,7 +282,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                     {/* Metadata Row */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                       <AppText variant="caption" tone="secondary" weight="medium">
-                        {authorDisplay} â€¢ {paper.year}
+                        {authorDisplay} • {paper.year}
                       </AppText>
                       {paper.venue && (
                         <AppText variant="caption" tone="secondary" style={{ fontStyle: 'italic' }}>
@@ -308,7 +308,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                         {paper.abstract}
                       </AppText>
                       <AppText variant="caption" tone="primary" weight="bold" style={{ marginTop: 2, fontSize: 11 }}>
-                        {isExpanded ? 'Show less â†‘' : 'Read abstract preview â†“'}
+                        {isExpanded ? 'Show less ↑' : 'Read abstract preview ↓'}
                       </AppText>
                     </Pressable>
 
@@ -354,7 +354,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                       >
                         <Ionicons name="open-outline" size={13} color="#ffffff" />
                         <AppText variant="caption" weight="bold" style={{ color: '#ffffff', fontSize: 11 }}>
-                          {paper.openAccessPdfUrl ? 'Open PDF â†—' : 'View Paper â†—'}
+                          {paper.openAccessPdfUrl ? 'Open PDF ↗' : 'View Paper ↗'}
                         </AppText>
                       </Pressable>
                     </View>

@@ -1,4 +1,4 @@
-﻿import React, { useState } from'react';
+import React, { useState } from'react';
 import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
@@ -825,10 +825,10 @@ export default function UserDirectoryScreen() {
                             )}
                           </View>
                           <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                            @{item.username} â€¢ {item.matricNo}
+                            @{item.username} • {item.matricNo}
                           </AppText>
                           <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                            {item.campus} â€¢ {item.department}
+                            {item.campus} • {item.department}
                           </AppText>
                           {item.suspended && (
                             <View style={{ marginTop: 4 }}>
@@ -910,10 +910,10 @@ export default function UserDirectoryScreen() {
                         )}
                       </View>
                       <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                        @{item.username} â€¢ {item.matricNo}
+                        @{item.username} • {item.matricNo}
                       </AppText>
                       <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                        {item.campus} â€¢ {item.department}
+                        {item.campus} • {item.department}
                       </AppText>
                       {item.suspended && (
                         <View style={{ marginTop: 4 }}>
@@ -956,7 +956,7 @@ export default function UserDirectoryScreen() {
               <View>
                 <AppText weight="bold">{selectedUser.fullName}</AppText>
                 <AppText tone="secondary" variant="caption">
-                  {selectedUser.matricNo} â€¢ {selectedUser.email}
+                  {selectedUser.matricNo} • {selectedUser.email}
                 </AppText>
               </View>
             </View>
@@ -1120,7 +1120,7 @@ export default function UserDirectoryScreen() {
  {entry.summary}
  </AppText>
  <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 2 }}>
- {entry.actorName} â€¢ {new Date(entry.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+ {entry.actorName} • {new Date(entry.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
  </AppText>
  </View>
  ))}

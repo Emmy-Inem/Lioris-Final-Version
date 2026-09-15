@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -61,7 +61,7 @@ export function UserProfileQuickViewModal({
       onClose();
       router.push(`/${roleGroup}/messages/${conversation.id}` as any);
     } catch {
-      Alert.alert('Couldnâ€™t start conversation', 'Please try again.');
+      Alert.alert('Couldn’t start conversation', 'Please try again.');
     } finally {
       setStartingChat(false);
     }
@@ -113,7 +113,7 @@ export function UserProfileQuickViewModal({
               <Badge label="Verified" tone="neutral" />
             </View>
             <AppText tone="secondary" variant="bodySmall">
-              {user.department ?? 'Faculty of Science â€¢ University of Ibadan'}
+              {user.department ?? 'Faculty of Science • University of Ibadan'}
             </AppText>
             {user.level && (
               <AppText tone="secondary" variant="caption" style={{ color: colors.brandPrimary, fontWeight: '600' }}>

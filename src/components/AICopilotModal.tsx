@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -423,7 +423,7 @@ export function AICopilotModal({
                 <Badge label="Gemini 2.0 Flash" tone="neutral" />
               </View>
               <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                {initialCourse ? `Focus: ${initialCourse} â€¢ Multimodal Math & Exam Revision` : 'Multimodal Math, chalkboard diagrams & exam revision'}
+                {initialCourse ? `Focus: ${initialCourse} • Multimodal Math & Exam Revision` : 'Multimodal Math, chalkboard diagrams & exam revision'}
               </AppText>
             </View>
 

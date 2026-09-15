@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -191,7 +191,7 @@ export function CampusMapModal({
             <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Ionicons name="school" size={15} color={colors.brandPrimary} />
               <AppText variant="caption" weight="bold" tone="brand">
-                {CAMPUS_CENTERS[activeCampus]?.name ?? `${activeCampus} Campus`} â€¢ Campus Amenities & Landmarks
+                {CAMPUS_CENTERS[activeCampus]?.name ?? `${activeCampus} Campus`} • Campus Amenities & Landmarks
               </AppText>
             </View>
           )}
@@ -344,7 +344,7 @@ export function CampusMapModal({
                       </View>
 
                       <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
-                        {item.category} â€¢ {item.description}
+                        {item.category} • {item.description}
                       </AppText>
 
                       {distanceInfo && (

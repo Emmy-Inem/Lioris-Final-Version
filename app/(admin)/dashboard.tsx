@@ -1,4 +1,4 @@
-﻿import React, { useState } from'react';
+import React, { useState } from'react';
 import { ScrollView, View, Pressable, Alert } from'react-native';
 import { router } from'expo-router';
 import { useQuery } from'@tanstack/react-query';
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
                           ROOT ADMIN
                         </AppText>
                         <AppText variant="caption" tone="inverse" style={[{ opacity: 0.9 }, heroTextShadowStyle]}>
-                          â€¢ Multi-Campus Hub
+                          • Multi-Campus Hub
                         </AppText>
                       </View>
                     </View>
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
                       justifyContent: 'space-between',
                     }}
                   >
-                    <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.brandPrimary} />
+                    <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.textSecondary} />
                     <View style={{ minWidth: 0 }}>
                       <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                         Direct Messages
@@ -304,7 +304,7 @@ export default function AdminDashboard() {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <Ionicons name="options-outline" size={22} color={colors.brandPrimary} />
+                  <Ionicons name="options-outline" size={22} color={colors.textSecondary} />
                   <View style={{ minWidth: 0 }}>
                     <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Feature Switches
@@ -362,7 +362,7 @@ export default function AdminDashboard() {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <Ionicons name="settings-outline" size={22} color={colors.brandPrimary} />
+                  <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
                   <View style={{ minWidth: 0 }}>
                     <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                       Command Desk
@@ -566,7 +566,7 @@ export default function AdminDashboard() {
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Ionicons name="chatbubbles-outline" size={22} color={colors.brandPrimary} />
+                    <Ionicons name="chatbubbles-outline" size={22} color={colors.textSecondary} />
                     <Badge label="+ New Thread" tone="neutral" />
                   </View>
                   <View style={{ minWidth: 0 }}>

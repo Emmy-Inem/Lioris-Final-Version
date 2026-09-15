@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, View, Pressable, Alert, Modal, Linking, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -365,7 +365,7 @@ export default function StudentDashboard() {
                   <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11 }}>
                     {/* "UI Node" as a fallback asserted University of Ibadan for
                         anyone whose campus wasn't resolved yet. */}
-                    {[profile?.department, profile?.institutionCode].filter(Boolean).join(' â€¢ ') ||
+                    {[profile?.department, profile?.institutionCode].filter(Boolean).join(' • ') ||
                       'Complete your profile'}
                   </AppText>
 
@@ -375,7 +375,7 @@ export default function StudentDashboard() {
                       style={{ alignSelf: 'flex-start', marginTop: 4 }}
                     >
                       <AppText variant="caption" tone="secondary" style={{ fontSize: 11, textDecorationLine: 'underline' }}>
-                        Verify student ID â†’
+                        Verify student ID →
                       </AppText>
                     </Pressable>
                   ) : null}
@@ -407,13 +407,13 @@ export default function StudentDashboard() {
                     width: 36,
                     height: 36,
                     borderRadius: 18,
-                    backgroundColor: `${colors.brandPrimary}20`,
+                    backgroundColor: colors.divider,
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexShrink: 0,
                   }}
                 >
-                  <Ionicons name="sparkles" size={18} color={colors.brandPrimary} />
+                  <Ionicons name="sparkles" size={18} color={colors.textSecondary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13.5 : 12.5, lineHeight: 16 }}>
@@ -436,7 +436,7 @@ export default function StudentDashboard() {
                 }}
               >
                 <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11 }}>
-                  Ask AI â†’
+                  Ask AI →
                 </AppText>
               </Pressable>
             </View>
@@ -470,7 +470,7 @@ export default function StudentDashboard() {
                     minHeight: isDesktop ? 68 : 84,
                   }}
                 >
-                  <Ionicons name="chatbubble-ellipses" size={isDesktop ? 22 : 20} color={colors.brandPrimary} />
+                  <Ionicons name="chatbubble-ellipses" size={isDesktop ? 22 : 20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Direct Messages</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Chats & calls</AppText>
@@ -524,7 +524,7 @@ export default function StudentDashboard() {
                     minHeight: isDesktop ? 68 : 84,
                   }}
                 >
-                  <Ionicons name="folder-open" size={isDesktop ? 22 : 20} color={colors.brandPrimary} />
+                  <Ionicons name="folder-open" size={isDesktop ? 22 : 20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Resources</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Past Qs & notes</AppText>
@@ -733,7 +733,7 @@ export default function StudentDashboard() {
                     minHeight: isDesktop ? 68 : 84,
                   }}
                 >
-                  <Ionicons name="map" size={isDesktop ? 22 : 20} color={colors.brandPrimary} />
+                  <Ionicons name="map" size={isDesktop ? 22 : 20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Map & POIs</AppText>
                     <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>ATMs, halls & food</AppText>
@@ -752,14 +752,14 @@ export default function StudentDashboard() {
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                <Ionicons name="calendar-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+                <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                 <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                   Campus Events
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(student)/events-list')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
-                  View All ({events?.length ?? 0}) â†’
+                  View All ({events?.length ?? 0}) →
                 </AppText>
               </Pressable>
             </View>
@@ -788,14 +788,14 @@ export default function StudentDashboard() {
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                <Ionicons name="document-text-outline" size={18} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+                <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                 <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                   Course Materials
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(student)/resources')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
-                  View All ({resources?.length ?? 0}) â†’
+                  View All ({resources?.length ?? 0}) →
                 </AppText>
               </Pressable>
             </View>
@@ -830,10 +830,10 @@ export default function StudentDashboard() {
                       </AppText>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                         <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ flex: 1, minWidth: 0 }}>
-                          By {res.authorName || 'Student'} â€¢ {res.downloadsCount ?? 0} downloads
+                          By {res.authorName || 'Student'} • {res.downloadsCount ?? 0} downloads
                         </AppText>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, paddingLeft: 8 }}>
-                          <Ionicons name="cloud-download-outline" size={14} color={colors.brandPrimary} />
+                          <Ionicons name="cloud-download-outline" size={14} color={colors.textSecondary} />
                           <AppText variant="caption" weight="bold" tone="brand">
                             Access File
                           </AppText>
@@ -859,7 +859,7 @@ export default function StudentDashboard() {
               </View>
               <Pressable onPress={() => router.push('/(student)/study-groups')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
-                  View All ({studyGroups?.length ?? 0}) â†’
+                  View All ({studyGroups?.length ?? 0}) →
                 </AppText>
               </Pressable>
             </View>
@@ -914,7 +914,7 @@ export default function StudentDashboard() {
             </View>
             <Pressable onPress={() => router.push('/(student)/feed')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
-                View All â†’
+                View All →
               </AppText>
             </Pressable>
           </View>
@@ -982,7 +982,7 @@ export default function StudentDashboard() {
         {(portalLinks ?? []).length > 0 && (
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
-              <Ionicons name="link-outline" size={18} color={colors.brandPrimary} />
+              <Ionicons name="link-outline" size={18} color={colors.textSecondary} />
               <AppText weight="bold" style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                 Official University Services
               </AppText>
@@ -995,15 +995,15 @@ export default function StudentDashboard() {
                   style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
                 >
                   <GlassCard radius={16} padded={false} contentStyle={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.brandPrimary} />
+                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.divider, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.textSecondary} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                         {portal.title}
                       </AppText>
                       <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
-                        {portal.category} â€¢ Official University Portal
+                        {portal.category} • Official University Portal
                       </AppText>
                     </View>
                     <Ionicons name="open-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
@@ -1040,7 +1040,7 @@ export default function StudentDashboard() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name="images" size={20} color={colors.brandPrimary} />
+                <Ionicons name="images" size={20} color={colors.textSecondary} />
                 <AppText variant="h3" weight="bold">
                   Customize App Photos
                 </AppText>
@@ -1055,7 +1055,7 @@ export default function StudentDashboard() {
               <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
                 <View style={{ flex: 1 }}>
                   <AppButton
-                    label={uploadingAvatar ? 'Uploading...' : 'ðŸ“· Upload DP'}
+                    label={uploadingAvatar ? 'Uploading...' : '📷 Upload DP'}
                     variant="secondary"
                     onPress={handlePickCustomAvatar}
                     loading={uploadingAvatar}
@@ -1064,7 +1064,7 @@ export default function StudentDashboard() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <AppButton
-                    label={uploadingCover ? 'Uploading...' : 'ðŸ–¼ï¸ Upload Cover'}
+                    label={uploadingCover ? 'Uploading...' : '🖼️ Upload Cover'}
                     variant="secondary"
                     onPress={handlePickCustomCover}
                     loading={uploadingCover}
@@ -1073,7 +1073,7 @@ export default function StudentDashboard() {
                 </View>
               </View>
 
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
                 OR CHOOSE AVATAR PRESET
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -1103,7 +1103,7 @@ export default function StudentDashboard() {
                 })}
               </View>
 
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
                 CHOOSE CAMPUS BANNER
               </AppText>
               <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>

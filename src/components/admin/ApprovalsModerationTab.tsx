@@ -1,4 +1,4 @@
-﻿import React, { useState } from'react';
+import React, { useState } from'react';
 import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -185,14 +185,14 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  {res.title}
  </AppText>
  <AppText tone="brand"variant="caption"weight="bold">
- {res.courseCode} â€¢ {res.department} â€¢ {res.category} ({res.fileSize})
+ {res.courseCode} • {res.department} • {res.category} ({res.fileSize})
  </AppText>
  </View>
  <Badge label="Pending Review"tone="warning" />
  </View>
 
  <AppText tone="secondary"variant="caption"style={{ marginBottom: 4 }}>
- Uploader: <AppText weight="bold">{res.authorName}</AppText> ({res.academicLevel || 'Student'}) â€¢ Format: {res.fileType || 'PDF'}
+ Uploader: <AppText weight="bold">{res.authorName}</AppText> ({res.academicLevel || 'Student'}) • Format: {res.fileType || 'PDF'}
  </AppText>
 
  <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.sm, marginVertical: spacing.xs }}>
@@ -256,7 +256,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  {v.applicantName}
  </AppText>
  <AppText tone="brand"variant="caption"weight="bold">
- {v.documentType} â€¢ Ref: {v.documentReference}
+ {v.documentType} • Ref: {v.documentReference}
  </AppText>
  </View>
  <Badge label="Pending Review"tone="warning" />
@@ -345,7 +345,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  {previewResource.title}
  </AppText>
  <AppText tone="brand"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
- {previewResource.courseCode} â€¢ {previewResource.department} â€¢ {previewResource.fileType} ({previewResource.fileSize})
+ {previewResource.courseCode} • {previewResource.department} • {previewResource.fileType} ({previewResource.fileSize})
  </AppText>
 
  <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Image } from'expo-image';
 import { Ionicons } from'@expo/vector-icons';
@@ -393,7 +393,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  </AppText>
 
  <AppText tone="secondary"variant="caption"numberOfLines={1}>
- {item.category} â€¢ {item.department}
+ {item.category} • {item.department}
  </AppText>
 
  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
