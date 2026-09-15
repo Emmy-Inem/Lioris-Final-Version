@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -414,7 +414,7 @@ export function SettingsScreen() {
           <View style={{ flexShrink: 0 }}>
             <Badge
               label={user?.role?.toUpperCase() ?? 'STUDENT'}
-              tone="brand"
+              tone="neutral"
             />
           </View>
         </View>
@@ -628,7 +628,7 @@ export function SettingsScreen() {
                       </AppText>
                     </View>
                   </View>
-                  <Badge label={scope === 'campus' ? 'CAMPUS' : 'GLOBAL'} tone="brand" />
+                  <Badge label={scope === 'campus' ? 'CAMPUS' : 'GLOBAL'} tone="neutral" />
                 </View>
 
                 <AppButton
@@ -817,7 +817,7 @@ export function SettingsScreen() {
                   </View>
 
                   {mfaChecking ? (
-                    <AppText tone="secondary" variant="caption">Checking status…</AppText>
+                    <AppText tone="secondary" variant="caption">Checking statusâ€¦</AppText>
                   ) : mfaFactorId && !mfaPendingFactorId ? (
                     <View style={{ gap: spacing.sm }}>
                       <View
@@ -838,7 +838,7 @@ export function SettingsScreen() {
                         </AppText>
                       </View>
                       <AppButton
-                        label={mfaDisabling ? 'Turning off…' : 'Turn Off'}
+                        label={mfaDisabling ? 'Turning offâ€¦' : 'Turn Off'}
                         variant="secondary"
                         onPress={handleTurnOffMfa}
                         loading={mfaDisabling}
@@ -887,7 +887,7 @@ export function SettingsScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                           <AppButton
-                            label={mfaConfirming ? 'Confirming…' : 'Confirm'}
+                            label={mfaConfirming ? 'Confirmingâ€¦' : 'Confirm'}
                             onPress={handleConfirmMfaEnrollment}
                             loading={mfaConfirming}
                             disabled={mfaConfirmCode.length < 6}
@@ -897,7 +897,7 @@ export function SettingsScreen() {
                     </View>
                   ) : (
                     <AppButton
-                      label={mfaEnrolling ? 'Starting setup…' : 'Set Up Two-Factor Authentication'}
+                      label={mfaEnrolling ? 'Starting setupâ€¦' : 'Set Up Two-Factor Authentication'}
                       variant="secondary"
                       onPress={handleStartMfaEnrollment}
                       loading={mfaEnrolling}
@@ -1057,14 +1057,14 @@ export function SettingsScreen() {
               value={newPassword}
               onChangeText={setNewPassword}
               secureTextEntry
-              placeholder="••••••••"
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
             />
             <AppTextField
               label="Confirm Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
-              placeholder="••••••••"
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
             />
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
               <View style={{ flex: 1 }}>

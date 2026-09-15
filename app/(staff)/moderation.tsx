@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -31,7 +31,7 @@ export default function StaffModerationScreen() {
         <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
           Staff Workdesk
         </AppText>
-        {profile?.institutionCode ? <Badge label={`${profile.institutionCode} Node`} tone="brand" /> : null}
+        {profile?.institutionCode ? <Badge label={`${profile.institutionCode} Node`} tone="neutral" /> : null}
       </View>
       <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
         Faculty moderation covers reports, student matric verifications, and resource catalog approvals.

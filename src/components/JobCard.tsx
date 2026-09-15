@@ -78,14 +78,14 @@ export function JobCard({ job }: { job: JobListing }) {
             width: 48,
             height: 48,
             borderRadius: radius.md,
-            backgroundColor: colors.pastelPrimaryBg,
+            backgroundColor: colors.divider,
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1,
-            borderColor: colors.brandPrimary,
+            borderColor: colors.border,
           }}
         >
-          <Ionicons name="briefcase-outline" size={22} color={colors.brandPrimary} />
+          <Ionicons name="briefcase-outline" size={22} color={colors.textSecondary} />
         </View>
 
         <View style={{ flex: 1 }}>

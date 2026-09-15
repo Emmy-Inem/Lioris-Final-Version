@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Pressable, Modal, ScrollView, Platform } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -188,7 +188,7 @@ export function AnnouncementsWidget({
                   </AppText>
 
                   <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
-                    Posted by {selectedAnnouncement.authorName} • {new Date(selectedAnnouncement.publishedAt).toLocaleDateString()}
+                    Posted by {selectedAnnouncement.authorName} â€¢ {new Date(selectedAnnouncement.publishedAt).toLocaleDateString()}
                   </AppText>
 
                   <ScrollView style={{ flex: 1, width: '100%', maxHeight: 250, marginBottom: spacing.lg }} showsVerticalScrollIndicator={false}>
@@ -225,7 +225,7 @@ export function AnnouncementsWidget({
  </AppText>
  </View>
  <View style={{ flexShrink: 0 }}>
- {action ?? <Badge label={`${activeAnnouncements.length} New`} tone="brand" />}
+ {action ?? <Badge label={`${activeAnnouncements.length} New`} tone="neutral" />}
  </View>
  </View>
 
@@ -252,11 +252,11 @@ export function AnnouncementsWidget({
 
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1, minWidth: 0, paddingRight: 8 }}>
- {item.authorName} • {new Date(item.publishedAt).toLocaleDateString()}
+ {item.authorName} â€¢ {new Date(item.publishedAt).toLocaleDateString()}
  </AppText>
  <Pressable onPress={() => setSelectedAnnouncement(item)} style={{ flexShrink: 0 }}>
  <AppText variant="caption" weight="bold" tone="brand">
- Read More →
+ Read More â†’
  </AppText>
  </Pressable>
  </View>
@@ -298,7 +298,7 @@ export function AnnouncementsWidget({
  </AppText>
 
  <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md }}>
- Posted by {selectedAnnouncement.authorName} • {new Date(selectedAnnouncement.publishedAt).toLocaleDateString()}
+ Posted by {selectedAnnouncement.authorName} â€¢ {new Date(selectedAnnouncement.publishedAt).toLocaleDateString()}
  </AppText>
 
  <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 250, marginBottom: spacing.lg }} showsVerticalScrollIndicator={false}>

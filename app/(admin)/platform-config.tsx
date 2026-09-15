@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+﻿import React, { useState } from'react';
 import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
 import { router } from'expo-router';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -124,7 +124,7 @@ export default function PlatformConfigScreen() {
                 Preview Workspace As Role
               </AppText>
             </View>
-            <Badge label={`Current: ${user?.role?.toUpperCase() || 'ADMIN'}`} tone="brand" />
+            <Badge label={`Current: ${user?.role?.toUpperCase() || 'ADMIN'}`} tone="neutral" />
           </View>
           <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
             Jump into any user perspective to inspect features, student workflows, and faculty desks.
@@ -311,7 +311,7 @@ export default function PlatformConfigScreen() {
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches</AppText>
-            <Badge label="Runtime Modular" tone="brand" />
+            <Badge label="Runtime Modular" tone="neutral" />
           </View>
           <AppText tone="secondary" variant="caption">
             Temporarily toggle XP gamification, career page, marketplace, utility cards & more

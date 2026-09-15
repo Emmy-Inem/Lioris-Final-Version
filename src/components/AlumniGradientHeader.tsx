@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -46,7 +46,7 @@ export function AlumniGradientHeader() {
  {user?.fullName ?? 'Alumni'}
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>
- <Badge label="Verified Alumni" tone="brand" />
+ <Badge label="Verified Alumni" tone="neutral" />
  </View>
  </View>
  </Pressable>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -74,7 +74,7 @@ export default function ContentDeskScreen() {
         return (data || []).map((row: any) => ({
           id: row.id,
           title: row.title,
-          subtitle: `Course: ${row.course_code || 'N/A'} • Dept: ${row.department || 'General'}`,
+          subtitle: `Course: ${row.course_code || 'N/A'} â€¢ Dept: ${row.department || 'General'}`,
           category: row.file_type || 'Document',
           campus: row.campus_code,
           author: row.profiles?.full_name || 'Contributor',
@@ -94,7 +94,7 @@ export default function ContentDeskScreen() {
         return (data || []).map((row: any) => ({
           id: row.id,
           title: row.title,
-          subtitle: `Venue: ${row.venue} • Starts: ${new Date(row.start_time).toLocaleDateString()}`,
+          subtitle: `Venue: ${row.venue} â€¢ Starts: ${new Date(row.start_time).toLocaleDateString()}`,
           category: 'Event',
           campus: row.campus_code,
           author: row.profiles?.full_name || 'Organizer',
@@ -258,10 +258,10 @@ export default function ContentDeskScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <Badge label={item.category} tone="brand" />
+                    <Badge label={item.category} tone="neutral" />
                     {item.campus && <Badge label={item.campus} tone="neutral" />}
                     <AppText tone="secondary" variant="caption">
-                      By {item.author} ({item.authorRole}) • {new Date(item.createdAt).toLocaleDateString()}
+                      By {item.author} ({item.authorRole}) â€¢ {new Date(item.createdAt).toLocaleDateString()}
                     </AppText>
                   </View>
                   <AppText weight="bold" numberOfLines={2} style={{ fontSize: 15, marginTop: 4 }}>

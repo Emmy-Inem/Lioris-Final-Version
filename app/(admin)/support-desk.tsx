@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -259,7 +259,7 @@ export default function SupportDeskScreen() {
           </View>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Badge label={`${openCount} Open`} tone="warning" />
-            <Badge label={`${inProgressCount} In Progress`} tone="brand" />
+            <Badge label={`${inProgressCount} In Progress`} tone="neutral" />
             <Badge label={`${resolvedCount} Resolved`} tone="success" />
           </View>
         </View>
@@ -348,11 +348,11 @@ export default function SupportDeskScreen() {
                       {item.userMatric && (
                         <Badge label={item.userMatric} tone="neutral" />
                       )}
-                      <Badge label={(item.userRole || 'student').toUpperCase()} tone="brand" />
+                      <Badge label={(item.userRole || 'student').toUpperCase()} tone="neutral" />
                       {item.userCampus && <Badge label={item.userCampus} tone="neutral" />}
                     </View>
                     <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                      {item.userEmail || 'No email registered'} • {new Date(item.createdAt).toLocaleDateString()}
+                      {item.userEmail || 'No email registered'} â€¢ {new Date(item.createdAt).toLocaleDateString()}
                     </AppText>
                   </View>
                 </View>
@@ -362,7 +362,7 @@ export default function SupportDeskScreen() {
               {/* Title & Category */}
               <View style={{ marginTop: spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Badge label={CATEGORY_LABELS[item.category] || item.category} tone="brand" />
+                  <Badge label={CATEGORY_LABELS[item.category] || item.category} tone="neutral" />
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: 14.5, flex: 1 }}>
                     {item.title}
                   </AppText>
@@ -432,7 +432,7 @@ export default function SupportDeskScreen() {
                   <View>
                     <AppText variant="h2" weight="bold">Ticket Resolution</AppText>
                     <AppText tone="secondary" variant="caption">
-                      ID: {selectedTicket.id.slice(0, 12)}... • Submitted {new Date(selectedTicket.createdAt).toLocaleString()}
+                      ID: {selectedTicket.id.slice(0, 12)}... â€¢ Submitted {new Date(selectedTicket.createdAt).toLocaleString()}
                     </AppText>
                   </View>
                   <Ionicons
@@ -460,7 +460,7 @@ export default function SupportDeskScreen() {
                 <View style={{ marginBottom: spacing.md }}>
                   <AppText weight="bold" style={{ fontSize: 16 }}>{selectedTicket.title}</AppText>
                   <View style={{ flexDirection: 'row', gap: 6, marginVertical: 6 }}>
-                    <Badge label={CATEGORY_LABELS[selectedTicket.category] || selectedTicket.category} tone="brand" />
+                    <Badge label={CATEGORY_LABELS[selectedTicket.category] || selectedTicket.category} tone="neutral" />
                     <Badge label={selectedTicket.priority.toUpperCase()} tone={selectedTicket.priority === 'urgent' ? 'warning' : 'neutral'} />
                     <Badge label={selectedTicket.status.toUpperCase()} tone={STATUS_TONES[selectedTicket.status]} />
                   </View>
@@ -472,7 +472,7 @@ export default function SupportDeskScreen() {
                 {/* 1-Click Remediation Actions Box */}
                 <View style={{ marginBottom: spacing.md, padding: spacing.md, backgroundColor: isDark ? '#1C1917' : '#FEF3C7', borderRadius: radius.md, borderWidth: 1, borderColor: isDark ? '#44403C' : '#FDE68A' }}>
                   <AppText weight="bold" style={{ color: isDark ? '#FDE68A' : '#92400E', fontSize: 13.5, marginBottom: 8 }}>
-                    ⚡ 1-Click Remediation Actions
+                    âš¡ 1-Click Remediation Actions
                   </AppText>
 
                   {/* Remediation 1: Reassign Matric */}

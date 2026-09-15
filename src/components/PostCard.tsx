@@ -149,8 +149,8 @@ export function PostCard({ post }: { post: Post }) {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
                     {post.isPinned ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                        <Ionicons name="pin" size={10} color={colors.brandPrimary} />
-                        <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
+                        <Ionicons name="pin" size={10} color={colors.textSecondary} />
+                        <AppText tone="secondary" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
                           Pinned
                         </AppText>
                       </View>
@@ -224,17 +224,17 @@ export function PostCard({ post }: { post: Post }) {
  {poll ? (
  <View
  style={{
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.divider,
  borderRadius: radius.md,
  padding: spacing.md,
  marginBottom: spacing.sm,
  borderWidth: 1,
- borderColor: colors.brandPrimary,
+ borderColor: colors.border,
  }}
  >
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
- <Ionicons name="bar-chart-outline"size={16} color={colors.brandPrimary} />
- <AppText weight="bold"variant="bodySmall"tone="brand">
+ <Ionicons name="bar-chart-outline"size={16} color={colors.textSecondary} />
+ <AppText weight="bold"variant="bodySmall">
  {poll.question}
  </AppText>
  </View>
@@ -463,7 +463,7 @@ export function PostCard({ post }: { post: Post }) {
  {(user?.role === 'admin' || user?.role === 'staff') && (
  <>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginVertical: 2 }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ letterSpacing: 0.5, marginVertical: 2 }}>
  MODERATOR CONTROLS
  </AppText>
 
@@ -476,8 +476,8 @@ export function PostCard({ post }: { post: Post }) {
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
- <Ionicons name="pin-outline"size={18} color={colors.brandPrimary} />
- <AppText weight="medium"tone="brand">{post.isPinned ? 'Unpin Announcement' : 'Pin as Announcement'}</AppText>
+ <Ionicons name="pin-outline"size={18} color={colors.textPrimary} />
+ <AppText weight="medium">{post.isPinned ? 'Unpin Announcement' : 'Pin as Announcement'}</AppText>
  </Pressable>
 
  <Pressable

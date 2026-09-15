@@ -72,7 +72,7 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
 
  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.sm }}>
  {mentor.expertiseTags.map((tag) => (
- <Badge key={tag} label={tag} tone="brand" />
+ <Badge key={tag} label={tag} tone="neutral" />
  ))}
  </View>
 

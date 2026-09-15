@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+﻿import React, { useState } from'react';
 import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
@@ -774,7 +774,7 @@ export default function UserDirectoryScreen() {
             <SolidCard radius={20} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <AppText variant="caption" tone="secondary">Total Filtered</AppText>
-                <Badge label={`${filtered.length} Users`} tone="brand" />
+                <Badge label={`${filtered.length} Users`} tone="neutral" />
               </View>
               <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                 Live synchronized with multi-campus profiles table.
@@ -825,10 +825,10 @@ export default function UserDirectoryScreen() {
                             )}
                           </View>
                           <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                            @{item.username} • {item.matricNo}
+                            @{item.username} â€¢ {item.matricNo}
                           </AppText>
                           <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                            {item.campus} • {item.department}
+                            {item.campus} â€¢ {item.department}
                           </AppText>
                           {item.suspended && (
                             <View style={{ marginTop: 4 }}>
@@ -910,10 +910,10 @@ export default function UserDirectoryScreen() {
                         )}
                       </View>
                       <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                        @{item.username} • {item.matricNo}
+                        @{item.username} â€¢ {item.matricNo}
                       </AppText>
                       <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                        {item.campus} • {item.department}
+                        {item.campus} â€¢ {item.department}
                       </AppText>
                       {item.suspended && (
                         <View style={{ marginTop: 4 }}>
@@ -956,7 +956,7 @@ export default function UserDirectoryScreen() {
               <View>
                 <AppText weight="bold">{selectedUser.fullName}</AppText>
                 <AppText tone="secondary" variant="caption">
-                  {selectedUser.matricNo} • {selectedUser.email}
+                  {selectedUser.matricNo} â€¢ {selectedUser.email}
                 </AppText>
               </View>
             </View>
@@ -1067,7 +1067,7 @@ export default function UserDirectoryScreen() {
  </AppText>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
  <UserTypeBadge role={detailModalUser.role.toLowerCase() as any} />
- <Badge label={`Trust ${detailModalUser.trustScore}/100`} tone="brand" />
+ <Badge label={`Trust ${detailModalUser.trustScore}/100`} tone="neutral" />
  </View>
  </View>
 
@@ -1120,7 +1120,7 @@ export default function UserDirectoryScreen() {
  {entry.summary}
  </AppText>
  <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 2 }}>
- {entry.actorName} • {new Date(entry.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+ {entry.actorName} â€¢ {new Date(entry.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
  </AppText>
  </View>
  ))}

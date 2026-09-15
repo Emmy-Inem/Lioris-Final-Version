@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+﻿import React, { useState } from'react';
 import { Alert, Pressable, View } from'react-native';
 import { Image } from'expo-image';
 import { router, useSegments } from'expo-router';
@@ -148,7 +148,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
             <Badge label="PENDING REVIEW" tone="warning" />
           )}
           {event.sponsored ? (
-            <Badge label="SPONSORED" tone="brand" />
+            <Badge label="SPONSORED" tone="neutral" />
           ) : null}
         </View>
         <View
@@ -182,17 +182,17 @@ export function EventCard({ event }: { event: CampusEvent }) {
  width: 48,
  height: 52,
  borderRadius: radius.md,
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.divider,
  alignItems: 'center',
  justifyContent: 'center',
  borderWidth: 1,
- borderColor: colors.brandPrimary,
+ borderColor: colors.border,
  }}
  >
- <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10, letterSpacing: 0.5 }}>
+ <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10, letterSpacing: 0.5 }}>
  {month}
  </AppText>
- <AppText weight="bold" tone="brand" style={{ fontSize: 18, lineHeight: 22 }}>
+ <AppText weight="bold" style={{ fontSize: 18, lineHeight: 22 }}>
  {day}
  </AppText>
  </Pressable>
@@ -261,8 +261,8 @@ export function EventCard({ event }: { event: CampusEvent }) {
  }}
  >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-          <Ionicons name="people" size={16} color={colors.brandPrimary} />
-          <AppText variant="caption" weight="bold" tone="brand" numberOfLines={1}>
+          <Ionicons name="people" size={16} color={colors.textSecondary} />
+          <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1}>
             {rsvpCount} attending{event.capacity ? ` (${event.capacity} max)` : ''}
           </AppText>
         </View>

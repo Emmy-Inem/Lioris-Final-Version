@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
@@ -81,7 +81,7 @@ export function ResourceCard({
         {/* Top Badges & Bookmark Action Row */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
-            <Badge label={resource.courseCode || 'GEN'} tone="brand" />
+            <Badge label={resource.courseCode || 'GEN'} tone="neutral" />
             <Badge label={resource.category} tone="neutral" />
             {resource.fileSize ? (
               <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5 }}>
@@ -118,7 +118,7 @@ export function ResourceCard({
           {resource.title}
         </AppText>
         <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11.5, lineHeight: 16, marginTop: 4 }}>
-          {resource.department} • By {resource.authorName || 'Campus Student'}
+          {resource.department} â€¢ By {resource.authorName || 'Campus Student'}
         </AppText>
 
         {resource.description ? (

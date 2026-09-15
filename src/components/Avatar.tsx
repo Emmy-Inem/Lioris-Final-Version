@@ -64,9 +64,9 @@ export function Avatar({ name, uri, size = 44, role }: AvatarProps) {
  height: size,
  borderRadius: size / 2,
  overflow: 'hidden',
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.divider,
  borderWidth: 1.5,
- borderColor: colors.brandPrimary,
+ borderColor: colors.border,
  }}
  >
  <Image

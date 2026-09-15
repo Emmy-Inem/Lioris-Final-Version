@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { View, Pressable, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
@@ -119,7 +119,7 @@ export function VerifiedCampusLocationPicker({
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <Badge label="VERIFIED" tone="success" />
-                <Badge label={matchedLandmark.category} tone="brand" />
+                <Badge label={matchedLandmark.category} tone="neutral" />
                 {matchedLandmark.shortCode && <Badge label={matchedLandmark.shortCode} tone="neutral" />}
               </View>
               <AppText weight="bold" style={{ fontSize: 15, marginTop: 4 }}>

@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+﻿import React, { useState } from'react';
 import { Alert, FlatList, Modal, Pressable, ScrollView, View } from'react-native';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
@@ -194,7 +194,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
                     <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
                       <Badge label={item.targetType.toUpperCase()} tone="critical" />
-                      {item.institutionCode ? <Badge label={item.institutionCode} tone="brand" /> : null}
+                      {item.institutionCode ? <Badge label={item.institutionCode} tone="neutral" /> : null}
                     </View>
                     <Badge label={item.status.replace('_', ' ')} tone={STATUS_TONE[item.status]} />
                   </View>
@@ -256,7 +256,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
                 <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
                   <Badge label={item.targetType.toUpperCase()} tone="critical" />
-                  {item.institutionCode ? <Badge label={item.institutionCode} tone="brand" /> : null}
+                  {item.institutionCode ? <Badge label={item.institutionCode} tone="neutral" /> : null}
                 </View>
                 <Badge label={item.status.replace('_', ' ')} tone={STATUS_TONE[item.status]} />
               </View>

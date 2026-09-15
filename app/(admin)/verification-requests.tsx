@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+﻿import React, { useState } from'react';
 import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
@@ -250,7 +250,7 @@ export default function VerificationRequestsScreen() {
             <AppText tone="secondary" variant="caption" numberOfLines={1}>Review student matriculation records & IDs</AppText>
           </View>
           <View style={{ flexShrink: 0 }}>
-            <Badge label={`${requests?.length ?? 0} Pending`} tone="brand" />
+            <Badge label={`${requests?.length ?? 0} Pending`} tone="neutral" />
           </View>
         </View>
 

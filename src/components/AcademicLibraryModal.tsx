@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -231,7 +231,7 @@ export function AcademicLibraryModal({
 
                         {/* Badges / Subject Tags */}
                         <View style={styles.tagRow}>
-                          <Badge label={book.source} tone="brand" />
+                          <Badge label={book.source} tone="neutral" />
                           {book.hasFulltext && <Badge label="FULL TEXT" tone="success" />}
                         </View>
 

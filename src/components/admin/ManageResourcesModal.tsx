@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Image } from'expo-image';
 import { Ionicons } from'@expo/vector-icons';
@@ -382,7 +382,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
 
  <View style={{ flex: 1 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
- <Badge label={item.courseCode} tone="brand" />
+ <Badge label={item.courseCode} tone="neutral" />
  <AppText variant="caption"tone="secondary">
  {item.fileSize} | {item.downloadsCount} dl
  </AppText>
@@ -393,7 +393,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  </AppText>
 
  <AppText tone="secondary"variant="caption"numberOfLines={1}>
- {item.category} • {item.department}
+ {item.category} â€¢ {item.department}
  </AppText>
 
  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>

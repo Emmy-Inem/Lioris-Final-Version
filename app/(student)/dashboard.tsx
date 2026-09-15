@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { ScrollView, View, Pressable, Alert, Modal, Linking, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -365,7 +365,7 @@ export default function StudentDashboard() {
                   <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11 }}>
                     {/* "UI Node" as a fallback asserted University of Ibadan for
                         anyone whose campus wasn't resolved yet. */}
-                    {[profile?.department, profile?.institutionCode].filter(Boolean).join(' • ') ||
+                    {[profile?.department, profile?.institutionCode].filter(Boolean).join(' â€¢ ') ||
                       'Complete your profile'}
                   </AppText>
 
@@ -375,7 +375,7 @@ export default function StudentDashboard() {
                       style={{ alignSelf: 'flex-start', marginTop: 4 }}
                     >
                       <AppText variant="caption" tone="secondary" style={{ fontSize: 11, textDecorationLine: 'underline' }}>
-                        Verify student ID →
+                        Verify student ID â†’
                       </AppText>
                     </Pressable>
                   ) : null}
@@ -436,7 +436,7 @@ export default function StudentDashboard() {
                 }}
               >
                 <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11 }}>
-                  Ask AI →
+                  Ask AI â†’
                 </AppText>
               </Pressable>
             </View>
@@ -759,7 +759,7 @@ export default function StudentDashboard() {
               </View>
               <Pressable onPress={() => router.push('/(student)/events-list')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
-                  View All ({events?.length ?? 0}) →
+                  View All ({events?.length ?? 0}) â†’
                 </AppText>
               </Pressable>
             </View>
@@ -795,7 +795,7 @@ export default function StudentDashboard() {
               </View>
               <Pressable onPress={() => router.push('/(student)/resources')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
-                  View All ({resources?.length ?? 0}) →
+                  View All ({resources?.length ?? 0}) â†’
                 </AppText>
               </Pressable>
             </View>
@@ -816,7 +816,7 @@ export default function StudentDashboard() {
                     <SolidCard radius={16} style={{ padding: 14 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                          <Badge label={res.courseCode || 'GEN'} tone="brand" />
+                          <Badge label={res.courseCode || 'GEN'} tone="neutral" />
                           <AppText variant="caption" tone="secondary" numberOfLines={1}>
                             {res.department || 'Academic'}
                           </AppText>
@@ -830,7 +830,7 @@ export default function StudentDashboard() {
                       </AppText>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                         <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ flex: 1, minWidth: 0 }}>
-                          By {res.authorName || 'Student'} • {res.downloadsCount ?? 0} downloads
+                          By {res.authorName || 'Student'} â€¢ {res.downloadsCount ?? 0} downloads
                         </AppText>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, paddingLeft: 8 }}>
                           <Ionicons name="cloud-download-outline" size={14} color={colors.brandPrimary} />
@@ -859,7 +859,7 @@ export default function StudentDashboard() {
               </View>
               <Pressable onPress={() => router.push('/(student)/study-groups')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
-                  View All ({studyGroups?.length ?? 0}) →
+                  View All ({studyGroups?.length ?? 0}) â†’
                 </AppText>
               </Pressable>
             </View>
@@ -914,7 +914,7 @@ export default function StudentDashboard() {
             </View>
             <Pressable onPress={() => router.push('/(student)/feed')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
-                View All →
+                View All â†’
               </AppText>
             </Pressable>
           </View>
@@ -947,7 +947,7 @@ export default function StudentDashboard() {
                       </View>
                     </View>
                     <View style={{ flexShrink: 0 }}>
-                      <Badge label={post.category ?? 'Discussion'} tone="brand" />
+                      <Badge label={post.category ?? 'Discussion'} tone="neutral" />
                     </View>
                   </View>
 
@@ -1003,7 +1003,7 @@ export default function StudentDashboard() {
                         {portal.title}
                       </AppText>
                       <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
-                        {portal.category} • Official University Portal
+                        {portal.category} â€¢ Official University Portal
                       </AppText>
                     </View>
                     <Ionicons name="open-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
@@ -1055,7 +1055,7 @@ export default function StudentDashboard() {
               <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
                 <View style={{ flex: 1 }}>
                   <AppButton
-                    label={uploadingAvatar ? 'Uploading...' : '📷 Upload DP'}
+                    label={uploadingAvatar ? 'Uploading...' : 'ðŸ“· Upload DP'}
                     variant="secondary"
                     onPress={handlePickCustomAvatar}
                     loading={uploadingAvatar}
@@ -1064,7 +1064,7 @@ export default function StudentDashboard() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <AppButton
-                    label={uploadingCover ? 'Uploading...' : '🖼️ Upload Cover'}
+                    label={uploadingCover ? 'Uploading...' : 'ðŸ–¼ï¸ Upload Cover'}
                     variant="secondary"
                     onPress={handlePickCustomCover}
                     loading={uploadingCover}

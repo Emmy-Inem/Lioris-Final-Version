@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -149,7 +149,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                 <AppText variant="h3" weight="bold">
                   Research & Thesis Hub
                 </AppText>
-                <Badge label="250M+ Papers" tone="brand" />
+                <Badge label="250M+ Papers" tone="neutral" />
               </View>
               <AppText variant="caption" tone="secondary" numberOfLines={1}>
                 Semantic Scholar & OpenAlex peer-reviewed academic papers & APA citation engine
@@ -274,7 +274,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                       {paper.citationCount > 0 && (
                         <Badge
                           label={`${paper.citationCount >= 1000 ? (paper.citationCount / 1000).toFixed(1) + 'k' : paper.citationCount} citations`}
-                          tone="brand"
+                          tone="neutral"
                         />
                       )}
                     </View>
@@ -282,7 +282,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                     {/* Metadata Row */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                       <AppText variant="caption" tone="secondary" weight="medium">
-                        {authorDisplay} • {paper.year}
+                        {authorDisplay} â€¢ {paper.year}
                       </AppText>
                       {paper.venue && (
                         <AppText variant="caption" tone="secondary" style={{ fontStyle: 'italic' }}>
@@ -308,7 +308,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                         {paper.abstract}
                       </AppText>
                       <AppText variant="caption" tone="primary" weight="bold" style={{ marginTop: 2, fontSize: 11 }}>
-                        {isExpanded ? 'Show less ↑' : 'Read abstract preview ↓'}
+                        {isExpanded ? 'Show less â†‘' : 'Read abstract preview â†“'}
                       </AppText>
                     </Pressable>
 
@@ -354,7 +354,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                       >
                         <Ionicons name="open-outline" size={13} color="#ffffff" />
                         <AppText variant="caption" weight="bold" style={{ color: '#ffffff', fontSize: 11 }}>
-                          {paper.openAccessPdfUrl ? 'Open PDF ↗' : 'View Paper ↗'}
+                          {paper.openAccessPdfUrl ? 'Open PDF â†—' : 'View Paper â†—'}
                         </AppText>
                       </Pressable>
                     </View>

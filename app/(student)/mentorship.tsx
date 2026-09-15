@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+﻿import React, { useState } from'react';
 import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
 import { Image } from'expo-image';
 import { router } from'expo-router';
@@ -60,7 +60,7 @@ export default function StudentMentorshipScreen() {
               <AppText weight="bold" tone="brand">
                 My Mentorship Applications
               </AppText>
-              <Badge label={`${myApplications.length} submitted`} tone="brand" />
+              <Badge label={`${myApplications.length} submitted`} tone="neutral" />
             </View>
             <ScrollView
               horizontal

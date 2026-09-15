@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { ScrollView, View, Pressable, Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -148,7 +148,7 @@ export default function StaffDashboard() {
                 <Ionicons name="school" size={14} color="#68D391" style={[{ flexShrink: 0 }, heroTextShadowStyle]} />
                 <View style={{ flexShrink: 1, minWidth: 0 }}>
                   <AppText variant="caption" weight="bold" tone="inverse" style={heroTextShadowStyle}>
-                    Faculty Console • {institutionName}
+                    Faculty Console â€¢ {institutionName}
                   </AppText>
                 </View>
               </View>
@@ -176,13 +176,13 @@ export default function StaffDashboard() {
                     {profile?.department || 'Department of Computer Science'}
                   </AppText>
                   <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5, opacity: 0.8 }}>
-                    Faculty Member • {profile?.institutionCode || 'UI Node'}
+                    Faculty Member â€¢ {profile?.institutionCode || 'UI Node'}
                   </AppText>
                 </View>
               </View>
 
               <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap', alignItems: 'center', marginTop: isDesktop ? 0 : 4 }}>
-                <Badge label="Faculty Staff" tone="brand" />
+                <Badge label="Faculty Staff" tone="neutral" />
                 <Badge label="Harmattan Term 2026" tone="success" />
               </View>
             </View>
@@ -239,7 +239,7 @@ export default function StaffDashboard() {
                 }}
               >
                 <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                  Ask AI →
+                  Ask AI â†’
                 </AppText>
               </Pressable>
             </View>
@@ -481,7 +481,7 @@ export default function StaffDashboard() {
           action={
             <Pressable onPress={() => router.push('/(staff)/announcements')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="bodySmall" weight="bold">
-                + New Notice →
+                + New Notice â†’
               </AppText>
             </Pressable>
           }
@@ -502,7 +502,7 @@ export default function StaffDashboard() {
             </View>
             <Pressable onPress={() => router.push('/(staff)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                All ({events?.length ?? 0}) →
+                All ({events?.length ?? 0}) â†’
               </AppText>
             </Pressable>
           </View>
@@ -540,7 +540,7 @@ export default function StaffDashboard() {
             </View>
             <Pressable onPress={() => router.push('/(staff)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                Forum →
+                Forum â†’
               </AppText>
             </Pressable>
           </View>
@@ -564,7 +564,7 @@ export default function StaffDashboard() {
                       </View>
                     </View>
                     <View style={{ flexShrink: 0, marginLeft: 8 }}>
-                      <Badge label={post.category ?? 'Discussion'} tone="brand" />
+                      <Badge label={post.category ?? 'Discussion'} tone="neutral" />
                     </View>
                   </View>
 
@@ -608,7 +608,7 @@ export default function StaffDashboard() {
                       {portal.title}
                     </AppText>
                     <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
-                      {portal.category} • Official Faculty Portal
+                      {portal.category} â€¢ Official Faculty Portal
                     </AppText>
                   </View>
                   <Ionicons name="open-outline" size={15} color={colors.textSecondary} style={{ flexShrink: 0 }} />
