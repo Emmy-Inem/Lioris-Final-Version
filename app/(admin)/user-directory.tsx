@@ -166,7 +166,6 @@ export default function UserDirectoryScreen() {
         department: editDepartment.trim() || 'General Studies',
         role: editRole.toLowerCase(),
         is_suspended: editSuspended,
-        is_verified: editVerified,
         verification_status: editVerified ? 'verified' : 'unverified',
       });
 

@@ -515,7 +515,7 @@ function EcosystemTile({
  badge?: string;
  onPress: () => void;
 }) {
- const { colors, spacing, radius } = useTheme();
+ const { colors, spacing } = useTheme();
  const { isDesktop } = useResponsive();
  return (
  <Pressable
@@ -539,11 +539,9 @@ function EcosystemTile({
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, gap: spacing.xs }}>
           <Ionicons name={icon} size={22} color={colors.brandPrimary} />
           {badge ? (
-            <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, maxWidth: 90 }}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9.5 }} numberOfLines={1}>
-                {badge}
-              </AppText>
-            </View>
+            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9.5, flexShrink: 0, maxWidth: 90 }} numberOfLines={1}>
+              {badge}
+            </AppText>
           ) : null}
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>

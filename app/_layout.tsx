@@ -22,6 +22,7 @@ import { loadBlockedUserIds } from '@/api/connections';
 import { FeatureFlagsProvider, useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { LiquidGlassProvider } from '@/context/LiquidGlassContext';
+import { installWebAlertPolyfill, AlertHost } from '@/polyfills/webAlert';
 
 // Export root ErrorBoundary for Expo Router file-system routing
 export { RouteErrorBoundary as ErrorBoundary };
@@ -29,6 +30,8 @@ export { RouteErrorBoundary as ErrorBoundary };
 SplashScreen.preventAutoHideAsync().catch(() => {
  // No-op: harmless if called more than once (e.g. fast refresh in dev).
 });
+
+installWebAlertPolyfill();
 
 setupNetworkAwareQueries();
 
@@ -301,6 +304,7 @@ function AppShell() {
  <ErrorBoundary>
  <Slot />
  </ErrorBoundary>
+ <AlertHost />
  </>
  );
 }
