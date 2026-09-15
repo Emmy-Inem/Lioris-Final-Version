@@ -49,7 +49,7 @@ export default function StudentMentorshipScreen() {
           <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             Alumni Mentorship
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={2}>
+          <AppText tone="secondary" variant="bodySmall">
             Connect with verified alumni and faculty mentors for career advice, technical coaching, and professional growth.
           </AppText>
         </View>

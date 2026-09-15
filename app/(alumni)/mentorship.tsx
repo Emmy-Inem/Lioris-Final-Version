@@ -87,7 +87,7 @@ export default function AlumniMentorshipScreen() {
           <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
             Alumni Mentorship Desk
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ marginTop: 2 }}>
+          <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
             Guide university students, review portfolio code, and conduct 1-on-1 video calls.
           </AppText>
         </View>

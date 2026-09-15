@@ -439,7 +439,7 @@ export default function SuperAdminConfigScreen() {
           Super Admin Configuration
         </AppText>
       </View>
-      <AppText tone="secondary" style={{ marginBottom: spacing.md }} numberOfLines={2}>
+      <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
         Root-level platform parameters - changes here apply across every campus workspace.
       </AppText>
 
