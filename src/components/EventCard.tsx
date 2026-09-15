@@ -13,6 +13,7 @@ import { Badge } from'./Badge';
 import { VisibilityBadge } from'./VisibilityBadge';
 import { ActionSheetModal } from'./ActionSheetModal';
 import { useTheme } from'@/theme/ThemeProvider';
+import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { CampusEvent } from'@/api/types';
 import { rsvpToEvent } from'@/api/events';
 import { submitReport } from'@/api/moderation';
@@ -161,31 +162,13 @@ export function EventCard({ event }: { event: CampusEvent }) {
           }}
         >
           {event.ticketPrice && event.ticketPrice > 0 ? (
-            <View
-              style={{
-                backgroundColor: 'rgba(16, 185, 129, 0.9)',
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: radius.sm,
-              }}
-            >
-              <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 10 }}>
-                NGN {event.ticketPrice.toLocaleString()}
-              </AppText>
-            </View>
-          ) : null}
-          <View
-            style={{
-              backgroundColor: 'rgba(15, 23, 42, 0.75)',
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              borderRadius: radius.sm,
-            }}
-          >
-            <AppText variant="caption" weight="semiBold" tone="inverse" style={{ fontSize: 11 }}>
-              {event.category}
+            <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 10, color: '#6EE7B7' }, heroTextShadowStyle]}>
+              NGN {event.ticketPrice.toLocaleString()}
             </AppText>
-          </View>
+          ) : null}
+          <AppText variant="caption" weight="semiBold" tone="inverse" style={[{ fontSize: 11 }, heroTextShadowStyle]}>
+            {event.category}
+          </AppText>
         </View>
       </Pressable>
 

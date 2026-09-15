@@ -8,6 +8,7 @@ import { AppText } from'./AppText';
 import { AppButton } from'./AppButton';
 import { Avatar } from'./Avatar';
 import { useTheme } from'@/theme/ThemeProvider';
+import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { MarketplaceListing } from'@/api/types';
 import { isWishlisted, toggleWishlist } from '@/api/marketplace';
 import { getOrCreateConversationWithUser, sendMessage } from '@/api/messaging';
@@ -111,11 +112,9 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
           </View>
         )}
         <View style={{ position: 'absolute', top: 6, left: 6, zIndex: 2 }}>
-          <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-            <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 8 }}>
-              {item.condition}
-            </AppText>
-          </View>
+          <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 9 }, heroTextShadowStyle]}>
+            {item.condition}
+          </AppText>
         </View>
  <Pressable
  onPress={handleToggleWishlist}

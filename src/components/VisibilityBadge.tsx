@@ -3,6 +3,7 @@ import { View } from'react-native';
 import { Ionicons } from'@expo/vector-icons';
 import { AppText } from'./AppText';
 import { useTheme } from'@/theme/ThemeProvider';
+import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 
 type Visibility = 'campus' | 'global' | 'private';
 
@@ -69,20 +70,13 @@ export function VisibilityBadge({
  );
  }
 
- const bg = isDark ? config.darkBg : config.lightBg;
+ // Floats directly over an event's cover photo, so it needs its own
+ // legibility (a text shadow) rather than a background pill - same
+ // treatment as the dashboard hero badges and other cover-image overlays.
  return (
- <View
- style={{
- backgroundColor: bg,
- borderRadius: 12,
- borderWidth: 1,
- borderColor: `${text}40`,
- paddingHorizontal: 8,
- paddingVertical: 2,
- alignSelf: 'flex-start',
- }}
- >
- <AppText variant="caption" weight="bold" style={{ color: text, fontSize: 11 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start' }}>
+ <Ionicons name={config.icon} size={12} color="#FFFFFF" style={heroTextShadowStyle} />
+ <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11 }, heroTextShadowStyle]}>
  {label}
  </AppText>
  </View>
