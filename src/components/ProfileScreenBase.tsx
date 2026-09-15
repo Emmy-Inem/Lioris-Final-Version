@@ -283,8 +283,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  photoBlob: data.photoBlob,
  });
  markVerificationPending(user.id);
- queryClient.invalidateQueries({ queryKey: ['profile'] });
+ await queryClient.invalidateQueries({ queryKey: ['profile'] });
  setVerificationModalOpen(false);
+ Alert.alert('Application Submitted', 'Your verification request is now pending review by campus moderators.');
  } catch (err: any) {
  Alert.alert('Application Failed', err?.message ?? 'Please try again later.');
  }
