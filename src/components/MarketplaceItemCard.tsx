@@ -112,9 +112,18 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
           </View>
         )}
         <View style={{ position: 'absolute', top: 6, left: 6, zIndex: 2 }}>
-          <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 9 }, heroTextShadowStyle]}>
-            {item.condition}
-          </AppText>
+          {item.imageUrl ? (
+            <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 9 }, heroTextShadowStyle]}>
+              {item.condition}
+            </AppText>
+          ) : (
+            // No photo backdrop - falls back to the pastel placeholder
+            // background, where white shadow-text is illegible. Plain
+            // brand-toned text instead, matching the placeholder's own tone.
+            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9 }}>
+              {item.condition}
+            </AppText>
+          )}
         </View>
  <Pressable
  onPress={handleToggleWishlist}
