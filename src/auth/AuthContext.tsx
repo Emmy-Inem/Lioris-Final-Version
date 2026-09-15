@@ -267,7 +267,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             (storedUser?.actualRole === 'admin' && storedUser?.role)
               ? ((userRef.current?.role || storedUser?.role) as UserRole)
               : role;
+          // `profiles.onboarding_complete` is the real, server-side signal
+          // (added after discovering onboarding-complete was previously
+          // inferred client-side only, from Boolean(department) backstopped
+          // by localStorage - broken for anyone on a fresh device/browser).
+          // Local flags and the department heuristic stay as fallbacks for
+          // the brief window before every row is backfilled.
           const isOnboarded =
+            profile?.onboarding_complete ??
             userRef.current?.onboardingComplete ??
             storedUser?.onboardingComplete ??
             (Boolean(profile?.department) || role === 'admin' || role === 'staff');
@@ -330,6 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ? ((userRef.current?.role || storedUser?.role) as UserRole)
             : role;
         const isOnboarded =
+          profile?.onboarding_complete ??
           userRef.current?.onboardingComplete ??
           storedUser?.onboardingComplete ??
           (Boolean(profile?.department) || role === 'admin' || role === 'staff');
@@ -367,7 +375,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { data: prof } = await supabase
           .from('profiles')
-          .select('department, is_suspended')
+          .select('department, is_suspended, onboarding_complete')
           .eq('id', session.user.id)
           .maybeSingle();
 
@@ -388,6 +396,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const previouslyOnboarded =
           storedUser?.id === session.user.id ? storedUser.onboardingComplete : undefined;
         const isOnboarded =
+          prof?.onboarding_complete ??
           previouslyOnboarded ??
           (Boolean(prof?.department) || session.user.role === 'admin' || session.user.role === 'staff');
 
@@ -442,12 +451,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       },
       async completeOnboarding() {
+        const currentUserId = userRef.current?.id;
         setUser((prev) => {
           if (!prev) return prev;
           const next = { ...prev, onboardingComplete: true, onboardingStep: undefined };
           persist(next);
           return next;
         });
+        // Best-effort server sync so "has onboarded" survives a cleared
+        // browser/new device, not just this session's local storage.
+        if (currentUserId) {
+          supabase
+            .from('profiles')
+            .update({ onboarding_complete: true })
+            .eq('id', currentUserId)
+            .then(({ error }) => {
+              if (error) console.warn('[Auth] Failed to persist onboarding_complete:', error.message);
+            });
+        }
         registerForPushNotificationsAsync().catch(() => {});
       },
       async verifyMfa(code) {

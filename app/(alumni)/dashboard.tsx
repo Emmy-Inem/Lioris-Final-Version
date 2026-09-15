@@ -22,6 +22,7 @@ import { JobCard } from '@/components/JobCard';
 import { EventCard } from '@/components/EventCard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
+import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -147,20 +148,13 @@ export default function AlumniDashboard() {
             <View style={{ position: 'absolute', top: 12, left: 12, right: 12, flexDirection: 'row' }}>
               <View
                 style={{
-                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.55)',
-                  borderRadius: radius.pill,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
-                  maxWidth: '100%',
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.25)',
                 }}
               >
-                <Ionicons name="school" size={13} color="#FCD34D" style={{ flexShrink: 0 }} />
-                <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 11, flexShrink: 1 }}>
+                <Ionicons name="school" size={13} color="#FCD34D" style={[{ flexShrink: 0 }, heroTextShadowStyle]} />
+                <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
                   Alumni Fellowship • {profile?.institutionName ?? 'University Chapter'}
                 </AppText>
               </View>

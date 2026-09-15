@@ -20,6 +20,7 @@ import { EventCard } from '@/components/EventCard';
 import { EmptyState } from '@/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
+import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -136,23 +137,17 @@ export default function StaffDashboard() {
               }}
             />
 
-            <View style={{ position: 'absolute', top: 14, left: 16 }}>
+            <View style={{ position: 'absolute', top: 14, left: 16, right: 16 }}>
               <View
                 style={{
-                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.55)',
-                  borderRadius: radius.pill,
-                  paddingHorizontal: 12,
-                  paddingVertical: 5,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.25)',
                 }}
               >
-                <Ionicons name="school" size={14} color="#68D391" style={{ flexShrink: 0 }} />
+                <Ionicons name="school" size={14} color="#68D391" style={[{ flexShrink: 0 }, heroTextShadowStyle]} />
                 <View style={{ flexShrink: 1, minWidth: 0 }}>
-                  <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1}>
+                  <AppText variant="caption" weight="bold" tone="inverse" style={heroTextShadowStyle}>
                     Faculty Console • {institutionName}
                   </AppText>
                 </View>

@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, View } from'react-native';
 import { AppText } from'./AppText';
 import { AppButton } from'./AppButton';
 import { useTheme } from'@/theme/ThemeProvider';
+import { ALL_DEPARTMENTS } from '@/data/departments';
 
 export interface LibraryFilters {
  resourceType: string;
@@ -13,7 +14,7 @@ export interface LibraryFilters {
 }
 
 const RESOURCE_TYPES = ['All Types', 'Notes', 'Past Questions', 'Projects'];
-const DEPARTMENTS = ['All Depts', 'Computer Science', 'Mathematics', 'Electrical Engineering'];
+const DEPARTMENTS = ['All Depts', ...ALL_DEPARTMENTS];
 const STUDY_LEVELS = ['All Levels', '100 Lvl', '200 Lvl', '300 Lvl', '400 Lvl'];
 const RATINGS = ['All Ratings', '3.0+ Stars', '4.0+ Stars', '4.5+ Stars'];
 const SORT_OPTIONS = ['Newest Shared', 'Highest Quality Rated'];

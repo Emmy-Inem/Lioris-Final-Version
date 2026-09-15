@@ -1,6 +1,7 @@
 import { router } from'expo-router';
 import { useAuth } from'./AuthContext';
 import { nextOnboardingStep } from'./onboardingSteps';
+import { getInstitutionForEmail } from '@/api/institutions';
 
 /**
  * Used by every screen in the onboarding chain (PRD Section 5). Each
@@ -14,7 +15,10 @@ export function useAdvanceOnboarding(currentPath: string) {
 
  return async function advance() {
  const userRole = user?.role || 'student';
- const next = nextOnboardingStep(userRole, currentPath);
+ // Whether to detour through the "join the waitlist" step right after
+ // verify - see onboardingSteps.ts's WAITLIST_STEP.
+ const institutionMatched = !user?.email || Boolean(getInstitutionForEmail(user.email));
+ const next = nextOnboardingStep(userRole, currentPath, institutionMatched);
  if (next && user && user.onboardingComplete === false) {
  await setOnboardingStep(next);
  router.replace(next as any);
