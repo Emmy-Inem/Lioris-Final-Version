@@ -772,8 +772,8 @@ export default function AlumniDashboard() {
                 style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
               >
                 <SolidCard radius={16} style={{ padding: isDesktop ? 14 : 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name={portal.icon || 'globe-outline'} size={18} color={colors.textSecondary} />
+                  <View style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Ionicons name={portal.icon || 'globe-outline'} size={22} color={colors.textSecondary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>

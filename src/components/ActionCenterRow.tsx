@@ -31,14 +31,12 @@ export function ActionCenterRow({ actions }: { actions: QuickAction[] }) {
  style={{
  width: 52,
  height: 52,
- borderRadius: radius.lg,
- backgroundColor: `${colors.brandPrimary}18`,
  alignItems: 'center',
  justifyContent: 'center',
  marginBottom: spacing.xs,
  }}
  >
- <Ionicons name={action.icon} size={22} color={colors.brandPrimary} />
+ <Ionicons name={action.icon} size={26} color={colors.textSecondary} />
  </View>
  <AppText variant="caption"weight="semiBold"style={{ textAlign: 'center' }} numberOfLines={2}>
  {action.label}

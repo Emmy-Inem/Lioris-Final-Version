@@ -177,7 +177,7 @@ export default function AuditLogsScreen() {
               </AppText>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 2 }}>
-                <Ionicons name="shield-checkmark" size={14} color={colors.brandPrimary} />
+                <Ionicons name="shield-checkmark" size={14} color={colors.textSecondary} />
                 <AppText tone="secondary" variant="caption">
                   Actor: {item.actorName} ({item.actorRole.toUpperCase()})
                   {item.institutionCode ? ` \u2022 Campus: ${item.institutionCode}` : ''}
@@ -185,8 +185,8 @@ export default function AuditLogsScreen() {
               </View>
 
               {item.reason ? (
-                <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.xs, borderRadius: 8, marginTop: 4 }}>
-                  <AppText variant="caption" tone="brand" style={{ fontSize: 11, fontStyle: 'italic' }}>
+                <View style={{ backgroundColor: colors.divider, padding: spacing.xs, borderRadius: 8, marginTop: 4 }}>
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>
                     Justification: {item.reason}
                   </AppText>
                 </View>

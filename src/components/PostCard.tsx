@@ -313,8 +313,8 @@ export function PostCard({ post }: { post: Post }) {
  {/* Course Tags / Meta Badges */}
  {post.courseTags ? (
  <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.sm, flexWrap: 'wrap' }}>
- <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3 }}>
- <AppText variant="caption"weight="bold"tone="brand">
+ <View style={{ backgroundColor: colors.divider, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3 }}>
+ <AppText variant="caption"weight="bold"tone="secondary">
  {post.courseTags}
  </AppText>
  </View>

@@ -995,8 +995,8 @@ export default function StudentDashboard() {
                   style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
                 >
                   <GlassCard radius={16} padded={false} contentStyle={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.divider, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name={portal.icon || 'globe-outline'} size={20} color={colors.textSecondary} />
+                    <View style={{ width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={portal.icon || 'globe-outline'} size={24} color={colors.textSecondary} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
