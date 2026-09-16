@@ -316,7 +316,7 @@ export default function RegisterScreen() {
 
  <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
  <LiorisLogo size={44} variant="symbol" />
- <LiorisLogo size={28} variant="wordmark" />
+ <LiorisLogo size={28} variant="wordmark" tintColor="#FFFFFF" />
  </View>
 
  <View style={{ zIndex: 10, maxWidth: 540, gap: spacing.lg }}>

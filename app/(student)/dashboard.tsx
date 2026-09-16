@@ -406,14 +406,12 @@ export default function StudentDashboard() {
                   style={{
                     width: 36,
                     height: 36,
-                    borderRadius: 18,
-                    backgroundColor: colors.divider,
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexShrink: 0,
                   }}
                 >
-                  <Ionicons name="sparkles" size={18} color={colors.textSecondary} />
+                  <Ionicons name="sparkles" size={22} color={colors.textSecondary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13.5 : 12.5, lineHeight: 16 }}>

@@ -210,14 +210,12 @@ export default function StaffDashboard() {
                   style={{
                     width: 38,
                     height: 38,
-                    borderRadius: 12,
-                    backgroundColor: colors.divider,
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexShrink: 0,
                   }}
                 >
-                  <Ionicons name="sparkles" size={17} color={colors.textSecondary} />
+                  <Ionicons name="sparkles" size={22} color={colors.textSecondary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 14 : 13, lineHeight: 16 }}>

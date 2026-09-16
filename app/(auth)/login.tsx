@@ -374,7 +374,7 @@ export default function LoginScreen() {
  {/* Logo */}
  <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
  <LiorisLogo size={44} variant="symbol" />
- <LiorisLogo size={28} variant="wordmark" />
+ <LiorisLogo size={28} variant="wordmark" tintColor="#FFFFFF" />
  </View>
 
  {/* Hero Value Props */}
@@ -494,7 +494,7 @@ export default function LoginScreen() {
  <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
  <LiorisLogo size={56} variant="symbol" />
  <View style={{ marginTop: 8 }}>
- <LiorisLogo size={32} variant="wordmark" />
+ <LiorisLogo size={32} variant="wordmark" tintColor="#FFFFFF" />
  </View>
  </View>
  </View>
