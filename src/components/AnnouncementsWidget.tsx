@@ -70,7 +70,7 @@ export function AnnouncementsWidget({
  <View style={{ marginBottom: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
- <Ionicons name="megaphone" size={16} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+ <Ionicons name="megaphone" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
  <AppText
  weight="bold"
  numberOfLines={1}
@@ -115,7 +115,7 @@ export function AnnouncementsWidget({
                 ? (isDark ? 'rgba(239, 68, 68, 0.40)' : 'rgba(239, 68, 68, 0.30)')
                 : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'),
               borderLeftWidth: 4,
-              borderLeftColor: topAnnouncement.priority === 'critical' ? '#DC2626' : colors.brandPrimary,
+              borderLeftColor: topAnnouncement.priority === 'critical' ? '#DC2626' : colors.border,
               gap: spacing.sm,
             },
             Platform.OS === 'web' &&
@@ -131,7 +131,7 @@ export function AnnouncementsWidget({
           <Ionicons
             name={topAnnouncement.priority === 'critical' ? 'alert-circle' : 'megaphone'}
             size={18}
-            color={topAnnouncement.priority === 'critical' ? '#DC2626' : colors.brandPrimary}
+            color={topAnnouncement.priority === 'critical' ? '#DC2626' : colors.textSecondary}
           />
           <View style={{ flex: 1 }}>
             <AppText
@@ -215,7 +215,7 @@ export function AnnouncementsWidget({
  <View style={{ marginBottom: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
- <Ionicons name="megaphone" size={16} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
+ <Ionicons name="megaphone" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
  <AppText
  weight="bold"
  numberOfLines={1}

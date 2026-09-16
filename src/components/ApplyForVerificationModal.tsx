@@ -134,7 +134,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
  <Animated.View style={[{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%' }, animatedStyle]}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
- <Ionicons name="shield-checkmark"size={20} color={colors.brandPrimary} />
+ <Ionicons name="shield-checkmark"size={20} color={colors.textSecondary} />
  <AppText variant="h3"weight="bold">
  Apply for Verification
  </AppText>

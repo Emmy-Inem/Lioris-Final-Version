@@ -130,8 +130,8 @@ export function VerifiedCampusLocationPicker({
               </AppText>
               {matchedLandmark.walkingTip && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                  <Ionicons name="navigate-outline" size={12} color={colors.brandPrimary} />
-                  <AppText variant="caption" tone="brand" style={{ fontSize: 11, flex: 1 }}>
+                  <Ionicons name="navigate-outline" size={12} color={colors.textSecondary} />
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: 11, flex: 1 }}>
                     {matchedLandmark.walkingTip}
                   </AppText>
                 </View>

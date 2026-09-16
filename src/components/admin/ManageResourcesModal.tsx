@@ -376,8 +376,8 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  return (
  <SolidCard style={{ marginBottom: spacing.sm, padding: spacing.md }}>
  <View style={{ flexDirection: 'row', gap: spacing.md }}>
- <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
- <Ionicons name="document-text"size={24} color={colors.brandPrimary} />
+ <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: colors.divider, alignItems: 'center', justifyContent: 'center' }}>
+ <Ionicons name="document-text"size={24} color={colors.textSecondary} />
  </View>
 
  <View style={{ flex: 1 }}>

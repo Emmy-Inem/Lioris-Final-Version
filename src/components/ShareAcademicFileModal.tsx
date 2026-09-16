@@ -209,7 +209,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  ]}
  >
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
- <Ionicons name="cloud-upload" size={20} color={colors.brandPrimary} />
+ <Ionicons name="cloud-upload" size={20} color={colors.textSecondary} />
  <AppText variant="h2" weight="bold">
  Share Academic File
  </AppText>

@@ -505,7 +505,7 @@ export function EventsModerationTab() {
  >
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="calendar-outline"size={20} color={colors.brandPrimary} />
+ <Ionicons name="calendar-outline"size={20} color={colors.textSecondary} />
  <AppText variant="h2"weight="bold">
  {editingEvent ? 'Edit Campus Event' : 'Publish Campus Event'}
  </AppText>
@@ -693,8 +693,8 @@ export function EventsModerationTab() {
  {rosterEvent.rsvpCount} students registered • Capacity: {rosterEvent.capacity || 'Unlimited'}
  </AppText>
 
-  <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md }}>
-    <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+  <View style={{ backgroundColor: colors.divider, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md }}>
+    <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs }}>
       CHECKED-IN & REGISTERED ROSTER:
     </AppText>
     {isLoadingAttendees ? (
@@ -708,7 +708,7 @@ export function EventsModerationTab() {
       eventAttendees.map((att, i) => (
         <View key={att.userId || i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: i < eventAttendees.length - 1 ? 1 : 0, borderBottomColor: colors.border }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
-            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.textSecondary, alignItems: 'center', justifyContent: 'center' }}>
               <AppText variant="caption" weight="bold" tone="inverse">
                 {(att.fullName || att.name || 'S').charAt(0).toUpperCase()}
               </AppText>

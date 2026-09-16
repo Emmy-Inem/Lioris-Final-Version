@@ -228,7 +228,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
 
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="link" size={22} color={colors.brandPrimary} />
+ <Ionicons name="link" size={22} color={colors.textSecondary} />
  <AppText variant="h2" weight="bold">
  Manage Campus Portal Links
  </AppText>
@@ -371,12 +371,12 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  width: 40,
  height: 40,
  borderRadius: 20,
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.divider,
  alignItems: 'center',
  justifyContent: 'center',
  }}
  >
- <Ionicons name={link.icon} size={20} color={colors.brandPrimary} />
+ <Ionicons name={link.icon} size={20} color={colors.textSecondary} />
  </View>
 
  <View style={{ flex: 1 }}>
@@ -408,11 +408,11 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  </Pressable>
 
  <Pressable onPress={() => handleTestLink(link.url)} hitSlop={8} style={{ padding: 4 }}>
- <Ionicons name="open-outline" size={18} color={colors.brandPrimary} />
+ <Ionicons name="open-outline" size={18} color={colors.textSecondary} />
  </Pressable>
 
  <Pressable onPress={() => startEdit(link)} hitSlop={8} style={{ padding: 4 }}>
- <Ionicons name="pencil" size={17} color={colors.brandPrimary} />
+ <Ionicons name="pencil" size={17} color={colors.textSecondary} />
  </Pressable>
 
  <Pressable onPress={() => handleDeleteLink(link.id)} hitSlop={8} style={{ padding: 4 }}>

@@ -145,7 +145,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
           <View style={[styles.header, { borderBottomColor: colors.divider }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="school" size={20} color={colors.brandPrimary} />
+                <Ionicons name="school" size={20} color={colors.textSecondary} />
                 <AppText variant="h3" weight="bold">
                   Research & Thesis Hub
                 </AppText>
@@ -328,10 +328,10 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                     >
                       <Pressable
                         onPress={() => handleCopyCitation(paper)}
-                        style={[styles.smallActionBtn, { backgroundColor: `${colors.brandPrimary}12` }]}
+                        style={[styles.smallActionBtn, { backgroundColor: colors.divider }]}
                       >
-                        <Ionicons name="copy-outline" size={13} color={colors.brandPrimary} />
-                        <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
+                        <Ionicons name="copy-outline" size={13} color={colors.textSecondary} />
+                        <AppText variant="caption" weight="bold" style={{ color: colors.textPrimary, fontSize: 11 }}>
                           Copy APA
                         </AppText>
                       </Pressable>

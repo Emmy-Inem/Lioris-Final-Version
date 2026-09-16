@@ -43,14 +43,14 @@ export function FeatureFlagsTab() {
   return (
     <View>
       <SolidCard
-        backgroundColor={colors.pastelPrimaryBg}
-        style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.brandPrimary}30` }}
+        backgroundColor={colors.divider}
+        style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1, paddingRight: spacing.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <Ionicons name="toggle-outline" size={18} color={colors.brandPrimary} />
-              <AppText weight="bold" tone="brand">
+              <Ionicons name="toggle-outline" size={18} color={colors.textSecondary} />
+              <AppText weight="bold">
                 Campus Feature Visibility & Kill Switches
               </AppText>
             </View>

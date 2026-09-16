@@ -121,7 +121,7 @@ export function AcademicLibraryModal({
           <View style={[styles.header, { borderBottomColor: colors.divider }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="library" size={20} color={colors.brandPrimary} />
+                <Ionicons name="library" size={20} color={colors.textSecondary} />
                 <AppText variant="h3" weight="bold">
                   Global Academic Library
                 </AppText>

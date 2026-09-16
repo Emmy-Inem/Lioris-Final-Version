@@ -111,7 +111,7 @@ export function ChangeWorkspaceScopeModal({
  </View>
 
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
- <Ionicons name="globe" size={20} color={colors.brandPrimary} />
+ <Ionicons name="globe" size={20} color={colors.textSecondary} />
  <AppText variant="h2" weight="bold">
  Change Workspace Scope
  </AppText>
@@ -149,7 +149,7 @@ export function ChangeWorkspaceScopeModal({
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
 
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1 }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ letterSpacing: 1 }}>
  EXPLORE OTHER CAMPUS WORKSPACES
  </AppText>
  <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>

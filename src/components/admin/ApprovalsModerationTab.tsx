@@ -178,13 +178,13 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  {section === 'resources' ? (
  <View>
  {pendingResources.map((res) => (
- <SolidCard key={res.id} radius={18} frosted style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.brandPrimary}40` }}>
+ <SolidCard key={res.id} radius={18} frosted style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
  <View style={{ flex: 1, marginRight: spacing.sm }}>
  <AppText weight="bold"variant="body">
  {res.title}
  </AppText>
- <AppText tone="brand"variant="caption"weight="bold">
+ <AppText tone="secondary"variant="caption"weight="bold">
  {res.courseCode} • {res.department} • {res.category} ({res.fileSize})
  </AppText>
  </View>
@@ -195,8 +195,8 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  Uploader: <AppText weight="bold">{res.authorName}</AppText> ({res.academicLevel || 'Student'}) • Format: {res.fileType || 'PDF'}
  </AppText>
 
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.sm, marginVertical: spacing.xs }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: 2 }}>
+ <View style={{ backgroundColor: colors.divider, padding: spacing.sm, borderRadius: radius.sm, marginVertical: spacing.xs }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 2 }}>
  SYLLABUS SUMMARY:
  </AppText>
  <AppText tone="secondary"variant="bodySmall"numberOfLines={2}>
@@ -344,12 +344,12 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  <AppText variant="body"weight="bold"style={{ marginBottom: 4 }}>
  {previewResource.title}
  </AppText>
- <AppText tone="brand"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
+ <AppText tone="secondary"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
  {previewResource.courseCode} • {previewResource.department} • {previewResource.fileType} ({previewResource.fileSize})
  </AppText>
 
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: 4 }}>
+ <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 4 }}>
  AUTHENTICITY & METADATA:
  </AppText>
  <AppText variant="caption">Author: {previewResource.authorName}</AppText>

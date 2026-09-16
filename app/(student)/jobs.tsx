@@ -67,7 +67,7 @@ export default function JobsScreen() {
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Ionicons name="shield-checkmark" size={15} color={colors.brandPrimary} />
+                <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" weight="semiBold">Alumni Verified Roles</AppText>
               </View>
 

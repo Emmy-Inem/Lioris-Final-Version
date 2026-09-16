@@ -390,8 +390,8 @@ export function ResourcesModerationTab() {
  </View>
 
  {/* Document excerpt preview */}
- <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.sm, padding: spacing.sm, marginBottom: spacing.md }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: 2 }}>
+ <View style={{ backgroundColor: colors.divider, borderRadius: radius.sm, padding: spacing.sm, marginBottom: spacing.md }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 2 }}>
  SYLLABUS & DOCUMENT EXCERPT:
  </AppText>
  <AppText tone="secondary"variant="bodySmall"numberOfLines={3}>
@@ -480,7 +480,7 @@ export function ResourcesModerationTab() {
  >
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="folder-outline"size={20} color={colors.brandPrimary} />
+ <Ionicons name="folder-outline"size={20} color={colors.textSecondary} />
  <AppText variant="h2"weight="bold">
  {editingResource ? 'Edit Academic Resource' : 'Publish Academic Resource'}
  </AppText>
@@ -631,12 +631,12 @@ export function ResourcesModerationTab() {
  <AppText variant="body"weight="bold"style={{ marginBottom: 4 }}>
  {previewModalResource.title}
  </AppText>
- <AppText tone="brand"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
+ <AppText tone="secondary"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
  {previewModalResource.courseCode} • {previewModalResource.department} • {previewModalResource.fileType} ({previewModalResource.fileSize})
  </AppText>
 
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: 4 }}>
+ <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 4 }}>
  VERIFICATION CLEARANCES:
  </AppText>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
@@ -644,7 +644,7 @@ export function ResourcesModerationTab() {
  <AppText variant="caption">Virus & Malware Scan: Clean</AppText>
  </View>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <Ionicons name="school"size={14} color={colors.brandPrimary} />
+ <Ionicons name="school"size={14} color={colors.success} />
  <AppText variant="caption">Syllabus Match: University of Ibadan Department Archive</AppText>
  </View>
  </View>

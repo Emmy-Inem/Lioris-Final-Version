@@ -102,7 +102,7 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons name="water" size={16} color={colors.brandPrimary} />
+                      <Ionicons name="water" size={16} color={colors.textSecondary} />
                       <Text style={{ fontWeight: '700', fontSize: 13, color: isDark ? '#FFFFFF' : '#0F172A' }}>
                         Live Glass Preview
                       </Text>
@@ -172,7 +172,7 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
             <View style={styles.sliderCard}>
               <View style={styles.sliderHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="eye-outline" size={15} color={colors.brandPrimary} />
+                  <Ionicons name="eye-outline" size={15} color={colors.textSecondary} />
                   <Text style={[styles.sliderTitle, { color: isDark ? '#F1F5F9' : '#0F172A' }]}>
                     Translucency (Alpha Transparency)
                   </Text>
@@ -199,7 +199,7 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
             <View style={styles.sliderCard}>
               <View style={styles.sliderHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="contrast-outline" size={15} color={colors.brandPrimary} />
+                  <Ionicons name="contrast-outline" size={15} color={colors.textSecondary} />
                   <Text style={[styles.sliderTitle, { color: isDark ? '#F1F5F9' : '#0F172A' }]}>
                     Backdrop Blur Diffusion
                   </Text>
@@ -226,7 +226,7 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
             <View style={styles.sliderCard}>
               <View style={styles.sliderHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="color-palette-outline" size={15} color={colors.brandPrimary} />
+                  <Ionicons name="color-palette-outline" size={15} color={colors.textSecondary} />
                   <Text style={[styles.sliderTitle, { color: isDark ? '#F1F5F9' : '#0F172A' }]}>
                     Prism Refraction (Color Saturation)
                   </Text>
@@ -253,7 +253,7 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
             <View style={styles.sliderCard}>
               <View style={styles.sliderHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="sunny-outline" size={15} color={colors.brandPrimary} />
+                  <Ionicons name="sunny-outline" size={15} color={colors.textSecondary} />
                   <Text style={[styles.sliderTitle, { color: isDark ? '#F1F5F9' : '#0F172A' }]}>
                     Specular Surface Shine
                   </Text>
@@ -280,7 +280,7 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
             <View style={styles.sliderCard}>
               <View style={styles.sliderHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="square-outline" size={15} color={colors.brandPrimary} />
+                  <Ionicons name="square-outline" size={15} color={colors.textSecondary} />
                   <Text style={[styles.sliderTitle, { color: isDark ? '#F1F5F9' : '#0F172A' }]}>
                     Hairline Rim Opacity
                   </Text>
@@ -315,8 +315,8 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
                 { borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)' },
               ]}
             >
-              <Ionicons name="refresh" size={14} color={colors.brandPrimary} />
-              <Text style={[styles.resetButtonText, { color: colors.brandPrimary }]}>
+              <Ionicons name="refresh" size={14} color={colors.textSecondary} />
+              <Text style={[styles.resetButtonText, { color: colors.textSecondary }]}>
                 Reset to Recommended iOS 26 Defaults
               </Text>
             </Pressable>

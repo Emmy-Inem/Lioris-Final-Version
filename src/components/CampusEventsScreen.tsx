@@ -139,8 +139,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       <View style={{ marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
         {/* Workspace Campus Badge */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-          <Ionicons name={isAlumniScope ? 'ribbon' : 'school'} size={14} color={colors.brandPrimary} />
-          <AppText variant="caption" weight="bold" tone="brand" numberOfLines={1}>
+          <Ionicons name={isAlumniScope ? 'ribbon' : 'school'} size={14} color={colors.textSecondary} />
+          <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1}>
             {institutionName} • {isAlumniScope ? 'Alumni Network' : 'Campus Hub'}
           </AppText>
         </View>
@@ -298,8 +298,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Ionicons name={isAlumniScope ? 'ribbon' : 'school'} size={16} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" tone="brand">
+                <Ionicons name={isAlumniScope ? 'ribbon' : 'school'} size={16} color={colors.textSecondary} />
+                <AppText variant="caption" weight="bold" tone="secondary">
                   {institutionName} • {isAlumniScope ? 'Alumni Network' : 'Student Campus Hub'}
                 </AppText>
               </View>

@@ -276,7 +276,7 @@ export function ResourceReaderModal({
             ) : viewerUrl ? (
               // Native fallback: Web link button or direct preview
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-                <Ionicons name="document-text-outline" size={56} color={colors.brandPrimary} style={{ marginBottom: spacing.md }} />
+                <Ionicons name="document-text-outline" size={56} color={colors.textSecondary} style={{ marginBottom: spacing.md }} />
                 <AppText variant="h2" weight="bold" style={{ textAlign: 'center', marginBottom: spacing.xs }}>
                   {resource.title}
                 </AppText>
@@ -309,7 +309,7 @@ export function ResourceReaderModal({
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.md }}>
-                    <Ionicons name="book-outline" size={24} color={colors.brandPrimary} />
+                    <Ionicons name="book-outline" size={24} color={colors.textSecondary} />
                     <AppText variant="h2" weight="bold">
                       {resource.title}
                     </AppText>
@@ -321,15 +321,15 @@ export function ResourceReaderModal({
 
                   <View
                     style={{
-                      backgroundColor: colors.pastelPrimaryBg,
+                      backgroundColor: colors.divider,
                       borderRadius: 12,
                       padding: spacing.md,
                       borderLeftWidth: 4,
-                      borderLeftColor: colors.brandPrimary,
+                      borderLeftColor: colors.border,
                       marginBottom: spacing.lg,
                     }}
                   >
-                    <AppText weight="bold" tone="brand" variant="bodySmall" style={{ marginBottom: 4 }}>
+                    <AppText weight="bold" variant="bodySmall" style={{ marginBottom: 4 }}>
                       Verified Academic Material
                     </AppText>
                     <AppText tone="secondary" variant="caption" style={{ lineHeight: 18 }}>

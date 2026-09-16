@@ -70,7 +70,7 @@ export default function MarketplaceScreen() {
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Ionicons name="shield-checkmark" size={15} color={colors.brandPrimary} />
+                <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" weight="semiBold">Meet on Campus for a Safe Exchange</AppText>
               </View>
 

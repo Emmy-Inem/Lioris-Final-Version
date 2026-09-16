@@ -119,8 +119,8 @@ export default function PlatformConfigScreen() {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Ionicons name="eye-outline" size={16} color={colors.brandPrimary} />
-              <AppText weight="bold" tone="brand">
+              <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
+              <AppText weight="bold">
                 Preview Workspace As Role
               </AppText>
             </View>
@@ -162,7 +162,7 @@ export default function PlatformConfigScreen() {
                     marginBottom: 4,
                   }}
                 >
-                  <AppText variant="bodySmall" weight="bold" tone={active ? 'inverse' : 'brand'}>
+                  <AppText variant="bodySmall" weight="bold" tone={active ? 'inverse' : 'primary'}>
                     {r.label}
                   </AppText>
                 </Pressable>
@@ -182,8 +182,8 @@ export default function PlatformConfigScreen() {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-            <Ionicons name="school-outline" size={16} color={colors.brandPrimary} />
-            <AppText weight="bold" tone="brand">
+            <Ionicons name="school-outline" size={16} color={colors.textSecondary} />
+            <AppText weight="bold">
               Active Campus Workspace Scope
             </AppText>
           </View>
@@ -207,7 +207,7 @@ export default function PlatformConfigScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brandPrimary }} />
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.textSecondary }} />
               <AppText weight="semiBold">{institution}</AppText>
             </View>
             <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
@@ -299,14 +299,14 @@ export default function PlatformConfigScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: `${colors.brandPrimary}20`,
+            backgroundColor: colors.divider,
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1,
-            borderColor: `${colors.brandPrimary}40`,
+            borderColor: colors.border,
           }}
         >
-          <Ionicons name="options-outline" size={22} color={colors.brandPrimary} />
+          <Ionicons name="options-outline" size={22} color={colors.textSecondary} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -317,7 +317,7 @@ export default function PlatformConfigScreen() {
             Temporarily toggle XP gamification, career page, marketplace, utility cards & more
           </AppText>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.brandPrimary} />
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </View>
     </GlassCard>
   </Pressable>
@@ -345,14 +345,14 @@ export default function PlatformConfigScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: `${colors.brandPrimary}20`,
+            backgroundColor: colors.divider,
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1,
-            borderColor: `${colors.brandPrimary}40`,
+            borderColor: colors.border,
           }}
         >
-          <Ionicons name="construct" size={22} color={colors.brandPrimary} />
+          <Ionicons name="construct" size={22} color={colors.textSecondary} />
         </View>
         <View style={{ flex: 1 }}>
           <AppText weight="bold" variant="bodySmall">Super Admin Configuration</AppText>
@@ -393,7 +393,7 @@ export default function PlatformConfigScreen() {
             borderColor: selected ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.85)',
           }}
         >
-          <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'brand'}>
+          <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'primary'}>
             {t}
           </AppText>
         </Pressable>
@@ -537,9 +537,9 @@ function EcosystemTile({
         }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, gap: spacing.xs }}>
-          <Ionicons name={icon} size={22} color={colors.brandPrimary} />
+          <Ionicons name={icon} size={22} color={colors.textSecondary} />
           {badge ? (
-            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9.5, flexShrink: 0, maxWidth: 90 }} numberOfLines={1}>
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 9.5, flexShrink: 0, maxWidth: 90 }} numberOfLines={1}>
               {badge}
             </AppText>
           ) : null}

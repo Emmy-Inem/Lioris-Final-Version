@@ -63,8 +63,8 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.divider }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-              <View style={[styles.iconPill, { backgroundColor: colors.pastelPrimaryBg }]}>
-                <Ionicons name="cash-outline" size={20} color={colors.brandPrimary} />
+              <View style={[styles.iconPill, { backgroundColor: colors.divider }]}>
+                <Ionicons name="cash-outline" size={20} color={colors.textSecondary} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <AppText variant="h3" weight="bold" numberOfLines={1}>
@@ -106,7 +106,7 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
                     style={[
                       styles.presetChip,
                       {
-                        backgroundColor: numAmount === amt ? colors.brandPrimary : colors.pastelPrimaryBg,
+                        backgroundColor: numAmount === amt ? colors.brandPrimary : colors.divider,
                         borderColor: numAmount === amt ? colors.brandPrimary : colors.border,
                       },
                     ]}
@@ -114,7 +114,7 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
                     <AppText
                       variant="caption"
                       weight="bold"
-                      style={{ color: numAmount === amt ? '#FFFFFF' : colors.brandPrimary, fontSize: 11 }}
+                      style={{ color: numAmount === amt ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}
                     >
                       ₦{amt.toLocaleString()}
                     </AppText>
@@ -159,8 +159,8 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
             <SolidCard
               radius={16}
               style={{
-                backgroundColor: colors.pastelPrimaryBg,
-                borderColor: `${colors.brandPrimary}35`,
+                backgroundColor: colors.divider,
+                borderColor: colors.border,
                 borderWidth: 1,
                 padding: 16,
                 alignItems: 'center',

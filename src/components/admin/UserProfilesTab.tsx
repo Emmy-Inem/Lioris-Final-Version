@@ -258,7 +258,7 @@ export function UserProfilesTab() {
  {user.fullName}
  </AppText>
  {user.isVerified ? (
- <Ionicons name="checkmark-circle"size={16} color={colors.brandPrimary} />
+ <Ionicons name="checkmark-circle"size={16} color={colors.success} />
  ) : null}
  </View>
  <AppText tone="secondary"variant="caption">
@@ -322,7 +322,7 @@ export function UserProfilesTab() {
  >
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="person-circle-outline"size={22} color={colors.brandPrimary} />
+ <Ionicons name="person-circle-outline"size={22} color={colors.textSecondary} />
  <AppText variant="h2"weight="bold">
  User Governance Controls
  </AppText>

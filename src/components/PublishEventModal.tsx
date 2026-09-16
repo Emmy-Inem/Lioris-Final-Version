@@ -334,8 +334,8 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 8,
-                backgroundColor: colors.pastelPrimaryBg,
-                borderColor: colors.brandPrimary,
+                backgroundColor: colors.divider,
+                borderColor: colors.border,
                 borderWidth: 1,
                 borderRadius: radius.md,
                 paddingHorizontal: spacing.md,
@@ -343,7 +343,7 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
                 marginBottom: spacing.md,
               }}
             >
-              <Ionicons name="information-circle" size={18} color={colors.brandPrimary} />
+              <Ionicons name="information-circle" size={18} color={colors.textSecondary} />
               <AppText variant="caption" style={{ flex: 1, lineHeight: 16 }}>
                 {isStaffOrAdmin
                   ? 'Official / Staff Event: submitted for moderation review - approve it from the Events tab once it appears in the queue.'
@@ -393,10 +393,10 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
             </View>
 
             {/* University Workspace Node (Locked to Current Campus) */}
-            <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border }}>
+            <View style={{ backgroundColor: colors.divider, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="school" size={15} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" tone="brand">
+                <Ionicons name="school" size={15} color={colors.textSecondary} />
+                <AppText variant="caption" weight="bold" tone="secondary">
                   University Workspace: {institutionName} ({targetCampus})
                 </AppText>
               </View>
@@ -600,8 +600,8 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
                 <Image source={{ uri: bannerUri }} style={{ width: '100%', height: 140 }} contentFit="cover" transition={200} />
               ) : (
                 <>
-                  <Ionicons name="cloud-upload" size={24} color={colors.brandPrimary} style={{ marginBottom: spacing.xs }} />
-                  <AppText weight="semiBold" tone="brand">
+                  <Ionicons name="cloud-upload" size={24} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+                  <AppText weight="semiBold">
                     Upload Event Banner (Optional)
                   </AppText>
                   <AppText tone="secondary" variant="caption">
