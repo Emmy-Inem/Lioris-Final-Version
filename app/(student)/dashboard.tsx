@@ -1055,7 +1055,7 @@ export default function StudentDashboard() {
               <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
                 <View style={{ flex: 1 }}>
                   <AppButton
-                    label={uploadingAvatar ? 'Uploading...' : '📷 Upload DP'}
+                    label={uploadingAvatar ? 'Uploading...' : 'Upload DP'}
                     variant="secondary"
                     onPress={handlePickCustomAvatar}
                     loading={uploadingAvatar}
@@ -1064,7 +1064,7 @@ export default function StudentDashboard() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <AppButton
-                    label={uploadingCover ? 'Uploading...' : '🖼️ Upload Cover'}
+                    label={uploadingCover ? 'Uploading...' : 'Upload Cover'}
                     variant="secondary"
                     onPress={handlePickCustomCover}
                     loading={uploadingCover}

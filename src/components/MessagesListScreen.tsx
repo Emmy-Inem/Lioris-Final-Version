@@ -153,7 +153,7 @@ export function MessagesListScreen() {
               ListEmptyComponent={
                 !isLoading ? (
                   <View style={{ alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.md }}>
-                    <Ionicons name="chatbubbles-outline" size={36} color={colors.brandPrimary} />
+                    <Ionicons name="chatbubbles-outline" size={36} color={colors.textSecondary} />
                     <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm }}>
                       No Conversations Found
                     </AppText>
@@ -198,16 +198,10 @@ export function MessagesListScreen() {
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
                 <View
                   style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 36,
-                    backgroundColor: colors.pastelPrimaryBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
                     marginBottom: spacing.md,
                   }}
                 >
-                  <Ionicons name="chatbubble-ellipses-outline" size={36} color={colors.brandPrimary} />
+                  <Ionicons name="chatbubble-ellipses-outline" size={48} color={colors.textSecondary} />
                 </View>
                 <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
                   Your Academic Inbox
@@ -355,16 +349,10 @@ export function MessagesListScreen() {
                   <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.md, flex: 1 }}>
                     <View
                       style={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: 32,
-                        backgroundColor: colors.pastelPrimaryBg,
-                        alignItems: 'center',
-                        justifyContent: 'center',
                         marginBottom: spacing.md,
                       }}
                     >
-                      <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+                      <Ionicons name="chatbubbles-outline" size={44} color={colors.textSecondary} />
                     </View>
                     <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs, textAlign: 'center' }}>
                       No Conversations Yet

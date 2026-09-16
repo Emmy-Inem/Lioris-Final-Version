@@ -464,14 +464,14 @@ export function DesktopSidebar() {
                     paddingHorizontal: 5,
                     paddingVertical: 1,
                     borderRadius: 4,
-                    backgroundColor: colors.pastelPrimaryBg,
+                    backgroundColor: colors.divider,
                     flexShrink: 0,
                   }}
                 >
                   <AppText
                     variant="caption"
                     weight="bold"
-                    tone="brand"
+                    tone="secondary"
                     style={{ fontSize: 9, textTransform: 'capitalize' }}
                   >
                     {role}

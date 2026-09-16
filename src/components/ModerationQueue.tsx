@@ -200,8 +200,8 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                   </View>
 
                   {/* Violation Reason Box */}
-                  <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
-                    <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 2 }}>
+                  <View style={{ backgroundColor: `${colors.critical}15`, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
+                    <AppText variant="caption" weight="bold" tone="critical" style={{ marginBottom: 2 }}>
                       FLAGGED REASON & POLICY VIOLATION:
                     </AppText>
                     <AppText weight="bold" tone="primary" variant="bodySmall">
@@ -262,8 +262,8 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
               </View>
 
               {/* Violation Reason Box */}
-              <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
-                <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 2 }}>
+              <View style={{ backgroundColor: `${colors.critical}15`, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
+                <AppText variant="caption" weight="bold" tone="critical" style={{ marginBottom: 2 }}>
                   FLAGGED REASON & POLICY VIOLATION:
                 </AppText>
                 <AppText weight="bold" tone="primary" variant="bodySmall">

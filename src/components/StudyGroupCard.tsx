@@ -45,18 +45,16 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
           style={{
             width: 44,
             height: 44,
-            borderRadius: radius.md,
-            backgroundColor: colors.pastelPrimaryBg,
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          <Ionicons name="people-outline" size={22} color={colors.brandPrimary} />
+          <Ionicons name="people-outline" size={26} color={colors.textSecondary} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-            <Badge label={group.isPublic ? 'Public Pod' : 'Private Pod'} tone={group.isPublic ? 'brand' : 'neutral'} />
+            <Badge label={group.isPublic ? 'Public Pod' : 'Private Pod'} tone="neutral" />
             <AppText tone="secondary" variant="caption" numberOfLines={1}>
               {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
             </AppText>
@@ -64,7 +62,7 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
           <AppText variant="h3" weight="bold" numberOfLines={2} style={{ marginTop: 2 }}>
             {group.name}
           </AppText>
-          <AppText tone="brand" variant="caption" weight="bold" numberOfLines={1}>
+          <AppText tone="secondary" variant="caption" weight="bold" numberOfLines={1}>
             {group.courseCode}
           </AppText>
         </View>
@@ -84,16 +82,12 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
             style={{
               width: 26,
               height: 26,
-              borderRadius: 13,
-              backgroundColor: colors.pastelPrimaryBg,
               alignItems: 'center',
               justifyContent: 'center',
-              borderWidth: 1.5,
-              borderColor: colors.surface,
               flexShrink: 0,
             }}
           >
-            <Ionicons name="people" size={13} color={colors.brandPrimary} />
+            <Ionicons name="people" size={16} color={colors.textSecondary} />
           </View>
           <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
             {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}

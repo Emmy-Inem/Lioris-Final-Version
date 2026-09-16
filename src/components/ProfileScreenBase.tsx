@@ -455,11 +455,11 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
         {/* Verification Callout if not verified */}
         {profile.verificationStatus === 'pending' ? (
-          <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.pastelPrimaryBg, marginBottom: spacing.xs }}>
+          <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.divider, marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Ionicons name="time-outline" size={18} color={colors.brandPrimary} />
+              <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
               <View style={{ flex: 1 }}>
-                <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
+                <AppText weight="bold" variant="bodySmall">
                   Verification Pending Review
                 </AppText>
                 <AppText tone="secondary" variant="caption">
@@ -469,10 +469,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </View>
           </View>
         ) : profile.verificationStatus !== 'verified' ? (
-          <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.pastelPrimaryBg, marginBottom: spacing.xs }}>
+          <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.divider, marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, marginRight: spacing.sm }}>
-                <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
+                <AppText weight="bold" variant="bodySmall">
                   Verify Student Identity
                 </AppText>
                 <AppText tone="secondary" variant="caption">
@@ -496,11 +496,11 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  style={{
  paddingHorizontal: 8,
  paddingVertical: 4,
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.divider,
  borderRadius: radius.pill,
  }}
  >
- <AppText variant="caption" weight="semiBold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
+ <AppText variant="caption" weight="semiBold" style={{ color: colors.textSecondary, fontSize: 11 }}>
  {interest}
  </AppText>
  </View>
@@ -595,7 +595,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Ionicons name="images" size={20} color={colors.brandPrimary} />
+              <Ionicons name="images" size={20} color={colors.textSecondary} />
               <AppText variant="h3" weight="bold">
                 Customize Photos
               </AppText>
@@ -610,7 +610,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
               <View style={{ flex: 1 }}>
                 <AppButton
-                  label={uploadingAvatar ? 'Uploading...' : '📷 Upload DP'}
+                  label={uploadingAvatar ? 'Uploading...' : 'Upload DP'}
                   variant="secondary"
                   onPress={handlePickCustomAvatar}
                   loading={uploadingAvatar}
@@ -619,7 +619,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
               </View>
               <View style={{ flex: 1 }}>
                 <AppButton
-                  label={uploadingCover ? 'Uploading...' : '🖼️ Upload Cover'}
+                  label={uploadingCover ? 'Uploading...' : 'Upload Cover'}
                   variant="secondary"
                   onPress={handlePickCustomCover}
                   loading={uploadingCover}
@@ -629,7 +629,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </View>
 
             {/* Avatar Selector */}
-            <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
               OR CHOOSE AVATAR PRESET
             </AppText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingRight: spacing.md, marginBottom: spacing.lg }}>
@@ -659,7 +659,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </ScrollView>
 
             {/* Cover Banner Selector */}
-            <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
               CHOOSE CAMPUS BANNER
             </AppText>
             <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
@@ -749,14 +749,14 @@ function StatChip({ label, value }: { label: string; value: number }) {
  style={{
  flex: 1,
  alignItems: 'center',
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.divider,
  borderWidth: 1,
- borderColor: colors.brandPrimary,
+ borderColor: colors.border,
  borderRadius: radius.md,
  paddingVertical: spacing.sm,
  }}
  >
- <AppText weight="bold"variant="h3"tone="brand">
+ <AppText weight="bold"variant="h3">
  {value}
  </AppText>
  <AppText tone="secondary"variant="caption">

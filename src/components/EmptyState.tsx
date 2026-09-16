@@ -20,20 +20,12 @@ export function EmptyState({
   actionLabel,
   onAction,
 }: EmptyStateProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing } = useTheme();
 
   return (
     <View style={[styles.container, { padding: spacing.xl }]}>
-      <View
-        style={[
-          styles.iconCircle,
-          {
-            backgroundColor: colors.pastelPrimaryBg,
-            borderRadius: 36,
-          },
-        ]}
-      >
-        <Ionicons name={icon} size={36} color={colors.brandPrimary} />
+      <View style={styles.iconCircle}>
+        <Ionicons name={icon} size={44} color={colors.textSecondary} />
       </View>
       <AppText variant="h3" weight="bold" style={{ textAlign: 'center', marginBottom: spacing.xs }}>
         {title}

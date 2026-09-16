@@ -78,7 +78,7 @@ export default function StudyGroupsScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: isDesktop ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
           {isFeatureEnabled('ai_study_copilot') && (
             <AppButton
-              label="⚡ AI Copilot"
+              label="AI Copilot"
               variant="ghost"
               size={isDesktop ? 'md' : 'sm'}
               onPress={() => setCopilotOpen(true)}

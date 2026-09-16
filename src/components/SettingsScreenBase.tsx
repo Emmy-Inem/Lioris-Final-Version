@@ -608,13 +608,13 @@ export function SettingsScreen() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: spacing.sm,
-                    backgroundColor: colors.pastelPrimaryBg,
+                    backgroundColor: colors.divider,
                     borderRadius: radius.md,
                     padding: spacing.md,
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
-                    <Ionicons name={scope === 'campus' ? 'school' : 'globe'} size={20} color={colors.brandPrimary} />
+                    <Ionicons name={scope === 'campus' ? 'school' : 'globe'} size={20} color={colors.textSecondary} />
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                         {scope === 'campus'
@@ -825,15 +825,15 @@ export function SettingsScreen() {
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 8,
-                          backgroundColor: colors.pastelPrimaryBg,
+                          backgroundColor: colors.divider,
                           borderRadius: radius.md,
                           padding: spacing.sm,
                           borderWidth: 1,
-                          borderColor: `${colors.brandPrimary}22`,
+                          borderColor: colors.border,
                         }}
                       >
-                        <Ionicons name="shield-checkmark" size={18} color={colors.brandPrimary} />
-                        <AppText tone="brand" weight="bold" variant="bodySmall">
+                        <Ionicons name="shield-checkmark" size={18} color={colors.success} />
+                        <AppText weight="bold" variant="bodySmall" style={{ color: colors.success }}>
                           Two-Factor Authentication is active
                         </AppText>
                       </View>
@@ -1108,7 +1108,7 @@ export function SettingsScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
-                <Ionicons name="shield-checkmark-outline" size={22} color={colors.brandPrimary} />
+                <Ionicons name="shield-checkmark-outline" size={22} color={colors.textSecondary} />
                 <AppText variant="h3" weight="bold" numberOfLines={1}>
                   {activeLegalDoc?.title}
                 </AppText>

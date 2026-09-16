@@ -323,17 +323,17 @@ export function PostDetailScreen() {
  {poll ? (
  <View
  style={{
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.surface,
  borderRadius: radius.lg,
  padding: spacing.md,
  marginBottom: spacing.md,
  borderWidth: 1,
- borderColor: colors.brandPrimary,
+ borderColor: colors.border,
  }}
  >
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
- <Ionicons name="bar-chart"size={18} color={colors.brandPrimary} />
- <AppText weight="bold"variant="bodySmall"tone="brand">
+ <Ionicons name="bar-chart"size={18} color={colors.textSecondary} />
+ <AppText weight="bold"variant="bodySmall">
  {poll.question}
  </AppText>
  </View>
@@ -397,8 +397,8 @@ export function PostDetailScreen() {
  {/* Tags */}
  {post.courseTags ? (
  <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.md }}>
- <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
- <AppText variant="caption"weight="bold"tone="brand">{post.courseTags}</AppText>
+ <View style={{ backgroundColor: colors.divider, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
+ <AppText variant="caption"weight="bold"tone="secondary">{post.courseTags}</AppText>
  </View>
  </View>
  ) : null}
@@ -745,8 +745,8 @@ export function PostDetailScreen() {
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
- <Ionicons name="pin-outline"size={18} color={colors.brandPrimary} />
- <AppText weight="medium"tone="brand">{post.isPinned ? 'Unpin Announcement' : 'Pin as Announcement'}</AppText>
+ <Ionicons name="pin-outline"size={18} color={colors.textPrimary} />
+ <AppText weight="medium">{post.isPinned ? 'Unpin Announcement' : 'Pin as Announcement'}</AppText>
  </Pressable>
 
  <Pressable

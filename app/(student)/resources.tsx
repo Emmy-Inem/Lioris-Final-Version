@@ -235,7 +235,7 @@ export default function ResourcesScreen() {
       {/* Section 1: Compact University Portal Shortcuts */}
       <View style={{ marginBottom: spacing.md }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, fontSize: 10.5 }}>
+          <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, fontSize: 10.5 }}>
             PORTAL SHORTCUTS
           </AppText>
           <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5 }}>
@@ -268,7 +268,7 @@ export default function ResourcesScreen() {
                 }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.brandPrimary} />
+                  <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.textSecondary} />
                   <AppText tone="secondary" variant="caption" style={{ fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     {portal.category || 'Portal'}
                   </AppText>
@@ -297,7 +297,7 @@ export default function ResourcesScreen() {
 
       {/* Section 2: Academic Repository Header & Filters */}
       <View style={{ marginBottom: spacing.xs }}>
-        <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: 6, fontSize: 10.5 }}>
+        <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, marginBottom: 6, fontSize: 10.5 }}>
           ACADEMIC REPOSITORY & STUDY FILES
         </AppText>
 
@@ -525,7 +525,7 @@ export default function ResourcesScreen() {
           {/* Section: University Portal Directories */}
           <View style={{ marginBottom: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
-              <AppText variant="caption" weight="bold" tone="brand" numberOfLines={1} style={{ letterSpacing: 1, flex: 1, minWidth: 0 }}>
+              <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1} style={{ letterSpacing: 1, flex: 1, minWidth: 0 }}>
                 CAMPUS DIRECTORIES & OFFICIAL PORTALS
               </AppText>
               <AppText tone="secondary" variant="caption" style={{ flexShrink: 0 }}>
@@ -556,13 +556,13 @@ export default function ResourcesScreen() {
                         width: 40,
                         height: 40,
                         borderRadius: 20,
-                        backgroundColor: colors.pastelPrimaryBg,
+                        backgroundColor: colors.divider,
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
                       }}
                     >
-                      <Ionicons name={portal.icon || 'link-outline'} size={20} color={colors.brandPrimary} />
+                      <Ionicons name={portal.icon || 'link-outline'} size={20} color={colors.textSecondary} />
                     </View>
 
                     <View style={{ flex: 1, minWidth: 0 }}>
@@ -668,8 +668,8 @@ export default function ResourcesScreen() {
                   borderColor: colors.border,
                 }}
               >
-                <Ionicons name="options-outline" size={16} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" tone="brand">
+                <Ionicons name="options-outline" size={16} color={colors.textPrimary} />
+                <AppText variant="caption" weight="bold">
                   {filters.department !== 'All Depts' ? filters.department : 'Filter Department'}
                 </AppText>
               </Pressable>

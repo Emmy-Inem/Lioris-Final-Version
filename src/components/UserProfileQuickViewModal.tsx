@@ -116,14 +116,14 @@ export function UserProfileQuickViewModal({
               {user.department ?? 'Faculty of Science • University of Ibadan'}
             </AppText>
             {user.level && (
-              <AppText tone="secondary" variant="caption" style={{ color: colors.brandPrimary, fontWeight: '600' }}>
+              <AppText tone="secondary" variant="caption" style={{ fontWeight: '600' }}>
                 {user.level} Level
               </AppText>
             )}
           </View>
 
           {/* Bio / Summary */}
-          <SolidCard radius={16} style={{ padding: spacing.md, marginBottom: spacing.lg, backgroundColor: colors.pastelPrimaryBg }}>
+          <SolidCard radius={16} style={{ padding: spacing.md, marginBottom: spacing.lg, backgroundColor: colors.divider }}>
             <AppText variant="caption" tone="secondary" style={{ fontStyle: 'italic', lineHeight: 18 }}>
               {user.bio ?? 'Active student scholar engaged in departmental seminars, study sessions, and campus academic collaboration.'}
             </AppText>

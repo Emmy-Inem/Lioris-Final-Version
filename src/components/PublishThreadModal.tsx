@@ -291,7 +291,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 >
                   <Ionicons name={pinToTop ? 'checkbox' : 'square-outline'} size={18} color={colors.brandPrimary} />
                   <AppText variant="caption" weight="bold" tone={pinToTop ? 'brand' : 'secondary'} style={{ fontSize: 11.5 }}>
-                    📌 Pin to Top of Forum
+                    Pin to Top of Forum
                   </AppText>
                 </Pressable>
               </View>
@@ -388,7 +388,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               >
                 <Ionicons name="sparkles" size={15} color="#8B5CF6" />
                 <AppText variant="caption" weight="bold" style={{ color: '#8B5CF6' }} numberOfLines={1}>
-                  {generatingAi ? 'Generating...' : 'AI Art ✨'}
+                  {generatingAi ? 'Generating...' : 'AI Art'}
                 </AppText>
               </Pressable>
 
@@ -520,7 +520,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 Post Into Community
               </AppText>
               <AppText variant="caption" tone="brand" weight="bold" style={{ fontSize: 11 }}>
-                🛡️ {communities.find((c) => c.category === channel)?.moderatorBadge}
+                {communities.find((c) => c.category === channel)?.moderatorBadge}
               </AppText>
             </View>
             <ScrollView

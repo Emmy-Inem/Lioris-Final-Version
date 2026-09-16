@@ -168,8 +168,8 @@ export function JobCard({ job }: { job: JobListing }) {
               </Pressable>
             </View>
 
-            <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md }}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: 2 }}>
+            <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md }}>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 2 }}>
                 VERIFIED STUDENT CANDIDATE
               </AppText>
               <AppText variant="caption" tone="secondary">

@@ -134,7 +134,7 @@ export function CampusMapModal({
           <View style={[styles.header, { borderBottomColor: colors.divider }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="map" size={20} color={colors.brandPrimary} />
+                <Ionicons name="map" size={20} color={colors.textSecondary} />
                 <AppText variant="h3" weight="bold">
                   Campus Map & Hall Locator
                 </AppText>
@@ -189,8 +189,8 @@ export function CampusMapModal({
             </View>
           ) : (
             <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="school" size={15} color={colors.brandPrimary} />
-              <AppText variant="caption" weight="bold" tone="brand">
+              <Ionicons name="school" size={15} color={colors.textSecondary} />
+              <AppText variant="caption" weight="bold" tone="secondary">
                 {CAMPUS_CENTERS[activeCampus]?.name ?? `${activeCampus} Campus`} • Campus Amenities & Landmarks
               </AppText>
             </View>
@@ -206,7 +206,7 @@ export function CampusMapModal({
               />
             ) : (
               <View style={styles.nativeMapPlaceholder}>
-                <Ionicons name="navigate-circle" size={44} color={colors.brandPrimary} />
+                <Ionicons name="navigate-circle" size={44} color={colors.textSecondary} />
                 <AppText variant="bodySmall" weight="bold" style={{ marginTop: 6 }}>
                   {selectedLandmark.name}
                 </AppText>
@@ -349,7 +349,7 @@ export function CampusMapModal({
 
                       {distanceInfo && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                          <Ionicons name="walk-outline" size={12} color={colors.brandPrimary} />
+                          <Ionicons name="walk-outline" size={12} color={colors.textSecondary} />
                           <AppText variant="caption" tone="primary" weight="medium">
                             {distanceInfo.distanceText} ({distanceInfo.etaText})
                           </AppText>

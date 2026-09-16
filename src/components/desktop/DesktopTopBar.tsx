@@ -152,16 +152,16 @@ export function DesktopTopBar() {
  style={[
  styles.roleSwitchBtn,
  {
- backgroundColor: colors.pastelPrimaryBg,
- borderColor: colors.brandPrimary,
+ backgroundColor: colors.divider,
+ borderColor: colors.border,
  },
  ]}
  >
- <Ionicons name="eye-outline" size={14} color={colors.brandPrimary} />
- <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+ <Ionicons name="eye-outline" size={14} color={colors.textSecondary} />
+ <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 11 }}>
  View: {role.toUpperCase()}
  </AppText>
- <Ionicons name="chevron-down" size={12} color={colors.brandPrimary} />
+ <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
  </Pressable>
 
  {roleSwitcherOpen && (
@@ -349,7 +349,7 @@ export function DesktopTopBar() {
  >
  {/* Search Input */}
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0' }}>
- <Ionicons name="search" size={20} color={colors.brandPrimary} />
+ <Ionicons name="search" size={20} color={colors.textSecondary} />
  <TextInput
  placeholder="Type a command, course, thread or page to navigate..."
  placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
@@ -388,13 +388,11 @@ export function DesktopTopBar() {
  style={{
  width: 36,
  height: 36,
- borderRadius: 8,
- backgroundColor: colors.pastelPrimaryBg,
  alignItems: 'center',
  justifyContent: 'center',
  }}
  >
- <Ionicons name={cmd.icon as any} size={18} color={colors.brandPrimary} />
+ <Ionicons name={cmd.icon as any} size={20} color={colors.textSecondary} />
  </View>
  <View style={{ flex: 1 }}>
  <AppText variant="bodySmall" weight="bold">

@@ -269,12 +269,12 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
               width: 36,
               height: 36,
               borderRadius: 18,
-              backgroundColor: colors.pastelPrimaryBg,
+              backgroundColor: colors.divider,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="call" size={17} color={colors.brandPrimary} />
+            <Ionicons name="call" size={17} color={colors.textSecondary} />
           </Pressable>
           <Pressable
             hitSlop={8}
@@ -285,12 +285,12 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
               width: 36,
               height: 36,
               borderRadius: 18,
-              backgroundColor: colors.pastelPrimaryBg,
+              backgroundColor: colors.divider,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="videocam" size={18} color={colors.brandPrimary} />
+            <Ionicons name="videocam" size={18} color={colors.textSecondary} />
           </Pressable>
         </View>
       </View>
@@ -512,7 +512,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           }}
           style={{ padding: 4 }}
         >
-          <Ionicons name="add-circle" size={30} color={colors.brandPrimary} />
+          <Ionicons name="add-circle" size={30} color={colors.textSecondary} />
         </Pressable>
 
         <View
@@ -568,7 +568,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="call-outline" size={18} color={colors.brandPrimary} />
+          <Ionicons name="call-outline" size={18} color={colors.textPrimary} />
           <AppText weight="medium">Start Campus Voice Call</AppText>
         </Pressable>
 
@@ -579,7 +579,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
         >
-          <Ionicons name="videocam-outline" size={18} color={colors.brandPrimary} />
+          <Ionicons name="videocam-outline" size={18} color={colors.textPrimary} />
           <AppText weight="medium">Start Campus Video Meeting</AppText>
         </Pressable>
 
@@ -588,7 +588,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           disabled={uploadingAttachment}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, opacity: uploadingAttachment ? 0.5 : 1 }}
         >
-          <Ionicons name="image-outline" size={18} color={colors.brandPrimary} />
+          <Ionicons name="image-outline" size={18} color={colors.textPrimary} />
           <AppText weight="medium">Send Study Photo / Diagram</AppText>
         </Pressable>
 
@@ -597,7 +597,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           disabled={uploadingAttachment}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, opacity: uploadingAttachment ? 0.5 : 1 }}
         >
-          <Ionicons name="document-attach-outline" size={18} color={colors.brandPrimary} />
+          <Ionicons name="document-attach-outline" size={18} color={colors.textPrimary} />
           <AppText weight="medium">Attach Course PDF / Lecture Notes</AppText>
         </Pressable>
       </ActionSheetModal>

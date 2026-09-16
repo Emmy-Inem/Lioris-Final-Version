@@ -101,7 +101,7 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
             <AppText
               variant="caption"
               weight="medium"
-              style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: colors.brandPrimary }}
+              style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: colors.textPrimary }}
             >
               {part.slice(1, -1)}
             </AppText>
@@ -114,7 +114,7 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
             key={keyPrefix + '-' + idx}
             weight="bold"
             variant="bodySmall"
-            style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: colors.brandPrimary }}
+            style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: colors.textPrimary }}
           >
             {part.slice(2, -2)}
           </AppText>
@@ -147,8 +147,8 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
             <View
               key={lineIndex}
               style={{
-                backgroundColor: colors.brandPrimary + '10',
-                borderColor: colors.brandPrimary + '35',
+                backgroundColor: colors.divider,
+                borderColor: colors.border,
                 borderWidth: 1,
                 borderRadius: 8,
                 padding: 10,
@@ -161,7 +161,7 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
                 weight="bold"
                 style={{
                   fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                  color: colors.brandPrimary,
+                  color: colors.textPrimary,
                   letterSpacing: 0.5,
                   textAlign: 'center',
                 }}
@@ -176,7 +176,7 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
         if (line.startsWith('### ')) {
           return (
             <View key={lineIndex} style={{ marginTop: 8, marginBottom: 2 }}>
-              <AppText variant="bodySmall" weight="bold" style={{ fontSize: 14, color: colors.brandPrimary }}>
+              <AppText variant="bodySmall" weight="bold" style={{ fontSize: 14, color: colors.textPrimary }}>
                 {line.slice(4)}
               </AppText>
             </View>
@@ -201,11 +201,11 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
               key={lineIndex}
               style={{
                 borderLeftWidth: 3,
-                borderLeftColor: colors.brandPrimary,
+                borderLeftColor: colors.border,
                 paddingLeft: 10,
                 paddingVertical: 2,
                 marginVertical: 4,
-                backgroundColor: colors.brandPrimary + '08',
+                backgroundColor: colors.divider,
                 borderRadius: 4,
               }}
             >
@@ -225,7 +225,7 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
                   width: 5,
                   height: 5,
                   borderRadius: 2.5,
-                  backgroundColor: colors.brandPrimary,
+                  backgroundColor: colors.textSecondary,
                   marginTop: 7,
                   flexShrink: 0,
                 }}
@@ -242,7 +242,7 @@ function FormattedAcademicContent({ text, isUser, colors }: { text: string; isUs
         if (numMatch) {
           return (
             <View key={lineIndex} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingLeft: 2 }}>
-              <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, width: 18, marginTop: 1 }}>
+              <AppText variant="caption" weight="bold" style={{ color: colors.textSecondary, width: 18, marginTop: 1 }}>
                 {`${numMatch[1]}.`}
               </AppText>
               <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -527,8 +527,8 @@ export function AICopilotModal({
                     {!isUser && (
                       <View style={styles.msgHeader}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name="sparkles" size={13} color={colors.brandPrimary} />
-                          <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
+                          <Ionicons name="sparkles" size={13} color={colors.textSecondary} />
+                          <AppText variant="caption" weight="bold" style={{ color: colors.textSecondary, fontSize: 11 }}>
                             Study Copilot
                           </AppText>
                           {msg.source && <Badge label={msg.source} tone="neutral" />}

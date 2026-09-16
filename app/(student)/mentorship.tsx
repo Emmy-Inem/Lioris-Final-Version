@@ -57,7 +57,7 @@ export default function StudentMentorshipScreen() {
         {myApplications.length > 0 && (
           <SolidCard style={{ marginBottom: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <AppText weight="bold" tone="brand">
+              <AppText weight="bold">
                 My Mentorship Applications
               </AppText>
               <Badge label={`${myApplications.length} submitted`} tone="neutral" />

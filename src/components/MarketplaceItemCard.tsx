@@ -107,8 +107,8 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
             transition={200}
           />
         ) : (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.pastelPrimaryBg }}>
-            <Ionicons name="pricetag-outline" size={28} color={colors.brandPrimary} />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.divider }}>
+            <Ionicons name="pricetag-outline" size={28} color={colors.textSecondary} />
           </View>
         )}
         <View style={{ position: 'absolute', top: 6, left: 6, zIndex: 2 }}>
@@ -117,10 +117,9 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
               {item.condition}
             </AppText>
           ) : (
-            // No photo backdrop - falls back to the pastel placeholder
-            // background, where white shadow-text is illegible. Plain
-            // brand-toned text instead, matching the placeholder's own tone.
-            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 9 }}>
+            // No photo backdrop - falls back to the neutral placeholder
+            // background, where white shadow-text is illegible.
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 9 }}>
               {item.condition}
             </AppText>
           )}
@@ -150,7 +149,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  {item.title}
  </AppText>
  <View style={{ marginBottom: spacing.xs }}>
-    <AppText weight="bold" tone="brand">
+    <AppText weight="bold">
       {item.price}
     </AppText>
     {showConverter && numericPrice > 0 ? (
@@ -170,7 +169,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  {item.sellerVerified ? (
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
  {trust ? <Ionicons name={trust.icon} size={10} color={trust.color} /> : null}
- <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 9, letterSpacing: 0.2 }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ fontSize: 9, letterSpacing: 0.2 }}>
  Verified
  </AppText>
  </View>
@@ -216,8 +215,8 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  opacity: messaging ? 0.6 : 1,
  }}
  >
- <Ionicons name="chatbubble-outline"size={10} color={colors.brandPrimary} />
- <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 9 }}>
+ <Ionicons name="chatbubble-outline"size={10} color={colors.textPrimary} />
+ <AppText variant="caption"weight="bold"style={{ fontSize: 9 }}>
  Chat
  </AppText>
  </Pressable>
@@ -231,7 +230,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  <SolidCard style={{ width: '100%', maxWidth: 440 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="shield-checkmark" size={20} color={colors.brandPrimary} />
+ <Ionicons name="shield-checkmark" size={20} color={colors.textSecondary} />
  <AppText variant="h3" weight="bold">
  Campus Pickup & Handover
  </AppText>

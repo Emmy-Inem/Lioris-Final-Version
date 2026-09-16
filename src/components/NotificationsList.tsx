@@ -186,13 +186,11 @@ export function NotificationsScreen() {
             style={{
               width: 44,
               height: 44,
-              borderRadius: 22,
-              backgroundColor: colors.pastelPrimaryBg,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="git-network" size={20} color={colors.brandPrimary} />
+            <Ionicons name="git-network" size={26} color={colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
             <AppText weight="bold">Campus Network Directory</AppText>

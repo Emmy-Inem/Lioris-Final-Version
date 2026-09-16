@@ -192,7 +192,7 @@ export function UserProfileModal({
  contentContainerStyle={{ paddingBottom: 50 }}
  >
  {/* Scrollable Cover Photo Banner (Scrolls naturally with content) */}
- <View style={{ height: 160, position: 'relative', width: '100%', backgroundColor: colors.pastelPrimaryBg }}>
+ <View style={{ height: 160, position: 'relative', width: '100%', backgroundColor: colors.divider }}>
  <Image
  source={coverSource}
  style={{ width: '100%', height: '100%' }}
@@ -247,13 +247,13 @@ export function UserProfileModal({
  {effectiveName}
  </AppText>
  {fetchedProfile?.isVerified ? (
- <Ionicons name="checkmark-circle" size={18} color={colors.brandPrimary} />
+ <Ionicons name="checkmark-circle" size={18} color={colors.success} />
  ) : null}
  <UserTypeBadge role={effectiveRole} />
  </View>
 
  {effectiveInstitution || effectiveDepartment ? (
- <AppText tone="brand" weight="semiBold" variant="bodySmall" numberOfLines={2} style={{ marginTop: 3, fontSize: 12, lineHeight: 16 }}>
+ <AppText tone="secondary" weight="semiBold" variant="bodySmall" numberOfLines={2} style={{ marginTop: 3, fontSize: 12, lineHeight: 16 }}>
  {[effectiveInstitution, effectiveDepartment].filter(Boolean).join(' | ')}
  </AppText>
  ) : null}
@@ -261,7 +261,7 @@ export function UserProfileModal({
 
  {/* Academic Bio */}
  <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
- <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: 4 }}>
+ <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.5, marginBottom: 4 }}>
  ABOUT & ACADEMIC BIO
  </AppText>
  <AppText variant="bodySmall" tone="primary" style={{ lineHeight: 20 }}>
@@ -272,7 +272,7 @@ export function UserProfileModal({
  {/* Academic Interests Tags */}
  {effectiveInterests && effectiveInterests.length > 0 ? (
  <SolidCard frosted radius={16} style={{ marginBottom: spacing.md }}>
- <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
+ <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.5, marginBottom: spacing.xs }}>
  FOCUS AREAS & INTERESTS
  </AppText>
  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -280,15 +280,15 @@ export function UserProfileModal({
  <View
  key={tag}
  style={{
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.divider,
  borderRadius: radius.pill,
  paddingHorizontal: 10,
  paddingVertical: 5,
  borderWidth: 1,
- borderColor: `${colors.brandPrimary}30`,
+ borderColor: colors.border,
  }}
  >
- <AppText variant="caption" weight="semiBold" tone="brand">
+ <AppText variant="caption" weight="semiBold" tone="secondary">
  {tag}
  </AppText>
  </View>

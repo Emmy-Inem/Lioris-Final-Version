@@ -609,15 +609,15 @@ export function EventDetailScreen() {
               style={{
                 padding: spacing.md,
                 borderWidth: 1.5,
-                borderColor: colors.brandPrimary,
+                borderColor: colors.border,
                 borderRadius: radius.lg,
                 gap: 10,
               }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="shield-checkmark" size={18} color={colors.brandPrimary} />
-                  <AppText weight="bold" variant="caption" tone="brand" style={{ letterSpacing: 0.8 }}>
+                  <Ionicons name="shield-checkmark" size={18} color={colors.textSecondary} />
+                  <AppText weight="bold" variant="caption" tone="secondary" style={{ letterSpacing: 0.8 }}>
                     ADMINISTRATIVE CONTROL & MODERATION HUB
                   </AppText>
                 </View>
@@ -813,14 +813,14 @@ export function EventDetailScreen() {
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="calendar-outline" size={16} color={colors.brandPrimary} />
+                  <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
                   <AppText weight="bold" variant="bodySmall">
                     {event.startAt ? new Date(event.startAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Date TBA'}
                   </AppText>
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="time-outline" size={16} color={colors.brandPrimary} />
+                  <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
                   <AppText variant="bodySmall" tone="secondary">
                     {event.startAt ? new Date(event.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''} -{' '}
                     {event.endAt ? new Date(event.endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -828,7 +828,7 @@ export function EventDetailScreen() {
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="location-outline" size={16} color={colors.brandPrimary} />
+                  <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
                   <AppText weight="bold" variant="bodySmall">
                     {event.location}
                   </AppText>
@@ -896,8 +896,8 @@ export function EventDetailScreen() {
                         </AppText>
                         {matchedLandmark.walkingTip && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                            <Ionicons name="navigate-circle" size={16} color={colors.brandPrimary} />
-                            <AppText variant="caption" tone="brand" weight="bold">
+                            <Ionicons name="navigate-circle" size={16} color={colors.textSecondary} />
+                            <AppText variant="caption" tone="secondary" weight="bold">
                               Walking Directions: {matchedLandmark.walkingTip}
                             </AppText>
                           </View>
@@ -960,8 +960,8 @@ export function EventDetailScreen() {
                   <View style={{ gap: spacing.md }}>
                     {event.agenda.map((stage, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-                        <View style={{ backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm, minWidth: 80, alignItems: 'center' }}>
-                          <AppText weight="bold" variant="caption" tone="brand">
+                        <View style={{ backgroundColor: colors.divider, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm, minWidth: 80, alignItems: 'center' }}>
+                          <AppText weight="bold" variant="caption">
                             {stage.time}
                           </AppText>
                         </View>
@@ -970,7 +970,7 @@ export function EventDetailScreen() {
                             {stage.title}
                           </AppText>
                           {stage.speaker && (
-                            <AppText tone="brand" variant="caption">
+                            <AppText tone="secondary" variant="caption">
                               Speaker: {stage.speaker}
                             </AppText>
                           )}
@@ -1011,7 +1011,7 @@ export function EventDetailScreen() {
                   style={{
                     height: 360,
                     borderWidth: 1.5,
-                    borderColor: colors.brandPrimary,
+                    borderColor: colors.border,
                     borderRadius: radius.lg,
                     backgroundColor: colors.surface,
                     overflow: 'hidden',
@@ -1033,8 +1033,8 @@ export function EventDetailScreen() {
                       }
                     />
                   ) : (
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.pastelPrimaryBg }}>
-                      <Ionicons name="location" size={44} color={colors.brandPrimary} />
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.divider }}>
+                      <Ionicons name="location" size={44} color={colors.textSecondary} />
                       <AppText weight="bold" variant="h3" style={{ marginTop: spacing.xs, textAlign: 'center' }}>
                         {matchedLandmark ? matchedLandmark.name : event.location}
                       </AppText>
@@ -1063,8 +1063,8 @@ export function EventDetailScreen() {
                     <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>{matchedLandmark.description}</AppText>
                     {matchedLandmark.walkingTip && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                        <Ionicons name="navigate-circle" size={16} color={colors.brandPrimary} />
-                        <AppText variant="caption" tone="brand" weight="bold">
+                        <Ionicons name="navigate-circle" size={16} color={colors.textSecondary} />
+                        <AppText variant="caption" tone="secondary" weight="bold">
                           Walking Directions: {matchedLandmark.walkingTip}
                         </AppText>
                       </View>
@@ -1246,7 +1246,7 @@ export function EventDetailScreen() {
                 style={{
                   padding: spacing.sm,
                   borderWidth: 1.5,
-                  borderColor: colors.brandPrimary,
+                  borderColor: colors.border,
                   borderRadius: radius.md,
                   gap: 8,
                   marginBottom: spacing.md,
@@ -1254,8 +1254,8 @@ export function EventDetailScreen() {
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="shield-checkmark" size={16} color={colors.brandPrimary} />
-                    <AppText weight="bold" variant="caption" tone="brand" style={{ letterSpacing: 0.6, fontSize: 11 }}>
+                    <Ionicons name="shield-checkmark" size={16} color={colors.textSecondary} />
+                    <AppText weight="bold" variant="caption" tone="secondary" style={{ letterSpacing: 0.6, fontSize: 11 }}>
                       ADMIN MODERATION HUB
                     </AppText>
                   </View>
@@ -1401,14 +1401,14 @@ export function EventDetailScreen() {
             {/* Date & Location Pill Highlights */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="calendar-outline" size={16} color={colors.brandPrimary} />
+                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
                 <AppText weight="bold" variant="bodySmall" tone="primary">
                   {event.startAt ? new Date(event.startAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBA'}
                 </AppText>
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="location-outline" size={16} color={colors.brandPrimary} />
+                <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
                 <AppText weight="bold" variant="bodySmall" tone="primary">
                   {event.location}
                 </AppText>
@@ -1566,8 +1566,8 @@ export function EventDetailScreen() {
                   <View style={{ gap: spacing.md }}>
                     {event.agenda.map((stage, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-                        <View style={{ backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm }}>
-                          <AppText weight="bold" variant="caption" tone="brand">
+                        <View style={{ backgroundColor: colors.divider, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm }}>
+                          <AppText weight="bold" variant="caption">
                             {stage.time}
                           </AppText>
                         </View>
@@ -1576,7 +1576,7 @@ export function EventDetailScreen() {
                             {stage.title}
                           </AppText>
                           {stage.speaker && (
-                            <AppText tone="brand" variant="caption">
+                            <AppText tone="secondary" variant="caption">
                               {stage.speaker}
                             </AppText>
                           )}
@@ -1617,7 +1617,7 @@ export function EventDetailScreen() {
                   style={{
                     height: 280,
                     borderWidth: 1.5,
-                    borderColor: colors.brandPrimary,
+                    borderColor: colors.border,
                     borderRadius: radius.md,
                     backgroundColor: colors.surface,
                     overflow: 'hidden',
@@ -1639,8 +1639,8 @@ export function EventDetailScreen() {
                       }
                     />
                   ) : (
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.pastelPrimaryBg }}>
-                      <Ionicons name="location" size={40} color={colors.brandPrimary} />
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.divider }}>
+                      <Ionicons name="location" size={40} color={colors.textSecondary} />
                       <AppText weight="bold" style={{ marginTop: 6, textAlign: 'center' }}>
                         {matchedLandmark ? matchedLandmark.name : event.location}
                       </AppText>
@@ -1665,8 +1665,8 @@ export function EventDetailScreen() {
                     <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>{matchedLandmark.description}</AppText>
                     {matchedLandmark.walkingTip && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                        <Ionicons name="navigate-circle" size={16} color={colors.brandPrimary} />
-                        <AppText variant="caption" tone="brand" weight="bold">
+                        <Ionicons name="navigate-circle" size={16} color={colors.textSecondary} />
+                        <AppText variant="caption" tone="secondary" weight="bold">
                           Directions: {matchedLandmark.walkingTip}
                         </AppText>
                       </View>
@@ -1717,7 +1717,7 @@ export function EventDetailScreen() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="people-outline" size={20} color={colors.brandPrimary} />
+                <Ionicons name="people-outline" size={20} color={colors.textSecondary} />
                 <AppText variant="h2" weight="bold">
                   Registered Attendees ({rosterAttendees.length})
                 </AppText>
@@ -1793,8 +1793,8 @@ export function EventDetailScreen() {
                     </View>
 
                     {item.ticketCode && (
-                      <View style={{ backgroundColor: colors.pastelPrimaryBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, marginLeft: 8 }}>
-                        <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+                      <View style={{ backgroundColor: colors.divider, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, marginLeft: 8 }}>
+                        <AppText variant="caption" weight="bold" style={{ fontSize: 11 }}>
                           #{item.ticketCode.toUpperCase()}
                         </AppText>
                       </View>
@@ -1833,7 +1833,7 @@ export function EventDetailScreen() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="create-outline" size={20} color={colors.brandPrimary} />
+                <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
                 <AppText weight="bold" variant="h2">
                   Edit Event Details & Controls
                 </AppText>
@@ -1852,10 +1852,10 @@ export function EventDetailScreen() {
               />
 
               {/* University Workspace Indicator (Locked to Workspace) */}
-              <View style={{ backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: spacing.xs }}>
+              <View style={{ backgroundColor: colors.divider, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: spacing.xs }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="school" size={15} color={colors.brandPrimary} />
-                  <AppText variant="caption" weight="bold" tone="brand">
+                  <Ionicons name="school" size={15} color={colors.textSecondary} />
+                  <AppText variant="caption" weight="bold" tone="secondary">
                     Campus Workspace: {event?.campusCode || editCampus || 'UI'}
                   </AppText>
                 </View>
@@ -1865,7 +1865,7 @@ export function EventDetailScreen() {
               </View>
 
               {/* Event Category Selector */}
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
                 EVENT CATEGORY
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
@@ -2000,10 +2000,10 @@ export function EventDetailScreen() {
                       paddingHorizontal: 8,
                       paddingVertical: 4,
                       borderRadius: radius.sm,
-                      backgroundColor: colors.pastelPrimaryBg,
+                      backgroundColor: colors.divider,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+                    <AppText variant="caption" weight="bold" style={{ fontSize: 11 }}>
                       {q.label}
                     </AppText>
                   </Pressable>
@@ -2044,10 +2044,10 @@ export function EventDetailScreen() {
               {/* ADMIN-ONLY MODERATION CONTROLS */}
               {/* ============================================================= */}
               {isAdmin && (
-                <View style={{ marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, gap: 10 }}>
+                <View style={{ marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.divider, borderRadius: radius.md, gap: 10 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="shield" size={16} color={colors.brandPrimary} />
-                    <AppText weight="bold" variant="caption" tone="brand">
+                    <Ionicons name="shield" size={16} color={colors.textSecondary} />
+                    <AppText weight="bold" variant="caption" tone="secondary">
                       ADMINISTRATIVE STATUS & SPOTLIGHT OVERRIDES
                     </AppText>
                   </View>
@@ -2181,7 +2181,7 @@ export function EventDetailScreen() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="time-outline" size={20} color={colors.brandPrimary} />
+                <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
                 <AppText weight="bold" variant="h2">
                   Edit Event Schedule
                 </AppText>
@@ -2207,7 +2207,7 @@ export function EventDetailScreen() {
                       }}
                     >
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <AppText weight="bold" variant="caption" tone="brand">
+                        <AppText weight="bold" variant="caption" tone="secondary">
                           SESSION {idx + 1}
                         </AppText>
                         <Pressable

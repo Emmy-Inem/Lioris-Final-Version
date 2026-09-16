@@ -408,8 +408,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       {/* Sub-Forums Navigation Bar */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, paddingHorizontal: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="planet-outline" size={15} color={colors.brandPrimary} />
-          <AppText weight="bold" variant="caption" tone="brand" style={{ letterSpacing: 0.5, textTransform: 'uppercase', fontSize: 11 }}>
+          <Ionicons name="planet-outline" size={15} color={colors.textSecondary} />
+          <AppText weight="bold" variant="caption" tone="secondary" style={{ letterSpacing: 0.5, textTransform: 'uppercase', fontSize: 11 }}>
             Communities
           </AppText>
         </View>
@@ -559,7 +559,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
-              <Ionicons name="shield-checkmark" size={13} color={colors.brandPrimary} />
+              <Ionicons name="shield-checkmark" size={13} color={colors.textSecondary} />
               <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>
                 <AppText weight="bold" tone="primary" style={{ fontSize: 10.5 }}>
                   Moderated by:
@@ -591,7 +591,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         <GlassCard radius={16} padded={false} contentStyle={{ padding: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Avatar name={user?.fullName ?? 'You'} uri={profile?.avatarUrl} size={34} role={user?.role} />
-            <View style={{ flex: 1, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7 }}>
+            <View style={{ flex: 1, backgroundColor: colors.divider, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7 }}>
               <AppText tone="secondary" variant="bodySmall" style={{ fontSize: 12 }}>
                 {selectedChannel ? `Post in ${activeSubForum.slug}...` : 'Start a discussion or create a poll...'}
               </AppText>
@@ -740,8 +740,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   flexShrink: 0,
                 }}
               >
-                <Ionicons name="swap-vertical" size={14} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" tone="brand">
+                <Ionicons name="swap-vertical" size={14} color={colors.textSecondary} />
+                <AppText variant="caption" weight="bold">
                   {sortBy === 'latest' ? 'Latest' : 'Top Upvoted'}
                 </AppText>
               </Pressable>
@@ -821,7 +821,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-                    <Ionicons name="shield-checkmark" size={15} color={colors.brandPrimary} />
+                    <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
                     <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11.5 }}>
                       <AppText weight="bold" tone="primary" style={{ fontSize: 11.5 }}>
                         Moderated by:
@@ -862,7 +862,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 >
                   <Ionicons name="shield-checkmark" size={14} color="#3B82F6" />
                   <AppText variant="caption" weight="bold" style={{ color: '#2563EB', fontSize: 11.5 }}>
-                    🛡️ Posting as Campus Administrator (Verified Official Broadcast Mode)
+                    Posting as Campus Administrator (Verified Official Broadcast Mode)
                   </AppText>
                 </View>
               )}
@@ -953,16 +953,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
                     <View
                       style={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: 32,
-                        backgroundColor: colors.pastelPrimaryBg,
-                        alignItems: 'center',
-                        justifyContent: 'center',
                         marginBottom: spacing.md,
                       }}
                     >
-                      <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+                      <Ionicons name="chatbubbles-outline" size={40} color={colors.textSecondary} />
                     </View>
                     <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
                       No Threads in this Channel Yet
@@ -997,7 +991,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
                 <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.xs, marginBottom: spacing.sm, gap: 4 }}>
                   <AppText variant="caption" weight="bold" tone="primary">
-                    🛡️ Moderated by:
+                    Moderated by:
                   </AppText>
                   <AppText variant="caption" tone="secondary">
                     {activeSubForum.moderatorTitle}
@@ -1022,7 +1016,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 <Pressable
                   onPress={() => setRulesModalOpen(true)}
                   style={{
-                    backgroundColor: colors.pastelPrimaryBg,
                     paddingVertical: 7,
                     borderRadius: radius.pill,
                     alignItems: 'center',
@@ -1128,16 +1121,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
               <View
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  backgroundColor: colors.pastelPrimaryBg,
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   marginBottom: spacing.md,
                 }}
               >
-                <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+                <Ionicons name="chatbubbles-outline" size={40} color={colors.textSecondary} />
               </View>
               <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
                 No Threads in this Channel Yet
@@ -1271,7 +1258,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="planet" size={22} color={colors.brandPrimary} />
+              <Ionicons name="planet" size={22} color={colors.textSecondary} />
               <View>
                 <AppText variant="h3" weight="bold">
                   Communities
@@ -1329,7 +1316,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </AppText>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                    <Ionicons name="shield-checkmark" size={12} color={colors.brandPrimary} />
+                    <Ionicons name="shield-checkmark" size={12} color={colors.textSecondary} />
                     <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5 }}>
                       {sf.moderatorBadge}: {sf.moderatorTitle}
                     </AppText>

@@ -128,8 +128,8 @@ export default function AlumniMentorshipScreen() {
                 </View>
 
                 {m.focusArea ? (
-                  <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.sm, borderRadius: radius.md, marginVertical: spacing.sm }}>
-                    <AppText variant="caption" weight="bold" tone="brand">
+                  <View style={{ backgroundColor: colors.divider, padding: spacing.sm, borderRadius: radius.md, marginVertical: spacing.sm }}>
+                    <AppText variant="caption" weight="bold" tone="secondary">
                       REQUESTED FOCUS:
                     </AppText>
                     <AppText variant="bodySmall" weight="medium" style={{ marginTop: 2 }}>
@@ -201,18 +201,18 @@ function StatBox({ label, value, icon }: { label: string; value: number; icon: k
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.pastelPrimaryBg,
+        backgroundColor: colors.divider,
         borderRadius: radius.md,
         paddingHorizontal: 6,
         paddingVertical: 8,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: colors.brandPrimary,
+        borderColor: colors.border,
         minWidth: 0,
       }}
     >
-      <Ionicons name={icon} size={16} color={colors.brandPrimary} style={{ marginBottom: 2 }} />
-      <AppText variant="h3" weight="bold" tone="brand" numberOfLines={1}>
+      <Ionicons name={icon} size={16} color={colors.textSecondary} style={{ marginBottom: 2 }} />
+      <AppText variant="h3" weight="bold" numberOfLines={1}>
         {value}
       </AppText>
       <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, textAlign: 'center' }}>

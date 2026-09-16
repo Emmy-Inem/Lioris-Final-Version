@@ -843,9 +843,9 @@ export default function UserDirectoryScreen() {
                         hitSlop={12}
                         accessibilityRole="button"
                         accessibilityLabel={`Manage ${item.fullName}`}
-                        style={{ padding: spacing.xs, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.pill }}
+                        style={{ padding: spacing.xs, backgroundColor: colors.divider, borderRadius: radius.pill }}
                       >
-                        <Ionicons name="ellipsis-horizontal" size={18} color={colors.brandPrimary} />
+                        <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
                       </Pressable>
                     </View>
                   </SolidCard>
@@ -933,11 +933,11 @@ export default function UserDirectoryScreen() {
                       height: 38,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: colors.pastelPrimaryBg,
+                      backgroundColor: colors.divider,
                       borderRadius: 19,
                     }}
                   >
-                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.brandPrimary} />
+                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
                   </Pressable>
                 </View>
               </SolidCard>
@@ -968,8 +968,8 @@ export default function UserDirectoryScreen() {
                 setSelectedUser(null);
               }}
             >
-              <Ionicons name="create-outline" size={18} color={colors.brandPrimary} />
-              <AppText tone="brand" weight="bold">Edit Profile & Credentials (Matric, Role, Campus)</AppText>
+              <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
+              <AppText weight="bold">Edit Profile & Credentials (Matric, Role, Campus)</AppText>
             </Pressable>
 
             <Pressable
@@ -979,8 +979,8 @@ export default function UserDirectoryScreen() {
                 setSelectedUser(null);
               }}
             >
-              <Ionicons name="information-circle-outline" size={18} color={colors.brandPrimary} />
-              <AppText tone="brand" weight="bold">View Full Profile & Identity Record</AppText>
+              <Ionicons name="information-circle-outline" size={18} color={colors.textPrimary} />
+              <AppText weight="bold">View Full Profile & Identity Record</AppText>
             </Pressable>
 
             {selectedUser.role !== 'Alumni' && (
@@ -1018,8 +1018,8 @@ export default function UserDirectoryScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleVerifyUser(selectedUser)}
               >
-                <Ionicons name="shield-checkmark-outline" size={18} color={colors.brandPrimary} />
-                <AppText tone="brand" weight="bold">Grant Verified Badge</AppText>
+                <Ionicons name="shield-checkmark-outline" size={18} color={colors.textPrimary} />
+                <AppText weight="bold">Grant Verified Badge</AppText>
               </Pressable>
             )}
 
@@ -1028,8 +1028,8 @@ export default function UserDirectoryScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleImpersonate(selectedUser)}
               >
-                <Ionicons name="eye-outline" size={18} color={colors.brandPrimary} />
-                <AppText tone="brand" weight="bold">View As (Support Mode)</AppText>
+                <Ionicons name="eye-outline" size={18} color={colors.textPrimary} />
+                <AppText weight="bold">View As (Support Mode)</AppText>
               </Pressable>
             )}
 
@@ -1071,7 +1071,7 @@ export default function UserDirectoryScreen() {
  </View>
  </View>
 
- <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 16, marginBottom: spacing.md }}>
+ <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 16, marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
  <AppText tone="secondary"variant="caption">Matriculation / Staff ID</AppText>
  <AppText weight="bold"variant="caption">{detailModalUser.matricNo}</AppText>
@@ -1111,7 +1111,7 @@ export default function UserDirectoryScreen() {
  <View
  key={entry.id}
  style={{
- backgroundColor: colors.pastelPrimaryBg,
+ backgroundColor: colors.divider,
  padding: spacing.sm,
  borderRadius: 12,
  }}
@@ -1190,7 +1190,7 @@ export default function UserDirectoryScreen() {
  />
 
  {/* Role Selection */}
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
  ASSIGN USER ROLE
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -1202,7 +1202,7 @@ export default function UserDirectoryScreen() {
  flex: 1,
  paddingVertical: 10,
  borderRadius: radius.md,
- backgroundColor: newRole === r ? colors.brandPrimary : colors.pastelPrimaryBg,
+ backgroundColor: newRole === r ? colors.brandPrimary : colors.divider,
  alignItems: 'center',
  }}
  >
@@ -1214,7 +1214,7 @@ export default function UserDirectoryScreen() {
  </View>
 
  {/* Campus Instance Selection */}
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: spacing.xs }}>
  TARGET UNIVERSITY CAMPUS NODE
  </AppText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.lg }}>
@@ -1226,7 +1226,7 @@ export default function UserDirectoryScreen() {
                         width: '31%',
                         paddingVertical: 10,
                         borderRadius: radius.md,
-                        backgroundColor: newCampus === c ? colors.brandPrimary : colors.pastelPrimaryBg,
+                        backgroundColor: newCampus === c ? colors.brandPrimary : colors.divider,
                         alignItems: 'center',
                       }}
                     >
@@ -1285,7 +1285,7 @@ export default function UserDirectoryScreen() {
                 />
 
                 {/* Role Selection */}
-                <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
+                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
                   ASSIGNED ROLE & PERMISSIONS
                 </AppText>
                 <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -1297,7 +1297,7 @@ export default function UserDirectoryScreen() {
                         flex: 1,
                         paddingVertical: 10,
                         borderRadius: radius.md,
-                        backgroundColor: editRole === r ? colors.brandPrimary : colors.pastelPrimaryBg,
+                        backgroundColor: editRole === r ? colors.brandPrimary : colors.divider,
                         alignItems: 'center',
                       }}
                     >
@@ -1309,7 +1309,7 @@ export default function UserDirectoryScreen() {
                 </View>
 
                 {/* Campus Instance Selection */}
-                <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs }}>
                   CAMPUS NODE
                 </AppText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
@@ -1321,7 +1321,7 @@ export default function UserDirectoryScreen() {
                         width: '31%',
                         paddingVertical: 8,
                         borderRadius: radius.md,
-                        backgroundColor: editCampus === c ? colors.brandPrimary : colors.pastelPrimaryBg,
+                        backgroundColor: editCampus === c ? colors.brandPrimary : colors.divider,
                         alignItems: 'center',
                       }}
                     >
@@ -1333,7 +1333,7 @@ export default function UserDirectoryScreen() {
                 </View>
 
                 {/* Verification Badge Toggle & Password Reset */}
-                <View style={{ padding: spacing.md, backgroundColor: colors.pastelPrimaryBg, borderRadius: radius.md, marginBottom: spacing.md, gap: 10 }}>
+                <View style={{ padding: spacing.md, backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.md, gap: 10 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View>
                       <AppText weight="bold">Official Verification Badge</AppText>

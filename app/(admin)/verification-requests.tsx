@@ -314,10 +314,10 @@ export default function VerificationRequestsScreen() {
                 </View>
 
                 {/* Document Reference Box */}
-                <View style={{ backgroundColor: colors.pastelPrimaryBg, padding: spacing.md, borderRadius: 14, marginVertical: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
+                <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 14, marginVertical: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                     <AppText variant="caption" tone="secondary">Matric / Certificate Ref</AppText>
-                    <AppText variant="caption" weight="bold" tone="brand">{req.documentReference}</AppText>
+                    <AppText variant="caption" weight="bold">{req.documentReference}</AppText>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <AppText variant="caption" tone="secondary">Status</AppText>
