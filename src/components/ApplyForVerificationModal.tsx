@@ -105,6 +105,11 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
  haptics.error();
  return;
  }
+ if (!documentPhotoUri) {
+ setErrorMessage('Please upload a clear photo of your student ID, admission letter or certificate so a moderator can verify you.');
+ haptics.error();
+ return;
+ }
  haptics.success();
  let photoBlob: Blob | undefined;
  if (documentPhotoUri) {
@@ -227,7 +232,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
                 <>
                   <Ionicons name="cloud-upload-outline" size={20} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
                   <AppText tone="secondary" variant="bodySmall">
-                    Upload supporting document (photo)
+                    Upload supporting document (required)
                   </AppText>
                 </>
               )}

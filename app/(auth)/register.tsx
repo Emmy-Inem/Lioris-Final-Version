@@ -15,6 +15,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { UserRole } from '@/api/types';
 import { isPasswordValid, passwordStrength, isValidEmailFormat, isValidUsername } from '@/utils/validation';
 import { seedProfileUsername } from '@/api/profile';
+import { isEmailConfirmationRequired } from '@/api/auth';
 import { getInstitutionForEmail } from '@/api/institutions';
 import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
@@ -88,6 +89,11 @@ export default function RegisterScreen() {
  seedProfileUsername(createdUser, username, matchedInstitution ?? undefined);
  router.replace('/');
  } catch (err: any) {
+ if (isEmailConfirmationRequired(err)) {
+ // Account exists; the address must be confirmed with the emailed code before sign-in.
+ router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email } });
+ return;
+ }
  setErrorMessage(err?.message || 'Registration failed. Please check your details and try again.');
  } finally {
  setSubmitting(false);

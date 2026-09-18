@@ -50,12 +50,19 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
  // keep URI as is
  }
  }
- if (photoBlobToUpload) {
+ // Evidence is mandatory: an application with no document gives a moderator nothing to check.
+ if (!photoBlobToUpload) {
+ throw new Error('Please attach a clear photo of your student ID, admission letter or certificate.');
+ }
+ {
  const filePath = `${authUserId}/${reqId}.jpg`;
- await supabase.storage.from('verifications').upload(filePath, photoBlobToUpload, {
+ const { error: uploadError } = await supabase.storage.from('verifications').upload(filePath, photoBlobToUpload, {
  contentType: 'image/jpeg',
  upsert: true,
  });
+ if (uploadError) {
+ throw new Error('We could not upload your document. Please check your connection and try again.');
+ }
  // Generate secure temporary signed URL for authorized viewing
  const { data: signedUrlData } = await supabase.storage
  .from('verifications')
@@ -82,19 +89,22 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
           user_id: authUserId,
           campus_code: campusCode,
           requested_role: 'student',
-          id_card_front_url: photoUrl || 'https://storage.lioris.app/verifications/default-id.jpg',
+          id_card_front_url: photoUrl,
           status: 'pending',
           review_notes: `${payload.documentType}: ${payload.documentReference}`,
         });
         if (error) {
-          console.warn('[Verification] Supabase insert warning:', error.message);
+          throw new Error('We could not submit your verification request. Please try again.');
         }
 
         // Sync pending status to user's profile in database
         await supabase.from('profiles').update({ verification_status: 'pending' }).eq('id', authUserId);
       }
     } catch (err) {
-      console.warn('[Verification] Submission backend warning:', err);
+      // Surface the failure: reporting "pending" for a request that was never stored
+      // leaves the applicant waiting for a review that will never happen.
+      console.warn('[Verification] Submission failed:', err);
+      throw err instanceof Error ? err : new Error('Verification submission failed.');
     }
 
  const created: VerificationRequest = {

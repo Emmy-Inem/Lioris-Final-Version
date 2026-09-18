@@ -15,6 +15,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { joinWaitlist } from '@/api/institutions';
+import { isEmailConfirmationRequired } from '@/api/auth';
 import {
  sendPasswordResetEmail,
  verifyPasswordResetOtpAndSetPassword,
@@ -147,6 +148,10 @@ export default function LoginScreen() {
  await login(email.trim(), password);
  router.replace('/');
  } catch (err: any) {
+ if (isEmailConfirmationRequired(err)) {
+ router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email } });
+ return;
+ }
  haptics.error();
  const msg = err?.message || 'Incorrect email or password. Please verify your credentials and try again.';
  setErrorMessage(msg);

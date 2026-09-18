@@ -2,7 +2,6 @@ import { api } from './client';
 import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
-import { submitVerificationRequest } from './verification';
 import { recordAuditLogEntry } from './auditLog';
 
 export interface LoginPayload {
@@ -18,6 +17,30 @@ export interface RegisterPayload {
  userType: UserRole;
  campusCode?: string;
  botField?: string;
+}
+
+/**
+ * Thrown when an account exists but its email address has not been confirmed yet.
+ * Screens catch it to send the user to the verify-email step instead of showing a
+ * generic "wrong password" error.
+ */
+export class EmailConfirmationRequiredError extends Error {
+  readonly email: string;
+  constructor(email: string) {
+    super('Please confirm your email address with the 6-digit code we sent you.');
+    this.name = 'EmailConfirmationRequiredError';
+    this.email = email;
+  }
+}
+
+/** Name check as well as instanceof: subclassed Errors can lose their prototype after transpilation. */
+export function isEmailConfirmationRequired(err: unknown): err is EmailConfirmationRequiredError {
+  return err instanceof EmailConfirmationRequiredError || (err as any)?.name === 'EmailConfirmationRequiredError';
+}
+
+function isEmailNotConfirmedError(error: { message?: string; code?: string } | null | undefined): boolean {
+  if (!error) return false;
+  return error.code === 'email_not_confirmed' || /email not confirmed/i.test(error.message ?? '');
 }
 
 // Server & Client hybrid rate limiting and brute force protection
@@ -105,39 +128,23 @@ async function clearLoginFailures(email: string): Promise<void> {
  loginAttempts.delete(key);
 }
 
-// Direct RPC account activation to ensure users are never blocked by external SMTP delivery
-export async function confirmUserEmailDirectly(email: string): Promise<{ success: boolean; message: string }> {
- const cleanEmail = email.trim();
- if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
- try {
- const { data, error } = await supabase.rpc('confirm_user_email', { p_email: cleanEmail });
- if (error) throw error;
- return {
- success: data?.success ?? true,
- message: data?.message ?? 'Email address activated successfully.',
- };
- } catch (err: any) {
- throw new Error(err?.message || 'Could not activate account. Please contact campus admin.');
- }
-}
-
+// Sends a fresh 6-digit confirmation code. Delivery is real email (Supabase custom SMTP);
+// there is deliberately no server-side "just activate it" fallback any more.
 export async function resendConfirmationEmail(email: string): Promise<{ success: boolean }> {
- const cleanEmail = email.trim();
- if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
- const { error } = await supabase.auth.resend({
- type: 'signup',
- email: cleanEmail,
- });
- if (error) {
- // If resend failed (e.g. rate limit), attempt direct activation fallback via RPC
- try {
- await confirmUserEmailDirectly(cleanEmail);
- return { success: true };
- } catch {
- throw new Error(error.message || 'Could not resend confirmation email. Please check your address.');
- }
- }
- return { success: true };
+  const cleanEmail = email.trim();
+  if (!cleanEmail) throw new Error('Please enter your registered email address.');
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: cleanEmail,
+  });
+  if (error) {
+    throw new Error(
+      /rate|seconds|too many/i.test(error.message)
+        ? 'Please wait a minute before requesting another code.'
+        : 'We could not send the code right now. Please check the address and try again.',
+    );
+  }
+  return { success: true };
 }
 
 // POST /auth/login - Real Supabase Authentication & Rate Limiting
@@ -162,20 +169,9 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     password: payload.password,
   });
 
-  // If email confirmation is required or pending in Supabase, auto-resolve it immediately
-  if (signInError && (signInError.message.toLowerCase().includes('email') || signInError.message.toLowerCase().includes('confirm'))) {
-    try {
-      await confirmUserEmailDirectly(cleanEmail);
-      // Retry sign-in now that the account is activated
-      const retryResult = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: payload.password,
-      });
-      signInData = retryResult.data;
-      signInError = retryResult.error;
-    } catch {
-      // Non-blocking fallback
-    }
+  // The password was right but the inbox has not been proven yet - not a failed login.
+  if (isEmailNotConfirmedError(signInError)) {
+    throw new EmailConfirmationRequiredError(cleanEmail);
   }
 
   if (signInError || !signInData?.session || !signInData?.user) {
@@ -248,6 +244,25 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
  throw new Error(error?.message || 'Unable to register account. Please check your details.');
  }
 
+ // With email confirmation on, signUp returns no session: the profile is created server-side
+ // (auth trigger) and the user must enter the code we emailed. If the project has confirmation
+ // switched off, sign-in works straight away and the account continues as before.
+ let activeSession = data.session;
+ if (!activeSession) {
+ const { data: signInAfterReg, error: signInAfterRegError } = await supabase.auth.signInWithPassword({
+ email: cleanEmail,
+ password: payload.password,
+ });
+ if (signInAfterReg?.session) {
+ activeSession = signInAfterReg.session;
+ } else if (isEmailNotConfirmedError(signInAfterRegError)) {
+ throw new EmailConfirmationRequiredError(cleanEmail);
+ }
+ }
+ if (!activeSession) {
+ throw new Error('Your account was created, but we could not sign you in. Please log in with your new password.');
+ }
+
  // Upsert profile in Supabase profiles table with campus_code
  await supabase.from('profiles').upsert({
  id: data.user.id,
@@ -258,25 +273,8 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
  campus_code: detectedCampus,
  });
 
- // If email confirmation is required and session is null, auto-activate and sign in immediately
- let activeSession = data.session;
- if (!activeSession) {
- try {
- await confirmUserEmailDirectly(cleanEmail);
- const { data: signInAfterReg } = await supabase.auth.signInWithPassword({
- email: cleanEmail,
- password: payload.password,
- });
- if (signInAfterReg?.session) {
- activeSession = signInAfterReg.session;
- }
- } catch {
- // Non-blocking fallback
- }
- }
-
- const accessToken = activeSession?.access_token || `auth-token.${assignedRole}.${Date.now()}`;
- const refreshToken = activeSession?.refresh_token || `refresh-token.${assignedRole}.${Date.now()}`;
+ const accessToken = activeSession.access_token;
+ const refreshToken = activeSession.refresh_token;
 
  return {
  accessToken,
@@ -365,77 +363,6 @@ export async function verifyEmail(code: string, email?: string): Promise<{ verif
  }
 
  throw new Error(error?.message || emailError?.message || 'Invalid verification code. Please check your email.');
-}
-
-export async function verifySchool(schoolId: string): Promise<{ status: string }> {
-  if (!schoolId.trim()) throw new Error('Valid Student / Staff ID is required.');
-  try {
-    const { data: authUser } = await supabase.auth.getUser();
-    if (authUser?.user?.id) {
-      await supabase.from('profiles').update({
-        matriculation_number: schoolId.trim(),
-        verification_status: 'pending',
-      }).eq('id', authUser.user.id);
-
-      // Also land the request in the `verifications` table - this is the
-      // only table app/(admin)/verification-requests.tsx reads, so without
-      // this call the profile flips to "pending" but no admin ever sees a
-      // request to review.
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, username, campus_code')
-        .eq('id', authUser.user.id)
-        .maybeSingle();
-      await submitVerificationRequest({
-        userId: authUser.user.id,
-        applicantName: profile?.full_name || profile?.username || 'Campus Applicant',
-        documentType: 'Student ID',
-        documentReference: schoolId.trim(),
-        institutionClaimed: profile?.campus_code || 'University Campus',
-      });
-    }
-    return { status: 'pending' };
-  } catch {
-    return { status: 'pending' };
-  }
-}
-
-export async function verifyAlumniStatus(payload: {
-  graduationYear: number;
-  studentId?: string;
-}): Promise<{ status: string }> {
-  if (!payload.graduationYear || payload.graduationYear < 1960 || payload.graduationYear > new Date().getFullYear()) {
-    throw new Error('Please provide a valid graduation year.');
-  }
-  try {
-    const { data: authUser } = await supabase.auth.getUser();
-    if (authUser?.user?.id) {
-      await supabase.from('profiles').update({
-        level: `Class of ${payload.graduationYear}`,
-        student_id_number: payload.studentId?.trim() || null,
-        verification_status: 'pending',
-      }).eq('id', authUser.user.id);
-
-      // Also land the request in the `verifications` table - see the note
-      // in verifySchool() above; without this, admin's verification queue
-      // never sees alumni submissions either.
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, username, campus_code')
-        .eq('id', authUser.user.id)
-        .maybeSingle();
-      await submitVerificationRequest({
-        userId: authUser.user.id,
-        applicantName: profile?.full_name || profile?.username || 'Campus Applicant',
-        documentType: 'Alumni Certificate',
-        documentReference: `Graduation year: ${payload.graduationYear}${payload.studentId ? `, Student ID: ${payload.studentId.trim()}` : ''}`,
-        institutionClaimed: profile?.campus_code || 'University Campus',
-      });
-    }
-    return { status: 'pending' };
-  } catch {
-    return { status: 'pending' };
-  }
 }
 
 // Real Supabase TOTP MFA verification via supabase.auth.mfa - no custom
