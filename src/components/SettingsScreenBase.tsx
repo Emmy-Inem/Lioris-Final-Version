@@ -108,7 +108,19 @@ const LEGAL_DOCUMENTS: LegalPolicy[] = [
 ];
 
 export function SettingsScreen() {
-  const { colors, spacing, radius, isDark, themeMode, setThemeMode, customAccent, setCustomAccent, accentPresets } = useTheme();
+  const {
+    colors,
+    spacing,
+    radius,
+    isDark,
+    themeMode,
+    setThemeMode,
+    customAccent,
+    setCustomAccent,
+    resetToDefaultTheme,
+    isDefaultTheme,
+    accentPresets,
+  } = useTheme();
   const { user, logout, switchRole } = useAuth();
   const { isDesktop } = useResponsive();
   const toast = useToast();
@@ -645,90 +657,415 @@ export function SettingsScreen() {
 
             {/* 2. Appearance & Theme */}
             {activeSection === 'appearance' && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.lg }}>
+                {/* Section Header */}
                 <View>
                   <AppText variant="h3" weight="bold">
-                    Interface Theme
+                    Appearance & Campus Theme
                   </AppText>
                   <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    Select your preferred appearance mode
+                    Manage interface appearance mode, brand colors, and institution palettes
                   </AppText>
                 </View>
 
                 {/* Theme Mode Selector */}
-                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  {[
-                    { id: 'light', label: 'Light', fullLabel: 'Light Mode', icon: 'sunny-outline' as const },
-                    { id: 'dark', label: 'Dark', fullLabel: 'Dark Mode', icon: 'moon-outline' as const },
-                    { id: 'system', label: 'Auto', fullLabel: 'Auto System', icon: 'phone-portrait-outline' as const },
-                  ].map((t) => {
-                    const active = themeMode === t.id;
-                    return (
-                      <Pressable
-                        key={t.id}
-                        onPress={() => {
-                          haptics.light();
-                          setThemeMode(t.id as any);
-                          toast.success(`Theme set to ${t.fullLabel}`);
-                        }}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 12,
-                          paddingHorizontal: 8,
-                          borderRadius: radius.md,
-                          borderWidth: 2,
-                          borderColor: active ? colors.brandPrimary : colors.border,
-                          backgroundColor: active ? colors.pastelPrimaryBg : colors.surface,
-                          alignItems: 'center',
-                          gap: 6,
-                        }}
-                      >
-                        <Ionicons name={t.icon} size={20} color={active ? colors.brandPrimary : colors.textSecondary} />
-                        <AppText variant="caption" weight="bold" tone={active ? 'brand' : 'primary'} numberOfLines={1}>
-                          {isDesktop ? t.fullLabel : t.label}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
+                <View style={{ gap: spacing.xs }}>
+                  <AppText variant="bodySmall" weight="bold">
+                    Display Mode
+                  </AppText>
+                  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                    {[
+                      { id: 'light', label: 'Light', fullLabel: 'Light Mode', icon: 'sunny-outline' as const },
+                      { id: 'dark', label: 'Dark', fullLabel: 'Dark Mode', icon: 'moon-outline' as const },
+                      { id: 'system', label: 'Auto', fullLabel: 'Auto System', icon: 'phone-portrait-outline' as const },
+                    ].map((t) => {
+                      const active = themeMode === t.id;
+                      return (
+                        <Pressable
+                          key={t.id}
+                          onPress={() => {
+                            haptics.light();
+                            setThemeMode(t.id as any);
+                            toast.success(`Theme set to ${t.fullLabel}`);
+                          }}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            paddingHorizontal: 8,
+                            borderRadius: radius.md,
+                            borderWidth: 2,
+                            borderColor: active ? colors.brandPrimary : colors.border,
+                            backgroundColor: active ? colors.pastelPrimaryBg : colors.surface,
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <Ionicons name={t.icon} size={20} color={active ? colors.brandPrimary : colors.textSecondary} />
+                          <AppText variant="caption" weight="bold" tone={active ? 'brand' : 'primary'} numberOfLines={1}>
+                            {isDesktop ? t.fullLabel : t.label}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
 
-                <View style={{ marginTop: spacing.xs }}>
-                  <AppText variant="h3" weight="bold">
-                    Brand Accent Color
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2, marginBottom: spacing.sm }}>
-                    Personalize your primary focus and badge hues
-                  </AppText>
-                </View>
+                {/* Primary & Secondary Color Utilization Showcase */}
+                <View
+                  style={{
+                    padding: spacing.md,
+                    borderRadius: radius.lg,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    gap: spacing.sm,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ gap: 2 }}>
+                      <AppText variant="bodySmall" weight="bold">
+                        Active Color Hierarchy
+                      </AppText>
+                      <AppText variant="caption" tone="secondary">
+                        Coordinated primary brand and secondary accent pairing
+                      </AppText>
+                    </View>
+                    <Badge label={isDefaultTheme ? 'LOGO DEFAULT' : 'CUSTOM ACCENT'} tone={isDefaultTheme ? 'brand' : 'accent'} />
+                  </View>
 
-                {/* Accent Swatches */}
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-                  {accentPresets.map((preset) => {
-                    const isSelected = customAccent === preset.id;
-                    const displayColor = isDark ? preset.primaryDark : preset.primaryLight;
-                    return (
-                      <Pressable
-                        key={preset.id}
-                        onPress={() => {
-                          haptics.light();
-                          setCustomAccent(preset.id);
-                          toast.success(`Accent color applied: ${preset.label}`);
-                        }}
+                  {/* Primary & Secondary Swatches */}
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: spacing.sm }}>
+                    {/* Primary Color Card */}
+                    <View
+                      style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: 12,
+                        borderRadius: radius.md,
+                        backgroundColor: colors.surface,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}
+                    >
+                      <View
                         style={{
-                          width: isDesktop ? 44 : 40,
-                          height: isDesktop ? 44 : 40,
-                          borderRadius: isDesktop ? 22 : 20,
-                          backgroundColor: displayColor,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: colors.brandPrimary,
                           alignItems: 'center',
                           justifyContent: 'center',
-                          borderWidth: isSelected ? 3 : 1,
-                          borderColor: isSelected ? (isDark ? '#FFFFFF' : '#000000') : colors.border,
+                          borderWidth: 2,
+                          borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
                         }}
                       >
-                        {isSelected && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
-                      </Pressable>
-                    );
-                  })}
+                        <Ionicons name="color-palette" size={18} color="#FFFFFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <AppText variant="bodySmall" weight="bold">
+                            Primary Color
+                          </AppText>
+                          <AppText variant="caption" tone="brand" weight="bold" style={{ fontSize: 11 }}>
+                            {colors.brandPrimary}
+                          </AppText>
+                        </View>
+                        <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                          Buttons, active tabs, brand headers
+                        </AppText>
+                      </View>
+                    </View>
+
+                    {/* Secondary Accent Card */}
+                    <View
+                      style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: 12,
+                        borderRadius: radius.md,
+                        backgroundColor: colors.surface,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: colors.brandAccent,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: 2,
+                          borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                        }}
+                      >
+                        <Ionicons name="sparkles" size={18} color={isDark ? '#0A1326' : '#FFFFFF'} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <AppText variant="bodySmall" weight="bold">
+                            Secondary Accent
+                          </AppText>
+                          <AppText variant="caption" tone="accent" weight="bold" style={{ fontSize: 11 }}>
+                            {colors.brandAccent}
+                          </AppText>
+                        </View>
+                        <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                          Action tags, badges, notifications, highlights
+                        </AppText>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Component Preview Bar */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingTop: 4,
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: colors.brandPrimary,
+                        paddingHorizontal: 12,
+                        paddingVertical: 5,
+                        borderRadius: radius.pill,
+                      }}
+                    >
+                      <AppText variant="caption" weight="bold" tone="inverse">
+                        Primary CTA
+                      </AppText>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: colors.brandAccent,
+                        paddingHorizontal: 12,
+                        paddingVertical: 5,
+                        borderRadius: radius.pill,
+                      }}
+                    >
+                      <AppText variant="caption" weight="bold" style={{ color: isDark ? '#0A1326' : '#FFFFFF' }}>
+                        Secondary Highlight
+                      </AppText>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: colors.pastelPrimaryBg,
+                        borderWidth: 1,
+                        borderColor: colors.brandPrimary,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: radius.pill,
+                      }}
+                    >
+                      <AppText variant="caption" weight="bold" tone="brand">
+                        Verified Badge
+                      </AppText>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Return to Default Theme Option Card */}
+                <View
+                  style={{
+                    padding: spacing.md,
+                    borderRadius: radius.lg,
+                    borderWidth: 1.5,
+                    borderColor: isDefaultTheme ? colors.brandPrimary : colors.border,
+                    backgroundColor: isDefaultTheme ? colors.pastelPrimaryBg : colors.surface,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'stretch',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                    {/* Dual-color badge preview */}
+                    <View
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 19,
+                        overflow: 'hidden',
+                        flexDirection: 'row',
+                        borderWidth: 1.5,
+                        borderColor: isDark ? '#FFFFFF' : '#0F172A',
+                      }}
+                    >
+                      <View style={{ flex: 1, backgroundColor: '#1A3DFF' }} />
+                      <View style={{ flex: 1, backgroundColor: '#F08A2E' }} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <AppText variant="bodySmall" weight="bold">
+                          Lioris Logo Theme (Default)
+                        </AppText>
+                        {isDefaultTheme && (
+                          <Badge label="ACTIVE" tone="brand" />
+                        )}
+                      </View>
+                      <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                        Primary Blue (#1A3DFF) & Warm Gold (#F08A2E) sampled from the Lioris emblem
+                      </AppText>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    onPress={async () => {
+                      haptics.medium();
+                      await resetToDefaultTheme();
+                      toast.success('Restored default Lioris Blue & Gold theme');
+                    }}
+                    disabled={isDefaultTheme}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 16,
+                      paddingVertical: 9,
+                      borderRadius: radius.pill,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      backgroundColor: isDefaultTheme
+                        ? isDark
+                          ? 'rgba(255,255,255,0.1)'
+                          : 'rgba(0,0,0,0.06)'
+                        : colors.brandPrimary,
+                      opacity: pressed ? 0.85 : 1,
+                    })}
+                  >
+                    <Ionicons
+                      name={isDefaultTheme ? 'checkmark-circle' : 'arrow-undo'}
+                      size={16}
+                      color={isDefaultTheme ? (isDark ? '#FFFFFF' : colors.brandPrimary) : '#FFFFFF'}
+                    />
+                    <AppText
+                      variant="caption"
+                      weight="bold"
+                      style={{
+                        color: isDefaultTheme
+                          ? isDark
+                            ? '#FFFFFF'
+                            : colors.brandPrimary
+                          : '#FFFFFF',
+                      }}
+                    >
+                      {isDefaultTheme ? 'Default Active' : 'Return to Default'}
+                    </AppText>
+                  </Pressable>
+                </View>
+
+                {/* Campus Palette Presets */}
+                <View style={{ gap: spacing.sm }}>
+                  <View>
+                    <AppText variant="h3" weight="bold">
+                      Campus & Custom Palettes
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                      Select an institution to adopt its distinct primary and secondary accents
+                    </AppText>
+                  </View>
+
+                  <View style={{ gap: 8 }}>
+                    {accentPresets.map((preset) => {
+                      const isSelected = (!customAccent && preset.isDefault) || customAccent === preset.id;
+                      const displayPrimary = isDark ? preset.primaryDark : preset.primaryLight;
+                      const displayAccent = isDark ? preset.accentDark : preset.accentLight;
+
+                      return (
+                        <Pressable
+                          key={preset.id}
+                          onPress={async () => {
+                            haptics.light();
+                            await setCustomAccent(preset.id);
+                            toast.success(`Applied ${preset.label} palette`);
+                          }}
+                          style={({ pressed }) => ({
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: 12,
+                            borderRadius: radius.md,
+                            borderWidth: isSelected ? 2 : 1,
+                            borderColor: isSelected ? colors.brandPrimary : colors.border,
+                            backgroundColor: isSelected
+                              ? colors.pastelPrimaryBg
+                              : pressed
+                              ? isDark
+                                ? 'rgba(255,255,255,0.04)'
+                                : 'rgba(0,0,0,0.02)'
+                              : colors.surface,
+                            gap: 12,
+                          })}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                            {/* Dual-color swatch circle */}
+                            <View
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 18,
+                                overflow: 'hidden',
+                                flexDirection: 'row',
+                                borderWidth: 1.5,
+                                borderColor: isSelected ? (isDark ? '#FFFFFF' : '#000000') : colors.border,
+                              }}
+                            >
+                              <View style={{ flex: 1, backgroundColor: displayPrimary }} />
+                              <View style={{ flex: 1, backgroundColor: displayAccent }} />
+                            </View>
+
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <AppText variant="bodySmall" weight={isSelected ? 'bold' : 'medium'}>
+                                  {preset.label}
+                                </AppText>
+                                {preset.isDefault && (
+                                  <Badge label="DEFAULT" tone="brand" />
+                                )}
+                              </View>
+                              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                                {preset.campusName || 'Institutional Palette'}
+                              </AppText>
+                            </View>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            {/* Visual mini swatches */}
+                            <View style={{ flexDirection: 'row', gap: 4 }}>
+                              <View
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: 7,
+                                  backgroundColor: displayPrimary,
+                                }}
+                              />
+                              <View
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: 7,
+                                  backgroundColor: displayAccent,
+                                }}
+                              />
+                            </View>
+
+                            {isSelected && (
+                              <Ionicons name="checkmark-circle" size={20} color={colors.brandPrimary} />
+                            )}
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
               </SolidCard>
             )}

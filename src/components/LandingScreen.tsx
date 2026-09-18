@@ -276,8 +276,7 @@ export function LandingScreen() {
             <AppText
               variant="caption"
               weight="bold"
-              tone="brand"
-              style={{ letterSpacing: 1.5, marginBottom: 12 }}
+              style={{ color: colors.brandAccent, letterSpacing: 1.5, marginBottom: 12, fontSize: 13 }}
             >
               THE VERIFIED UNIVERSITY COMMUNITY PLATFORM
             </AppText>
@@ -1086,6 +1085,7 @@ export function LandingScreen() {
                       />
                       <AppButton
                         label="Nominate My Campus"
+                        variant="accent"
                         onPress={handleJoinWaitlist}
                         loading={waitlistSubmitting}
                         disabled={!waitlistEmail.trim() || !waitlistSchool.trim()}

@@ -43,6 +43,8 @@ interface ThemeContextValue {
  toggleTheme: () => Promise<void>;
  customAccent: string | null;
  setCustomAccent: (accentId: string | null) => Promise<void>;
+ resetToDefaultTheme: () => Promise<void>;
+ isDefaultTheme: boolean;
  accentPresets: AccentPreset[];
  spacing: typeof spacing;
  radius: typeof radius;
@@ -122,6 +124,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  const override = activeKey ? institutionThemeOverrides[activeKey] : undefined;
  const colors = override ? { ...base, ...(isDark ? override.dark : override.light) } : base;
 
+ const isDefaultTheme = !customAccent || customAccent === 'GLOBAL';
+
+ const resetToDefaultTheme = async () => {
+ await setCustomAccent(null);
+ };
+
  return {
  colors,
  isDark,
@@ -130,6 +138,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  toggleTheme,
  customAccent,
  setCustomAccent,
+ resetToDefaultTheme,
+ isDefaultTheme,
  accentPresets: ACCENT_PRESETS,
  spacing,
  radius,
