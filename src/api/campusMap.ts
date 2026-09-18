@@ -376,13 +376,16 @@ export function formatDistanceAndEta(meters: number): { distanceText: string; et
 }
 
 /**
- * Queries OpenStreetMap Overpass API for live amenities (ATMs, food, health, study areas) around a campus.
- * Public, free, zero-key REST endpoint.
+ * Queries OpenStreetMap (Overpass) for live amenities (ATMs, food, health, study areas) around a campus.
+ *
+ * The request goes through the `overpass-proxy` Supabase edge function: overpass-api.de answers any
+ * browser User-Agent with a 406 that has no CORS headers, so a direct browser call can never succeed.
+ * Results are cached per campus for 30 minutes because the upstream is slow (10-20s).
  */
-const OVERPASS_ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-];
+const OVERPASS_PROXY_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fdtnbluslkabwsmspbem.supabase.co'}/functions/v1/overpass-proxy`;
+const OVERPASS_PROXY_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF';
+const OVERPASS_CACHE_TTL_MS = 30 * 60 * 1000;
+const overpassCache = new Map<string, { at: number; data: any }>();
 
 export async function fetchOverpassCampusAmenities(
   campusCode: string,
@@ -394,32 +397,27 @@ export async function fetchOverpassCampusAmenities(
   const centerLat = center.latitude;
   const centerLon = center.longitude;
 
-  // Overpass QL query: 2500m radius around campus center
-  const query = `[out:json][timeout:10];(
-    node["amenity"~"atm|bank|clinic|pharmacy|hospital|cafe|restaurant|fast_food|library"](around:2500,${centerLat},${centerLon});
-    node["building"~"university|college"](around:2500,${centerLat},${centerLon});
-  );out center 25;`;
-
   try {
-    // overpass-api.de answers browser-style requests with a 406 that carries no
-    // CORS headers, so the fetch dies in the browser; the mail.ru mirror accepts them.
     let data: any = null;
-    for (const endpoint of OVERPASS_ENDPOINTS) {
+    const cached = overpassCache.get(normalizedCampus);
+    if (cached && Date.now() - cached.at < OVERPASS_CACHE_TTL_MS) {
+      data = cached.data;
+    } else {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 45000);
       try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 12000);
-        const res = await fetch(endpoint, {
+        const res = await fetch(OVERPASS_PROXY_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `data=${encodeURIComponent(query)}`,
+          headers: { 'Content-Type': 'application/json', apikey: OVERPASS_PROXY_KEY },
+          body: JSON.stringify({ lat: centerLat, lon: centerLon }),
           signal: controller.signal,
         });
+        if (res.ok) {
+          data = await res.json();
+          overpassCache.set(normalizedCampus, { at: Date.now(), data });
+        }
+      } finally {
         clearTimeout(timer);
-        if (!res.ok) continue;
-        data = await res.json();
-        break;
-      } catch {
-        // try the next mirror
       }
     }
 

@@ -1,8 +1,11 @@
 /**
  * AI Academic Study Copilot API
- * Powered by Google Gemini 2.0 Flash (Multimodal) with intelligent academic heuristic reasoning fallback.
+ * Calls Google Gemini through the `gemini-proxy` Supabase edge function (the API key stays server-side);
+ * when the proxy is unavailable or not configured it falls back to offline study templates and says so.
  * Supports image analysis for handwritten chalkboard math, physics diagrams, past questions, and lecture flashcards.
  */
+
+import { supabase } from './supabase';
 
 export type CopilotMode =
   | 'explain'
@@ -20,7 +23,7 @@ export interface MultimodalAttachment {
 export interface CopilotResponse {
   content: string;
   mode: CopilotMode;
-  source: 'Google Gemini 2.0 Flash' | 'Academic Reasoning Engine';
+  source: 'Google Gemini 2.0 Flash' | 'Google Gemini 1.5 Flash' | 'Academic Reasoning Engine';
   timestamp: string;
 }
 
@@ -36,10 +39,6 @@ export async function askAiStudyCopilot(
   courseContext?: string,
   imageAttachment?: MultimodalAttachment
 ): Promise<CopilotResponse> {
-  const apiKey =
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_GEMINI_API_KEY) ||
-    '';
-
   let formattedPrompt = userPrompt;
   if (courseContext) {
     formattedPrompt = `[Course: ${courseContext}]
@@ -63,57 +62,29 @@ ${userPrompt}`;
       '\nPlease generate a structured 3-day exam revision timetable with specific focus blocks and rest intervals.';
   }
 
-  // 1. If API key exists, call live Google Gemini 2.0 Flash API (multimodal)
-  if (apiKey) {
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-    for (const modelName of models) {
-      try {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
-        const parts: any[] = [];
-        if (imageAttachment && imageAttachment.base64) {
-          // Clean base64 header if present (e.g. data:image/jpeg;base64,)
-          const cleanBase64 = imageAttachment.base64.replace(/^data:image\/[a-z]+;base64,/, '');
-          parts.push({
-            inlineData: {
-              mimeType: imageAttachment.mimeType || 'image/jpeg',
-              data: cleanBase64,
-            },
-          });
-        }
-
-        parts.push({
-          text: `${ACADEMIC_SYSTEM_PROMPT}\n\nTask Mode: ${mode}\n\nStudent Prompt:\n${formattedPrompt}`,
-        });
-
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts }],
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 1500,
-            },
-          }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (candidate) {
-            return {
-              content: candidate,
-              mode,
-              source: 'Google Gemini 2.0 Flash',
-              timestamp: new Date().toISOString(),
-            };
-          }
-        }
-      } catch (err: any) {
-        console.warn(`[AICopilot] Gemini (${modelName}) call error:`, err?.message ?? err);
-      }
+  // 1. Ask the server-side Gemini proxy (needs a signed-in session; returns 503 "not_configured"
+  //    until GEMINI_API_KEY is set as a Supabase secret, in which case we use the offline fallback).
+  try {
+    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+      body: {
+        prompt: formattedPrompt,
+        mode,
+        image:
+          imageAttachment && imageAttachment.base64
+            ? { base64: imageAttachment.base64, mimeType: imageAttachment.mimeType || 'image/jpeg' }
+            : undefined,
+      },
+    });
+    if (!error && data && typeof data.content === 'string' && data.content.length > 0) {
+      return {
+        content: data.content,
+        mode,
+        source: data.model === 'gemini-1.5-flash' ? 'Google Gemini 1.5 Flash' : 'Google Gemini 2.0 Flash',
+        timestamp: new Date().toISOString(),
+      };
     }
+  } catch (err: any) {
+    console.warn('[AICopilot] gemini-proxy call failed, using offline fallback:', err?.message ?? err);
   }
 
   // 2. Intelligent Academic Reasoning Fallback

@@ -112,9 +112,18 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
-    // (a) Delete the profile row first (explicit, even though the FK from
-    // profiles -> auth.users is ON DELETE CASCADE, so this stays clear and
-    // safe even if that constraint ever changes).
+    // (a) Delete the Auth user FIRST. If this fails nothing has changed, whereas
+    // deleting the profile first used to leave a login with no profile behind
+    // whenever the Auth deletion failed. profiles -> auth.users is ON DELETE
+    // CASCADE, so this normally removes the profile row too.
+    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(targetUserId);
+
+    if (authDeleteError) {
+      console.error('[admin-delete-user] Failed to delete auth user:', authDeleteError);
+      return jsonResponse({ error: `Failed to delete auth account: ${authDeleteError.message}` }, 500);
+    }
+
+    // (b) Explicit cleanup in case that cascade ever changes (no-op otherwise).
     const { error: profileDeleteError } = await adminClient
       .from('profiles')
       .delete()
@@ -122,16 +131,7 @@ Deno.serve(async (req: Request) => {
 
     if (profileDeleteError) {
       console.error('[admin-delete-user] Failed to delete profile row:', profileDeleteError);
-      return jsonResponse({ error: `Failed to delete profile: ${profileDeleteError.message}` }, 500);
-    }
-
-    // (b) Delete the actual Auth user - this removes their login
-    // credentials entirely.
-    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(targetUserId);
-
-    if (authDeleteError) {
-      console.error('[admin-delete-user] Failed to delete auth user:', authDeleteError);
-      return jsonResponse({ error: `Failed to delete auth account: ${authDeleteError.message}` }, 500);
+      return jsonResponse({ error: `Auth account deleted but profile cleanup failed: ${profileDeleteError.message}` }, 500);
     }
 
     // (c) Record an audit log entry for who performed the deletion and when.

@@ -418,7 +418,7 @@ export default function StudentDashboard() {
                     AI Academic Study Copilot
                   </AppText>
                   <AppText tone="secondary" numberOfLines={2} style={{ fontSize: isDesktop ? 11 : 10.5, lineHeight: 14, marginTop: 2 }}>
-                    Gemini concept breakdowns & past questions
+                    Concept breakdowns & past questions
                   </AppText>
                 </View>
               </View>

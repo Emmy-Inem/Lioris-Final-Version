@@ -85,13 +85,18 @@ export function CampusMapModal({
     }
   }, [visible, activeCampus, isEnabled]);
 
-  async function loadAmenities(campusCode: string) {
+  async function loadAmenities(campusCode: string, manual = false) {
     setLoadingOsm(true);
     try {
       const results = await fetchOverpassCampusAmenities(campusCode);
       setLandmarks(results);
       if (results.length > 0) {
         setSelectedLandmark(results[0]);
+      }
+      // The public Overpass service is frequently overloaded; say so instead of silently
+      // showing the built-in catalog after the user explicitly asked for a refresh.
+      if (manual && !results.some((r) => r.isOsmLive)) {
+        toast.info('Live OpenStreetMap lookup is unavailable right now - showing the campus catalog.');
       }
     } catch {
       // fallback handled inside fetchOverpassCampusAmenities
@@ -258,8 +263,8 @@ export function CampusMapModal({
 
             <Pressable
               onPress={() => {
-                toast.info('Querying OpenStreetMap Overpass servers...');
-                loadAmenities(activeCampus);
+                toast.info('Querying OpenStreetMap servers (can take up to 20 seconds)...');
+                loadAmenities(activeCampus, true);
               }}
               disabled={loadingOsm}
               style={[

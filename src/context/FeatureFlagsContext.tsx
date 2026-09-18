@@ -151,7 +151,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     label: 'AI Academic Study Copilot',
     category: 'AI & Tools',
     tier: 'P0',
-    description: 'Gemini-powered academic assistant for concept explanation, past questions, and revision summaries.',
+    description: 'AI study assistant for concept explanation, past questions, and revision summaries (uses Google Gemini once the gemini-proxy key is configured; offline study templates otherwise).',
     defaultOn: true,
   },
   {

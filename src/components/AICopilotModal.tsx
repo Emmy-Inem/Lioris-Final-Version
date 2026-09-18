@@ -47,7 +47,7 @@ interface ChatMessage {
 const INITIAL_GREETING: ChatMessage = {
   id: 'welcome',
   sender: 'ai',
-  text: 'Hello! I am your AI Study Copilot powered by Google Gemini 2.0 Flash and academic reasoning algorithms. Ask me to explain a concept, break down a past question, generate flashcards, or attach a photo of chalkboard math and diagrams for instant step-by-step solving!',
+  text: 'Hello! I am your Study Copilot. Ask me to explain a concept, break down a past question, generate flashcards, or attach a photo of chalkboard math and diagrams. Each reply is labelled with the engine that produced it.',
   source: 'Academic Reasoning Engine',
   timestamp: 'Just now',
 };
@@ -420,7 +420,7 @@ export function AICopilotModal({
                 <AppText variant="h3" weight="bold">
                   AI Academic Study Copilot
                 </AppText>
-                <Badge label="Gemini 2.0 Flash" tone="neutral" />
+                <Badge label="Study assistant" tone="neutral" />
               </View>
               <AppText variant="caption" tone="secondary" numberOfLines={1}>
                 {initialCourse ? `Focus: ${initialCourse} • Multimodal Math & Exam Revision` : 'Multimodal Math, chalkboard diagrams & exam revision'}
@@ -531,7 +531,7 @@ export function AICopilotModal({
                           <AppText variant="caption" weight="bold" style={{ color: colors.textSecondary, fontSize: 11 }}>
                             Study Copilot
                           </AppText>
-                          {msg.source && <Badge label={msg.source} tone="neutral" />}
+                          {msg.source && <Badge label={msg.source === 'Academic Reasoning Engine' ? 'Offline template' : msg.source} tone="neutral" />}
                         </View>
                         <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
                           {msg.timestamp}
@@ -568,7 +568,7 @@ export function AICopilotModal({
                 >
                   <ActivityIndicator size="small" color={colors.brandPrimary} style={{ marginRight: 8 }} />
                   <AppText variant="caption" tone="secondary">
-                    Gemini 2.0 Flash analyzing equations and synthesizing academic response...
+                    Working on your question...
                   </AppText>
                 </View>
               </View>

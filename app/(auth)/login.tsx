@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Linking, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
@@ -15,7 +15,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { joinWaitlist } from '@/api/institutions';
-import { supabase } from '@/api/supabase';
+import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from '@/api/supabase';
 import {
  sendPasswordResetEmail,
  verifyPasswordResetOtpAndSetPassword,
@@ -51,6 +51,17 @@ export default function LoginScreen() {
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
  const [googleSubmitting, setGoogleSubmitting] = useState(false);
+ // supabase-js only builds the OAuth URL client-side, so with the provider switched off the
+ // user is sent to a raw JSON 400 on supabase.co. Only offer the button when it is enabled.
+ const [googleEnabled, setGoogleEnabled] = useState(false);
+ useEffect(() => {
+ let cancelled = false;
+ fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_ANON_KEY } })
+ .then((r) => r.json())
+ .then((s) => { if (!cancelled) setGoogleEnabled(!!s?.external?.google); })
+ .catch(() => {});
+ return () => { cancelled = true; };
+ }, []);
  const [waitlistEmail, setWaitlistEmail] = useState('');
  const [waitlistSchool, setWaitlistSchool] = useState('');
  const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
@@ -183,7 +194,7 @@ export default function LoginScreen() {
  if (error.message?.includes('Unsupported provider') || (error as any).error_code === 'validation_failed') {
  Alert.alert(
  'Google Sign-In Notice',
- 'Google OAuth is not enabled in your Supabase dashboard yet.\n\nTo activate it, enable Google in Supabase under Authentication → Providers. In the meantime, you can log in directly with your email and password below.',
+ 'Google sign-in is not available yet. Please sign in with your school email and password.',
  [{ text: 'Got It', style: 'default' }]
  );
  } else {
@@ -325,6 +336,8 @@ export default function LoginScreen() {
  </Link>
  </View>
 
+ {googleEnabled ? (
+ <>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.lg }}>
  <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
  <AppText variant="caption" tone="secondary" weight="semiBold">
@@ -355,6 +368,8 @@ export default function LoginScreen() {
  {googleSubmitting ? 'Connecting Google...' : 'Continue with Google'}
  </AppText>
  </Pressable>
+ </>
+ ) : null}
  </>
  );
 
