@@ -20,16 +20,17 @@ import { supabase } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
 import { loadBlockedUserIds } from '@/api/connections';
 import { resetToDefaultCampusScope } from '@/hooks/useViewScope';
-import { recordAuditLogEntry } from '@/api/auditLog';
 
 // ---------------------------------------------------------------------------
 // Admin "View As / Support Mode" impersonation - session backup helpers.
 //
-// Mirrors src/auth/tokenStorage.ts's own SecureStore/web-localStorage pattern
-// exactly (same guard, same fallback rationale), but under a distinct key so
+// Mirrors src/auth/tokenStorage.ts's own SecureStore pattern (same guard, same
+// fallback rationale), but under a distinct key so
 // it can never collide with or be clobbered by the normal token lifecycle -
 // this key only ever holds the *admin's* own tokens, backed up for the
 // duration of an impersonation session so `endImpersonation` can restore them.
+// On web it lives in sessionStorage (NOT localStorage) so the admin's tokens do
+// not survive closing the tab; native uses SecureStore.
 // ---------------------------------------------------------------------------
 const IMPERSONATION_ADMIN_BACKUP_KEY = 'lioris_impersonation_admin_backup';
 const isWebPlatform = Platform.OS === 'web';
@@ -43,7 +44,7 @@ async function setImpersonationAdminBackup(accessToken: string, refreshToken: st
  const value = JSON.stringify({ accessToken, refreshToken });
  if (isWebPlatform) {
  try {
- if (typeof localStorage !== 'undefined') localStorage.setItem(IMPERSONATION_ADMIN_BACKUP_KEY, value);
+ if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(IMPERSONATION_ADMIN_BACKUP_KEY, value);
  } catch {
  // no-op - best effort only, matches tokenStorage.ts's web fallback
  }
@@ -56,7 +57,7 @@ async function getImpersonationAdminBackup(): Promise<ImpersonationBackup | null
  const raw = isWebPlatform
  ? (() => {
  try {
- return typeof localStorage !== 'undefined' ? localStorage.getItem(IMPERSONATION_ADMIN_BACKUP_KEY) : null;
+ return typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(IMPERSONATION_ADMIN_BACKUP_KEY) : null;
  } catch {
  return null;
  }
@@ -73,6 +74,8 @@ async function getImpersonationAdminBackup(): Promise<ImpersonationBackup | null
 async function clearImpersonationAdminBackup(): Promise<void> {
  if (isWebPlatform) {
  try {
+ if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(IMPERSONATION_ADMIN_BACKUP_KEY);
+ // Also purge any copy an older build left in localStorage.
  if (typeof localStorage !== 'undefined') localStorage.removeItem(IMPERSONATION_ADMIN_BACKUP_KEY);
  } catch {
  // no-op
@@ -145,9 +148,9 @@ interface AuthContextValue {
   * active Supabase session to `targetUserId` via the admin-impersonate-user
   * Edge Function, so the admin can view the app exactly as that user for
   * support purposes. Time-boxed (auto-ends at the grant's expiresAt) and
-  * fully audit-logged. Throws on failure without changing the live session.
+  * fully audit-logged server-side (a reason of 10+ characters is required). Throws on failure without changing the live session.
   */
- beginImpersonation: (targetUserId: string) => Promise<void>;
+ beginImpersonation: (targetUserId: string, reason: string) => Promise<void>;
  /**
   * Restores the backed-up admin session and ends impersonation. Designed to
   * never throw and never leave the app half-authenticated: if the backup is
@@ -435,6 +438,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async logout() {
         await authApi.logout();
         await clearTokens();
+        // Never leave a backed-up admin session behind after signing out.
+        await clearImpersonationAdminBackup().catch(() => {});
+        setImpersonation(DEFAULT_IMPERSONATION);
         setUser(null);
         try {
           queryClient.clear();
@@ -514,7 +520,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       },
       impersonation,
-      async beginImpersonation(targetUserId: string) {
+      async beginImpersonation(targetUserId: string, reason: string) {
         // Gated on actualRole, same rationale as switchRole above - never
         // trust the currently-*displayed* role for a privileged action.
         if (!user || user.actualRole !== 'admin') {
@@ -533,7 +539,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         let result: Awaited<ReturnType<typeof authApi.startImpersonation>>;
         try {
-          result = await authApi.startImpersonation(targetUserId);
+          result = await authApi.startImpersonation(targetUserId, reason);
         } catch (err) {
           await clearImpersonationAdminBackup();
           throw err;
@@ -599,7 +605,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const endedTargetId = impersonation.targetUserId;
-        const endedTargetName = impersonation.targetName;
 
         try {
           const { error: setSessionError } = await supabase.auth.setSession({
@@ -619,19 +624,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await clearImpersonationAdminBackup();
           setImpersonation(DEFAULT_IMPERSONATION);
 
-          // The live session is now restored to the real admin, so this
-          // write is correctly attributed to them, not the impersonated
-          // user. Non-blocking - an audit-log hiccup must never trap the
-          // admin mid-restore.
-          try {
-            await recordAuditLogEntry({
-              action: 'impersonation_ended',
-              summary: `Ended impersonation of ${endedTargetName || 'a user'}.`,
-              targetType: 'user',
-              targetId: endedTargetId || restoredUser.id,
-            });
-          } catch {
-            // Non-blocking
+          // The live session is now restored to the real admin, so ask the
+          // edge function to write the authoritative `impersonation_ended`
+          // audit entry. Best effort and non-blocking - an audit hiccup must
+          // never trap the admin mid-restore.
+          if (endedTargetId) {
+            void authApi.endImpersonationAudit(endedTargetId);
           }
 
           try {

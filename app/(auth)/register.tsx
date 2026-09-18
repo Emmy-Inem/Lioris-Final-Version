@@ -20,6 +20,7 @@ import { getInstitutionForEmail } from '@/api/institutions';
 import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
+import { MIN_AGE, TERMS_VERSION } from '@/constants/legal';
 
 const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
  { value: 'student', label: 'Student Portal', icon: 'school' },
@@ -38,6 +39,7 @@ export default function RegisterScreen() {
  const [botField, setBotField] = useState('');
  const [showPassword, setShowPassword] = useState(false);
  const [acceptedTerms, setAcceptedTerms] = useState(false);
+ const [confirmedAge, setConfirmedAge] = useState(false);
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
 
@@ -71,6 +73,10 @@ export default function RegisterScreen() {
  setErrorMessage('Username must be 3-24 characters (letters, numbers, dots, underscores).');
  return;
  }
+ if (!confirmedAge) {
+ setErrorMessage(`Lioris is for people aged ${MIN_AGE} and over. Please confirm that you are at least ${MIN_AGE} to continue.`);
+ return;
+ }
  if (!acceptedTerms) {
  setErrorMessage('Please accept the Terms of Service & Privacy Policy to continue.');
  return;
@@ -85,6 +91,8 @@ export default function RegisterScreen() {
  password,
  userType: portal,
  botField,
+ acceptedTermsVersion: TERMS_VERSION,
+ confirmedAge18: true,
  });
  seedProfileUsername(createdUser, username, matchedInstitution ?? undefined);
  router.replace('/');
@@ -252,22 +260,55 @@ export default function RegisterScreen() {
  />
  </View>
 
+ <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md, marginTop: spacing.sm }}>
+ <Pressable
+ onPress={() => setConfirmedAge((v) => !v)}
+ accessibilityRole="checkbox"
+ accessibilityState={{ checked: confirmedAge }}
+ accessibilityLabel={`I confirm that I am ${MIN_AGE} years old or older`}
+ hitSlop={8}
+ >
+ <Ionicons
+ name={confirmedAge ? 'checkbox' : 'square-outline'}
+ size={20}
+ color={confirmedAge ? colors.brandPrimary : colors.textSecondary}
+ />
+ </Pressable>
+ <AppText variant="bodySmall" style={{ flex: 1 }} onPress={() => setConfirmedAge((v) => !v)}>
+ I confirm that I am {MIN_AGE} years old or older.
+ </AppText>
+ </View>
+
+ <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
  <Pressable
  onPress={() => setAcceptedTerms((v) => !v)}
  accessibilityRole="checkbox"
  accessibilityState={{ checked: acceptedTerms }}
- accessibilityLabel="I accept the Privacy Policy, Terms of Service, and Community Rules"
- style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg, marginTop: spacing.sm }}
+ accessibilityLabel="I accept the Terms of Service, Privacy Policy, and Community Rules"
+ hitSlop={8}
  >
  <Ionicons
  name={acceptedTerms ? 'checkbox' : 'square-outline'}
  size={20}
  color={acceptedTerms ? colors.brandPrimary : colors.textSecondary}
  />
- <AppText variant="bodySmall" style={{ flex: 1 }}>
- I accept the Privacy Policy, Terms of Service, and Community Rules.
- </AppText>
  </Pressable>
+ <AppText variant="bodySmall" style={{ flex: 1 }}>
+ I have read and accept the{' '}
+ <AppText variant="bodySmall" tone="brand" weight="semiBold" accessibilityRole="link" onPress={() => router.push('/terms')}>
+ Terms of Service
+ </AppText>
+ ,{' '}
+ <AppText variant="bodySmall" tone="brand" weight="semiBold" accessibilityRole="link" onPress={() => router.push('/privacy')}>
+ Privacy Policy
+ </AppText>
+ , and{' '}
+ <AppText variant="bodySmall" tone="brand" weight="semiBold" accessibilityRole="link" onPress={() => router.push('/community-rules')}>
+ Community Rules
+ </AppText>
+ .
+ </AppText>
+ </View>
 
  {errorMessage ? (
  <View

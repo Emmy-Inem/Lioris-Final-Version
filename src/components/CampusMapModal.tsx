@@ -6,11 +6,11 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Linking,
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
 } from 'react-native';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
@@ -139,7 +139,7 @@ export function CampusMapModal({
 
   function openDirections(landmark: CampusLandmark) {
     const url = getDirectionsUrl(landmark.latitude, landmark.longitude, landmark.name);
-    Linking.openURL(url).catch(() => {});
+    void openExternalUrl(url);
   }
 
   const isWeb = Platform.OS === 'web';

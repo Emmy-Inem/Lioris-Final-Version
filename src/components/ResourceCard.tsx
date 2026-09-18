@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Linking, Platform, Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
 import { AppText } from './AppText';
@@ -11,6 +11,8 @@ import { trackResourceDownload, toggleResourceUpvote } from '@/api/resources';
 import { useResourceBookmarks } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
+import { isSafeHttpUrl } from '@/utils/safeUrl';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 
 export function ResourceCard({
   resource,
@@ -44,10 +46,9 @@ export function ResourceCard({
     setDownloading(true);
     try {
       if (resource.fileUrl) {
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          window.open(resource.fileUrl, '_blank');
-        } else {
-          await Linking.openURL(resource.fileUrl);
+        if (!isSafeHttpUrl(resource.fileUrl) || !(await openExternalUrl(resource.fileUrl))) {
+          Alert.alert('Download Unavailable', 'This resource has an invalid or unsafe file link.');
+          return;
         }
         setDownloaded(true);
         trackResourceDownload(resource.id).catch(() => {});
@@ -59,9 +60,7 @@ export function ResourceCard({
         );
       }
     } catch {
-      if (resource.fileUrl) {
-        Linking.openURL(resource.fileUrl).catch(() => {});
-      }
+      Alert.alert('Download Failed', 'Could not open this file. Please try again.');
     } finally {
       setDownloading(false);
     }

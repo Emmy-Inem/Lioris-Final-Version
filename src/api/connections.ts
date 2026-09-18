@@ -2,6 +2,7 @@ import { api } from'./client';
 import { AlumniDirectoryEntry, Connection, IncomingConnectionRequest } from'./types';
 import { createNotification } from'./notifications';
 import { supabase } from './supabase';
+import { assertUuid, escapePostgrestLike } from '../utils/postgrest';
 
 
 
@@ -48,7 +49,7 @@ export async function searchAlumniDirectory(
     }
 
     if (query.q) {
-      q = q.ilike('full_name', `%${query.q}%`);
+      q = q.ilike('full_name', `%${escapePostgrestLike(query.q)}%`);
     }
     if (query.department) {
       q = q.eq('department', query.department);
@@ -317,6 +318,8 @@ export async function checkConnectionStatus(targetUserId: string): Promise<'none
  const { data: authData } = await supabase.auth.getUser();
  const myId = authData?.user?.id || (await getSessionUser())?.id;
  if (!myId || myId === targetUserId) return 'none';
+ assertUuid(myId, 'user id');
+ assertUuid(targetUserId, 'user id');
 
  const { data, error } = await supabase
  .from('connections')
@@ -336,6 +339,8 @@ export async function deleteConnection(targetUserId: string): Promise<void> {
  const { data: authData } = await supabase.auth.getUser();
  const myId = authData?.user?.id || (await getSessionUser())?.id;
  if (!myId) return;
+ assertUuid(myId, 'user id');
+ assertUuid(targetUserId, 'user id');
 
  await supabase
  .from('connections')

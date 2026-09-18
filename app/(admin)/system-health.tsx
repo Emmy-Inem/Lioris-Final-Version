@@ -57,8 +57,7 @@ export default function SystemHealthScreen() {
         navigator.clipboard.writeText(jsonStr);
         toast.success('Diagnostics copied to clipboard.');
       } catch {
-        toast.info('Export ready in console log.');
-        console.log(jsonStr);
+        toast.error('Could not copy diagnostics to the clipboard.');
       }
     } else {
       Share.share({

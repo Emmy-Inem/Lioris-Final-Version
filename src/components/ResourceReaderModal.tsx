@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Alert,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -20,6 +19,8 @@ import { trackResourceDownload } from '@/api/resources';
 import { useResourceBookmarks } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
+import { isSafeHttpUrl } from '@/utils/safeUrl';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 
 interface ResourceReaderModalProps {
   visible: boolean;
@@ -64,10 +65,9 @@ export function ResourceReaderModal({
     setDownloading(true);
     try {
       if (resource.fileUrl) {
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          window.open(resource.fileUrl, '_blank');
-        } else {
-          await Linking.openURL(resource.fileUrl);
+        if (!isSafeHttpUrl(resource.fileUrl) || !(await openExternalUrl(resource.fileUrl))) {
+          Alert.alert('Download Unavailable', 'This resource has an invalid or unsafe file link.');
+          return;
         }
         setDownloaded(true);
         trackResourceDownload(resource.id).catch(() => {});
@@ -79,16 +79,14 @@ export function ResourceReaderModal({
         );
       }
     } catch {
-      if (resource.fileUrl) {
-        Linking.openURL(resource.fileUrl).catch(() => {});
-      }
+      Alert.alert('Download Failed', 'Could not open this file. Please try again.');
     } finally {
       setDownloading(false);
     }
   }
 
   // Google Docs Viewer API URL (Free, Zero-Auth, embeds any PDF, DOC, DOCX, PPT, XLS)
-  const viewerUrl = resource.fileUrl
+  const viewerUrl = isSafeHttpUrl(resource.fileUrl)
     ? `https://docs.google.com/viewer?url=${encodeURIComponent(resource.fileUrl)}&embedded=true`
     : null;
 
@@ -289,7 +287,7 @@ export function ResourceReaderModal({
                 <View style={{ flexDirection: 'row', gap: spacing.md }}>
                   <AppButton
                     label="Open In Browser Viewer ↗"
-                    onPress={() => Linking.openURL(viewerUrl)}
+                    onPress={() => { void openExternalUrl(viewerUrl); }}
                     variant="primary"
                   />
                   <AppButton

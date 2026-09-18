@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Linking, Platform } from 'react-native';
+import { ScrollView, View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
@@ -34,6 +34,7 @@ import { listMentorships } from '@/api/mentorship';
 import { listEvents } from '@/api/events';
 import { listPortalLinks } from '@/api/portalLinks';
 import { haptics } from '@/utils/haptics';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 
 export default function AlumniDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -96,11 +97,7 @@ export default function AlumniDashboard() {
 
   function handleOpenPortal(url: string) {
     haptics.light();
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.open(url, '_blank');
-    } else {
-      Linking.openURL(url).catch(() => {});
-    }
+    void openExternalUrl(url);
   }
 
   const activeJobs = (jobs ?? []).slice(0, 2);

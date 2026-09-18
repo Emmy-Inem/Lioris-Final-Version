@@ -18,6 +18,7 @@ import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
+import { escapePostgrestLike } from '@/utils/postgrest';
 import { useResponsive } from '@/hooks/useResponsive';
 import { supabase } from '@/api/supabase';
 import { recordAuditLogEntry } from '@/api/auditLog';
@@ -48,7 +49,7 @@ export default function ContentDeskScreen() {
           .select('id, title, content, category, campus_code, created_at, profiles:author_id(full_name, role)')
           .order('created_at', { ascending: false })
           .limit(50);
-        if (q) builder = builder.ilike('title', `%${q}%`);
+        if (q) builder = builder.ilike('title', `%${escapePostgrestLike(q)}%`);
         const { data, error } = await builder;
         if (error) throw error;
         return (data || []).map((row: any) => ({
@@ -68,7 +69,7 @@ export default function ContentDeskScreen() {
           .select('id, title, course_code, department, file_type, campus_code, created_at, profiles:uploader_id(full_name)')
           .order('created_at', { ascending: false })
           .limit(50);
-        if (q) builder = builder.ilike('title', `%${q}%`);
+        if (q) builder = builder.ilike('title', `%${escapePostgrestLike(q)}%`);
         const { data, error } = await builder;
         if (error) throw error;
         return (data || []).map((row: any) => ({
@@ -88,7 +89,7 @@ export default function ContentDeskScreen() {
           .select('id, title, description, venue, campus_code, start_time, profiles:creator_id(full_name)')
           .order('start_time', { ascending: false })
           .limit(50);
-        if (q) builder = builder.ilike('title', `%${q}%`);
+        if (q) builder = builder.ilike('title', `%${escapePostgrestLike(q)}%`);
         const { data, error } = await builder;
         if (error) throw error;
         return (data || []).map((row: any) => ({
@@ -109,7 +110,7 @@ export default function ContentDeskScreen() {
           .select('id, content, created_at, post_id, profiles:author_id(full_name)')
           .order('created_at', { ascending: false })
           .limit(50);
-        if (q) builder = builder.ilike('content', `%${q}%`);
+        if (q) builder = builder.ilike('content', `%${escapePostgrestLike(q)}%`);
         const { data, error } = await builder;
         if (error) throw error;
         return (data || []).map((row: any) => ({

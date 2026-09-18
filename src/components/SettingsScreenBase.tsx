@@ -19,7 +19,9 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
-import { getMyProfile } from '@/api/profile';
+import { deleteMyAccount, exportMyData, getMyProfile } from '@/api/profile';
+import { roleRequiresMfa } from '@/auth/mfaPolicy';
+import { DPO_EMAIL, DSR_RESPONSE_DAYS, PRIVACY_VERSION, TERMS_VERSION } from '@/constants/legal';
 import { LAUNCH_INSTITUTIONS, getInstitutionByCode } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
 import { submitReport } from '@/api/moderation';
@@ -66,46 +68,14 @@ const ALL_SETTINGS_SECTIONS = [
   { key: 'notifications', label: 'Alerts', fullLabel: 'Notifications', icon: 'notifications-outline' as const },
   { key: 'security', label: 'Security', fullLabel: 'Security & Logins', icon: 'shield-checkmark-outline' as const },
   { key: 'preview', label: 'Switcher', fullLabel: 'Role Switcher', icon: 'swap-horizontal-outline' as const },
+  { key: 'privacy', label: 'Privacy', fullLabel: 'Privacy & Data', icon: 'lock-closed-outline' as const },
   { key: 'legal', label: 'Policies', fullLabel: 'Terms & Policies', icon: 'document-text-outline' as const },
 ] as const;
 
-interface LegalPolicy {
-  title: string;
-  desc: string;
-  paragraphs: string[];
-}
-
-const LEGAL_DOCUMENTS: LegalPolicy[] = [
-  {
-    title: 'Software Terms of Service',
-    desc: 'University platform operational rules and code of conduct.',
-    paragraphs: [
-      '1. Acceptance of Terms: By logging in with your institutional credentials (@ui.edu.ng, @unilag.edu.ng, etc.), you agree to adhere to all university software policies and the terms set forth herein.',
-      '2. Academic Identity: Accounts on the Lioris platform are strictly tied to verified matriculation numbers and academic email domains. Impersonation of students, faculty, or alumni fellows is strictly prohibited.',
-      '3. Campus Escrow & Trade: When using the Campus Marketplace or Escrow service, buyers and sellers agree that transactions conducted under university escrow are held securely until physical verification and handover.',
-      '4. Resource Sharing: All lecture notes, syllabi, and past questions uploaded to the Academic Repository must be owned by the user or distributed under open academic educational licenses.',
-    ],
-  },
-  {
-    title: 'Privacy & Data Protection Policy',
-    desc: 'Zero third-party ads, NDPR compliance and verified encryption.',
-    paragraphs: [
-      '1. Zero Ad Tracking: Lioris is a secure academic network. We do not sell your personal data, academic records, or browsing patterns to advertisers or third-party data brokers.',
-      '2. Encryption & Storage: All personal authentication tokens, biometric secrets, and submitted identity verification documents are encrypted at rest using industry-standard AES-256 and SSL/TLS in transit.',
-      '3. Regulatory Compliance: Our data governance practices strictly conform to the Nigeria Data Protection Regulation (NDPR) and international institutional academic data protection standards.',
-      '4. Retention & Deletion: You may request the permanent export or deletion of your academic activity records at any time through university administration.',
-    ],
-  },
-  {
-    title: 'Campus Academic Honor Code',
-    desc: 'Academic integrity rules and anti-harassment guidelines.',
-    paragraphs: [
-      '1. Academic Integrity: The platform supports collaboration, peer study sprints, and revision pods. Distributing live examination question leaks or engaging in academic dishonesty is grounds for immediate suspension.',
-      '2. Respectful Community Discourse: Forums, course circles, and direct messaging channels must remain free from harassment, hate speech, bullying, and defamation.',
-      '3. Faculty & Mentorship Decorum: When interacting with faculty lecturers or alumni mentors, professional academic etiquette and respect are required at all times.',
-      '4. Sanctions: Breaches of this Honor Code are reported to the university Disciplinary Board and student affairs council.',
-    ],
-  },
+const LEGAL_LINKS = [
+  { title: 'Privacy Policy', desc: 'How we collect, use and protect your data (NDPA 2023).', href: '/privacy' as const },
+  { title: 'Terms of Service', desc: 'Rules for using Lioris, including AI and marketplace terms.', href: '/terms' as const },
+  { title: 'Community Rules', desc: 'Standards of conduct, reporting and moderation.', href: '/community-rules' as const },
 ];
 
 export function SettingsScreen() {
@@ -166,8 +136,12 @@ export function SettingsScreen() {
   const [mfaConfirmCode, setMfaConfirmCode] = useState('');
   const [mfaError, setMfaError] = useState<string | null>(null);
 
-  // Legal Modal State
-  const [activeLegalDoc, setActiveLegalDoc] = useState<LegalPolicy | null>(null);
+  // Privacy & Data (export / delete account)
+  const [exportingData, setExportingData] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Contact Support / Report a Problem
   const [supportModalOpen, setSupportModalOpen] = useState(false);
@@ -265,8 +239,19 @@ export function SettingsScreen() {
     resetMfaEnrollmentFlow();
   }
 
+  // Two-factor authentication is mandatory for admin/staff (see src/auth/mfaPolicy.ts),
+  // so they cannot remove their last factor.
+  const mfaMandatory = !!user && (roleRequiresMfa(user.role) || roleRequiresMfa(user.actualRole));
+
   function handleTurnOffMfa() {
     if (!mfaFactorId) return;
+    if (mfaMandatory) {
+      Alert.alert(
+        'Two-Factor Authentication is required',
+        'Administrator and staff accounts must keep two-factor authentication enabled to protect campus data. To use a different authenticator device, set up a new one first and then contact an administrator for help removing the old one.',
+      );
+      return;
+    }
     Alert.alert(
       'Turn Off Two-Factor Authentication?',
       'This reduces the security of your account. You will only need your password to sign in afterward.',
@@ -292,6 +277,82 @@ export function SettingsScreen() {
         },
       ],
     );
+  }
+
+  async function handleExportData() {
+    if (exportingData) return;
+    haptics.light();
+    setExportingData(true);
+    try {
+      const data = await exportMyData();
+      const json = JSON.stringify(data, null, 2);
+      const filename = `lioris-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        const { File, Paths } = await import('expo-file-system');
+        const Sharing = await import('expo-sharing');
+        const file = new File(Paths.cache, filename);
+        file.create({ overwrite: true });
+        file.write(json);
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(file.uri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Export my Lioris data',
+            UTI: 'public.json',
+          });
+        } else {
+          const { Share } = await import('react-native');
+          await Share.share({ title: 'My Lioris data', message: json });
+        }
+      }
+      haptics.success();
+      toast.success('Your data export is ready.');
+    } catch (err: any) {
+      haptics.error();
+      toast.error(err?.message || 'Could not export your data. Please try again.');
+    } finally {
+      setExportingData(false);
+    }
+  }
+
+  function openDeleteModal() {
+    haptics.light();
+    setDeleteConfirmText('');
+    setDeleteError(null);
+    setDeleteModalOpen(true);
+  }
+
+  async function handleDeleteAccount() {
+    if (deletingAccount || deleteConfirmText.trim() !== 'DELETE') return;
+    setDeletingAccount(true);
+    setDeleteError(null);
+    haptics.medium();
+    try {
+      await deleteMyAccount();
+      setDeleteModalOpen(false);
+      try {
+        await logout();
+      } catch {}
+      toast.success('Your account has been deleted.');
+      router.replace('/(auth)/login');
+    } catch (err: any) {
+      haptics.error();
+      const message = err?.message || 'Could not delete your account. Please try again.';
+      setDeleteError(message);
+      toast.error(message);
+    } finally {
+      setDeletingAccount(false);
+    }
   }
 
   function saveNotifPreference(updated: { push: boolean; announcements: boolean; events: boolean }) {
@@ -1176,12 +1237,18 @@ export function SettingsScreen() {
                           Two-Factor Authentication is active
                         </AppText>
                       </View>
-                      <AppButton
-                        label={mfaDisabling ? 'Turning off…' : 'Turn Off'}
-                        variant="secondary"
-                        onPress={handleTurnOffMfa}
-                        loading={mfaDisabling}
-                      />
+                      {mfaMandatory ? (
+                        <AppText tone="secondary" variant="caption">
+                          Two-factor authentication is required for administrator and staff accounts and cannot be turned off.
+                        </AppText>
+                      ) : (
+                        <AppButton
+                          label={mfaDisabling ? 'Turning off…' : 'Turn Off'}
+                          variant="secondary"
+                          onPress={handleTurnOffMfa}
+                          loading={mfaDisabling}
+                        />
+                      )}
                     </View>
                   ) : mfaPendingFactorId && mfaSecret ? (
                     <View style={{ gap: spacing.sm }}>
@@ -1307,7 +1374,78 @@ export function SettingsScreen() {
               </SolidCard>
             )}
 
-            {/* 6. Terms & Policies */}
+            {/* 6. Privacy & Data */}
+            {activeSection === 'privacy' && (
+              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+                <View>
+                  <AppText variant="h3" weight="bold">
+                    Privacy & Data
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                    Your data protection rights: access, portability and erasure
+                  </AppText>
+                </View>
+
+                <View style={{ gap: spacing.sm }}>
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">Export my data</AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                      Download a copy of the personal data we hold about you as a JSON file.
+                    </AppText>
+                  </View>
+                  <AppButton
+                    label={exportingData ? 'Preparing export…' : 'Export my data'}
+                    variant="secondary"
+                    icon="download-outline"
+                    onPress={handleExportData}
+                    loading={exportingData}
+                    disabled={exportingData || deletingAccount}
+                  />
+                </View>
+
+                <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                  <View>
+                    <AppText weight="bold" variant="bodySmall" style={{ color: colors.critical }}>
+                      Delete my account
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                      Permanently erase your account, content, messages, uploads and verification documents. This cannot be undone.
+                    </AppText>
+                  </View>
+                  <AppButton
+                    label="Delete my account"
+                    variant="secondary"
+                    icon="trash-outline"
+                    onPress={openDeleteModal}
+                    disabled={exportingData || deletingAccount}
+                  />
+                </View>
+
+                <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+                  <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.xs }}>
+                    We respond to other data requests within {DSR_RESPONSE_DAYS} days. Contact {DPO_EMAIL}.
+                  </AppText>
+                  {LEGAL_LINKS.map((doc) => (
+                    <Pressable
+                      key={doc.title}
+                      accessibilityRole="link"
+                      onPress={() => {
+                        haptics.light();
+                        router.push(doc.href);
+                      }}
+                      style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}
+                    >
+                      <AppText weight="semiBold" variant="bodySmall" tone="brand">
+                        {doc.title}
+                      </AppText>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                    </Pressable>
+                  ))}
+                </View>
+              </SolidCard>
+            )}
+
+            {/* 7. Terms & Policies */}
             {activeSection === 'legal' && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
@@ -1315,16 +1453,17 @@ export function SettingsScreen() {
                     Institutional Governance & Policies
                   </AppText>
                   <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    Official terms of service, NDPR privacy rules, and student honor code
+                    Terms of service, privacy policy and community rules (Terms v{TERMS_VERSION}, Privacy v{PRIVACY_VERSION})
                   </AppText>
                 </View>
 
-                {LEGAL_DOCUMENTS.map((doc) => (
+                {LEGAL_LINKS.map((doc) => (
                   <Pressable
                     key={doc.title}
+                    accessibilityRole="link"
                     onPress={() => {
                       haptics.light();
-                      setActiveLegalDoc(doc);
+                      router.push(doc.href);
                     }}
                     style={{
                       flexDirection: 'row',
@@ -1337,10 +1476,10 @@ export function SettingsScreen() {
                     }}
                   >
                     <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
-                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                      <AppText weight="bold" variant="bodySmall">
                         {doc.title}
                       </AppText>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
                         {doc.desc}
                       </AppText>
                     </View>
@@ -1426,92 +1565,80 @@ export function SettingsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Legal & Policy Viewer Modal */}
+      {/* Delete Account Confirmation Modal */}
       <Modal
-        visible={!!activeLegalDoc}
+        visible={deleteModalOpen}
         transparent
-        animationType="slide"
-        onRequestClose={() => setActiveLegalDoc(null)}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!deletingAccount) setDeleteModalOpen(false);
+        }}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setActiveLegalDoc(null)} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md, paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (!deletingAccount) setDeleteModalOpen(false);
+            }}
+          />
           <View
             style={{
               backgroundColor: colors.surface,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: isDesktop ? spacing.xl : spacing.lg,
-              paddingBottom: Math.max(insets.bottom, spacing.lg),
+              borderRadius: 20,
+              padding: spacing.lg,
               width: '100%',
-              maxWidth: 640,
-              alignSelf: 'center',
-              maxHeight: '85%',
+              maxWidth: 460,
+              gap: spacing.md,
               borderWidth: 1,
               borderColor: colors.border,
             }}
           >
-            {/* Mobile grab handle */}
-            {!isDesktop && (
-              <View
-                style={{
-                  width: 36,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: colors.border,
-                  alignSelf: 'center',
-                  marginBottom: spacing.sm,
-                }}
-              />
-            )}
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: spacing.md,
-                gap: 8,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
-                <Ionicons name="shield-checkmark-outline" size={22} color={colors.textSecondary} />
-                <AppText variant="h3" weight="bold" numberOfLines={1}>
-                  {activeLegalDoc?.title}
-                </AppText>
-              </View>
-              <Pressable
-                onPress={() => setActiveLegalDoc(null)}
-                hitSlop={8}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: colors.background,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="close" size={18} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.lg, gap: spacing.md }}>
-              <AppText tone="secondary" variant="bodySmall" style={{ fontStyle: 'italic', marginBottom: 4 }}>
-                {activeLegalDoc?.desc}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Ionicons name="warning" size={22} color={colors.critical} />
+              <AppText variant="h3" weight="bold" style={{ flex: 1 }}>
+                Delete your account?
               </AppText>
-              {activeLegalDoc?.paragraphs.map((p, idx) => (
-                <View key={idx} style={{ backgroundColor: colors.background, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border }}>
-                  <AppText style={{ color: colors.textPrimary, fontSize: 13, lineHeight: 20 }}>
-                    {p}
-                  </AppText>
-                </View>
-              ))}
-            </ScrollView>
-
-            <View style={{ paddingTop: spacing.sm }}>
-              <AppButton label="Close Document" variant="secondary" onPress={() => setActiveLegalDoc(null)} />
+            </View>
+            <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 20 }}>
+              This is permanent and cannot be undone. Your profile, posts, comments, messages, uploaded files and
+              verification documents will be erased, and you will be signed out everywhere. Backups roll off within 30
+              days.
+            </AppText>
+            <AppTextField
+              label="Type DELETE to confirm"
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              placeholder="DELETE"
+              editable={!deletingAccount}
+            />
+            {deleteError ? (
+              <AppText style={{ color: colors.critical, fontSize: 12, lineHeight: 16 }}>{deleteError}</AppText>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label="Cancel"
+                  variant="secondary"
+                  onPress={() => setDeleteModalOpen(false)}
+                  disabled={deletingAccount}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={deletingAccount ? 'Deleting…' : 'Delete forever'}
+                  onPress={handleDeleteAccount}
+                  loading={deletingAccount}
+                  disabled={deletingAccount || deleteConfirmText.trim() !== 'DELETE'}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Contact Support / Report a Problem Modal */}

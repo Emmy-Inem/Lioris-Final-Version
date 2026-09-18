@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { Announcement } from './types';
 import { generateUUID } from '../utils/uuid';
+import { escapePostgrestLike } from '../utils/postgrest';
 
 // Announcements this session has *successfully* written to Supabase, kept
 // here only so they render instantly before the next refetch. Never mixed
@@ -115,7 +116,12 @@ export async function publishAnnouncement(
  for (;;) {
  let query = supabase.from('profiles').select('id');
  if (userCampus && userCampus !== 'GLOBAL') {
- query = query.or(`campus_code.eq.${userCampus},campus_code.eq.GLOBAL`);
+ const safeCampus = escapePostgrestLike(String(userCampus)).replace(/[^A-Za-z0-9_-]/g, '');
+ if (safeCampus) {
+ query = query.or(`campus_code.eq.${safeCampus},campus_code.eq.GLOBAL`);
+ } else {
+ query = query.eq('campus_code', 'GLOBAL');
+ }
  }
  if (payload.audienceScope === 'student') {
  query = query.eq('role', 'student');

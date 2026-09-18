@@ -12,11 +12,13 @@
 // Deployment:
 //   supabase functions deploy overpass-proxy --no-verify-jwt
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
+import { readJsonBody } from '../_shared/body.ts';
+import { clientIp, consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
+
+const MAX_BODY_BYTES = 1024; // the client only ever sends { lat, lon }
+const IP_RATE_LIMIT = 30; // requests per IP per 10 minutes (fails OPEN: public data)
+const IP_RATE_WINDOW_SECONDS = 600;
 
 // Overpass requires a non-browser, identifying User-Agent with contact details.
 const USER_AGENT = 'Lioris/1.0 (contact: https://lioris-final-version.vercel.app)';
@@ -31,28 +33,29 @@ const RADIUS_METERS = 2500;
 
 const cache = new Map<string, { at: number; body: string }>();
 
-function json(body: unknown, status: number): Response {
-  return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
-
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  const json = (body: unknown, status: number, extra: Record<string, string> = {}) =>
+    jsonResponse(req, body, status, extra);
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  let body: { lat?: unknown; lon?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: 'Invalid JSON request body.' }, 400);
-  }
+  const parsed = await readJsonBody<{ lat?: unknown; lon?: unknown }>(req, MAX_BODY_BYTES);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const body = parsed.value;
 
   const lat = Number(body?.lat);
   const lon = Number(body?.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
     return json({ error: 'lat and lon must be valid coordinates.' }, 400);
+  }
+
+  // Per-IP rate limit. Best effort: if the limiter is unavailable (no service key or
+  // RPC error) we fail OPEN because this endpoint only serves public map data.
+  const admin = createServiceClient();
+  if (admin) {
+    const verdict = await consumeRateLimit(admin, `overpass:${clientIp(req)}`, IP_RATE_LIMIT, IP_RATE_WINDOW_SECONDS);
+    if (verdict === 'limited') return json({ error: 'Too many requests.' }, 429, { 'Retry-After': '600' });
   }
 
   // ~1km grid so nearby requests share a cache entry.
@@ -93,6 +96,7 @@ Deno.serve(async (req: Request) => {
     cache.set(key, { at: Date.now(), body: text });
     return json(text, 200);
   } catch {
-    return json({ error: 'Overpass upstream unavailable.', attempts }, 502);
+    console.error('[overpass-proxy] all mirrors failed:', attempts.join(' | '));
+    return json({ error: 'Overpass upstream unavailable.' }, 502);
   }
 });

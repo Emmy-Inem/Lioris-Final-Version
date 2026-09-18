@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, FlatList, Image, KeyboardAvoidingView, Linking, Platform, Pressable, TextInput, View } from 'react-native';
+import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -412,7 +413,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                   />
                 ) : item.mediaUrl ? (
                   <Pressable
-                    onPress={() => Linking.openURL(item.mediaUrl!)}
+                    onPress={() => { void openExternalUrl(item.mediaUrl!); }}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',

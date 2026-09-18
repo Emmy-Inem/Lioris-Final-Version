@@ -249,7 +249,7 @@ class CampusRadioManager {
       this.audioElement.addEventListener('error', () => {
         console.warn('[CampusRadio] Audio playback error on station:', this.state.currentStation.name);
         if (this.state.currentStation.backupStreamUrl && this.audioElement.src !== this.state.currentStation.backupStreamUrl) {
-          console.log('[CampusRadio] Switching to backup stream URL...');
+          if (__DEV__) console.log('[CampusRadio] Switching to backup stream URL...');
           this.audioElement.src = this.state.currentStation.backupStreamUrl;
           this.audioElement.play().catch(() => {});
         } else {

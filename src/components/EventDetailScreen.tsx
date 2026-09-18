@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -12,6 +11,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -431,22 +431,7 @@ export function EventDetailScreen() {
     const query = matchedLandmark
       ? `${matchedLandmark.latitude},${matchedLandmark.longitude}`
       : encodeURIComponent(`${event.location} ${event.campusCode || ''} University Campus`);
-    const mapsUrl =
-      Platform.OS === 'ios'
-        ? `maps://?q=${query}`
-        : `https://www.google.com/maps/search/?api=1&query=${query}`;
-
-    Linking.canOpenURL(mapsUrl)
-      .then((supported) => {
-        if (supported) {
-          Linking.openURL(mapsUrl);
-        } else {
-          Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-        }
-      })
-      .catch(() => {
-        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-      });
+    void openExternalUrl(`https://www.google.com/maps/search/?api=1&query=${query}`);
   }
 
   function handleGoogleCalendar() {
@@ -461,8 +446,8 @@ export function EventDetailScreen() {
     )}&dates=${startTime}/${endTime}&details=${encodeURIComponent(event.description ?? '')}&location=${encodeURIComponent(
       event.location
     )}`;
-    Linking.openURL(gcalUrl).catch(() => {
-      Alert.alert('Calendar', 'Could not open Google Calendar link.');
+    openExternalUrl(gcalUrl).then((opened) => {
+      if (!opened) Alert.alert('Calendar', 'Could not open Google Calendar link.');
     });
   }
 

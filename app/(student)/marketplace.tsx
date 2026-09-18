@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { FlatList, Pressable, ScrollView, TextInput, View, Platform } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -28,7 +28,7 @@ const CATEGORIES = [
 const CONDITIONS = ['All Conditions', 'New', 'Like New', 'Fair'];
 
 export default function MarketplaceScreen() {
- const { colors, spacing, radius, isDark } = useTheme();
+ const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
  const toast = useToast();
  const queryClient = useQueryClient();
@@ -38,6 +38,22 @@ export default function MarketplaceScreen() {
  const [condition, setCondition] = useState('All Conditions');
  const [sellModalOpen, setSellModalOpen] = useState(false);
  const { campusCode } = useCampusScope();
+
+ const categoriesScrollRef = useRef<ScrollView>(null);
+
+ useEffect(() => {
+   if (Platform.OS !== 'web') return;
+   const node = (categoriesScrollRef.current as any)?.getScrollableNode?.() || (categoriesScrollRef.current as any);
+   if (!node) return;
+   const handleWheel = (e: WheelEvent) => {
+     if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && node.scrollWidth > node.clientWidth) {
+       e.preventDefault();
+       node.scrollLeft += e.deltaY;
+     }
+   };
+   node.addEventListener('wheel', handleWheel, { passive: false });
+   return () => node.removeEventListener('wheel', handleWheel);
+ }, []);
 
  const { data: listings, isLoading } = useQuery({
  queryKey: ['marketplace', debouncedQuery, category, condition, campusCode],
@@ -129,7 +145,16 @@ export default function MarketplaceScreen() {
               </View>
 
               {/* Category Pills */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView
+                ref={categoriesScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={[
+                  { flex: 1, minWidth: 0 },
+                  Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
+                ]}
+                contentContainerStyle={{ gap: 8 }}
+              >
                 {CATEGORIES.map((cat) => {
                   const isSelected = category === cat.id;
                   return (

@@ -21,7 +21,11 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { recordAuditLogEntry, listAuditLogEntries } from '@/api/auditLog';
 import { grantVerification } from '@/api/profile';
-import { adminTriggerPasswordReset, adminUpdateUserProfile } from '@/api/auth';
+import {
+ adminTriggerPasswordReset,
+ adminUpdateUserProfile,
+ IMPERSONATION_REASON_MIN_LENGTH,
+} from '@/api/auth';
 import { adminDirectVerifyUser } from '@/api/verification';
 import { useToast } from '@/context/ToastContext';
 import { AuditLogEntry } from '@/api/types';
@@ -41,6 +45,46 @@ interface DirectoryUser {
  isVerified: boolean;
  trustScore: number;
  joinedDate: string;
+}
+
+/**
+ * Cryptographically random one-time password (never shown to anyone - the user
+ * sets their own via the invitation / password-reset email).
+ */
+function generateSecureTempPassword(): string {
+ const cryptoObj = (globalThis as any).crypto as Crypto | undefined;
+ if (!cryptoObj || typeof cryptoObj.getRandomValues !== 'function') {
+ throw new Error('A secure random number generator is not available on this device, so an account cannot be provisioned safely.');
+ }
+ const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+ const lower = 'abcdefghijkmnopqrstuvwxyz';
+ const digits = '23456789';
+ const special = '!@#$%^&*-_=+?';
+ const all = upper + lower + digits + special;
+ const pick = (set: string, n: number) => {
+ // Rejection sampling to avoid modulo bias.
+ const out: string[] = [];
+ const limit = 256 - (256 % set.length);
+ while (out.length < n) {
+ const buf = cryptoObj.getRandomValues(new Uint8Array(n * 2));
+ for (let i = 0; i < buf.length && out.length < n; i++) {
+ if (buf[i] < limit) out.push(set[buf[i] % set.length]);
+ }
+ }
+ return out;
+ };
+ const chars = [...pick(upper, 2), ...pick(lower, 2), ...pick(digits, 2), ...pick(special, 2), ...pick(all, 16)];
+ // Fisher-Yates shuffle with secure randomness.
+ for (let i = chars.length - 1; i > 0; i--) {
+ const limit = 256 - (256 % (i + 1));
+ let r = 0;
+ do {
+ r = cryptoObj.getRandomValues(new Uint8Array(1))[0];
+ } while (r >= limit);
+ const j = r % (i + 1);
+ [chars[i], chars[j]] = [chars[j], chars[i]];
+ }
+ return chars.join('');
 }
 
 const ROLE_FILTERS = ['All Roles', 'Student', 'Alumni', 'Staff', 'Admin'];
@@ -127,6 +171,11 @@ export default function UserDirectoryScreen() {
  const [newDepartment, setNewDepartment] = useState('Computer Science');
  const [newRole, setNewRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
  const [newCampus, setNewCampus] = useState('UI');
+ const [isProvisioning, setIsProvisioning] = useState(false);
+
+ // Impersonation reason prompt (Alert.prompt is iOS-only, so use an inline modal)
+ const [impersonateTarget, setImpersonateTarget] = useState<DirectoryUser | null>(null);
+ const [impersonateReason, setImpersonateReason] = useState('');
 
   // Edit User Modal State
   const toast = useToast();
@@ -237,12 +286,13 @@ export default function UserDirectoryScreen() {
 
  const username = newEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
  const matricNo = newMatric.trim() || `${newCampus}/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
- const { generateUUID } = await import('@/utils/uuid');
- let userId = generateUUID();
- let provisionSucceeded = false;
- const tempPassword = `Lioris#${Math.floor(100000 + Math.random() * 900000)}!`;
+ if (isProvisioning) return;
+ setIsProvisioning(true);
+ const email = newEmail.trim();
+ let userId: string | null = null;
 
  try {
+ const tempPassword = generateSecureTempPassword();
  const { createClient } = await import('@supabase/supabase-js');
  const { SUPABASE_URL, SUPABASE_ANON_KEY, supabase } = await import('@/api/supabase');
 
@@ -256,7 +306,7 @@ export default function UserDirectoryScreen() {
  });
 
  const { data, error } = await isolatedAuthClient.auth.signUp({
- email: newEmail.trim(),
+ email,
  password: tempPassword,
  options: {
  data: {
@@ -269,12 +319,16 @@ export default function UserDirectoryScreen() {
  },
  });
 
- if (!error && data?.user?.id) {
+ if (error || !data?.user?.id) {
+ throw new Error(error?.message || 'The account could not be created.');
+ }
  userId = data.user.id;
- provisionSucceeded = true;
- await supabase.from('profiles').upsert({
+
+ // Admins have full profile access under RLS; a failure here means the
+ // account exists but its profile fields are incomplete - say so.
+ const { error: profileError } = await supabase.from('profiles').upsert({
  id: userId,
- email: newEmail.trim(),
+ email,
  full_name: newFullName.trim(),
  username,
  role: newRole.toLowerCase(),
@@ -284,18 +338,19 @@ export default function UserDirectoryScreen() {
  verification_status: 'verified',
  is_suspended: false,
  });
- } else if (error) {
- console.warn('[UserDirectory] Supabase isolated signUp note:', error.message);
+ if (profileError) {
+ throw new Error(`The login was created but its profile could not be completed (${profileError.message}). Review it in the directory.`);
  }
- } catch (err) {
- console.warn('[UserDirectory] Auth provision exception:', err);
- }
+
+ // The temporary password is never displayed: the user receives a
+ // password-reset / invitation email and chooses their own.
+ const invite = await adminTriggerPasswordReset(email);
 
  const newUser: DirectoryUser = {
  id: userId,
  fullName: newFullName.trim(),
  username,
- email: newEmail.trim(),
+ email,
  role: newRole,
  campus: newCampus,
  department: newDepartment.trim() || 'General Studies',
@@ -305,7 +360,6 @@ export default function UserDirectoryScreen() {
  trustScore: 85,
  joinedDate: 'Just now',
  };
-
  setUsers((prev) => [newUser, ...prev]);
 
  recordAuditLogEntry({
@@ -322,16 +376,22 @@ export default function UserDirectoryScreen() {
  setNewEmail('');
  setNewMatric('');
 
- if (provisionSucceeded) {
+ if (invite.success) {
  Alert.alert(
- 'User Provisioned in Supabase',
- `${newUser.fullName} has been registered with ID ${userId.slice(0, 8)}...\n\nTemporary Password: ${tempPassword}\n\nPlease share this temporary password with the user.`,
+ 'User Provisioned',
+ `${newUser.fullName} has been registered with ID ${userId.slice(0, 8)}...\n\nAn invitation email was sent to ${email} so they can set their own password.`,
  );
  } else {
  Alert.alert(
- 'User Provisioned Locally',
- `${newUser.fullName} has been created in the local directory for this session.\n\nTemporary Password: ${tempPassword}`,
+ 'User Provisioned - Invitation Not Sent',
+ `${newUser.fullName} was registered, but the invitation email could not be sent (${invite.message}). Use the password reset option when editing the user to retry.`,
  );
+ }
+ } catch (err: any) {
+ console.warn('[UserDirectory] Auth provision exception:', err);
+ Alert.alert('Could Not Provision User', err?.message || 'The account could not be created. Please try again.');
+ } finally {
+ setIsProvisioning(false);
  }
  }
 
@@ -573,24 +633,33 @@ export default function UserDirectoryScreen() {
  'View As (Support Mode)?',
  `This will temporarily switch your session to view the app as ${target.fullName} (@${target.username}) for support purposes.\n\n` +
  `You will see exactly what they see, including their private data. This is time-boxed and automatically ends in 15 minutes, ` +
- `and is fully audit-logged - both starting and ending this session are recorded against your admin account.`,
+ `and is fully audit-logged - both starting and ending this session are recorded against your admin account.\n\n` +
+ `You will be asked for a reason next.`,
  [
  { text: 'Cancel', style: 'cancel' },
  {
- text: 'View As User',
+ text: 'Continue',
  style: 'destructive',
- onPress: () => confirmImpersonate(target),
+ onPress: () => {
+ setImpersonateReason('');
+ setImpersonateTarget(target);
+ },
  },
  ],
  );
  }
 
- async function confirmImpersonate(target: DirectoryUser) {
+ async function confirmImpersonate(target: DirectoryUser, reason: string) {
  if (isImpersonating) return;
+ if (reason.trim().length < IMPERSONATION_REASON_MIN_LENGTH) {
+ Alert.alert('Reason Required', `Please describe why you need to view as this user (at least ${IMPERSONATION_REASON_MIN_LENGTH} characters).`);
+ return;
+ }
  setIsImpersonating(true);
  try {
  setSelectedUser(null);
- await beginImpersonation(target.id);
+ setImpersonateTarget(null);
+ await beginImpersonation(target.id, reason.trim());
  } catch (err: any) {
  console.warn('[UserDirectory] beginImpersonation error:', err);
  Alert.alert('Could Not Start Support Mode', err?.message || 'Unable to start impersonation. Please try again.');
@@ -1151,6 +1220,41 @@ export default function UserDirectoryScreen() {
  </View>
  </Modal>
 
+ {/* Impersonation reason prompt */}
+ <Modal visible={!!impersonateTarget} transparent animationType="fade" onRequestClose={() => setImpersonateTarget(null)}>
+ <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: spacing.lg }}>
+ <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: spacing.lg, maxWidth: 480, width: '100%', alignSelf: 'center' }}>
+ <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+ Reason for Support Mode
+ </AppText>
+ <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+ {impersonateTarget ? `Viewing as ${impersonateTarget.fullName}. ` : ''}This reason is recorded in the audit log.
+ </AppText>
+ <AppTextField
+ label="Reason (min. 10 characters)"
+ value={impersonateReason}
+ onChangeText={setImpersonateReason}
+ placeholder="e.g. Support ticket #123 - cannot see enrolled courses"
+ multiline
+ numberOfLines={3}
+ />
+ <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+ <View style={{ flex: 1 }}>
+ <AppButton label="Cancel" variant="secondary" onPress={() => setImpersonateTarget(null)} fullWidth />
+ </View>
+ <View style={{ flex: 1 }}>
+ <AppButton
+ label={isImpersonating ? 'Starting...' : 'View As User'}
+ onPress={() => impersonateTarget && confirmImpersonate(impersonateTarget, impersonateReason)}
+ disabled={isImpersonating || impersonateReason.trim().length < IMPERSONATION_REASON_MIN_LENGTH}
+ fullWidth
+ />
+ </View>
+ </View>
+ </View>
+ </View>
+ </Modal>
+
  {/* Provision New User Modal */}
  <Modal visible={createModalOpen} transparent animationType="slide"onRequestClose={() => setCreateModalOpen(false)}>
  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
@@ -1238,7 +1342,8 @@ export default function UserDirectoryScreen() {
                 </View>
 
  <AppButton
- label="Provision & Issue Credentials"onPress={handleCreateUser}
+ label={isProvisioning ? 'Provisioning...' : 'Provision & Send Invitation'}onPress={handleCreateUser}
+ disabled={isProvisioning}
  fullWidth
  />
  </ScrollView>

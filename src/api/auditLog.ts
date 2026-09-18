@@ -2,54 +2,66 @@ import { supabase } from './supabase';
 import { AuditLogAction, AuditLogEntry, UserRole } from './types';
 import { getSessionUser } from '@/auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
-
-let auditLogState: AuditLogEntry[] = [];
+import { assertUuid } from '../utils/postgrest';
 
 export interface RecordAuditLogEntryPayload {
- action: AuditLogAction;
- summary: string;
- targetType: AuditLogEntry['targetType'];
- targetId: string;
- reason?: string;
- institutionCode?: string;
+  action: AuditLogAction;
+  summary: string;
+  targetType: AuditLogEntry['targetType'];
+  targetId: string;
+  reason?: string;
+  institutionCode?: string;
 }
 
-export async function recordAuditLogEntry(payload: RecordAuditLogEntryPayload): Promise<AuditLogEntry> {
- const actor = await getSessionUser();
- const entryId = generateUUID();
- const entry: AuditLogEntry = {
- id: entryId,
- actorId: actor?.id ?? 'system',
- actorName: actor?.fullName ?? 'Administrator',
- actorRole: (actor?.role as UserRole) ?? 'admin',
- createdAt: new Date().toISOString(),
- ...payload,
- };
+/**
+ * The entry as submitted, plus whether the database accepted it. `persisted`
+ * is false when the insert failed (RLS, network...) - the entry is then NOT in
+ * the audit trail and must not be presented as if it were.
+ *
+ * actorName / actorRole are display hints only; the authoritative actor is the
+ * server-side `actor_id` (auth.uid()) and server-side triggers.
+ */
+export interface RecordedAuditLogEntry extends AuditLogEntry {
+  persisted: boolean;
+}
 
- try {
- const isTargetUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.targetId);
- await supabase.from('audit_logs').insert({
- id: entryId,
- actor_id: actor?.id || null,
- action: payload.action,
- entity_type: payload.targetType,
- entity_id: isTargetUUID ? payload.targetId : null,
- metadata: {
- summary: payload.summary,
- reason: payload.reason,
- institutionCode: payload.institutionCode,
- targetIdRaw: payload.targetId,
- actorName: actor?.fullName || 'Administrator',
- actorRole: actor?.role || 'admin',
- },
- created_at: entry.createdAt,
- });
- } catch (err) {
- console.warn('[AuditLog] Supabase write fallback:', err);
- }
+export async function recordAuditLogEntry(payload: RecordAuditLogEntryPayload): Promise<RecordedAuditLogEntry> {
+  const actor = await getSessionUser();
+  const entryId = generateUUID();
+  const entry: AuditLogEntry = {
+    id: entryId,
+    actorId: actor?.id ?? 'system',
+    actorName: actor?.fullName ?? 'Administrator',
+    actorRole: (actor?.role as UserRole) ?? 'admin',
+    createdAt: new Date().toISOString(),
+    ...payload,
+  };
 
- auditLogState = [entry, ...auditLogState];
- return entry;
+  try {
+    const isTargetUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.targetId);
+    const { error } = await supabase.from('audit_logs').insert({
+      id: entryId,
+      actor_id: actor?.id || null,
+      action: payload.action,
+      entity_type: payload.targetType,
+      entity_id: isTargetUUID ? payload.targetId : null,
+      metadata: {
+        summary: payload.summary,
+        reason: payload.reason,
+        institutionCode: payload.institutionCode,
+        targetIdRaw: payload.targetId,
+        // Display hints only - never used as authority.
+        actorName: actor?.fullName || 'Administrator',
+        actorRole: actor?.role || 'admin',
+      },
+      created_at: entry.createdAt,
+    });
+    if (error) throw error;
+    return { ...entry, persisted: true };
+  } catch (err) {
+    console.error('[AuditLog] Failed to persist audit entry:', err);
+    return { ...entry, persisted: false };
+  }
 }
 
 export interface AuditLogQuery {
@@ -73,7 +85,8 @@ export async function listAuditLogEntries(query: AuditLogQuery = {}): Promise<Au
  .limit(100);
 
  if (query.involvingUserId) {
- queryBuilder = queryBuilder.or(`actor_id.eq.${query.involvingUserId},entity_id.eq.${query.involvingUserId}`);
+ const involvingId = assertUuid(query.involvingUserId, 'user id');
+ queryBuilder = queryBuilder.or(`actor_id.eq.${involvingId},entity_id.eq.${involvingId}`);
  }
  if (query.action) {
  queryBuilder = queryBuilder.eq('action', query.action);
@@ -81,12 +94,17 @@ export async function listAuditLogEntries(query: AuditLogQuery = {}): Promise<Au
 
  const { data, error } = await queryBuilder;
 
- if (!error && data && data.length > 0) {
- return data.map((row: any) => ({
+ if (error) throw error;
+ if (data && data.length > 0) {
+ let rows = data;
+ if (query.institutionCode) {
+ rows = rows.filter((row: any) => row.metadata?.institutionCode === query.institutionCode);
+ }
+ return rows.map((row: any) => ({
  id: row.id,
  actorId: row.actor_id || 'system',
- actorName: row.metadata?.actorName || row.profiles?.full_name || 'Administrator',
- actorRole: (row.metadata?.actorRole || row.profiles?.role || 'admin') as UserRole,
+ actorName: row.profiles?.full_name || row.metadata?.actorName || 'Administrator',
+ actorRole: (row.profiles?.role || row.metadata?.actorRole || 'admin') as UserRole,
  action: row.action as AuditLogAction,
  summary: row.metadata?.summary || `${row.action} on ${row.entity_type}`,
  targetType: row.entity_type as AuditLogEntry['targetType'],
@@ -97,13 +115,10 @@ export async function listAuditLogEntries(query: AuditLogQuery = {}): Promise<Au
  }));
  }
  } catch (err) {
- console.warn('[AuditLog] Supabase query fallback:', err);
+ console.error('[AuditLog] Failed to load audit entries:', err);
  }
 
- let results = [...auditLogState];
- if (query.action) results = results.filter((e) => e.action === query.action);
- if (query.institutionCode) results = results.filter((e) => e.institutionCode === query.institutionCode);
- return results;
+ return [];
 }
 
 export const listAuditLog = listAuditLogEntries;

@@ -25,8 +25,7 @@ type ModalKey =
   | 'paymentGateway'
   | 'escrowConfig'
   | 'legacyVault'
-  | 'webrtcKeys'
-  | 'aiKeys'
+  | 'serverSecrets'
   | 'toxicityThresholds'
   | 'cloudStorage'
   | 'globalPush'
@@ -59,10 +58,6 @@ export default function SuperAdminConfigScreen() {
   const [cloudStoragePdfMb, setCloudStoragePdfMb] = useState('25');
   const [pushTitle, setPushTitle] = useState('');
   const [pushBody, setPushBody] = useState('');
-  const [zegoAppId, setZegoAppId] = useState('');
-  const [zegoServerSecret, setZegoServerSecret] = useState('');
-  const [openAiKey, setOpenAiKey] = useState('');
-  const [geminiKey, setGeminiKey] = useState('');
 
   // Hydrate settings on mount from local storage / remote cache
   useEffect(() => {
@@ -107,19 +102,10 @@ export default function SuperAdminConfigScreen() {
           if (typeof parsed.scoreLimit === 'number') setToxicityScoreLimit(parsed.scoreLimit);
         }
 
-        const cachedWebrtc = localStorage.getItem('lioris_setting_webrtc_keys');
-        if (cachedWebrtc) {
-          const parsed = JSON.parse(cachedWebrtc);
-          if (parsed.zegoAppId) setZegoAppId(parsed.zegoAppId);
-          if (parsed.zegoServerSecret) setZegoServerSecret(parsed.zegoServerSecret);
-        }
-
-        const cachedAiKeys = localStorage.getItem('lioris_setting_ai_service_keys');
-        if (cachedAiKeys) {
-          const parsed = JSON.parse(cachedAiKeys);
-          if (parsed.openAiKey) setOpenAiKey(parsed.openAiKey);
-          if (parsed.geminiKey) setGeminiKey(parsed.geminiKey);
-        }
+        // Server secrets (AI / video SDK) are never stored in the app. Purge any
+        // copy an older build may have cached in this browser.
+        localStorage.removeItem('lioris_setting_webrtc_keys');
+        localStorage.removeItem('lioris_setting_ai_service_keys');
       } catch {}
     }
   }, []);
@@ -343,54 +329,6 @@ export default function SuperAdminConfigScreen() {
     }
   }
 
-  async function handleSaveWebrtcKeys() {
-    setIsSaving(true);
-    try {
-      const keys = {
-        zegoAppId: zegoAppId.trim(),
-        zegoServerSecret: zegoServerSecret.trim(),
-      };
-      await persistSetting('webrtc_keys', keys, 'ZegoCloud/Agora Audio/Video Call provider keys');
-      await recordAuditLogEntry({
-        action: 'platform_config_updated',
-        summary: 'Updated WebRTC/Video SDK provider credentials',
-        targetType: 'platform_config',
-        targetId: 'webrtc_keys',
-        reason: 'Video SDK provider configuration update',
-      });
-      Alert.alert('Keys Saved', 'WebRTC/Video SDK credentials updated in the database.');
-      setActiveModal(null);
-    } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not save WebRTC keys.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function handleSaveAiKeys() {
-    setIsSaving(true);
-    try {
-      const keys = {
-        openAiKey: openAiKey.trim(),
-        geminiKey: geminiKey.trim(),
-      };
-      await persistSetting('ai_service_keys', keys, 'OpenAI / Gemini integration keys');
-      await recordAuditLogEntry({
-        action: 'platform_config_updated',
-        summary: 'Updated AI service provider credentials',
-        targetType: 'platform_config',
-        targetId: 'ai_service_keys',
-        reason: 'AI service provider configuration update',
-      });
-      Alert.alert('Keys Saved', 'AI service credentials updated in the database.');
-      setActiveModal(null);
-    } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not save AI service keys.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   /**
    * Maintenance mode is platform-wide, so a failed write has to be
    * reported - the toggle flipping on screen is not evidence it stuck.
@@ -498,10 +436,7 @@ export default function SuperAdminConfigScreen() {
 
  <Section number={4} title="Third-Party API & Integration"emoji="">
  <Row
- title="WebRTC/Video SDK Keys"description="ZegoCloud/Agora Audio/Video Call provider keys."actionLabel="Manage"onPress={() => setActiveModal('webrtcKeys')}
- />
- <Row
- title="AI Service Keys"description="OpenAI / Gemini integration keys."actionLabel="Manage"onPress={() => setActiveModal('aiKeys')}
+ title="Server Secrets (AI, Video SDK)"description="How provider secrets are managed - never stored in the app."actionLabel="Info"onPress={() => setActiveModal('serverSecrets')}
  last
  />
  </Section>
@@ -682,30 +617,20 @@ export default function SuperAdminConfigScreen() {
         </AppText>
       </AdminConfigModal>
 
-      {/* 9. WebRTC / Video SDK Keys */}
+      {/* 9. Server secrets (informational only) */}
       <AdminConfigModal
-        visible={activeModal === 'webrtcKeys'}
+        visible={activeModal === 'serverSecrets'}
         onClose={() => setActiveModal(null)}
-        title="WebRTC/Video SDK Keys"
-        description="ZegoCloud/Agora Audio/Video Call provider keys."
-        onConfirm={handleSaveWebrtcKeys}
-        confirmLabel={isSaving ? 'Saving...' : 'Save Keys'}
+        title="Server Secrets"
+        description="AI and video SDK provider secrets are not configured here."
+        onConfirm={() => setActiveModal(null)}
+        confirmLabel="Close"
       >
-        <AppTextField label="Zego App ID" value={zegoAppId} onChangeText={setZegoAppId} placeholder="e.g. 1234567890" autoCapitalize="none" />
-        <AppTextField label="Zego Server Secret" value={zegoServerSecret} onChangeText={setZegoServerSecret} placeholder="Server secret" autoCapitalize="none" />
-      </AdminConfigModal>
-
-      {/* 10. AI Service Keys */}
-      <AdminConfigModal
-        visible={activeModal === 'aiKeys'}
-        onClose={() => setActiveModal(null)}
-        title="AI Service Keys"
-        description="OpenAI / Gemini integration keys."
-        onConfirm={handleSaveAiKeys}
-        confirmLabel={isSaving ? 'Saving...' : 'Save Keys'}
-      >
-        <AppTextField label="OpenAI API Key" value={openAiKey} onChangeText={setOpenAiKey} placeholder="sk-..." autoCapitalize="none" />
-        <AppTextField label="Gemini API Key" value={geminiKey} onChangeText={setGeminiKey} placeholder="AIza..." autoCapitalize="none" />
+        <AppText variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+          Secrets such as the Gemini/OpenAI API keys and the Zego server secret are managed on the server with
+          {'"supabase secrets set"'} and are read only by edge functions. They are never stored in the app or in
+          the platform database.
+        </AppText>
       </AdminConfigModal>
 
       {/* 11. Automated Toxicity Thresholds */}

@@ -31,6 +31,29 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ['remote-notification'],
     },
+    // Apple privacy manifest (PrivacyInfo.xcprivacy). Keep in sync with
+    // docs/compliance/records-of-processing.md and the Privacy Policy.
+    privacyManifests: {
+      NSPrivacyTracking: false,
+      NSPrivacyTrackingDomains: [],
+      NSPrivacyAccessedAPITypes: [
+        { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults', NSPrivacyAccessedAPITypeReasons: ['CA92.1'] },
+        { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp', NSPrivacyAccessedAPITypeReasons: ['C617.1'] },
+        { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime', NSPrivacyAccessedAPITypeReasons: ['35F9.1'] },
+        { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace', NSPrivacyAccessedAPITypeReasons: ['E174.1'] },
+      ],
+      NSPrivacyCollectedDataTypes: [
+        'NSPrivacyCollectedDataTypeEmailAddress',
+        'NSPrivacyCollectedDataTypeName',
+        'NSPrivacyCollectedDataTypePhotosorVideos',
+        'NSPrivacyCollectedDataTypeOtherUserContent',
+      ].map((type) => ({
+        NSPrivacyCollectedDataType: type,
+        NSPrivacyCollectedDataTypeLinked: true,
+        NSPrivacyCollectedDataTypeTracking: false,
+        NSPrivacyCollectedDataTypePurposes: ['NSPrivacyCollectedDataTypePurposeAppFunctionality'],
+      })),
+    },
   },
   android: {
     package: 'app.lioris.mobile',
@@ -39,15 +62,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/images/favicon.png',
       backgroundColor: '#0B1220',
     },
-    permissions: [
-      'CAMERA',
-      'READ_EXTERNAL_STORAGE',
-      'WRITE_EXTERNAL_STORAGE',
-      'READ_MEDIA_IMAGES',
-      'READ_MEDIA_VIDEO',
-      'POST_NOTIFICATIONS',
-      'VIBRATE',
-    ],
+    // Gallery access goes through the system photo picker (expo-image-picker),
+    // so no broad storage/media permissions are declared here. expo-image-picker
+    // itself declares READ/WRITE_EXTERNAL_STORAGE with maxSdkVersion=32, which
+    // Android 13+ (and Google Play's photo/video policy) never sees. We do NOT
+    // block those two globally: on Android 12 and below the app still calls
+    // ImagePicker.requestMediaLibraryPermissionsAsync(), which needs them.
+    permissions: ['CAMERA', 'POST_NOTIFICATIONS', 'VIBRATE'],
+    blockedPermissions: ['android.permission.SYSTEM_ALERT_WINDOW'],
   },
   web: {
     favicon: './assets/images/favicon.png',

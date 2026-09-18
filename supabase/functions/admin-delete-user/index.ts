@@ -1,163 +1,145 @@
 // admin-delete-user
 //
-// Supabase Edge Function that permanently deletes a user's Auth account
-// (login credentials) in addition to their `profiles` row.
+// Supabase Edge Function that permanently and completely erases another user's
+// account: Storage objects, all database rows (purge_user_data) and the Auth login.
 //
 // This exists because `supabase.auth.admin.deleteUser()` requires the
 // service-role key, and a service-role key must NEVER be shipped inside the
-// client app (Expo/React Native bundle) - anyone with the compiled app could
-// extract it and gain full database admin rights. Instead this function runs
-// server-side, reads the service-role key from a server-only secret, and the
-// client calls it via `supabase.functions.invoke()` passing only the
-// caller's own auth token. The function verifies that token and the
-// caller's admin role before doing anything privileged.
+// client app (Expo/React Native bundle). This function runs server-side, reads the
+// key from a server-only secret, and verifies the caller before doing anything
+// privileged.
 //
-// Deployment:
+// Guard rails (all enforced server-side):
+//   * caller must be a non-suspended admin AND have an AAL2 (MFA) session
+//     (403 { error: 'mfa_required' } otherwise; set REQUIRE_ADMIN_MFA=false to disable)
+//   * body must include `reason` (string, >= 10 characters) - written to the audit log
+//   * self-deletion is refused (use delete-my-account)
+//   * admin accounts cannot be deleted here: demote first. This also guarantees the
+//     last admin can never be removed through this function.
+//   * shares its erasure routine (_shared/purge.ts) with delete-my-account so admin
+//     deletions never orphan storage files or database rows. Retrying is safe.
+//
+// Request:  POST { targetUserId: uuid, reason: string }
+// Response: { success: true, deletedUserId }
+//
+// Deployment (verify_jwt ON):
 //   supabase functions deploy admin-delete-user
+//   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<service role key> ALLOWED_ORIGINS=<...>
 //
-// Required secret (set once per project, never committed to the repo and
-// never added to any client-side .env file):
-//   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
-//
-// SUPABASE_URL is provided automatically to Edge Functions at runtime.
+// SUPABASE_URL and SUPABASE_ANON_KEY are provided automatically at runtime.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
+import { isUuid, requireAdmin } from '../_shared/auth.ts';
+import { readJsonBody } from '../_shared/body.ts';
+import { createServiceClient } from '../_shared/ratelimit.ts';
+import { eraseUser } from '../_shared/purge.ts';
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function jsonResponse(body: Record<string, unknown>, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
+const MAX_BODY_BYTES = 4096;
+const MIN_REASON_CHARS = 10;
+const MAX_REASON_CHARS = 500;
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405);
 
-  if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405);
-  }
-
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
-
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
+  const admin = createServiceClient();
+  if (!admin) {
     console.error('[admin-delete-user] Missing required environment secrets.');
-    return jsonResponse({ error: 'Server misconfiguration. Missing required secrets.' }, 500);
+    return jsonResponse(req, { error: 'Server misconfiguration. Missing required secrets.' }, 500);
   }
 
-  // --- 1. Extract and verify the caller's JWT ---------------------------
-  const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization');
-  if (!authHeader) {
-    return jsonResponse({ error: 'Missing Authorization header.' }, 401);
+  // --- 1. Caller must be an admin with an MFA (AAL2) session ----------------
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+  const { user: callerUser } = auth.caller;
+
+  // --- 2. Validate the request body -----------------------------------------
+  const parsed = await readJsonBody<{ targetUserId?: unknown; reason?: unknown }>(req, MAX_BODY_BYTES);
+  if (!parsed.ok) return jsonResponse(req, { error: parsed.error }, parsed.status);
+
+  const targetUserId = parsed.value.targetUserId;
+  if (!isUuid(targetUserId)) {
+    return jsonResponse(req, { error: 'targetUserId is required and must be a valid user id.' }, 400);
   }
-
-  // Client scoped to the CALLER's own JWT - used only to verify identity
-  // and role. This client must never be used to perform privileged writes.
-  const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-
-  const {
-    data: { user: callerUser },
-    error: callerAuthError,
-  } = await callerClient.auth.getUser();
-
-  if (callerAuthError || !callerUser) {
-    return jsonResponse({ error: 'Invalid or expired session.' }, 401);
-  }
-
-  // --- 2. Verify caller is an admin --------------------------------------
-  const { data: callerProfile, error: callerProfileError } = await callerClient
-    .from('profiles')
-    .select('role')
-    .eq('id', callerUser.id)
-    .single();
-
-  if (callerProfileError || !callerProfile || callerProfile.role !== 'admin') {
-    return jsonResponse({ error: 'Forbidden. Admin privileges are required to perform this action.' }, 403);
-  }
-
-  // --- 3. Parse and validate the request body ----------------------------
-  let body: { targetUserId?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return jsonResponse({ error: 'Invalid JSON request body.' }, 400);
-  }
-
-  const targetUserId = body?.targetUserId;
-  if (typeof targetUserId !== 'string' || targetUserId.trim().length === 0) {
-    return jsonResponse({ error: 'targetUserId is required and must be a non-empty string.' }, 400);
+  const reason = typeof parsed.value.reason === 'string' ? parsed.value.reason.trim() : '';
+  if (reason.length < MIN_REASON_CHARS || reason.length > MAX_REASON_CHARS) {
+    return jsonResponse(
+      req,
+      { error: `reason is required (${MIN_REASON_CHARS}-${MAX_REASON_CHARS} characters).` },
+      400,
+    );
   }
 
   if (targetUserId === callerUser.id) {
     return jsonResponse(
+      req,
       { error: 'You cannot delete your own account through this action. Use account settings instead.' },
       400,
     );
   }
 
-  // --- 4. Perform the privileged deletion with a service-role client -----
-  const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
   try {
-    // (a) Delete the Auth user FIRST. If this fails nothing has changed, whereas
-    // deleting the profile first used to leave a login with no profile behind
-    // whenever the Auth deletion failed. profiles -> auth.users is ON DELETE
-    // CASCADE, so this normally removes the profile row too.
-    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(targetUserId);
-
-    if (authDeleteError) {
-      console.error('[admin-delete-user] Failed to delete auth user:', authDeleteError);
-      return jsonResponse({ error: `Failed to delete auth account: ${authDeleteError.message}` }, 500);
-    }
-
-    // (b) Explicit cleanup in case that cascade ever changes (no-op otherwise).
-    const { error: profileDeleteError } = await adminClient
+    // --- 3. Target checks (service role: bypasses RLS) ----------------------
+    const { data: targetProfile, error: profileError } = await admin
       .from('profiles')
-      .delete()
-      .eq('id', targetUserId);
-
-    if (profileDeleteError) {
-      console.error('[admin-delete-user] Failed to delete profile row:', profileDeleteError);
-      return jsonResponse({ error: `Auth account deleted but profile cleanup failed: ${profileDeleteError.message}` }, 500);
+      .select('role')
+      .eq('id', targetUserId)
+      .maybeSingle();
+    if (profileError) {
+      console.error('[admin-delete-user] profile lookup failed:', profileError.message);
+      return jsonResponse(req, { error: 'Unexpected server error while deleting the account.' }, 500);
     }
 
-    // (c) Record an audit log entry for who performed the deletion and when.
-    const { error: auditError } = await adminClient.from('audit_logs').insert({
+    // Admins must be demoted first. Because no admin can be deleted here, this
+    // function can never remove the last remaining admin either.
+    if (targetProfile?.role === 'admin') {
+      return jsonResponse(
+        req,
+        { error: 'Admin accounts cannot be deleted directly. Demote the user first.' },
+        409,
+      );
+    }
+
+    // --- 4. Erase: storage -> DB rows -> Auth user --------------------------
+    try {
+      await eraseUser(admin, targetUserId);
+    } catch (err) {
+      const step = err instanceof Error ? err.message : 'unknown';
+      const cause = (err as { cause?: { message?: string } })?.cause?.message;
+      console.error(`[admin-delete-user] erase failed at ${step}:`, cause ?? '');
+      return jsonResponse(
+        req,
+        { error: 'Failed to fully delete the account. Nothing further was removed; it is safe to retry.', step },
+        500,
+      );
+    }
+
+    // --- 5. Audit (who, whom, why) ------------------------------------------
+    const { error: auditError } = await admin.from('audit_logs').insert({
       actor_id: callerUser.id,
       action: 'user_account_deleted',
       entity_type: 'user',
       entity_id: targetUserId,
       metadata: {
-        summary: `Fully deleted account ${targetUserId} (profile + Auth login) via admin-delete-user Edge Function`,
-        reason: 'Admin-initiated full account deletion',
+        summary: `Fully deleted account ${targetUserId} (storage + data + Auth login) via admin-delete-user`,
+        reason,
+        method: 'admin_delete',
         targetIdRaw: targetUserId,
+        targetRole: targetProfile?.role ?? null,
         actorRole: 'admin',
+        mfa: auth.caller.aal ?? null,
       },
       created_at: new Date().toISOString(),
     });
-
     if (auditError) {
-      // The deletion itself already succeeded; do not fail the request over
-      // a logging error, but surface it server-side for visibility.
-      console.error('[admin-delete-user] Failed to write audit log entry:', auditError);
+      // The deletion already succeeded; surface for visibility, do not fail the request.
+      console.error('[admin-delete-user] Failed to write audit log entry:', auditError.message);
     }
 
-    return jsonResponse({ success: true, deletedUserId: targetUserId }, 200);
+    return jsonResponse(req, { success: true, deletedUserId: targetUserId }, 200);
   } catch (err) {
-    console.error('[admin-delete-user] Unexpected error:', err);
-    return jsonResponse({ error: 'Unexpected server error while deleting the account.' }, 500);
+    console.error('[admin-delete-user] Unexpected error:', err instanceof Error ? err.message : 'unknown');
+    return jsonResponse(req, { error: 'Unexpected server error while deleting the account.' }, 500);
   }
 });

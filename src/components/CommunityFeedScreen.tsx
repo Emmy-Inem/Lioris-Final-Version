@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -122,12 +122,37 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     }
   }, [params.category]);
 
- const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
- const [sortModalOpen, setSortModalOpen] = useState(false);
- const { scope: viewScope, setScope: setViewScope } = useViewScope();
- // activeCampusCode lets an admin's "Explore Other Campus Workspaces" pick
- // (Settings/Workdesk -> Change Workspace Scope) actually change which
- // campus's threads show here too, not just their own home campus.
+  const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
+  const [sortModalOpen, setSortModalOpen] = useState(false);
+  const { scope: viewScope, setScope: setViewScope } = useViewScope();
+
+  // Desktop horizontal channels scrolling ref & wheel listener
+  const desktopChannelsScrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = (desktopChannelsScrollRef.current as any)?.getScrollableNode?.() || (desktopChannelsScrollRef.current as any);
+    if (!node) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && node.scrollWidth > node.clientWidth) {
+        e.preventDefault();
+        node.scrollLeft += e.deltaY;
+      }
+    };
+    node.addEventListener('wheel', handleWheel, { passive: false });
+    return () => node.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  const scrollDesktopChannels = (direction: 'left' | 'right') => {
+    const node = (desktopChannelsScrollRef.current as any)?.getScrollableNode?.() || (desktopChannelsScrollRef.current as any);
+    if (node?.scrollBy) {
+      node.scrollBy({ left: direction === 'left' ? -220 : 220, behavior: 'smooth' });
+    }
+  };
+
+  // activeCampusCode lets an admin's "Explore Other Campus Workspaces" pick
+  // (Settings/Workdesk -> Change Workspace Scope) actually change which
+  // campus's threads show here too, not just their own home campus.
   const { activeCampusCode, homeInstitutionCode } = useCampusScope();
 
   const { data: profile } = useQuery({
@@ -675,56 +700,110 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   })}
                 </View>
 
-                {/* Primary New Thread / Broadcast Button */}
-                <AppButton
-                  label={user?.role === 'admin' ? '+ Post Admin Thread' : '+ Start Discussion'}
-                  variant="primary"
-                  icon="add-circle-outline"
-                  onPress={() => {
-                    haptics.light();
-                    setComposerOpen(true);
-                  }}
-                />
               </View>
             </View>
 
             {/* Desktop Channel Pills & Sort Bar */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8, paddingRight: spacing.sm }}>
-                {CHANNELS.map((ch) => {
-                  const isSelected = selectedChannel === ch.category || (ch.id === 'all' && selectedChannel === null);
-                  return (
-                    <Pressable
-                      key={ch.id}
-                      onPress={() => setSelectedChannel(ch.category)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: radius.pill,
-                        backgroundColor: isSelected ? colors.brandPrimary : colors.surface,
-                        borderWidth: 1,
-                        borderColor: isSelected ? colors.brandPrimary : colors.border,
-                      }}
-                    >
-                      <Ionicons
-                        name={ch.icon}
-                        size={14}
-                        color={isSelected ? '#FFFFFF' : colors.textSecondary}
-                      />
-                      <AppText
-                        variant="bodySmall"
-                        weight={isSelected ? 'bold' : 'medium'}
-                        style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 12 }}
+              <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {/* Desktop Left Scroll Arrow */}
+                <Pressable
+                  onPress={() => scrollDesktopChannels('left')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Scroll channels left"
+                  style={({ hovered }: any) => [
+                    {
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: colors.surface,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      opacity: hovered ? 1 : 0.75,
+                    },
+                    Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                  ]}
+                >
+                  <Ionicons name="chevron-back" size={15} color={colors.textPrimary} />
+                </Pressable>
+
+                <ScrollView
+                  ref={desktopChannelsScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={[
+                    { flex: 1, minWidth: 0 },
+                    Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
+                  ]}
+                  contentContainerStyle={{ gap: 8, paddingRight: spacing.sm }}
+                >
+                  {CHANNELS.map((ch) => {
+                    const isSelected = selectedChannel === ch.category || (ch.id === 'all' && selectedChannel === null);
+                    return (
+                      <Pressable
+                        key={ch.id}
+                        onPress={() => setSelectedChannel(ch.category)}
+                        style={({ hovered }: any) => [
+                          {
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            paddingHorizontal: 14,
+                            paddingVertical: 8,
+                            borderRadius: radius.pill,
+                            backgroundColor: isSelected ? colors.brandPrimary : colors.surface,
+                            borderWidth: 1,
+                            borderColor: isSelected ? colors.brandPrimary : colors.border,
+                            flexShrink: 0,
+                            opacity: hovered ? 0.9 : 1,
+                          },
+                          Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                        ]}
                       >
-                        {ch.label}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+                        <Ionicons
+                          name={ch.icon}
+                          size={14}
+                          color={isSelected ? '#FFFFFF' : colors.textSecondary}
+                        />
+                        <AppText
+                          variant="bodySmall"
+                          weight={isSelected ? 'bold' : 'medium'}
+                          style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 12, whiteSpace: 'nowrap' } as any}
+                        >
+                          {ch.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Desktop Right Scroll Arrow */}
+                <Pressable
+                  onPress={() => scrollDesktopChannels('right')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Scroll channels right"
+                  style={({ hovered }: any) => [
+                    {
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: colors.surface,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      opacity: hovered ? 1 : 0.75,
+                    },
+                    Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                  ]}
+                >
+                  <Ionicons name="chevron-forward" size={15} color={colors.textPrimary} />
+                </Pressable>
+              </View>
 
               {/* Sort Pill */}
               <Pressable
@@ -975,7 +1054,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           {/* Right Sidebar: Hubs, Mentors & Guidelines */}
           <View
             style={[
-              { width: isWideDesktop ? 320 : 280, flexShrink: 0, gap: spacing.md },
+              { width: isWideDesktop ? 320 : 280, flexShrink: 0, gap: spacing.md, paddingBottom: 80 },
               Platform.OS === 'web' ? ({ position: 'sticky', top: 16 } as any) : {},
             ]}
           >
@@ -1432,7 +1511,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       </KeyboardAvoidingView>
     </Modal>
 
-    {/* Floating Action Button (FAB) - Compact Floating Plus Icon */}
+    {/* Floating Action Button (FAB) - Elevated Pill with Post text on Desktop */}
     <Pressable
       onPress={() => {
         haptics.medium();
@@ -1440,25 +1519,42 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       }}
       accessibilityRole="button"
       accessibilityLabel="Create new thread"
-      style={{
-        position: 'absolute',
-        bottom: isDesktop ? 30 : 88,
-        right: 18,
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: colors.brandPrimary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 4,
-        elevation: 2,
-        zIndex: 999,
-      }}
+      style={({ hovered }: any) => [
+        {
+          position: (Platform.OS === 'web' ? 'fixed' : 'absolute') as any,
+          bottom: isDesktop ? 32 : 88,
+          right: isDesktop ? 36 : 20,
+          height: isDesktop ? 46 : 48,
+          minWidth: isDesktop ? 104 : 48,
+          paddingHorizontal: isDesktop ? 18 : 0,
+          borderRadius: radius.pill,
+          backgroundColor: colors.brandPrimary,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.25,
+          shadowRadius: 10,
+          elevation: 8,
+          zIndex: 1000,
+          opacity: hovered ? 0.92 : 1,
+        },
+        Platform.OS === 'web' && ({
+          cursor: 'pointer',
+          boxShadow: isDark
+            ? '0 6px 20px rgba(59, 130, 246, 0.45)'
+            : '0 6px 18px rgba(37, 99, 235, 0.35)',
+        } as any),
+      ]}
     >
-      <Ionicons name="add" size={26} color="#FFFFFF" />
+      <Ionicons name="add" size={isDesktop ? 20 : 26} color="#FFFFFF" />
+      {isDesktop && (
+        <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 14 }}>
+          Post
+        </AppText>
+      )}
     </Pressable>
   </ScreenContainer>
   );

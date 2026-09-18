@@ -4,8 +4,22 @@
     {
       "name": "lioris-web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web", "--port", "8081"],
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8081"
+      ],
       "port": 8081
+    },
+    {
+      "name": "lioris-dist-csp",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/ADMIN/AppData/Local/Temp/claude/C--Users-ADMIN--gemini-antigravity-scratch-Lioris-Final-Version/91d8074a-1142-4d53-a3d2-7351541e5418/scratchpad/serve-dist.js"
+      ],
+      "port": 4173
     }
   ]
 }

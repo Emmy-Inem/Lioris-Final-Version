@@ -3,6 +3,7 @@ import { createNotification } from './notifications';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
+import { assertUuid, escapePostgrestLike } from '../utils/postgrest';
 
 // Mentorships this session has *successfully* written to Supabase, kept
 // here only so they render instantly before the next refetch. Never mixed
@@ -22,6 +23,7 @@ export async function listMentorships(): Promise<Mentorship[]> {
  }
 
  if (!currentUserId) throw new Error('Not signed in');
+ assertUuid(currentUserId, 'user id');
 
  const { data, error } = await supabase
  .from('mentorships')
@@ -68,7 +70,7 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
       .in('role', ['staff', 'alumni', 'admin']);
 
     if (query.q) {
-      q = q.ilike('full_name', `%${query.q}%`);
+      q = q.ilike('full_name', `%${escapePostgrestLike(query.q)}%`);
     }
 
     const { data, error } = await q;

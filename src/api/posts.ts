@@ -4,6 +4,8 @@ import { isUserBlocked } from './connections';
 import { getInstitutionForEmail } from './institutions';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
+import { escapePostgrestLike } from '../utils/postgrest';
+import { assertSafeHttpUrl } from '../utils/safeUrl';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -124,7 +126,7 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     const { rows } = await selectPostsWithFallback((select) => {
       let dbQuery = supabase.from('posts').select(select).order('created_at', { ascending: false });
       if (query.category) {
-        dbQuery = dbQuery.ilike('category', `%${query.category}%`);
+        dbQuery = dbQuery.ilike('category', `%${escapePostgrestLike(query.category)}%`);
       }
       return dbQuery;
     });
@@ -362,22 +364,16 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  let permanentImageUrl: string | undefined = payload.imageUrl;
  let permanentVideoUrl: string | undefined = payload.videoUrl;
 
- if (payload.imageUrl && !payload.imageUrl.startsWith('http://') && !payload.imageUrl.startsWith('https://') && !payload.imageUrl.startsWith('asset:')) {
- try {
- const { uploadMediaFile } = await import('./storage');
- permanentImageUrl = await uploadMediaFile('campus-media', payload.imageUrl, 'feed');
- } catch (uploadErr) {
- console.warn('[Posts] Image upload warning:', uploadErr);
- }
+ // Media references are validated (safe http(s), the bundled `asset:` scheme,
+ // or an on-device file that is uploaded). Upload/validation failures throw.
+ if (payload.imageUrl) {
+ const { resolveMediaUrl } = await import('./storage');
+ permanentImageUrl = await resolveMediaUrl(payload.imageUrl, 'feed', { allowAsset: true });
  }
 
- if (payload.videoUrl && !payload.videoUrl.startsWith('http://') && !payload.videoUrl.startsWith('https://')) {
- try {
- const { uploadMediaFile } = await import('./storage');
- permanentVideoUrl = await uploadMediaFile('campus-media', payload.videoUrl, 'videos');
- } catch (uploadErr) {
- console.warn('[Posts] Video upload warning:', uploadErr);
- }
+ if (payload.videoUrl) {
+ const { resolveMediaUrl } = await import('./storage');
+ permanentVideoUrl = await resolveMediaUrl(payload.videoUrl, 'videos');
  }
 
  const { data: authData } = await supabase.auth.getUser();
@@ -707,6 +703,7 @@ export async function deletePost(postId: string): Promise<boolean> {
  * for it instead of throwing, since the write already succeeded.
  */
 export async function updatePost(postId: string, updates: Partial<Post>): Promise<Post> {
+ if (updates.imageUrl && !/^asset:/i.test(updates.imageUrl)) assertSafeHttpUrl(updates.imageUrl, 'The image link');
  try {
  const dbPayload: any = {};
  if (updates.title) dbPayload.title = updates.title;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Alert, Modal, Linking, Platform } from 'react-native';
+import { ScrollView, View, Pressable, Alert, Modal } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -35,6 +35,7 @@ import { listResources } from '@/api/resources';
 import { listStudyGroups } from '@/api/studyGroups';
 import { listPortalLinks } from '@/api/portalLinks';
 import { haptics } from '@/utils/haptics';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 
 const COVER_PRESETS = [
   { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
@@ -257,11 +258,7 @@ export default function StudentDashboard() {
 
   function handleOpenPortal(url: string) {
     haptics.light();
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.open(url, '_blank');
-    } else {
-      Linking.openURL(url).catch(() => {});
-    }
+    void openExternalUrl(url);
   }
 
   const upcomingEvents = (events ?? []).slice(0, 2);
@@ -997,7 +994,7 @@ export default function StudentDashboard() {
                       <Ionicons name={portal.icon || 'globe-outline'} size={24} color={colors.textSecondary} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                      <AppText variant="bodySmall" weight="bold" numberOfLines={2}>
                         {portal.title}
                       </AppText>
                       <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>

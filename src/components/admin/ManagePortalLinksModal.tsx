@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
 import { AppTextField } from '../AppTextField';
@@ -212,8 +213,8 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  }
 
  function handleTestLink(targetUrl: string) {
- Linking.openURL(targetUrl).catch(() => {
- Alert.alert('Open Link', `Cannot open ${targetUrl}`);
+ openExternalUrl(targetUrl).then((opened) => {
+ if (!opened) Alert.alert('Open Link', 'Only valid http(s) links can be opened.');
  });
  }
 

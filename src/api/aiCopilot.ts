@@ -27,12 +27,6 @@ export interface CopilotResponse {
   timestamp: string;
 }
 
-const ACADEMIC_SYSTEM_PROMPT = `You are Lioris Academic AI, an elite university tutor and researcher powered by Google Gemini.
-Your job is to provide clear, high-yield academic explanations, step-by-step past question breakdowns, handwritten chalkboard and equation solutions in standard LaTeX notation, and active-recall revision flashcards.
-Structure your answers with clean markdown headings, numbered steps, bold key terms, and practical exam tips.
-When mathematical equations or formulas are present, render them clearly with LaTeX formatting (\[ ... \] for display math, \( ... \) for inline math).
-Keep explanations rigorous, pedagogical, encouraging, and free of fluff.`;
-
 export async function askAiStudyCopilot(
   userPrompt: string,
   mode: CopilotMode = 'explain',
@@ -82,57 +76,10 @@ export async function askAiStudyCopilot(
       };
     }
   } catch (err: any) {
-    console.warn('[LiorisAI] gemini-proxy call failed, attempting direct Gemini fallback:', err?.message ?? err);
+    console.warn('[LiorisAI] gemini-proxy call failed, using offline fallback:', err?.message ?? err);
   }
 
-  // 2. Secondary: Direct Gemini API call if client environment key is present
-  const directApiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-  if (directApiKey) {
-    try {
-      const parts: Record<string, unknown>[] = [];
-      if (imageAttachment?.base64) {
-        const cleanBase64 = imageAttachment.base64.replace(/^data:image\/[a-z]+;base64,/, '');
-        parts.push({
-          inlineData: {
-            mimeType: imageAttachment.mimeType || 'image/jpeg',
-            data: cleanBase64,
-          },
-        });
-      }
-      parts.push({
-        text: `${ACADEMIC_SYSTEM_PROMPT}\n\nTask Mode: ${mode}\n\nStudent Prompt:\n${formattedPrompt}`,
-      });
-
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${directApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 1500 },
-          }),
-        }
-      );
-
-      if (res.ok) {
-        const geminiData = await res.json();
-        const generatedText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (typeof generatedText === 'string' && generatedText.length > 0) {
-          return {
-            content: generatedText,
-            mode,
-            source: 'Google Gemini 3.6 Flash',
-            timestamp: new Date().toISOString(),
-          };
-        }
-      }
-    } catch (directErr: any) {
-      console.warn('[LiorisAI] direct Gemini API call failed:', directErr?.message ?? directErr);
-    }
-  }
-
-  // 3. Intelligent Academic Reasoning Fallback
+  // 2. Intelligent Academic Reasoning Fallback
   return {
     content: generateHeuristicAcademicResponse(userPrompt, mode, courseContext, imageAttachment),
     mode,

@@ -175,13 +175,9 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  let permanentImageUrl: string | null = payload.imageUrl || null;
 
  // Upload local device photo to Supabase Storage if present
- if (payload.imageUrl && !payload.imageUrl.startsWith('http://') && !payload.imageUrl.startsWith('https://')) {
- try {
- const { uploadMediaFile } = await import('./storage');
- permanentImageUrl = await uploadMediaFile('campus-media', payload.imageUrl, 'marketplace');
- } catch (uploadErr) {
- console.warn('[Marketplace] Storage upload failed, keeping original URL:', uploadErr);
- }
+ if (payload.imageUrl) {
+ const { resolveMediaUrl } = await import('./storage');
+ permanentImageUrl = await resolveMediaUrl(payload.imageUrl, 'marketplace');
  }
 
  const { data: authData } = await supabase.auth.getUser();

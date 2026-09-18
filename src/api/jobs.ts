@@ -4,6 +4,7 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { isUserBlocked } from './connections';
 import { getInstitutionForEmail } from './institutions';
+import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
 
 export interface JobsQuery {
  q?: string;
@@ -90,7 +91,8 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  location: row.location,
  type: row.type as JobListing['type'],
  remote: row.is_remote ?? false,
- applyUrl: row.apply_url,
+ // A bad stored link (e.g. javascript:) must never reach an opener.
+ applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
  postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
  posterId: row.poster_id,
  createdAt: row.created_at,
@@ -134,6 +136,7 @@ export interface CreateJobPayload {
  * catch this and show a real error - see CreateJobModal.
  */
 export async function createJob(payload: CreateJobPayload): Promise<JobListing> {
+ const applyUrl = assertSafeHttpUrl(payload.applyUrl, 'The apply link');
  const jobId = generateUUID();
  const { data: authData } = await supabase.auth.getUser();
  let realPosterId = authData?.user?.id;
@@ -158,7 +161,7 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
  location: payload.location,
  type: payload.type,
  is_remote: payload.remote ?? false,
- apply_url: payload.applyUrl,
+ apply_url: applyUrl,
  salary: payload.salary || null,
  description: payload.description || null,
  posted_by_name: posterName,
@@ -176,7 +179,7 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
  location: payload.location,
  type: payload.type,
  remote: payload.remote ?? false,
- applyUrl: payload.applyUrl,
+ applyUrl,
  postedByName: posterName,
  createdAt: new Date().toISOString(),
  };

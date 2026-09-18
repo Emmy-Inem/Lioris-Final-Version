@@ -1,4 +1,5 @@
 import { sendMessage } from './messaging';
+import { isSafeHttpUrl } from '../utils/safeUrl';
 
 export interface CallDetails {
   callType: 'voice' | 'video';
@@ -84,9 +85,14 @@ export function extractCallDetails(content: string): CallDetails | null {
   let callUrl = linkMatch ? linkMatch[1] : '';
   let roomName = roomMatch ? roomMatch[1] : '';
 
+  // Message text is attacker-controlled: only accept a plain room slug and a safe http(s) link.
+  if (roomName && !/^[A-Za-z0-9_-]{1,64}$/.test(roomName)) roomName = '';
+  if (callUrl && !isSafeHttpUrl(callUrl)) callUrl = '';
+
   if (!roomName && callUrl) {
     const urlParts = callUrl.split('#')[0].split('/');
     roomName = urlParts[urlParts.length - 1] || 'campus-call';
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(roomName)) roomName = 'campus-call';
   } else if (!roomName) {
     roomName = 'campus-call';
   }

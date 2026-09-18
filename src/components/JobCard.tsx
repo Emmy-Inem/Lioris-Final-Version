@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -23,6 +22,8 @@ import { useAuth } from '@/auth/AuthContext';
 import { JobListing } from '@/api/types';
 import { createNotification } from '@/api/notifications';
 import { haptics } from '@/utils/haptics';
+import { isSafeHttpUrl } from '@/utils/safeUrl';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 
 export function JobCard({ job }: { job: JobListing }) {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -42,12 +43,8 @@ export function JobCard({ job }: { job: JobListing }) {
   }
 
   function handleOpenApplyUrl() {
-    if (job.applyUrl && (job.applyUrl.startsWith('http') || job.applyUrl.startsWith('mailto'))) {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.open(job.applyUrl, '_blank');
-      } else {
-        Linking.openURL(job.applyUrl).catch(() => {});
-      }
+    if (isSafeHttpUrl(job.applyUrl)) {
+      void openExternalUrl(job.applyUrl);
     }
   }
 
@@ -132,7 +129,7 @@ export function JobCard({ job }: { job: JobListing }) {
         </AppText>
 
         <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flexShrink: 0 }}>
-          {job.applyUrl && job.applyUrl.startsWith('http') && (
+          {isSafeHttpUrl(job.applyUrl) && (
             <AppButton
               label="Job Site ↗"
               variant="ghost"

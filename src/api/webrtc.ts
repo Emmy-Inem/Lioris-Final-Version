@@ -25,6 +25,29 @@ const ICE_SERVERS = [
   { urls: 'stun:stun.services.mozilla.com' },
 ];
 
+// Signaling payloads arrive from other clients over Realtime broadcast, so they
+// are validated before touching the peer connection.
+function isValidSenderId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= 128;
+}
+
+function isValidSessionDescription(value: unknown, type: 'offer' | 'answer'): value is { type: string; sdp: string } {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as { type?: unknown; sdp?: unknown };
+  return v.type === type && typeof v.sdp === 'string' && v.sdp.length > 0 && v.sdp.length <= 200_000;
+}
+
+function isValidIceCandidate(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as { candidate?: unknown; sdpMid?: unknown; sdpMLineIndex?: unknown };
+  return (
+    typeof v.candidate === 'string' &&
+    v.candidate.length <= 4096 &&
+    (v.sdpMid == null || typeof v.sdpMid === 'string') &&
+    (v.sdpMLineIndex == null || typeof v.sdpMLineIndex === 'number')
+  );
+}
+
 export class WebRTCCallSession {
   private config: WebRTCConfig;
   private peerConnection: any = null;
@@ -133,42 +156,55 @@ export class WebRTCCallSession {
       // 3. Connect to Supabase Realtime Signaling Channel
       const cleanRoom = this.config.roomName.replace(/[^a-zA-Z0-9_-]/g, '_');
       this.channel = supabase.channel(`webrtc:${cleanRoom}`, {
-        config: { broadcast: { self: false } },
+        // Private channel: access is enforced by realtime.messages RLS for `webrtc:*` topics.
+        config: { broadcast: { self: false }, private: true },
       });
 
       this.channel
         .on('broadcast', { event: 'signal:join' }, async (data: any) => {
-          if (data.payload?.senderId !== this.config.userId) {
-            console.log('[WebRTC] Remote peer joined. Creating offer as initiator.');
+          if (isValidSenderId(data.payload?.senderId) && data.payload.senderId !== this.config.userId) {
+            if (__DEV__) console.log('[WebRTC] Remote peer joined. Creating offer as initiator.');
             this.isInitiator = true;
             await this.createAndSendOffer();
           }
         })
         .on('broadcast', { event: 'signal:offer' }, async (data: any) => {
-          if (data.payload?.senderId !== this.config.userId && data.payload?.sdp) {
-            console.log('[WebRTC] Received remote offer. Creating answer.');
+          if (
+            isValidSenderId(data.payload?.senderId) &&
+            data.payload.senderId !== this.config.userId &&
+            isValidSessionDescription(data.payload.sdp, 'offer')
+          ) {
+            if (__DEV__) console.log('[WebRTC] Received remote offer. Creating answer.');
             await this.handleRemoteOffer(data.payload.sdp);
           }
         })
         .on('broadcast', { event: 'signal:answer' }, async (data: any) => {
-          if (data.payload?.senderId !== this.config.userId && data.payload?.sdp) {
-            console.log('[WebRTC] Received remote answer.');
+          if (
+            isValidSenderId(data.payload?.senderId) &&
+            data.payload.senderId !== this.config.userId &&
+            isValidSessionDescription(data.payload.sdp, 'answer')
+          ) {
+            if (__DEV__) console.log('[WebRTC] Received remote answer.');
             await this.handleRemoteAnswer(data.payload.sdp);
           }
         })
         .on('broadcast', { event: 'signal:candidate' }, async (data: any) => {
-          if (data.payload?.senderId !== this.config.userId && data.payload?.candidate) {
+          if (
+            isValidSenderId(data.payload?.senderId) &&
+            data.payload.senderId !== this.config.userId &&
+            isValidIceCandidate(data.payload.candidate)
+          ) {
             await this.handleRemoteCandidate(data.payload.candidate);
           }
         })
         .on('broadcast', { event: 'signal:hangup' }, () => {
-          console.log('[WebRTC] Remote peer hung up.');
+          if (__DEV__) console.log('[WebRTC] Remote peer hung up.');
           this.config.onRemoteHangup?.();
         });
 
       await this.channel.subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
-          console.log('[WebRTC] Signaling channel subscribed. Broadcasting join.');
+          if (__DEV__) console.log('[WebRTC] Signaling channel subscribed. Broadcasting join.');
           this.channel.send({
             type: 'broadcast',
             event: 'signal:join',

@@ -6,11 +6,11 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Linking,
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
@@ -105,8 +105,8 @@ export function ResearchPapersModal({
   function handleOpenPaper(paper: ResearchPaper) {
     const targetUrl = paper.openAccessPdfUrl || paper.semanticScholarUrl;
     if (targetUrl) {
-      Linking.openURL(targetUrl).catch(() => {
-        toast.warning('Unable to open publication URL');
+      openExternalUrl(targetUrl).then((opened) => {
+        if (!opened) toast.warning('Unable to open publication URL');
       });
     } else {
       toast.info('Direct PDF not available for this venue');

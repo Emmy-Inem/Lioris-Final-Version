@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
-import { getSessionUser } from '../auth/tokenStorage';
+import { isLocalMediaUri, isSafeHttpUrl } from '../utils/safeUrl';
+
+type Bucket = 'resources' | 'avatars' | 'verifications' | 'campus-media';
 
 const BUCKET_LIMITS: Record<string, { maxSize: number; label: string }> = {
  resources: { maxSize: 50 * 1024 * 1024, label: '50MB' },
@@ -8,30 +10,120 @@ const BUCKET_LIMITS: Record<string, { maxSize: number; label: string }> = {
  verifications: { maxSize: 10 * 1024 * 1024, label: '10MB' },
 };
 
+// mime type -> file extension. The extension (and the stored contentType) is
+// always derived from this table, never from the file name / URI the user gave.
+const MIME_EXTENSIONS: Record<string, string> = {
+ 'image/jpeg': 'jpg',
+ 'image/jpg': 'jpg',
+ 'image/png': 'png',
+ 'image/webp': 'webp',
+ 'image/gif': 'gif',
+ 'video/mp4': 'mp4',
+ 'video/quicktime': 'mov',
+ 'application/pdf': 'pdf',
+ 'application/zip': 'zip',
+ 'application/x-zip-compressed': 'zip',
+ 'application/msword': 'doc',
+ 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+ 'application/vnd.ms-powerpoint': 'ppt',
+ 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+ 'text/plain': 'txt',
+};
+
+const EXTENSION_MIMES: Record<string, string> = {
+ jpg: 'image/jpeg',
+ jpeg: 'image/jpeg',
+ png: 'image/png',
+ webp: 'image/webp',
+ gif: 'image/gif',
+ mp4: 'video/mp4',
+ mov: 'video/quicktime',
+ pdf: 'application/pdf',
+ zip: 'application/zip',
+ doc: 'application/msword',
+ docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+ ppt: 'application/vnd.ms-powerpoint',
+ pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+ txt: 'text/plain',
+};
+
+const IMAGE_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+
+const BUCKET_ALLOWED_MIMES: Record<Bucket, string[]> = {
+ avatars: IMAGE_MIMES,
+ 'campus-media': ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime'],
+ resources: [
+ ...IMAGE_MIMES,
+ 'application/pdf',
+ 'application/zip',
+ 'application/x-zip-compressed',
+ 'application/msword',
+ 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+ 'application/vnd.ms-powerpoint',
+ 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+ 'text/plain',
+ ],
+ verifications: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'],
+};
+
+function randomToken(bytes = 8): string {
+ const c = (globalThis as any).crypto as Crypto | undefined;
+ if (c && typeof c.getRandomValues === 'function') {
+ return Array.from(c.getRandomValues(new Uint8Array(bytes)), (b) => b.toString(16).padStart(2, '0')).join('');
+ }
+ // Only reached on runtimes without Web Crypto; the name is not a secret, it only needs to be unique.
+ return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function sanitizeSegment(value: string, fallback: string): string {
+ const cleaned = value
+ .replace(/\.[^./\\]*$/, '') // drop any user-supplied extension
+ .replace(/[^A-Za-z0-9_-]+/g, '_')
+ .replace(/^_+|_+$/g, '')
+ .slice(0, 40);
+ return cleaned || fallback;
+}
+
+function mimeFromUri(uri: string): string | undefined {
+ const match = /\.([A-Za-z0-9]{2,5})(?:[?#].*)?$/.exec(uri);
+ return match ? EXTENSION_MIMES[match[1].toLowerCase()] : undefined;
+}
+
+/**
+ * Uploads a file to Supabase Storage under `${auth.uid}/...` and returns its
+ * public URL - or, for the private `verifications` bucket, the storage PATH
+ * (callers must create signed URLs from it on demand).
+ *
+ * Throws when the user is not signed in, the file type/size is not allowed for
+ * the bucket, or the upload fails.
+ */
 export async function uploadMediaFile(
- bucket: 'resources' | 'avatars' | 'verifications' | 'campus-media',
+ bucket: Bucket,
  fileUriOrBlob: string | Blob,
  folder = 'media',
  customFileName?: string
 ): Promise<string> {
- // If it's already a full remote public URL, return as-is
- if (typeof fileUriOrBlob === 'string' && (fileUriOrBlob.startsWith('http://') || fileUriOrBlob.startsWith('https://'))) {
- return fileUriOrBlob;
+ // An already-hosted remote URL is returned as-is (never for the private bucket).
+ if (typeof fileUriOrBlob === 'string' && /^https?:\/\//i.test(fileUriOrBlob)) {
+ if (bucket === 'verifications') {
+ throw new Error('Verification documents must be uploaded as files.');
+ }
+ if (!isSafeHttpUrl(fileUriOrBlob)) {
+ throw new Error('That link is not a valid http(s) URL.');
+ }
+ return fileUriOrBlob.trim();
  }
 
  const { data: authData } = await supabase.auth.getUser();
- let userId = authData?.user?.id;
+ const userId = authData?.user?.id;
  if (!userId) {
- const sessionUser = await getSessionUser();
- userId = sessionUser?.id || 'community';
+ throw new Error('You must be signed in to upload files.');
  }
 
  let blob: Blob;
- let ext = 'jpg';
- let mimeType = 'image/jpeg';
-
  if (typeof fileUriOrBlob === 'string') {
  const response = await fetch(fileUriOrBlob);
+ if (!response.ok) throw new Error('Could not read the selected file.');
  blob = await response.blob();
  } else {
  blob = fileUriOrBlob;
@@ -43,33 +135,67 @@ export async function uploadMediaFile(
  throw new Error(`File size (${(blob.size / (1024 * 1024)).toFixed(1)}MB) exceeds the maximum allowed limit of ${limit.label} for ${bucket}.`);
  }
 
- if (blob.type) {
- mimeType = blob.type;
- if (mimeType.includes('png')) ext = 'png';
- else if (mimeType.includes('gif')) ext = 'gif';
- else if (mimeType.includes('webp')) ext = 'webp';
- else if (mimeType.includes('mp4') || mimeType.includes('video')) ext = 'mp4';
- else if (mimeType.includes('pdf')) ext = 'pdf';
- else if (mimeType.includes('zip') || mimeType.includes('compressed')) ext = 'zip';
- else if (mimeType.includes('word') || mimeType.includes('document')) ext = 'docx';
- else if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) ext = 'pptx';
+ // Resolve and validate the mime type against this bucket's allow-list.
+ let mimeType = (blob.type || '').toLowerCase().split(';')[0].trim();
+ if (!mimeType && typeof fileUriOrBlob === 'string') {
+ mimeType = mimeFromUri(fileUriOrBlob) ?? '';
+ }
+ if (!mimeType || !BUCKET_ALLOWED_MIMES[bucket].includes(mimeType)) {
+ throw new Error(`This file type is not allowed for ${bucket} uploads.`);
+ }
+ const ext = MIME_EXTENSIONS[mimeType];
+ if (!ext) {
+ throw new Error(`This file type is not allowed for ${bucket} uploads.`);
  }
 
- const fileName = customFileName || `${folder}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+ const folderSegment = sanitizeSegment(folder, 'media');
+ const namePart = customFileName ? `${folderSegment}_${sanitizeSegment(customFileName, 'file')}` : folderSegment;
+ const fileName = `${namePart}_${Date.now()}_${randomToken()}.${ext}`;
+ // Always under the caller's own uid folder (storage RLS is scoped to it).
  const filePath = `${userId}/${fileName}`;
 
- try {
  const { error } = await supabase.storage.from(bucket).upload(filePath, blob, {
  contentType: mimeType,
- upsert: true,
+ upsert: false,
  });
  if (error) {
- console.warn(`[Storage] Upload to "${bucket}" bucket warning:`, error.message);
+ console.warn(`[Storage] Upload to "${bucket}" bucket failed:`, error.message);
+ throw new Error(`Upload failed: ${error.message}`);
  }
- } catch (err: any) {
- console.warn(`[Storage] Upload exception to "${bucket}":`, err?.message);
+
+ // The verifications bucket is private: hand back the path, never a public URL.
+ if (bucket === 'verifications') {
+ return filePath;
  }
 
  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
- return data?.publicUrl || `https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/${bucket}/${filePath}`;
+ if (!data?.publicUrl) {
+ throw new Error('Upload succeeded but the file address could not be resolved.');
+ }
+ return data.publicUrl;
+}
+
+/**
+ * Normalises a user-supplied media reference into a URL that is safe to store:
+ * - safe http(s) URLs are kept as-is;
+ * - `asset:` references are kept only when `allowAsset` is set;
+ * - on-device URIs (file://, content://, blob:, data:image...) are uploaded to storage;
+ * - anything else (javascript:, data:text/html, ...) throws.
+ * Upload failures throw - callers must not fall back to the raw local URI.
+ */
+export async function resolveMediaUrl(
+ value: string,
+ folder: string,
+ options: { bucket?: Bucket; allowAsset?: boolean } = {}
+): Promise<string> {
+ const trimmed = value.trim();
+ if (/^https?:\/\//i.test(trimmed)) {
+ if (!isSafeHttpUrl(trimmed)) throw new Error('That media link is not a valid http(s) URL.');
+ return trimmed;
+ }
+ if (options.allowAsset && /^asset:/i.test(trimmed)) return trimmed;
+ if (isLocalMediaUri(trimmed)) {
+ return uploadMediaFile(options.bucket ?? 'campus-media', trimmed, folder);
+ }
+ throw new Error('Unsupported media link. Please choose a photo or video from your device.');
 }

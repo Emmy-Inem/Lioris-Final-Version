@@ -67,7 +67,22 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   // Automatic Horizontal Carousel State
   const [activeSlide, setActiveSlide] = useState(0);
   const carouselRef = useRef<FlatList>(null);
+  const desktopFiltersScrollRef = useRef<ScrollView>(null);
   const isInteracting = useRef(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = (desktopFiltersScrollRef.current as any)?.getScrollableNode?.() || (desktopFiltersScrollRef.current as any);
+    if (!node) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && node.scrollWidth > node.clientWidth) {
+        e.preventDefault();
+        node.scrollLeft += e.deltaY;
+      }
+    };
+    node.addEventListener('wheel', handleWheel, { passive: false });
+    return () => node.removeEventListener('wheel', handleWheel);
+  }, []);
 
   const queryScope: EventsQuery['scope'] = isAlumniScope ? 'alumni' : (scope ?? 'student');
 
@@ -377,7 +392,16 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               </View>
 
               {/* Filter Pills */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView
+                ref={desktopFiltersScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={[
+                  { flex: 1, minWidth: 0 },
+                  Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
+                ]}
+                contentContainerStyle={{ gap: 8 }}
+              >
                 {activeFilters.map((f) => {
                   const active = filter === f.key;
                   return (

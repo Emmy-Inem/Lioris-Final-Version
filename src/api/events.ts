@@ -278,13 +278,9 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  }
 
  let permanentImageUrl: string | null = payload.imageUrl || null;
- if (payload.imageUrl && !payload.imageUrl.startsWith('http://') && !payload.imageUrl.startsWith('https://')) {
- try {
- const { uploadMediaFile } = await import('./storage');
- permanentImageUrl = await uploadMediaFile('campus-media', payload.imageUrl, 'events');
- } catch (uploadErr) {
- console.warn('[Events] Banner upload warning:', uploadErr);
- }
+ if (payload.imageUrl) {
+ const { resolveMediaUrl } = await import('./storage');
+ permanentImageUrl = await resolveMediaUrl(payload.imageUrl, 'events');
  }
 
  const { data: authData } = await supabase.auth.getUser();

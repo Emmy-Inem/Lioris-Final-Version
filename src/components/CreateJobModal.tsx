@@ -9,6 +9,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { createJob } from '@/api/jobs';
 import { haptics } from '@/utils/haptics';
+import { isSafeHttpUrl } from '@/utils/safeUrl';
 
 interface CreateJobModalProps {
   visible: boolean;
@@ -74,7 +75,12 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
       return;
     }
     if (!applyUrl.trim()) {
-      showError('Please provide an application URL or email.');
+      showError('Please provide an application link (https://...).');
+      haptics.error();
+      return;
+    }
+    if (!isSafeHttpUrl(applyUrl.trim())) {
+      showError('The application link must be a valid http:// or https:// URL.');
       haptics.error();
       return;
     }
@@ -268,8 +274,8 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  />
 
  <AppTextField
- label="Apply URL or Email"
- placeholder="https://company.com/apply or mailto:jobs@company.com"
+ label="Application Link"
+ placeholder="https://company.com/apply"
  value={applyUrl}
  onChangeText={(t) => {
  setApplyUrl(t);

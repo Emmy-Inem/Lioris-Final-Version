@@ -4,6 +4,25 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { isUserBlocked } from './connections';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
+import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
+
+// Content types a resource upload may be stored with.
+const ALLOWED_RESOURCE_MIME_TYPES = new Set([
+ 'application/pdf',
+ 'application/zip',
+ 'application/x-zip-compressed',
+ 'application/msword',
+ 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+ 'application/vnd.ms-powerpoint',
+ 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+ 'application/vnd.ms-excel',
+ 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+ 'text/plain',
+ 'image/jpeg',
+ 'image/png',
+ 'image/webp',
+ 'image/gif',
+]);
 
 let locallyCreatedResources: Resource[] = [];
 
@@ -94,7 +113,7 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         // Undefined when the upload recorded no size - ResourceCard omits the
         // chip rather than showing an invented "2.5 MB".
         fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : undefined,
-        fileUrl: row.file_url || null,
+        fileUrl: sanitizeHttpUrl(row.file_url) ?? null,
         authorName: row.profiles?.full_name || 'Campus Student',
         authorId: row.uploader_id,
         authorRole: (row.profiles?.role || 'student') as any,
@@ -235,21 +254,31 @@ export async function createResource(
 
  const storagePath = `${uploaderId}/${resourceId}.${fileExt}`;
 
- try {
- // If binary file blob is provided, upload directly to Supabase Storage
+ // Only allow-listed content types are ever stored; a client-supplied mime
+ // type outside the list falls back to the one derived from the file type.
+ const storedMimeType =
+ payload.fileMimeType && ALLOWED_RESOURCE_MIME_TYPES.has(payload.fileMimeType.toLowerCase())
+ ? payload.fileMimeType.toLowerCase()
+ : mimeType;
+
+ // If binary file blob is provided, upload directly to Supabase Storage.
+ // supabase-js resolves with `{ error }` rather than throwing, so it must be checked.
  if (fileBlob) {
- await supabase.storage.from('resources').upload(storagePath, fileBlob, {
- contentType: payload.fileMimeType || mimeType,
- upsert: true,
+ const { error: uploadError } = await supabase.storage.from('resources').upload(storagePath, fileBlob, {
+ contentType: storedMimeType,
+ upsert: false,
  });
- }
- } catch (err) {
- console.warn('[Resources] Storage upload error:', err);
+ if (uploadError) {
+ console.warn('[Resources] Storage upload error:', uploadError.message);
  throw new Error('Could not upload your file. Please try again.');
+ }
  }
 
  const { data: publicUrlData } = supabase.storage.from('resources').getPublicUrl(storagePath);
- const fileUrl = publicUrlData?.publicUrl || `https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/${storagePath}`;
+ if (!publicUrlData?.publicUrl) {
+ throw new Error('Could not resolve the uploaded file address. Please try again.');
+ }
+ const fileUrl = assertSafeHttpUrl(publicUrlData.publicUrl, 'The file link');
  created.fileUrl = fileUrl;
 
  const realSizeBytes = (fileBlob && typeof (fileBlob as any).size === 'number' ? (fileBlob as any).size : undefined)
@@ -267,7 +296,7 @@ export async function createResource(
  resource_type: mapCategoryToResourceType(payload.category),
  file_url: fileUrl,
  file_size_bytes: realSizeBytes,
- file_mime_type: payload.fileMimeType || mimeType,
+ file_mime_type: storedMimeType,
  is_approved: true,
  });
 
@@ -289,6 +318,7 @@ export async function createResource(
  * throwing, since the write already succeeded.
  */
 export async function updateResource(id: string, payload: Partial<Resource>): Promise<Resource> {
+ if (payload.fileUrl) assertSafeHttpUrl(payload.fileUrl, 'The file link');
  try {
  const dbPayload: any = {};
  if (payload.title) dbPayload.title = payload.title;

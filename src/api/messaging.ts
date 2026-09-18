@@ -3,6 +3,8 @@ import { Conversation, Message } from './types';
 import { generateUUID } from '../utils/uuid';
 import { getSessionUser } from '../auth/tokenStorage';
 import { isCallMessage } from './calling';
+import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
+import { escapePostgrestLike } from '../utils/postgrest';
 
 function toPreviewText(content: string | undefined | null): string {
   if (!content) return 'Started conversation';
@@ -341,7 +343,7 @@ export async function listMessages(
         sentAt: row.created_at,
         // `media_url` is a pre-existing column on chat_messages used to reference
         // real uploaded attachments (photos/documents) sent from ChatThread.
-        mediaUrl: row.media_url ?? undefined,
+        mediaUrl: sanitizeHttpUrl(row.media_url),
       }));
 
       // Merge with local state
@@ -370,6 +372,9 @@ export async function sendMessage(
   // `chat_messages.media_url` column — additive, no schema change required.
   mediaUrl?: string,
 ): Promise<Message & { mediaUrl?: string }> {
+  // Attachment links must be plain http(s) URLs (they are rendered/opened by other users).
+  if (mediaUrl) mediaUrl = assertSafeHttpUrl(mediaUrl, 'The attachment link');
+
   const msgId = generateUUID();
   const now = new Date().toISOString();
 
@@ -426,7 +431,7 @@ export async function sendMessage(
       // Non-blocking
     }
   } else {
-    console.log('[Messaging] Message stored in local session (guest mode)');
+    if (__DEV__) console.log('[Messaging] Message stored in local session (guest mode)');
   }
 
   if (!localMessages[conversationId]) {
@@ -496,7 +501,7 @@ export async function searchUsersToMessage(
     }
 
     if (query && query.trim()) {
-      req = req.ilike('full_name', `%${query.trim()}%`);
+      req = req.ilike('full_name', `%${escapePostgrestLike(query.trim())}%`);
     }
 
     const { data, error } = await req;

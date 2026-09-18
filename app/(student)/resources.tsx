@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Linking, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { Alert, FlatList, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
 import { ScreenContainer } from'@/components/ScreenContainer';
 import { AppHeader } from'@/components/AppHeader';
 import { AppText } from'@/components/AppText';
 import { SolidCard } from'@/components/SolidCard';
-import { Badge } from '@/components/Badge';
 import { ResourceCard } from '@/components/ResourceCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ShareAcademicFileModal, UploadAcademicPayload } from '@/components/ShareAcademicFileModal';
@@ -15,6 +14,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 import { listResources, createResource } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -55,7 +55,49 @@ export default function ResourcesScreen() {
   const { isFeatureEnabled } = useFeatureFlags();
   const { bookmarkedIds } = useResourceBookmarks();
 
- const { campusCode, homeInstitutionCode } = useCampusScope();
+  // Desktop horizontal scroll refs & wheel handlers
+  const portalsScrollRef = useRef<ScrollView>(null);
+  const categoriesScrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const portalNode = (portalsScrollRef.current as any)?.getScrollableNode?.() || (portalsScrollRef.current as any);
+    const handlePortalWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && portalNode && portalNode.scrollWidth > portalNode.clientWidth) {
+        e.preventDefault();
+        portalNode.scrollLeft += e.deltaY;
+      }
+    };
+    if (portalNode) {
+      portalNode.addEventListener('wheel', handlePortalWheel, { passive: false });
+    }
+
+    const catNode = (categoriesScrollRef.current as any)?.getScrollableNode?.() || (categoriesScrollRef.current as any);
+    const handleCatWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && catNode && catNode.scrollWidth > catNode.clientWidth) {
+        e.preventDefault();
+        catNode.scrollLeft += e.deltaY;
+      }
+    };
+    if (catNode) {
+      catNode.addEventListener('wheel', handleCatWheel, { passive: false });
+    }
+
+    return () => {
+      if (portalNode) portalNode.removeEventListener('wheel', handlePortalWheel);
+      if (catNode) catNode.removeEventListener('wheel', handleCatWheel);
+    };
+  }, []);
+
+  const scrollPortals = (direction: 'left' | 'right') => {
+    const node = (portalsScrollRef.current as any)?.getScrollableNode?.() || (portalsScrollRef.current as any);
+    if (node?.scrollBy) {
+      node.scrollBy({ left: direction === 'left' ? -280 : 280, behavior: 'smooth' });
+    }
+  };
+
+  const { campusCode, homeInstitutionCode } = useCampusScope();
   const effectiveCampus =
     homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
       ? homeInstitutionCode
@@ -104,8 +146,8 @@ export default function ResourcesScreen() {
  {
  text: 'Open Portal ↗',
  onPress: () => {
- Linking.openURL(portal.url).catch(() => {
- Alert.alert('Portal Link Copied', `${portal.url} copied to clipboard.`);
+ openExternalUrl(portal.url).then((opened: boolean) => {
+ if (!opened) Alert.alert('Link Blocked', 'This portal link is not a valid http(s) address and was not opened.');
  });
  },
  },
@@ -528,17 +570,76 @@ export default function ResourcesScreen() {
               <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1} style={{ letterSpacing: 1, flex: 1, minWidth: 0 }}>
                 CAMPUS DIRECTORIES & OFFICIAL PORTALS
               </AppText>
-              <AppText tone="secondary" variant="caption" style={{ flexShrink: 0 }}>
-                {portalLinks.filter((p) => p.active).length} active verified portals
-              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <AppText tone="secondary" variant="caption">
+                  {portalLinks.filter((p) => p.active).length} active verified portals
+                </AppText>
+                {/* Desktop Left / Right Scroll Chevrons */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Pressable
+                    onPress={() => scrollPortals('left')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Scroll directories left"
+                    style={({ hovered }: any) => [
+                      {
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: colors.surface,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: hovered ? 1 : 0.75,
+                      },
+                      Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                    ]}
+                  >
+                    <Ionicons name="chevron-back" size={14} color={colors.textPrimary} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => scrollPortals('right')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Scroll directories right"
+                    style={({ hovered }: any) => [
+                      {
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: colors.surface,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: hovered ? 1 : 0.75,
+                      },
+                      Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                    ]}
+                  >
+                    <Ionicons name="chevron-forward" size={14} color={colors.textPrimary} />
+                  </Pressable>
+                </View>
+              </View>
             </View>
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            <ScrollView
+              ref={portalsScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={[
+                { flexGrow: 0 },
+                Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
+              ]}
+              contentContainerStyle={{ flexDirection: 'row', gap: 12, paddingBottom: 6 }}
+            >
               {portalLinks.filter((p) => p.active).map((portal) => (
                 <Pressable
                   key={portal.id}
                   onPress={() => handleLaunchPortal(portal)}
-                  style={{ flexGrow: 1, flexBasis: 0, minWidth: 240 }}
+                  style={({ hovered }: any) => [
+                    { width: 280, flexShrink: 0, opacity: hovered ? 0.92 : 1 },
+                    Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
+                  ]}
                 >
                   <SolidCard
                     radius={16}
@@ -549,6 +650,7 @@ export default function ResourcesScreen() {
                       borderWidth: 1,
                       borderColor: colors.border,
                       padding: 12,
+                      minHeight: 68,
                     }}
                   >
                     <View
@@ -566,11 +668,11 @@ export default function ResourcesScreen() {
                     </View>
 
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                        <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
+                        <AppText weight="bold" variant="bodySmall" numberOfLines={2} style={{ flex: 1, lineHeight: 17 }}>
                           {portal.title}
                         </AppText>
-                        <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
+                        <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} style={{ marginTop: 2 }} />
                       </View>
                       <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 11 }}>
                         {(portal as any).description || portal.category || 'Portal Link'}
@@ -579,7 +681,7 @@ export default function ResourcesScreen() {
                   </SolidCard>
                 </Pressable>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           {/* Filter & Search Toolbar */}
@@ -617,7 +719,16 @@ export default function ResourcesScreen() {
               </View>
 
               {/* Resource Type Pills */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView
+                ref={categoriesScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={[
+                  { flex: 1, minWidth: 0 },
+                  Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
+                ]}
+                contentContainerStyle={{ gap: 8 }}
+              >
                 {RESOURCE_CATEGORIES.map((c) => {
                   const selected = filters.resourceType === c.filter;
                   return (

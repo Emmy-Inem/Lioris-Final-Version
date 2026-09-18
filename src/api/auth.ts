@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
 import { recordAuditLogEntry } from './auditLog';
+import { checkPassword, isPasswordValid } from '../utils/validation';
 
 export interface LoginPayload {
  email: string;
@@ -17,6 +18,10 @@ export interface RegisterPayload {
  userType: UserRole;
  campusCode?: string;
  botField?: string;
+ /** Version of the Terms/Privacy the user accepted at sign-up (stored as auth metadata). */
+ acceptedTermsVersion?: string;
+ /** User confirmed they are 18 or older. */
+ confirmedAge18?: boolean;
 }
 
 /**
@@ -43,7 +48,10 @@ function isEmailNotConfirmedError(error: { message?: string; code?: string } | n
   return error.code === 'email_not_confirmed' || /email not confirmed/i.test(error.message ?? '');
 }
 
-// Server & Client hybrid rate limiting and brute force protection
+// Client-side login throttle. This is only a UX nicety (it slows down accidental
+// hammering from this tab); real brute-force protection is Supabase Auth's own
+// rate limits. There is deliberately no server-side per-email lockout: it would
+// let anyone lock a victim out of their account.
 interface LoginAttemptRecord {
  failures: number;
  lockedUntil?: number;
@@ -52,26 +60,10 @@ interface LoginAttemptRecord {
 
 const loginAttempts = new Map<string, LoginAttemptRecord>();
 
-async function checkLoginRateLimit(email: string): Promise<void> {
+function checkLoginRateLimit(email: string): void {
  const clean = email.toLowerCase().trim();
 
- // 1. Check server-side Postgres rate limiting via RPC (authoritative)
- try {
- const { data, error } = await supabase.rpc('check_auth_rate_limit', {
- p_identifier: clean,
- });
- if (!error && data && data.allowed === false) {
- const retrySec = data.retry_after_seconds || 60;
- throw new Error(data.message || `Too many failed login attempts. Temporarily locked for ${retrySec}s.`);
- }
- } catch (err: any) {
- if (err.message && err.message.includes('Too many failed login attempts')) {
- throw err;
- }
- // If RPC is unavailable (e.g. offline/network), fall through to local client tracking
- }
-
- // 2. Client-side memory check
+ // Client-side memory check
  const record = loginAttempts.get(clean);
  if (!record) return;
  const now = Date.now();
@@ -84,21 +76,11 @@ async function checkLoginRateLimit(email: string): Promise<void> {
  }
 }
 
-async function recordLoginFailure(email: string): Promise<void> {
+function recordLoginFailure(email: string): void {
  const key = email.toLowerCase().trim();
  const now = Date.now();
 
- // 1. Record on server-side Postgres
- try {
- await supabase.rpc('record_auth_attempt', {
- p_identifier: key,
- p_success: false,
- });
- } catch {
- // Non-blocking fallback
- }
-
- // 2. Record locally
+ // Record locally
  const existing = loginAttempts.get(key) || { failures: 0, lastAttempt: now };
  const failures = existing.failures + 1;
  let lockedUntil: number | undefined;
@@ -115,16 +97,8 @@ async function recordLoginFailure(email: string): Promise<void> {
  });
 }
 
-async function clearLoginFailures(email: string): Promise<void> {
+function clearLoginFailures(email: string): void {
  const key = email.toLowerCase().trim();
- try {
- await supabase.rpc('record_auth_attempt', {
- p_identifier: key,
- p_success: true,
- });
- } catch {
- // Non-blocking
- }
  loginAttempts.delete(key);
 }
 
@@ -161,8 +135,8 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
 export async function login(payload: LoginPayload): Promise<AuthSession> {
   const cleanEmail = payload.email.trim().toLowerCase();
 
-  // Enforce server-side brute-force lockout check
-  await checkLoginRateLimit(cleanEmail);
+  // Client-side throttle (UX only; Supabase Auth enforces the real limits)
+  checkLoginRateLimit(cleanEmail);
 
   let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: cleanEmail,
@@ -175,12 +149,12 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   }
 
   if (signInError || !signInData?.session || !signInData?.user) {
-    await recordLoginFailure(cleanEmail);
+    recordLoginFailure(cleanEmail);
     throw new Error('Invalid email or password. Please verify your credentials and try again.');
   }
 
   // Clear failures upon successful authentication
-  await clearLoginFailures(cleanEmail);
+  clearLoginFailures(cleanEmail);
 
   // Fetch verified user profile from Supabase profiles table with targeted column projection
   const { data: profile } = await supabase
@@ -236,6 +210,9 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
  username: payload.username,
  role: assignedRole,
  campus_code: detectedCampus,
+ terms_version: payload.acceptedTermsVersion ?? null,
+ terms_accepted_at: payload.acceptedTermsVersion ? new Date().toISOString() : null,
+ age_confirmed_18: payload.confirmedAge18 === true,
  },
  },
  });
@@ -263,15 +240,8 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
  throw new Error('Your account was created, but we could not sign you in. Please log in with your new password.');
  }
 
- // Upsert profile in Supabase profiles table with campus_code
- await supabase.from('profiles').upsert({
- id: data.user.id,
- email: cleanEmail,
- full_name: payload.fullName,
- username: payload.username,
- role: assignedRole,
- campus_code: detectedCampus,
- });
+ // The profile row is created server-side by the auth trigger; the client never
+ // writes role / campus_code for itself.
 
  const accessToken = activeSession.access_token;
  const refreshToken = activeSession.refresh_token;
@@ -306,8 +276,11 @@ export async function verifyPasswordResetOtpAndSetPassword(
  const cleanEmail = email.trim();
  const cleanToken = token.trim();
  if (!cleanToken) throw new Error('Recovery code is required.');
- if (!newPassword || newPassword.length < 8) {
- throw new Error('New password must be at least 8 characters long.');
+ if (!newPassword || !isPasswordValid(newPassword)) {
+ const unmet = checkPassword(newPassword ?? '')
+ .filter((c) => !c.met)
+ .map((c) => c.label.toLowerCase());
+ throw new Error(`New password does not meet the password policy: ${unmet.join(', ')}.`);
  }
 
  const { data, error } = await supabase.auth.verifyOtp({
@@ -532,14 +505,20 @@ export interface StartImpersonationResult {
  expiresAt: string;
 }
 
-export async function startImpersonation(targetUserId: string): Promise<StartImpersonationResult> {
+export const IMPERSONATION_REASON_MIN_LENGTH = 10;
+
+export async function startImpersonation(targetUserId: string, reason: string): Promise<StartImpersonationResult> {
  const cleanTargetUserId = targetUserId?.trim();
  if (!cleanTargetUserId) {
  throw new Error('A target user is required to start impersonation.');
  }
+ const cleanReason = reason?.trim() ?? '';
+ if (cleanReason.length < IMPERSONATION_REASON_MIN_LENGTH) {
+ throw new Error(`A reason of at least ${IMPERSONATION_REASON_MIN_LENGTH} characters is required to start impersonation.`);
+ }
 
  const { data, error } = await supabase.functions.invoke('admin-impersonate-user', {
- body: { targetUserId: cleanTargetUserId },
+ body: { targetUserId: cleanTargetUserId, reason: cleanReason },
  });
 
  if (error) {
@@ -573,6 +552,21 @@ export async function startImpersonation(targetUserId: string): Promise<StartImp
     targetName,
     expiresAt,
   };
+}
+
+/**
+ * Best-effort: asks the edge function to write the `impersonation_ended` audit
+ * entry. Must be called AFTER the admin session has been restored (the function
+ * authenticates the caller as the admin). Never throws.
+ */
+export async function endImpersonationAudit(targetUserId: string): Promise<void> {
+ try {
+ await supabase.functions.invoke('admin-impersonate-user', {
+ body: { action: 'end', targetUserId },
+ });
+ } catch (err) {
+ console.warn('[Auth] Could not record impersonation end:', err);
+ }
 }
 
 export async function adminTriggerPasswordReset(email: string): Promise<{ success: boolean; message: string }> {

@@ -1,211 +1,215 @@
 // admin-impersonate-user
 //
-// Supabase Edge Function that lets an admin "view as user" for support
-// purposes (the same idea as Intercom/Zendesk "log in as user"). It mints a
-// one-time magic-link token for the target user's own email address.
+// Supabase Edge Function that lets an admin "view as user" for support purposes
+// (the same idea as Intercom/Zendesk "log in as user"). It mints a one-time
+// magic-link token for the target user's own email address.
 //
 // This exists because generating a session for another user requires the
-// service-role key, and a service-role key must NEVER be shipped inside the
-// client app (Expo/React Native bundle) - anyone with the compiled app could
-// extract it and gain full database admin rights. Instead this function runs
-// server-side, reads the service-role key from a server-only secret, and the
-// client calls it via `supabase.functions.invoke()` passing only the
-// caller's own auth token. The function verifies that token and the
-// caller's admin role before doing anything privileged.
+// service-role key, which must NEVER be shipped inside the client app. This
+// function runs server-side, reads the key from a server-only secret, and
+// verifies the caller before doing anything privileged.
 //
-// SECURITY NOTE: this function deliberately does NOT hand back a full
-// session for the target user - that would mean shipping a live refresh
-// token through this response. Instead it only mints a one-time token
-// (`tokenHash`, the `hashed_token`/`email_otp` from `generateLink`). The
-// client is expected to immediately exchange it for a real session via:
+// Request (start):  POST { targetUserId: uuid, reason: string (>= 10 chars) }
+// Response (start): { email, tokenHash, targetUserId, targetName, expiresAt }
+// Request (end):    POST { action: 'end', targetUserId: uuid }
+// Response (end):   { success: true }   (audit only; no token is minted)
 //
-//   supabase.auth.verifyOtp({ email, token: tokenHash, type: 'magiclink' })
+// Guard rails (all enforced server-side):
+//   * caller must be a non-suspended admin AND hold an AAL2 (MFA) session
+//     (403 { error: 'mfa_required' }; REQUIRE_ADMIN_MFA=false disables this)
+//   * `reason` (>= 10 chars) is mandatory and stored in the audit log
+//   * only NON-ADMIN targets can be impersonated (students, alumni, staff); admins
+//     cannot impersonate other admins, and cannot impersonate themselves
+//   * 10 impersonations per admin per hour (durable rate limit, fails closed)
+//   * the audit row is written BEFORE the token is returned; if it cannot be
+//     written no token is handed out
+//   * 'end' must be called with the ADMIN's own session (the client has to restore
+//     the admin session first), so it needs admin + AAL2 as well.
 //
-// which keeps the privileged, service-role-only operation in this function
-// to the smallest possible surface (minting the token), while the actual
-// session exchange happens client-side using the public anon client, exactly
-// like a normal magic-link login.
+// IMPORTANT LIMITATION: the session created from `tokenHash` is a REAL Supabase Auth
+// session (access + refresh token) for the target user. It cannot be time-limited
+// server-side: `expiresAt` is advisory for the client UI only, and the magic-link
+// token itself expires per the project's OTP expiry setting. The compensating
+// control is the append-only audit trail (impersonation_started / impersonation_ended
+// with actor, target, reason and timestamps) plus the admin-only + MFA gate above.
 //
-// Deployment:
+// The token is intentionally NOT a full session: the client exchanges it with
+//   supabase.auth.verifyOtp({ email, token_hash: tokenHash, type: 'magiclink' })
+//
+// Deployment (verify_jwt ON):
 //   supabase functions deploy admin-impersonate-user
-//
-// Required secret (already set for admin-delete-user, reused here - never
-// committed to the repo and never added to any client-side .env file):
-//   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
-//
-// SUPABASE_URL is provided automatically to Edge Functions at runtime.
+//   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<service role key> ALLOWED_ORIGINS=<...>
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
+import { isUuid, requireAdmin } from '../_shared/auth.ts';
+import { readJsonBody } from '../_shared/body.ts';
+import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function jsonResponse(body: Record<string, unknown>, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
+const MAX_BODY_BYTES = 4096;
+const MIN_REASON_CHARS = 10;
+const MAX_REASON_CHARS = 500;
+const IMPERSONATION_LIMIT = 10;
+const IMPERSONATION_WINDOW_SECONDS = 60 * 60;
+const ADVISORY_TTL_MS = 15 * 60 * 1000;
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405);
 
-  if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405);
-  }
-
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
-
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
+  const admin = createServiceClient();
+  if (!admin) {
     console.error('[admin-impersonate-user] Missing required environment secrets.');
-    return jsonResponse({ error: 'Server misconfiguration. Missing required secrets.' }, 500);
+    return jsonResponse(req, { error: 'Server misconfiguration. Missing required secrets.' }, 500);
   }
 
-  // --- 1. Extract and verify the caller's JWT ---------------------------
-  const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization');
-  if (!authHeader) {
-    return jsonResponse({ error: 'Missing Authorization header.' }, 401);
+  // --- 1. Caller must be an admin with an MFA (AAL2) session ----------------
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+  const { user: callerUser } = auth.caller;
+
+  // --- 2. Validate the request body -----------------------------------------
+  const parsed = await readJsonBody<{ action?: unknown; targetUserId?: unknown; reason?: unknown }>(
+    req,
+    MAX_BODY_BYTES,
+  );
+  if (!parsed.ok) return jsonResponse(req, { error: parsed.error }, parsed.status);
+  const { action, targetUserId } = parsed.value;
+
+  if (!isUuid(targetUserId)) {
+    return jsonResponse(req, { error: 'targetUserId is required and must be a valid user id.' }, 400);
   }
-
-  // Client scoped to the CALLER's own JWT - used only to verify identity
-  // and role. This client must never be used to perform privileged writes.
-  const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-
-  const {
-    data: { user: callerUser },
-    error: callerAuthError,
-  } = await callerClient.auth.getUser();
-
-  if (callerAuthError || !callerUser) {
-    return jsonResponse({ error: 'Invalid or expired session.' }, 401);
-  }
-
-  // --- 2. Verify caller is an admin --------------------------------------
-  const { data: callerProfile, error: callerProfileError } = await callerClient
-    .from('profiles')
-    .select('role')
-    .eq('id', callerUser.id)
-    .single();
-
-  if (callerProfileError || !callerProfile || callerProfile.role !== 'admin') {
-    return jsonResponse({ error: 'Forbidden. Admin privileges are required to perform this action.' }, 403);
-  }
-
-  // --- 3. Parse and validate the request body ----------------------------
-  let body: { targetUserId?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return jsonResponse({ error: 'Invalid JSON request body.' }, 400);
-  }
-
-  const targetUserId = body?.targetUserId;
-  if (typeof targetUserId !== 'string' || targetUserId.trim().length === 0) {
-    return jsonResponse({ error: 'targetUserId is required and must be a non-empty string.' }, 400);
-  }
-
   if (targetUserId === callerUser.id) {
     return jsonResponse(
+      req,
       { error: 'You cannot impersonate your own account. You are already viewing the app as yourself.' },
       400,
     );
   }
 
-  // --- 4. Look up the target user and mint a one-time token --------------
-  const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  try {
-    // The Auth admin API is the authoritative source for the actual login
-    // email (it reflects what auth.users has, including any email changes
-    // that may not yet be mirrored into profiles.email), so prefer it over
-    // reading profiles.email directly.
-    const { data: targetAuthData, error: targetAuthError } = await adminClient.auth.admin.getUserById(
-      targetUserId,
-    );
-
-    if (targetAuthError || !targetAuthData?.user?.email) {
-      return jsonResponse({ error: 'Target user not found.' }, 404);
+  // --- 3a. End of an impersonation: audit only, no token ---------------------
+  if (action === 'end') {
+    const { error: endAuditError } = await admin.from('audit_logs').insert({
+      actor_id: callerUser.id,
+      action: 'impersonation_ended',
+      entity_type: 'user',
+      entity_id: targetUserId,
+      metadata: {
+        summary: `Admin ${callerUser.id} ended impersonation of user ${targetUserId}`,
+        targetIdRaw: targetUserId,
+        actorRole: 'admin',
+      },
+      created_at: new Date().toISOString(),
+    });
+    if (endAuditError) {
+      console.error('[admin-impersonate-user] Failed to write end audit entry:', endAuditError.message);
+      return jsonResponse(req, { error: 'Failed to record the end of impersonation.' }, 500);
     }
+    return jsonResponse(req, { success: true }, 200);
+  }
+  if (action !== undefined && action !== 'start') {
+    return jsonResponse(req, { error: 'Unknown action.' }, 400);
+  }
 
-    const targetEmail = targetAuthData.user.email;
+  // --- 3b. Start: reason + rate limit ---------------------------------------
+  const reason = typeof parsed.value.reason === 'string' ? parsed.value.reason.trim() : '';
+  if (reason.length < MIN_REASON_CHARS || reason.length > MAX_REASON_CHARS) {
+    return jsonResponse(
+      req,
+      { error: `reason is required (${MIN_REASON_CHARS}-${MAX_REASON_CHARS} characters).` },
+      400,
+    );
+  }
 
-    // Best-effort lookup of a display name for the response; not required
-    // for the impersonation flow itself, so failures here are non-fatal.
-    const { data: targetProfile } = await adminClient
+  const verdict = await consumeRateLimit(
+    admin,
+    `impersonate:${callerUser.id}`,
+    IMPERSONATION_LIMIT,
+    IMPERSONATION_WINDOW_SECONDS,
+  );
+  if (verdict === 'error') return jsonResponse(req, { error: 'Service temporarily unavailable.' }, 503);
+  if (verdict === 'limited') {
+    return jsonResponse(req, { error: 'Impersonation rate limit reached. Try again later.' }, 429, {
+      'Retry-After': '3600',
+    });
+  }
+
+  // --- 4. Look up the target and mint a one-time token ------------------------
+  try {
+    const { data: targetProfile, error: profileError } = await admin
       .from('profiles')
-      .select('full_name')
+      .select('role, full_name')
       .eq('id', targetUserId)
       .maybeSingle();
+    if (profileError || !targetProfile) {
+      return jsonResponse(req, { error: 'Target user not found.' }, 404);
+    }
+    if (targetProfile.role === 'admin') {
+      return jsonResponse(req, { error: 'Admin accounts cannot be impersonated.' }, 403);
+    }
 
-    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    // The Auth admin API is the authoritative source for the actual login email.
+    const { data: targetAuthData, error: targetAuthError } = await admin.auth.admin.getUserById(targetUserId);
+    if (targetAuthError || !targetAuthData?.user?.email) {
+      return jsonResponse(req, { error: 'Target user not found.' }, 404);
+    }
+    const targetEmail = targetAuthData.user.email;
+
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email: targetEmail,
     });
-
     if (linkError || !linkData?.properties) {
-      console.error('[admin-impersonate-user] Failed to generate impersonation link:', linkError);
-      return jsonResponse({ error: 'Failed to generate an impersonation session for this user.' }, 500);
+      console.error('[admin-impersonate-user] Failed to generate impersonation link:', linkError?.message);
+      return jsonResponse(req, { error: 'Failed to generate an impersonation session for this user.' }, 500);
     }
 
-    // supabase-js v2's generateLink response shape has shifted slightly
-    // across versions; check both known field names defensively.
-    const tokenHash =
-      (linkData.properties as Record<string, unknown>).hashed_token ??
-      (linkData.properties as Record<string, unknown>).email_otp;
-
+    // supabase-js v2's generateLink response shape has shifted across versions;
+    // check both known field names defensively.
+    const props = linkData.properties as Record<string, unknown>;
+    const tokenHash = props.hashed_token ?? props.email_otp;
     if (typeof tokenHash !== 'string' || tokenHash.length === 0) {
-      console.error('[admin-impersonate-user] generateLink response missing a usable token:', linkData.properties);
-      return jsonResponse({ error: 'Failed to generate an impersonation session for this user.' }, 500);
+      console.error('[admin-impersonate-user] generateLink response missing a usable token.');
+      return jsonResponse(req, { error: 'Failed to generate an impersonation session for this user.' }, 500);
     }
 
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + ADVISORY_TTL_MS).toISOString();
 
-    // --- 5. Record an audit log entry for who impersonated whom, and when.
-    const { error: auditError } = await adminClient.from('audit_logs').insert({
+    // --- 5. Audit BEFORE handing the token out (fail closed) --------------------
+    const { error: auditError } = await admin.from('audit_logs').insert({
       actor_id: callerUser.id,
       action: 'impersonation_started',
       entity_type: 'user',
       entity_id: targetUserId,
       metadata: {
-        summary: `Admin ${callerUser.id} started impersonating user ${targetUserId} via admin-impersonate-user Edge Function`,
-        reason: 'Admin-initiated support impersonation ("view as user")',
+        summary: `Admin ${callerUser.id} started impersonating user ${targetUserId} via admin-impersonate-user`,
+        reason,
         targetIdRaw: targetUserId,
-        targetEmail,
+        targetRole: targetProfile.role,
         actorRole: 'admin',
+        mfa: auth.caller.aal ?? null,
         expiresAt,
       },
       created_at: new Date().toISOString(),
     });
-
     if (auditError) {
-      // The token has already been minted; do not fail the request over a
-      // logging error, but surface it server-side for visibility.
-      console.error('[admin-impersonate-user] Failed to write audit log entry:', auditError);
+      console.error('[admin-impersonate-user] Failed to write audit entry, withholding token:', auditError.message);
+      return jsonResponse(req, { error: 'Failed to record the impersonation. Not started.' }, 500);
     }
 
     return jsonResponse(
+      req,
       {
         email: targetEmail,
         tokenHash,
         targetUserId,
-        targetName: targetProfile?.full_name ?? null,
+        targetName: targetProfile.full_name ?? null,
         expiresAt,
       },
       200,
     );
   } catch (err) {
-    console.error('[admin-impersonate-user] Unexpected error:', err);
-    return jsonResponse({ error: 'Unexpected server error while starting impersonation.' }, 500);
+    console.error('[admin-impersonate-user] Unexpected error:', err instanceof Error ? err.message : 'unknown');
+    return jsonResponse(req, { error: 'Unexpected server error while starting impersonation.' }, 500);
   }
 });

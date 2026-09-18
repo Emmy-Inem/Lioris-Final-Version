@@ -8,10 +8,10 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
-  Linking,
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
@@ -99,8 +99,8 @@ export function AcademicLibraryModal({
 
   function openBookLink(book: AcademicBook) {
     if (book.openLibraryUrl) {
-      Linking.openURL(book.openLibraryUrl).catch(() => {
-        toast.warning('Could not open publication link');
+      openExternalUrl(book.openLibraryUrl).then((opened) => {
+        if (!opened) toast.warning('Could not open publication link');
       });
     } else {
       toast.info('No external direct link available for this record');

@@ -11,7 +11,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node -e \"const fs=require('fs'),cp=require('child_process');const f=fs.readdirSync('src/utils').filter(n=>/.test.ts$/.test(n)).map(n=>'src/utils/'+n);if(!f.length){console.log('No unit tests found.');process.exit(0)}process.exit(cp.spawnSync(process.execPath,['--test',...f],{stdio:'inherit'}).status??1)\"",
+    "audit:prod": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -60,5 +62,12 @@
     "eslint": "^10.8.1",
     "typescript": "~6.0.3"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "@xmldom/xmldom": "^0.9.12",
+    "browserslist": "^4.29.0",
+    "baseline-browser-mapping": "^2.11.25",
+    "uuid": "^11.1.1",
+    "query-string": "^9.5.1"
+  }
 }

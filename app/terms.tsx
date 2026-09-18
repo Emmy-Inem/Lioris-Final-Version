@@ -7,6 +7,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
+import { LegalSection, LegalParagraph, LegalBullets, LegalStrong, LegalPlaceholder } from '@/components/LegalSection';
+import { DATA_CONTROLLER, MIN_AGE, RETENTION, TERMS_VERSION } from '@/constants/legal';
 
 export default function TermsOfServiceScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -128,59 +130,126 @@ export default function TermsOfServiceScreen() {
                 Terms of Service
               </AppText>
               <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
-                Last updated: September 2026 • Lioris Campus Technologies
+                Version {TERMS_VERSION} • {DATA_CONTROLLER.legalName}
               </AppText>
             </View>
 
             <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }} />
 
-            <View style={{ gap: 12 }}>
-              <AppText variant="h3" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                1. Acceptance of Terms & Eligibility
-              </AppText>
-              <AppText variant="body" tone="secondary" style={{ lineHeight: 24 }}>
-                By accessing or using Lioris, you agree to be bound by these Terms of Service. Access to institutional
-                spaces requires active affiliation (as an enrolled student, staff member, or verified alumnus) verified
-                via institutional domain email or accredited registrar documents.
-              </AppText>
-            </View>
+            <LegalSection title="1. Acceptance of Terms & Eligibility">
+              <LegalParagraph>
+                By creating an account or using Lioris you agree to these Terms of Service, the Privacy Policy and the
+                Community Rules. You must be at least {MIN_AGE} years old to use Lioris; by registering you confirm that
+                you are. Access to institutional spaces requires active affiliation (as an enrolled student, staff
+                member, or verified alumnus) verified via institutional domain email or accredited registrar documents.
+                Other users may join the general network and apply for verification afterwards.
+              </LegalParagraph>
+            </LegalSection>
 
-            <View style={{ gap: 12 }}>
-              <AppText variant="h3" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                2. Acceptable Use & Academic Integrity
-              </AppText>
-              <AppText variant="body" tone="secondary" style={{ lineHeight: 24 }}>
+            <LegalSection title="2. Your Account & Security">
+              <LegalParagraph>
+                You are responsible for keeping your password and authenticator device secure and for activity on your
+                account. Provide accurate information, do not share or sell your account, and tell us promptly if you
+                suspect unauthorised access. Administrator and staff accounts must use two-factor authentication.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="3. Acceptable Use & Academic Integrity">
+              <LegalParagraph>
                 Lioris is dedicated to constructive peer learning, academic resource sharing, and professional growth.
-                Users must strictly refrain from:
-                {'\n'}• Uploading active, unreleased examination questions or engaging in academic dishonesty.
-                {'\n'}• Impersonating other students, faculty members, or administrative staff.
-                {'\n'}• Harassment, hate speech, or sharing unauthorized personal identifiable information.
-              </AppText>
-            </View>
+                You must not:
+              </LegalParagraph>
+              <LegalBullets
+                items={[
+                  'Upload active, unreleased examination questions or engage in academic dishonesty.',
+                  'Impersonate other students, faculty members, administrative staff or institutions.',
+                  'Harass, threaten or discriminate against others, share hate speech, or publish other people\'s personal information without permission.',
+                  'Post unlawful content, including child sexual abuse material, which is reported to the authorities.',
+                  'Use bots, scrapers or other automated means to collect data from Lioris, or to create accounts, post or message at scale.',
+                  'Attempt to probe, disrupt or bypass security, rate limits or access controls.',
+                ]}
+              />
+            </LegalSection>
 
-            <View style={{ gap: 12 }}>
-              <AppText variant="h3" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                3. Content Ownership & License
-              </AppText>
-              <AppText variant="body" tone="secondary" style={{ lineHeight: 24 }}>
-                You retain all rights to the forum discussions, study notes, and content you post on Lioris.
-                By sharing content in public academic forums, you grant Lioris a limited license to display and
-                distribute that material within your institution's verified directory.
-              </AppText>
-            </View>
+            <LegalSection title="4. Your Content & Licence">
+              <LegalParagraph>
+                You retain all rights to the forum discussions, study notes and other content you post. You grant Lioris
+                a non-exclusive, worldwide, royalty-free licence to host, store, reproduce and display that content
+                solely to operate and provide the service to the audience you choose (for example your institution's
+                verified directory), and to keep the platform safe. This licence ends when you delete the content or
+                your account, except for copies that cannot yet be removed from backups (see the Privacy Policy). You
+                confirm that you own or have the right to share what you upload.
+              </LegalParagraph>
+            </LegalSection>
 
-            <View style={{ gap: 12 }}>
-              <AppText variant="h3" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                4. Direct Administration & Inquiries
-              </AppText>
-              <AppText variant="body" tone="secondary" style={{ lineHeight: 24 }}>
+            <LegalSection title="5. AI Study Copilot">
+              <LegalParagraph>
+                The AI Study Copilot uses Google Gemini to generate responses. Output may be inaccurate, incomplete or
+                out of date and is provided for study support only; it is not professional (legal, medical, financial or
+                academic-advisory) advice and you should verify it before relying on it. Do not submit other people's
+                personal data, confidential material or anything you do not have the right to share. Prompts and images
+                you submit are sent to Google for processing as described in the Privacy Policy. Do not use the Copilot
+                to cheat in assessments or to generate unlawful content.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="6. Marketplace & Escrow">
+              <LegalParagraph>
+                The campus marketplace lets users list and buy items and services. Lioris is a platform only and is not
+                a party to sales between users, does not own or inspect listed goods, and does not guarantee quality,
+                legality or delivery. Any escrow or hold feature is a convenience mechanism whose release is governed by
+                the rules shown in the app. Buyers and sellers must comply with applicable law (including consumer
+                protection and tax rules) and may not list prohibited or stolen items. Meet in safe public campus
+                locations and report suspicious listings.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="7. Moderation & Suspension">
+              <LegalParagraph>
+                We and campus moderators may remove content, restrict features, or suspend or terminate accounts that
+                breach these Terms or the Community Rules, or where required by law. Where practicable we will tell you
+                why and how to appeal (see Community Rules for the moderation contact).
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="8. Termination & Deletion">
+              <LegalParagraph>
+                You may stop using Lioris and delete your account at any time from Settings, then Privacy & Data.
+                Deletion permanently erases your account, content, messages, uploads and verification documents and
+                cannot be undone; backups roll off within {RETENTION.backupRollOffDays} days. We may suspend or
+                terminate your access for serious or repeated breaches.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="9. Disclaimers & Limitation of Liability">
+              <LegalParagraph>
+                Lioris is provided "as is" and "as available". To the fullest extent permitted by law, Lioris is not
+                liable for indirect or consequential loss, loss of data or profit, or for user-generated content,
+                third-party services or transactions between users. Nothing in these Terms excludes liability that cannot
+                be excluded by law.{' '}
+                <LegalPlaceholder>[TODO(owner): have counsel review and set the liability cap.]</LegalPlaceholder>
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="10. Governing Law & Changes">
+              <LegalParagraph>
+                These Terms are governed by the laws of the Federal Republic of Nigeria, and the Nigerian courts have
+                jurisdiction, without affecting any mandatory consumer rights you have in your country of residence.{' '}
+                <LegalPlaceholder>[TODO(owner): confirm governing law, venue and dispute-resolution wording with counsel.]</LegalPlaceholder>{' '}
+                We may update these Terms; material changes will be announced in the app and may require you to accept
+                them again. Terms version: <LegalStrong>{TERMS_VERSION}</LegalStrong>.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="11. Direct Administration & Inquiries">
+              <LegalParagraph>
                 For questions regarding governance, moderation appeals, or institutional partnerships:
                 {'\n\n'}
-                <AppText weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>Campus Lead Administrator</AppText>
-                {'\n'}Email: inememmanuel@gmail.com
-                {'\n'}Telephone: +2349076664049
-              </AppText>
-            </View>
+                <LegalStrong>Campus Lead Administrator</LegalStrong>
+                {'\n'}Email: {DATA_CONTROLLER.contactEmail}
+                {'\n'}Telephone: {DATA_CONTROLLER.contactPhone}
+              </LegalParagraph>
+            </LegalSection>
           </View>
         </View>
       </ScrollView>

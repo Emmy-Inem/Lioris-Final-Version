@@ -7,6 +7,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
+import { LegalSection, LegalParagraph, LegalStrong } from '@/components/LegalSection';
+import { DATA_CONTROLLER, TERMS_VERSION } from '@/constants/legal';
 
 export default function CommunityRulesScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -128,56 +130,65 @@ export default function CommunityRulesScreen() {
                 Community Guidelines
               </AppText>
               <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
-                Last updated: September 2026 • Lioris Campus Technologies
+                Version {TERMS_VERSION} • {DATA_CONTROLLER.legalName}
               </AppText>
             </View>
 
             <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }} />
 
-            <View style={{ gap: 12 }}>
-              <AppText variant="h3" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                1. Respectful Academic Discourse
-              </AppText>
-              <AppText variant="body" tone="secondary" style={{ lineHeight: 24 }}>
+            <LegalSection title="1. Respectful Academic Discourse">
+              <LegalParagraph>
                 Lioris is a scholarly environment. While spirited debate and diverse viewpoints are welcomed,
                 personal attacks, derogatory slurs, tribal discrimination, and religious hostility are strictly
                 prohibited across all public forums and group chats.
-              </AppText>
-            </View>
+              </LegalParagraph>
+            </LegalSection>
 
-            <View style={{ gap: 12 }}>
-              <AppText variant="h3" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                2. Academic Honor Code
-              </AppText>
-              <AppText variant="body" tone="secondary" style={{ lineHeight: 24 }}>
+            <LegalSection title="2. Zero Tolerance">
+              <LegalParagraph>
+                We have no tolerance for harassment, bullying, threats, sexual exploitation, and any content that
+                sexualises minors (child sexual abuse material). Illegal content, including incitement to violence,
+                fraud, and trade in prohibited goods, is removed immediately, accounts involved are terminated, and
+                serious cases are referred to the appropriate law enforcement authorities.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="3. Academic Honor Code">
+              <LegalParagraph>
                 Sharing past examination papers, syllabus summaries, and tutorial explanations is encouraged.
                 However, publishing active examination questions, circulating stolen marking schemes, or soliciting
                 impersonation in university assessments constitutes a severe violation resulting in immediate account termination.
-              </AppText>
-            </View>
+              </LegalParagraph>
+            </LegalSection>
 
-            <View style={{ gap: 12 }}>
-              <AppText variant="h3" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                3. Mentorship & Professional Etiquette
-              </AppText>
-              <AppText variant="body" tone="secondary" style={{ lineHeight: 24 }}>
+            <LegalSection title="4. Mentorship & Professional Etiquette">
+              <LegalParagraph>
                 Alumni volunteer their time to guide current undergraduates. Students are expected to maintain
                 punctuality, professionalism, and courteous communication during 1-on-1 mentorship sessions.
-              </AppText>
-            </View>
+              </LegalParagraph>
+            </LegalSection>
 
-            <View style={{ gap: 12 }}>
-              <AppText variant="h3" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                4. Reporting Violations & Direct Contact
-              </AppText>
-              <AppText variant="body" tone="secondary" style={{ lineHeight: 24 }}>
-                To report a community violation or appeal a moderation decision:
+            <LegalSection title="5. Report and Block">
+              <LegalParagraph>
+                You are in control of your experience. Use the report option on any post, comment, message, listing or
+                profile to flag a violation, and use block to stop a person from contacting you or appearing in your
+                feeds. Reports are reviewed by campus moderators and administrators, and reporters are not disclosed to
+                the reported user. Deliberately false reports may themselves lead to sanctions.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="6. Reaching Moderators & Appeals">
+              <LegalParagraph>
+                To report a community violation, escalate an urgent safety concern, or appeal a moderation decision,
+                use the in-app report or Support Desk (Settings) or contact us directly:
                 {'\n\n'}
-                <AppText weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>Community Moderation Desk</AppText>
-                {'\n'}Email: inememmanuel@gmail.com
-                {'\n'}Telephone: +2349076664049
-              </AppText>
-            </View>
+                <LegalStrong>Community Moderation Desk</LegalStrong>
+                {'\n'}Email: {DATA_CONTROLLER.contactEmail}
+                {'\n'}Telephone: {DATA_CONTROLLER.contactPhone}
+                {'\n\n'}
+                Consequences range from content removal and warnings to suspension and permanent account termination.
+              </LegalParagraph>
+            </LegalSection>
           </View>
         </View>
       </ScrollView>

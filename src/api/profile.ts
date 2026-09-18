@@ -3,7 +3,7 @@ import { UserProfile, UserRole } from './types';
 
 import { supabase } from './supabase';
 import { getInstitutionByCode, getInstitutionForEmail, LAUNCH_INSTITUTIONS } from './institutions';
-import { getSessionUser } from '../auth/tokenStorage';
+import { clearTokens, getSessionUser } from '../auth/tokenStorage';
 
 export function nextLevelXp(level: number): number {
  if (level === 1) return 200;
@@ -334,20 +334,54 @@ export async function updateMyProfile(
  return updated;
 }
 
-export async function deleteMyAccount(userId?: string): Promise<{ success: boolean }> {
-  let targetId = userId;
-  if (!targetId) {
-    const { data } = await supabase.auth.getUser();
-    targetId = data?.user?.id;
+/**
+ * Permanently deletes the signed-in user's account. The heavy lifting (storage
+ * files, database rows and the auth login itself) happens server-side in the
+ * `delete-my-account` edge function, because a client cannot delete its own
+ * auth user or every dependent row. On success the local session is wiped.
+ * Server errors (for example the last-admin protection) are surfaced verbatim.
+ */
+export async function deleteMyAccount(): Promise<{ success: boolean }> {
+  const { data, error } = await supabase.functions.invoke('delete-my-account', {
+    body: { confirm: 'DELETE' },
+  });
+
+  let message: string | null = null;
+  if (error) {
+    message = error.message || null;
+    // FunctionsHttpError carries the JSON body of the failed response in `context`.
+    const ctx = (error as { context?: unknown }).context;
+    if (ctx && typeof (ctx as Response).json === 'function') {
+      try {
+        const body = await (ctx as Response).clone().json();
+        if (body && typeof body.error === 'string') message = body.error;
+        else if (body && typeof body.message === 'string') message = body.message;
+      } catch {}
+    }
+  } else if (data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string') {
+    message = (data as { error: string }).error;
   }
-  if (targetId) {
-    try {
-      await supabase.from('profiles').delete().eq('id', targetId);
-      profileState.delete(targetId);
-    } catch {}
+  if (message !== null || error) {
+    const friendly =
+      message && !/non-2xx|Failed to send a request/i.test(message)
+        ? message
+        : 'We could not delete your account right now. Please check your connection and try again, or contact support.';
+    throw new Error(friendly);
   }
+
+  profileState.clear();
+  await clearTokens().catch(() => {});
   await supabase.auth.signOut().catch(() => {});
   return { success: true };
+}
+
+/** GDPR/NDPA data portability & access: returns everything we hold about the caller as JSON. */
+export async function exportMyData(): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase.rpc('export_my_data');
+  if (error) {
+    throw new Error(error.message || 'We could not prepare your data export. Please try again.');
+  }
+  return (data ?? {}) as Record<string, unknown>;
 }
 
 export async function getPublicProfile(userId: string): Promise<UserProfile | null> {
