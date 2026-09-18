@@ -676,7 +676,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value.endImpersonation().catch(() => {});
     }, msRemaining);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [impersonation.active, impersonation.expiresAt]);
 
  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
