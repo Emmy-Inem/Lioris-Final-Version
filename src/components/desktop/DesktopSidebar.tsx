@@ -326,7 +326,6 @@ export function DesktopSidebar() {
           flex: 1,
           minHeight: 0,
           width: '100%',
-          overflowY: 'auto' as any,
         }}
         contentContainerStyle={{
           paddingVertical: 6,
@@ -560,8 +559,6 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    transitionProperty: 'width' as any,
-    transitionDuration: '200ms' as any,
   },
   brandHeader: {
     paddingVertical: 10,
