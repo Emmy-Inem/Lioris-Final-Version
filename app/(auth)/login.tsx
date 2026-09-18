@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +15,6 @@ import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { joinWaitlist } from '@/api/institutions';
-import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from '@/api/supabase';
 import {
  sendPasswordResetEmail,
  verifyPasswordResetOtpAndSetPassword,
@@ -50,18 +49,6 @@ export default function LoginScreen() {
  const [password, setPassword] = useState('');
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
- const [googleSubmitting, setGoogleSubmitting] = useState(false);
- // supabase-js only builds the OAuth URL client-side, so with the provider switched off the
- // user is sent to a raw JSON 400 on supabase.co. Only offer the button when it is enabled.
- const [googleEnabled, setGoogleEnabled] = useState(false);
- useEffect(() => {
- let cancelled = false;
- fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_ANON_KEY } })
- .then((r) => r.json())
- .then((s) => { if (!cancelled) setGoogleEnabled(!!s?.external?.google); })
- .catch(() => {});
- return () => { cancelled = true; };
- }, []);
  const [waitlistEmail, setWaitlistEmail] = useState('');
  const [waitlistSchool, setWaitlistSchool] = useState('');
  const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
@@ -165,55 +152,6 @@ export default function LoginScreen() {
  setErrorMessage(msg);
  } finally {
  setSubmitting(false);
- }
- }
-
- async function handleGoogleSignIn() {
- haptics.medium();
- setGoogleSubmitting(true);
- try {
- const redirectUrl =
- Platform.OS === 'web'
- ? typeof window !== 'undefined'
- ? `${window.location.origin}/`
- : 'https://lioris-final-version.vercel.app/'
- : 'lioris://auth/callback';
-
- const { data, error } = await supabase.auth.signInWithOAuth({
- provider: 'google',
- options: {
- redirectTo: redirectUrl,
- queryParams: {
- access_type: 'offline',
- prompt: 'consent',
- },
- },
- });
-
- if (error) {
- if (error.message?.includes('Unsupported provider') || (error as any).error_code === 'validation_failed') {
- Alert.alert(
- 'Google Sign-In Notice',
- 'Google sign-in is not available yet. Please sign in with your school email and password.',
- [{ text: 'Got It', style: 'default' }]
- );
- } else {
- Alert.alert('Google Sign-In', error.message);
- }
- } else if (data?.url) {
- if (Platform.OS === 'web') {
- window.location.href = data.url;
- } else {
- Linking.openURL(data.url);
- }
- }
- } catch (err: any) {
- Alert.alert(
- 'Google Sign-In',
- err?.message || 'Unable to connect to Google Auth. Please check your network or sign in with your email.'
- );
- } finally {
- setGoogleSubmitting(false);
  }
  }
 
@@ -335,41 +273,6 @@ export default function LoginScreen() {
  </AppText>
  </Link>
  </View>
-
- {googleEnabled ? (
- <>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.lg }}>
- <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
- <AppText variant="caption" tone="secondary" weight="semiBold">
- OR CONTINUE WITH
- </AppText>
- <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
- </View>
-
- <Pressable
- onPress={handleGoogleSignIn}
- disabled={googleSubmitting}
- accessibilityRole="button"
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- justifyContent: 'center',
- gap: 10,
- borderWidth: 1,
- borderColor: colors.border,
- borderRadius: radius.md,
- paddingVertical: spacing.md,
- backgroundColor: colors.surface,
- opacity: googleSubmitting ? 0.7 : 1,
- }}
- >
- <Ionicons name="logo-google" size={18} color="#EA4335" />
- <AppText variant="bodySmall" weight="bold">
- {googleSubmitting ? 'Connecting Google...' : 'Continue with Google'}
- </AppText>
- </Pressable>
- </>
- ) : null}
  </>
  );
 

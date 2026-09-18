@@ -37,7 +37,7 @@ export function AnnouncementBanner({ title, message, onPressDetails }: Announcem
  <AppText variant="caption"weight="bold"style={{ color: colors.critical, letterSpacing: 0.5 }}>
  {title.toUpperCase()}
  </AppText>
- <AppText variant="bodySmall"weight="semiBold"style={{ marginTop: 2 }} numberOfLines={2}>
+ <AppText variant="bodySmall"weight="semiBold"style={{ marginTop: 2, lineHeight: 18 }}>
  {message}
  </AppText>
  </View>

@@ -22,10 +22,12 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/auth/AuthContext';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import {
   CAMPUS_LANDMARKS,
   CAMPUS_CENTERS,
   CampusLandmark,
+  getCampusLandmarks,
   searchLandmarks,
   getOsmEmbedUrl,
   getDirectionsUrl,
@@ -51,36 +53,54 @@ const CATEGORY_FILTERS = [
   'Hostel',
 ];
 
-const AVAILABLE_CAMPUSES = ['UI', 'UNILAG', 'OAU', 'UNN', 'CU', 'FUNAAB', 'FUTA', 'ABU'];
+const AVAILABLE_CAMPUSES = ['FUNAAB', 'UI', 'UNILAG', 'OAU', 'UNN', 'CU', 'FUTA', 'ABU'];
 
 export function CampusMapModal({
   visible,
   onClose,
   initialLandmarkName,
-  campusFilter = 'UI',
+  campusFilter,
 }: CampusMapModalProps) {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const toast = useToast();
   const { user } = useAuth();
+  const { campusCode: scopedCampus, homeInstitutionCode } = useCampusScope();
   const isAdmin = user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
 
+  // Determine current user's university campus strictly
+  const rawTargetCampus = campusFilter && campusFilter !== 'GLOBAL'
+    ? campusFilter
+    : (scopedCampus && scopedCampus !== 'GLOBAL' ? scopedCampus : homeInstitutionCode);
+  const targetCampus = (rawTargetCampus || 'FUNAAB').toUpperCase();
+
   const insets = useSafeAreaInsets();
-  const [activeCampus, setActiveCampus] = useState((campusFilter || 'UI').toUpperCase());
+  const [activeCampus, setActiveCampus] = useState(targetCampus);
   const [query, setQuery] = useState(initialLandmarkName || '');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [landmarks, setLandmarks] = useState<CampusLandmark[]>(CAMPUS_LANDMARKS);
-  const [selectedLandmark, setSelectedLandmark] = useState<CampusLandmark>(CAMPUS_LANDMARKS[0]);
+  const [landmarks, setLandmarks] = useState<CampusLandmark[]>(() => {
+    const local = getCampusLandmarks(targetCampus);
+    return local.length > 0 ? local : getCampusLandmarks('FUNAAB');
+  });
+  const [selectedLandmark, setSelectedLandmark] = useState<CampusLandmark>(() => {
+    const local = getCampusLandmarks(targetCampus);
+    return local[0] || getCampusLandmarks('FUNAAB')[0] || CAMPUS_LANDMARKS[0];
+  });
   const [loadingOsm, setLoadingOsm] = useState(false);
 
   const isEnabled = isFeatureEnabled('campus_map');
 
   useEffect(() => {
-    if (campusFilter) {
-      setActiveCampus(campusFilter.toUpperCase());
+    if (targetCampus) {
+      setActiveCampus(targetCampus);
+      const local = getCampusLandmarks(targetCampus);
+      if (local.length > 0) {
+        setLandmarks(local);
+        setSelectedLandmark(local[0]);
+      }
     }
-  }, [campusFilter]);
+  }, [targetCampus]);
 
   useEffect(() => {
     if (visible && isEnabled) {
@@ -92,13 +112,12 @@ export function CampusMapModal({
     setLoadingOsm(true);
     try {
       const results = await fetchOverpassCampusAmenities(campusCode);
-      setLandmarks(results);
-      if (results.length > 0) {
-        setSelectedLandmark(results[0]);
+      const scoped = results.filter((r) => r.campus.toUpperCase() === campusCode.toUpperCase());
+      if (scoped.length > 0) {
+        setLandmarks(scoped);
+        setSelectedLandmark(scoped[0]);
       }
-      // The public Overpass service is frequently overloaded; say so instead of silently
-      // showing the built-in catalog after the user explicitly asked for a refresh.
-      if (manual && !results.some((r) => r.isOsmLive)) {
+      if (manual && !scoped.some((r) => r.isOsmLive)) {
         toast.info('Live OpenStreetMap lookup is unavailable right now - showing the campus catalog.');
       }
     } catch {
@@ -110,7 +129,9 @@ export function CampusMapModal({
 
   if (!isEnabled) return null;
 
-  const allLandmarks = searchLandmarks(query, activeCampus, landmarks);
+  const allLandmarks = searchLandmarks(query, activeCampus, landmarks).filter(
+    (l) => l.campus.toUpperCase() === activeCampus.toUpperCase()
+  );
   const filtered =
     selectedCategory === 'All'
       ? allLandmarks
@@ -153,12 +174,12 @@ export function CampusMapModal({
             <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <Ionicons name="map" size={18} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold" numberOfLines={1}>
+                <AppText variant="h3" weight="bold">
                   {isDesktop ? 'Campus Map & Hall Locator' : 'Campus Map'}
                 </AppText>
                 <Badge label="OpenStreetMap Live" tone="neutral" />
               </View>
-              <AppText variant="caption" tone="secondary" numberOfLines={1}>
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
                 Interactive amenities, ATMs, clinics, food spots & faculty navigation
               </AppText>
             </View>
@@ -183,6 +204,11 @@ export function CampusMapModal({
                       key={cCode}
                       onPress={() => {
                         setActiveCampus(cCode);
+                        const local = getCampusLandmarks(cCode);
+                        if (local.length > 0) {
+                          setLandmarks(local);
+                          setSelectedLandmark(local[0]);
+                        }
                         loadAmenities(cCode);
                       }}
                       style={[
@@ -236,11 +262,11 @@ export function CampusMapModal({
 
             {/* Selected Landmark Quick Overlay Banner */}
             <View style={[styles.selectedBanner, { backgroundColor: `${colors.surface}f0`, borderColor: colors.border }]}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+              <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                <AppText variant="bodySmall" weight="bold">
                   {selectedLandmark.name}
                 </AppText>
-                <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
                   {selectedLandmark.walkingTip || selectedLandmark.description}
                 </AppText>
               </View>
@@ -352,18 +378,27 @@ export function CampusMapModal({
                       },
                     ]}
                   >
-                    <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ flex: 1, minWidth: 0, paddingRight: 6 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                        <AppText variant="bodySmall" weight="bold">
                           {item.name}
                         </AppText>
                         {item.shortCode && <Badge label={item.shortCode} tone="neutral" />}
                         {item.isOsmLive && <Badge label="OSM Live" tone="success" />}
                       </View>
 
-                      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                      <AppText variant="caption" tone="secondary" style={{ marginTop: 2, lineHeight: 17 }}>
                         {item.category} • {item.description}
                       </AppText>
+
+                      {item.walkingTip && (
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 4 }}>
+                          <Ionicons name="footsteps-outline" size={12} color={colors.brandPrimary} style={{ marginTop: 2 }} />
+                          <AppText variant="caption" tone="brand" style={{ flex: 1, lineHeight: 16 }}>
+                            {item.walkingTip}
+                          </AppText>
+                        </View>
+                      )}
 
                       {distanceInfo && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>

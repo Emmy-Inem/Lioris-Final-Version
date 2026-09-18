@@ -2204,7 +2204,7 @@ export function EventDetailScreen() {
         visible={campusMapOpen}
         onClose={() => setCampusMapOpen(false)}
         initialLandmarkName={event.location}
-        campusFilter={event.campusCode || 'UI'}
+        campusFilter={event.campusCode}
       />
       {/* AGENDA SCHEDULE EDITOR MODAL */}
       <Modal visible={agendaEditorOpen} transparent animationType="slide" onRequestClose={() => setAgendaEditorOpen(false)}>

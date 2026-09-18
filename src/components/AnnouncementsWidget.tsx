@@ -246,18 +246,18 @@ export function AnnouncementsWidget({
  </Pressable>
  </View>
 
- <AppText variant="bodySmall" weight="bold" numberOfLines={2} style={{ marginTop: 4, marginBottom: 2 }}>
- {item.title}
- </AppText>
+          <AppText variant="bodySmall" weight="bold" style={{ marginTop: 4, marginBottom: 2, lineHeight: 18 }}>
+            {item.title}
+          </AppText>
 
- <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ marginBottom: spacing.xs }}>
- {item.content}
- </AppText>
+          <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.xs, lineHeight: 17 }}>
+            {item.content}
+          </AppText>
 
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
- <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1, minWidth: 0, paddingRight: 8 }}>
- {item.authorName} • {new Date(item.publishedAt).toLocaleDateString()}
- </AppText>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 6 }}>
+            <AppText variant="caption" tone="secondary" style={{ fontSize: 11, minWidth: 0 }}>
+              {item.authorName} • {new Date(item.publishedAt).toLocaleDateString()}
+            </AppText>
  <Pressable onPress={() => setSelectedAnnouncement(item)} style={{ flexShrink: 0 }}>
  <AppText variant="caption" weight="bold" tone="brand">
  Read More →

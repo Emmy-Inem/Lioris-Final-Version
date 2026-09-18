@@ -80,7 +80,7 @@ export function ConversationRow({ conversation, onArchive, onSelect, isSelected 
  </View>
  <View style={{ flex: 1, minWidth: 0 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6, marginBottom: 3 }}>
- <AppText weight="bold"variant="bodySmall"numberOfLines={1}style={{ flex: 1, minWidth: 0 }}>
+ <AppText weight="bold"variant="bodySmall"style={{ flex: 1, minWidth: 0 }}>
  {conversation.participantName}
  </AppText>
  {conversation.lastMessageAt ? (

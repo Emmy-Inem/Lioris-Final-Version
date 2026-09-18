@@ -138,9 +138,9 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       {/* Screen Title & Post Event Button */}
       <View style={{ marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
         {/* Workspace Campus Badge */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4, flexWrap: 'wrap' }}>
           <Ionicons name={isAlumniScope ? 'ribbon' : 'school'} size={14} color={colors.textSecondary} />
-          <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1}>
+          <AppText variant="caption" weight="bold" tone="secondary">
             {institutionName} • {isAlumniScope ? 'Alumni Network' : 'Campus Hub'}
           </AppText>
         </View>
@@ -175,7 +175,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           </Pressable>
         </View>
 
-        <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 3 }}>
+        <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 18, marginTop: 3 }}>
           {isAlumniScope
             ? 'Exclusive homecomings, class reunions, networking galas & alumni chapters'
             : 'Workshops, career fairs, academic symposiums & student campus gatherings'}

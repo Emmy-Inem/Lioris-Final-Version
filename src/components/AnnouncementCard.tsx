@@ -16,13 +16,13 @@ export function AnnouncementCard({ announcement }: { announcement: Announcement 
  return (
  <SolidCard style={{ marginBottom: spacing.md }}>
  <Badge label={announcement.priority.toUpperCase()} tone={PRIORITY_TONE[announcement.priority]} />
-      <AppText variant="bodySmall" weight="bold" numberOfLines={2} style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
+      <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs, lineHeight: 18 }}>
         {announcement.title}
       </AppText>
-      <AppText variant="bodySmall" tone="secondary" numberOfLines={3} style={{ lineHeight: 18 }}>
+      <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 20 }}>
         {announcement.content}
       </AppText>
-      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: spacing.sm, fontSize: 11 }}>
+      <AppText tone="secondary" variant="caption" style={{ marginTop: spacing.sm, fontSize: 11 }}>
         {announcement.authorName} {'\u00b7'} {announcement.audienceScope} audience
       </AppText>
  </SolidCard>

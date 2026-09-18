@@ -68,14 +68,14 @@ export function SuggestedConnectionCard({ person, index }: { person: SuggestedPe
           <Avatar name={person.name} uri={person.avatarUrl} size={44} />
 
           <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flexShrink: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <AppText weight="bold" variant="bodySmall" style={{ flexShrink: 1 }}>
                 {person.name}
               </AppText>
               <Ionicons name="shield-checkmark" size={13} color={colors.brandPrimary} />
             </View>
 
-            <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11.5, marginTop: 1 }}>
+            <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, marginTop: 2, lineHeight: 16 }}>
               {person.roleLabel} • {person.department}
             </AppText>
 
