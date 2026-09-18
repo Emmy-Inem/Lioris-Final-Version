@@ -314,9 +314,29 @@ export default function RegisterScreen() {
  />
  <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)' }} />
 
- <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+ {/* Logo & Back to Overview */}
+ <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+ <Pressable onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
  <LiorisLogo size={44} variant="symbol" />
  <LiorisLogo size={28} variant="wordmark" tintColor="#FFFFFF" />
+ </Pressable>
+ <Pressable
+ onPress={() => router.push('/')}
+ style={{
+ flexDirection: 'row',
+ alignItems: 'center',
+ gap: 6,
+ paddingHorizontal: 12,
+ paddingVertical: 6,
+ borderRadius: radius.pill,
+ backgroundColor: 'rgba(255,255,255,0.15)',
+ }}
+ >
+ <Ionicons name="arrow-back" size={14} color="#FFFFFF" />
+ <AppText variant="caption" weight="bold" tone="inverse">
+ Overview
+ </AppText>
+ </Pressable>
  </View>
 
  <View style={{ zIndex: 10, maxWidth: 540, gap: spacing.lg }}>
@@ -364,6 +384,26 @@ export default function RegisterScreen() {
  /* Mobile Layout */
  <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
  <AuthHeroBackground height={140} fromColor={heroFromColor} toColor={heroToColor}>
+ <View style={{ position: 'absolute', top: 20, left: 16, zIndex: 10 }}>
+ <Pressable
+ onPress={() => router.push('/')}
+ hitSlop={8}
+ style={{
+ height: 36,
+ paddingHorizontal: 12,
+ borderRadius: 18,
+ backgroundColor: 'rgba(0,0,0,0.3)',
+ flexDirection: 'row',
+ alignItems: 'center',
+ gap: 6,
+ }}
+ >
+ <Ionicons name="arrow-back" size={16} color="#FFFFFF" />
+ <AppText variant="caption" weight="bold" tone="inverse">
+ Overview
+ </AppText>
+ </Pressable>
+ </View>
  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: spacing.lg }}>
  <AppText variant="h1" weight="bold" tone="inverse">
  Join Lioris

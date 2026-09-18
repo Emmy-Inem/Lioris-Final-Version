@@ -371,11 +371,30 @@ export default function LoginScreen() {
  />
  <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)' }} />
 
- {/* Logo */}
- <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
- <LiorisLogo size={44} variant="symbol" />
- <LiorisLogo size={28} variant="wordmark" tintColor="#FFFFFF" />
- </View>
+        {/* Logo & Back to Overview */}
+        <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Pressable onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <LiorisLogo size={44} variant="symbol" />
+            <LiorisLogo size={28} variant="wordmark" tintColor="#FFFFFF" />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/')}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: radius.pill,
+              backgroundColor: 'rgba(255,255,255,0.15)',
+            }}
+          >
+            <Ionicons name="arrow-back" size={14} color="#FFFFFF" />
+            <AppText variant="caption" weight="bold" tone="inverse">
+              Overview
+            </AppText>
+          </Pressable>
+        </View>
 
  {/* Hero Value Props */}
  <View style={{ zIndex: 10, maxWidth: 540, gap: spacing.lg }}>
@@ -475,6 +494,26 @@ export default function LoginScreen() {
  contentFit="cover"
  />
  <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.48)' }} />
+ <View style={{ position: 'absolute', top: 20, left: 16, zIndex: 10 }}>
+ <Pressable
+ onPress={() => router.push('/')}
+ hitSlop={8}
+ style={{
+ height: 38,
+ paddingHorizontal: 12,
+ borderRadius: 19,
+ backgroundColor: 'rgba(0,0,0,0.4)',
+ flexDirection: 'row',
+ alignItems: 'center',
+ gap: 6,
+ }}
+ >
+ <Ionicons name="arrow-back" size={16} color="#FFFFFF" />
+ <AppText variant="caption" weight="bold" tone="inverse">
+ Overview
+ </AppText>
+ </Pressable>
+ </View>
  <View style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
  <Pressable
  onPress={toggleTheme}

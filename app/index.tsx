@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { firstOnboardingStep } from '@/auth/onboardingSteps';
 import { roleRequiresMfa } from '@/auth/mfaPolicy';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';
+import { LandingScreen } from '@/components/LandingScreen';
 
 // PRD Section 6.1 (Dashboard Routing): each role lands on its own
 // dedicated dashboard. This is a client-side convenience redirect only - 
@@ -29,9 +30,9 @@ export default function Index() {
     return <AppLoadingScreen message="Verifying session and security tokens..." />;
   }
 
- if (!user) {
- return <Redirect href="/(auth)/login" />;
- }
+  if (!user) {
+    return <LandingScreen />;
+  }
 
  if (!user.onboardingComplete) {
  // Resume exactly where they left off (PRD Section 5's onboarding
