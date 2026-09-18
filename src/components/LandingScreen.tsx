@@ -160,7 +160,9 @@ export function LandingScreen() {
             style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
           >
             <LiorisLogo size={32} variant="symbol" />
-            <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
+            {width >= 480 && (
+              <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
+            )}
           </Pressable>
 
           {/* Desktop Nav Links */}
@@ -193,32 +195,32 @@ export function LandingScreen() {
           )}
 
           {/* Action CTAs & Theme Toggle */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: width < 380 ? 6 : 10 }}>
             <Pressable
               onPress={toggleTheme}
               accessibilityLabel="Toggle Theme"
               style={{
-                width: 36,
-                height: 36,
+                width: width < 380 ? 32 : 36,
+                height: width < 380 ? 32 : 36,
                 borderRadius: 18,
                 backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={17} color={isDark ? '#F8FAFC' : '#1E293B'} />
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={width < 380 ? 15 : 17} color={isDark ? '#F8FAFC' : '#1E293B'} />
             </Pressable>
 
             <Pressable
               onPress={() => router.push('/(auth)/login')}
               style={{
-                paddingHorizontal: 14,
+                paddingHorizontal: width < 380 ? 10 : 14,
                 paddingVertical: 8,
                 borderRadius: radius.pill,
                 backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
               }}
             >
-              <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFFFFF' : colors.textPrimary }}>
+              <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFFFFF' : colors.textPrimary, fontSize: width < 380 ? 12 : 13 }}>
                 Log In
               </AppText>
             </Pressable>
@@ -227,12 +229,12 @@ export function LandingScreen() {
               onPress={() => router.push('/(auth)/register')}
               style={{
                 backgroundColor: colors.brandPrimary,
-                paddingHorizontal: 16,
+                paddingHorizontal: width < 380 ? 12 : 16,
                 paddingVertical: 8,
                 borderRadius: radius.pill,
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 6,
+                gap: 5,
                 ...(Platform.OS === 'web'
                   ? {
                       boxShadow: '0 4px 14px rgba(26, 61, 255, 0.40)',
@@ -240,10 +242,10 @@ export function LandingScreen() {
                   : {}),
               }}
             >
-              <AppText variant="bodySmall" weight="bold" tone="inverse">
+              <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: width < 380 ? 12 : 13 }}>
                 Get Started
               </AppText>
-              <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
             </Pressable>
           </View>
         </View>
@@ -329,10 +331,13 @@ export function LandingScreen() {
             {/* Primary Hero Actions */}
             <View
               style={{
-                flexDirection: width < 480 ? 'column' : 'row',
+                flexDirection: width < 520 ? 'column' : 'row',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: 12,
-                width: width < 480 ? '100%' : 'auto',
+                width: width < 520 ? '100%' : 'auto',
+                maxWidth: width < 520 ? 340 : undefined,
+                alignSelf: 'center',
                 marginBottom: 28,
               }}
             >
@@ -347,7 +352,7 @@ export function LandingScreen() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 10,
-                  width: width < 480 ? '100%' : 'auto',
+                  width: width < 520 ? '100%' : 'auto',
                   ...(Platform.OS === 'web'
                     ? {
                         boxShadow: '0 8px 24px -2px rgba(26, 61, 255, 0.45)',
@@ -358,6 +363,28 @@ export function LandingScreen() {
                 <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
                 <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: 15 }}>
                   Join Your Campus Space
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                onPress={() => router.push('/(auth)/login')}
+                style={[
+                  glassStyle(radius.pill, isDark ? 0.5 : 0.7),
+                  {
+                    paddingHorizontal: 24,
+                    paddingVertical: 14,
+                    borderRadius: radius.pill,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    width: width < 520 ? '100%' : 'auto',
+                  },
+                ]}
+              >
+                <Ionicons name="log-in-outline" size={18} color={isDark ? '#FFFFFF' : colors.textPrimary} />
+                <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFFFFF' : colors.textPrimary, fontSize: 15 }}>
+                  Sign In to Campus ID
                 </AppText>
               </Pressable>
             </View>
@@ -516,8 +543,8 @@ export function LandingScreen() {
               <View
                 style={{
                   width: Math.min(width - 32, 340),
-                  height: 660,
-                  borderRadius: 50,
+                  height: width < 480 ? 560 : 660,
+                  borderRadius: width < 480 ? 44 : 50,
                   backgroundColor: isDark ? '#020617' : '#FFFFFF',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.12)',
                   borderWidth: 4,
@@ -537,7 +564,7 @@ export function LandingScreen() {
                 <View
                   style={{
                     flex: 1,
-                    borderRadius: 42,
+                    borderRadius: width < 480 ? 36 : 42,
                     backgroundColor: isDark ? '#0B132B' : '#F1F5F9',
                     overflow: 'hidden',
                     position: 'relative',
@@ -876,7 +903,7 @@ export function LandingScreen() {
                     glassStyle(24, isDark ? 0.45 : 0.65),
                     {
                       width: isDesktop ? '31.8%' : isTablet ? '48%' : '100%',
-                      padding: 24,
+                      padding: isDesktop ? 24 : 18,
                       gap: 12,
                     },
                   ]}
@@ -1134,7 +1161,15 @@ export function LandingScreen() {
               Join thousands of students and alumni experiencing university life with verified privacy and institutional trust.
             </AppText>
 
-            <View style={{ flexDirection: width < 420 ? 'column' : 'row', gap: 12, width: width < 420 ? '100%' : 'auto' }}>
+            <View
+              style={{
+                flexDirection: width < 520 ? 'column' : 'row',
+                gap: 12,
+                width: width < 520 ? '100%' : 'auto',
+                maxWidth: width < 520 ? 340 : undefined,
+                alignSelf: 'center',
+              }}
+            >
               <Pressable
                 onPress={() => router.push('/(auth)/register')}
                 style={{
@@ -1144,7 +1179,12 @@ export function LandingScreen() {
                   borderRadius: radius.pill,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: width < 420 ? '100%' : 'auto',
+                  width: width < 520 ? '100%' : 'auto',
+                  ...(Platform.OS === 'web'
+                    ? {
+                        boxShadow: '0 8px 24px -2px rgba(26, 61, 255, 0.45)',
+                      }
+                    : {}),
                 }}
               >
                 <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: 15 }}>
@@ -1161,7 +1201,7 @@ export function LandingScreen() {
                     paddingVertical: 14,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: width < 420 ? '100%' : 'auto',
+                    width: width < 520 ? '100%' : 'auto',
                   },
                 ]}
               >

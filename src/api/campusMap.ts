@@ -379,6 +379,11 @@ export function formatDistanceAndEta(meters: number): { distanceText: string; et
  * Queries OpenStreetMap Overpass API for live amenities (ATMs, food, health, study areas) around a campus.
  * Public, free, zero-key REST endpoint.
  */
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+];
+
 export async function fetchOverpassCampusAmenities(
   campusCode: string,
   userLat?: number,
@@ -396,14 +401,29 @@ export async function fetchOverpassCampusAmenities(
   );out center 25;`;
 
   try {
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `data=${encodeURIComponent(query)}`,
-    });
+    // overpass-api.de answers browser-style requests with a 406 that carries no
+    // CORS headers, so the fetch dies in the browser; the mail.ru mirror accepts them.
+    let data: any = null;
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 12000);
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) continue;
+        data = await res.json();
+        break;
+      } catch {
+        // try the next mirror
+      }
+    }
 
-    if (res.ok) {
-      const data = await res.json();
+    if (data) {
       const elements: any[] = data.elements || [];
 
       const liveLandmarks = elements
