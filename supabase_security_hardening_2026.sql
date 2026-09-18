@@ -989,10 +989,21 @@ BEGIN
   v_hex := substring(p_topic from '^webrtc:lioris-ui-([0-9a-f]{16})$');
   IF v_hex IS NULL THEN RETURN false; END IF;
   IF public.auth_is_suspended() THEN RETURN false; END IF;
-  RETURN EXISTS (
+  -- Chat-channel calls: room = first 16 hex of the chat channel id.
+  IF EXISTS (
     SELECT 1 FROM public.chat_channel_members m
      WHERE m.user_id = auth.uid()
-       AND left(replace(m.channel_id::text, '-', ''), 16) = v_hex);
+       AND left(replace(m.channel_id::text, '-', ''), 16) = v_hex) THEN
+    RETURN true;
+  END IF;
+  -- Mentorship calls: room = first 16 hex of the mentorship id; only its two participants.
+  IF to_regclass('public.mentorships') IS NOT NULL THEN
+    RETURN EXISTS (
+      SELECT 1 FROM public.mentorships ms
+       WHERE (ms.student_id = auth.uid() OR ms.mentor_id = auth.uid())
+         AND left(replace(ms.id::text, '-', ''), 16) = v_hex);
+  END IF;
+  RETURN false;
 END
 $$;
 REVOKE ALL ON FUNCTION public.can_access_webrtc_topic(text) FROM PUBLIC, anon;
@@ -1352,6 +1363,57 @@ REVOKE ALL ON FUNCTION public.list_expired_verification_documents(int) FROM PUBL
 GRANT EXECUTE ON FUNCTION public.list_expired_verification_documents(int) TO service_role;
 
 -- ============================================================================
+-- SECTION 11b. RESOURCE MODERATION CANNOT BE SELF-APPROVED
+-- ============================================================================
+-- The "Users can upload resources" INSERT policy only checks uploader_id, and the
+-- client used to insert is_approved = true, so every upload bypassed the
+-- moderation queue the SELECT policy is built around. Only staff/admin (and
+-- server-side / service_role writes, where auth.uid() IS NULL) may set approval.
+DO $do$
+BEGIN
+  IF to_regclass('public.resources') IS NULL THEN
+    RAISE NOTICE 'public.resources missing: skipping section 11b';
+    RETURN;
+  END IF;
+
+  EXECUTE $f$
+    CREATE OR REPLACE FUNCTION public.enforce_resource_moderation()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    SECURITY DEFINER
+    SET search_path = public, pg_temp
+    AS $body$
+    DECLARE
+      v_role text;
+    BEGIN
+      IF auth.uid() IS NULL THEN
+        RETURN NEW;                      -- service_role / migrations
+      END IF;
+      SELECT role::text INTO v_role FROM public.profiles WHERE id = auth.uid();
+      IF v_role IN ('admin', 'staff') THEN
+        RETURN NEW;
+      END IF;
+      IF TG_OP = 'INSERT' THEN
+        NEW.is_approved := false;
+        NEW.approved_by := NULL;
+        NEW.approved_at := NULL;
+      ELSE
+        NEW.is_approved := OLD.is_approved;
+        NEW.approved_by := OLD.approved_by;
+        NEW.approved_at := OLD.approved_at;
+      END IF;
+      RETURN NEW;
+    END
+    $body$
+  $f$;
+
+  EXECUTE 'DROP TRIGGER IF EXISTS trg_enforce_resource_moderation ON public.resources';
+  EXECUTE 'CREATE TRIGGER trg_enforce_resource_moderation BEFORE INSERT OR UPDATE ON public.resources
+           FOR EACH ROW EXECUTE FUNCTION public.enforce_resource_moderation()';
+END
+$do$;
+
+-- ============================================================================
 -- SECTION 12. RATE-LIMIT PRIMITIVE FOR EDGE FUNCTIONS
 -- ============================================================================
 -- Interface contract: public.api_rate_limits(key, window_start, count) and
@@ -1438,6 +1500,7 @@ DO $do$
 DECLARE
   r record;
   v_cfg text;
+  v_auth boolean;
 BEGIN
   FOR r IN
     SELECT p.oid, p.oid::regprocedure::text AS sig, p.proconfig, (p.prorettype = 'trigger'::regtype) AS is_trigger
@@ -1458,9 +1521,17 @@ BEGIN
         EXECUTE format('ALTER FUNCTION %s SET search_path = %s, pg_temp', r.sig, v_cfg);
       END IF;
 
+      -- Capture whether signed-in users can call it TODAY (directly or via the
+      -- implicit PUBLIC grant). Revoking PUBLIC must not silently break RLS
+      -- policies / RPCs that authenticated relied on; functions already locked
+      -- to service_role earlier in this script report false here and stay locked.
+      v_auth := has_function_privilege('authenticated', r.oid, 'EXECUTE');
+
       EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon', r.sig);
       IF r.is_trigger THEN
         EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM authenticated', r.sig);
+      ELSIF v_auth THEN
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', r.sig);
       END IF;
     EXCEPTION WHEN OTHERS THEN
       RAISE WARNING 'SECURITY DEFINER hygiene skipped for %: %', r.sig, SQLERRM;

@@ -43,8 +43,10 @@ export default function AlumniMentorshipScreen() {
     partnerDepartment?: string | null;
   } | null>(null);
 
-  function handleStartMentorshipCall(studentId: string, studentName: string, department?: string | null) {
-    const roomName = getCallRoomName(`mentorship-${studentId}`);
+  function handleStartMentorshipCall(mentorshipId: string, studentName: string, department?: string | null) {
+    // Room is derived from the mentorship record id (not the student's id) so that only its
+    // two participants can join: the realtime policy authorises against public.mentorships.
+    const roomName = getCallRoomName(mentorshipId);
     const callUrl = getCallUrl(roomName, false);
     setActiveCall({ roomName, callUrl, partnerName: studentName, partnerDepartment: department });
   }
@@ -155,7 +157,7 @@ export default function AlumniMentorshipScreen() {
                         variant="primary"
                         fullWidth
                         size="sm"
-                        onPress={() => handleStartMentorshipCall(m.studentId, studentName, m.studentDepartment)}
+                        onPress={() => handleStartMentorshipCall(m.id, studentName, m.studentDepartment)}
                       />
                     </View>
                     <View style={{ flex: 1 }}>

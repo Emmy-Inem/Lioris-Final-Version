@@ -20,6 +20,7 @@ import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { AppTextField } from '@/components/AppTextField';
 import { joinWaitlist, LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import { DATA_CONTROLLER, DPO_EMAIL } from '@/constants/legal';
 import { haptics } from '@/utils/haptics';
 
 export function LandingScreen() {
@@ -1248,22 +1249,22 @@ export function LandingScreen() {
                 {/* Direct Contact Details */}
                 <View style={{ gap: 8, marginTop: 4 }}>
                   <Pressable
-                    onPress={() => Linking.openURL('mailto:inememmanuel@gmail.com')}
+                    onPress={() => Linking.openURL(`mailto:${DATA_CONTROLLER.contactEmail}`)}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
                   >
                     <Ionicons name="mail-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="bodySmall" weight="semiBold" style={{ color: isDark ? '#E2E8F0' : '#1E293B' }}>
-                      inememmanuel@gmail.com
+                      {DATA_CONTROLLER.contactEmail}
                     </AppText>
                   </Pressable>
 
                   <Pressable
-                    onPress={() => Linking.openURL('tel:+2349076664049')}
+                    onPress={() => Linking.openURL(`mailto:${DPO_EMAIL}`)}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
                   >
-                    <Ionicons name="call-outline" size={16} color={colors.brandPrimary} />
+                    <Ionicons name="shield-checkmark-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="bodySmall" weight="semiBold" style={{ color: isDark ? '#E2E8F0' : '#1E293B' }}>
-                      +2349076664049
+                      {DPO_EMAIL}
                     </AppText>
                   </Pressable>
                 </View>

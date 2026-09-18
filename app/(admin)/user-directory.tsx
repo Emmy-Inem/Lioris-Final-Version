@@ -177,6 +177,11 @@ export default function UserDirectoryScreen() {
  const [impersonateTarget, setImpersonateTarget] = useState<DirectoryUser | null>(null);
  const [impersonateReason, setImpersonateReason] = useState('');
 
+ // Account-deletion reason prompt: admin-delete-user requires a recorded reason (>= 10 chars).
+ const [deleteTarget, setDeleteTarget] = useState<DirectoryUser | null>(null);
+ const [deleteReason, setDeleteReason] = useState('');
+ const [isDeleting, setIsDeleting] = useState(false);
+
   // Edit User Modal State
   const toast = useToast();
   const [editModalUser, setEditModalUser] = useState<DirectoryUser | null>(null);
@@ -680,28 +685,26 @@ export default function UserDirectoryScreen() {
  {
  text: 'Delete Forever',
  style: 'destructive',
- onPress: () => confirmWipeAccount(target),
+ onPress: () => {
+ // Collect the audit reason in an inline modal (Alert.prompt is iOS-only).
+ setDeleteReason('');
+ setDeleteTarget(target);
+ },
  },
  ],
  );
  }
 
- async function confirmWipeAccount(target: DirectoryUser) {
- // Second confirmation step for a fully irreversible action: the admin
- // must explicitly re-confirm the target's identity before we proceed.
- Alert.alert(
- 'Final Confirmation',
- `Type-check: you are about to permanently erase ${target.fullName} (${target.email}).\n\nThis cannot be undone. Proceed?`,
- [
- { text: 'Cancel', style: 'cancel' },
- {
- text: 'Permanently Delete',
- style: 'destructive',
- onPress: async () => {
+ async function confirmWipeAccount(target: DirectoryUser, reason: string) {
+ if (reason.trim().length < IMPERSONATION_REASON_MIN_LENGTH) {
+ Alert.alert('Reason Required', `Please record why this account is being deleted (at least ${IMPERSONATION_REASON_MIN_LENGTH} characters).`);
+ return;
+ }
+ setIsDeleting(true);
  try {
  const { supabase } = await import('@/api/supabase');
  const { data, error } = await supabase.functions.invoke('admin-delete-user', {
- body: { targetUserId: target.id },
+ body: { targetUserId: target.id, reason: reason.trim() },
  });
 
  if (error || (data && data.error)) {
@@ -711,20 +714,19 @@ export default function UserDirectoryScreen() {
  return;
  }
 
+ setDeleteTarget(null);
  setUsers((prev) => prev.filter((u) => u.id !== target.id));
  setSelectedUser(null);
  Alert.alert(
  'Account Permanently Deleted',
- `${target.fullName}'s login credentials and profile data have been permanently removed.`,
+ `${target.fullName}'s login credentials, profile data and uploaded files have been permanently removed.`,
  );
  } catch (err: any) {
  console.warn('[UserDirectory] admin-delete-user invoke error:', err);
  Alert.alert('Deletion Failed', `Could not reach the deletion service: ${err?.message || 'Unknown error'}`);
+ } finally {
+ setIsDeleting(false);
  }
- },
- },
- ],
- );
  }
 
   return (
@@ -1247,6 +1249,41 @@ export default function UserDirectoryScreen() {
  label={isImpersonating ? 'Starting...' : 'View As User'}
  onPress={() => impersonateTarget && confirmImpersonate(impersonateTarget, impersonateReason)}
  disabled={isImpersonating || impersonateReason.trim().length < IMPERSONATION_REASON_MIN_LENGTH}
+ fullWidth
+ />
+ </View>
+ </View>
+ </View>
+ </View>
+ </Modal>
+
+ {/* Account deletion reason prompt */}
+ <Modal visible={!!deleteTarget} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
+ <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: spacing.lg }}>
+ <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: spacing.lg, maxWidth: 480, width: '100%', alignSelf: 'center' }}>
+ <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+ Reason for Deletion
+ </AppText>
+ <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+ {deleteTarget ? `Permanently deleting ${deleteTarget.fullName}. ` : ''}This reason is recorded in the audit log.
+ </AppText>
+ <AppTextField
+ label="Reason (min. 10 characters)"
+ value={deleteReason}
+ onChangeText={setDeleteReason}
+ placeholder="e.g. Verified erasure request received by email"
+ multiline
+ numberOfLines={3}
+ />
+ <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+ <View style={{ flex: 1 }}>
+ <AppButton label="Cancel" variant="secondary" onPress={() => setDeleteTarget(null)} fullWidth />
+ </View>
+ <View style={{ flex: 1 }}>
+ <AppButton
+ label={isDeleting ? 'Deleting...' : 'Delete Forever'}
+ onPress={() => deleteTarget && confirmWipeAccount(deleteTarget, deleteReason)}
+ disabled={isDeleting || deleteReason.trim().length < IMPERSONATION_REASON_MIN_LENGTH}
  fullWidth
  />
  </View>

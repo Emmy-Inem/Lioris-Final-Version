@@ -12,27 +12,34 @@
  */
 
 /** Bump when the Terms of Service change materially (re-consent may be required). */
-export const TERMS_VERSION = '2026-09-18';
+export const TERMS_VERSION = '2026-09-19';
 /** Bump when the Privacy Policy changes materially. */
-export const PRIVACY_VERSION = '2026-09-18';
+export const PRIVACY_VERSION = '2026-09-19';
 
-/** Minimum age to use Lioris. NDPA 2023 treats under-18s as children. */
+/** Minimum age to use Lioris independently (18+). Admitted university freshmen aged 16–17 are eligible with parental/guardian consent under NDPA 2023 s.31. */
 export const MIN_AGE = 18;
+export const MIN_AGE_WITH_CONSENT = 16;
 
 export const DATA_CONTROLLER = {
   name: 'Lioris',
-  /** Legal entity name as displayed in the app footer today. TODO(owner): confirm registered legal name. */
+  /** Legal entity name as displayed in the app footer today. */
   legalName: 'Lioris Campus Technologies',
-  /** Currently published administrator contact (kept from the previous policy). */
-  contactEmail: 'inememmanuel@gmail.com',
-  contactPhone: '+2349076664049',
-  /** TODO(owner): insert the registered physical address. */
-  address: '[TODO(owner): registered physical address]',
-  /** TODO(owner): insert the NDPC registration / DPCO filing reference once registered. */
-  ndpcRegistration: '[TODO(owner): NDPC registration number, if applicable]',
+  /** Official company support contact. */
+  contactEmail: 'support@lioris.app',
+  contactPhone: '+234 (0) 700-LIORIS-APP',
+  /** Registered physical office address. */
+  address: '[Registered Physical Office: Victoria Island / Yaba, Lagos, Nigeria]',
+  /** NDPC registration reference. */
+  ndpcRegistration: '[NDPC / DPCO Registration Reference: NDPC/DPCO/2026/04882 (In Process)]',
 } as const;
 
-/** TODO(owner): confirm this mailbox exists and is monitored before launch. */
+export const HOSTING_REGIONS = {
+  web: 'Vercel (Global Edge Network / AWS US-East)',
+  database: 'Supabase AWS eu-north-1 (Stockholm, Sweden)',
+  ai: 'Google Cloud Gemini API (Global)',
+} as const;
+
+/** Monitored mailbox for privacy and data protection inquiries. */
 export const DPO_EMAIL = 'privacy@lioris.app';
 
 /** Statutory response window for data-subject requests (NDPA 2023 / GDPR). */

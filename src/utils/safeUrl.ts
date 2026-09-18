@@ -18,7 +18,6 @@ export function isSafeHttpUrl(url: unknown): url is string {
   const trimmed = url.trim();
   if (!trimmed || trimmed.length > MAX_URL_LENGTH) return false;
   // Control characters / whitespace inside the URL are used to smuggle schemes.
-  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f\s]/.test(trimmed)) return false;
   let parsed: URL;
   try {
@@ -49,7 +48,6 @@ export function sanitizeHttpUrl(url: unknown): string | undefined {
 export function isSafeContactLink(url: unknown): url is string {
   if (typeof url !== 'string') return false;
   const trimmed = url.trim();
-  // eslint-disable-next-line no-control-regex
   if (!trimmed || trimmed.length > 512 || /[\u0000-\u001f\u007f\s]/.test(trimmed)) return false;
   return /^(mailto:[^?#]+|tel:\+?[0-9()\-.]{3,32})(\?[^#]*)?$/i.test(trimmed);
 }

@@ -23,7 +23,7 @@ export const escapePostgrestId = assertUuid;
  */
 export function escapePostgrestLike(value: string): string {
   return String(value)
-    .replace(/[\%_]/g, (c) => `\${c}`)
+    .replace(/[\\%_]/g, '\\$&')
     .replace(/[,()"]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

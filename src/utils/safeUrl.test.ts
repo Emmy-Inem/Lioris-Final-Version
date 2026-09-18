@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertSafeHttpUrl, isSafeContactLink, isSafeHttpUrl, sanitizeHttpUrl } from './safeUrl';
+// Node's type stripping needs the explicit .ts extension; tsc does not allow it without allowImportingTsExtensions.
+// @ts-ignore TS5097
+import { assertSafeHttpUrl, isSafeContactLink, isSafeHttpUrl, sanitizeHttpUrl } from './safeUrl.ts';
 
 test('accepts plain http and https URLs', () => {
   assert.equal(isSafeHttpUrl('https://example.com'), true);
@@ -50,7 +52,7 @@ test('sanitizeHttpUrl maps bad values to undefined', () => {
 
 test('isSafeContactLink only allows mailto and tel', () => {
   assert.equal(isSafeContactLink('mailto:a@b.com'), true);
-  assert.equal(isSafeContactLink('tel:+2349076664049'), true);
+  assert.equal(isSafeContactLink('tel:+2348000000000'), true);
   assert.equal(isSafeContactLink('javascript:alert(1)'), false);
   assert.equal(isSafeContactLink('https://example.com'), false);
 });

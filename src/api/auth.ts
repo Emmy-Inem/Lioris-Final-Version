@@ -536,9 +536,10 @@ export async function startImpersonation(targetUserId: string, reason: string): 
  throw new Error('Impersonation service returned an incomplete response.');
  }
 
+ // The function returns generateLink's `hashed_token`, which verifyOtp accepts as
+ // `token_hash` (the `{ email, token }` form expects the 6-digit code instead).
  const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
- email,
- token: tokenHash,
+ token_hash: tokenHash,
  type: 'magiclink',
  });
 

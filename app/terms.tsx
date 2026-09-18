@@ -8,7 +8,7 @@ import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
 import { LegalSection, LegalParagraph, LegalBullets, LegalStrong, LegalPlaceholder } from '@/components/LegalSection';
-import { DATA_CONTROLLER, MIN_AGE, RETENTION, TERMS_VERSION } from '@/constants/legal';
+import { DATA_CONTROLLER, DPO_EMAIL, MIN_AGE, MIN_AGE_WITH_CONSENT, RETENTION, TERMS_VERSION } from '@/constants/legal';
 
 export default function TermsOfServiceScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -139,10 +139,10 @@ export default function TermsOfServiceScreen() {
             <LegalSection title="1. Acceptance of Terms & Eligibility">
               <LegalParagraph>
                 By creating an account or using Lioris you agree to these Terms of Service, the Privacy Policy and the
-                Community Rules. You must be at least {MIN_AGE} years old to use Lioris; by registering you confirm that
-                you are. Access to institutional spaces requires active affiliation (as an enrolled student, staff
-                member, or verified alumnus) verified via institutional domain email or accredited registrar documents.
-                Other users may join the general network and apply for verification afterwards.
+                Community Rules. You must be at least {MIN_AGE} years old, or an admitted university student aged {MIN_AGE_WITH_CONSENT}–17
+                registering with parental or guardian consent. Access to institutional spaces requires active affiliation
+                (as an enrolled student, staff member, or verified alumnus) verified via institutional domain email or accredited
+                registrar documents. Other users may join the general network and apply for verification afterwards.
               </LegalParagraph>
             </LegalSection>
 
@@ -223,21 +223,22 @@ export default function TermsOfServiceScreen() {
 
             <LegalSection title="9. Disclaimers & Limitation of Liability">
               <LegalParagraph>
-                Lioris is provided "as is" and "as available". To the fullest extent permitted by law, Lioris is not
-                liable for indirect or consequential loss, loss of data or profit, or for user-generated content,
-                third-party services or transactions between users. Nothing in these Terms excludes liability that cannot
-                be excluded by law.{' '}
-                <LegalPlaceholder>[TODO(owner): have counsel review and set the liability cap.]</LegalPlaceholder>
+                Lioris is provided "as is" and "as available". To the fullest extent permitted by applicable law, Lioris and
+                its affiliates, officers, employees, and agents shall not be liable for any indirect, incidental, special,
+                consequential, or punitive damages, or any loss of profits, revenue, data, use, goodwill, or other intangible
+                losses. In no event shall our aggregate liability exceed the greater of fifty thousand Nigerian Naira (NGN 50,000)
+                or the total amount paid by you to Lioris in the twelve (12) months preceding the claim. Nothing in these Terms
+                excludes or limits any liability that cannot be excluded under the laws of the Federal Republic of Nigeria.
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="10. Governing Law & Changes">
+            <LegalSection title="10. Governing Law & Dispute Resolution">
               <LegalParagraph>
-                These Terms are governed by the laws of the Federal Republic of Nigeria, and the Nigerian courts have
-                jurisdiction, without affecting any mandatory consumer rights you have in your country of residence.{' '}
-                <LegalPlaceholder>[TODO(owner): confirm governing law, venue and dispute-resolution wording with counsel.]</LegalPlaceholder>{' '}
-                We may update these Terms; material changes will be announced in the app and may require you to accept
-                them again. Terms version: <LegalStrong>{TERMS_VERSION}</LegalStrong>.
+                These Terms and any dispute arising from or related to them or your use of the platform shall be governed by
+                and construed in accordance with the laws of the Federal Republic of Nigeria. Any dispute, controversy, or claim
+                that cannot be resolved amicably shall be submitted to the exclusive jurisdiction of the state and federal courts
+                situated in Nigeria, without affecting any mandatory statutory consumer protections that cannot be waived.
+                Terms version: <LegalStrong>{TERMS_VERSION}</LegalStrong>.
               </LegalParagraph>
             </LegalSection>
 
@@ -245,9 +246,9 @@ export default function TermsOfServiceScreen() {
               <LegalParagraph>
                 For questions regarding governance, moderation appeals, or institutional partnerships:
                 {'\n\n'}
-                <LegalStrong>Campus Lead Administrator</LegalStrong>
-                {'\n'}Email: {DATA_CONTROLLER.contactEmail}
-                {'\n'}Telephone: {DATA_CONTROLLER.contactPhone}
+                <LegalStrong>Campus Platform Administration</LegalStrong>
+                {'\n'}Support Email: {DATA_CONTROLLER.contactEmail}
+                {'\n'}Privacy & Legal Inquiries: {DPO_EMAIL}
               </LegalParagraph>
             </LegalSection>
           </View>

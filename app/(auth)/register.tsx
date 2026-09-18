@@ -20,7 +20,7 @@ import { getInstitutionForEmail } from '@/api/institutions';
 import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
-import { MIN_AGE, TERMS_VERSION } from '@/constants/legal';
+import { MIN_AGE, MIN_AGE_WITH_CONSENT, TERMS_VERSION } from '@/constants/legal';
 
 const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
  { value: 'student', label: 'Student Portal', icon: 'school' },
@@ -73,10 +73,10 @@ export default function RegisterScreen() {
  setErrorMessage('Username must be 3-24 characters (letters, numbers, dots, underscores).');
  return;
  }
- if (!confirmedAge) {
- setErrorMessage(`Lioris is for people aged ${MIN_AGE} and over. Please confirm that you are at least ${MIN_AGE} to continue.`);
- return;
- }
+  if (!confirmedAge) {
+    setErrorMessage(`Lioris is for university students and staff. Please confirm that you are at least ${MIN_AGE}, or an admitted student aged ${MIN_AGE_WITH_CONSENT}–17 with parent/guardian consent.`);
+    return;
+  }
  if (!acceptedTerms) {
  setErrorMessage('Please accept the Terms of Service & Privacy Policy to continue.');
  return;
@@ -260,24 +260,24 @@ export default function RegisterScreen() {
  />
  </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md, marginTop: spacing.sm }}>
- <Pressable
- onPress={() => setConfirmedAge((v) => !v)}
- accessibilityRole="checkbox"
- accessibilityState={{ checked: confirmedAge }}
- accessibilityLabel={`I confirm that I am ${MIN_AGE} years old or older`}
- hitSlop={8}
- >
- <Ionicons
- name={confirmedAge ? 'checkbox' : 'square-outline'}
- size={20}
- color={confirmedAge ? colors.brandPrimary : colors.textSecondary}
- />
- </Pressable>
- <AppText variant="bodySmall" style={{ flex: 1 }} onPress={() => setConfirmedAge((v) => !v)}>
- I confirm that I am {MIN_AGE} years old or older.
- </AppText>
- </View>
+  <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md, marginTop: spacing.sm }}>
+  <Pressable
+  onPress={() => setConfirmedAge((v) => !v)}
+  accessibilityRole="checkbox"
+  accessibilityState={{ checked: confirmedAge }}
+  accessibilityLabel="I confirm that I am 18 years old or older, or a university student aged 16–17 registering with parent or guardian consent"
+  hitSlop={8}
+  >
+  <Ionicons
+  name={confirmedAge ? 'checkbox' : 'square-outline'}
+  size={20}
+  color={confirmedAge ? colors.brandPrimary : colors.textSecondary}
+  />
+  </Pressable>
+  <AppText variant="bodySmall" style={{ flex: 1 }} onPress={() => setConfirmedAge((v) => !v)}>
+  I confirm that I am {MIN_AGE} years old or older, OR a university student aged {MIN_AGE_WITH_CONSENT}–17 registering with parent/guardian consent.
+  </AppText>
+  </View>
 
  <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
  <Pressable

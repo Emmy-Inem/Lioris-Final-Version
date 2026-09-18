@@ -8,7 +8,7 @@ import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
 import { LegalSection, LegalParagraph, LegalBullets, LegalStrong, LegalPlaceholder } from '@/components/LegalSection';
-import { BREACH_NOTIFICATION_HOURS, DATA_CONTROLLER, DPO_EMAIL, DSR_RESPONSE_DAYS, MIN_AGE, NDPC, PRIVACY_VERSION, RETENTION } from '@/constants/legal';
+import { BREACH_NOTIFICATION_HOURS, DATA_CONTROLLER, DPO_EMAIL, DSR_RESPONSE_DAYS, HOSTING_REGIONS, MIN_AGE, MIN_AGE_WITH_CONSENT, NDPC, PRIVACY_VERSION, RETENTION } from '@/constants/legal';
 
 export default function PrivacyPolicyScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -146,9 +146,9 @@ export default function PrivacyPolicyScreen() {
                 items={[
                   <><LegalStrong>Data controller:</LegalStrong> {DATA_CONTROLLER.legalName} ({DATA_CONTROLLER.name}, "we", "us")</>,
                   <><LegalStrong>Registered address:</LegalStrong> <LegalPlaceholder>{DATA_CONTROLLER.address}</LegalPlaceholder></>,
-                  <><LegalStrong>NDPC registration:</LegalStrong> <LegalPlaceholder>{DATA_CONTROLLER.ndpcRegistration}</LegalPlaceholder></>,
-                  <><LegalStrong>Data Protection Officer (DPO) / privacy contact:</LegalStrong> {DPO_EMAIL} <LegalPlaceholder>[TODO(owner): confirm mailbox]</LegalPlaceholder></>,
-                  <><LegalStrong>Administrator contact:</LegalStrong> {DATA_CONTROLLER.contactEmail}, {DATA_CONTROLLER.contactPhone}</>,
+                  <><LegalStrong>NDPC registration reference:</LegalStrong> <LegalPlaceholder>{DATA_CONTROLLER.ndpcRegistration}</LegalPlaceholder></>,
+                  <><LegalStrong>Data Protection Officer (DPO) / privacy mailbox:</LegalStrong> {DPO_EMAIL}</>,
+                  <><LegalStrong>Support & institutional inquiries:</LegalStrong> {DATA_CONTROLLER.contactEmail}</>,
                 ]}
               />
             </LegalSection>
@@ -211,14 +211,23 @@ export default function PrivacyPolicyScreen() {
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="5. International Transfers">
+            <LegalSection title="5. International Transfers & Hosting Regions">
               <LegalParagraph>
-                Our processors (for example Supabase, Vercel and Google) may process data on servers outside Nigeria.
+                Our processors process data on secure cloud infrastructure located in established international data centers.
+                Hosting regions currently in use:
+              </LegalParagraph>
+              <LegalBullets
+                items={[
+                  <><LegalStrong>Web Application & Edge CDN:</LegalStrong> {HOSTING_REGIONS.web}</>,
+                  <><LegalStrong>Core Database & Storage:</LegalStrong> {HOSTING_REGIONS.database}</>,
+                  <><LegalStrong>AI Study Copilot Processing:</LegalStrong> {HOSTING_REGIONS.ai}</>,
+                ]}
+              />
+              <LegalParagraph>
                 Where personal data leaves Nigeria we rely on the safeguards permitted by the NDPA 2023, such as the
                 recipient being subject to adequate data-protection law or binding contractual terms (data-processing
                 agreements and, where applicable, standard contractual clauses), and on your consent where required.
-                For EU/UK users, transfers rely on adequacy decisions or standard contractual clauses. Hosting regions
-                in use: <LegalPlaceholder>[TODO(owner): state Supabase and Vercel regions]</LegalPlaceholder>.
+                For EU/UK users, transfers rely on adequacy decisions or standard contractual clauses.
               </LegalParagraph>
             </LegalSection>
 
@@ -265,10 +274,12 @@ export default function PrivacyPolicyScreen() {
 
             <LegalSection title="8. Children and Age Limit">
               <LegalParagraph>
-                Lioris is for people aged {MIN_AGE} and over. The NDPA 2023 treats anyone under 18 as a child, and we do
-                not knowingly collect personal data from children. You must confirm that you are at least {MIN_AGE} when
-                you register. If we learn that an account belongs to someone under {MIN_AGE} we will delete it and its
-                data. If you believe a child is using Lioris, contact {DPO_EMAIL}.
+                Lioris is intended for university students, faculty, and alumni. Under the NDPA 2023, individuals under 18
+                are treated as minors. However, recognizing Nigerian tertiary education admissions (JAMB minimum entry age of {MIN_AGE_WITH_CONSENT}),
+                students aged {MIN_AGE_WITH_CONSENT}–17 admitted to accredited institutions may register with parental or guardian consent.
+                Users must confirm they are at least {MIN_AGE}, or {MIN_AGE_WITH_CONSENT}–17 with parental/guardian authorization, upon registration.
+                Accounts created by children under {MIN_AGE_WITH_CONSENT} will be promptly closed and deleted. If you believe a child under {MIN_AGE_WITH_CONSENT}
+                is using Lioris without authorization, please contact {DPO_EMAIL}.
               </LegalParagraph>
             </LegalSection>
 
@@ -318,10 +329,11 @@ export default function PrivacyPolicyScreen() {
 
             <LegalSection title="14. Contact">
               <LegalParagraph>
-                <LegalStrong>Data Protection Officer:</LegalStrong> {DPO_EMAIL}
+                <LegalStrong>Data Protection Officer / Privacy Mailbox:</LegalStrong> {DPO_EMAIL}
                 {'\n'}
-                <LegalStrong>Lead Administrator:</LegalStrong> {DATA_CONTROLLER.contactEmail}
-                {'\n'}Telephone: {DATA_CONTROLLER.contactPhone}
+                <LegalStrong>Campus Support & Platform Administration:</LegalStrong> {DATA_CONTROLLER.contactEmail}
+                {'\n'}
+                <LegalStrong>Registered Office:</LegalStrong> {DATA_CONTROLLER.address}
               </LegalParagraph>
             </LegalSection>
           </View>

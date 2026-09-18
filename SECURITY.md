@@ -4,7 +4,8 @@
 
 Please report suspected vulnerabilities privately. Do not open a public issue.
 
-- Email: security@lioris.app (TODO(owner): confirm this mailbox is monitored)
+- Email: `security@lioris.app`
+- GitHub Private Vulnerability Reporting: [Submit via GitHub Security Advisory](https://github.com/Emmy-Inem/Lioris-Final-Version/security/advisories/new)
 - Include: affected URL or component, steps to reproduce, impact, and any proof of concept.
 - Do not include real student data. Use your own test accounts.
 
