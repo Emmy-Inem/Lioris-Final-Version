@@ -115,7 +115,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  ? activeCampusCode
  : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
  ? profile.institutionCode
- : 'UI';
+ : 'GLOBAL';
  }
  }
 

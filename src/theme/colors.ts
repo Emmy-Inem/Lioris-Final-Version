@@ -148,14 +148,14 @@ export const lightColors: ThemeColors = {
  textSecondary: palette.liorisNeutralGray,
  textInverse: '#FFFFFF',
 
- brandPrimary: palette.tealPrimary,
- brandPrimaryPressed: palette.tealPressed,
+ brandPrimary: palette.liorisBlue,
+ brandPrimaryPressed: '#102DB8',
  brandAccent: palette.waitlistOrange,
  brandAccentPressed: '#D97517',
  brandSky: palette.liorisSky,
  brandMagenta: palette.liorisMagenta,
- sectionLabel: palette.tealDeep,
- pastelPrimaryBg: palette.tealPaleBg,
+ sectionLabel: '#0F2485',
+ pastelPrimaryBg: '#EDF2FF',
  sageBg: palette.sageBg,
  sageText: palette.sageText,
  roseBg: palette.roseBg,
@@ -176,11 +176,11 @@ export const lightColors: ThemeColors = {
  alumniGradientEnd: palette.liorisDarkBg,
 
  tabInactive: palette.liorisNeutralGray,
- tabActive: palette.tealPrimary,
- tabActivePillBg: palette.tealPaleBg,
+ tabActive: palette.liorisBlue,
+ tabActivePillBg: '#EDF2FF',
 
- glowBlobPrimary: `rgba(${palette.tealGlowRgb},0.12)`,
- glowBlobAccent: 'rgba(240,138,46,0.08)',
+ glowBlobPrimary: 'rgba(26,61,255,0.12)',
+ glowBlobAccent: 'rgba(240,138,46,0.10)',
 } as const;
 
 export const darkColors: ThemeColors = {
@@ -197,14 +197,14 @@ export const darkColors: ThemeColors = {
  textSecondary: '#94A3B8',
  textInverse: '#FFFFFF',
 
- brandPrimary: '#2DD4BF',
- brandPrimaryPressed: '#14B8A6',
- brandAccent: '#FB923C',
- brandAccentPressed: '#F97316',
+ brandPrimary: '#5D7FFF',
+ brandPrimaryPressed: palette.liorisBlue,
+ brandAccent: '#FBBF24',
+ brandAccentPressed: '#F59E0B',
  brandSky: '#38BDF8',
  brandMagenta: '#F472B6',
- sectionLabel: '#5EEAD4',
- pastelPrimaryBg: 'rgba(45, 212, 191, 0.14)',
+ sectionLabel: '#A8B8FF',
+ pastelPrimaryBg: 'rgba(26, 61, 255, 0.16)',
  sageBg: 'rgba(27, 122, 75, 0.22)',
  sageText: '#6EE7B7',
  roseBg: 'rgba(155, 44, 59, 0.24)',
@@ -225,11 +225,11 @@ export const darkColors: ThemeColors = {
  alumniGradientEnd: '#0F172A',
 
  tabInactive: '#94A3B8',
- tabActive: '#2DD4BF',
- tabActivePillBg: 'rgba(45, 212, 191, 0.18)',
+ tabActive: '#5D7FFF',
+ tabActivePillBg: 'rgba(26, 61, 255, 0.22)',
 
- glowBlobPrimary: 'rgba(45, 212, 191, 0.10)',
- glowBlobAccent: 'rgba(251, 146, 60, 0.06)',
+ glowBlobPrimary: 'rgba(26, 61, 255, 0.16)',
+ glowBlobAccent: 'rgba(251, 191, 36, 0.10)',
 } as const;
 
 export const roleBadgeColors = {
@@ -350,22 +350,22 @@ export const institutionThemeOverrides: Record<
  },
  GLOBAL: {
  light: {
- brandPrimary: '#0B7A75',
- brandPrimaryPressed: '#075955',
- sectionLabel: '#054744',
- pastelPrimaryBg: '#EBF7F5',
- tabActive: '#0B7A75',
- tabActivePillBg: '#EBF7F5',
- glowBlobPrimary: 'rgba(11,122,117,0.12)',
+ brandPrimary: '#1A3DFF',
+ brandPrimaryPressed: '#102DB8',
+ sectionLabel: '#0F2485',
+ pastelPrimaryBg: '#EDF2FF',
+ tabActive: '#1A3DFF',
+ tabActivePillBg: '#EDF2FF',
+ glowBlobPrimary: 'rgba(26,61,255,0.12)',
  },
  dark: {
- brandPrimary: '#2DD4BF',
- brandPrimaryPressed: '#14B8A6',
- sectionLabel: '#5EEAD4',
- pastelPrimaryBg: 'rgba(45, 212, 191, 0.14)',
- tabActive: '#2DD4BF',
- tabActivePillBg: 'rgba(45, 212, 191, 0.18)',
- glowBlobPrimary: 'rgba(45, 212, 191, 0.16)',
+ brandPrimary: '#5D7FFF',
+ brandPrimaryPressed: '#1A3DFF',
+ sectionLabel: '#A8B8FF',
+ pastelPrimaryBg: 'rgba(26, 61, 255, 0.16)',
+ tabActive: '#5D7FFF',
+ tabActivePillBg: 'rgba(26, 61, 255, 0.22)',
+ glowBlobPrimary: 'rgba(26, 61, 255, 0.20)',
  },
  },
  ROSE: {
@@ -419,9 +419,9 @@ export interface AccentPreset {
 }
 
 export const ACCENT_PRESETS: AccentPreset[] = [
+ { id: 'GLOBAL', label: 'Lioris Blue & Gold', campusName: 'Default Brand', primaryLight: '#1A3DFF', primaryDark: '#5D7FFF' },
  { id: 'UI', label: 'Ibadan Violet', campusName: 'University of Ibadan', primaryLight: '#6D28D9', primaryDark: '#A78BFA' },
  { id: 'UNILAG', label: 'Lagos Royal Blue', campusName: 'University of Lagos', primaryLight: '#1A3DFF', primaryDark: '#5D7FFF' },
- { id: 'GLOBAL', label: 'Lioris Teal', campusName: 'Global Workspace', primaryLight: '#0B7A75', primaryDark: '#2DD4BF' },
  { id: 'OAU', label: 'Ife Amber Gold', campusName: 'Obafemi Awolowo University', primaryLight: '#B45309', primaryDark: '#FBBF24' },
  { id: 'FUNAAB', label: 'Abeokuta Emerald', campusName: 'FUNAAB', primaryLight: '#1B7A4B', primaryDark: '#3FAE73' },
  { id: 'ROSE', label: 'Coral Rose', campusName: 'Campus Vibrant', primaryLight: '#BE123C', primaryDark: '#FB7185' },

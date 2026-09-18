@@ -15,7 +15,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
-import { useAuth } from '@/auth/AuthContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
@@ -23,26 +22,14 @@ import { AppTextField } from '@/components/AppTextField';
 import { joinWaitlist, LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { haptics } from '@/utils/haptics';
 
-// Demo quick-logins
-const DEMO_ACCOUNTS = [
-  { role: 'student', label: 'Student', name: 'Diana Prince', email: 'diana.prince@ui.edu.ng', icon: 'school' as const, badge: 'UI • CSC 400L' },
-  { role: 'alumni', label: 'Alumni', name: 'Adeola M.', email: 'alumni.adeola@ui.edu.ng', icon: 'ribbon' as const, badge: 'UI Alum • Paystack' },
-  { role: 'staff', label: 'Faculty', name: 'Dr. Adeyemi', email: 'dr.adeyemi@ui.edu.ng', icon: 'briefcase' as const, badge: 'Faculty of Science' },
-  { role: 'admin', label: 'Admin', name: 'Campus Desk', email: 'admin@ui.edu.ng', icon: 'shield-checkmark' as const, badge: 'Platform Admin' },
-];
-
 export function LandingScreen() {
   const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
   const { width } = useWindowDimensions();
   const { isDesktop, isTablet } = useResponsive();
   const { getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
-  const { login } = useAuth();
 
   // Interactive phone preview: Student and Alumni only
   const [previewRole, setPreviewRole] = useState<'student' | 'alumni'>('student');
-  
-  // Fast 1-click demo signing-in state
-  const [signingInEmail, setSigningInEmail] = useState<string | null>(null);
 
   // Waitlist form state
   const [waitlistEmail, setWaitlistEmail] = useState('');
@@ -57,20 +44,6 @@ export function LandingScreen() {
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
       }
-    }
-  };
-
-  const handleDemoLogin = async (email: string) => {
-    haptics.medium();
-    setSigningInEmail(email);
-    try {
-      await login(email, 'password123');
-      router.replace('/');
-    } catch (err: any) {
-      haptics.error();
-      Alert.alert('Demo Sign In', err?.message || 'Unable to connect to demo account.');
-    } finally {
-      setSigningInEmail(null);
     }
   };
 
@@ -127,7 +100,7 @@ export function LandingScreen() {
           width: Math.min(width * 0.7, 650),
           height: 480,
           borderRadius: 300,
-          backgroundColor: isDark ? 'rgba(11, 122, 117, 0.18)' : 'rgba(11, 122, 117, 0.12)',
+          backgroundColor: isDark ? 'rgba(26, 61, 255, 0.18)' : 'rgba(26, 61, 255, 0.12)',
           ...(Platform.OS === 'web' ? { filter: 'blur(110px)' } : {}),
         }}
       />
@@ -140,7 +113,7 @@ export function LandingScreen() {
           width: Math.min(width * 0.6, 500),
           height: 420,
           borderRadius: 250,
-          backgroundColor: isDark ? 'rgba(30, 64, 175, 0.14)' : 'rgba(59, 130, 246, 0.10)',
+          backgroundColor: isDark ? 'rgba(240, 138, 46, 0.14)' : 'rgba(240, 138, 46, 0.10)',
           ...(Platform.OS === 'web' ? { filter: 'blur(100px)' } : {}),
         }}
       />
@@ -262,7 +235,7 @@ export function LandingScreen() {
                 gap: 6,
                 ...(Platform.OS === 'web'
                   ? {
-                      boxShadow: '0 4px 14px rgba(11, 122, 117, 0.40)',
+                      boxShadow: '0 4px 14px rgba(26, 61, 255, 0.40)',
                     }
                   : {}),
               }}
@@ -378,7 +351,7 @@ export function LandingScreen() {
                   width: width < 480 ? '100%' : 'auto',
                   ...(Platform.OS === 'web'
                     ? {
-                        boxShadow: '0 8px 24px -2px rgba(11, 122, 117, 0.45)',
+                        boxShadow: '0 8px 24px -2px rgba(26, 61, 255, 0.45)',
                       }
                     : {}),
                 }}
@@ -386,27 +359,6 @@ export function LandingScreen() {
                 <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
                 <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: 15 }}>
                   Join Your Campus Space
-                </AppText>
-              </Pressable>
-
-              <Pressable
-                onPress={() => scrollToSection('preview')}
-                style={[
-                  glassStyle(radius.pill, isDark ? 0.55 : 0.75),
-                  {
-                    paddingHorizontal: 24,
-                    paddingVertical: 14,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    width: width < 480 ? '100%' : 'auto',
-                  },
-                ]}
-              >
-                <Ionicons name="phone-portrait-outline" size={18} color={isDark ? '#E2E8F0' : '#1E293B'} />
-                <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 15 }}>
-                  Interactive Simulator
                 </AppText>
               </Pressable>
             </View>
@@ -448,76 +400,7 @@ export function LandingScreen() {
           </View>
 
           {/* =========================================================================
-              2. 1-CLICK INSTANT DEMO LAUNCH STRIP (Instant Reviewer / Evaluator Access)
-             ========================================================================= */}
-          <View
-            style={[
-              glassStyle(20, isDark ? 0.5 : 0.7),
-              {
-                padding: 18,
-                marginVertical: 16,
-                borderLeftWidth: 3,
-                borderLeftColor: colors.brandPrimary,
-              },
-            ]}
-          >
-            <View
-              style={{
-                flexDirection: isDesktop ? 'row' : 'column',
-                alignItems: isDesktop ? 'center' : 'flex-start',
-                justifyContent: 'space-between',
-                gap: 12,
-              }}
-            >
-              <View style={{ gap: 2 }}>
-                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8 }}>
-                  ONE-CLICK EVALUATION DEMO
-                </AppText>
-                <AppText variant="bodySmall" tone="secondary">
-                  Select any persona to immediately explore the live app without registering.
-                </AppText>
-              </View>
-
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {DEMO_ACCOUNTS.map((demo) => {
-                  const isLoading = signingInEmail === demo.email;
-                  return (
-                    <Pressable
-                      key={demo.role}
-                      onPress={() => handleDemoLogin(demo.email)}
-                      disabled={!!signingInEmail}
-                      style={({ hovered }: any) => [
-                        glassStyle(radius.pill, isDark ? 0.6 : 0.85),
-                        {
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 6,
-                          paddingHorizontal: 14,
-                          paddingVertical: 7,
-                          backgroundColor: hovered
-                            ? isDark
-                              ? 'rgba(255,255,255,0.15)'
-                              : 'rgba(0,0,0,0.06)'
-                            : isDark
-                            ? 'rgba(15, 23, 42, 0.65)'
-                            : 'rgba(255,255,255,0.85)',
-                          opacity: signingInEmail && !isLoading ? 0.5 : 1,
-                        },
-                      ]}
-                    >
-                      <Ionicons name={demo.icon} size={14} color={colors.brandPrimary} />
-                      <AppText variant="caption" weight="bold" style={{ color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                        {isLoading ? 'Entering...' : demo.label}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          </View>
-
-          {/* =========================================================================
-              3. INTERACTIVE DEVICE SIMULATOR: Student & Alumni with Floating Nav Bar
+              2. INTERACTIVE DEVICE SIMULATOR: Student & Alumni with Floating Nav Bar
              ========================================================================= */}
           <View
             // @ts-ignore
@@ -678,7 +561,7 @@ export function LandingScreen() {
                       paddingHorizontal: 10,
                     }}
                   >
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0B7A75' }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#1A3DFF' }} />
                     <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#1E293B' }} />
                   </View>
 
@@ -953,7 +836,7 @@ export function LandingScreen() {
               {[
                 {
                   icon: 'chatbubbles',
-                  accent: '#0B7A75',
+                  accent: '#1A3DFF',
                   title: 'Campus Community Forum',
                   desc: 'Verified peer-to-peer discourse, departmental discussion channels, and course threads without outside noise or anonymous trolls.',
                 },
