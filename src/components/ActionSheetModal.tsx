@@ -1,5 +1,5 @@
-import React, { useEffect } from'react';
-import { Modal, Pressable } from'react-native';
+import React, { useEffect } from 'react';
+import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
 import { useTheme } from'@/theme/ThemeProvider';
 
@@ -39,33 +39,37 @@ export function ActionSheetModal({ visible, onClose, children }: ActionSheetModa
  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
- return (
- <Modal visible={visible} transparent animationType="none"onRequestClose={onClose}>
- <AnimatedPressable
- style={[{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' }, backdropStyle]}
- onPress={onClose}
- accessible={false}
- />
- <Animated.View
- style={[
- {
- position: 'absolute',
- left: 0,
- right: 0,
- bottom: 0,
- backgroundColor: colors.surface,
- borderTopLeftRadius: 24,
- borderTopRightRadius: 24,
- borderTopWidth: 1,
- borderColor: colors.border,
- padding: spacing.lg,
- paddingBottom: spacing.xxl,
- },
- sheetStyle,
- ]}
- >
- {children}
- </Animated.View>
- </Modal>
- );
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+        <AnimatedPressable
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }, backdropStyle]}
+          onPress={onClose}
+          accessible={false}
+        />
+        <Animated.View
+          style={[
+            {
+              width: '100%',
+              maxWidth: 500,
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              borderTopWidth: 1,
+              borderColor: colors.border,
+              padding: spacing.lg,
+              paddingBottom: Platform.OS === 'ios' ? 36 : spacing.xl,
+            },
+            sheetStyle,
+          ]}
+        >
+          {/* Mobile Sheet Grab Handle */}
+          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+          </View>
+          {children}
+        </Animated.View>
+      </View>
+    </Modal>
+  );
 }

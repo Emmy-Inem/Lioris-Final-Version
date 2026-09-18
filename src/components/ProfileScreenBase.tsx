@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -47,6 +48,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  const { colors, spacing, radius } = useTheme();
  const { user } = useAuth();
  const { isDesktop } = useResponsive();
+ const insets = useSafeAreaInsets();
  const queryClient = useQueryClient();
 
  const [activeTab, setActiveTab] = useState<(typeof PROFILE_TABS)[number]>('Posts & Activity');
@@ -589,10 +591,35 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </View>
  </ScrollView>
 
- {/* Photo & Cover Customizer Modal */}
- <Modal visible={photoPickerOpen} transparent animationType="slide"onRequestClose={() => setPhotoPickerOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
+    {/* Photo & Cover Customizer Modal */}
+    <Modal visible={photoPickerOpen} transparent animationType="slide" onRequestClose={() => setPhotoPickerOpen(false)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setPhotoPickerOpen(false)} />
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            padding: isDesktop ? spacing.xl : spacing.lg,
+            paddingBottom: Math.max(insets.bottom, spacing.lg),
+            width: '100%',
+            maxWidth: 540,
+            alignSelf: 'center',
+            maxHeight: '80%',
+          }}
+        >
+          {!isDesktop && (
+            <View
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: colors.border,
+                alignSelf: 'center',
+                marginBottom: spacing.sm,
+              }}
+            />
+          )}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Ionicons name="images" size={20} color={colors.textSecondary} />
@@ -702,36 +729,41 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
     {/* Edit Profile Details Modal */}
     <Modal visible={editModalOpen} transparent animationType="fade" onRequestClose={() => setEditModalOpen(false)}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
-        <SolidCard style={{ width: '100%', maxWidth: 440, maxHeight: '85%' }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, 16) }}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
+        <SolidCard style={{ width: '100%', maxWidth: 460, maxHeight: '85%' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
             <AppText variant="h3" weight="bold">
               Edit Profile
             </AppText>
- <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
- <Ionicons name="close"size={20} color={colors.textSecondary} />
- </Pressable>
- </View>
+            <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+              <Ionicons name="close" size={20} color={colors.textSecondary} />
+            </Pressable>
+          </View>
 
- <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, width: '100%',  maxHeight: 380 }}>
- <AppTextField label="Full Name"value={editName} onChangeText={setEditName} />
- <DepartmentPicker value={editDepartment || null} onChange={setEditDepartment} />
- <AppTextField label="Graduation Year"value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />
- <AppTextField label="Skills & Interests (comma-separated)"value={editInterests} onChangeText={setEditInterests} />
- <AppTextField label="Academic Bio"value={editBio} onChangeText={setEditBio} multiline numberOfLines={3} />
- </ScrollView>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flex: 1, width: '100%', maxHeight: 380 }}>
+            <AppTextField label="Full Name" value={editName} onChangeText={setEditName} />
+            <DepartmentPicker value={editDepartment || null} onChange={setEditDepartment} />
+            <AppTextField label="Graduation Year" value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />
+            <AppTextField label="Skills & Interests (comma-separated)" value={editInterests} onChangeText={setEditInterests} />
+            <AppTextField label="Academic Bio" value={editBio} onChangeText={setEditBio} multiline numberOfLines={3} />
+          </ScrollView>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setEditModalOpen(false)} />
- <AppButton
- label="Save Changes"loading={savingProfile}
- disabled={!editName.trim()}
- onPress={handleSaveProfile}
- />
- </View>
- </SolidCard>
- </View>
- </Modal>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+            <AppButton label="Cancel" variant="ghost" onPress={() => setEditModalOpen(false)} />
+            <AppButton
+              label="Save Changes"
+              loading={savingProfile}
+              disabled={!editName.trim()}
+              onPress={handleSaveProfile}
+            />
+          </View>
+        </SolidCard>
+      </KeyboardAvoidingView>
+    </Modal>
 
  <ApplyForVerificationModal
  visible={verificationModalOpen}

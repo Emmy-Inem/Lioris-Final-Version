@@ -1,19 +1,23 @@
-import React, { useEffect, useState } from'react';
-import { Modal, View } from'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
-import { SolidCard } from'./SolidCard';
-import { AppText } from'./AppText';
-import { Avatar } from'./Avatar';
-import { Badge } from'./Badge';
-import { AppButton } from'./AppButton';
-import { AppTextField } from'./AppTextField';
+import React, { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { SolidCard } from './SolidCard';
+import { AppText } from './AppText';
+import { Avatar } from './Avatar';
+import { Badge } from './Badge';
+import { AppButton } from './AppButton';
+import { AppTextField } from './AppTextField';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { MentorProfile } from '@/api/types';
-import { requestMentorship } from'@/api/mentorship';
+import { requestMentorship } from '@/api/mentorship';
 
 export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onRequested?: () => void }) {
- const { spacing } = useTheme();
+  const { spacing } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
  const [modalOpen, setModalOpen] = useState(false);
  const [pitch, setPitch] = useState('');
@@ -91,30 +95,48 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
  />
  </View>
 
- <Modal visible={modalOpen} transparent animationType="fade"onRequestClose={() => setModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
- <Animated.View style={[{ width: '100%' }, animatedStyle]}>
- <SolidCard radius={20} style={{ width: '100%' }}>
- <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.xs }}>
- Pitch to {mentor.fullName}
- </AppText>
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
- A short note on what you're hoping to get out of mentorship.
- </AppText>
- <AppTextField
- label=""placeholder="e.g. Looking for guidance breaking into fintech PM roles..."value={pitch}
- onChangeText={setPitch}
- multiline
- numberOfLines={3}
- />
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setModalOpen(false)} />
- <AppButton label="Send request"onPress={handleSubmit} loading={submitting} />
- </View>
- </SolidCard>
- </Animated.View>
- </View>
- </Modal>
+      <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => setModalOpen(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: isDesktop ? spacing.xl : spacing.md,
+            paddingBottom: Math.max(insets.bottom, 16),
+          }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalOpen(false)} />
+          <Animated.View style={[{ width: '100%', maxWidth: 480 }, animatedStyle]}>
+            <SolidCard radius={20} style={{ width: '100%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                <AppText variant="h3" weight="bold" style={{ flex: 1 }}>
+                  Pitch to {mentor.fullName}
+                </AppText>
+                <Pressable onPress={() => setModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+                  <AppText tone="secondary" variant="bodySmall">✕</AppText>
+                </Pressable>
+              </View>
+              <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+                A short note on what you're hoping to get out of mentorship.
+              </AppText>
+              <AppTextField
+                label=""
+                placeholder="e.g. Looking for guidance breaking into fintech PM roles..."
+                value={pitch}
+                onChangeText={setPitch}
+                multiline
+                numberOfLines={3}
+              />
+              <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
+                <AppButton label="Cancel" variant="ghost" onPress={() => setModalOpen(false)} />
+                <AppButton label="Send request" onPress={handleSubmit} loading={submitting} />
+              </View>
+            </SolidCard>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </Modal>
  </SolidCard>
  );
 }

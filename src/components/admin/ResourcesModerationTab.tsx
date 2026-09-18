@@ -1,5 +1,6 @@
 import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from'expo-image';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -10,6 +11,7 @@ import { Badge } from'@/components/Badge';
 import { AppButton } from'@/components/AppButton';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { listResources, createResource, updateResource, approveResource, rejectResource, deleteResource } from'@/api/resources';
 import { Resource } from'@/api/types';
 import { recordAuditLogEntry } from'@/api/auditLog';
@@ -27,10 +29,12 @@ const LEVELS: Resource['academicLevel'][] = ['100L', '200L', '300L', '400L', '50
 const FILE_TYPES: Resource['fileType'][] = ['PDF', 'DOCX', 'ZIP', 'EPUB'];
 
 export function ResourcesModerationTab() {
- const { colors, spacing, radius, isDark } = useTheme();
- const queryClient = useQueryClient();
- const [section, setSection] = useState<'approved' | 'pending'>('approved');
- const [searchQuery, setSearchQuery] = useState('');
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+  const [section, setSection] = useState<'approved' | 'pending'>('approved');
+  const [searchQuery, setSearchQuery] = useState('');
  const [selectedCategory, setSelectedCategory] = useState<Resource['category'] | 'all'>('all');
  const [actingId, setActingId] = useState<string | null>(null);
 
@@ -465,205 +469,242 @@ export function ResourcesModerationTab() {
  />
  ) : null}
 
- {/* Create / Edit Resource Modal */}
- <Modal visible={editModalOpen} transparent animationType="slide"onRequestClose={() => setEditModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={() => setEditModalOpen(false)} />
- <View
- style={{
- backgroundColor: colors.surface,
- borderTopLeftRadius: 24,
- borderTopRightRadius: 24,
- padding: spacing.lg,
- maxHeight: '90%',
- }}
- >
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="folder-outline"size={20} color={colors.textSecondary} />
- <AppText variant="h2"weight="bold">
- {editingResource ? 'Edit Academic Resource' : 'Publish Academic Resource'}
- </AppText>
- </View>
- <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+  {/* Create / Edit Resource Modal */}
+  <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: isDesktop ? 'center' : 'flex-end',
+        padding: isDesktop ? spacing.lg : 0,
+      }}
+    >
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          borderBottomLeftRadius: isDesktop ? 24 : 0,
+          borderBottomRightRadius: isDesktop ? 24 : 0,
+          padding: spacing.lg,
+          paddingBottom: Math.max(insets.bottom, spacing.lg),
+          maxHeight: isDesktop ? '85%' : '90%',
+          maxWidth: 600,
+          width: '100%',
+          alignSelf: 'center',
+        }}
+      >
+        {!isDesktop && (
+          <View
+            style={{
+              width: 36,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: colors.border,
+              alignSelf: 'center',
+              marginBottom: spacing.sm,
+            }}
+          />
+        )}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Ionicons name="folder-outline" size={20} color={colors.textSecondary} />
+            <AppText variant="h2" weight="bold">
+              {editingResource ? 'Edit Academic Resource' : 'Publish Academic Resource'}
+            </AppText>
+          </View>
+          <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </Pressable>
+        </View>
 
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
- <AppTextField
- label="Resource Title"placeholder="e.g. CSC 301 Operating Systems Past Questions 2024"value={formTitle}
- onChangeText={setFormTitle}
- />
- <AppTextField
- label="Course Code"placeholder="e.g. CSC 301"value={formCode}
- onChangeText={setFormCode}
- autoCapitalize="characters"
- />
- <AppTextField
- label="Academic Department"placeholder="e.g. Computer Science & AI"value={formDept}
- onChangeText={setFormDept}
- />
+        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <AppTextField
+            label="Resource Title"
+            placeholder="e.g. CSC 301 Operating Systems Past Questions 2024"
+            value={formTitle}
+            onChangeText={setFormTitle}
+          />
+          <AppTextField
+            label="Course Code"
+            placeholder="e.g. CSC 301"
+            value={formCode}
+            onChangeText={setFormCode}
+            autoCapitalize="characters"
+          />
+          <AppTextField
+            label="Academic Department"
+            placeholder="e.g. Computer Science & AI"
+            value={formDept}
+            onChangeText={setFormDept}
+          />
 
- {/* Category Picker */}
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
- RESOURCE TYPE / CATEGORY
- </AppText>
- <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
- {CATEGORIES.map((cat) => (
- <Pressable
- key={cat}
- onPress={() => setFormCategory(cat)}
- style={{
- flex: 1,
- paddingVertical: 8,
- alignItems: 'center',
- borderRadius: radius.pill,
- borderWidth: 1,
- borderColor: formCategory === cat ? colors.brandPrimary : colors.border,
- backgroundColor: formCategory === cat ? colors.pastelPrimaryBg : colors.surface,
- }}
- >
- <AppText variant="caption"weight="bold"tone={formCategory === cat ? 'brand' : 'secondary'}>
- {cat}
- </AppText>
- </Pressable>
- ))}
- </View>
+          {/* Category Picker */}
+          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+            RESOURCE TYPE / CATEGORY
+          </AppText>
+          <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+            {CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat}
+                onPress={() => setFormCategory(cat)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  alignItems: 'center',
+                  borderRadius: radius.pill,
+                  borderWidth: 1,
+                  borderColor: formCategory === cat ? colors.brandPrimary : colors.border,
+                  backgroundColor: formCategory === cat ? colors.pastelPrimaryBg : colors.surface,
+                }}
+              >
+                <AppText variant="caption" weight="bold" tone={formCategory === cat ? 'brand' : 'secondary'}>
+                  {cat}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
 
- {/* Academic Level & Format Row */}
- <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
- <View style={{ flex: 1 }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
- LEVEL COHORT
- </AppText>
- <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 4 }}>
- {LEVELS.map((lvl) => (
- <Pressable
- key={lvl}
- onPress={() => setFormLevel(lvl)}
- style={{
- paddingHorizontal: 10,
- paddingVertical: 6,
- borderRadius: radius.pill,
- borderWidth: 1,
- borderColor: formLevel === lvl ? colors.brandPrimary : colors.border,
- backgroundColor: formLevel === lvl ? colors.pastelPrimaryBg : colors.surface,
- }}
- >
- <AppText variant="caption"weight="bold"tone={formLevel === lvl ? 'brand' : 'secondary'}>
- {lvl}
- </AppText>
- </Pressable>
- ))}
- </ScrollView>
- </View>
+          {/* Academic Level & Format Row */}
+          <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                LEVEL COHORT
+              </AppText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 4 }}>
+                {LEVELS.map((lvl) => (
+                  <Pressable
+                    key={lvl}
+                    onPress={() => setFormLevel(lvl)}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: radius.pill,
+                      borderWidth: 1,
+                      borderColor: formLevel === lvl ? colors.brandPrimary : colors.border,
+                      backgroundColor: formLevel === lvl ? colors.pastelPrimaryBg : colors.surface,
+                    }}
+                  >
+                    <AppText variant="caption" weight="bold" tone={formLevel === lvl ? 'brand' : 'secondary'}>
+                      {lvl}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
 
- <View style={{ flex: 1 }}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ marginBottom: spacing.xs }}>
- FILE FORMAT
- </AppText>
- <View style={{ flexDirection: 'row', gap: 4 }}>
- {FILE_TYPES.map((ft) => (
- <Pressable
- key={ft}
- onPress={() => setFormFileType(ft)}
- style={{
- flex: 1,
- paddingVertical: 6,
- alignItems: 'center',
- borderRadius: radius.pill,
- borderWidth: 1,
- borderColor: formFileType === ft ? colors.brandPrimary : colors.border,
- backgroundColor: formFileType === ft ? colors.pastelPrimaryBg : colors.surface,
- }}
- >
- <AppText variant="caption"weight="bold"tone={formFileType === ft ? 'brand' : 'secondary'}>
- {ft}
- </AppText>
- </Pressable>
- ))}
- </View>
- </View>
- </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                FILE FORMAT
+              </AppText>
+              <View style={{ flexDirection: 'row', gap: 4 }}>
+                {FILE_TYPES.map((ft) => (
+                  <Pressable
+                    key={ft}
+                    onPress={() => setFormFileType(ft)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 6,
+                      alignItems: 'center',
+                      borderRadius: radius.pill,
+                      borderWidth: 1,
+                      borderColor: formFileType === ft ? colors.brandPrimary : colors.border,
+                      backgroundColor: formFileType === ft ? colors.pastelPrimaryBg : colors.surface,
+                    }}
+                  >
+                    <AppText variant="caption" weight="bold" tone={formFileType === ft ? 'brand' : 'secondary'}>
+                      {ft}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
 
- <AppTextField
- label="File Size (Estimated)"placeholder="e.g. 4.8 MB"value={formFileSize}
- onChangeText={setFormFileSize}
- />
+          <AppTextField
+            label="File Size (Estimated)"
+            placeholder="e.g. 4.8 MB"
+            value={formFileSize}
+            onChangeText={setFormFileSize}
+          />
 
- <AppTextField
- label="Description & Syllabus Coverage"placeholder="Detail exam year, chapters covered, lecturer notes..."value={formDesc}
- onChangeText={setFormDesc}
- multiline
- numberOfLines={3}
- />
- </ScrollView>
+          <AppTextField
+            label="Description & Syllabus Coverage"
+            placeholder="Detail exam year, chapters covered, lecturer notes..."
+            value={formDesc}
+            onChangeText={setFormDesc}
+            multiline
+            numberOfLines={3}
+          />
+        </ScrollView>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setEditModalOpen(false)} />
- <AppButton
- label={editingResource ? 'Save Changes' : 'Upload to Catalog'}
- loading={saving}
- disabled={!formTitle.trim() || !formCode.trim()}
- onPress={handleSave}
- />
- </View>
- </View>
- </View>
- </Modal>
+        <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+          <AppButton label="Cancel" variant="ghost" onPress={() => setEditModalOpen(false)} />
+          <AppButton
+            label={editingResource ? 'Save Changes' : 'Upload to Catalog'}
+            loading={saving}
+            disabled={!formTitle.trim() || !formCode.trim()}
+            onPress={handleSave}
+          />
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>
 
- {/* Document Inspector Modal */}
- <Modal visible={!!previewModalResource} transparent animationType="fade"onRequestClose={() => setPreviewModalResource(null)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg }}>
- <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <AppText variant="h3"weight="bold">
- Document Inspection
- </AppText>
- <Pressable onPress={() => setPreviewModalResource(null)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+  {/* Document Inspector Modal */}
+  <Modal visible={!!previewModalResource} transparent animationType="fade" onRequestClose={() => setPreviewModalResource(null)}>
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => setPreviewModalResource(null)} />
+      <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '80%', maxWidth: 560, width: '100%', alignSelf: 'center' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+          <AppText variant="h3" weight="bold">
+            Document Inspection
+          </AppText>
+          <Pressable onPress={() => setPreviewModalResource(null)} hitSlop={8}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </Pressable>
+        </View>
 
- {previewModalResource ? (
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
- <AppText variant="body"weight="bold"style={{ marginBottom: 4 }}>
- {previewModalResource.title}
- </AppText>
- <AppText tone="secondary"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
- {previewModalResource.courseCode} • {previewModalResource.department} • {previewModalResource.fileType} ({previewModalResource.fileSize})
- </AppText>
+        {previewModalResource ? (
+          <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
+            <AppText variant="body" weight="bold" style={{ marginBottom: 4 }}>
+              {previewModalResource.title}
+            </AppText>
+            <AppText tone="secondary" variant="caption" weight="bold" style={{ marginBottom: spacing.md }}>
+              {previewModalResource.courseCode} • {previewModalResource.department} • {previewModalResource.fileType} ({previewModalResource.fileSize})
+            </AppText>
 
- <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
- <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 4 }}>
- VERIFICATION CLEARANCES:
- </AppText>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
- <Ionicons name="shield-checkmark"size={14} color={colors.success} />
- <AppText variant="caption">Virus & Malware Scan: Clean</AppText>
- </View>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
- <Ionicons name="school"size={14} color={colors.success} />
- <AppText variant="caption">Syllabus Match: University of Ibadan Department Archive</AppText>
- </View>
- </View>
+            <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+                VERIFICATION CLEARANCES:
+              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <Ionicons name="shield-checkmark" size={14} color={colors.success} />
+                <AppText variant="caption">Virus & Malware Scan: Clean</AppText>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="school" size={14} color={colors.success} />
+                <AppText variant="caption">Syllabus Match: University of Ibadan Department Archive</AppText>
+              </View>
+            </View>
 
- <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 4 }}>
- SUMMARY & CHAPTERS:
- </AppText>
- <AppText tone="primary"variant="bodySmall"style={{ lineHeight: 20 }}>
- {previewModalResource.description}
- </AppText>
- </ScrollView>
- ) : null}
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+              SUMMARY & CHAPTERS:
+            </AppText>
+            <AppText tone="primary" variant="bodySmall" style={{ lineHeight: 20 }}>
+              {previewModalResource.description}
+            </AppText>
+          </ScrollView>
+        ) : null}
 
- <View style={{ marginTop: spacing.md }}>
- <AppButton label="Close Inspection"onPress={() => setPreviewModalResource(null)} />
- </View>
- </View>
- </View>
- </Modal>
+        <View style={{ marginTop: spacing.md }}>
+          <AppButton label="Close Inspection" onPress={() => setPreviewModalResource(null)} />
+        </View>
+      </View>
+    </View>
+  </Modal>
  </View>
  );
 }

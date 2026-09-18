@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Pressable, Modal, ScrollView, Platform } from 'react-native';
+import { View, Pressable, Modal, ScrollView, Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
@@ -38,6 +39,7 @@ export function AnnouncementsWidget({
 }) {
  const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
+ const insets = useSafeAreaInsets();
  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
 
@@ -167,9 +169,11 @@ export function AnnouncementsWidget({
               backgroundColor: 'rgba(0,0,0,0.5)',
               justifyContent: 'center',
               alignItems: 'center',
-              padding: spacing.lg,
+              padding: isDesktop ? spacing.lg : spacing.md,
+              paddingBottom: Math.max(insets.bottom, 16),
             }}
           >
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedAnnouncement(null)} />
             <GlassCard radius={20} style={{ width: '100%', maxWidth: 440 }}>
               {selectedAnnouncement && (
                 <>
@@ -277,9 +281,11 @@ export function AnnouncementsWidget({
  backgroundColor: 'rgba(0,0,0,0.5)',
  justifyContent: 'center',
  alignItems: 'center',
- padding: spacing.lg,
+ padding: isDesktop ? spacing.lg : spacing.md,
+ paddingBottom: Math.max(insets.bottom, 16),
  }}
  >
+ <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedAnnouncement(null)} />
  <SolidCard radius={20} style={{ width: '100%', maxWidth: 440, padding: spacing.lg }}>
  {selectedAnnouncement && (
  <>

@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Modal, Pressable, ScrollView, View, Platform, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { FACULTIES } from '@/data/departments';
 import { haptics } from '@/utils/haptics';
 
@@ -24,6 +26,8 @@ interface DepartmentPickerProps {
  */
 export function DepartmentPicker({ value, onChange, label = 'Department', placeholder = 'Search or select your department' }: DepartmentPickerProps) {
   const { colors, spacing, radius, minTouchTarget } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -72,17 +76,46 @@ export function DepartmentPicker({ value, onChange, label = 'Department', placeh
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: isDesktop ? 'center' : 'flex-end',
+            alignItems: isDesktop ? 'center' : 'stretch',
+            padding: isDesktop ? spacing.lg : 0,
+          }}
+        >
+          <Pressable style={{ position: 'absolute', inset: 0 }} onPress={() => setOpen(false)} />
           <View
             style={{
               backgroundColor: colors.background,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
-              maxHeight: '80%',
+              borderRadius: isDesktop ? 24 : undefined,
+              maxHeight: isDesktop ? '85%' : '80%',
+              maxWidth: 540,
+              width: '100%',
+              alignSelf: 'center',
               paddingTop: spacing.lg,
               paddingHorizontal: spacing.lg,
+              paddingBottom: isDesktop ? spacing.lg : Math.max(insets.bottom, spacing.md),
             }}
           >
+            {/* Mobile grab handle */}
+            {!isDesktop && (
+              <View
+                style={{
+                  width: 36,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: colors.divider,
+                  alignSelf: 'center',
+                  marginBottom: spacing.md,
+                }}
+              />
+            )}
+
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
               <AppText variant="h2" weight="bold">
                 Select department
@@ -100,7 +133,7 @@ export function DepartmentPicker({ value, onChange, label = 'Department', placeh
               autoFocus
             />
 
-            <ScrollView style={{ marginBottom: spacing.lg }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ marginBottom: spacing.sm }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               {filteredFaculties.length === 0 ? (
                 <AppText tone="secondary" style={{ paddingVertical: spacing.lg, textAlign: 'center' }}>
                   No departments match "{query}".
@@ -143,7 +176,7 @@ export function DepartmentPicker({ value, onChange, label = 'Department', placeh
               )}
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

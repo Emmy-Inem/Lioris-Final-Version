@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
@@ -48,6 +49,15 @@ const START_TIME_PICKS: Array<{ label: string; value: string }> = [
   { label: '6:00 PM', value: '18:00' },
 ];
 
+interface PublishEventModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onPublished?: () => void;
+  onPublish?: () => void;
+  defaultScope?: 'campus' | 'global' | 'alumni' | 'student';
+  defaultCategory?: string;
+}
+
 const DURATION_PICKS: Array<{ label: string; minutes: number }> = [
   { label: '1 hr', minutes: 60 },
   { label: '1.5 hr', minutes: 90 },
@@ -73,22 +83,23 @@ function nextWeekendDate(): Date {
 
 function addMinutesToTime(time: string, minutes: number): string {
   const [h, m] = time.split(':').map(Number);
-  const total = h * 60 + m + minutes;
-  const wrapped = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
-  return `${pad2(Math.floor(wrapped / 60))}:${pad2(wrapped % 60)}`;
+  const total = (h || 0) * 60 + (m || 0) + minutes;
+  const newH = Math.floor(total / 60) % 24;
+  const newM = total % 60;
+  return `${pad2(newH)}:${pad2(newM)}`;
 }
 
-interface PublishEventModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onPublish: () => void;
-  defaultScope?: 'student' | 'alumni';
-  defaultCategory?: (typeof CATEGORIES)[number] | string;
-}
-
-export function PublishEventModal({ visible, onClose, onPublish, defaultScope, defaultCategory }: PublishEventModalProps) {
+export function PublishEventModal({
+  visible,
+  onClose,
+  onPublished,
+  onPublish,
+  defaultScope,
+  defaultCategory,
+}: PublishEventModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { campusCode: defaultCampus, homeInstitutionCode } = useCampusScope();
 
@@ -258,7 +269,8 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
         capacity: capacity.trim() ? Number(capacity) : null,
         ticketPrice: Number(ticketPrice) || 0,
       });
-      onPublish();
+      onPublish?.();
+      onPublished?.();
       onClose();
       // Reset form
       setTitle('');
@@ -282,15 +294,16 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
 
   return (
     <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
-      <View
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{
           flex: 1,
           backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
           justifyContent: isDesktop ? 'center' : 'flex-start',
           alignItems: isDesktop ? 'center' : 'stretch',
-          paddingTop: isDesktop ? spacing.lg : 44,
+          paddingTop: isDesktop ? spacing.lg : Math.max(insets.top, 16),
           paddingHorizontal: isDesktop ? spacing.lg : 16,
-          paddingBottom: isDesktop ? spacing.lg : 0,
+          paddingBottom: isDesktop ? spacing.lg : Math.max(insets.bottom, 16),
         }}
       >
         <View
@@ -661,7 +674,7 @@ export function PublishEventModal({ visible, onClose, onPublish, defaultScope, d
             <AppButton label="Submit Event" onPress={handleHost} loading={submitting} />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

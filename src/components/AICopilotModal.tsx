@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AppText } from '@/components/AppText';
@@ -271,6 +273,7 @@ export function AICopilotModal({
 }: AICopilotModalProps) {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { isFeatureEnabled } = useFeatureFlags();
   const toast = useToast();
 
@@ -400,34 +403,44 @@ export function AICopilotModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[
+          styles.overlay,
+          {
+            paddingTop: isDesktop ? 12 : Math.max(insets.top, 12),
+            paddingBottom: isDesktop ? 12 : Math.max(insets.bottom, 12),
+            paddingHorizontal: isDesktop ? 12 : 8,
+          },
+        ]}
+      >
         <View
           style={[
             styles.modalContainer,
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              width: isDesktop ? 720 : '95%',
-              maxHeight: isDesktop ? '90%' : '94%',
+              width: isDesktop ? 720 : '100%',
+              maxHeight: isDesktop ? '90%' : '98%',
             },
           ]}
         >
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.divider }]}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="sparkles" size={20} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold">
-                  AI Academic Study Copilot
+            <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <Ionicons name="sparkles" size={18} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold" numberOfLines={1}>
+                  {isDesktop ? 'AI Academic Study Copilot' : 'AI Study Copilot'}
                 </AppText>
-                <Badge label="Study assistant" tone="neutral" />
+                {isDesktop && <Badge label="Study assistant" tone="neutral" />}
               </View>
               <AppText variant="caption" tone="secondary" numberOfLines={1}>
                 {initialCourse ? `Focus: ${initialCourse} • Multimodal Math & Exam Revision` : 'Multimodal Math, chalkboard diagrams & exam revision'}
               </AppText>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <Pressable
                 onPress={handleNewConversation}
                 hitSlop={8}
@@ -659,7 +672,7 @@ export function AICopilotModal({
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

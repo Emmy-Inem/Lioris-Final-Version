@@ -1,5 +1,6 @@
 import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { SolidCard } from'@/components/SolidCard';
@@ -8,6 +9,7 @@ import { Badge } from'@/components/Badge';
 import { AppButton } from'@/components/AppButton';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { listVerificationRequests, respondToVerificationRequest } from'@/api/verification';
 import { listWaitlist, respondToWaitlistEntry } from'@/api/institutions';
 import { listResources, approveResource, rejectResource } from'@/api/resources';
@@ -23,6 +25,8 @@ interface ApprovalsModerationTabProps {
 
 export function ApprovalsModerationTab({ scope = 'admin', campusCode }: ApprovalsModerationTabProps) {
  const { colors, spacing, radius, isDark } = useTheme();
+ const { isDesktop } = useResponsive();
+ const insets = useSafeAreaInsets();
  const queryClient = useQueryClient();
  const isStaffScope = scope === 'staff';
  const [section, setSection] = useState<'resources' | 'credentials' | 'nodes'>('resources');
@@ -327,51 +331,70 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  ) : null}
 
  {/* Document Inspector Modal */}
- <Modal visible={!!previewResource} transparent animationType="fade"onRequestClose={() => setPreviewResource(null)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg }}>
- <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <AppText variant="h3"weight="bold">
- Resource Submission Preview
- </AppText>
- <Pressable onPress={() => setPreviewResource(null)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+  <Modal visible={!!previewResource} transparent animationType="fade" onRequestClose={() => setPreviewResource(null)}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: isDesktop ? spacing.xl : spacing.md,
+        paddingBottom: Math.max(insets.bottom, 16),
+      }}
+    >
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => setPreviewResource(null)} />
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: 24,
+          padding: isDesktop ? spacing.xl : spacing.lg,
+          maxHeight: '85%',
+          width: '100%',
+          maxWidth: 560,
+        }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+          <AppText variant="h3" weight="bold">
+            Resource Submission Preview
+          </AppText>
+          <Pressable onPress={() => setPreviewResource(null)} hitSlop={8} style={{ padding: 4 }}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </Pressable>
+        </View>
 
- {previewResource ? (
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
- <AppText variant="body"weight="bold"style={{ marginBottom: 4 }}>
- {previewResource.title}
- </AppText>
- <AppText tone="secondary"variant="caption"weight="bold"style={{ marginBottom: spacing.md }}>
- {previewResource.courseCode} • {previewResource.department} • {previewResource.fileType} ({previewResource.fileSize})
- </AppText>
+        {previewResource ? (
+          <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
+            <AppText variant="body" weight="bold" style={{ marginBottom: 4 }}>
+              {previewResource.title}
+            </AppText>
+            <AppText tone="secondary" variant="caption" weight="bold" style={{ marginBottom: spacing.md }}>
+              {previewResource.courseCode} • {previewResource.department} • {previewResource.fileType} ({previewResource.fileSize})
+            </AppText>
 
- <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
- <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 4 }}>
- AUTHENTICITY & METADATA:
- </AppText>
- <AppText variant="caption">Author: {previewResource.authorName}</AppText>
- <AppText variant="caption">Academic Cohort: {previewResource.academicLevel || 'Undergraduate'}</AppText>
- <AppText variant="caption">Topic: {previewResource.syllabusTopic || 'Core Syllabus'}</AppText>
- </View>
+            <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+                AUTHENTICITY & METADATA:
+              </AppText>
+              <AppText variant="caption">Author: {previewResource.authorName}</AppText>
+              <AppText variant="caption">Academic Cohort: {previewResource.academicLevel || 'Undergraduate'}</AppText>
+              <AppText variant="caption">Topic: {previewResource.syllabusTopic || 'Core Syllabus'}</AppText>
+            </View>
 
- <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 4 }}>
- DESCRIPTION & SCOPE:
- </AppText>
- <AppText tone="primary"variant="bodySmall"style={{ lineHeight: 20 }}>
- {previewResource.description}
- </AppText>
- </ScrollView>
- ) : null}
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+              DESCRIPTION & SCOPE:
+            </AppText>
+            <AppText tone="primary" variant="bodySmall" style={{ lineHeight: 20 }}>
+              {previewResource.description}
+            </AppText>
+          </ScrollView>
+        ) : null}
 
- <View style={{ marginTop: spacing.md }}>
- <AppButton label="Close Preview"onPress={() => setPreviewResource(null)} />
- </View>
- </View>
- </View>
- </Modal>
+        <View style={{ marginTop: spacing.md }}>
+          <AppButton label="Close Preview" onPress={() => setPreviewResource(null)} />
+        </View>
+      </View>
+    </View>
+  </Modal>
  </View>
  );
 }

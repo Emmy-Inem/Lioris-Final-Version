@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
   Linking,
   Modal,
   Platform,
@@ -11,6 +12,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +62,7 @@ const VENUE_FORMATS = ['Physical Event', 'Lioris Live Event (In-App)', 'External
 export function EventDetailScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const toast = useToast();
   const roleGroup = user?.role ? `(${user.role})` : '(student)';
@@ -1705,16 +1708,33 @@ export function EventDetailScreen() {
       {/* ========================================================================= */}
       <Modal visible={rosterModalOpen} transparent animationType="slide" onRequestClose={() => setRosterModalOpen(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <Pressable style={{ flex: 1 }} onPress={() => setRosterModalOpen(false)} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setRosterModalOpen(false)} />
           <View
             style={{
               backgroundColor: colors.surface,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
-              padding: spacing.lg,
+              padding: isDesktop ? spacing.xl : spacing.lg,
+              paddingBottom: Math.max(insets.bottom, spacing.lg),
+              width: '100%',
+              maxWidth: 600,
+              alignSelf: 'center',
               maxHeight: '85%',
             }}
           >
+            {/* Mobile grab handle */}
+            {!isDesktop && (
+              <View
+                style={{
+                  width: 36,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: colors.border,
+                  alignSelf: 'center',
+                  marginBottom: spacing.sm,
+                }}
+              />
+            )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="people-outline" size={20} color={colors.textSecondary} />
@@ -1820,17 +1840,37 @@ export function EventDetailScreen() {
       {/* COMPREHENSIVE EDIT EVENT MODAL */}
       {/* ========================================================================= */}
       <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <Pressable style={{ flex: 1 }} onPress={() => setEditModalOpen(false)} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
           <View
             style={{
               backgroundColor: colors.surface,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
-              padding: spacing.lg,
+              padding: isDesktop ? spacing.xl : spacing.lg,
+              paddingBottom: Math.max(insets.bottom, spacing.lg),
+              width: '100%',
+              maxWidth: 640,
+              alignSelf: 'center',
               maxHeight: '92%',
             }}
           >
+            {/* Mobile grab handle */}
+            {!isDesktop && (
+              <View
+                style={{
+                  width: 36,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: colors.border,
+                  alignSelf: 'center',
+                  marginBottom: spacing.sm,
+                }}
+              />
+            )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
@@ -2148,7 +2188,7 @@ export function EventDetailScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Fullscreen Poster Lightbox */}
@@ -2168,17 +2208,37 @@ export function EventDetailScreen() {
       />
       {/* AGENDA SCHEDULE EDITOR MODAL */}
       <Modal visible={agendaEditorOpen} transparent animationType="slide" onRequestClose={() => setAgendaEditorOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <Pressable style={{ flex: 1 }} onPress={() => setAgendaEditorOpen(false)} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAgendaEditorOpen(false)} />
           <View
             style={{
               backgroundColor: colors.surface,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
-              padding: spacing.lg,
+              padding: isDesktop ? spacing.xl : spacing.lg,
+              paddingBottom: Math.max(insets.bottom, spacing.lg),
+              width: '100%',
+              maxWidth: 600,
+              alignSelf: 'center',
               maxHeight: '90%',
             }}
           >
+            {/* Mobile grab handle */}
+            {!isDesktop && (
+              <View
+                style={{
+                  width: 36,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: colors.border,
+                  alignSelf: 'center',
+                  marginBottom: spacing.sm,
+                }}
+              />
+            )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
@@ -2304,7 +2364,7 @@ export function EventDetailScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenContainer>
   );

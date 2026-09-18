@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, View, Platform, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
@@ -10,134 +11,142 @@ import { createJob } from '@/api/jobs';
 import { haptics } from '@/utils/haptics';
 
 interface CreateJobModalProps {
- visible: boolean;
- onClose: () => void;
- onCreated: () => void;
+  visible: boolean;
+  onClose: () => void;
+  onCreated: () => void;
 }
 
 const JOB_TYPES = ['Full-time', 'Internship', 'Part-time', 'Contract'] as const;
 
 export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalProps) {
- const { colors, spacing, radius, isDark } = useTheme();
- const { isDesktop } = useResponsive();
- const [title, setTitle] = useState('');
- const [company, setCompany] = useState('');
- const [location, setLocation] = useState('');
- const [jobType, setJobType] = useState<(typeof JOB_TYPES)[number]>('Full-time');
- const [isRemote, setIsRemote] = useState(false);
- const [salary, setSalary] = useState('');
- const [applyUrl, setApplyUrl] = useState('');
- const [description, setDescription] = useState('');
- const [submitting, setSubmitting] = useState(false);
- const [errorMessage, setErrorMessage] = useState<string | null>(null);
- const scrollRef = useRef<ScrollView>(null);
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const [title, setTitle] = useState('');
+  const [company, setCompany] = useState('');
+  const [location, setLocation] = useState('');
+  const [jobType, setJobType] = useState<(typeof JOB_TYPES)[number]>('Full-time');
+  const [isRemote, setIsRemote] = useState(false);
+  const [salary, setSalary] = useState('');
+  const [applyUrl, setApplyUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
- // The error banner renders at the very top of the form, above every
- // field - invisible to anyone who has scrolled down to the "Publish"
- // button at the bottom when validation fails. Scroll back up whenever a
- // new error appears so it's actually seen instead of looking like the
- // button silently did nothing.
- function showError(message: string) {
- setErrorMessage(message);
- scrollRef.current?.scrollTo({ y: 0, animated: true });
- }
+  // The error banner renders at the very top of the form, above every
+  // field - invisible to anyone who has scrolled down to the "Publish"
+  // button at the bottom when validation fails. Scroll back up whenever a
+  // new error appears so it's actually seen instead of looking like the
+  // button silently did nothing.
+  function showError(message: string) {
+    setErrorMessage(message);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
 
- function reset() {
- setTitle('');
- setCompany('');
- setLocation('');
- setJobType('Full-time');
- setIsRemote(false);
- setSalary('');
- setApplyUrl('');
- setDescription('');
- setErrorMessage(null);
- }
+  function reset() {
+    setTitle('');
+    setCompany('');
+    setLocation('');
+    setJobType('Full-time');
+    setIsRemote(false);
+    setSalary('');
+    setApplyUrl('');
+    setDescription('');
+    setErrorMessage(null);
+  }
 
- async function handleSubmit() {
- setErrorMessage(null);
- if (!title.trim()) {
- showError('Please enter a role title.');
- haptics.error();
- return;
- }
- if (!company.trim()) {
- showError('Please enter the hiring company or organization.');
- haptics.error();
- return;
- }
- if (!location.trim()) {
- showError('Please specify the location (e.g. Lagos, Ibadan, Remote).');
- haptics.error();
- return;
- }
- if (!applyUrl.trim()) {
- showError('Please provide an application URL or email.');
- haptics.error();
- return;
- }
+  async function handleSubmit() {
+    setErrorMessage(null);
+    if (!title.trim()) {
+      showError('Please enter a role title.');
+      haptics.error();
+      return;
+    }
+    if (!company.trim()) {
+      showError('Please enter the hiring company or organization.');
+      haptics.error();
+      return;
+    }
+    if (!location.trim()) {
+      showError('Please specify the location (e.g. Lagos, Ibadan, Remote).');
+      haptics.error();
+      return;
+    }
+    if (!applyUrl.trim()) {
+      showError('Please provide an application URL or email.');
+      haptics.error();
+      return;
+    }
 
- setSubmitting(true);
- haptics.medium();
+    setSubmitting(true);
+    haptics.medium();
 
- try {
- await createJob({
- title: title.trim(),
- company: company.trim(),
- location: location.trim(),
- type: jobType,
- remote: isRemote,
- salary: salary.trim() || undefined,
- applyUrl: applyUrl.trim(),
- description: description.trim() || undefined,
- });
+    try {
+      await createJob({
+        title: title.trim(),
+        company: company.trim(),
+        location: location.trim(),
+        type: jobType,
+        remote: isRemote,
+        salary: salary.trim() || undefined,
+        applyUrl: applyUrl.trim(),
+        description: description.trim() || undefined,
+      });
 
- haptics.success();
- Alert.alert('Opening Published ', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
- reset();
- onCreated();
- onClose();
- } catch (err: any) {
- haptics.error();
- showError(err?.message || 'Failed to publish job opening. Please try again.');
- } finally {
- setSubmitting(false);
- }
- }
+      haptics.success();
+      Alert.alert('Opening Published 🚀', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
+      reset();
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      haptics.error();
+      showError(err?.message || 'Failed to publish job opening. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
- return (
- <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
- <View
- style={{
- flex: 1,
- backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
- justifyContent: isDesktop ? 'center' : 'flex-start',
- alignItems: isDesktop ? 'center' : 'stretch',
- paddingTop: isDesktop ? spacing.lg : 56,
- paddingHorizontal: spacing.lg,
- paddingBottom: isDesktop ? spacing.lg : 0,
- }}
- >
- <View
- style={{
- flex: isDesktop ? undefined : 1,
- backgroundColor: colors.background,
- width: isDesktop ? '100%' : undefined,
- maxWidth: isDesktop ? 620 : undefined,
- maxHeight: isDesktop ? '90%' : undefined,
- borderRadius: isDesktop ? 24 : 0,
- padding: isDesktop ? spacing.xl : 0,
- borderWidth: isDesktop ? 1 : 0,
- borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
- overflow: 'hidden',
- }}
- >
- <ScrollView ref={scrollRef} style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
- <View>
- <AppText variant="h1" weight="bold">
- Post Opportunity 
- </AppText>
+  return (
+    <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{
+          flex: 1,
+          backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
+          justifyContent: isDesktop ? 'center' : 'flex-start',
+          alignItems: isDesktop ? 'center' : 'stretch',
+          paddingTop: isDesktop ? spacing.lg : Math.max(insets.top, 16),
+          paddingHorizontal: isDesktop ? spacing.lg : spacing.md,
+          paddingBottom: isDesktop ? spacing.lg : Math.max(insets.bottom, 16),
+        }}
+      >
+        <View
+          style={{
+            flex: isDesktop ? undefined : 1,
+            backgroundColor: colors.background,
+            width: isDesktop ? '100%' : '100%',
+            maxWidth: isDesktop ? 620 : undefined,
+            maxHeight: isDesktop ? '90%' : undefined,
+            borderRadius: isDesktop ? 24 : 0,
+            padding: isDesktop ? spacing.xl : 0,
+            borderWidth: isDesktop ? 1 : 0,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden',
+          }}
+        >
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1, width: '100%' }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40, paddingHorizontal: isDesktop ? 0 : spacing.xs }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
+              <View>
+                <AppText variant="h1" weight="bold">
+                  Post Opportunity 💼
+                </AppText>
  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
  Share internships, graduate roles & referrals
  </AppText>
@@ -284,9 +293,9 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  disabled={submitting}
  />
  </View>
- </ScrollView>
- </View>
- </View>
- </Modal>
- );
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>
+);
 }

@@ -1,5 +1,6 @@
-﻿import React, { useState } from'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, View } from'react-native';
+import React, { useState } from'react';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
 import { SolidCard } from'./SolidCard';
@@ -39,6 +40,7 @@ type PunishmentType = 'warn' | 'takedown' | 'mute' | 'escalate' | 'shadowban' | 
 export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear', role = 'admin' }: ModerationQueueProps) {
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
+ const insets = useSafeAreaInsets();
  const queryClient = useQueryClient();
  const [submittingId, setSubmittingId] = useState<string | null>(null);
  const [filterType, setFilterType] = useState('All Flags');
@@ -307,84 +309,119 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         />
       )}
 
- {/* Enforcement & Strike Modal */}
- <Modal visible={!!actionModalReport} transparent animationType="slide"onRequestClose={() => setActionModalReport(null)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={() => setActionModalReport(null)} />
- <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="shield-half"size={22} color={colors.critical} />
- <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
- Moderation Enforcement Action 
- </AppText>
- </View>
- <Pressable onPress={() => setActionModalReport(null)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+      {/* Enforcement & Strike Modal */}
+      <Modal visible={!!actionModalReport} transparent animationType="slide" onRequestClose={() => setActionModalReport(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setActionModalReport(null)} />
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: isDesktop ? spacing.xl : spacing.lg,
+              paddingBottom: Math.max(insets.bottom, spacing.lg),
+              width: '100%',
+              maxWidth: 560,
+              alignSelf: 'center',
+              maxHeight: '90%',
+            }}
+          >
+            {/* Grab handle on mobile */}
+            {!isDesktop && (
+              <View
+                style={{
+                  width: 36,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: colors.border,
+                  alignSelf: 'center',
+                  marginBottom: spacing.sm,
+                }}
+              />
+            )}
 
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
- Select disciplinary penalty for report on {actionModalReport?.targetType}:
- </AppText>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
+                <Ionicons name="shield-half" size={22} color={colors.critical} />
+                <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+                  Moderation Enforcement Action 
+                </AppText>
+              </View>
+              <Pressable onPress={() => setActionModalReport(null)} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
 
- {(canPermaban
- ? [
- { id: 'warn'as const, title: 'Official Warning', desc: 'Issue formal warning to user without deleting content.' },
- { id: 'takedown'as const, title: 'Purge & Take Down Content', desc: 'Immediately remove content and issue community strike.' },
- { id: 'shadowban'as const, title: '7-Day Account Shadowban', desc: 'Purge content and suppress author visibility for 7 days.' },
- { id: 'permaban'as const, title: 'Permanent Account Termination', desc: 'Wipe user account and blacklist university email domain.' },
- ]
- : [
- { id: 'warn'as const, title: 'Official Warning', desc: 'Issue formal warning to user without deleting content.' },
- { id: 'takedown'as const, title: 'Purge & Take Down Content', desc: 'Immediately remove content and issue community strike.' },
- { id: 'mute'as const, title: 'Temporary 24-Hour Mute', desc: 'Restrict author from posting for 24 hours. No account suspension.' },
- { id: 'escalate'as const, title: 'Escalate to Admin', desc: 'Flag this report for an administrator to apply account-level enforcement.' },
- ]
- ).map((p) => {
- const isSelected = punishmentType === p.id;
- return (
- <Pressable
- key={p.id}
- onPress={() => setPunishmentType(p.id)}
- style={{
- padding: spacing.md,
- borderRadius: radius.md,
- backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface,
- borderWidth: 1,
- borderColor: isSelected ? colors.brandPrimary : colors.border,
- marginBottom: spacing.xs,
- }}
- >
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
- <AppText weight="bold"tone={isSelected ? 'brand' : 'primary'} variant="bodySmall">
- {p.title}
- </AppText>
- <Ionicons name={isSelected ? 'radio-button-on' : 'radio-button-off'} size={16} color={isSelected ? colors.brandPrimary : colors.textSecondary} />
- </View>
- <AppText tone="secondary"variant="caption"style={{ marginTop: 2 }}>
- {p.desc}
- </AppText>
- </Pressable>
- );
- })}
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+                Select disciplinary penalty for report on {actionModalReport?.targetType}:
+              </AppText>
 
- <AppTextField
- label="Admin Audit Justification (Optional)"placeholder="e.g. Violates section 4.2 anti-harassment policy."value={adminModNote}
- onChangeText={setAdminModNote}
- />
+              {(canPermaban
+                ? [
+                    { id: 'warn' as const, title: 'Official Warning', desc: 'Issue formal warning to user without deleting content.' },
+                    { id: 'takedown' as const, title: 'Purge & Take Down Content', desc: 'Immediately remove content and issue community strike.' },
+                    { id: 'shadowban' as const, title: '7-Day Account Shadowban', desc: 'Purge content and suppress author visibility for 7 days.' },
+                    { id: 'permaban' as const, title: 'Permanent Account Termination', desc: 'Wipe user account and blacklist university email domain.' },
+                  ]
+                : [
+                    { id: 'warn' as const, title: 'Official Warning', desc: 'Issue formal warning to user without deleting content.' },
+                    { id: 'takedown' as const, title: 'Purge & Take Down Content', desc: 'Immediately remove content and issue community strike.' },
+                    { id: 'mute' as const, title: 'Temporary 24-Hour Mute', desc: 'Restrict author from posting for 24 hours. No account suspension.' },
+                    { id: 'escalate' as const, title: 'Escalate to Admin', desc: 'Flag this report for an administrator to apply account-level enforcement.' },
+                  ]
+              ).map((p) => {
+                const isSelected = punishmentType === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => setPunishmentType(p.id)}
+                    style={{
+                      padding: spacing.md,
+                      borderRadius: radius.md,
+                      backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface,
+                      borderWidth: 1,
+                      borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      marginBottom: spacing.xs,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <AppText weight="bold" tone={isSelected ? 'brand' : 'primary'} variant="bodySmall">
+                        {p.title}
+                      </AppText>
+                      <Ionicons name={isSelected ? 'radio-button-on' : 'radio-button-off'} size={16} color={isSelected ? colors.brandPrimary : colors.textSecondary} />
+                    </View>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                      {p.desc}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
- <View style={{ flex: 1 }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setActionModalReport(null)} disabled={applyingPenalty} fullWidth />
- </View>
- <View style={{ flex: 2 }}>
- <AppButton label="Apply Penalty & Log Audit"onPress={handleConfirmTakedown} loading={applyingPenalty} fullWidth />
- </View>
- </View>
- </View>
- </View>
- </Modal>
- </View>
- );
+              <View style={{ marginTop: spacing.xs }}>
+                <AppTextField
+                  label="Admin Audit Justification (Optional)"
+                  placeholder="e.g. Violates section 4.2 anti-harassment policy."
+                  value={adminModNote}
+                  onChangeText={setAdminModNote}
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+                <View style={{ flex: 1 }}>
+                  <AppButton label="Cancel" variant="ghost" onPress={() => setActionModalReport(null)} disabled={applyingPenalty} fullWidth />
+                </View>
+                <View style={{ flex: 2 }}>
+                  <AppButton label="Apply Penalty & Log Audit" onPress={handleConfirmTakedown} loading={applyingPenalty} fullWidth />
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
+  );
 }

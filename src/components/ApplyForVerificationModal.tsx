@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Platform, Pressable, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -129,116 +129,143 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
  setErrorMessage(null);
  }
 
- return (
- <Modal visible={visible} transparent animationType="fade"onRequestClose={onClose}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
- <Animated.View style={[{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%' }, animatedStyle]}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
- <Ionicons name="shield-checkmark"size={20} color={colors.textSecondary} />
- <AppText variant="h3"weight="bold">
- Apply for Verification
- </AppText>
- </View>
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.lg }}>
- Submit your school and a supporting document reference. A reviewer approves or
- rejects this manually - it isn't granted automatically.
- </AppText>
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.md }}
+      >
+        <Animated.View
+          style={[
+            {
+              backgroundColor: colors.surface,
+              borderRadius: radius.xl,
+              padding: spacing.lg,
+              width: '100%',
+              maxWidth: 520,
+              maxHeight: '90%',
+              borderWidth: 1,
+              borderColor: colors.border,
+            },
+            animatedStyle,
+          ]}
+        >
+          {/* Header with Close */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+              <Ionicons name="shield-checkmark" size={20} color={colors.brandPrimary} />
+              <AppText variant="h3" weight="bold" numberOfLines={1}>
+                Apply for Verification
+              </AppText>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md, lineHeight: 16 }}>
+            Submit your school and a supporting document reference for administrator review.
+          </AppText>
 
- <AppTextField label="Your school"value={institutionClaimed} onChangeText={setInstitutionClaimed} placeholder="e.g. Obafemi Awolowo University" />
+          <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <AppTextField label="Your school" value={institutionClaimed} onChangeText={setInstitutionClaimed} placeholder="e.g. Obafemi Awolowo University" />
 
- <AppText weight="semiBold"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
- Document type
- </AppText>
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md }}>
- {DOCUMENT_TYPES.map((type) => {
- const selected = documentType === type;
- return (
- <Pressable
- key={type}
- onPress={() => setDocumentType(type)}
- accessibilityRole="radio"accessibilityState={{ checked: selected }}
- accessibilityLabel={type}
- style={{
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- borderRadius: radius.pill,
- backgroundColor: selected ? colors.pastelPrimaryBg : 'transparent',
- borderWidth: selected ? 0 : 1,
- borderColor: colors.border,
- }}
- >
- <AppText variant="bodySmall"weight="semiBold"tone={selected ? 'brand' : 'secondary'}>
- {type}
- </AppText>
- </Pressable>
- );
- })}
- </View>
+            <AppText weight="semiBold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+              Document type
+            </AppText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md }}>
+              {DOCUMENT_TYPES.map((type) => {
+                const selected = documentType === type;
+                return (
+                  <Pressable
+                    key={type}
+                    onPress={() => setDocumentType(type)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={type}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radius.pill,
+                      backgroundColor: selected ? colors.pastelPrimaryBg : 'transparent',
+                      borderWidth: selected ? 0 : 1,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
+                      {type}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
 
- <AppTextField
- label="Document reference / ID number"value={documentReference}
- onChangeText={setDocumentReference}
- placeholder="e.g. Matric No. OAU/2021/04521"
- />
+            <AppTextField
+              label="Document reference / ID number"
+              value={documentReference}
+              onChangeText={setDocumentReference}
+              placeholder="e.g. Matric No. OAU/2021/04521"
+            />
 
- <Pressable
- onPress={pickDocumentPhoto}
- accessibilityRole="button"accessibilityLabel={documentPhotoUri ? 'Change uploaded document photo' : 'Upload supporting document'}
- style={{
- borderWidth: 1,
- borderColor: colors.border,
- borderStyle: documentPhotoUri ? 'solid' : 'dashed',
- borderRadius: radius.md,
- alignItems: 'center',
- paddingVertical: documentPhotoUri ? 0 : spacing.lg,
- marginBottom: spacing.lg,
- overflow: 'hidden',
- }}
- >
- {documentPhotoUri ? (
- <Image source={{ uri: documentPhotoUri }} style={{ width: '100%', height: 120 }} contentFit="cover"transition={200} />
- ) : (
- <>
- <Ionicons name="cloud-upload-outline"size={20} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
- <AppText tone="secondary"variant="bodySmall">
- Upload supporting document (photo)
- </AppText>
- </>
- )}
- </Pressable>
+            <Pressable
+              onPress={pickDocumentPhoto}
+              accessibilityRole="button"
+              accessibilityLabel={documentPhotoUri ? 'Change uploaded document photo' : 'Upload supporting document'}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderStyle: documentPhotoUri ? 'solid' : 'dashed',
+                borderRadius: radius.md,
+                alignItems: 'center',
+                paddingVertical: documentPhotoUri ? 0 : spacing.lg,
+                marginBottom: spacing.md,
+                overflow: 'hidden',
+              }}
+            >
+              {documentPhotoUri ? (
+                <Image source={{ uri: documentPhotoUri }} style={{ width: '100%', height: 120 }} contentFit="cover" transition={200} />
+              ) : (
+                <>
+                  <Ionicons name="cloud-upload-outline" size={20} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+                  <AppText tone="secondary" variant="bodySmall">
+                    Upload supporting document (photo)
+                  </AppText>
+                </>
+              )}
+            </Pressable>
 
- {errorMessage ? (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 8,
- backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
- borderColor: colors.critical,
- borderWidth: 1,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="alert-circle" size={18} color={colors.critical} />
- <AppText
- variant="bodySmall"
- weight="semiBold"
- style={{ color: colors.critical, flex: 1 }}
- >
- {errorMessage}
- </AppText>
- </View>
- ) : null}
+            {errorMessage ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                  borderColor: colors.critical,
+                  borderWidth: 1,
+                  borderRadius: radius.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name="alert-circle" size={18} color={colors.critical} />
+                <AppText
+                  variant="bodySmall"
+                  weight="semiBold"
+                  style={{ color: colors.critical, flex: 1 }}
+                >
+                  {errorMessage}
+                </AppText>
+              </View>
+            ) : null}
+          </ScrollView>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
- <AppButton label="Cancel" variant="ghost" onPress={onClose} />
- <AppButton label="Submit for review" onPress={handleSubmit} />
- </View>
- </Animated.View>
- </View>
- </Modal>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <AppButton label="Cancel" variant="ghost" onPress={onClose} />
+            <AppButton label="Submit for review" onPress={handleSubmit} />
+          </View>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </Modal>
  );
 }

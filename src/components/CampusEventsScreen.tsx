@@ -497,7 +497,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
       <PublishEventModal
         visible={publishModalOpen}
-        defaultScope={isAlumniScope ? 'alumni' : 'student'}
+        defaultScope={isAlumniScope ? 'alumni' : 'campus'}
         defaultCategory={isAlumniScope ? 'Alumni' : 'Academic'}
         onClose={() => setPublishModalOpen(false)}
         onPublish={() => {

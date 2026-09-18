@@ -8,9 +8,11 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass, PRESETS } from '@/context/LiquidGlassContext';
 import { GlassCard } from '@/components/GlassCard';
 import { haptics } from '@/utils/haptics';
@@ -22,6 +24,8 @@ interface LiquidGlassCustomizerModalProps {
 
 export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCustomizerModalProps) {
   const { colors, spacing, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const {
     settings,
     updateSetting,
@@ -34,7 +38,16 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <View
+        style={[
+          styles.overlay,
+          {
+            justifyContent: isDesktop ? 'center' : 'flex-end',
+            alignItems: isDesktop ? 'center' : 'stretch',
+            padding: isDesktop ? spacing.lg : 0,
+          },
+        ]}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View
           style={[
@@ -42,9 +55,27 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
             {
               backgroundColor: isDark ? '#0B1120' : '#FFFFFF',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+              maxWidth: 620,
+              alignSelf: 'center',
+              borderRadius: isDesktop ? 24 : undefined,
+              paddingBottom: isDesktop ? spacing.lg : Math.max(insets.bottom, 16),
             },
           ]}
         >
+          {/* Mobile grab handle */}
+          {!isDesktop && (
+            <View
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: colors.divider,
+                alignSelf: 'center',
+                marginBottom: spacing.md,
+              }}
+            />
+          )}
+
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

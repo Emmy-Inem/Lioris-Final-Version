@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -123,6 +124,7 @@ export function SettingsScreen() {
   } = useTheme();
   const { user, logout, switchRole } = useAuth();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const { scope, setScope, activeCampusCode, homeInstitutionCode } = useCampusScope();
   const [workspaceScopeModalOpen, setWorkspaceScopeModalOpen] = useState(false);
@@ -1368,22 +1370,31 @@ export function SettingsScreen() {
         animationType="fade"
         onRequestClose={() => setPasswordModalOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md, paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setPasswordModalOpen(false)} />
           <View
             style={{
               backgroundColor: colors.surface,
               borderRadius: 20,
               padding: spacing.lg,
               width: '100%',
-              maxWidth: 420,
+              maxWidth: 440,
               gap: spacing.md,
               borderWidth: 1,
               borderColor: colors.border,
             }}
           >
-            <AppText variant="h3" weight="bold">
-              Update Password
-            </AppText>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <AppText variant="h3" weight="bold">
+                Update Password
+              </AppText>
+              <Pressable onPress={() => setPasswordModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </Pressable>
+            </View>
             {passwordError && (
               <AppText style={{ color: '#EF4444', fontSize: 12, lineHeight: 16 }}>
                 {passwordError}
@@ -1412,7 +1423,7 @@ export function SettingsScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Legal & Policy Viewer Modal */}
@@ -1423,18 +1434,35 @@ export function SettingsScreen() {
         onRequestClose={() => setActiveLegalDoc(null)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <Pressable style={{ flex: 1 }} onPress={() => setActiveLegalDoc(null)} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setActiveLegalDoc(null)} />
           <View
             style={{
               backgroundColor: colors.surface,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               padding: isDesktop ? spacing.xl : spacing.lg,
+              paddingBottom: Math.max(insets.bottom, spacing.lg),
+              width: '100%',
+              maxWidth: 640,
+              alignSelf: 'center',
               maxHeight: '85%',
               borderWidth: 1,
               borderColor: colors.border,
             }}
           >
+            {/* Mobile grab handle */}
+            {!isDesktop && (
+              <View
+                style={{
+                  width: 36,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: colors.border,
+                  alignSelf: 'center',
+                  marginBottom: spacing.sm,
+                }}
+              />
+            )}
             <View
               style={{
                 flexDirection: 'row',
@@ -1493,14 +1521,18 @@ export function SettingsScreen() {
         animationType="fade"
         onRequestClose={() => setSupportModalOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md, paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSupportModalOpen(false)} />
           <View
             style={{
               backgroundColor: colors.surface,
               borderRadius: 20,
               padding: spacing.lg,
               width: '100%',
-              maxWidth: 460,
+              maxWidth: 480,
               maxHeight: '90%',
               gap: spacing.md,
               borderWidth: 1,
@@ -1647,7 +1679,7 @@ export function SettingsScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenContainer>
   );

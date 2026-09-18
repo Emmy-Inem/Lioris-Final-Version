@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FlatList, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,6 +65,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const isAdmin = user?.role === 'admin';
   const { isFeatureEnabled } = useFeatureFlags();
   const { isDesktop, isWideDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const segments = useSegments();
   const roleGroup = segments[0] ?? '(student)';
@@ -1252,10 +1254,27 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             backgroundColor: colors.surface,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            padding: spacing.lg,
+            padding: isDesktop ? spacing.xl : spacing.lg,
+            paddingBottom: Math.max(insets.bottom, spacing.lg),
+            width: '100%',
+            maxWidth: 600,
+            alignSelf: 'center',
             maxHeight: '85%',
           }}
         >
+          {/* Mobile grab handle */}
+          {!isDesktop && (
+            <View
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: colors.border,
+                alignSelf: 'center',
+                marginBottom: spacing.sm,
+              }}
+            />
+          )}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="planet" size={22} color={colors.textSecondary} />
@@ -1356,55 +1375,61 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     {/* Propose a Community Modal - held for root-admin approval before it
         becomes a real, postable space (see src/api/communities.ts) */}
     <Modal visible={proposeCommunityOpen} transparent animationType="fade" onRequestClose={() => setProposeCommunityOpen(false)}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, 16) }}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setProposeCommunityOpen(false)} />
         <View
           style={{
             width: '100%',
-            maxWidth: 440,
+            maxWidth: 460,
             backgroundColor: colors.surface,
             borderRadius: 20,
             padding: spacing.lg,
             borderWidth: 1,
             borderColor: colors.border,
+            maxHeight: '90%',
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-            <AppText variant="h3" weight="bold">
-              Propose a Community
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+              <AppText variant="h3" weight="bold">
+                Propose a Community
+              </AppText>
+              <Pressable onPress={() => setProposeCommunityOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+              A root admin reviews every proposed community before it goes live - your posts, though, never wait on anyone.
             </AppText>
-            <Pressable onPress={() => setProposeCommunityOpen(false)} hitSlop={8}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
-            A root admin reviews every proposed community before it goes live - your posts, though, never wait on anyone.
-          </AppText>
-          <AppTextField
-            label="Community Name"
-            placeholder="e.g. Photography Club"
-            value={newCommunityName}
-            onChangeText={setNewCommunityName}
-          />
-          <AppTextField
-            label="Description"
-            placeholder="What is this space for?"
-            value={newCommunityDescription}
-            onChangeText={setNewCommunityDescription}
-            multiline
-            numberOfLines={3}
-          />
-          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
-            <AppButton label="Cancel" variant="ghost" onPress={() => setProposeCommunityOpen(false)} />
-            <AppButton
-              label={submittingCommunity ? 'Submitting...' : 'Submit'}
-              loading={submittingCommunity}
-              disabled={!newCommunityName.trim() || submittingCommunity}
-              onPress={handleProposeCommunity}
+            <AppTextField
+              label="Community Name"
+              placeholder="e.g. Photography Club"
+              value={newCommunityName}
+              onChangeText={setNewCommunityName}
             />
-          </View>
+            <AppTextField
+              label="Description"
+              placeholder="What is this space for?"
+              value={newCommunityDescription}
+              onChangeText={setNewCommunityDescription}
+              multiline
+              numberOfLines={3}
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
+              <AppButton label="Cancel" variant="ghost" onPress={() => setProposeCommunityOpen(false)} />
+              <AppButton
+                label={submittingCommunity ? 'Submitting...' : 'Submit'}
+                loading={submittingCommunity}
+                disabled={!newCommunityName.trim() || submittingCommunity}
+                onPress={handleProposeCommunity}
+              />
+            </View>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
 
     {/* Floating Action Button (FAB) - Compact Floating Plus Icon */}

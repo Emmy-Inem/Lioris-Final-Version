@@ -8,6 +8,8 @@ import { AppText } from'./AppText';
 import { AppButton } from'./AppButton';
 import { Avatar } from'./Avatar';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { MarketplaceListing } from'@/api/types';
 import { isWishlisted, toggleWishlist } from '@/api/marketplace';
@@ -25,19 +27,21 @@ function trustLabel(level: number) {
 }
 
 export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
- const { colors, spacing, radius } = useTheme();
- const { user } = useAuth();
- const segments = useSegments();
- const roleGroup = segments[0];
- const [saved, setSaved] = useState(isWishlisted(item.id));
- const [messaging, setMessaging] = useState(false);
- const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
- const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card' | 'transfer'>('wallet');
- const [processingOrder, setProcessingOrder] = useState(false);
- const [orderComplete, setOrderComplete] = useState(false);
+  const { colors, spacing, radius } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const segments = useSegments();
+  const roleGroup = segments[0];
+  const [saved, setSaved] = useState(isWishlisted(item.id));
+  const [messaging, setMessaging] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card' | 'transfer'>('wallet');
+  const [processingOrder, setProcessingOrder] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
 
- const trust = trustLabel(item.sellerTrustLevel);
- const isOwnListing = item.sellerId === 'me' || (!!user?.id && item.sellerId === user.id);
+  const trust = trustLabel(item.sellerTrustLevel);
+  const isOwnListing = item.sellerId === 'me' || (!!user?.id && item.sellerId === user.id);
   const { isFeatureEnabled } = useFeatureFlags();
   const showConverter = isFeatureEnabled('currency_converter');
   const numericPrice = parseFloat(String(item.price ?? '').replace(/[^0-9.]/g, '')) || 0;
@@ -224,92 +228,104 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  ) : null}
  </View>
 
- {/* Escrow Checkout Modal */}
- <Modal visible={checkoutModalOpen} transparent animationType="fade"onRequestClose={() => setCheckoutModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
- <SolidCard style={{ width: '100%', maxWidth: 440 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="shield-checkmark" size={20} color={colors.textSecondary} />
- <AppText variant="h3" weight="bold">
- Campus Pickup & Handover
- </AppText>
- </View>
- <Pressable onPress={() => setCheckoutModalOpen(false)} hitSlop={8}>
- <Ionicons name="close" size={20} color={colors.textSecondary} />
- </Pressable>
- </View>
+      {/* Escrow Checkout Modal */}
+      <Modal visible={checkoutModalOpen} transparent animationType="fade" onRequestClose={() => setCheckoutModalOpen(false)}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: isDesktop ? spacing.lg : spacing.md,
+            paddingBottom: Math.max(insets.bottom, 16),
+          }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setCheckoutModalOpen(false)} />
+          <SolidCard style={{ width: '100%', maxWidth: 460, maxHeight: '90%' }}>
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                  <Ionicons name="shield-checkmark" size={20} color={colors.textSecondary} />
+                  <AppText variant="h3" weight="bold">
+                    Campus Pickup & Handover
+                  </AppText>
+                </View>
+                <Pressable onPress={() => setCheckoutModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={20} color={colors.textSecondary} />
+                </Pressable>
+              </View>
 
- <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
- Arrange a safe in-person campus meetup with the seller. Inspect your item thoroughly before completing payment.
- </AppText>
+              <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+                Arrange a safe in-person campus meetup with the seller. Inspect your item thoroughly before completing payment.
+              </AppText>
 
- <View style={{ backgroundColor: colors.divider, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
- <AppText weight="bold" variant="bodySmall">
- {item.title}
- </AppText>
- <AppText weight="bold" tone="brand">
- {item.price}
- </AppText>
- </View>
- <AppText variant="caption" tone="secondary">
- Seller: {item.sellerName} | Condition: {item.condition}
- </AppText>
- <AppText variant="caption" tone="brand" style={{ marginTop: 4 }}>
- Recommended Meetup: Student Union Building (SUB) or Main Library Foyer
- </AppText>
- </View>
+              <View style={{ backgroundColor: colors.divider, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <AppText weight="bold" variant="bodySmall">
+                    {item.title}
+                  </AppText>
+                  <AppText weight="bold" tone="brand">
+                    {item.price}
+                  </AppText>
+                </View>
+                <AppText variant="caption" tone="secondary">
+                  Seller: {item.sellerName} | Condition: {item.condition}
+                </AppText>
+                <AppText variant="caption" tone="brand" style={{ marginTop: 4 }}>
+                  Recommended Meetup: Student Union Building (SUB) or Main Library Foyer
+                </AppText>
+              </View>
 
- <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.xs }}>
- Preferred Payment on Pickup
- </AppText>
- {[
- { id: 'wallet' as const, name: 'Campus Bank / Mobile Transfer', icon: 'wallet-outline', desc: 'Instant bank or mobile peer transfer on handover' },
- { id: 'card' as const, name: 'Cash on Handover', icon: 'cash-outline', desc: 'Direct cash payment after in-person inspection' },
- ].map((method) => {
- const isSelected = paymentMethod === method.id;
- return (
- <Pressable
- key={method.id}
- onPress={() => setPaymentMethod(method.id)}
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: spacing.sm,
- padding: spacing.sm,
- borderRadius: radius.md,
- borderWidth: 1,
- borderColor: isSelected ? colors.brandPrimary : colors.border,
- backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface,
- marginBottom: spacing.xs,
- }}
- >
- <Ionicons name={method.icon as any} size={18} color={isSelected ? colors.brandPrimary : colors.textSecondary} />
- <View style={{ flex: 1 }}>
- <AppText weight="bold" variant="caption">
- {method.name}
- </AppText>
- <AppText tone="secondary" variant="caption" style={{ fontSize: 9 }}>
- {method.desc}
- </AppText>
- </View>
- {isSelected ? <Ionicons name="checkmark-circle" size={16} color={colors.brandPrimary} /> : null}
- </Pressable>
- );
- })}
+              <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.xs }}>
+                Preferred Payment on Pickup
+              </AppText>
+              {[
+                { id: 'wallet' as const, name: 'Campus Bank / Mobile Transfer', icon: 'wallet-outline', desc: 'Instant bank or mobile peer transfer on handover' },
+                { id: 'card' as const, name: 'Cash on Handover', icon: 'cash-outline', desc: 'Direct cash payment after in-person inspection' },
+              ].map((method) => {
+                const isSelected = paymentMethod === method.id;
+                return (
+                  <Pressable
+                    key={method.id}
+                    onPress={() => setPaymentMethod(method.id)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                      padding: spacing.sm,
+                      borderRadius: radius.md,
+                      borderWidth: 1,
+                      borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface,
+                      marginBottom: spacing.xs,
+                    }}
+                  >
+                    <Ionicons name={method.icon as any} size={18} color={isSelected ? colors.brandPrimary : colors.textSecondary} />
+                    <View style={{ flex: 1 }}>
+                      <AppText weight="bold" variant="caption">
+                        {method.name}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" style={{ fontSize: 9 }}>
+                        {method.desc}
+                      </AppText>
+                    </View>
+                    {isSelected ? <Ionicons name="checkmark-circle" size={16} color={colors.brandPrimary} /> : null}
+                  </Pressable>
+                );
+              })}
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel" variant="ghost" onPress={() => setCheckoutModalOpen(false)} />
-          <AppButton
-            label={orderComplete ? 'Request Sent' : processingOrder ? 'Sending Request...' : 'Reserve & Request Meetup'}
-            loading={processingOrder}
-            onPress={handleConfirmEscrowOrder}
-          />
- </View>
- </SolidCard>
- </View>
- </Modal>
+              <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+                <AppButton label="Cancel" variant="ghost" onPress={() => setCheckoutModalOpen(false)} />
+                <AppButton
+                  label={orderComplete ? 'Request Sent' : processingOrder ? 'Sending Request...' : 'Reserve & Request Meetup'}
+                  loading={processingOrder}
+                  onPress={handleConfirmEscrowOrder}
+                />
+              </View>
+            </ScrollView>
+          </SolidCard>
+        </View>
+      </Modal>
  </SolidCard>
  );
 }

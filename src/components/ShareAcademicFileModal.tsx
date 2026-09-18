@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import * as DocumentPicker from 'expo-document-picker';
@@ -185,147 +185,165 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  const { isDesktop } = useResponsive();
 
  return (
- <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
- <View style={{ flex: 1, justifyContent: isDesktop ? 'center' : 'flex-end', alignItems: isDesktop ? 'center' : 'stretch', padding: isDesktop ? spacing.lg : 0 }}>
- <Animated.View
- style={[
- { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
- backdropStyle,
- ]}
- />
- <Animated.View
- style={[
- {
- backgroundColor: colors.background,
- borderRadius: isDesktop ? 24 : 0,
- borderTopLeftRadius: 24,
- borderTopRightRadius: 24,
- padding: spacing.lg,
- maxHeight: '90%',
- maxWidth: isDesktop ? 580 : undefined,
- width: isDesktop ? '100%' : undefined,
- },
- sheetStyle,
- ]}
- >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
- <Ionicons name="cloud-upload" size={20} color={colors.textSecondary} />
- <AppText variant="h2" weight="bold">
- Share Academic File
- </AppText>
- </View>
- <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
- Upload reference notes, past exams, or group projects to help your classmates learn.
- </AppText>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, justifyContent: isDesktop ? 'center' : 'flex-end', alignItems: isDesktop ? 'center' : 'stretch', padding: isDesktop ? spacing.lg : 0 }}
+      >
+        <Animated.View
+          style={[
+            { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
+            backdropStyle,
+          ]}
+        />
+        <Animated.View
+          style={[
+            {
+              backgroundColor: colors.background,
+              borderRadius: isDesktop ? 24 : 0,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing.lg,
+              paddingBottom: isDesktop ? spacing.lg : Platform.OS === 'ios' ? 34 : spacing.md,
+              maxHeight: isDesktop ? '88%' : '92%',
+              maxWidth: isDesktop ? 580 : undefined,
+              width: isDesktop ? '100%' : undefined,
+            },
+            sheetStyle,
+          ]}
+        >
+          {/* Mobile Drag Handle */}
+          {!isDesktop && (
+            <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
+              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
+          )}
 
- <AppTextField label="" placeholder="Resource Title / Subject" value={title} onChangeText={setTitle} />
- <AppTextField label="" placeholder="Course Code (e.g. CSC 301)" value={courseCode} onChangeText={setCourseCode} />
- <AppTextField label="" placeholder="Short Description" value={description} onChangeText={setDescription} multiline />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+              <Ionicons name="cloud-upload" size={20} color={colors.brandPrimary} />
+              <AppText variant="h2" weight="bold" numberOfLines={1}>
+                Share Academic File
+              </AppText>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md, lineHeight: 16 }}>
+            Upload reference notes, past exams, or group projects to help your classmates learn.
+          </AppText>
 
- {/* Document Attachment Picker Button */}
- <Pressable
- onPress={handlePickFile}
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- justifyContent: 'space-between',
- padding: spacing.md,
- borderRadius: radius.md,
- borderWidth: 1,
- borderStyle: 'dashed',
- borderColor: selectedFile ? colors.brandPrimary : colors.border,
- backgroundColor: selectedFile ? colors.pastelPrimaryBg : colors.surface,
- marginBottom: spacing.md,
- }}
- >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
- <Ionicons
- name={selectedFile ? 'document-text' : 'attach-outline'}
- size={20}
- color={selectedFile ? colors.brandPrimary : colors.textSecondary}
- />
- <View style={{ flex: 1 }}>
- <AppText weight="semiBold" variant="bodySmall" numberOfLines={1}>
- {selectedFile ? selectedFile.name : 'Attach Document (PDF, ZIP)'}
- </AppText>
- {selectedFile?.size ? (
- <AppText variant="caption" tone="secondary">
- {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
- </AppText>
- ) : null}
- </View>
- </View>
- <AppText variant="caption" weight="bold" tone="brand">
- {selectedFile ? 'Change' : 'Browse'}
- </AppText>
- </Pressable>
+          <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <AppTextField label="" placeholder="Resource Title / Subject" value={title} onChangeText={setTitle} />
+            <AppTextField label="" placeholder="Course Code (e.g. CSC 301)" value={courseCode} onChangeText={setCourseCode} />
+            <AppTextField label="" placeholder="Short Description" value={description} onChangeText={setDescription} multiline />
 
- <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
- Resource Category:
- </AppText>
- <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
- {CATEGORIES.map((cat) => {
- const selected = category === cat;
- return (
- <Pressable
- key={cat}
- onPress={() => setCategory(cat)}
- accessibilityRole="radio"
- accessibilityState={{ checked: selected }}
- accessibilityLabel={cat}
- style={{
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- borderRadius: radius.pill,
- backgroundColor: selected ? colors.pastelPrimaryBg : 'transparent',
- borderWidth: selected ? 0 : 1,
- borderColor: colors.border,
- }}
- >
- <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
- {cat}
- </AppText>
- </Pressable>
- );
- })}
- </View>
+            {/* Document Attachment Picker Button */}
+            <Pressable
+              onPress={handlePickFile}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: spacing.md,
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderStyle: 'dashed',
+                borderColor: selectedFile ? colors.brandPrimary : colors.border,
+                backgroundColor: selectedFile ? colors.pastelPrimaryBg : colors.surface,
+                marginBottom: spacing.md,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
+                <Ionicons
+                  name={selectedFile ? 'document-text' : 'attach-outline'}
+                  size={20}
+                  color={selectedFile ? colors.brandPrimary : colors.textSecondary}
+                />
+                <View style={{ flex: 1 }}>
+                  <AppText weight="semiBold" variant="bodySmall" numberOfLines={1}>
+                    {selectedFile ? selectedFile.name : 'Attach Document (PDF, ZIP)'}
+                  </AppText>
+                  {selectedFile?.size ? (
+                    <AppText variant="caption" tone="secondary">
+                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+              <AppText variant="caption" weight="bold" tone="brand">
+                {selectedFile ? 'Change' : 'Browse'}
+              </AppText>
+            </Pressable>
 
- {errorMessage ? (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 8,
- backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
- borderColor: colors.critical,
- borderWidth: 1,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="alert-circle" size={18} color={colors.critical} />
- <AppText
- variant="bodySmall"
- weight="semiBold"
- style={{ color: colors.critical, flex: 1 }}
- >
- {errorMessage}
- </AppText>
- </View>
- ) : null}
+            <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+              Resource Category:
+            </AppText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
+              {CATEGORIES.map((cat) => {
+                const selected = category === cat;
+                return (
+                  <Pressable
+                    key={cat}
+                    onPress={() => setCategory(cat)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={cat}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radius.pill,
+                      backgroundColor: selected ? colors.pastelPrimaryBg : 'transparent',
+                      borderWidth: selected ? 0 : 1,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
+                      {cat}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' }}>
- <AppButton label="Cancel" variant="ghost" onPress={onClose} disabled={isUploading} />
- <AppButton
- label={isUploading ? 'Uploading...' : 'Upload File'}
- onPress={handleUpload}
- loading={isUploading}
- />
- </View>
- </Animated.View>
- </View>
- </Modal>
+            {errorMessage ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+                  borderColor: colors.critical,
+                  borderWidth: 1,
+                  borderRadius: radius.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name="alert-circle" size={18} color={colors.critical} />
+                <AppText
+                  variant="bodySmall"
+                  weight="semiBold"
+                  style={{ color: colors.critical, flex: 1 }}
+                >
+                  {errorMessage}
+                </AppText>
+              </View>
+            ) : null}
+          </ScrollView>
+
+          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <AppButton label="Cancel" variant="ghost" onPress={onClose} disabled={isUploading} />
+            <AppButton
+              label={isUploading ? 'Uploading...' : 'Upload File'}
+              onPress={handleUpload}
+              loading={isUploading}
+            />
+          </View>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </Modal>
  );
 }

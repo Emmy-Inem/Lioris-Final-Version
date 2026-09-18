@@ -1,5 +1,6 @@
 import React, { useState } from'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View } from'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from'expo-image';
 import { router, useSegments } from'expo-router';
 import { Ionicons } from'@expo/vector-icons';
@@ -42,6 +43,7 @@ function timeAgo(iso: string) {
 
 export function PostCard({ post }: { post: Post }) {
  const { colors, spacing, radius, isDark } = useTheme();
+ const insets = useSafeAreaInsets();
  const { user } = useAuth();
  const segments = useSegments();
  const roleGroup = segments[0] ?? '(student)';
@@ -549,49 +551,62 @@ export function PostCard({ post }: { post: Post }) {
  </Pressable>
  </ActionSheetModal>
 
- {/* Report Modal */}
- <Modal visible={reportOpen} transparent animationType="fade"onRequestClose={() => setReportOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
- <SolidCard style={{ width: '100%', maxWidth: 400 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm }}>
- <Ionicons name="shield-outline"size={20} color={colors.critical} />
- <AppText variant="h3"weight="bold"style={{ color: colors.critical }}>
- Report Policy Violation
- </AppText>
- </View>
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
- Describe how this post violates the Campus Honor Code or Academic Integrity policies.
- </AppText>
- <AppTextField
- label="Reason for Flag"placeholder="e.g. Harassment, unauthorized exam paper..."value={reportReason}
- onChangeText={setReportReason}
- multiline
- numberOfLines={3}
- />
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setReportOpen(false)} />
- <AppButton
- label="Submit Report"variant="accent"onPress={async () => {
- if (!reportReason.trim()) return;
- try {
- await submitReport({
- targetType: 'post',
- targetId: post.id,
- institutionCode: post.institutionCode || (post as any).campusCode || undefined,
- reason: reportReason.trim(),
- });
- setReportOpen(false);
- setReportReason('');
- Alert.alert('Report Dispatched', 'Campus moderators have been notified.');
- } catch (err: any) {
- Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
- }
- }}
- />
- </View>
- </SolidCard>
- </View>
- </Modal>
+      {/* Report Modal */}
+      <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setReportOpen(false)} />
+          <SolidCard style={{ width: '100%', maxWidth: 420 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Ionicons name="shield-outline" size={20} color={colors.critical} />
+                <AppText variant="h3" weight="bold" style={{ color: colors.critical }}>
+                  Report Policy Violation
+                </AppText>
+              </View>
+              <Pressable onPress={() => setReportOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+              Describe how this post violates the Campus Honor Code or Academic Integrity policies.
+            </AppText>
+            <AppTextField
+              label="Reason for Flag"
+              placeholder="e.g. Harassment, unauthorized exam paper..."
+              value={reportReason}
+              onChangeText={setReportReason}
+              multiline
+              numberOfLines={3}
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+              <AppButton label="Cancel" variant="ghost" onPress={() => setReportOpen(false)} />
+              <AppButton
+                label="Submit Report"
+                variant="accent"
+                onPress={async () => {
+                  if (!reportReason.trim()) return;
+                  try {
+                    await submitReport({
+                      targetType: 'post',
+                      targetId: post.id,
+                      institutionCode: post.institutionCode || (post as any).campusCode || undefined,
+                      reason: reportReason.trim(),
+                    });
+                    setReportOpen(false);
+                    setReportReason('');
+                    Alert.alert('Report Dispatched', 'Campus moderators have been notified.');
+                  } catch (err: any) {
+                    Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
+                  }
+                }}
+              />
+            </View>
+          </SolidCard>
+        </KeyboardAvoidingView>
+      </Modal>
 
  {/* User Profile Modal Inspector */}
  {inspectUser ? (

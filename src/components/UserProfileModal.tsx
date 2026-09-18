@@ -11,6 +11,7 @@ import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sendConnectionRequest, checkConnectionStatus, deleteConnection } from '@/api/connections';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { getPublicProfile } from '@/api/profile';
@@ -135,6 +136,7 @@ export function UserProfileModal({
  }
 
  const { isDesktop } = useResponsive();
+ const insets = useSafeAreaInsets();
 
  return (
  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -158,8 +160,8 @@ export function UserProfileModal({
  borderColor: colors.border,
  overflow: 'hidden',
  maxHeight: '90%',
- maxWidth: isDesktop ? 540 : undefined,
- width: isDesktop ? '100%' : undefined,
+ maxWidth: 540,
+ width: '100%',
  alignSelf: 'center',
  position: 'relative',
  }}
@@ -183,20 +185,23 @@ export function UserProfileModal({
  zIndex: 20,
  }}
  >
- <Ionicons name="close"size={20} color="#FFFFFF" />
+ <Ionicons name="close" size={20} color="#FFFFFF" />
  </Pressable>
 
- <ScrollView style={{ flex: 1, width: '100%' }}
+ <ScrollView
+ style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={false}
  nestedScrollEnabled
- contentContainerStyle={{ paddingBottom: 50 }}
+ contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) }}
  >
  {/* Scrollable Cover Photo Banner (Scrolls naturally with content) */}
  <View style={{ height: 160, position: 'relative', width: '100%', backgroundColor: colors.divider }}>
  <Image
  source={coverSource}
  style={{ width: '100%', height: '100%' }}
- contentFit="cover"cachePolicy="memory-disk"transition={200}
+ contentFit="cover"
+ cachePolicy="memory-disk"
+ transition={200}
  />
  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
  </View>
@@ -204,7 +209,7 @@ export function UserProfileModal({
  {/* Profile Content Body */}
  <View style={{ paddingHorizontal: spacing.lg }}>
  {/* Avatar & Action Buttons Row (Overlaps bottom of cover naturally) */}
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: -44, marginBottom: spacing.sm }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: -44, marginBottom: spacing.sm, flexWrap: 'wrap', gap: 8 }}>
  <View
  style={{
  width: 88,
@@ -225,17 +230,19 @@ export function UserProfileModal({
  <Avatar name={effectiveName} uri={effectiveAvatar} size={80} role={effectiveRole} />
  </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+ <View style={{ flexDirection: 'row', gap: spacing.xs, flexShrink: 0 }}>
  <AppButton
  label={connected ? 'Connected' : 'Connect'}
  variant={connected ? 'secondary' : 'primary'}
  onPress={handleToggleConnect}
  loading={connecting}
+ size="sm"
  />
  <AppButton
  label="Message"
  variant="secondary"
  onPress={handleStartChat}
+ size="sm"
  />
  </View>
  </View>

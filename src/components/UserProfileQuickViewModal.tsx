@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Pressable, StyleSheet, View, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
@@ -78,74 +78,78 @@ export function UserProfileQuickViewModal({
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              width: isDesktop ? 440 : '90%',
+              width: '100%',
+              maxWidth: 440,
+              maxHeight: '90%',
               borderRadius: 24,
               padding: spacing.lg,
             },
           ]}
           onPress={(e) => e.stopPropagation()}
         >
-          {/* Header row with close button */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md }}>
-            <Avatar name={user.name} size={64} role={user.role ?? 'student'} />
-            <Pressable
-              onPress={onClose}
-              hitSlop={12}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="close" size={18} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          {/* User Info */}
-          <View style={{ gap: 4, marginBottom: spacing.md }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <AppText variant="h2" weight="bold">
-                {user.name}
-              </AppText>
-              <Badge label="Verified" tone="neutral" />
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Header row with close button */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md }}>
+              <Avatar name={user.name} size={64} role={user.role ?? 'student'} />
+              <Pressable
+                onPress={onClose}
+                hitSlop={12}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="close" size={18} color={colors.textSecondary} />
+              </Pressable>
             </View>
-            <AppText tone="secondary" variant="bodySmall">
-              {user.department ?? 'Faculty of Science • University of Ibadan'}
-            </AppText>
-            {user.level && (
-              <AppText tone="secondary" variant="caption" style={{ fontWeight: '600' }}>
-                {user.level} Level
+
+            {/* User Info */}
+            <View style={{ gap: 4, marginBottom: spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <AppText variant="h2" weight="bold">
+                  {user.name}
+                </AppText>
+                <Badge label="Verified" tone="neutral" />
+              </View>
+              <AppText tone="secondary" variant="bodySmall">
+                {user.department ?? 'Faculty of Science • University of Ibadan'}
               </AppText>
-            )}
-          </View>
+              {user.level && (
+                <AppText tone="secondary" variant="caption" style={{ fontWeight: '600' }}>
+                  {user.level} Level
+                </AppText>
+              )}
+            </View>
 
-          {/* Bio / Summary */}
-          <SolidCard radius={16} style={{ padding: spacing.md, marginBottom: spacing.lg, backgroundColor: colors.divider }}>
-            <AppText variant="caption" tone="secondary" style={{ fontStyle: 'italic', lineHeight: 18 }}>
-              {user.bio ?? 'Active student scholar engaged in departmental seminars, study sessions, and campus academic collaboration.'}
-            </AppText>
-          </SolidCard>
+            {/* Bio / Summary */}
+            <SolidCard radius={16} style={{ padding: spacing.md, marginBottom: spacing.lg, backgroundColor: colors.divider }}>
+              <AppText variant="caption" tone="secondary" style={{ fontStyle: 'italic', lineHeight: 18 }}>
+                {user.bio ?? 'Active student scholar engaged in departmental seminars, study sessions, and campus academic collaboration.'}
+              </AppText>
+            </SolidCard>
 
-          {/* Action Buttons */}
-          <View style={{ gap: spacing.sm }}>
-            <AppButton
-              label="Send Direct Message"
-              icon="chatbubble-ellipses-outline"
-              variant="primary"
-              fullWidth
-              loading={startingChat}
-              onPress={() => handleSendDirectMessage(user)}
-            />
-            <AppButton
-              label="Dismiss"
-              variant="ghost"
-              fullWidth
-              onPress={onClose}
-            />
-          </View>
+            {/* Action Buttons */}
+            <View style={{ gap: spacing.sm }}>
+              <AppButton
+                label="Send Direct Message"
+                icon="chatbubble-ellipses-outline"
+                variant="primary"
+                fullWidth
+                loading={startingChat}
+                onPress={() => handleSendDirectMessage(user)}
+              />
+              <AppButton
+                label="Dismiss"
+                variant="ghost"
+                fullWidth
+                onPress={onClose}
+              />
+            </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -158,6 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
   },
   modalContent: {
     borderWidth: 1,

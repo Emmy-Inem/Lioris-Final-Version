@@ -1,5 +1,6 @@
 import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { SolidCard } from'@/components/SolidCard';
@@ -10,12 +11,15 @@ import { AppButton } from'@/components/AppButton';
 import { Avatar } from'@/components/Avatar';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
 import { UserProfile, UserRole } from'@/api/types';
 import { recordAuditLogEntry } from'@/api/auditLog';
 import { haptics } from'@/utils/haptics';
 
 export function UserProfilesTab() {
  const { colors, spacing, radius } = useTheme();
+ const { isDesktop } = useResponsive();
+ const insets = useSafeAreaInsets();
  const [users, setUsers] = useState<UserProfile[]>([]);
  const [loading, setLoading] = useState(true);
  const [searchQuery, setSearchQuery] = useState('');
@@ -307,122 +311,141 @@ export function UserProfilesTab() {
  <EmptyState title="No users found"description="Try clearing your search query or role filter." />
  ) : null}
 
- {/* Edit User Modal */}
- <Modal visible={editModalOpen} transparent animationType="slide"onRequestClose={() => setEditModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={() => setEditModalOpen(false)} />
- <View
- style={{
- backgroundColor: colors.surface,
- borderTopLeftRadius: 24,
- borderTopRightRadius: 24,
- padding: spacing.lg,
- maxHeight: '90%',
- }}
- >
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
- <Ionicons name="person-circle-outline"size={22} color={colors.textSecondary} />
- <AppText variant="h2"weight="bold">
- User Governance Controls
- </AppText>
- </View>
- <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
-
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
- <AppTextField label="Full Name"value={editName} onChangeText={setEditName} />
- <AppTextField label="Academic Department"value={editDept} onChangeText={setEditDept} />
-
- {/* Role Picker */}
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
- ASSIGN ROLE & PRIVILEGES
- </AppText>
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md }}>
- {(['student', 'alumni', 'staff', 'admin'] as UserRole[]).map((r) => (
- <Pressable
- key={r}
- onPress={() => setEditRole(r)}
- style={{
- paddingHorizontal: spacing.md,
- paddingVertical: 7,
- borderRadius: radius.pill,
- borderWidth: 1,
- borderColor: editRole === r ? colors.brandPrimary : colors.border,
- backgroundColor: editRole === r ? colors.pastelPrimaryBg : colors.surface,
- }}
- >
- <AppText variant="caption"weight="bold"tone={editRole === r ? 'brand' : 'secondary'}>
- {r.toUpperCase()}
- </AppText>
- </Pressable>
- ))}
- </View>
-
- {/* Verified Badge Toggle */}
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, marginBottom: spacing.sm }}>
- <View style={{ flex: 1, marginRight: spacing.sm }}>
- <AppText weight="bold"variant="bodySmall">
- Verified Academic Badge
- </AppText>
- <AppText tone="secondary"variant="caption">
- Grants blue checkmark and elevated trust scoring.
- </AppText>
- </View>
- <Pressable
- onPress={() => setEditVerified(!editVerified)}
- style={{
- paddingHorizontal: spacing.md,
- paddingVertical: 6,
- borderRadius: radius.pill,
- backgroundColor: editVerified ? colors.pastelPrimaryBg : colors.divider,
- }}
- >
-            <AppText variant="caption" weight="bold" tone={editVerified ? 'brand' : 'secondary'}>
-              {editVerified ? 'Verified' : 'Unverified'}
+  {/* Edit User Modal */}
+  <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
+    >
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          padding: isDesktop ? spacing.xl : spacing.lg,
+          paddingBottom: Math.max(insets.bottom, spacing.lg),
+          width: '100%',
+          maxWidth: 560,
+          alignSelf: 'center',
+          maxHeight: '90%',
+        }}
+      >
+        {/* Mobile grab handle */}
+        {!isDesktop && (
+          <View
+            style={{
+              width: 36,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: colors.border,
+              alignSelf: 'center',
+              marginBottom: spacing.sm,
+            }}
+          />
+        )}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Ionicons name="person-circle-outline" size={22} color={colors.textSecondary} />
+            <AppText variant="h2" weight="bold">
+              User Governance Controls
             </AppText>
- </Pressable>
- </View>
+          </View>
+          <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </Pressable>
+        </View>
 
+        <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <AppTextField label="Full Name" value={editName} onChangeText={setEditName} />
+          <AppTextField label="Academic Department" value={editDept} onChangeText={setEditDept} />
 
+          {/* Role Picker */}
+          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+            ASSIGN ROLE & PRIVILEGES
+          </AppText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md }}>
+            {(['student', 'alumni', 'staff', 'admin'] as UserRole[]).map((r) => (
+              <Pressable
+                key={r}
+                onPress={() => setEditRole(r)}
+                style={{
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 7,
+                  borderRadius: radius.pill,
+                  borderWidth: 1,
+                  borderColor: editRole === r ? colors.brandPrimary : colors.border,
+                  backgroundColor: editRole === r ? colors.pastelPrimaryBg : colors.surface,
+                }}
+              >
+                <AppText variant="caption" weight="bold" tone={editRole === r ? 'brand' : 'secondary'}>
+                  {r.toUpperCase()}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
 
- {/* MFA Reset Button */}
- <Pressable
- onPress={() => {
- haptics.medium();
- Alert.alert('MFA Reset', `Multi-Factor Authentication challenge reset for ${editName}. User will be prompted to re-bind on next login.`);
- }}
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 6,
- paddingVertical: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="key-outline"size={16} color={colors.brandPrimary} />
- <AppText variant="caption"weight="bold"tone="brand">
- Reset MFA Credentials & Sessions
- </AppText>
- </Pressable>
+          {/* Verified Badge Toggle */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, marginBottom: spacing.sm }}>
+            <View style={{ flex: 1, marginRight: spacing.sm }}>
+              <AppText weight="bold" variant="bodySmall">
+                Verified Academic Badge
+              </AppText>
+              <AppText tone="secondary" variant="caption">
+                Grants blue checkmark and elevated trust scoring.
+              </AppText>
+            </View>
+            <Pressable
+              onPress={() => setEditVerified(!editVerified)}
+              style={{
+                paddingHorizontal: spacing.md,
+                paddingVertical: 6,
+                borderRadius: radius.pill,
+                backgroundColor: editVerified ? colors.pastelPrimaryBg : colors.divider,
+              }}
+            >
+              <AppText variant="caption" weight="bold" tone={editVerified ? 'brand' : 'secondary'}>
+                {editVerified ? 'Verified' : 'Unverified'}
+              </AppText>
+            </Pressable>
+          </View>
 
- <AppTextField
- label="Academic Bio / Moderator Note"value={editBio}
- onChangeText={setEditBio}
- multiline
- numberOfLines={3}
- />
- </ScrollView>
+          {/* MFA Reset Button */}
+          <Pressable
+            onPress={() => {
+              haptics.medium();
+              Alert.alert('MFA Reset', `Multi-Factor Authentication challenge reset for ${editName}. User will be prompted to re-bind on next login.`);
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingVertical: spacing.sm,
+              marginBottom: spacing.md,
+            }}
+          >
+            <Ionicons name="key-outline" size={16} color={colors.brandPrimary} />
+            <AppText variant="caption" weight="bold" tone="brand">
+              Reset MFA Credentials & Sessions
+            </AppText>
+          </Pressable>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setEditModalOpen(false)} />
- <AppButton label="Save Changes"onPress={handleSaveUser} />
- </View>
- </View>
- </View>
- </Modal>
+          <AppTextField
+            label="Academic Bio / Moderator Note"
+            value={editBio}
+            onChangeText={setEditBio}
+            multiline
+            numberOfLines={3}
+          />
+        </ScrollView>
+
+        <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+          <AppButton label="Cancel" variant="ghost" onPress={() => setEditModalOpen(false)} />
+          <AppButton label="Save Changes" onPress={handleSaveUser} />
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>
  </View>
  );
 }

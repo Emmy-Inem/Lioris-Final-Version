@@ -9,7 +9,9 @@ import {
   Linking,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
@@ -64,6 +66,7 @@ export function CampusMapModal({
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
 
+  const insets = useSafeAreaInsets();
   const [activeCampus, setActiveCampus] = useState((campusFilter || 'UI').toUpperCase());
   const [query, setQuery] = useState(initialLandmarkName || '');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -123,25 +126,35 @@ export function CampusMapModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[
+          styles.overlay,
+          {
+            paddingTop: isDesktop ? 12 : Math.max(insets.top, 12),
+            paddingBottom: isDesktop ? 12 : Math.max(insets.bottom, 12),
+            paddingHorizontal: isDesktop ? 12 : 8,
+          },
+        ]}
+      >
         <View
           style={[
             styles.modalContainer,
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              width: isDesktop ? 760 : '95%',
-              maxHeight: isDesktop ? '92%' : '95%',
+              width: isDesktop ? 760 : '100%',
+              maxHeight: isDesktop ? '92%' : '98%',
             },
           ]}
         >
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.divider }]}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="map" size={20} color={colors.textSecondary} />
-                <AppText variant="h3" weight="bold">
-                  Campus Map & Hall Locator
+            <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <Ionicons name="map" size={18} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold" numberOfLines={1}>
+                  {isDesktop ? 'Campus Map & Hall Locator' : 'Campus Map'}
                 </AppText>
                 <Badge label="OpenStreetMap Live" tone="neutral" />
               </View>
@@ -202,7 +215,7 @@ export function CampusMapModal({
           )}
 
           {/* Interactive Map View */}
-          <View style={[styles.mapFrame, { borderColor: colors.border, backgroundColor: colors.background }]}>
+          <View style={[styles.mapFrame, { height: isDesktop ? 220 : 160, borderColor: colors.border, backgroundColor: colors.background }]}>
             {isWeb ? (
               <iframe
                 src={embedUrl}
@@ -378,7 +391,7 @@ export function CampusMapModal({
             )}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

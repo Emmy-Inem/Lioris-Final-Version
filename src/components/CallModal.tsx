@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
@@ -33,6 +34,7 @@ export function CallModal({
 }: CallModalProps) {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
   const [seconds, setSeconds] = useState(0);
@@ -172,7 +174,7 @@ export function CallModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleHangup}>
       <View style={styles.container}>
         {/* TOP APP HEADER */}
-        <View style={styles.topHeader}>
+        <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 12) }]}>
           <View style={styles.partnerInfo}>
             <Avatar name={partnerName} uri={partnerAvatar} size={38} />
             <View style={{ flex: 1, minWidth: 0, marginLeft: spacing.sm }}>
@@ -318,7 +320,7 @@ export function CallModal({
         </View>
 
         {/* FLOATING NATIVE CONTROL BAR */}
-        <View style={styles.controlsBar}>
+        <View style={[styles.controlsBar, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           <Pressable
             onPress={handleToggleMic}
             style={[

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ interface SellItemModalProps {
 export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -121,22 +123,23 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
 
   return (
     <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
-      <View
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{
           flex: 1,
           backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
           justifyContent: isDesktop ? 'center' : 'flex-start',
           alignItems: isDesktop ? 'center' : 'stretch',
-          paddingTop: isDesktop ? spacing.lg : 56,
-          paddingHorizontal: spacing.lg,
-          paddingBottom: isDesktop ? spacing.lg : 0,
+          paddingTop: isDesktop ? spacing.lg : Math.max(insets.top, 16),
+          paddingHorizontal: isDesktop ? spacing.lg : spacing.md,
+          paddingBottom: isDesktop ? spacing.lg : Math.max(insets.bottom, 16),
         }}
       >
         <View
           style={{
             flex: isDesktop ? undefined : 1,
             backgroundColor: colors.background,
-            width: isDesktop ? '100%' : undefined,
+            width: isDesktop ? '100%' : '100%',
             maxWidth: isDesktop ? 600 : undefined,
             maxHeight: isDesktop ? '90%' : undefined,
             borderRadius: isDesktop ? 24 : 0,
@@ -149,7 +152,8 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
           <ScrollView
             style={{ flex: 1, width: '100%' }}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40 }}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40, paddingHorizontal: isDesktop ? 0 : spacing.xs }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
               <AppText variant="h1" weight="bold">
@@ -282,7 +286,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
             <AppButton label="Publish Listing" onPress={handlePublish} loading={submitting} fullWidth />
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -1,38 +1,40 @@
-import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
-import { Ionicons } from'@expo/vector-icons';
-import { AppText } from'./AppText';
-import { AppTextField } from'./AppTextField';
-import { AppButton } from'./AppButton';
-import { SolidCard } from'./SolidCard';
-import { useTheme } from'@/theme/ThemeProvider';
-import { useAuth } from'@/auth/AuthContext';
+import React, { useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, View, Platform, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText } from './AppText';
+import { AppTextField } from './AppTextField';
+import { AppButton } from './AppButton';
+import { SolidCard } from './SolidCard';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useViewScope } from'@/hooks/useViewScope';
-import { LAUNCH_INSTITUTIONS, createInstitution } from'@/api/institutions';
+import { useViewScope } from '@/hooks/useViewScope';
+import { LAUNCH_INSTITUTIONS, createInstitution } from '@/api/institutions';
 
 interface ChangeWorkspaceScopeModalProps {
- visible: boolean;
- onClose: () => void;
- homeInstitution: string;
- homeInstitutionCode: string;
- scope: 'campus' | 'global';
- onSelectScope: (scope: 'campus' | 'global') => void;
+  visible: boolean;
+  onClose: () => void;
+  homeInstitution: string;
+  homeInstitutionCode: string;
+  scope: 'campus' | 'global';
+  onSelectScope: (scope: 'campus' | 'global') => void;
 }
 
 export function ChangeWorkspaceScopeModal({
- visible,
- onClose,
- homeInstitution,
- homeInstitutionCode,
- scope,
- onSelectScope,
+  visible,
+  onClose,
+  homeInstitution,
+  homeInstitutionCode,
+  scope,
+  onSelectScope,
 }: ChangeWorkspaceScopeModalProps) {
- const { colors, spacing, radius, setCustomAccent } = useTheme();
- const { isDesktop } = useResponsive();
- const { user } = useAuth();
- const { activeCampusCode, setActiveCampusCode } = useViewScope();
- const isAdmin = user?.role === 'admin';
+  const { colors, spacing, radius, setCustomAccent } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const { activeCampusCode, setActiveCampusCode } = useViewScope();
+  const isAdmin = user?.role === 'admin';
 
   // Guest explored workspaces list (exclude home institution and global)
   const cleanHomeCode = (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL') ? homeInstitutionCode : 'UI';
@@ -46,66 +48,67 @@ export function ChangeWorkspaceScopeModal({
     })),
   );
 
- // New custom workspace modal state
- const [createModalOpen, setCreateModalOpen] = useState(false);
- const [newCampusName, setNewCampusName] = useState('');
- const [newCampusCode, setNewCampusCode] = useState('');
- const [isSubmitting, setIsSubmitting] = useState(false);
+  // New custom workspace modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [newCampusName, setNewCampusName] = useState('');
+  const [newCampusCode, setNewCampusCode] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
- function removeGuest(code: string) {
- setGuestWorkspaces((prev) => prev.filter((w) => w.code !== code));
- }
+  function removeGuest(code: string) {
+    setGuestWorkspaces((prev) => prev.filter((w) => w.code !== code));
+  }
 
- async function handleAddCustomWorkspace() {
- if (!newCampusName.trim() || !newCampusCode.trim()) return;
- const code = newCampusCode.trim().toUpperCase();
- const name = newCampusName.trim();
- setIsSubmitting(true);
- try {
- await createInstitution({
- code,
- name,
- shortName: code,
- location: 'Nigeria',
- domain: `${code.toLowerCase()}.edu.ng`,
- });
- setGuestWorkspaces((prev) => [...prev, { code, name, description: `${code} Campus Community` }]);
- setNewCampusName('');
- setNewCampusCode('');
- setCreateModalOpen(false);
- Alert.alert('Campus Node Added', `Successfully added ${name} (${code}) to available workspaces.`);
- } catch (err: any) {
- Alert.alert('Error', err.message || 'Failed to add institution node.');
- } finally {
- setIsSubmitting(false);
- }
- }
+  async function handleAddCustomWorkspace() {
+    if (!newCampusName.trim() || !newCampusCode.trim()) return;
+    const code = newCampusCode.trim().toUpperCase();
+    const name = newCampusName.trim();
+    setIsSubmitting(true);
+    try {
+      await createInstitution({
+        code,
+        name,
+        shortName: code,
+        location: 'Nigeria',
+        domain: `${code.toLowerCase()}.edu.ng`,
+      });
+      setGuestWorkspaces((prev) => [...prev, { code, name, description: `${code} Campus Community` }]);
+      setNewCampusName('');
+      setNewCampusCode('');
+      setCreateModalOpen(false);
+      Alert.alert('Campus Node Added', `Successfully added ${name} (${code}) to available workspaces.`);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to add institution node.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
- return (
- <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
- <View
- style={{
- flex: 1,
- backgroundColor: 'rgba(0,0,0,0.6)',
- justifyContent: isDesktop ? 'center' : 'flex-end',
- alignItems: isDesktop ? 'center' : 'stretch',
- padding: isDesktop ? spacing.lg : 0,
- }}
- >
- <Pressable style={{ position: 'absolute', inset: 0 }} onPress={onClose} accessible={false} />
- <View
- style={{
- backgroundColor: colors.surface,
- borderRadius: isDesktop ? 24 : undefined,
- borderTopLeftRadius: 24,
- borderTopRightRadius: 24,
- padding: spacing.lg,
- maxHeight: '85%',
- maxWidth: isDesktop ? 560 : undefined,
- width: isDesktop ? '100%' : undefined,
- alignSelf: 'center',
- }}
- >
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          justifyContent: isDesktop ? 'center' : 'flex-end',
+          alignItems: isDesktop ? 'center' : 'stretch',
+          padding: isDesktop ? spacing.lg : 0,
+        }}
+      >
+        <Pressable style={{ position: 'absolute', inset: 0 }} onPress={onClose} accessible={false} />
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: isDesktop ? 24 : undefined,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            padding: spacing.lg,
+            paddingBottom: isDesktop ? spacing.lg : Math.max(insets.bottom, spacing.md),
+            maxHeight: '85%',
+            maxWidth: 560,
+            width: '100%',
+            alignSelf: 'center',
+          }}
+        >
  <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
  <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
  </View>
@@ -216,46 +219,68 @@ export function ChangeWorkspaceScopeModal({
  ) : null}
  </ScrollView>
  </View>
- </View>
 
- {/* Create Custom Workspace Modal */}
- <Modal visible={createModalOpen} transparent animationType="fade"onRequestClose={() => setCreateModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
- <SolidCard style={{ width: '100%', maxWidth: 420 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
- <AppText variant="h3"weight="bold">
- Add Campus Workspace 
- </AppText>
- <Pressable onPress={() => setCreateModalOpen(false)} hitSlop={8}>
- <Ionicons name="close"size={20} color={colors.textSecondary} />
- </Pressable>
- </View>
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
- Add a partner university or regional campus hub to explore student groups and events.
- </AppText>
- <AppTextField
- label="Campus Name"placeholder="e.g. Obafemi Awolowo University"value={newCampusName}
- onChangeText={setNewCampusName}
- />
- <AppTextField
- label="Campus Acronym / Code"placeholder="e.g. OAU"value={newCampusCode}
- onChangeText={setNewCampusCode}
- autoCapitalize="characters"
- />
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setCreateModalOpen(false)} />
- <AppButton
- label="Provision Workspace"
- loading={isSubmitting}
- disabled={!newCampusName.trim() || !newCampusCode.trim() || isSubmitting}
- onPress={handleAddCustomWorkspace}
- />
- </View>
- </SolidCard>
- </View>
- </Modal>
- </Modal>
- );
+        {/* Create Custom Workspace Dialog Overlay (No nested native Modal) */}
+        {createModalOpen && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: spacing.md,
+              zIndex: 50,
+            }}
+          >
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ width: '100%', maxWidth: 420 }}
+            >
+              <SolidCard style={{ width: '100%' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+                  <AppText variant="h3" weight="bold">
+                    Add Campus Workspace 🎓
+                  </AppText>
+                  <Pressable onPress={() => setCreateModalOpen(false)} hitSlop={8}>
+                    <Ionicons name="close" size={20} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
+                <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+                  Add a partner university or regional campus hub to explore student groups and events.
+                </AppText>
+                <AppTextField
+                  label="Campus Name"
+                  placeholder="e.g. Obafemi Awolowo University"
+                  value={newCampusName}
+                  onChangeText={setNewCampusName}
+                />
+                <AppTextField
+                  label="Campus Acronym / Code"
+                  placeholder="e.g. OAU"
+                  value={newCampusCode}
+                  onChangeText={setNewCampusCode}
+                  autoCapitalize="characters"
+                />
+                <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+                  <AppButton label="Cancel" variant="ghost" onPress={() => setCreateModalOpen(false)} />
+                  <AppButton
+                    label="Provision Workspace"
+                    loading={isSubmitting}
+                    disabled={!newCampusName.trim() || !newCampusCode.trim() || isSubmitting}
+                    onPress={handleAddCustomWorkspace}
+                  />
+                </View>
+              </SolidCard>
+            </KeyboardAvoidingView>
+          </View>
+        )}
+      </View>
+    </Modal>
+  );
 }
 
 function ScopeOption({

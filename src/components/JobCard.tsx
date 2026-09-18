@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { Linking, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
 import { AppText } from './AppText';
@@ -16,6 +27,7 @@ import { haptics } from '@/utils/haptics';
 export function JobCard({ job }: { job: JobListing }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
@@ -140,109 +152,118 @@ export function JobCard({ job }: { job: JobListing }) {
 
       {/* Interactive Application Modal */}
       <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => setModalOpen(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setModalOpen(false)}>
-          <Pressable
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalOpen(false)} />
+          <View
             style={[
               styles.modalCard,
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
-                width: isDesktop ? 500 : '90%',
+                width: '100%',
+                maxWidth: 500,
+                maxHeight: '90%',
                 borderRadius: 24,
-                padding: spacing.lg,
+                padding: isDesktop ? spacing.lg : spacing.md,
+                marginHorizontal: spacing.md,
+                marginBottom: Math.max(insets.bottom, 12),
               },
             ]}
-            onPress={(e) => e.stopPropagation()}
           >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <AppText variant="h3" weight="bold" numberOfLines={2}>
-                  Notify Poster: {job.title}
-                </AppText>
-                <AppText tone="secondary" variant="bodySmall">
-                  {job.company} • {job.location}
-                </AppText>
-              </View>
-              <Pressable style={{ flexShrink: 0 }} onPress={() => setModalOpen(false)} hitSlop={12}>
-                <Ionicons name="close" size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md }}>
-              <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 2 }}>
-                VERIFIED STUDENT CANDIDATE
-              </AppText>
-              <AppText variant="caption" tone="secondary">
-                This sends a notification with your profile and pitch directly to the poster - it is not a formally
-                tracked application, so following up with them is recommended.
-              </AppText>
-            </View>
-
-            <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
-              <View>
-                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
-                  Cover Note / Pitch (Optional)
-                </AppText>
-                <TextInput
-                  value={coverNote}
-                  onChangeText={setCoverNote}
-                  placeholder="Introduce yourself and explain why you're a great fit for this role..."
-                  placeholderTextColor={colors.textSecondary}
-                  multiline
-                  numberOfLines={3}
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    padding: 12,
-                    color: colors.textPrimary,
-                    fontSize: 13,
-                    minHeight: 80,
-                    textAlignVertical: 'top',
-                  }}
-                />
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
+                  <AppText variant="h3" weight="bold" numberOfLines={2}>
+                    Notify Poster: {job.title}
+                  </AppText>
+                  <AppText tone="secondary" variant="bodySmall">
+                    {job.company} • {job.location}
+                  </AppText>
+                </View>
+                <Pressable style={{ flexShrink: 0, padding: 4 }} onPress={() => setModalOpen(false)} hitSlop={12}>
+                  <Ionicons name="close" size={20} color={colors.textSecondary} />
+                </Pressable>
               </View>
 
-              <View>
-                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
-                  Portfolio / GitHub / LinkedIn Link (Optional)
+              <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 14, marginBottom: spacing.md }}>
+                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 2 }}>
+                  VERIFIED STUDENT CANDIDATE
                 </AppText>
-                <TextInput
-                  value={portfolioLink}
-                  onChangeText={setPortfolioLink}
-                  placeholder="https://github.com/..."
-                  placeholderTextColor={colors.textSecondary}
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    color: colors.textPrimary,
-                    fontSize: 13,
-                  }}
-                />
+                <AppText variant="caption" tone="secondary">
+                  This sends a notification with your profile and pitch directly to the poster - it is not a formally
+                  tracked application, so following up with them is recommended.
+                </AppText>
               </View>
-            </View>
 
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <View style={{ flex: 1 }}>
-                <AppButton label="Cancel" variant="ghost" fullWidth onPress={() => setModalOpen(false)} />
+              <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
+                <View>
+                  <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
+                    Cover Note / Pitch (Optional)
+                  </AppText>
+                  <TextInput
+                    value={coverNote}
+                    onChangeText={setCoverNote}
+                    placeholder="Introduce yourself and explain why you're a great fit for this role..."
+                    placeholderTextColor={colors.textSecondary}
+                    multiline
+                    numberOfLines={3}
+                    style={{
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                      borderRadius: 12,
+                      padding: 12,
+                      color: colors.textPrimary,
+                      fontSize: 13,
+                      minHeight: 80,
+                      textAlignVertical: 'top',
+                    }}
+                  />
+                </View>
+
+                <View>
+                  <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
+                    Portfolio / GitHub / LinkedIn Link (Optional)
+                  </AppText>
+                  <TextInput
+                    value={portfolioLink}
+                    onChangeText={setPortfolioLink}
+                    placeholder="https://github.com/..."
+                    placeholderTextColor={colors.textSecondary}
+                    style={{
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      color: colors.textPrimary,
+                      fontSize: 13,
+                    }}
+                  />
+                </View>
               </View>
-              <View style={{ flex: 2 }}>
-                <AppButton
-                  label="Notify Poster"
-                  variant="primary"
-                  loading={submitting}
-                  fullWidth
-                  onPress={handleSubmitApplication}
-                />
+
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <AppButton label="Cancel" variant="ghost" fullWidth onPress={() => setModalOpen(false)} />
+                </View>
+                <View style={{ flex: 2 }}>
+                  <AppButton
+                    label="Notify Poster"
+                    variant="primary"
+                    loading={submitting}
+                    fullWidth
+                    onPress={handleSubmitApplication}
+                  />
+                </View>
               </View>
-            </View>
-          </Pressable>
-        </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SolidCard>
   );
@@ -254,6 +275,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
   },
   modalCard: {
     borderWidth: 1,

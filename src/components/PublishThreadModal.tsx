@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -47,6 +48,7 @@ interface PublishThreadModalProps {
 export function PublishThreadModal({ visible, onClose, onPublish }: PublishThreadModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { data: communities = [] } = useQuery({ queryKey: ['communities'], queryFn: listCommunities });
@@ -211,22 +213,23 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
 
   return (
     <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
-      <View
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{
           flex: 1,
           backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
           justifyContent: isDesktop ? 'center' : 'flex-start',
           alignItems: isDesktop ? 'center' : 'stretch',
-          paddingTop: isDesktop ? spacing.lg : 52,
+          paddingTop: isDesktop ? spacing.lg : Math.max(insets.top, 16),
           paddingHorizontal: isDesktop ? spacing.lg : 0,
-          paddingBottom: isDesktop ? spacing.lg : 0,
+          paddingBottom: isDesktop ? spacing.lg : Math.max(insets.bottom, 16),
         }}
       >
         <View
           style={{
             flex: isDesktop ? undefined : 1,
             backgroundColor: colors.background,
-            width: isDesktop ? '100%' : undefined,
+            width: isDesktop ? '100%' : '100%',
             maxWidth: isDesktop ? 600 : undefined,
             maxHeight: isDesktop ? '88%' : undefined,
             borderRadius: isDesktop ? 24 : 0,
@@ -630,7 +633,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
             />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

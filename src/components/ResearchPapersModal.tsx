@@ -9,7 +9,9 @@ import {
   Linking,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
@@ -51,6 +53,7 @@ export function ResearchPapersModal({
 }: ResearchPapersModalProps) {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
 
   const [query, setQuery] = useState(initialTopic);
@@ -129,15 +132,26 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[
+          styles.overlay,
+          {
+            paddingTop: isDesktop ? 12 : Math.max(insets.top, 12),
+            paddingBottom: isDesktop ? 12 : Math.max(insets.bottom, 12),
+            paddingHorizontal: isDesktop ? 12 : 8,
+          },
+        ]}
+      >
         <View
           style={[
             styles.modalContainer,
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              width: isDesktop ? 760 : '95%',
-              maxHeight: isDesktop ? '90%' : '94%',
+              width: isDesktop ? 760 : '100%',
+              maxWidth: 760,
+              maxHeight: isDesktop ? '90%' : '96%',
             },
           ]}
         >
@@ -364,7 +378,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
             )}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { Modal, View, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { SolidCard } from './SolidCard';
@@ -27,6 +28,7 @@ const PRESET_AMOUNTS = [5000, 20000, 50000, 100000, 250000];
 export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000 }: CurrencyConverterModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   const [amountStr, setAmountStr] = useState(String(initialAmount));
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('USD');
@@ -48,15 +50,26 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[
+          styles.overlay,
+          {
+            paddingTop: isDesktop ? 20 : Math.max(insets.top, 16),
+            paddingBottom: isDesktop ? 20 : Math.max(insets.bottom, 16),
+            paddingHorizontal: isDesktop ? 20 : 16,
+          },
+        ]}
+      >
         <View
           style={[
             styles.modalContainer,
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              width: isDesktop ? 520 : '92%',
-              maxHeight: '90%',
+              width: '100%',
+              maxWidth: 520,
+              maxHeight: '92%',
             },
           ]}
         >
@@ -195,7 +208,7 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
             </View>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
@@ -35,6 +36,7 @@ export function ResourceReaderModal({
 }: ResourceReaderModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const { isBookmarked, toggleBookmark } = useResourceBookmarks();
 
@@ -100,7 +102,8 @@ export function ResourceReaderModal({
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
+            paddingTop: Math.max(insets.top, spacing.sm),
+            paddingBottom: spacing.sm,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
             backgroundColor: colors.surface,
@@ -298,7 +301,7 @@ export function ResourceReaderModal({
               </View>
             ) : (
               // In-app note view when no external file URL is present
-              <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
+              <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
                 <View
                   style={{
                     backgroundColor: colors.surface,
@@ -352,7 +355,7 @@ export function ResourceReaderModal({
           </View>
         ) : (
           /* Notes & Info Tab */
-          <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+          <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.xl), gap: spacing.md }}>
             <View
               style={{
                 backgroundColor: colors.surface,

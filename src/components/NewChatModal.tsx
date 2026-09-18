@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FlatList, Modal, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, TextInput, View, Platform, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { AppText } from './AppText';
@@ -20,6 +21,7 @@ interface NewChatModalProps {
 export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { campusCode } = useCampusScope();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -36,12 +38,15 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{
           flex: 1,
           backgroundColor: 'rgba(0,0,0,0.6)',
           alignItems: 'center',
           justifyContent: isDesktop ? 'center' : 'flex-end',
+          paddingTop: isDesktop ? spacing.lg : Math.max(insets.top, 16),
+          paddingBottom: isDesktop ? spacing.lg : 0,
         }}
       >
         <Pressable
@@ -51,7 +56,7 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
         <View
           style={{
             width: isDesktop ? 480 : '100%',
-            maxHeight: isDesktop ? '80%' : '85%',
+            maxHeight: isDesktop ? '80%' : '88%',
             height: isDesktop ? 560 : '85%',
             backgroundColor: colors.surface,
             borderTopLeftRadius: 24,
@@ -65,6 +70,20 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
             overflow: 'hidden',
           }}
         >
+          {/* Mobile Grab Handle */}
+          {!isDesktop && (
+            <View
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: colors.divider,
+                alignSelf: 'center',
+                marginTop: spacing.sm,
+              }}
+            />
+          )}
+
           {/* Header */}
           <View
             style={{
@@ -197,7 +216,7 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
             }
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

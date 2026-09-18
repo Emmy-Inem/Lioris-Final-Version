@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -9,7 +9,10 @@ import {
   Image,
   ActivityIndicator,
   Linking,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
@@ -41,6 +44,7 @@ export function AcademicLibraryModal({
 }: AcademicLibraryModalProps) {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { isFeatureEnabled } = useFeatureFlags();
   const toast = useToast();
 
@@ -105,15 +109,26 @@ export function AcademicLibraryModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[
+          styles.overlay,
+          {
+            paddingTop: isDesktop ? 16 : Math.max(insets.top, 12),
+            paddingBottom: isDesktop ? 16 : Math.max(insets.bottom, 12),
+            paddingHorizontal: isDesktop ? 16 : 8,
+          },
+        ]}
+      >
         <View
           style={[
             styles.modalContainer,
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              width: isDesktop ? 680 : '94%',
-              maxHeight: isDesktop ? '88%' : '92%',
+              width: isDesktop ? 680 : '100%',
+              maxWidth: 680,
+              maxHeight: isDesktop ? '88%' : '96%',
             },
           ]}
         >
@@ -268,7 +283,7 @@ export function AcademicLibraryModal({
             </ScrollView>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
