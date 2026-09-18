@@ -34,7 +34,10 @@ export async function searchAlumniDirectory(
     if (query.roles && query.roles.length > 0) {
       q = q.in('role', query.roles);
     } else {
-      q = q.ilike('role', '%alumni%');
+      // profiles.role is a Postgres enum (user_role_type), which has no ILIKE operator -
+      // the previous ilike('%alumni%') made every default directory search error out
+      // and silently return an empty list.
+      q = q.eq('role', 'alumni');
     }
 
     // Never suggest people to themselves.
