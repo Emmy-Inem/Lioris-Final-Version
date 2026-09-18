@@ -49,8 +49,8 @@ interface ChatMessage {
 const INITIAL_GREETING: ChatMessage = {
   id: 'welcome',
   sender: 'ai',
-  text: 'Hello! I am your Study Copilot. Ask me to explain a concept, break down a past question, generate flashcards, or attach a photo of chalkboard math and diagrams. Each reply is labelled with the engine that produced it.',
-  source: 'Academic Reasoning Engine',
+  text: 'Hello! I am your Lioris AI study assistant powered by Google Gemini. Ask me to explain concepts, break down past questions, generate revision flashcards, or attach chalkboard math and diagrams.',
+  source: 'Google Gemini 3.6 Flash',
   timestamp: 'Just now',
 };
 
@@ -395,7 +395,7 @@ export function AICopilotModal({
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: any) {
-      toast.warning('Copilot response generation issue');
+      toast.warning('AI response generation issue');
     } finally {
       setLoading(false);
     }
@@ -430,13 +430,13 @@ export function AICopilotModal({
             <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <Ionicons name="sparkles" size={18} color={colors.brandPrimary} />
-                <AppText variant="h3" weight="bold" numberOfLines={1}>
-                  {isDesktop ? 'AI Academic Study Copilot' : 'AI Study Copilot'}
+                <AppText variant="h3" weight="bold">
+                  {isDesktop ? 'Lioris Academic AI' : 'Lioris AI'}
                 </AppText>
-                {isDesktop && <Badge label="Study assistant" tone="neutral" />}
+                <Badge label="Google Gemini 3.6 Flash" tone="brand" />
               </View>
-              <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                {initialCourse ? `Focus: ${initialCourse} • Multimodal Math & Exam Revision` : 'Multimodal Math, chalkboard diagrams & exam revision'}
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                {initialCourse ? `Focus: ${initialCourse} • Multimodal Math & Exam Revision` : 'Multimodal math, chalkboard diagrams, and exam revision powered by Google Gemini'}
               </AppText>
             </View>
 
@@ -542,9 +542,9 @@ export function AICopilotModal({
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Ionicons name="sparkles" size={13} color={colors.textSecondary} />
                           <AppText variant="caption" weight="bold" style={{ color: colors.textSecondary, fontSize: 11 }}>
-                            Study Copilot
+                            Lioris AI
                           </AppText>
-                          {msg.source && <Badge label={msg.source === 'Academic Reasoning Engine' ? 'Offline template' : msg.source} tone="neutral" />}
+                          {msg.source && <Badge label={msg.source === 'Academic Reasoning Engine' ? 'Offline template' : msg.source} tone={msg.source === 'Academic Reasoning Engine' ? 'neutral' : 'brand'} />}
                         </View>
                         <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
                           {msg.timestamp}

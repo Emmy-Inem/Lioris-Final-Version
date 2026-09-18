@@ -137,34 +137,43 @@ export function PostCard({ post }: { post: Post }) {
  >
  <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={44} role={post.authorRole} />
  <View style={{ flex: 1, minWidth: 0 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
- <AppText weight="bold"variant="bodySmall"numberOfLines={1}>
- {post.authorName}
- </AppText>
- {post.authorVerified || post.authorRole === 'admin' ? (
- <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} />
- ) : null}
- <AppText tone="secondary"variant="caption"style={{ fontSize: 11 }}>
- • {post.authorRole === 'student' ? 'Student' : post.authorRole === 'alumni' ? "Alumni'21" : 'Staff Advisor'}
- </AppText>
- </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
-                    {post.isPinned ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                        <Ionicons name="pin" size={10} color={colors.textSecondary} />
-                        <AppText tone="secondary" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
-                          Pinned
-                        </AppText>
-                      </View>
-                    ) : null}
-                    <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5 }}>
-                      c/{post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                      • {timeAgo(post.createdAt)}
-                    </AppText>
-                  </View>
- </View>
+    {/* Row 1: Name · Verified badge · Role */}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
+      <AppText weight="bold" variant="bodySmall" style={{ flexShrink: 1 }}>
+        {post.authorName}
+      </AppText>
+      {post.authorVerified || post.authorRole === 'admin' ? (
+        <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} />
+      ) : null}
+      <AppText tone="secondary" variant="caption" style={{ fontSize: 11, flexShrink: 0 }}>
+        •{' '}
+        {post.authorRole === 'student'
+          ? 'Student'
+          : post.authorRole === 'alumni'
+          ? 'Alumni'
+          : post.authorRole === 'admin'
+          ? 'Admin'
+          : 'Staff'}
+      </AppText>
+    </View>
+    {/* Row 2: Channel · Pinned · Time — all inline on one line */}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1, flexWrap: 'nowrap' }}>
+      <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5, flexShrink: 0 }}>
+        c/{post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}
+      </AppText>
+      {post.isPinned ? (
+        <>
+          <Ionicons name="pin" size={10} color={colors.textSecondary} />
+          <AppText tone="secondary" variant="caption" weight="bold" style={{ fontSize: 10.5, flexShrink: 0 }}>
+            Pinned
+          </AppText>
+        </>
+      ) : null}
+      <AppText tone="secondary" variant="caption" style={{ fontSize: 11, flexShrink: 0 }}>
+        • {timeAgo(post.createdAt)}
+      </AppText>
+    </View>
+  </View>
  </Pressable>
 
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>

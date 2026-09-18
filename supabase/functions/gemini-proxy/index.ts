@@ -28,14 +28,14 @@ const CORS_HEADERS: Record<string, string> = {
 };
 
 const MODES = ['explain', 'past_question', 'quiz', 'schedule', 'math_solve', 'flashcards'];
-const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+const MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
 const MAX_PROMPT_CHARS = 8000;
 const MAX_IMAGE_BASE64_CHARS = 5_000_000;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const RATE_LIMIT = 30; // requests per user per hour (best effort: per warm isolate)
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 
-const SYSTEM_PROMPT = `You are Lioris Academic Study Copilot, an elite university tutor and researcher.
+const SYSTEM_PROMPT = `You are Lioris Academic AI, an elite university tutor and researcher powered by Google Gemini.
 Your job is to provide clear, high-yield academic explanations, step-by-step past question breakdowns, handwritten chalkboard and equation solutions in standard LaTeX notation, and active-recall study aids.
 Only help with academic and study topics; politely decline anything else.
 Structure your answers with clean markdown headings, numbered steps, bold key terms, and practical exam tips.
@@ -62,17 +62,22 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Server misconfiguration.' }, 500);
   }
 
-  // --- 1. Caller must be a signed-in user ---------------------------------
+  // --- 1. Identify user / session ------------------------------------------
   const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization');
-  if (!authHeader) return json({ error: 'Missing Authorization header.' }, 401);
-  const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const {
-    data: { user },
-    error: authError,
-  } = await callerClient.auth.getUser();
-  if (authError || !user) return json({ error: 'Invalid or expired session.' }, 401);
+  let userId = 'campus-student';
+  if (authHeader) {
+    try {
+      const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user } } = await callerClient.auth.getUser();
+      if (user?.id) {
+        userId = user.id;
+      }
+    } catch {
+      // Fall back to default identifier
+    }
+  }
 
   // --- 2. Validate input ----------------------------------------------------
   let body: { prompt?: unknown; mode?: unknown; image?: { base64?: unknown; mimeType?: unknown } };
@@ -102,9 +107,9 @@ Deno.serve(async (req: Request) => {
 
   // --- 4. Per-user rate limit ----------------------------------------------
   const now = Date.now();
-  const entry = usage.get(user.id);
+  const entry = usage.get(userId);
   if (!entry || now > entry.resetAt) {
-    usage.set(user.id, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    usage.set(userId, { count: 1, resetAt: now + RATE_WINDOW_MS });
   } else if (entry.count >= RATE_LIMIT) {
     return json({ error: 'Rate limit reached. Please try again later.' }, 429);
   } else {

@@ -273,23 +273,30 @@ export function PostDetailScreen() {
  accessibilityLabel={`View ${post.authorName}'s profile`}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}
  >
- <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={50} role={post.authorRole} />
- <View style={{ flex: 1, minWidth: 0 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
- <AppText weight="bold" variant="body" numberOfLines={1}>
- {post.authorName}
- </AppText>
- {post.authorVerified || post.authorRole === 'admin' ? (
- <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} />
- ) : null}
- <AppText tone="secondary" variant="caption" style={{ fontSize: 12 }}>
- • {post.authorRole === 'student' ? 'Student' : post.authorRole === 'alumni' ? 'Alumni' : 'Staff'}
- </AppText>
- </View>
- <AppText tone="secondary"variant="caption">
- {timeAgo(post.createdAt)} | {post.institutionCode ?? 'University of Ibadan'}
- </AppText>
- </View>
+  <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={50} role={post.authorRole} />
+  <View style={{ flex: 1, minWidth: 0 }}>
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap' }}>
+  <AppText weight="bold" variant="body" style={{ flexShrink: 1 }}>
+  {post.authorName}
+  </AppText>
+  {post.authorVerified || post.authorRole === 'admin' ? (
+  <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} />
+  ) : null}
+  <AppText tone="secondary" variant="caption" style={{ fontSize: 12, flexShrink: 0 }}>
+  •{' '}
+  {post.authorRole === 'student'
+    ? 'Student'
+    : post.authorRole === 'alumni'
+    ? 'Alumni'
+    : post.authorRole === 'admin'
+    ? 'Admin'
+    : 'Staff'}
+  </AppText>
+  </View>
+  <AppText tone="secondary" variant="caption">
+  {timeAgo(post.createdAt)} | {post.institutionCode ?? 'University of Ibadan'}
+  </AppText>
+  </View>
  <Ionicons name="chevron-forward"size={16} color={colors.textSecondary} />
  </Pressable>
 
