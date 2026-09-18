@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -8,11 +9,9 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
@@ -36,11 +35,11 @@ export function LandingScreen() {
   const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
   const { width } = useWindowDimensions();
   const { isDesktop, isTablet } = useResponsive();
-  const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
+  const { getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
   const { login } = useAuth();
 
-  // Interactive phone preview role state
-  const [previewRole, setPreviewRole] = useState<'student' | 'alumni' | 'staff' | 'admin'>('student');
+  // Interactive phone preview: Student and Alumni only
+  const [previewRole, setPreviewRole] = useState<'student' | 'alumni'>('student');
   
   // Fast 1-click demo signing-in state
   const [signingInEmail, setSigningInEmail] = useState<string | null>(null);
@@ -118,7 +117,7 @@ export function LandingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#080E1A' : '#F6F8FB' }}>
-      {/* Dynamic Background Refraction Glow Blobs */}
+      {/* Background Refraction Glow Blobs */}
       <View
         pointerEvents="none"
         style={{
@@ -172,7 +171,6 @@ export function LandingScreen() {
             },
           ]}
         >
-          {/* Meniscus specular highlight */}
           {!isDark && (
             <LinearGradient
               colors={['rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0.05)', 'transparent']}
@@ -183,37 +181,22 @@ export function LandingScreen() {
             />
           )}
 
-          {/* Logo & Badge */}
+          {/* Logo */}
           <Pressable
             onPress={() => scrollToSection('hero')}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
           >
             <LiorisLogo size={32} variant="symbol" />
             <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
-            <View
-              style={{
-                backgroundColor: isDark ? 'rgba(11, 122, 117, 0.25)' : 'rgba(11, 122, 117, 0.12)',
-                borderColor: colors.brandPrimary,
-                borderWidth: 1,
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                borderRadius: radius.pill,
-                display: width < 420 ? 'none' : 'flex',
-              }}
-            >
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                CAMPUS OS
-              </AppText>
-            </View>
           </Pressable>
 
           {/* Desktop Nav Links */}
           {isDesktop && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 28 }}>
               {[
-                { label: 'Ecosystem', id: 'ecosystem' },
-                { label: 'Live Preview', id: 'preview' },
-                { label: 'Pillars', id: 'pillars' },
+                { label: 'Overview', id: 'hero' },
+                { label: 'Device Simulator', id: 'preview' },
+                { label: 'Core Pillars', id: 'pillars' },
                 { label: 'Campuses', id: 'campuses' },
               ].map((link) => (
                 <Pressable
@@ -298,51 +281,33 @@ export function LandingScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: Platform.OS === 'web' ? 100 : 110,
-          paddingBottom: 80,
+          paddingBottom: 40,
         }}
       >
         <View style={{ width: '100%', maxWidth: 1160, alignSelf: 'center', paddingHorizontal: 16 }}>
           
           {/* =========================================================================
-              1. HERO SECTION: Concise, Punchy, Creative Liquid Glass Centerpiece
+              1. HERO SECTION: Professional, High-Impact & Clean
              ========================================================================= */}
           <View
             // @ts-ignore
             id="hero"
             style={{
               paddingTop: isDesktop ? 36 : 18,
-              paddingBottom: 40,
+              paddingBottom: 36,
               alignItems: 'center',
               position: 'relative',
             }}
           >
-            {/* Status Live Indicator Badge */}
-            <View
-              style={[
-                glassStyle(radius.pill, isDark ? 0.5 : 0.7),
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  marginBottom: 20,
-                },
-              ]}
+            {/* Clean Typographic Eyebrow (No pill box) */}
+            <AppText
+              variant="caption"
+              weight="bold"
+              tone="brand"
+              style={{ letterSpacing: 1.5, marginBottom: 12 }}
             >
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: '#10B981',
-                  ...(Platform.OS === 'web' ? { boxShadow: '0 0 10px #10B981' } : {}),
-                }}
-              />
-              <AppText variant="caption" weight="bold" style={{ color: isDark ? '#E2E8F0' : '#334155', letterSpacing: 0.5 }}>
-                THE ALL-IN-ONE UNIVERSITY PLATFORM
-              </AppText>
-            </View>
+              THE VERIFIED UNIVERSITY COMMUNITY PLATFORM
+            </AppText>
 
             {/* Headline */}
             <AppText
@@ -369,11 +334,11 @@ export function LandingScreen() {
                   letterSpacing: -0.8,
                 }}
               >
-                Refined into Liquid Glass.
+                Unified into One Verified Space.
               </AppText>
             </AppText>
 
-            {/* Sub-headline: Bite-sized & Informative */}
+            {/* Sub-headline: Professional & Informative */}
             <AppText
               variant="body"
               tone="secondary"
@@ -385,8 +350,8 @@ export function LandingScreen() {
                 marginBottom: 28,
               }}
             >
-              Connect with verified classmates, track live lecture changes, trade on student escrow, 
-              access past exam vaults, and bridge directly to alumni career mentorship.
+              Connect with verified classmates, collaborate in departmental forums, access institutional past question vaults,
+              and bridge directly to alumni career mentorship.
             </AppText>
 
             {/* Primary Hero Actions */}
@@ -396,7 +361,7 @@ export function LandingScreen() {
                 alignItems: 'center',
                 gap: 12,
                 width: width < 480 ? '100%' : 'auto',
-                marginBottom: 32,
+                marginBottom: 28,
               }}
             >
               <Pressable
@@ -439,46 +404,44 @@ export function LandingScreen() {
                   },
                 ]}
               >
-                <Ionicons name="play-circle-outline" size={20} color={isDark ? '#E2E8F0' : '#1E293B'} />
+                <Ionicons name="phone-portrait-outline" size={18} color={isDark ? '#E2E8F0' : '#1E293B'} />
                 <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 15 }}>
-                  Explore Interactive Preview
+                  Interactive Simulator
                 </AppText>
               </Pressable>
             </View>
 
-            {/* Fast Proof Verification Pills */}
+            {/* Clean Trust Row (No pill boxes around text) */}
             <View
               style={{
                 flexDirection: 'row',
                 flexWrap: 'wrap',
                 justifyContent: 'center',
-                gap: 10,
+                alignItems: 'center',
+                gap: 16,
                 maxWidth: 780,
               }}
             >
               {[
-                { icon: 'shield-checkmark', text: '100% .edu Verified IDs', color: '#10B981' },
-                { icon: 'lock-closed', text: 'End-to-End Escrow Protection', color: '#3B82F6' },
-                { icon: 'flash', text: 'Real-Time Class Radars', color: '#F59E0B' },
-                { icon: 'ribbon', text: 'Direct Alumni Mentorship', color: '#8B5CF6' },
-              ].map((item) => (
-                <View
-                  key={item.text}
-                  style={[
-                    glassStyle(radius.pill, isDark ? 0.35 : 0.55),
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                    },
-                  ]}
-                >
-                  <Ionicons name={item.icon as any} size={14} color={item.color} />
-                  <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 12 }}>
-                    {item.text}
+                '100% .edu Verified IDs',
+                'Departmental Forums',
+                'Academic Resources Vault',
+                'Alumni Mentorship Circle',
+              ].map((item, i) => (
+                <View key={item} style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                  <AppText variant="caption" weight="medium" tone="secondary" style={{ fontSize: 13 }}>
+                    {item}
                   </AppText>
+                  {i < 3 && (
+                    <View
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: 2,
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+                      }}
+                    />
+                  )}
                 </View>
               ))}
             </View>
@@ -491,8 +454,8 @@ export function LandingScreen() {
             style={[
               glassStyle(20, isDark ? 0.5 : 0.7),
               {
-                padding: 16,
-                marginVertical: 20,
+                padding: 18,
+                marginVertical: 16,
                 borderLeftWidth: 3,
                 borderLeftColor: colors.brandPrimary,
               },
@@ -507,14 +470,11 @@ export function LandingScreen() {
               }}
             >
               <View style={{ gap: 2 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="flash" size={16} color={colors.brandPrimary} />
-                  <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8 }}>
-                    1-CLICK INSTANT EVALUATION DEMO
-                  </AppText>
-                </View>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8 }}>
+                  ONE-CLICK EVALUATION DEMO
+                </AppText>
                 <AppText variant="bodySmall" tone="secondary">
-                  Tap any persona below to immediately enter the live app without signing up.
+                  Select any persona to immediately explore the live app without registering.
                 </AppText>
               </View>
 
@@ -557,58 +517,46 @@ export function LandingScreen() {
           </View>
 
           {/* =========================================================================
-              3. CREATIVE CENTERPIECE: The Liquid Glass iPhone Device Simulator
+              3. INTERACTIVE DEVICE SIMULATOR: Student & Alumni with Floating Nav Bar
              ========================================================================= */}
           <View
             // @ts-ignore
             id="preview"
             style={{
               marginTop: 36,
-              marginBottom: 54,
+              marginBottom: 48,
               alignItems: 'center',
             }}
           >
-            {/* Section Tag & Title */}
-            <View style={{ alignItems: 'center', marginBottom: 24 }}>
-              <View
-                style={{
-                  backgroundColor: isDark ? 'rgba(11, 122, 117, 0.22)' : 'rgba(11, 122, 117, 0.10)',
-                  paddingHorizontal: 12,
-                  paddingVertical: 4,
-                  borderRadius: radius.pill,
-                  marginBottom: 8,
-                }}
-              >
-                <AppText variant="caption" weight="bold" tone="brand">
-                  INTERACTIVE DEVICE SIMULATOR
-                </AppText>
-              </View>
+            {/* Clean Section Header (No pill badge) */}
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1.2, marginBottom: 6 }}>
+                INTERACTIVE DEVICE SIMULATOR
+              </AppText>
               <AppText variant="h2" weight="bold" style={{ textAlign: 'center', color: isDark ? '#FFFFFF' : '#0F172A' }}>
                 Experience Lioris on iPhone
               </AppText>
               <AppText tone="secondary" style={{ textAlign: 'center', marginTop: 4, maxWidth: 520 }}>
-                Select a role to preview the actual liquid glass interface students, alumni, faculty, and admins use daily.
+                Explore the actual interface and floating navigation used by verified students and alumni.
               </AppText>
             </View>
 
-            {/* Role Tab Switcher (Floating Liquid Glass Pill) */}
+            {/* Role Switcher: Student & Alumni Only */}
             <View
               style={[
                 glassStyle(radius.pill, isDark ? 0.6 : 0.8),
                 {
                   flexDirection: 'row',
                   padding: 4,
-                  marginBottom: 32,
-                  maxWidth: 500,
+                  marginBottom: 28,
+                  maxWidth: 320,
                   width: '100%',
                 },
               ]}
             >
               {[
-                { id: 'student', label: 'Student', icon: 'school' as const },
-                { id: 'alumni', label: 'Alumni', icon: 'ribbon' as const },
-                { id: 'staff', label: 'Faculty', icon: 'briefcase' as const },
-                { id: 'admin', label: 'Admin', icon: 'shield-checkmark' as const },
+                { id: 'student', label: 'Student Portal', icon: 'school' as const },
+                { id: 'alumni', label: 'Alumni Circle', icon: 'ribbon' as const },
               ].map((tab) => {
                 const isSelected = previewRole === tab.id;
                 return (
@@ -624,14 +572,14 @@ export function LandingScreen() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 6,
-                      paddingVertical: 8,
+                      paddingVertical: 9,
                       borderRadius: radius.pill,
                       backgroundColor: isSelected ? colors.brandPrimary : 'transparent',
                     }}
                   >
                     <Ionicons
                       name={tab.icon}
-                      size={14}
+                      size={15}
                       color={isSelected ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
                     />
                     <AppText
@@ -648,7 +596,7 @@ export function LandingScreen() {
               })}
             </View>
 
-            {/* The iPhone Showcase Container (with Flanking Floating Badges on Desktop) */}
+            {/* The iPhone Showcase Container */}
             <View
               style={{
                 flexDirection: isDesktop ? 'row' : 'column',
@@ -659,43 +607,25 @@ export function LandingScreen() {
                 position: 'relative',
               }}
             >
-              {/* Left Flanking Glass Badge (Desktop) */}
+              {/* Left Side Highlight (Desktop) - Clean, No Shape Around Emojis */}
               {isDesktop && (
                 <View
                   style={[
                     glassStyle(20, isDark ? 0.55 : 0.75),
                     {
-                      width: 240,
-                      padding: 18,
-                      gap: 12,
-                      transform: [{ rotate: '-3deg' }],
+                      width: 250,
+                      padding: 20,
+                      gap: 10,
+                      transform: [{ rotate: '-2.5deg' }],
                     },
                   ]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: 'rgba(16, 185, 129, 0.18)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Ionicons name="shield-checkmark" size={20} color="#10B981" />
-                    </View>
-                    <View>
-                      <AppText variant="caption" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                        Verified ID
-                      </AppText>
-                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                        UI • CSC Class of '26
-                      </AppText>
-                    </View>
-                  </View>
-                  <AppText variant="caption" tone="secondary">
-                    Cryptographically stamped student profile guaranteed through institutional domain match.
+                  <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+                  <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
+                    Verified Academic Identity
+                  </AppText>
+                  <AppText variant="caption" tone="secondary" style={{ lineHeight: 18 }}>
+                    Student and alumni profiles are cryptographically stamped and restricted to authenticated institutional domains.
                   </AppText>
                 </View>
               )}
@@ -703,8 +633,8 @@ export function LandingScreen() {
               {/* iPhone Hardware Outer Frame */}
               <View
                 style={{
-                  width: Math.min(width - 32, 330),
-                  height: 640,
+                  width: Math.min(width - 32, 340),
+                  height: 660,
                   borderRadius: 50,
                   backgroundColor: isDark ? '#020617' : '#FFFFFF',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.12)',
@@ -752,13 +682,13 @@ export function LandingScreen() {
                     <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#1E293B' }} />
                   </View>
 
-                  {/* Simulated Screen Content based on Preview Role */}
+                  {/* Screen Content ScrollView */}
                   <ScrollView
                     nestedScrollEnabled
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingTop: 46, paddingBottom: 24, paddingHorizontal: 12 }}
+                    contentContainerStyle={{ paddingTop: 46, paddingBottom: 80, paddingHorizontal: 12 }}
                   >
-                    {/* Mini Header */}
+                    {/* Mini App Header */}
                     <View
                       style={{
                         flexDirection: 'row',
@@ -773,127 +703,124 @@ export function LandingScreen() {
                           LIORIS
                         </AppText>
                       </View>
-                      <View
-                        style={{
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          borderRadius: radius.pill,
-                        }}
-                      >
-                        <AppText variant="caption" weight="semiBold" style={{ fontSize: 10, color: colors.brandPrimary }}>
-                          {previewRole.toUpperCase()}
-                        </AppText>
-                      </View>
+                      <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+                        {previewRole === 'student' ? 'STUDENT' : 'ALUMNI'}
+                      </AppText>
                     </View>
 
-                    {/* ROLE-SPECIFIC SCREEN UI */}
+                    {/* STUDENT PREVIEW CONTENT */}
                     {previewRole === 'student' && (
                       <View style={{ gap: 10 }}>
-                        {/* Live Lecture Card */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' }} />
-                              <AppText variant="caption" weight="bold" style={{ color: '#EF4444', fontSize: 10 }}>
-                                LIVE NOW • TIMETABLE
-                              </AppText>
-                            </View>
-                            <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                              LT-2
-                            </AppText>
-                          </View>
+                        {/* Student Greeting */}
+                        <View style={{ marginBottom: 4 }}>
                           <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            CSC 401: Distributed Systems
+                            Hello, Diana 👋
                           </AppText>
                           <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Prof. Adeyemi • 10:00 AM - 12:00 PM
+                            University of Ibadan • Computer Science (400L)
                           </AppText>
                         </View>
 
-                        {/* Marketplace Escrow Spotlight */}
+                        {/* Forum Discussion Card */}
                         <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                             <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                              STUDENT ESCROW MARKET
-                            </AppText>
-                            <View style={{ backgroundColor: 'rgba(16,185,129,0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                              <AppText variant="caption" weight="bold" style={{ color: '#10B981', fontSize: 9 }}>
-                                🛡️ SECURED
-                              </AppText>
-                            </View>
-                          </View>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Apple iPad Air M1 + Pencil
-                          </AppText>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-                            <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary }}>
-                              ₦240,000
+                              CAMPUS FORUM
                             </AppText>
                             <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                              Seller: Kemi (UNILAG)
+                              12m ago
+                            </AppText>
+                          </View>
+                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
+                            CSC 401: Best preparation tips for Friday's lab exam?
+                          </AppText>
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                            24 classmates responding in #computer-science
+                          </AppText>
+                        </View>
+
+                        {/* Academic Resources Vault */}
+                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
+                          <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
+                            ACADEMIC RESOURCES VAULT
+                          </AppText>
+                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
+                            CSC 401 Past Exam & Marking Scheme
+                          </AppText>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                            <Ionicons name="folder-outline" size={13} color={colors.brandPrimary} />
+                            <AppText variant="caption" tone="brand" weight="semiBold" style={{ fontSize: 10 }}>
+                              Verified Department Repository (312 Downloads)
                             </AppText>
                           </View>
                         </View>
 
-                        {/* Past Exam Vault */}
+                        {/* Campus Event Card */}
                         <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
-                            REVISION VAULT
+                          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
+                            CAMPUS CALENDAR
                           </AppText>
                           <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            CSC 401 Past Exam & Marking 2024
+                            Annual Technology & Innovation Symposium
                           </AppText>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                            <Ionicons name="cloud-download-outline" size={12} color={colors.brandPrimary} />
-                            <AppText variant="caption" tone="brand" weight="semiBold" style={{ fontSize: 10 }}>
-                              312 Cohort Downloads
-                            </AppText>
-                          </View>
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                            Faculty Large Lecture Theatre • Tomorrow at 10:00 AM
+                          </AppText>
                         </View>
                       </View>
                     )}
 
+                    {/* ALUMNI PREVIEW CONTENT */}
                     {previewRole === 'alumni' && (
                       <View style={{ gap: 10 }}>
-                        {/* Mentorship Requests */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                              MENTORSHIP CIRCLE
-                            </AppText>
-                            <AppText variant="caption" style={{ color: '#10B981', fontSize: 10, fontWeight: 'bold' }}>
-                              2 Active
-                            </AppText>
-                          </View>
+                        {/* Alumni Greeting */}
+                        <View style={{ marginBottom: 4 }}>
                           <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            1-on-1 Session: Career in Fintech
+                            Welcome back, Adeola 🎓
                           </AppText>
                           <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Mentee: Chinedu E. (Yr 3 CS) • Tomorrow 4:00 PM
+                            UI Alum '22 • Software Engineer at Paystack
                           </AppText>
                         </View>
 
-                        {/* Job & Referral Board */}
+                        {/* Career & Hiring Board */}
                         <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
-                            POSTED HIRING PIPELINE
-                          </AppText>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
+                              CAREER PIPELINE
+                            </AppText>
+                            <AppText variant="caption" style={{ color: '#10B981', fontSize: 10, fontWeight: 'bold' }}>
+                              Active Hiring
+                            </AppText>
+                          </View>
                           <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
                             Software Engineering Intern • Paystack
                           </AppText>
                           <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Exclusive to verified campus graduates
+                            Direct alumni referral pipeline for graduating cohort
                           </AppText>
                         </View>
 
-                        {/* Alumni Annual Gala */}
+                        {/* 1-on-1 Mentorship Session */}
                         <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                            UPCOMING REUNION
+                          <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
+                            MENTORSHIP CIRCLE
                           </AppText>
                           <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Annual Alumni Gala 2026
+                            1-on-1 Session: Breaking into Cloud Engineering
+                          </AppText>
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                            Mentee: Chinedu E. (300L CS) • Thursday 4:00 PM
+                          </AppText>
+                        </View>
+
+                        {/* Alumni Gathering */}
+                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
+                          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
+                            ALUMNI GATHERINGS
+                          </AppText>
+                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
+                            Annual Alumni Dinner & Gala 2026
                           </AppText>
                           <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                             Victoria Island, Lagos • Dec 12
@@ -901,140 +828,92 @@ export function LandingScreen() {
                         </View>
                       </View>
                     )}
-
-                    {previewRole === 'staff' && (
-                      <View style={{ gap: 10 }}>
-                        {/* Hall Allocation Radar */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                            LECTURE RADAR
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            CSC 401 Hall Allocation Confirmed
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Large Lecture Hall 2 • Capacity 250 • Live Roster: 142
-                          </AppText>
-                        </View>
-
-                        {/* Broadcast Notice */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
-                            DEPARTMENT ANNOUNCEMENTS
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Mid-Semester Lab Project Due Date
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Broadcast sent to 184 registered students
-                          </AppText>
-                        </View>
-
-                        {/* Office Hours */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                            OFFICE HOURS SLOTS
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Wednesday: 2:00 PM - 4:00 PM
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Faculty Building, Room 314
-                          </AppText>
-                        </View>
-                      </View>
-                    )}
-
-                    {previewRole === 'admin' && (
-                      <View style={{ gap: 10 }}>
-                        {/* System Health */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                              CAMPUS SYSTEM HEALTH
-                            </AppText>
-                            <View style={{ backgroundColor: 'rgba(16,185,129,0.18)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                              <AppText variant="caption" weight="bold" style={{ color: '#10B981', fontSize: 9 }}>
-                                99.9% UPTIME
-                              </AppText>
-                            </View>
-                          </View>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Active Campus Connections: 1,842
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            UNILAG & UI Gateways Operational
-                          </AppText>
-                        </View>
-
-                        {/* ID Verification Desk */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
-                            STUDENT VERIFICATION QUEUE
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            4 Requests Pending Review
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Automated domain checks cleared 128 today
-                          </AppText>
-                        </View>
-
-                        {/* Moderation Logs */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                            CONTENT AUDIT DESK
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            0 Flagged Policy Violations
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Escrow transactions settled: ₦1.8M
-                          </AppText>
-                        </View>
-                      </View>
-                    )}
                   </ScrollView>
+
+                  {/* FLOATING LIQUID GLASS TAB BAR INSIDE SIMULATOR */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      bottom: 12,
+                      left: 12,
+                      right: 12,
+                      height: 46,
+                      borderRadius: 23,
+                      backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.90)',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                      borderWidth: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-around',
+                      paddingHorizontal: 8,
+                      ...(Platform.OS === 'web'
+                        ? {
+                            backdropFilter: 'blur(16px)',
+                            WebkitBackdropFilter: 'blur(16px)',
+                            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.25)',
+                          }
+                        : {}),
+                    }}
+                  >
+                    {previewRole === 'student' ? (
+                      <>
+                        {/* Student Floating Nav: Home, Forum, Events, Resources */}
+                        <View style={{ alignItems: 'center', backgroundColor: colors.brandPrimary, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 14 }}>
+                          <Ionicons name="home" size={16} color="#FFFFFF" />
+                        </View>
+                        <View style={{ alignItems: 'center', padding: 4 }}>
+                          <Ionicons name="chatbubbles-outline" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+                        </View>
+                        <View style={{ alignItems: 'center', padding: 4 }}>
+                          <Ionicons name="calendar-outline" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+                        </View>
+                        <View style={{ alignItems: 'center', padding: 4 }}>
+                          <Ionicons name="folder-outline" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        {/* Alumni Floating Nav: Home, Careers, Forum, Events, Mentorship */}
+                        <View style={{ alignItems: 'center', backgroundColor: colors.brandPrimary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 14 }}>
+                          <Ionicons name="home" size={15} color="#FFFFFF" />
+                        </View>
+                        <View style={{ alignItems: 'center', padding: 4 }}>
+                          <Ionicons name="briefcase-outline" size={15} color={isDark ? '#94A3B8' : '#64748B'} />
+                        </View>
+                        <View style={{ alignItems: 'center', padding: 4 }}>
+                          <Ionicons name="chatbubbles-outline" size={15} color={isDark ? '#94A3B8' : '#64748B'} />
+                        </View>
+                        <View style={{ alignItems: 'center', padding: 4 }}>
+                          <Ionicons name="calendar-outline" size={15} color={isDark ? '#94A3B8' : '#64748B'} />
+                        </View>
+                        <View style={{ alignItems: 'center', padding: 4 }}>
+                          <Ionicons name="ribbon-outline" size={15} color={isDark ? '#94A3B8' : '#64748B'} />
+                        </View>
+                      </>
+                    )}
+                  </View>
                 </View>
               </View>
 
-              {/* Right Flanking Glass Badge (Desktop) */}
+              {/* Right Side Highlight (Desktop) - Clean, No Shape Around Emojis */}
               {isDesktop && (
                 <View
                   style={[
                     glassStyle(20, isDark ? 0.55 : 0.75),
                     {
-                      width: 240,
-                      padding: 18,
-                      gap: 12,
-                      transform: [{ rotate: '3deg' }],
+                      width: 250,
+                      padding: 20,
+                      gap: 10,
+                      transform: [{ rotate: '2.5deg' }],
                     },
                   ]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: 'rgba(59, 130, 246, 0.18)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Ionicons name="cart" size={20} color="#3B82F6" />
-                    </View>
-                    <View>
-                      <AppText variant="caption" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                        Escrow Trade
-                      </AppText>
-                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                        100% Peer Protected
-                      </AppText>
-                    </View>
-                  </View>
-                  <AppText variant="caption" tone="secondary">
-                    Funds are secured by Lioris Escrow and only released after hands-on verification on campus.
+                  <Ionicons name="people" size={24} color="#3B82F6" />
+                  <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
+                    Alumni-Student Bridge
+                  </AppText>
+                  <AppText variant="caption" tone="secondary" style={{ lineHeight: 18 }}>
+                    Connect current students with graduated mentors working at top companies for guidance and hiring pipelines.
                   </AppText>
                 </View>
               )}
@@ -1042,37 +921,27 @@ export function LandingScreen() {
           </View>
 
           {/* =========================================================================
-              4. CORE PILLARS BENTO GRID: Informative, Creative, Not Wordy
+              4. CORE PILLARS OF CAMPUS LIFE: Focused on Main Navigations
              ========================================================================= */}
           <View
             // @ts-ignore
             id="pillars"
             style={{ marginVertical: 40 }}
           >
-            {/* Section Tag */}
+            {/* Clean Section Header (No pill badge) */}
             <View style={{ alignItems: 'center', marginBottom: 28 }}>
-              <View
-                style={{
-                  backgroundColor: isDark ? 'rgba(11, 122, 117, 0.22)' : 'rgba(11, 122, 117, 0.10)',
-                  paddingHorizontal: 12,
-                  paddingVertical: 4,
-                  borderRadius: radius.pill,
-                  marginBottom: 8,
-                }}
-              >
-                <AppText variant="caption" weight="bold" tone="brand">
-                  SIX PILLARS OF CAMPUS LIFE
-                </AppText>
-              </View>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1.2, marginBottom: 6 }}>
+                CORE CAMPUS PILLARS
+              </AppText>
               <AppText variant="h2" weight="bold" style={{ textAlign: 'center', color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                Everything You Need, Built for Your School
+                Designed Around Real University Life
               </AppText>
               <AppText tone="secondary" style={{ textAlign: 'center', marginTop: 4, maxWidth: 540 }}>
-                High-utility modules integrated into a single high-performance liquid glass architecture.
+                Essential academic, career, and community tools unified into a secure institutional ecosystem.
               </AppText>
             </View>
 
-            {/* Bento Grid (Responsive 2 / 3 columns) */}
+            {/* Bento Grid: Main Navigations (Forum, Resources, Events, Mentorship, Careers, Study Groups) */}
             <View
               style={{
                 flexDirection: 'row',
@@ -1083,46 +952,40 @@ export function LandingScreen() {
             >
               {[
                 {
-                  icon: 'shield-checkmark',
-                  accent: '#10B981',
-                  tag: 'TRUST & SAFETY',
-                  title: 'Verified Academic Identity',
-                  desc: 'Cryptographic .edu verification ensures only authentic students, faculty, and alumni enter. No strangers, no outside spam.',
+                  icon: 'chatbubbles',
+                  accent: '#0B7A75',
+                  title: 'Campus Community Forum',
+                  desc: 'Verified peer-to-peer discourse, departmental discussion channels, and course threads without outside noise or anonymous trolls.',
                 },
                 {
-                  icon: 'time',
-                  accent: '#F59E0B',
-                  tag: 'SCHEDULES & RADAR',
-                  title: 'Smart Timetable & Lecture Alerts',
-                  desc: 'Class schedules, venue adjustments, and assignment deadlines mapped automatically to your course and level.',
-                },
-                {
-                  icon: 'cart',
+                  icon: 'folder',
                   accent: '#3B82F6',
-                  tag: 'COMMERCE & ESCROW',
-                  title: 'Peer-to-Peer Escrow Marketplace',
-                  desc: 'Safely buy and sell textbooks, electronics, and dorm essentials with campus escrow protection that holds funds until handoff.',
+                  title: 'Academic Resources Vault',
+                  desc: 'Crowdsourced past questions archive, course outlines, and solution sheets organized strictly by university, faculty, and code.',
                 },
                 {
-                  icon: 'library',
-                  accent: '#8B5CF6',
-                  tag: 'ACADEMIC ARCHIVE',
-                  title: 'Past Questions & Study Groups',
-                  desc: 'Searchable university past questions vault, lecture notes, and active study groups organized strictly by faculty and code.',
+                  icon: 'calendar',
+                  accent: '#10B981',
+                  title: 'Campus Events & Calendar',
+                  desc: 'Academic symposiums, student elections, tech hackathons, and departmental gatherings with verified digital attendance.',
                 },
                 {
                   icon: 'ribbon',
-                  accent: '#EC4899',
-                  tag: 'CAREER ACCELERATOR',
-                  title: 'Alumni Network & Mentorship',
-                  desc: 'Connect with established alumni at top technology and finance firms for 1-on-1 career guidance and hiring referrals.',
+                  accent: '#8B5CF6',
+                  title: 'Alumni Mentorship Circle',
+                  desc: 'Direct 1-on-1 career guidance between enrolled students and graduated professionals across technology, healthcare, and finance.',
                 },
                 {
-                  icon: 'radio',
-                  accent: '#06B6D4',
-                  tag: 'CULTURE & PULSE',
-                  title: 'Campus Events & Live Radio',
-                  desc: 'Faculty symposiums, tech hackathons, student association elections, and official university radio streaming directly in-app.',
+                  icon: 'briefcase',
+                  accent: '#F59E0B',
+                  title: 'Career & Internship Pipelines',
+                  desc: 'Curated job opportunities, graduate trainee postings, and exclusive alumni referrals dedicated to your institution.',
+                },
+                {
+                  icon: 'people',
+                  accent: '#EC4899',
+                  title: 'Collaborative Study Cohorts',
+                  desc: 'Find classmates, organize study groups, and collaborate on assignments in dedicated course-specific learning rooms.',
                 },
               ].map((pillar) => (
                 <View
@@ -1136,37 +999,16 @@ export function LandingScreen() {
                     },
                   ]}
                 >
-                  <View
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 14,
-                      backgroundColor: isDark ? `${pillar.accent}25` : `${pillar.accent}18`,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderColor: `${pillar.accent}40`,
-                      borderWidth: 1,
-                    }}
-                  >
-                    <Ionicons name={pillar.icon as any} size={22} color={pillar.accent} />
-                  </View>
+                  {/* Clean Icon (No shape box around emoji/icon) */}
+                  <Ionicons name={pillar.icon as any} size={28} color={pillar.accent} />
 
-                  <View>
-                    <AppText
-                      variant="caption"
-                      weight="bold"
-                      style={{ color: pillar.accent, letterSpacing: 0.8, fontSize: 10 }}
-                    >
-                      {pillar.tag}
-                    </AppText>
-                    <AppText
-                      variant="h3"
-                      weight="bold"
-                      style={{ fontSize: 18, lineHeight: 24, marginTop: 4, color: isDark ? '#FFFFFF' : '#0F172A' }}
-                    >
-                      {pillar.title}
-                    </AppText>
-                  </View>
+                  <AppText
+                    variant="h3"
+                    weight="bold"
+                    style={{ fontSize: 18, lineHeight: 24, color: isDark ? '#FFFFFF' : '#0F172A' }}
+                  >
+                    {pillar.title}
+                  </AppText>
 
                   <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 20 }}>
                     {pillar.desc}
@@ -1177,7 +1019,7 @@ export function LandingScreen() {
           </View>
 
           {/* =========================================================================
-              5. THE LIORIS STANDARD: Refractive Metrics Strip
+              5. THE LIORIS STANDARD: Metrics Strip
              ========================================================================= */}
           <View
             style={[
@@ -1198,9 +1040,9 @@ export function LandingScreen() {
             >
               {[
                 { number: '100%', label: 'Campus ID Verified', subtext: 'Zero unauthorized outsiders' },
-                { number: '< 3 Min', label: 'Instant Academic Verification', subtext: 'Seamless domain matching' },
+                { number: '< 3 Min', label: 'Instant Domain Verification', subtext: 'Automatic school email validation' },
                 { number: '7+', label: 'Launch Universities', subtext: 'UI, UNILAG, FUNAAB + 18 expanding' },
-                { number: '₦0', label: 'Student Fees to Join', subtext: 'Built freely for academic spaces' },
+                { number: '₦0', label: 'Student Fees', subtext: 'Built freely for verified learners' },
               ].map((stat, idx) => (
                 <View
                   key={stat.label}
@@ -1236,7 +1078,7 @@ export function LandingScreen() {
           </View>
 
           {/* =========================================================================
-              6. SUPPORTED CAMPUSES & WAITLIST CARD
+              6. SUPPORTED CAMPUSES & WAITLIST NOMINATION
              ========================================================================= */}
           <View
             // @ts-ignore
@@ -1261,19 +1103,9 @@ export function LandingScreen() {
               >
                 {/* Left: Campuses List */}
                 <View style={{ flex: 1, gap: 14 }}>
-                  <View
-                    style={{
-                      backgroundColor: isDark ? 'rgba(11, 122, 117, 0.22)' : 'rgba(11, 122, 117, 0.10)',
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: radius.pill,
-                      alignSelf: 'flex-start',
-                    }}
-                  >
-                    <AppText variant="caption" weight="bold" tone="brand">
-                      CAMPUS NETWORK
-                    </AppText>
-                  </View>
+                  <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1.2 }}>
+                    CAMPUS NETWORK
+                  </AppText>
 
                   <AppText variant="h2" weight="bold" style={{ color: isDark ? '#FFFFFF' : '#0F172A' }}>
                     Live at Premier Institutions
@@ -1282,8 +1114,8 @@ export function LandingScreen() {
                     Lioris is deployed across Nigeria's top tertiary institutions with automated institutional email authentication.
                   </AppText>
 
-                  {/* Campus Badges */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                  {/* Campus Names */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
                     {LAUNCH_INSTITUTIONS.filter(i => i.code !== 'GLOBAL').map((inst) => (
                       <View
                         key={inst.code}
@@ -1292,9 +1124,9 @@ export function LandingScreen() {
                           {
                             flexDirection: 'row',
                             alignItems: 'center',
-                            gap: 6,
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
+                            gap: 8,
+                            paddingHorizontal: 14,
+                            paddingVertical: 7,
                           },
                         ]}
                       >
@@ -1346,11 +1178,11 @@ export function LandingScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Ionicons name="checkmark-circle" size={18} color="#10B981" />
                         <AppText variant="bodySmall" weight="bold" style={{ color: '#10B981' }}>
-                          Priority Waitlist Confirmed!
+                          Priority Nomination Received!
                         </AppText>
                       </View>
                       <AppText variant="caption" tone="secondary">
-                        We'll notify you as soon as your university's verification server goes live.
+                        We'll notify you as soon as your university's campus server goes live.
                       </AppText>
                     </View>
                   ) : (
@@ -1370,7 +1202,7 @@ export function LandingScreen() {
                         onChangeText={setWaitlistSchool}
                       />
                       <AppButton
-                        label="Fast-Track My Campus"
+                        label="Nominate My Campus"
                         onPress={handleJoinWaitlist}
                         loading={waitlistSubmitting}
                         disabled={!waitlistEmail.trim() || !waitlistSchool.trim()}
@@ -1416,7 +1248,7 @@ export function LandingScreen() {
               tone="secondary"
               style={{ textAlign: 'center', maxWidth: 520, marginBottom: 24 }}
             >
-              Join thousands of students and faculty experiencing university life with verified privacy and pure liquid glass speed.
+              Join thousands of students and alumni experiencing university life with verified privacy and institutional trust.
             </AppText>
 
             <View style={{ flexDirection: width < 420 ? 'column' : 'row', gap: 12, width: width < 420 ? '100%' : 'auto' }}>
@@ -1433,7 +1265,7 @@ export function LandingScreen() {
                 }}
               >
                 <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: 15 }}>
-                  Create Free Student Account
+                  Create Student Account
                 </AppText>
               </Pressable>
 
@@ -1458,47 +1290,165 @@ export function LandingScreen() {
           </View>
 
           {/* =========================================================================
-              8. REFINED LIQUID GLASS FOOTER
+              8. COMPREHENSIVE PROPER FOOTER & LEGAL LINKS
              ========================================================================= */}
           <View
             style={[
-              glassStyle(20, isDark ? 0.35 : 0.55),
+              glassStyle(28, isDark ? 0.55 : 0.75),
               {
-                padding: 20,
+                padding: isDesktop ? 40 : 24,
                 marginTop: 20,
-                flexDirection: isDesktop ? 'row' : 'column',
-                justifyContent: 'space-between',
-                alignItems: isDesktop ? 'center' : 'flex-start',
-                gap: 16,
+                marginBottom: 20,
+                gap: 32,
               },
             ]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <LiorisLogo size={24} variant="symbol" />
-              <AppText variant="caption" weight="bold" style={{ color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                LIORIS CAMPUS TECHNOLOGIES
-              </AppText>
-              <AppText variant="caption" tone="secondary">
-                • © 2026 All Rights Reserved
-              </AppText>
+            {/* 4 Footer Columns */}
+            <View
+              style={{
+                flexDirection: isDesktop ? 'row' : 'column',
+                justifyContent: 'space-between',
+                gap: isDesktop ? 40 : 28,
+              }}
+            >
+              {/* Column 1: Brand & Contact Info */}
+              <View style={{ flex: 1.3, gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <LiorisLogo size={32} variant="symbol" />
+                  <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
+                </View>
+                <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 22, maxWidth: 320 }}>
+                  The unified university platform connecting verified students and alumni through departmental forums,
+                  curated academic resource vaults, campus events, and career mentorship.
+                </AppText>
+
+                {/* Direct Contact Details */}
+                <View style={{ gap: 8, marginTop: 4 }}>
+                  <Pressable
+                    onPress={() => Linking.openURL('mailto:inememmanuel@gmail.com')}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  >
+                    <Ionicons name="mail-outline" size={16} color={colors.brandPrimary} />
+                    <AppText variant="bodySmall" weight="semiBold" style={{ color: isDark ? '#E2E8F0' : '#1E293B' }}>
+                      inememmanuel@gmail.com
+                    </AppText>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => Linking.openURL('tel:+2349076664049')}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  >
+                    <Ionicons name="call-outline" size={16} color={colors.brandPrimary} />
+                    <AppText variant="bodySmall" weight="semiBold" style={{ color: isDark ? '#E2E8F0' : '#1E293B' }}>
+                      +2349076664049
+                    </AppText>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Column 2: Platform Links */}
+              <View style={{ flex: 1, gap: 10 }}>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+                  PLATFORM
+                </AppText>
+                {[
+                  { label: 'Student Portal', href: '/(auth)/login' },
+                  { label: 'Alumni Circle', href: '/(auth)/login' },
+                  { label: 'Academic Resources', href: '/(auth)/register' },
+                  { label: 'Campus Forum', href: '/(auth)/register' },
+                  { label: 'Career Board', href: '/(auth)/login' },
+                ].map((item) => (
+                  <Pressable key={item.label} onPress={() => router.push(item.href as any)}>
+                    <AppText variant="bodySmall" tone="secondary" style={{ paddingVertical: 2 }}>
+                      {item.label}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* Column 3: Active Campuses */}
+              <View style={{ flex: 1, gap: 10 }}>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+                  CAMPUS HUBS
+                </AppText>
+                {[
+                  'University of Ibadan (UI)',
+                  'University of Lagos (UNILAG)',
+                  'FUNAAB (Abeokuta)',
+                  'University of Nigeria (UNN)',
+                  'Obafemi Awolowo Univ (OAU)',
+                  'Covenant University (CU)',
+                ].map((campus) => (
+                  <AppText key={campus} variant="bodySmall" tone="secondary" style={{ paddingVertical: 2 }}>
+                    {campus}
+                  </AppText>
+                ))}
+              </View>
+
+              {/* Column 4: Real Legal Pages */}
+              <View style={{ flex: 1, gap: 10 }}>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+                  LEGAL & PRIVACY
+                </AppText>
+                {[
+                  { label: 'Privacy Policy', href: '/privacy' },
+                  { label: 'Terms of Service', href: '/terms' },
+                  { label: 'Community Guidelines', href: '/community-rules' },
+                ].map((legal) => (
+                  <Pressable key={legal.label} onPress={() => router.push(legal.href as any)}>
+                    <AppText variant="bodySmall" weight="medium" style={{ color: colors.brandPrimary, paddingVertical: 2 }}>
+                      {legal.label} →
+                    </AppText>
+                  </Pressable>
+                ))}
+                <AppText variant="caption" tone="secondary" style={{ marginTop: 6, lineHeight: 18 }}>
+                  Zero commercial advertisements. Institutional domain verification enforced.
+                </AppText>
+              </View>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-              <Pressable onPress={() => router.push('/(auth)/login')}>
-                <AppText variant="caption" tone="secondary" weight="semiBold">
-                  Sign In
-                </AppText>
-              </Pressable>
-              <Pressable onPress={() => router.push('/(auth)/register')}>
-                <AppText variant="caption" tone="secondary" weight="semiBold">
-                  Registration
-                </AppText>
-              </Pressable>
-              <Pressable onPress={() => scrollToSection('hero')}>
-                <AppText variant="caption" tone="brand" weight="bold">
-                  Back to Top ↑
-                </AppText>
-              </Pressable>
+            {/* Sub-Footer Divider & Copyright */}
+            <View
+              style={{
+                height: 1,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              }}
+            />
+
+            <View
+              style={{
+                flexDirection: isDesktop ? 'row' : 'column',
+                justifyContent: 'space-between',
+                alignItems: isDesktop ? 'center' : 'flex-start',
+                gap: 12,
+              }}
+            >
+              <AppText variant="caption" tone="secondary">
+                © 2026 Lioris Campus Inc. All rights reserved. Registered Educational Platform.
+              </AppText>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <Pressable onPress={() => router.push('/privacy' as any)}>
+                  <AppText variant="caption" tone="secondary">
+                    Privacy
+                  </AppText>
+                </Pressable>
+                <Pressable onPress={() => router.push('/terms' as any)}>
+                  <AppText variant="caption" tone="secondary">
+                    Terms
+                  </AppText>
+                </Pressable>
+                <Pressable onPress={() => router.push('/community-rules' as any)}>
+                  <AppText variant="caption" tone="secondary">
+                    Guidelines
+                  </AppText>
+                </Pressable>
+                <Pressable onPress={() => scrollToSection('hero')}>
+                  <AppText variant="caption" tone="brand" weight="bold">
+                    Back to Top ↑
+                  </AppText>
+                </Pressable>
+              </View>
             </View>
           </View>
 
