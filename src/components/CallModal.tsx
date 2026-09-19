@@ -172,7 +172,7 @@ export function CallModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleHangup}>
-      <View style={styles.container}>
+      <View accessibilityViewIsModal style={styles.container}>
         {/* TOP APP HEADER */}
         <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 12) }]}>
           <View style={styles.partnerInfo}>
@@ -321,7 +321,7 @@ export function CallModal({
 
         {/* FLOATING NATIVE CONTROL BAR */}
         <View style={[styles.controlsBar, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
             onPress={handleToggleMic}
             style={[
               styles.controlBtn,
@@ -331,7 +331,7 @@ export function CallModal({
             <Ionicons name={isMicMuted ? 'mic-off' : 'mic'} size={22} color="#FFFFFF" />
           </Pressable>
 
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={isVideoDisabled ? 'Turn camera on' : 'Turn camera off'}
             onPress={handleToggleVideo}
             style={[
               styles.controlBtn,
@@ -341,7 +341,7 @@ export function CallModal({
             <Ionicons name={isVideoDisabled ? 'videocam-off' : 'videocam'} size={22} color="#FFFFFF" />
           </Pressable>
 
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker'}
             onPress={handleToggleSpeaker}
             style={[
               styles.controlBtn,
@@ -351,7 +351,7 @@ export function CallModal({
             <Ionicons name={isSpeakerMuted ? 'volume-mute' : 'volume-high'} size={22} color="#FFFFFF" />
           </Pressable>
 
-          <Pressable onPress={handleHangup} style={[styles.hangupBtn, { backgroundColor: colors.critical }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Call" onPress={handleHangup} style={[styles.hangupBtn, { backgroundColor: colors.critical }]}>
             <Ionicons name="call" size={24} color="#FFFFFF" style={{ transform: [{ rotate: '135deg' }] }} />
           </Pressable>
         </View>

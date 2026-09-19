@@ -1264,7 +1264,7 @@ export function SettingsScreen() {
                           padding: spacing.sm,
                         }}
                       >
-                        <TextInput
+                        <TextInput accessibilityLabel="Authenticator secret key"
                           value={mfaSecret}
                           editable={false}
                           selectTextOnFocus
@@ -1509,7 +1509,7 @@ export function SettingsScreen() {
         animationType="fade"
         onRequestClose={() => setPasswordModalOpen(false)}
       >
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md, paddingBottom: Math.max(insets.bottom, 16) }}
         >
@@ -1530,7 +1530,7 @@ export function SettingsScreen() {
               <AppText variant="h3" weight="bold">
                 Update Password
               </AppText>
-              <Pressable onPress={() => setPasswordModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setPasswordModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
                 <Ionicons name="close" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -1574,7 +1574,7 @@ export function SettingsScreen() {
           if (!deletingAccount) setDeleteModalOpen(false);
         }}
       >
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md, paddingBottom: Math.max(insets.bottom, 16) }}
         >
@@ -1648,7 +1648,7 @@ export function SettingsScreen() {
         animationType="fade"
         onRequestClose={() => setSupportModalOpen(false)}
       >
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md, paddingBottom: Math.max(insets.bottom, 16) }}
         >
@@ -1670,7 +1670,7 @@ export function SettingsScreen() {
               <AppText variant="h3" weight="bold">
                 Student & Staff Support Desk
               </AppText>
-              <Pressable
+              <Pressable accessibilityRole="button" accessibilityLabel="Close"
                 onPress={() => {
                   setSupportModalOpen(false);
                   setSupportMessage('');
@@ -1741,7 +1741,7 @@ export function SettingsScreen() {
                 <AppText variant="caption" weight="medium" tone="secondary" style={{ marginBottom: 6 }}>
                   Subject / Summary
                 </AppText>
-                <TextInput
+                <TextInput accessibilityLabel="e.g., Request to update matriculation number"
                   value={supportTitle}
                   onChangeText={setSupportTitle}
                   placeholder="e.g., Request to update matriculation number"
@@ -1763,7 +1763,7 @@ export function SettingsScreen() {
                 <AppText variant="caption" weight="medium" tone="secondary" style={{ marginBottom: 6 }}>
                   Details & Description
                 </AppText>
-                <TextInput
+                <TextInput accessibilityLabel="Provide complete details (current details vs correct details, evidence, error codes)"
                   value={supportMessage}
                   onChangeText={setSupportMessage}
                   placeholder="Provide complete details (current details vs correct details, evidence, error codes)..."

@@ -1,16 +1,20 @@
 import React, { useEffect } from'react';
 import { View } from'react-native';
+import { useReducedMotion } from'@/theme/useReducedMotion';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from'react-native-reanimated';
 
 /** Ported from PresenceHalo (CommunicationAndStudy.kt): a pulsing green online-status dot. */
 export function PresenceHalo({ isOnline }: { isOnline: boolean }) {
- const opacity = useSharedValue(0.4);
+ const reduceMotion = useReducedMotion();
+ const opacity = useSharedValue(reduceMotion ? 1 : 0.4);
 
  useEffect(() => {
- if (isOnline) {
+ if (reduceMotion) {
+ opacity.value = 1;
+ } else if (isOnline) {
  opacity.value = withRepeat(withTiming(1, { duration: 1000 }), -1, true);
  }
- }, [isOnline, opacity]);
+ }, [isOnline, reduceMotion, opacity]);
 
  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
@@ -18,6 +22,8 @@ export function PresenceHalo({ isOnline }: { isOnline: boolean }) {
 
  return (
  <View
+ accessibilityLabel="Online"
+ accessible
  style={{
  width: 11,
  height: 11,

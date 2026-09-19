@@ -163,7 +163,7 @@ export function AnnouncementsWidget({
           animationType="fade"
           onRequestClose={() => setSelectedAnnouncement(null)}
         >
-          <View
+          <View accessibilityViewIsModal
             style={{
               flex: 1,
               backgroundColor: 'rgba(0,0,0,0.5)',
@@ -173,7 +173,7 @@ export function AnnouncementsWidget({
               paddingBottom: Math.max(insets.bottom, 16),
             }}
           >
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedAnnouncement(null)} />
+            <Pressable accessible={false} importantForAccessibility="no" style={StyleSheet.absoluteFill} onPress={() => setSelectedAnnouncement(null)} />
             <GlassCard radius={20} style={{ width: '100%', maxWidth: 440 }}>
               {selectedAnnouncement && (
                 <>
@@ -182,7 +182,7 @@ export function AnnouncementsWidget({
                       label={selectedAnnouncement.priority.toUpperCase()}
                       tone={PRIORITY_TONE[selectedAnnouncement.priority]}
                     />
-                    <Pressable onPress={() => setSelectedAnnouncement(null)}>
+                    <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setSelectedAnnouncement(null)}>
                       <Ionicons name="close" size={22} color={colors.textSecondary} />
                     </Pressable>
                   </View>
@@ -238,7 +238,7 @@ export function AnnouncementsWidget({
  <GlassCard key={item.id} radius={16}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
  <Badge label={item.priority.toUpperCase()} tone={PRIORITY_TONE[item.priority]} />
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="Close"
  onPress={() => setDismissedIds((prev) => [...prev, item.id])}
  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
  >
@@ -275,7 +275,7 @@ export function AnnouncementsWidget({
  animationType="fade"
  onRequestClose={() => setSelectedAnnouncement(null)}
  >
- <View
+ <View accessibilityViewIsModal
  style={{
  flex: 1,
  backgroundColor: 'rgba(0,0,0,0.5)',
@@ -285,7 +285,7 @@ export function AnnouncementsWidget({
  paddingBottom: Math.max(insets.bottom, 16),
  }}
  >
- <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedAnnouncement(null)} />
+ <Pressable accessible={false} importantForAccessibility="no" style={StyleSheet.absoluteFill} onPress={() => setSelectedAnnouncement(null)} />
  <SolidCard radius={20} style={{ width: '100%', maxWidth: 440, padding: spacing.lg }}>
  {selectedAnnouncement && (
  <>
@@ -294,7 +294,7 @@ export function AnnouncementsWidget({
  label={selectedAnnouncement.priority.toUpperCase()}
  tone={PRIORITY_TONE[selectedAnnouncement.priority]}
  />
- <Pressable onPress={() => setSelectedAnnouncement(null)}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setSelectedAnnouncement(null)}>
  <Ionicons name="close" size={22} color={colors.textSecondary} />
  </Pressable>
  </View>

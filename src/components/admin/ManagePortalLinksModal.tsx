@@ -220,7 +220,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
 
  return (
  <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
+ <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
  <Pressable style={{ flex: 1 }} onPress={onClose} accessible={false} />
  <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
  <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
@@ -234,7 +234,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  Manage Campus Portal Links
  </AppText>
  </View>
- <Pressable onPress={onClose} hitSlop={8}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={8}>
  <Ionicons name="close" size={22} color={colors.textSecondary} />
  </Pressable>
  </View>
@@ -251,7 +251,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  <AppText weight="bold" variant="h3" tone="brand">
  {editingId ? 'Edit Portal Link' : 'Add New Portal Link'}
  </AppText>
- <Pressable onPress={cancelForm}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={cancelForm}>
  <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
  </Pressable>
  </View>
@@ -284,7 +284,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  {ICON_CHOICES.map((ic) => {
  const isSelected = selectedIcon === ic;
  return (
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel={`Icon ${ic}`} accessibilityState={{ selected: isSelected }}
  key={ic}
  onPress={() => setSelectedIcon(ic)}
  style={{
@@ -408,15 +408,15 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  </AppText>
  </Pressable>
 
- <Pressable onPress={() => handleTestLink(link.url)} hitSlop={8} style={{ padding: 4 }}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Open" onPress={() => handleTestLink(link.url)} hitSlop={8} style={{ padding: 4 }}>
  <Ionicons name="open-outline" size={18} color={colors.textSecondary} />
  </Pressable>
 
- <Pressable onPress={() => startEdit(link)} hitSlop={8} style={{ padding: 4 }}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Edit" onPress={() => startEdit(link)} hitSlop={8} style={{ padding: 4 }}>
  <Ionicons name="pencil" size={17} color={colors.textSecondary} />
  </Pressable>
 
- <Pressable onPress={() => handleDeleteLink(link.id)} hitSlop={8} style={{ padding: 4 }}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Delete" onPress={() => handleDeleteLink(link.id)} hitSlop={8} style={{ padding: 4 }}>
  <Ionicons name="trash-outline" size={17} color={colors.critical} />
  </Pressable>
  </View>

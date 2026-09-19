@@ -20,6 +20,7 @@ export function LiorisLogo({ size = 48, tintColor, variant = 'symbol' }: LiorisL
       <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
         <Image
           source={EMBLEM_ASSET}
+          alt="Lioris logo"
           style={{ width: size, height: size }}
           contentFit="contain"
           transition={200}
@@ -58,6 +59,7 @@ export function LiorisLogo({ size = 48, tintColor, variant = 'symbol' }: LiorisL
     <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>
       <Image
         source={EMBLEM_ASSET}
+        alt="Lioris logo"
         style={{ width: size, height: size }}
         contentFit="contain"
         transition={200}

@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
 import { recordAuditLogEntry } from './auditLog';
+import { unregisterDevicePushToken } from './notifications';
 import { checkPassword, isPasswordValid } from '../utils/validation';
 
 export interface LoginPayload {
@@ -482,6 +483,9 @@ export async function refresh(refreshToken: string) {
 }
 
 export async function logout() {
+ // Must run BEFORE signOut: the push_tokens row is owner-only, so it can only be deleted while
+ // still authenticated. Otherwise the next person on a shared phone would receive this user's pushes.
+ await unregisterDevicePushToken().catch(() => {});
  await supabase.auth.signOut().catch(() => {});
  await api.post('/auth/logout').catch(() => {});
 }

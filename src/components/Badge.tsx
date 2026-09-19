@@ -1,6 +1,7 @@
 import React from'react';
 import { useTheme } from'@/theme/ThemeProvider';
 import { AppText } from'./AppText';
+import { ensureContrast } from'@/theme/contrast';
 
 type BadgeTone = 'neutral' | 'brand' | 'accent' | 'success' | 'warning' | 'critical';
 
@@ -21,7 +22,7 @@ export function Badge({ label, tone = 'neutral' }: BadgeProps) {
  const fg: Record<BadgeTone, string> = {
  neutral: colors.textSecondary,
  brand: colors.brandPrimary,
- accent: colors.brandAccent,
+ accent: ensureContrast(colors.brandAccent, colors.surface),
  success: colors.success,
  warning: colors.warning,
  critical: colors.critical,

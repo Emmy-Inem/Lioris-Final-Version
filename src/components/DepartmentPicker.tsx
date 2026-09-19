@@ -76,7 +76,7 @@ export function DepartmentPicker({ value, onChange, label = 'Department', placeh
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{
             flex: 1,

@@ -1,0 +1,38 @@
+# Minimal Supabase CLI config: links this repo to the hosted project and records
+# the per-function JWT policy so `supabase functions deploy` is reproducible.
+# Deliberately NOT a full `supabase init` file; a later `supabase init` will
+# ask to overwrite it, so merge the [functions.*] blocks below into that file.
+# See docs/security/deploy.md.
+
+project_id = "fdtnbluslkabwsmspbem"
+
+# --- verify_jwt = true: the Supabase gateway rejects requests without a valid user JWT ---
+
+[functions.gemini-proxy]
+verify_jwt = true
+
+[functions.admin-delete-user]
+verify_jwt = true
+
+[functions.admin-impersonate-user]
+verify_jwt = true
+
+[functions.delete-my-account]
+verify_jwt = true
+
+[functions.turn-credentials]
+verify_jwt = true
+
+# --- verify_jwt = false: public data, machine-to-machine (shared-secret header) or pre-login ---
+
+[functions.overpass-proxy]
+verify_jwt = false
+
+[functions.purge-expired-verification-documents]
+verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
+
+[functions.report-client-error]
+verify_jwt = false

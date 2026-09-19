@@ -34,9 +34,10 @@ export const DATA_CONTROLLER = {
 } as const;
 
 export const HOSTING_REGIONS = {
-  web: 'Vercel (Global Edge Network / AWS US-East)',
-  database: 'Supabase AWS eu-north-1 (Stockholm, Sweden)',
-  ai: 'Google Cloud Gemini API (Global)',
+  web: 'Vercel global edge network (the site is served from the point of presence nearest you, including locations in Africa such as Cape Town, as well as Europe and the United States)',
+  database:
+    'Supabase, hosted on Amazon Web Services in the eu-north-1 region (Stockholm, Sweden) - database, authentication and file storage',
+  ai: "Google's infrastructure (Gemini API) - the processing location is determined by Google and may be outside Nigeria and the EU",
 } as const;
 
 /** Monitored mailbox for privacy and data protection inquiries. */

@@ -173,7 +173,7 @@ export function VerifiedCampusLocationPicker({
             }}
           >
             <Ionicons name="location-outline" size={18} color={colors.textSecondary} style={{ marginRight: 6 }} />
-            <TextInput
+            <TextInput accessibilityLabel={placeholder ?? "Search campus location"}
               style={{
                 flex: 1,
                 color: colors.textPrimary,
@@ -191,7 +191,7 @@ export function VerifiedCampusLocationPicker({
               onFocus={() => setIsSearching(true)}
             />
             {(searchQuery || value) ? (
-              <Pressable
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear"
                 onPress={() => {
                   setSearchQuery('');
                   onChangeLocation('');
@@ -301,7 +301,7 @@ export function VerifiedCampusLocationPicker({
       {/* Optional Specific Room or Floor Detail Input */}
       {onChangeRoomDetail && (
         <View style={{ marginTop: spacing.xs }}>
-          <TextInput
+          <TextInput accessibilityLabel="Room / Floor details (optional, e.g. 2nd Floor, Room 304)"
             style={{
               height: 38,
               borderWidth: 1,

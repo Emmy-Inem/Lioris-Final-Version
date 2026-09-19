@@ -422,7 +422,7 @@ export function ResourcesModerationTab() {
                   onPress={() => handleRejectConfirm(resource)}
                 />
  </View>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="View"
  onPress={() => setPreviewModalResource(resource)}
  hitSlop={8}
  style={{
@@ -442,7 +442,7 @@ export function ResourcesModerationTab() {
  <View style={{ flex: 1 }}>
  <AppButton label="Edit Resource"variant="secondary"onPress={() => handleOpenEdit(resource)} />
  </View>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="Delete"
  onPress={() => handleDeleteConfirm(resource)}
  hitSlop={8}
  style={{
@@ -471,7 +471,7 @@ export function ResourcesModerationTab() {
 
   {/* Create / Edit Resource Modal */}
   <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
-    <KeyboardAvoidingView
+    <KeyboardAvoidingView accessibilityViewIsModal
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{
         flex: 1,
@@ -515,7 +515,7 @@ export function ResourcesModerationTab() {
               {editingResource ? 'Edit Academic Resource' : 'Publish Academic Resource'}
             </AppText>
           </View>
-          <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setEditModalOpen(false)} hitSlop={8}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </Pressable>
         </View>
@@ -655,14 +655,14 @@ export function ResourcesModerationTab() {
 
   {/* Document Inspector Modal */}
   <Modal visible={!!previewModalResource} transparent animationType="fade" onRequestClose={() => setPreviewModalResource(null)}>
-    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
+    <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
       <Pressable style={StyleSheet.absoluteFill} onPress={() => setPreviewModalResource(null)} />
       <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '80%', maxWidth: 560, width: '100%', alignSelf: 'center' }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
           <AppText variant="h3" weight="bold">
             Document Inspection
           </AppText>
-          <Pressable onPress={() => setPreviewModalResource(null)} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setPreviewModalResource(null)} hitSlop={8}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </Pressable>
         </View>

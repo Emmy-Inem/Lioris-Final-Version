@@ -140,7 +140,7 @@ export function UserProfileModal({
 
  return (
  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
- <View
+ <View accessibilityViewIsModal
  style={{
  flex: 1,
  backgroundColor: 'rgba(0,0,0,0.72)',
@@ -149,7 +149,7 @@ export function UserProfileModal({
  padding: isDesktop ? spacing.lg : 0,
  }}
  >
- <Pressable style={{ position: 'absolute', inset: 0 }} onPress={onClose} />
+ <Pressable accessible={false} importantForAccessibility="no" style={{ position: 'absolute', inset: 0 }} onPress={onClose} />
  <View
  style={{
  backgroundColor: colors.surface,
@@ -167,7 +167,7 @@ export function UserProfileModal({
  }}
  >
  {/* Persistent Floating Close Button */}
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="Close"
  onPress={onClose}
  hitSlop={12}
  style={{

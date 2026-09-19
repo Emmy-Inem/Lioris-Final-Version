@@ -156,7 +156,7 @@ export function LandingScreen() {
           )}
 
           {/* Logo */}
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel="Lioris home"
             onPress={() => scrollToSection('hero')}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
           >

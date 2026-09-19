@@ -14,7 +14,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'lioris',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/favicon.png',
+  icon: './assets/images/icon.png',
   userInterfaceStyle: 'automatic', // supports Light + Dark mode, per PRD section 8 (Themes)
   assetBundlePatterns: ['**/*'],
   ios: {
@@ -59,7 +59,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'app.lioris.mobile',
     versionCode: 1,
     adaptiveIcon: {
-      foregroundImage: './assets/images/favicon.png',
+      foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundColor: '#0B1220',
     },
     // Gallery access goes through the system photo picker (expo-image-picker),
@@ -98,7 +98,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        image: './assets/images/favicon.png',
+        image: './assets/images/splash.png',
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#0B1220',

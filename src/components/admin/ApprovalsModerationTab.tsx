@@ -225,7 +225,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
                   onPress={() => handleRejectResource(res)}
                 />
               </View>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="View"
  onPress={() => setPreviewResource(res)}
  hitSlop={8}
  style={{
@@ -332,7 +332,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
 
  {/* Document Inspector Modal */}
   <Modal visible={!!previewResource} transparent animationType="fade" onRequestClose={() => setPreviewResource(null)}>
-    <View
+    <View accessibilityViewIsModal
       style={{
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.7)',
@@ -357,7 +357,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
           <AppText variant="h3" weight="bold">
             Resource Submission Preview
           </AppText>
-          <Pressable onPress={() => setPreviewResource(null)} hitSlop={8} style={{ padding: 4 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setPreviewResource(null)} hitSlop={8} style={{ padding: 4 }}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </Pressable>
         </View>

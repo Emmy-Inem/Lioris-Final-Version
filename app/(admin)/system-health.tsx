@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ScrollView,
   View,
+  Pressable,
   ActivityIndicator,
   Share,
   Platform,
@@ -17,8 +18,82 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { fetchSystemHealth, cleanupOrphanedRecords, SystemHealthReport } from '@/api/systemHealth';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 import { useToast } from '@/hooks/useToast';
+
+interface ClientErrorRow {
+  id: string;
+  fingerprint: string | null;
+  message: string | null;
+  stack: string | null;
+  url: string | null;
+  release: string | null;
+  level: string | null;
+  occurrences: number | null;
+  last_seen_at: string | null;
+  created_at: string | null;
+}
+
+interface ClientErrorGroup {
+  key: string;
+  message: string;
+  stack: string | null;
+  url: string | null;
+  release: string | null;
+  level: string;
+  occurrences: number;
+  lastSeenAt: string | null;
+}
+
+/** Last 50 client error rows (admin RLS), grouped by fingerprint. Never throws. */
+async function fetchClientErrors(): Promise<{ groups: ClientErrorGroup[]; unavailable: boolean }> {
+  try {
+    const { data, error } = await supabase
+      .from('client_errors')
+      .select('id, fingerprint, message, stack, url, release, level, occurrences, last_seen_at, created_at')
+      .order('last_seen_at', { ascending: false })
+      .limit(50);
+    if (error) {
+      // Table missing (migration not applied yet) or not readable by this account.
+      return { groups: [], unavailable: true };
+    }
+    const groups = new Map<string, ClientErrorGroup>();
+    for (const row of (data ?? []) as ClientErrorRow[]) {
+      const key = row.fingerprint || row.id;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.occurrences += row.occurrences ?? 1;
+        continue;
+      }
+      groups.set(key, {
+        key,
+        message: row.message ?? '(no message)',
+        stack: row.stack,
+        url: row.url,
+        release: row.release,
+        level: row.level ?? 'error',
+        occurrences: row.occurrences ?? 1,
+        lastSeenAt: row.last_seen_at ?? row.created_at,
+      });
+    }
+    return { groups: Array.from(groups.values()), unavailable: false };
+  } catch {
+    return { groups: [], unavailable: true };
+  }
+}
+
+function formatLastSeen(iso: string | null): string {
+  if (!iso) return 'unknown';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return 'unknown';
+  const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `${hours} h ago`;
+  return new Date(t).toLocaleDateString();
+}
 
 export default function SystemHealthScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -26,11 +101,22 @@ export default function SystemHealthScreen() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [cleaning, setCleaning] = useState(false);
+  const [expandedError, setExpandedError] = useState<string | null>(null);
 
   const { data: health, isLoading, refetch, isFetching } = useQuery<SystemHealthReport>({
     queryKey: ['system_health_report'],
     queryFn: fetchSystemHealth,
     refetchInterval: 15000,
+  });
+
+  const {
+    data: clientErrors,
+    isLoading: clientErrorsLoading,
+    refetch: refetchClientErrors,
+  } = useQuery({
+    queryKey: ['client_errors'],
+    queryFn: fetchClientErrors,
+    refetchInterval: 60000,
   });
 
   async function handleRunCleanup() {
@@ -89,7 +175,10 @@ export default function SystemHealthScreen() {
               label={isFetching ? 'Pinging...' : 'Refresh'}
               variant="secondary"
               size="sm"
-              onPress={() => refetch()}
+              onPress={() => {
+                refetch();
+                refetchClientErrors();
+              }}
               loading={isFetching}
             />
             <AppButton
@@ -248,6 +337,102 @@ export default function SystemHealthScreen() {
               <AppText style={{ color: '#047857', fontSize: 13.5, fontWeight: '500' }}>
                 All database foreign keys, cascaded relations, and indexes are in verified sync. No orphaned records found.
               </AppText>
+            </View>
+          )}
+        </SolidCard>
+
+        {/* Client-side errors reported by the app (self-hosted sink) */}
+        <SolidCard frosted style={{ padding: spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, gap: 8, flexWrap: 'wrap' }}>
+            <View style={{ flex: 1, minWidth: 200 }}>
+              <AppText variant="h3" weight="bold">Client errors</AppText>
+              <AppText tone="secondary" variant="caption">
+                Latest 50 reports from the web and mobile apps, grouped by fingerprint.
+              </AppText>
+            </View>
+            {clientErrors && !clientErrors.unavailable ? (
+              <Badge
+                label={`${clientErrors.groups.length} distinct`}
+                tone={clientErrors.groups.length > 0 ? 'warning' : 'success'}
+              />
+            ) : null}
+          </View>
+
+          {clientErrorsLoading ? (
+            <ActivityIndicator color={colors.brandPrimary} />
+          ) : clientErrors?.unavailable ? (
+            <AppText tone="secondary" variant="bodySmall">
+              Client error reporting is not available yet (the client_errors table is missing or not readable by this account).
+            </AppText>
+          ) : !clientErrors || clientErrors.groups.length === 0 ? (
+            <View
+              style={{
+                padding: spacing.md,
+                borderRadius: radius.md,
+                backgroundColor: isDark ? 'rgba(16, 185, 129, 0.1)' : '#ECFDF5',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+              <AppText style={{ color: '#047857', fontSize: 13.5, fontWeight: '500' }}>
+                No client errors reported.
+              </AppText>
+            </View>
+          ) : (
+            <View style={{ gap: spacing.sm }}>
+              {clientErrors.groups.map((group) => {
+                const expanded = expandedError === group.key;
+                return (
+                  <View
+                    key={group.key}
+                    style={{
+                      padding: spacing.md,
+                      borderRadius: radius.md,
+                      backgroundColor: isDark ? '#27272A' : '#F4F4F5',
+                      borderWidth: 1,
+                      borderColor: isDark ? '#3F3F46' : '#E4E4E7',
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => setExpandedError(expanded ? null : group.key)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${expanded ? 'Hide' : 'Show'} stack trace`}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                        <AppText weight="bold" style={{ fontSize: 14, flex: 1 }} numberOfLines={expanded ? undefined : 2}>
+                          {group.message}
+                        </AppText>
+                        <Badge
+                          label={`${group.occurrences}x`}
+                          tone={group.level === 'error' ? 'critical' : 'warning'}
+                        />
+                      </View>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 4 }}>
+                        Last seen {formatLastSeen(group.lastSeenAt)}
+                        {group.url ? ` \u00b7 ${group.url}` : ''}
+                        {group.release ? ` \u00b7 ${group.release}` : ''}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                        {expanded ? 'Hide stack trace' : 'Show stack trace'}
+                      </AppText>
+                    </Pressable>
+                    {expanded ? (
+                      <ScrollView style={{ marginTop: spacing.sm, maxHeight: 200 }} nestedScrollEnabled>
+                        <AppText
+                          selectable
+                          tone="secondary"
+                          variant="caption"
+                          style={{ fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) }}
+                        >
+                          {group.stack || 'No stack trace was captured.'}
+                        </AppText>
+                      </ScrollView>
+                    ) : null}
+                  </View>
+                );
+              })}
             </View>
           )}
         </SolidCard>

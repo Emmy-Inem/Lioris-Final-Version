@@ -29,8 +29,8 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+    # One grouped PR per week for every GitHub Actions bump (all pinned SHAs move together).
     groups:
-      actions-minor-and-patch:
-        update-types:
-          - "minor"
-          - "patch"
+      github-actions:
+        patterns:
+          - "*"

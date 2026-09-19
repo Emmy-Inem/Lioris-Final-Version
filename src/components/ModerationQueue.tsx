@@ -311,7 +311,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
 
       {/* Enforcement & Strike Modal */}
       <Modal visible={!!actionModalReport} transparent animationType="slide" onRequestClose={() => setActionModalReport(null)}>
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
         >
@@ -350,7 +350,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                   Moderation Enforcement Action 
                 </AppText>
               </View>
-              <Pressable onPress={() => setActionModalReport(null)} hitSlop={8} style={{ padding: 4 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setActionModalReport(null)} hitSlop={8} style={{ padding: 4 }}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
             </View>

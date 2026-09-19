@@ -6,6 +6,7 @@ import {
  StyleSheet,
  View,
 } from'react-native';
+import { readableOn } from'@/theme/contrast';
 import Animated, {
  useAnimatedStyle,
  useSharedValue,
@@ -45,7 +46,7 @@ export function AppButton({
 
  const palette = {
  primary: { bg: colors.brandPrimary, fg: isDark ? '#0B1120' : '#FFFFFF', border: 'transparent' },
- accent: { bg: colors.brandAccent, fg: isDark ? '#0B1120' : '#FFFFFF', border: 'transparent' },
+ accent: { bg: colors.brandAccent, fg: readableOn(colors.brandAccent), border: 'transparent' },
  secondary: { bg: 'transparent', fg: colors.brandPrimary, border: colors.brandPrimary },
  ghost: { bg: 'transparent', fg: colors.textPrimary, border: 'transparent' },
  }[variant];
@@ -58,6 +59,7 @@ export function AppButton({
  accessibilityLabel={label}
  accessibilityState={{ disabled: !!disabled || !!loading, busy: !!loading }}
  disabled={disabled || loading}
+ hitSlop={isSmall ? { top: 6, bottom: 6, left: 4, right: 4 } : undefined}
  onPressIn={() => (scale.value = withTiming(0.97, { duration: 100 }))}
  onPressOut={() => (scale.value = withTiming(1, { duration: 150 }))}
  style={[

@@ -109,7 +109,7 @@ export function AcademicLibraryModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[
           styles.overlay,
@@ -145,7 +145,7 @@ export function AcademicLibraryModal({
                 Open-access textbooks, research papers & university references
               </AppText>
             </View>
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel="Close"
               onPress={onClose}
               hitSlop={12}
               style={[styles.closeBtn, { backgroundColor: `${colors.textSecondary}15` }]}
@@ -157,7 +157,7 @@ export function AcademicLibraryModal({
           {/* Search Input Bar */}
           <View style={[styles.searchBar, { borderColor: colors.border, backgroundColor: colors.background }]}>
             <Ionicons name="search" size={18} color={colors.textSecondary} />
-            <TextInput
+            <TextInput accessibilityLabel="Search textbook title, author, or ISBN"
               value={query}
               onChangeText={setQuery}
               onSubmitEditing={() => handleSearch(query)}
@@ -167,7 +167,7 @@ export function AcademicLibraryModal({
               style={[styles.searchInput, { color: colors.textPrimary }]}
             />
             {query.length > 0 && (
-              <Pressable onPress={() => setQuery('')} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setQuery('')} hitSlop={8}>
                 <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
               </Pressable>
             )}
@@ -260,7 +260,7 @@ export function AcademicLibraryModal({
                               onPress={() => openBookLink(book)}
                             />
                           )}
-                          <Pressable
+                          <Pressable accessibilityRole="button" accessibilityLabel={isSaved ? 'Remove from saved books' : 'Save book'}
                             onPress={() => toggleSaveBook(book)}
                             hitSlop={8}
                             style={[

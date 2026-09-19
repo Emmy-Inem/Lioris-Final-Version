@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { supabase } from './supabase';
 import { AppNotification } from './types';
 import { getSessionUser } from '../auth/tokenStorage';
@@ -227,6 +228,15 @@ export async function deleteNotification(id: string) {
  }
 }
 
+// The most recently registered token, so logout can unregister this device
+// without having to re-query the Expo token.
+let lastRegisteredPushToken: string | null = null;
+
+/**
+ * Stores this device's Expo push token in public.push_tokens (owner-only RLS;
+ * the send-push edge function reads it with the service role). The token is
+ * unique, so a device that changes hands re-parents to the new signed-in user.
+ */
 export async function registerDevicePushToken(token: string): Promise<void> {
  try {
  const { data: authData } = await supabase.auth.getUser();
@@ -236,10 +246,41 @@ export async function registerDevicePushToken(token: string): Promise<void> {
  if (stored?.id) userId = stored.id;
  }
  if (userId) {
- const { error } = await supabase.from('profiles').update({ push_token: token }).eq('id', userId);
- if (error) console.warn('[Notifications] Register push token error:', error.message);
+ // RPC (not a plain upsert): when a phone changes hands its token still belongs to the
+ // previous account, and RLS would (correctly) stop the new user updating that row.
+ // register_push_token() re-parents it to the caller and validates the token shape.
+ const { error } = await supabase.rpc('register_push_token', {
+ p_token: token,
+ p_platform: Platform.OS,
+ });
+ if (error) {
+ console.warn('[Notifications] Register push token error:', error.message);
+ } else {
+ lastRegisteredPushToken = token;
+ }
  }
  } catch (err) {
  console.warn('[Notifications] Push token error:', err);
+ }
+}
+
+/**
+ * Removes this device's push token so a signed-out device stops receiving the
+ * previous user's notifications. Call BEFORE supabase.auth.signOut() (RLS needs
+ * the session). With no argument it uses the token registered in this session.
+ * Never throws.
+ */
+export async function unregisterDevicePushToken(token?: string): Promise<void> {
+ const target = token ?? lastRegisteredPushToken;
+ if (!target) return;
+ try {
+ const { error } = await supabase.from('push_tokens').delete().eq('token', target);
+ if (error) {
+ console.warn('[Notifications] Unregister push token error:', error.message);
+ return;
+ }
+ if (target === lastRegisteredPushToken) lastRegisteredPushToken = null;
+ } catch (err) {
+ console.warn('[Notifications] Unregister push token error:', err);
  }
 }

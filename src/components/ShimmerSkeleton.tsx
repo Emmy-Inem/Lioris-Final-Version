@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useReducedMotion } from '@/theme/useReducedMotion';
 
 interface ShimmerSkeletonProps {
   width?: number | string;
@@ -16,9 +17,14 @@ export function ShimmerSkeleton({
   style,
 }: ShimmerSkeletonProps) {
   const { colors, isDark } = useTheme();
+  const reduceMotion = useReducedMotion();
   const opacity = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      opacity.setValue(0.6); // static placeholder, no pulsing
+      return;
+    }
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
@@ -35,10 +41,12 @@ export function ShimmerSkeleton({
     );
     pulse.start();
     return () => pulse.stop();
-  }, [opacity]);
+  }, [opacity, reduceMotion]);
 
   return (
     <Animated.View
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
       style={[
         {
           width: width as any,

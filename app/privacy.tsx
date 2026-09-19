@@ -67,7 +67,7 @@ export default function PrivacyPolicyScreen() {
             },
           ]}
         >
-          <Pressable onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Lioris home" onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <LiorisLogo size={30} variant="symbol" />
             <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
           </Pressable>
@@ -213,8 +213,10 @@ export default function PrivacyPolicyScreen() {
 
             <LegalSection title="5. International Transfers & Hosting Regions">
               <LegalParagraph>
-                Our processors process data on secure cloud infrastructure located in established international data centers.
-                Hosting regions currently in use:
+                <LegalStrong>Your data is transferred outside Nigeria.</LegalStrong> Lioris does not currently operate servers in
+                Nigeria: our processors run on secure cloud infrastructure in Sweden and the European Union, and
+                (for web delivery and AI processing) potentially the United States and other countries. Hosting
+                regions currently in use:
               </LegalParagraph>
               <LegalBullets
                 items={[
@@ -224,9 +226,14 @@ export default function PrivacyPolicyScreen() {
                 ]}
               />
               <LegalParagraph>
-                Where personal data leaves Nigeria we rely on the safeguards permitted by the NDPA 2023, such as the
-                recipient being subject to adequate data-protection law or binding contractual terms (data-processing
-                agreements and, where applicable, standard contractual clauses), and on your consent where required.
+                Where personal data leaves Nigeria we rely on the cross-border transfer rules of the NDPA 2023
+                (sections 41 to 43) and the safeguards they permit: (a) Sweden and the EU are covered by the GDPR, a
+                data-protection regime that provides a level of protection at least comparable to the NDPA; (b) for
+                Vercel and Google, and for any onward transfer to the United States or other countries, we rely on
+                binding data-processing agreements that include standard contractual clauses and confidentiality and
+                security obligations; and (c) where neither applies, on your informed consent or another lawful basis
+                the NDPA allows. We only send providers the data they need to perform their service. Contact
+                {DPO_EMAIL} if you would like more detail on the safeguards for a particular provider.
                 For EU/UK users, transfers rely on adequacy decisions or standard contractual clauses.
               </LegalParagraph>
             </LegalSection>

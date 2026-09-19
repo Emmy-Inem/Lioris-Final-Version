@@ -288,7 +288,7 @@ export function UserProfilesTab() {
  label="Edit Role & Status"variant="secondary"onPress={() => handleOpenEdit(user)}
  />
  </View>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="Suspend or reactivate user"
  onPress={() => handleToggleSuspend(user)}
  hitSlop={8}
  style={{
@@ -313,7 +313,7 @@ export function UserProfilesTab() {
 
   {/* Edit User Modal */}
   <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
-    <KeyboardAvoidingView
+    <KeyboardAvoidingView accessibilityViewIsModal
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
     >
@@ -351,7 +351,7 @@ export function UserProfilesTab() {
               User Governance Controls
             </AppText>
           </View>
-          <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setEditModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </Pressable>
         </View>

@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useReducedMotion } from '@/theme/useReducedMotion';
 
 const FAVICON_ASSET = require('../../assets/images/favicon.png');
 
@@ -25,6 +26,7 @@ export function AppLoadingScreen({
   showTimeoutAction = true,
 }: AppLoadingScreenProps) {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [showFailsafe, setShowFailsafe] = useState(false);
 
@@ -44,7 +46,7 @@ export function AppLoadingScreen({
         }),
       ])
     );
-    pulseLoop.start();
+    if (!reduceMotion) pulseLoop.start();
 
     // 5-second failsafe: if still loading, provide recovery options
     const timer = setTimeout(() => {
@@ -55,7 +57,7 @@ export function AppLoadingScreen({
       pulseLoop.stop();
       clearTimeout(timer);
     };
-  }, [pulseAnim]);
+  }, [pulseAnim, reduceMotion]);
 
   const handleForceContinue = () => {
     if (onRetry) {
@@ -75,7 +77,7 @@ export function AppLoadingScreen({
         <Text style={styles.brandTitle}>Lioris</Text>
         <Text style={styles.brandSubtitle}>Campus Operating System</Text>
 
-        <View style={styles.loaderRow}>
+        <View style={styles.loaderRow} accessibilityRole="progressbar" accessibilityLabel={message} accessibilityLiveRegion="polite">
           <ActivityIndicator size="small" color="#2DD4BF" />
           <Text style={styles.messageText}>{message}</Text>
         </View>

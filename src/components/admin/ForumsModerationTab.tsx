@@ -371,7 +371,7 @@ export function ForumsModerationTab() {
                       </View>
                     </>
                   ) : null}
-                  <Pressable
+                  <Pressable accessibilityRole="button" accessibilityLabel="Delete"
                     onPress={() => handleDeleteCommunityConfirm(community)}
                     disabled={actingId === community.id}
                     hitSlop={8}
@@ -476,7 +476,7 @@ export function ForumsModerationTab() {
                     onPress={() => handleTogglePin(post)}
                   />
                 </View>
-                <Pressable
+                <Pressable accessibilityRole="button" accessibilityLabel="Delete"
                   onPress={() => handleDeleteConfirm(post)}
                   hitSlop={8}
                   style={{

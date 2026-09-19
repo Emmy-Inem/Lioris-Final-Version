@@ -464,7 +464,7 @@ export function EventsModerationTab() {
  onPress={() => handleToggleApproval(event)}
  />
  </View>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="Delete"
  onPress={() => handlePurgeConfirm(event.id, event.title)}
  hitSlop={8}
  style={{
@@ -492,7 +492,7 @@ export function EventsModerationTab() {
 
  {/* Create / Edit Event Modal */}
  <Modal visible={editModalOpen} transparent animationType="slide"onRequestClose={() => setEditModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+ <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
  <Pressable style={{ flex: 1 }} onPress={() => setEditModalOpen(false)} />
  <View
  style={{
@@ -510,7 +510,7 @@ export function EventsModerationTab() {
  {editingEvent ? 'Edit Campus Event' : 'Publish Campus Event'}
  </AppText>
  </View>
- <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setEditModalOpen(false)} hitSlop={8}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
  </Pressable>
  </View>
@@ -673,13 +673,13 @@ export function EventsModerationTab() {
 
  {/* Attendee Roster Modal */}
  <Modal visible={!!rosterEvent} transparent animationType="fade"onRequestClose={() => setRosterEvent(null)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg }}>
+ <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg }}>
  <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h3"weight="bold">
  Registered Attendees
  </AppText>
- <Pressable onPress={() => setRosterEvent(null)} hitSlop={8}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setRosterEvent(null)} hitSlop={8}>
  <Ionicons name="close"size={22} color={colors.textSecondary} />
  </Pressable>
  </View>

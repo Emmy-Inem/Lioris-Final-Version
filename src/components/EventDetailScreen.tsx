@@ -672,7 +672,7 @@ export function EventDetailScreen() {
                   />
                 </View>
 
-                <Pressable
+                <Pressable accessibilityRole="button" accessibilityLabel="Delete"
                   onPress={handleCancelEvent}
                   hitSlop={8}
                   style={{
@@ -767,7 +767,7 @@ export function EventDetailScreen() {
               <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
 
               <View style={{ position: 'absolute', top: 16, right: 16, flexDirection: 'row', gap: 8 }}>
-                <Pressable onPress={() => setLightboxOpen(true)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                <Pressable accessibilityRole="button" accessibilityLabel="View full size" onPress={() => setLightboxOpen(true)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="expand-outline" size={18} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -1169,14 +1169,14 @@ export function EventDetailScreen() {
         >
           {/* Top Hero Banner */}
           <View style={{ width: '100%', height: 260, position: 'relative', backgroundColor: colors.surface }}>
-            <Pressable onPress={() => setLightboxOpen(true)} style={{ width: '100%', height: '100%' }}>
+            <Pressable accessibilityRole="button" accessibilityLabel="View event image full screen" onPress={() => setLightboxOpen(true)} style={{ width: '100%', height: '100%' }}>
               <Image source={heroImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
               <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.38)' }} />
             </Pressable>
 
             {/* Floating Navigation Controls */}
             <View style={{ position: 'absolute', top: 44, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Pressable
+              <Pressable accessibilityRole="button" accessibilityLabel="Go back"
                 onPress={() => router.back()}
                 style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -1184,7 +1184,7 @@ export function EventDetailScreen() {
               </Pressable>
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <Pressable
+                <Pressable accessibilityRole="button" accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark event'}
                   onPress={() => {
                     haptics.light();
                     setBookmarked((b) => !b);
@@ -1195,7 +1195,7 @@ export function EventDetailScreen() {
                   <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : '#FFFFFF'} />
                 </Pressable>
 
-                <Pressable
+                <Pressable accessibilityRole="button" accessibilityLabel="View full size"
                   onPress={() => setLightboxOpen(true)}
                   style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
                 >
@@ -1306,7 +1306,7 @@ export function EventDetailScreen() {
                       onPress={handleOpenRoster}
                     />
                   </View>
-                  <Pressable
+                  <Pressable accessibilityRole="button" accessibilityLabel="Delete"
                     onPress={handleCancelEvent}
                     hitSlop={8}
                     style={{
@@ -1692,7 +1692,7 @@ export function EventDetailScreen() {
       {/* ATTENDEE ROSTER MODAL */}
       {/* ========================================================================= */}
       <Modal visible={rosterModalOpen} transparent animationType="slide" onRequestClose={() => setRosterModalOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+        <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setRosterModalOpen(false)} />
           <View
             style={{
@@ -1727,7 +1727,7 @@ export function EventDetailScreen() {
                   Registered Attendees ({rosterAttendees.length})
                 </AppText>
               </View>
-              <Pressable onPress={() => setRosterModalOpen(false)} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setRosterModalOpen(false)} hitSlop={8}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -1747,7 +1747,7 @@ export function EventDetailScreen() {
               }}
             >
               <Ionicons name="search-outline" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
-              <TextInput
+              <TextInput accessibilityLabel="Search by name, department, or matric"
                 style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
                 placeholder="Search by name, department, or matric..."
                 placeholderTextColor={colors.textSecondary}
@@ -1755,7 +1755,7 @@ export function EventDetailScreen() {
                 onChangeText={setRosterSearch}
               />
               {rosterSearch ? (
-                <Pressable onPress={() => setRosterSearch('')} hitSlop={8}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setRosterSearch('')} hitSlop={8}>
                   <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
                 </Pressable>
               ) : null}
@@ -1825,7 +1825,7 @@ export function EventDetailScreen() {
       {/* COMPREHENSIVE EDIT EVENT MODAL */}
       {/* ========================================================================= */}
       <Modal visible={editModalOpen} transparent animationType="slide" onRequestClose={() => setEditModalOpen(false)}>
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
         >
@@ -1863,7 +1863,7 @@ export function EventDetailScreen() {
                   Edit Event Details & Controls
                 </AppText>
               </View>
-              <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setEditModalOpen(false)} hitSlop={8}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -2193,7 +2193,7 @@ export function EventDetailScreen() {
       />
       {/* AGENDA SCHEDULE EDITOR MODAL */}
       <Modal visible={agendaEditorOpen} transparent animationType="slide" onRequestClose={() => setAgendaEditorOpen(false)}>
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
         >
@@ -2231,7 +2231,7 @@ export function EventDetailScreen() {
                   Edit Event Schedule
                 </AppText>
               </View>
-              <Pressable onPress={() => setAgendaEditorOpen(false)} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setAgendaEditorOpen(false)} hitSlop={8}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -2255,7 +2255,7 @@ export function EventDetailScreen() {
                         <AppText weight="bold" variant="caption" tone="secondary">
                           SESSION {idx + 1}
                         </AppText>
-                        <Pressable
+                        <Pressable accessibilityRole="button" accessibilityLabel="Delete"
                           onPress={() => handleRemoveAgendaItem(idx)}
                           hitSlop={8}
                           style={{

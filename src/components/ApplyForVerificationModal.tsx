@@ -136,7 +136,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.md }}
       >
@@ -163,7 +163,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
                 Apply for Verification
               </AppText>
             </View>
-            <Pressable onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
           </View>

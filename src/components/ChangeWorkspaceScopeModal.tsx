@@ -85,7 +85,7 @@ export function ChangeWorkspaceScopeModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View
+      <View accessibilityViewIsModal
         style={{
           flex: 1,
           backgroundColor: 'rgba(0,0,0,0.6)',
@@ -245,7 +245,7 @@ export function ChangeWorkspaceScopeModal({
                   <AppText variant="h3" weight="bold">
                     Add Campus Workspace 🎓
                   </AppText>
-                  <Pressable onPress={() => setCreateModalOpen(false)} hitSlop={8}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setCreateModalOpen(false)} hitSlop={8}>
                     <Ionicons name="close" size={20} color={colors.textSecondary} />
                   </Pressable>
                 </View>

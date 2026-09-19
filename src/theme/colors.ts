@@ -69,7 +69,7 @@ const palette = {
  // Role badge colors (UserTypeBadge) - each role gets a distinct hue,
  // not just the brand blue. Light / dark variants per mode.
  studentGreenBgLight: '#ECFDF5',
- studentGreenTextLight: '#059669',
+ studentGreenTextLight: '#047857',
  studentGreenBgDark: 'rgba(52, 211, 153, 0.18)',
  studentGreenTextDark: '#6EE7B7',
 
@@ -84,13 +84,13 @@ const palette = {
  staffBlueTextDark: '#93C5FD',
 
  adminRedBgLight: '#FEF2F2',
- adminRedTextLight: '#DC2626',
+ adminRedTextLight: '#B91C1C',
  adminRedBgDark: 'rgba(252, 165, 165, 0.18)',
  adminRedTextDark: '#FCA5A5',
 
- success: '#1FAA59',
- warning: '#E8A400',
- critical: '#E5484D',
+ success: '#177E44', // AA (was #1FAA59, 3.0:1)
+ warning: '#996600', // AA (was #E8A400, 2.2:1)
+ critical: '#D02F34', // AA (was #E5484D, 3.9:1)
 } as const;
 
 export interface ThemeColors {
@@ -121,6 +121,8 @@ export interface ThemeColors {
  lavenderBg: string;
  lavenderText: string;
  border: string;
+ /** Border of form controls (WCAG 1.4.11 needs 3:1 against the surface); `border` stays the subtle decorative hairline. */
+ inputBorder: string;
  divider: string;
  success: string;
  warning: string;
@@ -166,6 +168,7 @@ export const lightColors: ThemeColors = {
  lavenderText: palette.lavenderText,
 
  border: palette.liorisNeutralLight,
+ inputBorder: '#7E889C',
  divider: '#EEF0F3',
 
  success: palette.success,
@@ -197,7 +200,7 @@ export const darkColors: ThemeColors = {
  textSecondary: '#94A3B8',
  textInverse: '#FFFFFF',
 
- brandPrimary: '#5D7FFF',
+ brandPrimary: '#6A89FF',
  brandPrimaryPressed: palette.liorisBlue,
  brandAccent: '#FBBF24',
  brandAccentPressed: '#F59E0B',
@@ -215,17 +218,18 @@ export const darkColors: ThemeColors = {
  lavenderText: '#D8B4FE',
 
  border: 'rgba(255, 255, 255, 0.08)',
+ inputBorder: '#64748F',
  divider: 'rgba(255, 255, 255, 0.06)',
 
  success: '#22C55E',
  warning: '#FBBF24',
- critical: '#EF4444',
+ critical: '#F25555', // AA on surface (was #EF4444, 4.4:1)
 
  alumniGradientStart: '#1E40AF',
  alumniGradientEnd: '#0F172A',
 
  tabInactive: '#94A3B8',
- tabActive: '#5D7FFF',
+ tabActive: '#6A89FF',
  tabActivePillBg: 'rgba(26, 61, 255, 0.22)',
 
  glowBlobPrimary: 'rgba(26, 61, 255, 0.16)',
@@ -306,13 +310,13 @@ export const institutionThemeOverrides: Record<
       glowBlobAccent: 'rgba(240,138,46,0.10)',
     },
     dark: {
-      brandPrimary: '#5D7FFF',
+      brandPrimary: '#6A89FF',
       brandPrimaryPressed: '#1A3DFF',
       brandAccent: '#FBBF24',
       brandAccentPressed: '#F59E0B',
       sectionLabel: '#A8B8FF',
       pastelPrimaryBg: 'rgba(26,61,255,0.2)',
-      tabActive: '#5D7FFF',
+      tabActive: '#6A89FF',
       tabActivePillBg: 'rgba(26,61,255,0.28)',
       glowBlobPrimary: 'rgba(26,61,255,0.28)',
       glowBlobAccent: 'rgba(251,191,36,0.10)',
@@ -384,13 +388,13 @@ export const institutionThemeOverrides: Record<
       glowBlobAccent: 'rgba(240,138,46,0.10)',
     },
     dark: {
-      brandPrimary: '#5D7FFF',
+      brandPrimary: '#6A89FF',
       brandPrimaryPressed: '#1A3DFF',
       brandAccent: '#FBBF24',
       brandAccentPressed: '#F59E0B',
       sectionLabel: '#A8B8FF',
       pastelPrimaryBg: 'rgba(26, 61, 255, 0.16)',
-      tabActive: '#5D7FFF',
+      tabActive: '#6A89FF',
       tabActivePillBg: 'rgba(26, 61, 255, 0.22)',
       glowBlobPrimary: 'rgba(26, 61, 255, 0.20)',
       glowBlobAccent: 'rgba(251, 191, 36, 0.10)',
@@ -467,7 +471,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
     label: 'Lioris Blue & Gold',
     campusName: 'Default Platform Brand',
     primaryLight: '#1A3DFF',
-    primaryDark: '#5D7FFF',
+    primaryDark: '#6A89FF',
     accentLight: '#F08A2E',
     accentDark: '#FBBF24',
     isDefault: true,
@@ -486,7 +490,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
     label: 'Lagos Royal Blue & Gold',
     campusName: 'University of Lagos',
     primaryLight: '#1A3DFF',
-    primaryDark: '#5D7FFF',
+    primaryDark: '#6A89FF',
     accentLight: '#F08A2E',
     accentDark: '#FBBF24',
   },

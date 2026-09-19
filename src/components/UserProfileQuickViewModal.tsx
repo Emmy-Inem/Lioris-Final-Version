@@ -71,7 +71,7 @@ export function UserProfileQuickViewModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable accessibilityViewIsModal accessible={false} importantForAccessibility="no" style={styles.overlay} onPress={onClose}>
         <Pressable
           style={[
             styles.modalContent,
@@ -91,7 +91,7 @@ export function UserProfileQuickViewModal({
             {/* Header row with close button */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md }}>
               <Avatar name={user.name} size={64} role={user.role ?? 'student'} />
-              <Pressable
+              <Pressable accessibilityRole="button" accessibilityLabel="Close"
                 onPress={onClose}
                 hitSlop={12}
                 style={{

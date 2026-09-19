@@ -50,7 +50,7 @@ export function ImageViewerModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <View accessibilityViewIsModal style={styles.container}>
         {/* Top Header Bar */}
         <View style={[styles.topBar, { top: Math.max(insets.top, 16) }]}>
           <Pressable onPress={onClose} hitSlop={12} style={styles.iconButton} accessibilityLabel="Close Fullscreen View">
@@ -65,7 +65,7 @@ export function ImageViewerModal({
         </View>
 
         {/* Main Centered Full-Screen Image */}
-        <Pressable style={[styles.imageWrapper, { width, height: height * 0.82 }]} onPress={onClose}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close image viewer" style={[styles.imageWrapper, { width, height: height * 0.82 }]} onPress={onClose}>
           <Image
             source={resolvedSource}
             style={styles.fullImage}

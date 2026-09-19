@@ -54,7 +54,7 @@ export function LibraryFilterModal({ visible, onClose, filters, onApply }: Libra
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View
+      <View accessibilityViewIsModal
         style={{
           flex: 1,
           backgroundColor: 'rgba(0,0,0,0.55)',

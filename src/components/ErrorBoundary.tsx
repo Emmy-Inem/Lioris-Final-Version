@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
+import { reportError } from '@/monitoring/errorReporter';
 
 const FAVICON_ASSET = require('../../assets/images/favicon.png');
 
@@ -41,6 +42,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: any) {
     console.error('Lioris caught unhandled render error:', error, errorInfo);
+    reportError(error, { source: 'ErrorBoundary', componentStack: errorInfo?.componentStack });
     this.setState({ errorInfo });
   }
 
@@ -85,6 +87,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
  */
 export function RouteErrorBoundary(props: { error: Error; retry: () => void }) {
   const [showDetails, setShowDetails] = React.useState(false);
+
+  React.useEffect(() => {
+    reportError(props.error, { source: 'RouteErrorBoundary' });
+  }, [props.error]);
 
   return (
     <ErrorFallbackView

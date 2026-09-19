@@ -120,7 +120,7 @@ export function MessagesListScreen() {
                 }}
               >
                 <Ionicons name="search" size={16} color={colors.textSecondary} />
-                <TextInput
+                <TextInput accessibilityLabel="Search chats"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   placeholder="Search chats..."
@@ -128,7 +128,7 @@ export function MessagesListScreen() {
                   style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                 />
                 {searchQuery ? (
-                  <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')} hitSlop={8}>
                     <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
                   </Pressable>
                 ) : null}
@@ -282,7 +282,7 @@ export function MessagesListScreen() {
             }}
           >
             <Ionicons name="search" size={16} color={colors.textSecondary} />
-            <TextInput
+            <TextInput accessibilityLabel="Search conversations"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search conversations..."
@@ -290,7 +290,7 @@ export function MessagesListScreen() {
               style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
             />
             {searchQuery ? (
-              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')} hitSlop={8}>
                 <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
               </Pressable>
             ) : null}

@@ -136,11 +136,11 @@ export default function VerifyMfaScreen() {
   const pinInput = (
     <>
       {/* 6-Digit Segmented PIN Display */}
-      <Pressable onPress={() => inputRef.current?.focus()} style={{ marginBottom: spacing.lg }}>
+      <Pressable accessible={false} onPress={() => inputRef.current?.focus()} style={{ marginBottom: spacing.lg }}>
         <AppText weight="bold" variant="caption" tone="secondary" style={{ marginBottom: spacing.xs }}>
           ENTER 6-DIGIT CODE
         </AppText>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
+        <View importantForAccessibility="no-hide-descendants" aria-hidden style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
           {[0, 1, 2, 3, 4, 5].map((index) => {
             const char = code[index] || '';
             const isFocused = code.length === index || (index === 5 && code.length === 6);
@@ -175,6 +175,9 @@ export default function VerifyMfaScreen() {
             setCode(numericOnly);
           }}
           keyboardType="number-pad"
+          accessibilityLabel="6-digit verification code"
+          textContentType="oneTimeCode"
+          autoComplete="one-time-code"
           maxLength={6}
           autoFocus={!isEnroll}
           style={{ position: 'absolute', opacity: 0, width: '100%', height: 50 }}

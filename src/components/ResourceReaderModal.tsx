@@ -92,7 +92,7 @@ export function ResourceReaderModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: colors.background }}>
         {/* Modal Top Navigation Bar */}
         <View
           style={{

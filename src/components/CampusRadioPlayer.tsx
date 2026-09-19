@@ -163,7 +163,7 @@ export function CampusRadioPlayer() {
               {showStations ? 'Close ▴' : 'Browse Stations ▾'}
             </AppText>
           </Pressable>
-          <Pressable onPress={() => setMinimized(true)} hitSlop={8} style={styles.iconBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Minimise radio player" onPress={() => setMinimized(true)} hitSlop={8} style={styles.iconBtn}>
             <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
           </Pressable>
         </View>
@@ -190,7 +190,7 @@ export function CampusRadioPlayer() {
           {/* Search Bar */}
           <View style={[styles.searchBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
             <Ionicons name="search" size={15} color={colors.textSecondary} />
-            <TextInput
+            <TextInput accessibilityLabel="Search 40,000+ stations (e.g. Lagos, Ibadan, Wazobia, Lofi)"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search 40,000+ stations (e.g. Lagos, Ibadan, Wazobia, Lofi)..."
@@ -199,7 +199,7 @@ export function CampusRadioPlayer() {
             />
             {searching && <ActivityIndicator size="small" color={colors.brandPrimary} />}
             {searchQuery ? (
-              <Pressable onPress={() => setSearchQuery('')} hitSlop={6}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')} hitSlop={6}>
                 <Ionicons name="close-circle" size={15} color={colors.textSecondary} />
               </Pressable>
             ) : null}
@@ -275,7 +275,7 @@ export function CampusRadioPlayer() {
       {/* Audio Playback Controls Row */}
       <View style={styles.controlsRow}>
         <View style={styles.leftControls}>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={radioState.isPlaying ? 'Pause radio' : 'Play radio'}
             onPress={() => campusRadio.togglePlay()}
             style={[styles.playBtn, { backgroundColor: colors.brandPrimary }]}
           >
@@ -289,7 +289,7 @@ export function CampusRadioPlayer() {
               />
             )}
           </Pressable>
-          <Pressable onPress={nextStation} hitSlop={8} style={styles.iconBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next station" onPress={nextStation} hitSlop={8} style={styles.iconBtn}>
             <Ionicons name="play-forward" size={18} color={colors.textPrimary} />
           </Pressable>
           <View style={styles.nowPlayingIndicator}>
@@ -305,7 +305,7 @@ export function CampusRadioPlayer() {
         </View>
 
         <View style={styles.rightControls}>
-          <Pressable onPress={() => campusRadio.toggleMute()} hitSlop={8} style={styles.iconBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel={radioState.isMuted ? 'Unmute radio' : 'Mute radio'} onPress={() => campusRadio.toggleMute()} hitSlop={8} style={styles.iconBtn}>
             <Ionicons
               name={radioState.isMuted ? 'volume-mute' : 'volume-high'}
               size={18}

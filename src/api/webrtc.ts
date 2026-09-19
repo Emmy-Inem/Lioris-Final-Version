@@ -1,6 +1,6 @@
 /**
- * Pure WebRTC Calling Engine powered by Supabase Realtime & Google STUN
- * 100% Free Forever, Zero Iframes, 100% Native Lioris UI.
+ * Pure WebRTC Calling Engine powered by Supabase Realtime signaling, public STUN
+ * and (when configured) a Cloudflare TURN relay. Zero iframes, native Lioris UI.
  */
 import { supabase } from '@/api/supabase';
 
@@ -24,6 +24,72 @@ const ICE_SERVERS = [
   { urls: 'stun:stun4.l.google.com:19302' },
   { urls: 'stun:stun.services.mozilla.com' },
 ];
+
+// ---------------------------------------------------------------------------
+// TURN relay. Public STUN alone fails behind symmetric NAT / carrier-grade NAT
+// (very common on mobile networks), so the 'turn-credentials' edge function
+// mints short-lived Cloudflare TURN credentials. They are cached in memory and
+// any failure (not configured, offline, timeout, rate limited) falls back to
+// STUN-only so a call can still start.
+// ---------------------------------------------------------------------------
+const TURN_FETCH_TIMEOUT_MS = 3000;
+const TURN_DEFAULT_TTL_SECONDS = 3600;
+const TURN_REFRESH_MARGIN_MS = 5 * 60 * 1000;
+
+interface CachedIceServers {
+  servers: any[];
+  expiresAt: number;
+}
+
+let cachedTurnServers: CachedIceServers | null = null;
+let inflightTurnFetch: Promise<any[]> | null = null;
+
+async function fetchTurnServers(): Promise<any[]> {
+  const invoke = supabase.functions.invoke('turn-credentials', { body: {} });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('turn-credentials timeout')), TURN_FETCH_TIMEOUT_MS);
+  });
+  try {
+    const { data, error } = (await Promise.race([invoke, timeout])) as {
+      data: { iceServers?: unknown; ttl?: unknown } | null;
+      error: unknown;
+    };
+    if (error || !data || !Array.isArray(data.iceServers)) return [];
+    const servers = data.iceServers.filter(
+      (s: any) => s && (typeof s.urls === 'string' || Array.isArray(s.urls)),
+    );
+    if (servers.length === 0) return [];
+    const ttl = typeof data.ttl === 'number' && data.ttl > 0 ? data.ttl : TURN_DEFAULT_TTL_SECONDS;
+    cachedTurnServers = {
+      servers,
+      expiresAt: Date.now() + ttl * 1000 - TURN_REFRESH_MARGIN_MS,
+    };
+    return servers;
+  } catch {
+    return [];
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/** STUN list plus (when available) TURN relay servers. Never throws. */
+async function getIceServers(): Promise<any[]> {
+  try {
+    if (cachedTurnServers && cachedTurnServers.expiresAt > Date.now()) {
+      return [...cachedTurnServers.servers, ...ICE_SERVERS];
+    }
+    if (!inflightTurnFetch) {
+      inflightTurnFetch = fetchTurnServers().finally(() => {
+        inflightTurnFetch = null;
+      });
+    }
+    const turn = await inflightTurnFetch;
+    return [...turn, ...ICE_SERVERS];
+  } catch {
+    return ICE_SERVERS;
+  }
+}
 
 // Signaling payloads arrive from other clients over Realtime broadcast, so they
 // are validated before touching the peer connection.
@@ -106,8 +172,10 @@ export class WebRTCCallSession {
         throw new Error('WebRTC RTCPeerConnection is not supported in this runtime environment.');
       }
 
+      // STUN + (when configured) TURN relay credentials; STUN-only on any failure.
+      const iceServers = await getIceServers();
       this.peerConnection = new RTCPC({
-        iceServers: ICE_SERVERS,
+        iceServers,
         iceCandidatePoolSize: 4,
       });
 

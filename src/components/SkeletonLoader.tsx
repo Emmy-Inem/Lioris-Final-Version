@@ -9,6 +9,7 @@ import Animated, {
  Easing,
 } from'react-native-reanimated';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useReducedMotion } from'@/theme/useReducedMotion';
 
 interface SkeletonLoaderProps {
  height?: number;
@@ -24,15 +25,20 @@ interface SkeletonLoaderProps {
  */
 export function SkeletonLoader({ height = 120, width = '100%', borderRadius }: SkeletonLoaderProps) {
  const { colors, radius } = useTheme();
+ const reduceMotion = useReducedMotion();
  const translateX = useSharedValue(-1);
 
  useEffect(() => {
+ if (reduceMotion) {
+ translateX.value = -1;
+ return;
+ }
  translateX.value = withRepeat(
  withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
  -1,
  false,
  );
- }, [translateX]);
+ }, [translateX, reduceMotion]);
 
  const animatedStyle = useAnimatedStyle(() => ({
  transform: [{ translateX: translateX.value * 250 }],
