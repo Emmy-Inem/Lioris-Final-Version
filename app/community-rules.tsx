@@ -69,7 +69,7 @@ export default function CommunityRulesScreen() {
         >
           <Pressable onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <LiorisLogo size={30} variant="symbol" />
-            <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
+            <LiorisLogo size={20} variant="wordmark" />
           </Pressable>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

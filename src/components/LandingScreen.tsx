@@ -162,7 +162,7 @@ export function LandingScreen() {
           >
             <LiorisLogo size={32} variant="symbol" />
             {width >= 480 && (
-              <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
+              <LiorisLogo size={20} variant="wordmark" />
             )}
           </Pressable>
 
@@ -1248,7 +1248,7 @@ export function LandingScreen() {
               <View style={{ flex: isDesktop ? 1.4 : undefined, marginBottom: isDesktop ? 0 : 36 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <LiorisLogo size={32} variant="symbol" />
-                  <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
+                  <LiorisLogo size={20} variant="wordmark" />
                 </View>
                 <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 22, maxWidth: 340, marginBottom: 16 }}>
                   The unified university platform connecting verified students and alumni through departmental forums,

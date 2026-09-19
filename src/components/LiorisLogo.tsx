@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
+import { useTheme } from '@/theme/ThemeProvider';
+import { BRAND_PALETTE, type BrandToneId } from '@/constants/brandPalette';
+import { WORDMARK_ASSETS } from '@/constants/brandWordmarks';
+import { pickBrandTone } from '@/utils/brandTone';
+
+/** 'auto' matches the active theme; 'blue' / 'orange' are kept as aliases for older callers. */
+export type LiorisWordmarkTone = BrandToneId | 'auto' | 'blue' | 'orange';
 
 interface LiorisLogoProps {
-  /** Emblem edge length in px. The wordmark is sized relative to it (see WORDMARK_HEIGHT_RATIO). */
+  /** Emblem edge length in px. The wordmark is sized relative to it (see the ratios below). */
   size?: number;
   /**
    * Legacy colour hint kept for existing callers: a LIGHT value (e.g. '#FFFFFF') selects the white
@@ -11,22 +18,21 @@ interface LiorisLogoProps {
    */
   tintColor?: string;
   variant?: 'symbol' | 'wordmark' | 'full';
-  /** Wordmark colour. 'auto' = brand blue. Use 'white' over photos/dark heroes, 'orange' for accents. */
-  tone?: 'auto' | 'blue' | 'orange' | 'white';
+  /**
+   * Wordmark colour. Default 'auto' picks the emblem colour that best matches the active theme
+   * (campus / accent, light / dark) and stays readable on it. Or force any emblem colour
+   * ('sky' | 'azure' | 'cobalt' | 'orange' | 'tangerine' | 'salmon' | 'crimson' | 'magenta' | 'plum')
+   * or 'white' (over photos and dark heroes).
+   */
+  tone?: LiorisWordmarkTone;
   /** Emblem artwork: the full-colour master (default) or the all-blue variant. */
   emblem?: 'color' | 'blue';
   showSubtitle?: boolean;
 }
 
-// Real brand artwork (background-removed cut-outs built by tools/brand/build-brand-assets.cjs).
 const EMBLEM_ASSETS = {
   color: require('../../assets/images/lioris_emblem.png'),
   blue: require('../../assets/images/lioris_emblem_blue.png'),
-};
-const WORDMARK_ASSETS = {
-  blue: require('../../assets/images/lioris_wordmark_blue.png'),
-  orange: require('../../assets/images/lioris_wordmark_orange.png'),
-  white: require('../../assets/images/lioris_wordmark_white.png'),
 };
 
 /** Width / height of the wordmark PNGs (393 x 110). */
@@ -34,6 +40,8 @@ const WORDMARK_ASPECT = 393 / 110;
 /** Wordmark height as a fraction of `size`: standalone wordmark, and next to the emblem. */
 const WORDMARK_HEIGHT_RATIO = 0.9;
 const FULL_WORDMARK_HEIGHT_RATIO = 0.5;
+
+const TONE_ALIASES: Record<string, BrandToneId> = { blue: 'sky', orange: 'orange' };
 
 function isLightColor(hex?: string): boolean {
   if (!hex) return false;
@@ -45,12 +53,7 @@ function isLightColor(hex?: string): boolean {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.75;
 }
 
-function resolveTone(tone: LiorisLogoProps['tone'], tintColor?: string): 'blue' | 'orange' | 'white' {
-  if (tone && tone !== 'auto') return tone;
-  return isLightColor(tintColor) ? 'white' : 'blue';
-}
-
-function Wordmark({ height, tone }: { height: number; tone: 'blue' | 'orange' | 'white' }) {
+function Wordmark({ height, tone }: { height: number; tone: BrandToneId }) {
   return (
     <Image
       source={WORDMARK_ASSETS[tone]}
@@ -63,8 +66,16 @@ function Wordmark({ height, tone }: { height: number; tone: 'blue' | 'orange' | 
 }
 
 export function LiorisLogo({ size = 48, tintColor, variant = 'symbol', tone = 'auto', emblem = 'color' }: LiorisLogoProps) {
-  const resolvedTone = resolveTone(tone, tintColor);
+  const { colors } = useTheme();
   const emblemSource = EMBLEM_ASSETS[emblem];
+
+  // The emblem colour closest to the active theme that is still readable on its background.
+  const themeTone = useMemo(
+    () => pickBrandTone(BRAND_PALETTE, { primary: colors.brandPrimary, backgrounds: [colors.background, colors.surface] }),
+    [colors.brandPrimary, colors.background, colors.surface],
+  );
+  const resolvedTone: BrandToneId =
+    tone !== 'auto' ? (TONE_ALIASES[tone] ?? (tone as BrandToneId)) : isLightColor(tintColor) ? 'white' : themeTone;
 
   if (variant === 'symbol') {
     return (
