@@ -14,7 +14,7 @@ Values the app already assumes (so the dashboard must match):
 | Assumption in code | Where |
 | --- | --- |
 | Email confirmation is ON and the user types a **6-digit code** | `app/(auth)/verify-email.tsx` (`maxLength={6}`), `supabase_email_confirmation_2026.sql` |
-| Passwords are at least **12 characters** on the register screen | `app/(auth)/register.tsx` |
+| Passwords are at least **8 characters** on the register screen | `app/(auth)/register.tsx` |
 | Cloudflare Turnstile token is passed as `captchaToken` on sign-up, sign-in and password reset | `src/api/auth.ts`, `src/components/TurnstileWidget.tsx` |
 | Admin/staff enrol TOTP and are moved to AAL2 | `src/auth/mfaPolicy.ts`, `app/(auth)/verify-mfa.tsx` |
 | Password reset redirects to `https://lioris.app/(auth)/login` | `src/api/auth.ts` (~line 586) |

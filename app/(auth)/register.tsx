@@ -68,10 +68,10 @@ export default function RegisterScreen() {
  setErrorMessage('Please enter a valid email address.');
  return;
  }
- if (!passwordValid) {
- setErrorMessage('Password must meet all security criteria (12+ characters with uppercase, lowercase, numbers, and symbols).');
- return;
- }
+  if (!passwordValid) {
+    setErrorMessage('Password must meet all security criteria (8+ characters with uppercase, lowercase, numbers, and symbols).');
+    return;
+  }
  if (!usernameValid) {
  setErrorMessage('Username must be 3-24 characters (letters, numbers, dots, underscores).');
  return;
@@ -192,15 +192,15 @@ export default function RegisterScreen() {
  ) : null}
 
  <View>
- <AppTextField
- label="Password (Min 12 characters)"
- secureTextEntry={!showPassword}
- autoComplete="new-password"
- textContentType="newPassword"
- value={password}
- onChangeText={setPassword}
- placeholder="••••••••••••"
- />
+      <AppTextField
+        label="Password (Min 8 characters)"
+        secureTextEntry={!showPassword}
+        autoComplete="new-password"
+        textContentType="newPassword"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="••••••••"
+      />
  <Pressable
  onPress={() => setShowPassword((v) => !v)}
  accessibilityRole="button"

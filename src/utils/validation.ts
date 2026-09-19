@@ -1,4 +1,4 @@
-// PRD Security Requirements > Password Policy: minimum 12 characters,
+// PRD Security Requirements > Password Policy: minimum 8 characters,
 // at least one uppercase, one lowercase, one number, one special
 // character; common passwords must be rejected.
 
@@ -6,34 +6,38 @@
 // check against a proper breached/common-password list (e.g. a
 // Have I Been Pwned - style k-anonymity check), not a hardcoded array.
 const COMMON_PASSWORDS = new Set([
- 'password123!',
- 'password1234',
- 'qwertyuiop12',
- '123456789012',
- 'letmein12345',
- 'welcome12345',
- 'iloveyou1234',
+  'password',
+  'password1',
+  'password123!',
+  'password1234',
+  '12345678',
+  'qwertyui',
+  'qwertyuiop12',
+  '123456789012',
+  'letmein12345',
+  'welcome12345',
+  'iloveyou1234',
 ]);
 
 export interface PasswordCheck {
- id: string;
- label: string;
- met: boolean;
+  id: string;
+  label: string;
+  met: boolean;
 }
 
 export function checkPassword(password: string): PasswordCheck[] {
- return [
- { id: 'length', label: 'At least 12 characters', met: password.length >= 12 },
- { id: 'upper', label: 'One uppercase letter', met: /[A-Z]/.test(password) },
- { id: 'lower', label: 'One lowercase letter', met: /[a-z]/.test(password) },
- { id: 'number', label: 'One number', met: /[0-9]/.test(password) },
- { id: 'special', label: 'One special character', met: /[^A-Za-z0-9]/.test(password) },
- {
- id: 'common',
- label: 'Not a commonly used password',
- met: !COMMON_PASSWORDS.has(password.toLowerCase()),
- },
- ];
+  return [
+    { id: 'length', label: 'At least 8 characters', met: password.length >= 8 },
+    { id: 'upper', label: 'One uppercase letter', met: /[A-Z]/.test(password) },
+    { id: 'lower', label: 'One lowercase letter', met: /[a-z]/.test(password) },
+    { id: 'number', label: 'One number', met: /[0-9]/.test(password) },
+    { id: 'special', label: 'One special character', met: /[^A-Za-z0-9]/.test(password) },
+    {
+      id: 'common',
+      label: 'Not a commonly used password',
+      met: !COMMON_PASSWORDS.has(password.toLowerCase()),
+    },
+  ];
 }
 
 export function isPasswordValid(password: string): boolean {
@@ -53,7 +57,7 @@ export interface PasswordStrength {
 export function passwordStrength(password: string): PasswordStrength {
  const checks = checkPassword(password);
  const metCount = checks.filter((c) => c.met).length;
- const lengthBonus = Math.min(20, Math.max(0, password.length - 12) * 2);
+ const lengthBonus = Math.min(20, Math.max(0, password.length - 8) * 2);
  const score = Math.min(100, Math.round((metCount / checks.length) * 80) + lengthBonus);
 
  if (password.length === 0) return { score: 0, label: 'Too weak', color: 'critical' };
