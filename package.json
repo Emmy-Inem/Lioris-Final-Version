@@ -68,6 +68,6 @@
     "browserslist": "^4.29.0",
     "baseline-browser-mapping": "^2.11.25",
     "uuid": "^11.1.1",
-    "query-string": "^9.5.1"
+    "query-string": "^7.1.3"
   }
 }
