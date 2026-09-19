@@ -18,24 +18,30 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import { listMentorships, searchMentors } from '@/api/mentorship';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 const EXPERTISE_CATEGORIES = ['All Fields', 'Software', 'Resume Prep', 'Finance', 'Research', 'Design'];
 
 export default function StudentMentorshipScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const toast = useToast();
   const { user } = useAuth();
   const { isDesktop } = useResponsive();
+  const { campusCode } = useCampusScope();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
   const [expertise, setExpertise] = useState('All Fields');
+  const [campusFilter, setCampusFilter] = useState<'campus' | 'all'>('campus');
+
+  const activeCampus = campusFilter === 'campus' && campusCode && campusCode !== 'GLOBAL' ? campusCode : undefined;
+
   const { data: mentorships } = useQuery({ queryKey: ['mentorships'], queryFn: listMentorships });
   const { data: mentors, isLoading } = useQuery({
-    queryKey: ['mentors', debouncedQuery, expertise],
-    queryFn: () => searchMentors({ q: debouncedQuery || undefined, focusArea: expertise }),
+    queryKey: ['mentors', debouncedQuery, expertise, activeCampus],
+    queryFn: () => searchMentors({ q: debouncedQuery || undefined, focusArea: expertise, campusCode: activeCampus }),
   });
 
   const myApplications = mentorships?.filter((m) => !!user?.id && m.studentId === user.id) ?? [];
@@ -124,6 +130,42 @@ export default function StudentMentorshipScreen() {
           value={query}
           onChangeText={setQuery}
         />
+
+        {campusCode && campusCode !== 'GLOBAL' && (
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.sm }}>
+            {[
+              { id: 'campus', label: `${campusCode} Mentors` },
+              { id: 'all', label: 'All Campuses' },
+            ].map((f) => {
+              const isSelected = campusFilter === f.id;
+              return (
+                <Pressable
+                  key={f.id}
+                  onPress={() => setCampusFilter(f.id as any)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
+                    borderRadius: radius.pill,
+                    backgroundColor: isSelected ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.brandPrimary : colors.border,
+                  }}
+                >
+                  <AppText
+                    weight={isSelected ? 'bold' : 'regular'}
+                    variant="caption"
+                    style={{
+                      fontSize: 11,
+                      color: isSelected ? colors.textInverse : colors.textSecondary,
+                    }}
+                  >
+                    {f.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         <View style={{ marginBottom: spacing.lg }}>
           <ChipSelect

@@ -77,6 +77,9 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
  const { data: prof } = await supabase.from('profiles').select('campus_code, role').eq('id', authData.user.id).maybeSingle();
  if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
  if (prof?.role) userRole = prof.role;
+ if (!userCampus && authData.user.user_metadata?.campus_code) {
+ userCampus = authData.user.user_metadata.campus_code;
+ }
  }
 
  if (!userCampus && authData?.user?.email) {
@@ -99,9 +102,12 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
       .filter((row: any) => !isUserBlocked(row.uploader_id))
       .filter((row: any) => {
         if (isStaffOrAdmin && !(query as any).campusCode) return true;
-        if (!userCampus || userCampus === 'GLOBAL') return true;
+        const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
         const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
-        return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
+        if (targetCampus === 'GLOBAL') {
+          return rowCampus === 'GLOBAL';
+        }
+        return rowCampus === targetCampus || rowCampus === 'GLOBAL';
       })
       .map((row: any) => ({
         id: row.id,
@@ -134,11 +140,12 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
       if (!merged.some((m) => m.id === r.id) && !isUserBlocked(r.authorId)) {
         if (isStaffOrAdmin && !(query as any).campusCode) {
           merged.push(r);
-        } else if (!userCampus || userCampus === 'GLOBAL') {
-          merged.push(r);
         } else {
+          const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
           const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
-          if (rCampus === userCampus.toUpperCase() || rCampus === 'GLOBAL') {
+          if (targetCampus === 'GLOBAL') {
+            if (rCampus === 'GLOBAL') merged.push(r);
+          } else if (rCampus === targetCampus || rCampus === 'GLOBAL') {
             merged.push(r);
           }
         }
@@ -194,53 +201,57 @@ export interface CreateResourcePayload {
  * must catch this and show a real error - see ManageResourcesModal.
  */
 export async function createResource(
- payload: Partial<Resource> & {
- title: string;
- courseCode: string;
- category: Resource['category'];
- fileSizeBytes?: number;
- fileMimeType?: string;
- },
- fileBlob?: Blob | ArrayBuffer,
+  payload: Partial<Resource> & {
+    title: string;
+    courseCode: string;
+    category: Resource['category'];
+    fileSizeBytes?: number;
+    fileMimeType?: string;
+    campusCode?: string;
+  },
+  fileBlob?: Blob | ArrayBuffer,
 ): Promise<Resource> {
- const resourceId = generateUUID();
+  const resourceId = generateUUID();
 
- const { data: authData } = await supabase.auth.getUser();
- let uploaderId: string | null = authData?.user?.id || null;
- if (!uploaderId) {
- const stored = await getSessionUser();
- if (stored?.id) uploaderId = stored.id;
- }
+  const { data: authData } = await supabase.auth.getUser();
+  let uploaderId: string | null = authData?.user?.id || null;
+  if (!uploaderId) {
+    const stored = await getSessionUser();
+    if (stored?.id) uploaderId = stored.id;
+  }
 
- if (!uploaderId) {
- throw new Error('You need to be signed in to share a resource.');
- }
+  if (!uploaderId) {
+    throw new Error('You need to be signed in to share a resource.');
+  }
 
- const created: Resource = {
- id: resourceId,
- title: payload.title,
- description: payload.description || 'No description provided.',
- category: payload.category,
- department: payload.department || 'General',
- courseCode: payload.courseCode,
- fileSize: payload.fileSize || undefined,
- fileType: payload.fileType || 'PDF',
- academicLevel: payload.academicLevel || '300L',
- authorName: 'You',
- authorId: uploaderId,
- likesCount: 0,
- downloadsCount: 0,
- createdAt: new Date().toISOString(),
- approvalStatus: 'approved',
- };
+  const created: Resource = {
+    id: resourceId,
+    title: payload.title,
+    description: payload.description || 'No description provided.',
+    category: payload.category,
+    department: payload.department || 'General',
+    courseCode: payload.courseCode,
+    fileSize: payload.fileSize || undefined,
+    fileType: payload.fileType || 'PDF',
+    academicLevel: payload.academicLevel || '300L',
+    authorName: 'You',
+    authorId: uploaderId,
+    likesCount: 0,
+    downloadsCount: 0,
+    createdAt: new Date().toISOString(),
+    approvalStatus: 'approved',
+  };
 
- // Fetch uploader's campus
- const { data: profile } = await supabase
- .from('profiles')
- .select('campus_code')
- .eq('id', uploaderId)
- .maybeSingle();
- const campusCode = profile?.campus_code || 'GLOBAL';
+  // Fetch uploader's campus
+  let campusCode = payload.campusCode;
+  if (!campusCode) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('campus_code')
+      .eq('id', uploaderId)
+      .maybeSingle();
+    campusCode = profile?.campus_code || 'GLOBAL';
+  }
 
  let fileExt = 'pdf';
  let mimeType = 'application/pdf';

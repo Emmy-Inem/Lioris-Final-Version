@@ -23,6 +23,7 @@ const COURSE_FILTERS = ['All Pods', 'CSC 401', 'CSC 412', 'MAT 201', 'EEE 301', 
 export default function StudyGroupsScreen() {
  const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
+  const toast = useToast();
  const queryClient = useQueryClient();
  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
@@ -33,10 +34,15 @@ export default function StudyGroupsScreen() {
 
  const { data: groups, isLoading } = useQuery({ queryKey: ['study-groups', campusCode], queryFn: () => listStudyGroups(campusCode) });
 
- async function handleCreate(payload: Parameters<typeof createStudyGroup>[0]) {
- await createStudyGroup(payload);
- queryClient.invalidateQueries({ queryKey: ['study-groups'] });
- }
+  async function handleCreate(payload: Parameters<typeof createStudyGroup>[0]) {
+    try {
+      await createStudyGroup({ ...payload, campusCode });
+      queryClient.invalidateQueries({ queryKey: ['study-groups'] });
+      toast.show('Study pod created successfully!');
+    } catch (err: any) {
+      toast.show(err?.message || 'Could not create study pod.');
+    }
+  }
 
  const filteredGroups = (groups ?? []).filter((g) => {
  if (searchQuery.trim()) {

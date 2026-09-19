@@ -17,6 +17,10 @@ import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { listResources, createResource } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
+import { getMyProfile } from '@/api/profile';
+import { getInstitutionByCode } from '@/api/institutions';
+import { useToast } from '@/context/ToastContext';
+import { resolveActivePortalTarget } from '@/utils/campusPortalScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
@@ -52,6 +56,7 @@ export default function ResourcesScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
   const { isDesktop } = useResponsive();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>('CURRENT');
   const [query, setQuery] = useState('');
@@ -111,46 +116,66 @@ export default function ResourcesScreen() {
   };
 
   const { campusCode, homeInstitutionCode } = useCampusScope();
-  const currentCampus =
-    (campusCode && campusCode !== 'GLOBAL')
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+
+  const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff';
+
+  // Determine user's effective campus (e.g. UNILAG, UI, FUNAAB)
+  const effectiveCampus =
+    (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
+      ? profile.institutionCode
+      : (campusCode && campusCode !== 'GLOBAL')
       ? campusCode
       : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL')
       ? homeInstitutionCode
-      : 'ALL';
+      : 'GLOBAL';
 
-  const activePortalCampus = selectedPortalFilter === 'CURRENT' ? currentCampus : selectedPortalFilter;
+  const institutionInfo = effectiveCampus !== 'GLOBAL' ? getInstitutionByCode(effectiveCampus) : null;
+  const campusDisplayName = institutionInfo?.shortName || (effectiveCampus !== 'GLOBAL' ? effectiveCampus : 'Campus');
+
+  // Non-admin students are strictly isolated to their own university or National Portals
+  const activePortalCampus = resolveActivePortalTarget(user?.role, selectedPortalFilter, effectiveCampus);
 
   const { data: portalLinks = [] } = useQuery({
     queryKey: ['portalLinks', activePortalCampus],
     queryFn: () => listPortalLinks(activePortalCampus),
   });
 
- const { data: resources, isLoading, refetch, isRefetching } = useQuery({
- queryKey: ['resources', debouncedQuery, filters, campusCode],
- queryFn: () =>
- listResources({
- q: debouncedQuery || undefined,
- category:
-   filters.resourceType === 'All Types' || filters.resourceType === 'Bookmarked'
-     ? undefined
-     : (filters.resourceType as any),
- department: filters.department === 'All Depts' ? undefined : filters.department,
- campusCode,
- }),
- });
+  const { data: resources, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['resources', debouncedQuery, filters, effectiveCampus],
+    queryFn: () =>
+      listResources({
+        q: debouncedQuery || undefined,
+        category:
+          filters.resourceType === 'All Types' || filters.resourceType === 'Bookmarked'
+            ? undefined
+            : (filters.resourceType as any),
+        department: filters.department === 'All Depts' ? undefined : filters.department,
+        campusCode: effectiveCampus,
+      }),
+  });
 
- const displayedResources = (resources ?? []).filter((r) => {
-   if (filters.resourceType === 'Bookmarked') {
-     return bookmarkedIds.includes(r.id);
-   }
-   return true;
- });
+  const displayedResources = (resources ?? []).filter((r) => {
+    if (filters.resourceType === 'Bookmarked') {
+      return bookmarkedIds.includes(r.id);
+    }
+    return true;
+  });
 
- async function handleUpload(payload: UploadAcademicPayload) {
- const { fileBlob, ...rest } = payload;
- await createResource(rest, fileBlob);
- queryClient.invalidateQueries({ queryKey: ['resources'] });
- }
+  async function handleUpload(payload: UploadAcademicPayload) {
+    try {
+      const { fileBlob, ...rest } = payload;
+      await createResource({ ...rest, campusCode: effectiveCampus }, fileBlob);
+      queryClient.invalidateQueries({ queryKey: ['resources'] });
+      toast.success('Resource uploaded successfully! Pending moderation review.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not upload resource. Please try again.');
+    }
+  }
 
  function handleLaunchPortal(portal: PortalLink) {
  Alert.alert(
@@ -294,9 +319,25 @@ export default function ResourcesScreen() {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, fontSize: 10.5 }}>
-              PORTAL DIRECTORY
+              {isStaffOrAdmin && selectedPortalFilter === 'ALL'
+                ? 'ALL PORTAL DIRECTORIES'
+                : `${campusDisplayName.toUpperCase()} DIRECTORY`}
             </AppText>
-            {selectedPortalFilter !== 'CURRENT' && selectedPortalFilter !== 'ALL' && (
+            {!isStaffOrAdmin && (
+              <View
+                style={{
+                  backgroundColor: `${colors.brandPrimary}20`,
+                  paddingHorizontal: 6,
+                  paddingVertical: 1,
+                  borderRadius: radius.pill,
+                }}
+              >
+                <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 9.5 }}>
+                  VERIFIED LINKS
+                </AppText>
+              </View>
+            )}
+            {isStaffOrAdmin && selectedPortalFilter !== 'CURRENT' && selectedPortalFilter !== 'ALL' && (
               <View
                 style={{
                   backgroundColor: `${colors.brandPrimary}20`,
@@ -316,47 +357,88 @@ export default function ResourcesScreen() {
           </AppText>
         </View>
 
-        {/* University Selector Filter Pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 8 }}
-          contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
-        >
-          {UNIVERSITY_PORTAL_FILTERS.map((item) => {
-            const isSelected = selectedPortalFilter === item.code;
-            return (
-              <Pressable
-                key={item.code}
-                onPress={() => {
-                  haptics.light();
-                  setSelectedPortalFilter(item.code);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Filter portals for ${item.label}`}
-                style={{
-                  paddingHorizontal: 11,
-                  paddingVertical: 4,
-                  borderRadius: radius.pill,
-                  backgroundColor: isSelected ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
-                  borderWidth: 1,
-                  borderColor: isSelected ? colors.brandPrimary : colors.border,
-                }}
-              >
-                <AppText
-                  weight={isSelected ? 'bold' : 'regular'}
-                  variant="caption"
+        {/* University Selector Filter: Admin gets all campuses, Student only gets their campus + national portals */}
+        {isStaffOrAdmin ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 8 }}
+            contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
+          >
+            {UNIVERSITY_PORTAL_FILTERS.map((item) => {
+              const isSelected = selectedPortalFilter === item.code;
+              return (
+                <Pressable
+                  key={item.code}
+                  onPress={() => {
+                    haptics.light();
+                    setSelectedPortalFilter(item.code);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter portals for ${item.label}`}
                   style={{
-                    fontSize: 10.5,
-                    color: isSelected ? colors.textInverse : colors.textSecondary,
+                    paddingHorizontal: 11,
+                    paddingVertical: 4,
+                    borderRadius: radius.pill,
+                    backgroundColor: isSelected ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.brandPrimary : colors.border,
                   }}
                 >
-                  {item.code === 'CURRENT' ? `My Campus (${currentCampus})` : item.label}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <AppText
+                    weight={isSelected ? 'bold' : 'regular'}
+                    variant="caption"
+                    style={{
+                      fontSize: 10.5,
+                      color: isSelected ? colors.textInverse : colors.textSecondary,
+                    }}
+                  >
+                    {item.code === 'CURRENT' ? `My Campus (${effectiveCampus})` : item.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+            {[
+              { code: 'CURRENT', label: `${campusDisplayName} Portals` },
+              { code: 'GLOBAL', label: 'National Portals' },
+            ].map((item) => {
+              const isSelected = (selectedPortalFilter === 'GLOBAL' ? 'GLOBAL' : 'CURRENT') === item.code;
+              return (
+                <Pressable
+                  key={item.code}
+                  onPress={() => {
+                    haptics.light();
+                    setSelectedPortalFilter(item.code);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${item.label}`}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 4,
+                    borderRadius: radius.pill,
+                    backgroundColor: isSelected ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.brandPrimary : colors.border,
+                  }}
+                >
+                  <AppText
+                    weight={isSelected ? 'bold' : 'regular'}
+                    variant="caption"
+                    style={{
+                      fontSize: 10.5,
+                      color: isSelected ? colors.textInverse : colors.textSecondary,
+                    }}
+                  >
+                    {item.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         <ScrollView
           ref={portalsScrollRef}
@@ -386,7 +468,7 @@ export default function ResourcesScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.textSecondary} />
                   <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, maxWidth: 110, textAlign: 'right' }}>
-                    {portal.campusCode && portal.campusCode !== 'GLOBAL' && (selectedPortalFilter === 'ALL' || selectedPortalFilter === 'CURRENT') ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
+                    {portal.campusCode && portal.campusCode !== 'GLOBAL' && isStaffOrAdmin && selectedPortalFilter === 'ALL' ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
                   </AppText>
                 </View>
 
@@ -641,9 +723,20 @@ export default function ResourcesScreen() {
           {/* Section: University Portal Directories */}
           <View style={{ marginBottom: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
-              <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1} style={{ letterSpacing: 1, flex: 1, minWidth: 0 }}>
-                CAMPUS DIRECTORIES & OFFICIAL PORTALS
-              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1} style={{ letterSpacing: 1 }}>
+                  {isStaffOrAdmin && selectedPortalFilter === 'ALL'
+                    ? 'CAMPUS DIRECTORIES & OFFICIAL PORTALS'
+                    : `${(institutionInfo?.name || campusDisplayName).toUpperCase()} OFFICIAL PORTALS`}
+                </AppText>
+                {!isStaffOrAdmin && (
+                  <View style={{ backgroundColor: `${colors.brandPrimary}20`, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill }}>
+                    <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 9.5 }}>
+                      VERIFIED DIRECT LINKS
+                    </AppText>
+                  </View>
+                )}
+              </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                 <AppText tone="secondary" variant="caption">
                   {portalLinks.filter((p) => p.active).length} active verified portals
@@ -695,6 +788,89 @@ export default function ResourcesScreen() {
                 </View>
               </View>
             </View>
+
+            {/* Desktop Portal Filter Selector */}
+            {isStaffOrAdmin ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginBottom: 10 }}
+                contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
+              >
+                {UNIVERSITY_PORTAL_FILTERS.map((item) => {
+                  const isSelected = selectedPortalFilter === item.code;
+                  return (
+                    <Pressable
+                      key={item.code}
+                      onPress={() => {
+                        haptics.light();
+                        setSelectedPortalFilter(item.code);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Filter portals for ${item.label}`}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 5,
+                        borderRadius: radius.pill,
+                        backgroundColor: isSelected ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                        borderWidth: 1,
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <AppText
+                        weight={isSelected ? 'bold' : 'regular'}
+                        variant="caption"
+                        style={{
+                          fontSize: 11,
+                          color: isSelected ? colors.textInverse : colors.textSecondary,
+                        }}
+                      >
+                        {item.code === 'CURRENT' ? `My Campus (${effectiveCampus})` : item.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                {[
+                  { code: 'CURRENT', label: `${campusDisplayName} Official Portals` },
+                  { code: 'GLOBAL', label: 'National Portals' },
+                ].map((item) => {
+                  const isSelected = (selectedPortalFilter === 'GLOBAL' ? 'GLOBAL' : 'CURRENT') === item.code;
+                  return (
+                    <Pressable
+                      key={item.code}
+                      onPress={() => {
+                        haptics.light();
+                        setSelectedPortalFilter(item.code);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`View ${item.label}`}
+                      style={{
+                        paddingHorizontal: 13,
+                        paddingVertical: 5,
+                        borderRadius: radius.pill,
+                        backgroundColor: isSelected ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                        borderWidth: 1,
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <AppText
+                        weight={isSelected ? 'bold' : 'regular'}
+                        variant="caption"
+                        style={{
+                          fontSize: 11,
+                          color: isSelected ? colors.textInverse : colors.textSecondary,
+                        }}
+                      >
+                        {item.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
 
             <ScrollView
               ref={portalsScrollRef}

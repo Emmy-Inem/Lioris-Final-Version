@@ -19,9 +19,14 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
         <Avatar name={mentor.fullName} uri={mentor.avatarUrl} size={52} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <AppText variant="h3" weight="bold" numberOfLines={1}>
-            {mentor.fullName}
-          </AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            <AppText variant="h3" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+              {mentor.fullName}
+            </AppText>
+            {mentor.campusCode && mentor.campusCode !== 'GLOBAL' && (
+              <Badge label={mentor.campusCode} tone="neutral" />
+            )}
+          </View>
           <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
             {[mentor.company, mentor.department].filter(Boolean).join(' · ')}
           </AppText>

@@ -97,12 +97,15 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
 
  const dbListings: MarketplaceListing[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.seller_id))
- .filter((row: any) => {
-   if (isStaffOrAdmin && !query.campusCode) return true;
-   if (!userCampus || userCampus === 'GLOBAL') return true;
-   const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
-   return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
- })
+  .filter((row: any) => {
+    if (isStaffOrAdmin && !query.campusCode) return true;
+    const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
+    const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
+    if (targetCampus === 'GLOBAL') {
+      return rowCampus === 'GLOBAL';
+    }
+    return rowCampus === targetCampus || rowCampus === 'GLOBAL';
+  })
  .map((row: any) => ({
  id: row.id,
  sellerId: row.seller_id,

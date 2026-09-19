@@ -74,8 +74,9 @@ export async function listMentorships(): Promise<Mentorship[]> {
 }
 
 export interface MentorSearchQuery {
- focusArea?: string;
- q?: string;
+  focusArea?: string;
+  q?: string;
+  campusCode?: string;
 }
 
 export async function searchMentors(query: MentorSearchQuery = {}): Promise<MentorProfile[]> {
@@ -99,14 +100,35 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
       (row: any) => row.verification_status === 'verified' || row.role === 'admin',
     );
 
+    let filtered = verifiedOnly;
+    if (query.campusCode && query.campusCode !== 'GLOBAL') {
+      const targetCampus = query.campusCode.toUpperCase();
+      filtered = filtered.filter((row: any) => {
+        const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
+        return rowCampus === targetCampus || rowCampus === 'GLOBAL';
+      });
+    }
+
+    if (query.focusArea && query.focusArea !== 'All Fields') {
+      const area = query.focusArea.toLowerCase();
+      filtered = filtered.filter((row: any) => {
+        const tags = Array.isArray(row.interests) ? row.interests : [];
+        const inTags = tags.some((t: string) => t.toLowerCase().includes(area));
+        const inBio = (row.bio || '').toLowerCase().includes(area);
+        const inDept = (row.department || '').toLowerCase().includes(area);
+        return inTags || inBio || inDept;
+      });
+    }
+
     // Real profile fields only. This used to hand every mentor an identical
     // fabricated payload: the same four expertise tags, "4 slots available",
     // a campus code presented as an employer, and a bio asserting the person
     // was a "Verified" mentor.
-    return verifiedOnly.map((row: any) => ({
+    return filtered.map((row: any) => ({
       id: row.id,
       fullName: row.full_name,
       department: row.department || undefined,
+      campusCode: row.campus_code || 'GLOBAL',
       bio: row.bio || '',
       // profiles.interests is what the user actually picked during onboarding.
       expertiseTags: Array.isArray(row.interests) ? row.interests : [],

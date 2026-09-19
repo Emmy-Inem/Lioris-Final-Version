@@ -133,10 +133,10 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
         // Only members of that university see that university's events.
         const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
         const activeCampus = (userCampus || 'GLOBAL').toUpperCase();
-        if (activeCampus !== 'GLOBAL' && rowCampus !== 'GLOBAL' && rowCampus !== activeCampus) {
-          return false;
+        if (activeCampus === 'GLOBAL') {
+          return rowCampus === 'GLOBAL';
         }
-        return true;
+        return rowCampus === activeCampus || rowCampus === 'GLOBAL';
       })
       .map((row: any) => {
         const isRsvpd = currentUserId ? (row.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
@@ -174,7 +174,9 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     for (const e of pool) {
       if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
         const eCampus = (e.campusCode || 'GLOBAL').toUpperCase();
-        if (activeCampus === 'GLOBAL' || eCampus === 'GLOBAL' || eCampus === activeCampus) {
+        if (activeCampus === 'GLOBAL') {
+          if (eCampus === 'GLOBAL') merged.push(e);
+        } else if (eCampus === 'GLOBAL' || eCampus === activeCampus) {
           merged.push(e);
         }
       }

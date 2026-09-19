@@ -123,9 +123,12 @@ export async function listStudyGroups(campusCode?: string): Promise<StudyGroup[]
  .filter((row: any) => !isUserBlocked(row.creator_id))
  .filter((row: any) => {
    if (isStaffOrAdmin && !campusCode) return true;
-   if (!userCampus || userCampus === 'GLOBAL') return true;
+   const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
    const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
-   return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
+   if (targetCampus === 'GLOBAL') {
+     return rowCampus === 'GLOBAL';
+   }
+   return rowCampus === targetCampus || rowCampus === 'GLOBAL';
  })
  .map((row: any) => {
  const members = Array.isArray(row.study_group_members) ? row.study_group_members : [];

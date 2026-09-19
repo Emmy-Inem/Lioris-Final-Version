@@ -245,6 +245,7 @@ export interface MentorProfile {
  fullName: string;
  avatarUrl?: string | null;
  department?: string;
+ campusCode?: string;
  expertiseTags: string[];
  bio: string;
  company?: string;

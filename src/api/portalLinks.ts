@@ -89,9 +89,11 @@ let localPortalLinksState: PortalLink[] = [...ALL_DEFAULT_PORTAL_LINKS];
  */
 export async function listPortalLinks(campusCode?: string): Promise<PortalLink[]> {
   const normCode = campusCode?.trim().toUpperCase();
-  const targetCode = (!normCode || normCode === 'ALL') ? 'ALL' : normCode;
+  const targetCode = normCode === 'ALL' ? 'ALL' : (normCode || 'GLOBAL');
 
-  // Retrieve curated defaults for target code
+  // Retrieve curated defaults for target code.
+  // When a specific university is requested, return only its links.
+  // Defaults never fall back to ALL, preventing other universities' links from leaking.
   const defaults = targetCode === 'ALL'
     ? ALL_DEFAULT_PORTAL_LINKS
     : (DEFAULT_CAMPUS_PORTAL_LINKS[targetCode] || DEFAULT_CAMPUS_PORTAL_LINKS.GLOBAL || []);

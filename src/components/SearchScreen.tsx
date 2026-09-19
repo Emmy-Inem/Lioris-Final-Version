@@ -18,12 +18,14 @@ import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
 import { listResources } from '@/api/resources';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useCampusScope } from '@/hooks/useCampusScope';
 
 type SearchTab = 'posts' | 'events' | 'resources';
 
 export function SearchScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  const { campusCode } = useCampusScope();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<SearchTab>('posts');
   const [readingResource, setReadingResource] = useState<Resource | null>(null);
@@ -31,20 +33,20 @@ export function SearchScreen() {
   const debouncedTrimmed = useDebouncedValue(trimmed);
 
   const { data: posts, isLoading: postsLoading } = useQuery({
-    queryKey: ['search', 'posts', debouncedTrimmed],
+    queryKey: ['search', 'posts', debouncedTrimmed, campusCode],
     queryFn: () => listFeedPosts({ q: debouncedTrimmed }),
     enabled: tab === 'posts' && debouncedTrimmed.length > 0,
   });
 
   const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ['search', 'events', debouncedTrimmed],
-    queryFn: () => listEvents({ q: debouncedTrimmed }),
+    queryKey: ['search', 'events', debouncedTrimmed, campusCode],
+    queryFn: () => listEvents({ q: debouncedTrimmed, campusCode }),
     enabled: tab === 'events' && debouncedTrimmed.length > 0,
   });
 
   const { data: resources, isLoading: resourcesLoading } = useQuery({
-    queryKey: ['search', 'resources', debouncedTrimmed],
-    queryFn: () => listResources({ q: debouncedTrimmed }),
+    queryKey: ['search', 'resources', debouncedTrimmed, campusCode],
+    queryFn: () => listResources({ q: debouncedTrimmed, campusCode }),
     enabled: tab === 'resources' && debouncedTrimmed.length > 0,
   });
 

@@ -78,12 +78,15 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
 
  const dbJobs: JobListing[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.poster_id))
- .filter((row: any) => {
-   if (isStaffOrAdmin && !query.campusCode) return true;
-   if (!userCampus || userCampus === 'GLOBAL') return true;
-   const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
-   return rowCampus === userCampus.toUpperCase() || rowCampus === 'GLOBAL';
- })
+    .filter((row: any) => {
+      if (isStaffOrAdmin && !query.campusCode) return true;
+      const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
+      const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
+      if (targetCampus === 'GLOBAL') {
+        return rowCampus === 'GLOBAL' || !!row.is_remote;
+      }
+      return rowCampus === targetCampus || rowCampus === 'GLOBAL' || !!row.is_remote;
+    })
  .map((row: any) => ({
  id: row.id,
  title: row.title,
