@@ -1,14 +1,14 @@
-import React, { useState } from'react';
-import { View, ScrollView, Alert, Pressable, Platform } from'react-native';
-import { Link, router } from'expo-router';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'@/components/ScreenContainer';
-import { AppText } from'@/components/AppText';
-import { AppTextField } from'@/components/AppTextField';
-import { AppButton } from'@/components/AppButton';
-import { PasswordChecklist } from'@/components/PasswordChecklist';
-import { AuthHeroBackground } from'@/components/AuthHeroBackground';
-import { WaveCard } from'@/components/WaveCard';
+import React, { useState } from 'react';
+import { View, ScrollView, Alert, Pressable, Platform, Modal } from 'react-native';
+import { Link, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '@/components/ScreenContainer';
+import { AppText } from '@/components/AppText';
+import { AppTextField } from '@/components/AppTextField';
+import { AppButton } from '@/components/AppButton';
+import { PasswordChecklist } from '@/components/PasswordChecklist';
+import { AuthHeroBackground } from '@/components/AuthHeroBackground';
+import { WaveCard } from '@/components/WaveCard';
 import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -16,12 +16,14 @@ import { UserRole } from '@/api/types';
 import { isPasswordValid, passwordStrength, isValidEmailFormat, isValidUsername } from '@/utils/validation';
 import { seedProfileUsername } from '@/api/profile';
 import { isEmailConfirmationRequired, checkUsernameAvailable } from '@/api/auth';
-import { getInstitutionForEmail } from '@/api/institutions';
+import { getInstitutionForEmail, LAUNCH_INSTITUTIONS, getInstitutionByCode, joinWaitlist } from '@/api/institutions';
 import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { MIN_AGE, MIN_AGE_WITH_CONSENT, TERMS_VERSION } from '@/constants/legal';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
+
+const SUPPORTED_INSTITUTIONS = LAUNCH_INSTITUTIONS.filter((i) => i.code !== 'GLOBAL');
 
 const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
  { value: 'student', label: 'Student Portal', icon: 'school' },
@@ -33,6 +35,13 @@ export default function RegisterScreen() {
  const { isDesktop } = useResponsive();
  const { register } = useAuth();
  const [portal, setPortal] = useState<Extract<UserRole, 'student' | 'alumni'>>('student');
+ const [selectedCampusCode, setSelectedCampusCode] = useState<string>('UNILAG');
+ const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+ const [waitlistName, setWaitlistName] = useState('');
+ const [waitlistUniversity, setWaitlistUniversity] = useState('');
+ const [waitlistEmail, setWaitlistEmail] = useState('');
+ const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
+ const [waitlistSuccess, setWaitlistSuccess] = useState(false);
  const [fullName, setFullName] = useState('');
  const [username, setUsername] = useState('');
  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
@@ -136,7 +145,7 @@ export default function RegisterScreen() {
     confirmedAge18: true,
     captchaToken: captchaToken || undefined,
   });
- seedProfileUsername(createdUser, username.trim().replace(/^@/, ''), matchedInstitution ?? undefined);
+  seedProfileUsername(createdUser, username.trim().replace(/^@/, ''), matchedInstitution ?? getInstitutionByCode(selectedCampusCode) ?? undefined);
  router.replace('/');
  } catch (err: any) {
  turnstileRef.current?.reset();
@@ -154,6 +163,25 @@ export default function RegisterScreen() {
  } finally {
  setSubmitting(false);
  }
+ }
+
+ async function handleJoinWaitlist() {
+   if (!waitlistName.trim() || !waitlistUniversity.trim() || !waitlistEmail.trim()) {
+     return;
+   }
+   setSubmittingWaitlist(true);
+   try {
+     await joinWaitlist({
+       name: waitlistName.trim(),
+       universityName: waitlistUniversity.trim(),
+       email: waitlistEmail.trim(),
+     });
+     setWaitlistSuccess(true);
+   } catch {
+     Alert.alert('Error', 'Failed to join waitlist. Please try again.');
+   } finally {
+     setSubmittingWaitlist(false);
+   }
  }
 
  const formContent = (
@@ -191,20 +219,68 @@ export default function RegisterScreen() {
  <AppText variant="h1" weight="bold" style={{ marginBottom: spacing.xs }}>
  {portal === 'student' ? 'Create Student Workspace' : 'Create Alumni Workspace'}
  </AppText>
- <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
- UNILAG, UI, and FUNAAB emails are verified automatically. Any other email still works - 
- you can apply for the verified tick afterward.
+ <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
+ Select your university below. Official campus emails are verified automatically, while personal emails can be verified afterward.
  </AppText>
 
+ {/* Supported University Selector & Waitlist Action */}
+ <View style={{ marginBottom: spacing.md }}>
+   <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
+     SUPPORTED UNIVERSITIES
+   </AppText>
+   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+     {SUPPORTED_INSTITUTIONS.map((inst) => {
+       const isSelected = selectedCampusCode === inst.code;
+       return (
+         <Pressable
+           key={inst.code}
+           onPress={() => setSelectedCampusCode(inst.code)}
+           style={{
+             paddingHorizontal: 14,
+             paddingVertical: 8,
+             borderRadius: radius.pill,
+             backgroundColor: isSelected ? colors.brandPrimary : colors.surface,
+             borderWidth: 1,
+             borderColor: isSelected ? colors.brandPrimary : colors.border,
+           }}
+         >
+           <AppText
+             variant="caption"
+             weight="bold"
+             tone={isSelected ? 'inverse' : 'primary'}
+           >
+             {inst.shortName || inst.code}
+           </AppText>
+         </Pressable>
+       );
+     })}
+   </ScrollView>
+   <Pressable
+     onPress={() => {
+       setWaitlistSuccess(false);
+       setWaitlistName(fullName);
+       setWaitlistEmail(email);
+       setWaitlistUniversity('');
+       setShowWaitlistModal(true);
+     }}
+     style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+   >
+     <Ionicons name="sparkles" size={14} color={colors.brandPrimary} />
+     <AppText variant="caption" tone="brand" weight="bold">
+       Don't see your university? Join Waitlist
+     </AppText>
+   </Pressable>
+ </View>
+
  <AppTextField
- label="School Email"
+ label="School or Personal Email"
  autoCapitalize="none"
  autoComplete="email"
  textContentType="emailAddress"
  keyboardType="email-address"
  value={email}
  onChangeText={setEmail}
- placeholder="you@unilag.edu.ng or any email"
+ placeholder="you@campus.edu.ng or personal email"
  error={emailTouched && !emailFormatValid ? 'Enter a valid email address' : undefined}
  />
  {emailTouched && emailFormatValid && matchedInstitution ? (
@@ -212,14 +288,6 @@ export default function RegisterScreen() {
  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
  <AppText variant="bodySmall" style={{ color: colors.success }}>
  Registering at {matchedInstitution.name} - you'll be verified automatically.
- </AppText>
- </View>
- ) : null}
- {emailTouched && emailFormatValid && !matchedInstitution ? (
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -spacing.sm, marginBottom: spacing.lg }}>
- <Ionicons name="information-circle" size={14} color={colors.textSecondary} />
- <AppText variant="bodySmall" tone="secondary">
- We're not live at your school yet - you'll be asked to join the waitlist during setup.
  </AppText>
  </View>
  ) : null}
@@ -297,7 +365,7 @@ export default function RegisterScreen() {
       setUsername(t.replace(/^@/, ''));
       if (errorMessage) setErrorMessage(null);
     }}
-    placeholder="e.g. ineme.17"
+    placeholder="e.g. starboy"
     error={
       usernameTouched && !usernameValid
         ? '3-24 characters: letters, numbers, dots, underscores'
@@ -554,6 +622,104 @@ export default function RegisterScreen() {
  </WaveCard>
  </ScrollView>
  )}
+
+  {/* Campus Waitlist Modal */}
+  <Modal
+    visible={showWaitlistModal}
+    transparent
+    animationType="fade"
+    onRequestClose={() => setShowWaitlistModal(false)}
+  >
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: spacing.lg,
+      }}
+    >
+      <View
+        style={{
+          width: '100%',
+          maxWidth: 440,
+          backgroundColor: colors.surface,
+          borderRadius: radius.xl,
+          borderWidth: 1,
+          borderColor: colors.border,
+          padding: spacing.xl,
+          gap: spacing.md,
+        }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1, paddingRight: spacing.sm }}>
+            <AppText variant="h2" weight="bold">
+              Join Campus Waitlist
+            </AppText>
+            <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
+              Tell us your university and we'll prioritize launching Lioris there next!
+            </AppText>
+          </View>
+          <Pressable onPress={() => setShowWaitlistModal(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close waitlist modal">
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        {waitlistSuccess ? (
+          <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg }}>
+            <Ionicons name="checkmark-circle" size={48} color={colors.success} />
+            <AppText variant="h3" weight="bold" style={{ textAlign: 'center' }}>
+              You're on the list!
+            </AppText>
+            <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', lineHeight: 20 }}>
+              We've recorded your interest for {waitlistUniversity || 'your university'}. We'll email you at {waitlistEmail} as soon as Lioris opens for your campus!
+            </AppText>
+            <AppButton
+              label="Back to Sign Up"
+              onPress={() => setShowWaitlistModal(false)}
+              fullWidth
+            />
+          </View>
+        ) : (
+          <View style={{ gap: spacing.sm }}>
+            <AppTextField
+              label="Full Name"
+              value={waitlistName}
+              onChangeText={setWaitlistName}
+              placeholder="e.g. Alex Morgan"
+            />
+            <AppTextField
+              label="University Name"
+              value={waitlistUniversity}
+              onChangeText={setWaitlistUniversity}
+              placeholder="e.g. Lagos State University (LASU)"
+            />
+            <AppTextField
+              label="Email Address"
+              value={waitlistEmail}
+              onChangeText={setWaitlistEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="you@example.com"
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Cancel" variant="secondary" onPress={() => setShowWaitlistModal(false)} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={submittingWaitlist ? 'Submitting...' : 'Join Waitlist'}
+                  onPress={handleJoinWaitlist}
+                  loading={submittingWaitlist}
+                  disabled={!waitlistName.trim() || !waitlistUniversity.trim() || !waitlistEmail.trim()}
+                />
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+    </View>
+  </Modal>
  </ScreenContainer>
  );
 }

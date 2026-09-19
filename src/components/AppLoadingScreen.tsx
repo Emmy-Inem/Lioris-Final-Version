@@ -2,13 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  Image,
   ActivityIndicator,
   Animated,
   Pressable,
   StyleSheet,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useReducedMotion } from '@/theme/useReducedMotion';
 
@@ -71,7 +71,14 @@ export function AppLoadingScreen({
     <View style={styles.container}>
       <View style={styles.content}>
         <Animated.View style={[styles.emblemWrapper, { transform: [{ scale: pulseAnim }] }]}>
-          <Image source={FAVICON_ASSET} style={styles.emblem} resizeMode="contain" />
+          <Image
+            source={FAVICON_ASSET}
+            style={styles.emblem}
+            contentFit="contain"
+            transition={150}
+            priority="high"
+            alt="Lioris emblem"
+          />
         </Animated.View>
 
         <Text style={styles.brandTitle}>Lioris</Text>
@@ -134,8 +141,8 @@ const styles = StyleSheet.create({
     }),
   },
   emblem: {
-    width: 58,
-    height: 58,
+    width: 62,
+    height: 62,
   },
   brandTitle: {
     fontSize: 24,

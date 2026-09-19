@@ -100,6 +100,7 @@ export default function LoginScreen() {
  const [submitting, setSubmitting] = useState(false);
  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
  const turnstileRef = React.useRef<TurnstileWidgetRef>(null);
+ const [waitlistName, setWaitlistName] = useState('');
  const [waitlistEmail, setWaitlistEmail] = useState('');
  const [waitlistSchool, setWaitlistSchool] = useState('');
  const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
@@ -172,7 +173,7 @@ export default function LoginScreen() {
  async function handleJoinWaitlist() {
  setSubmittingWaitlist(true);
  try {
- await joinWaitlist({ email: waitlistEmail.trim(), universityName: waitlistSchool.trim() });
+ await joinWaitlist({ name: waitlistName.trim(), email: waitlistEmail.trim(), universityName: waitlistSchool.trim() });
  setWaitlistSubmitted(true);
  } finally {
  setSubmittingWaitlist(false);
@@ -567,7 +568,7 @@ export default function LoginScreen() {
  Don't see your school yet?
  </AppText>
  <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
- We're live at UNILAG, UI, and FUNAAB at launch. Join the waitlist to fast-track your campus!
+ Join the campus waitlist to fast-track Lioris launching at your university!
  </AppText>
  {waitlistSubmitted ? (
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -578,6 +579,7 @@ export default function LoginScreen() {
  </View>
  ) : (
  <>
+ <AppTextField label="" placeholder="Full Name" value={waitlistName} onChangeText={setWaitlistName} />
  <AppTextField label="" placeholder="Email Address" value={waitlistEmail} onChangeText={setWaitlistEmail} autoCapitalize="none" keyboardType="email-address" />
  <AppTextField label="" placeholder="University Name" value={waitlistSchool} onChangeText={setWaitlistSchool} />
  <AppButton
@@ -585,7 +587,7 @@ export default function LoginScreen() {
  variant="accent"
  onPress={handleJoinWaitlist}
  loading={submittingWaitlist}
- disabled={!waitlistEmail.trim() || !waitlistSchool.trim()}
+ disabled={!waitlistName.trim() || !waitlistEmail.trim() || !waitlistSchool.trim()}
  fullWidth
  />
  </>

@@ -232,6 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [impersonation, setImpersonation] = useState<ImpersonationState>(DEFAULT_IMPERSONATION);
   const userRef = React.useRef<SessionUser | null>(null);
   userRef.current = user;
+  const isExplicitLogout = React.useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -335,8 +336,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (event === 'SIGNED_OUT') {
-        userRef.current = null;
-        setUser(null);
+        // Only log out if user explicitly clicked the logout button
+        if (isExplicitLogout.current) {
+          userRef.current = null;
+          setUser(null);
+        }
         return;
       }
 
@@ -394,6 +398,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isLoading,
       async login(email, password, captchaToken) {
+        isExplicitLogout.current = false;
         const session = await authApi.login({ email, password, captchaToken });
         await setTokens(session.accessToken, session.refreshToken);
 
@@ -404,6 +409,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (prof?.is_suspended) {
+          isExplicitLogout.current = true;
           await clearTokens();
           await setSessionUser(null as any);
           await supabase.auth.signOut();
@@ -433,6 +439,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         registerForPushNotificationsAsync().catch(() => {});
       },
       async register(payload) {
+        isExplicitLogout.current = false;
         const session = await authApi.register(payload);
         await setTokens(session.accessToken, session.refreshToken);
         const nextUser: SessionUser = {
@@ -450,11 +457,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return nextUser;
       },
       async logout() {
+        isExplicitLogout.current = true;
         await authApi.logout();
         await clearTokens();
+        await setSessionUser(null as any);
         // Never leave a backed-up admin session behind after signing out.
         await clearImpersonationAdminBackup().catch(() => {});
         setImpersonation(DEFAULT_IMPERSONATION);
+        userRef.current = null;
         setUser(null);
         try {
           queryClient.clear();

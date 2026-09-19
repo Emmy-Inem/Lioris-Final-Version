@@ -116,6 +116,7 @@ export function getInstitutionByCode(code: string): Institution | undefined {
 
 export interface WaitlistEntry {
  id: string;
+ name?: string;
  universityName: string;
  email: string;
  submittedAt: string;
@@ -125,6 +126,7 @@ export interface WaitlistEntry {
 let waitlistState: WaitlistEntry[] = [];
 
 export interface JoinWaitlistPayload {
+ name?: string;
  universityName: string;
  email: string;
 }
@@ -133,14 +135,24 @@ export async function joinWaitlist(payload: JoinWaitlistPayload): Promise<Waitli
  const waitlistId = generateUUID();
 
  try {
- const { error } = await supabase.from('waitlist_entries').insert({
+ const insertPayload: Record<string, any> = {
  id: waitlistId,
  university_name: payload.universityName,
  email: payload.email,
  status: 'pending',
- });
+ };
+ if (payload.name?.trim()) {
+ insertPayload.name = payload.name.trim();
+ }
+
+ const { error } = await supabase.from('waitlist_entries').insert(insertPayload);
  if (error) {
  console.warn('[Waitlist] Supabase insert error:', error.message);
+ // Defensive fallback if 'name' column does not exist on remote table
+ if (payload.name && error.message?.toLowerCase().includes('name')) {
+ delete insertPayload.name;
+ await supabase.from('waitlist_entries').insert(insertPayload);
+ }
  }
  } catch (err) {
  console.warn('[Waitlist] Exception joining waitlist:', err);
@@ -148,6 +160,7 @@ export async function joinWaitlist(payload: JoinWaitlistPayload): Promise<Waitli
 
  const created: WaitlistEntry = {
  id: waitlistId,
+ name: payload.name?.trim(),
  universityName: payload.universityName,
  email: payload.email,
  submittedAt: new Date().toISOString(),

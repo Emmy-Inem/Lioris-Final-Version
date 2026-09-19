@@ -239,19 +239,8 @@ export function SettingsScreen() {
     resetMfaEnrollmentFlow();
   }
 
-  // Two-factor authentication is mandatory for admin/staff (see src/auth/mfaPolicy.ts),
-  // so they cannot remove their last factor.
-  const mfaMandatory = !!user && (roleRequiresMfa(user.role) || roleRequiresMfa(user.actualRole));
-
   function handleTurnOffMfa() {
     if (!mfaFactorId) return;
-    if (mfaMandatory) {
-      Alert.alert(
-        'Two-Factor Authentication is required',
-        'Administrator and staff accounts must keep two-factor authentication enabled to protect campus data. To use a different authenticator device, set up a new one first and then contact an administrator for help removing the old one.',
-      );
-      return;
-    }
     Alert.alert(
       'Turn Off Two-Factor Authentication?',
       'This reduces the security of your account. You will only need your password to sign in afterward.',
@@ -1209,15 +1198,29 @@ export function SettingsScreen() {
 
                 {/* Two-Factor Authentication (TOTP) */}
                 <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
-                  <View>
-                    <AppText weight="bold" variant="bodySmall">Two-Factor Authentication</AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                      Require a 6-digit code from an authenticator app when signing in
-                    </AppText>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
+                      <AppText weight="bold" variant="bodySmall">Two-Step Authentication</AppText>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                        Require a 6-digit confirmation code from an authenticator app when signing in
+                      </AppText>
+                    </View>
+                    <Switch
+                      value={Boolean(mfaFactorId && !mfaPendingFactorId)}
+                      onValueChange={(val) => {
+                        if (val) {
+                          handleStartMfaEnrollment();
+                        } else {
+                          handleTurnOffMfa();
+                        }
+                      }}
+                      disabled={mfaChecking || mfaEnrolling || mfaDisabling}
+                      trackColor={{ false: colors.divider, true: colors.brandPrimary }}
+                    />
                   </View>
 
                   {mfaChecking ? (
-                    <AppText tone="secondary" variant="caption">Checking status…</AppText>
+                    <AppText tone="secondary" variant="caption">Checking security status…</AppText>
                   ) : mfaFactorId && !mfaPendingFactorId ? (
                     <View style={{ gap: spacing.sm }}>
                       <View
@@ -1234,21 +1237,15 @@ export function SettingsScreen() {
                       >
                         <Ionicons name="shield-checkmark" size={18} color={colors.success} />
                         <AppText weight="bold" variant="bodySmall" style={{ color: colors.success }}>
-                          Two-Factor Authentication is active
+                          Two-Step Authentication is active
                         </AppText>
                       </View>
-                      {mfaMandatory ? (
-                        <AppText tone="secondary" variant="caption">
-                          Two-factor authentication is required for administrator and staff accounts and cannot be turned off.
-                        </AppText>
-                      ) : (
-                        <AppButton
-                          label={mfaDisabling ? 'Turning off…' : 'Turn Off'}
-                          variant="secondary"
-                          onPress={handleTurnOffMfa}
-                          loading={mfaDisabling}
-                        />
-                      )}
+                      <AppButton
+                        label={mfaDisabling ? 'Turning off…' : 'Turn Off Two-Step Authentication'}
+                        variant="secondary"
+                        onPress={handleTurnOffMfa}
+                        loading={mfaDisabling}
+                      />
                     </View>
                   ) : mfaPendingFactorId && mfaSecret ? (
                     <View style={{ gap: spacing.sm }}>
@@ -1293,7 +1290,7 @@ export function SettingsScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                           <AppButton
-                            label={mfaConfirming ? 'Confirming…' : 'Confirm'}
+                            label={mfaConfirming ? 'Confirming…' : 'Confirm & Enable'}
                             onPress={handleConfirmMfaEnrollment}
                             loading={mfaConfirming}
                             disabled={mfaConfirmCode.length < 6}
@@ -1303,7 +1300,7 @@ export function SettingsScreen() {
                     </View>
                   ) : (
                     <AppButton
-                      label={mfaEnrolling ? 'Starting setup…' : 'Set Up Two-Factor Authentication'}
+                      label={mfaEnrolling ? 'Starting setup…' : 'Set Up Two-Step Authentication'}
                       variant="secondary"
                       onPress={handleStartMfaEnrollment}
                       loading={mfaEnrolling}

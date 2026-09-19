@@ -51,12 +51,13 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="twitter:image" content="https://lioris-campus.vercel.app/og-image.jpg" />
         {/* Favicons, Apple Touch Icon, and Web App Manifest */}
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.svg" />
         {/* The `react-native-web` recommended style reset */}
         <ScrollViewStyleReset />
       </head>

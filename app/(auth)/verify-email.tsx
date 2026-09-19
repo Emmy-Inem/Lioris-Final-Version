@@ -11,6 +11,7 @@ import { WaveCard } from '@/components/WaveCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import * as authApi from '@/api/auth';
+import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -24,12 +25,12 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export default function VerifyEmailScreen() {
   const { spacing, colors, radius, isDark } = useTheme();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; token_hash?: string; type?: string; code?: string }>();
   const knownEmail = (typeof params.email === 'string' && params.email.trim()) || user?.email || '';
   const [emailInput, setEmailInput] = useState('');
   const email = knownEmail || emailInput.trim();
 
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(params.code || '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -42,6 +43,35 @@ export default function VerifyEmailScreen() {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
+  // If a token_hash link was clicked from the email, automatically verify and log in
+  useEffect(() => {
+    let cancelled = false;
+    async function autoVerifyHash() {
+      if (params.token_hash) {
+        setSubmitting(true);
+        try {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: params.token_hash,
+            type: (params.type as any) || 'signup',
+          });
+          if (!error && !cancelled) {
+            haptics.success();
+            router.replace('/');
+            return;
+          }
+        } catch {
+          // Fall through to manual code entry
+        } finally {
+          if (!cancelled) setSubmitting(false);
+        }
+      }
+    }
+    autoVerifyHash();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.token_hash, params.type]);
+
   async function handleVerify() {
     setErrorMessage(null);
     setNotice(null);
@@ -49,17 +79,18 @@ export default function VerifyEmailScreen() {
       setErrorMessage('Enter the email address you signed up with.');
       return;
     }
-    if (!/^\d{6}$/.test(code.trim())) {
-      setErrorMessage('Please enter the full 6-digit code from your email.');
+    const cleanCode = code.trim().replace(/\s+/g, '');
+    if (!/^\d{6,10}$/.test(cleanCode)) {
+      setErrorMessage('Please enter the full confirmation code from your email.');
       haptics.medium();
       return;
     }
     haptics.medium();
     setSubmitting(true);
     try {
-      await authApi.verifyEmail(code.trim(), email);
+      await authApi.verifyEmail(cleanCode, email);
       haptics.success();
-      // The auth listener signs the user in; the resolver then routes into onboarding.
+      // The auth listener signs the user in; the resolver then routes into the app.
       router.replace('/');
     } catch {
       haptics.error();
@@ -110,13 +141,13 @@ export default function VerifyEmailScreen() {
         <WaveCard>
           {knownEmail ? (
             <AppText tone="secondary" style={{ marginBottom: spacing.sm }}>
-              We sent a 6-digit code to <AppText weight="bold">{knownEmail}</AppText>. Enter it below to confirm the address
-              and continue.
+              We sent a confirmation code to <AppText weight="bold">{knownEmail}</AppText>. Enter it below to confirm your address
+              and access your workspace.
             </AppText>
           ) : (
             <>
               <AppText tone="secondary" style={{ marginBottom: spacing.sm }}>
-                Enter the email address you signed up with, then the 6-digit code we sent to it.
+                Enter the email address you signed up with, then the confirmation code we sent to it.
               </AppText>
               <AppTextField
                 label="Email address"
@@ -137,8 +168,8 @@ export default function VerifyEmailScreen() {
               setCode(text.replace(/\D/g, ''));
               if (errorMessage) setErrorMessage(null);
             }}
-            placeholder="123456"
-            maxLength={6}
+            placeholder="e.g. 91319799"
+            maxLength={10}
           />
 
           {errorMessage ? (
