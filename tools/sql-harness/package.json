@@ -1,0 +1,17 @@
+{
+  "name": "lioris-sql-harness",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Executes the Lioris Supabase SQL migrations against an in-memory Postgres (PGlite) and runs behaviour assertions. No real database is touched.",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs",
+    "parse": "node parse-check.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.3.0"
+  },
+  "devDependencies": {
+    "libpg-query": "^17.0.0"
+  }
+}
