@@ -122,7 +122,7 @@ const DEFAULT_IMPERSONATION: ImpersonationState = {
 interface AuthContextValue {
  user: SessionUser | null;
  isLoading: boolean;
- login: (email: string, password: string) => Promise<void>;
+ login: (email: string, password: string, captchaToken?: string) => Promise<void>;
  register: (payload: authApi.RegisterPayload) => Promise<SessionUser>;
  logout: () => Promise<void>;
  /** Called by each onboarding screen after it completes, so a reload resumes at the right step. */
@@ -372,8 +372,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       isLoading,
-      async login(email, password) {
-        const session = await authApi.login({ email, password });
+      async login(email, password, captchaToken) {
+        const session = await authApi.login({ email, password, captchaToken });
         await setTokens(session.accessToken, session.refreshToken);
 
         const { data: prof } = await supabase

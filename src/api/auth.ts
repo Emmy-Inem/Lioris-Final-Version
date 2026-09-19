@@ -8,6 +8,7 @@ import { checkPassword, isPasswordValid } from '../utils/validation';
 export interface LoginPayload {
  email: string;
  password: string;
+ captchaToken?: string;
 }
 
 export interface RegisterPayload {
@@ -22,6 +23,7 @@ export interface RegisterPayload {
  acceptedTermsVersion?: string;
  /** User confirmed they are 18 or older. */
  confirmedAge18?: boolean;
+ captchaToken?: string;
 }
 
 /**
@@ -141,6 +143,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: cleanEmail,
     password: payload.password,
+    options: payload.captchaToken ? { captchaToken: payload.captchaToken } : undefined,
   });
 
   // The password was right but the inbox has not been proven yet - not a failed login.
@@ -201,21 +204,22 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
  const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
  const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || 'UI';
 
- const { data, error } = await supabase.auth.signUp({
- email: cleanEmail,
- password: payload.password,
- options: {
- data: {
- full_name: payload.fullName,
- username: payload.username,
- role: assignedRole,
- campus_code: detectedCampus,
- terms_version: payload.acceptedTermsVersion ?? null,
- terms_accepted_at: payload.acceptedTermsVersion ? new Date().toISOString() : null,
- age_confirmed_18: payload.confirmedAge18 === true,
- },
- },
- });
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password: payload.password,
+    options: {
+      data: {
+        full_name: payload.fullName,
+        username: payload.username,
+        role: assignedRole,
+        campus_code: detectedCampus,
+        terms_version: payload.acceptedTermsVersion ?? null,
+        terms_accepted_at: payload.acceptedTermsVersion ? new Date().toISOString() : null,
+        age_confirmed_18: payload.confirmedAge18 === true,
+      },
+      captchaToken: payload.captchaToken,
+    },
+  });
 
  if (error || !data?.user) {
  throw new Error(error?.message || 'Unable to register account. Please check your details.');
@@ -258,14 +262,16 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
  };
 }
 
-export async function sendPasswordResetEmail(email: string): Promise<{ success: boolean }> {
- const cleanEmail = email.trim();
- if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
- const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
- if (error) {
- throw new Error(error.message || 'Could not send recovery email. Please check your email.');
- }
- return { success: true };
+export async function sendPasswordResetEmail(email: string, captchaToken?: string): Promise<{ success: boolean }> {
+  const cleanEmail = email.trim();
+  if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+    captchaToken,
+  });
+  if (error) {
+    throw new Error(error.message || 'Could not send recovery email. Please check your email.');
+  }
+  return { success: true };
 }
 
 export async function verifyPasswordResetOtpAndSetPassword(

@@ -20,6 +20,7 @@ import {
  sendPasswordResetEmail,
  verifyPasswordResetOtpAndSetPassword,
 } from '@/api/auth';
+import { TurnstileWidget } from '@/components/TurnstileWidget';
 import { haptics } from '@/utils/haptics';
 
 const SLIDES = [
@@ -50,6 +51,7 @@ export default function LoginScreen() {
  const [password, setPassword] = useState('');
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
+ const [captchaToken, setCaptchaToken] = useState<string | null>(null);
  const [waitlistEmail, setWaitlistEmail] = useState('');
  const [waitlistSchool, setWaitlistSchool] = useState('');
  const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
@@ -73,7 +75,7 @@ export default function LoginScreen() {
  }
  setSubmittingForgot(true);
  try {
- await sendPasswordResetEmail(forgotEmail.trim());
+ await sendPasswordResetEmail(forgotEmail.trim(), captchaToken || undefined);
  setForgotStep('sent');
  haptics.success();
  } catch (err: any) {
@@ -145,7 +147,7 @@ export default function LoginScreen() {
  haptics.medium();
  setSubmitting(true);
  try {
- await login(email.trim(), password);
+ await login(email.trim(), password, captchaToken || undefined);
  router.replace('/');
  } catch (err: any) {
  if (isEmailConfirmationRequired(err)) {
@@ -268,6 +270,11 @@ export default function LoginScreen() {
  </AppText>
  </View>
  ) : null}
+
+ <TurnstileWidget
+   onVerify={(token) => setCaptchaToken(token)}
+   onExpire={() => setCaptchaToken(null)}
+ />
 
  <AppButton label="Secure Login" onPress={handleLogin} loading={submitting} disabled={!email || !password} fullWidth />
 

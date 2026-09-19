@@ -21,6 +21,7 @@ import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { MIN_AGE, MIN_AGE_WITH_CONSENT, TERMS_VERSION } from '@/constants/legal';
+import { TurnstileWidget } from '@/components/TurnstileWidget';
 
 const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
  { value: 'student', label: 'Student Portal', icon: 'school' },
@@ -40,6 +41,7 @@ export default function RegisterScreen() {
  const [showPassword, setShowPassword] = useState(false);
  const [acceptedTerms, setAcceptedTerms] = useState(false);
  const [confirmedAge, setConfirmedAge] = useState(false);
+ const [captchaToken, setCaptchaToken] = useState<string | null>(null);
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
 
@@ -84,16 +86,17 @@ export default function RegisterScreen() {
 
  setSubmitting(true);
  try {
- const createdUser = await register({
- fullName: fullName.trim(),
- username,
- email: email.trim(),
- password,
- userType: portal,
- botField,
- acceptedTermsVersion: TERMS_VERSION,
- confirmedAge18: true,
- });
+  const createdUser = await register({
+    fullName: fullName.trim(),
+    username,
+    email: email.trim(),
+    password,
+    userType: portal,
+    botField,
+    acceptedTermsVersion: TERMS_VERSION,
+    confirmedAge18: true,
+    captchaToken: captchaToken || undefined,
+  });
  seedProfileUsername(createdUser, username, matchedInstitution ?? undefined);
  router.replace('/');
  } catch (err: any) {
@@ -336,7 +339,13 @@ export default function RegisterScreen() {
  </View>
  ) : null}
 
- <AppButton label="Configure & Join" onPress={handleRegister} loading={submitting} fullWidth />
+  {/* Cloudflare Turnstile CAPTCHA */}
+  <TurnstileWidget
+    onVerify={(token) => setCaptchaToken(token)}
+    onExpire={() => setCaptchaToken(null)}
+  />
+
+  <AppButton label="Configure & Join" onPress={handleRegister} loading={submitting} fullWidth />
 
  <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
  <Link href="/(auth)/login">
