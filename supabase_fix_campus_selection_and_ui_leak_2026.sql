@@ -104,7 +104,8 @@ DECLARE
     v_self_submitting_for_review BOOLEAN;
     v_domain_campus text;
 BEGIN
-    IF auth.uid() IS NULL AND pg_trigger_depth() > 1 THEN
+    -- Allow direct database administrators / SQL Editor (auth.uid() IS NULL) full authority
+    IF auth.uid() IS NULL THEN
         RETURN NEW;
     END IF;
 
