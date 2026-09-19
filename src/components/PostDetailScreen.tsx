@@ -88,7 +88,7 @@ export function PostDetailScreen() {
  const [lightboxCaption, setLightboxCaption] = useState<string | undefined>(undefined);
 
  // User Profile Inspector Modal
- const [inspectUser, setInspectUser] = useState<{ id: string; name: string; role: any; avatarUrl?: string | null } | null>(null);
+ const [inspectUser, setInspectUser] = useState<{ id: string; name: string; role: any; avatarUrl?: string | null; isVerified?: boolean } | null>(null);
 
  // Comment likes local state
  const [commentLikes, setCommentLikes] = useState<Record<string, number>>({});
@@ -265,10 +265,10 @@ export function PostDetailScreen() {
  <SolidCard frosted radius={24} style={{ marginBottom: spacing.md }}>
  {/* Author Header Row (Tap to View User Profile) */}
  <Pressable
- onPress={() => {
- haptics.light();
- setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl });
- }}
+  onPress={() => {
+    haptics.light();
+    setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl, isVerified: post.authorVerified });
+  }}
  accessibilityRole="button"
  accessibilityLabel={`View ${post.authorName}'s profile`}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}
@@ -684,6 +684,7 @@ export function PostDetailScreen() {
  userName={inspectUser.name}
  userRole={inspectUser.role}
  userAvatarUrl={inspectUser.avatarUrl}
+ isVerified={inspectUser.isVerified}
  />
  ) : null}
 

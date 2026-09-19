@@ -34,7 +34,13 @@ export function VerifiedBadge({
   const [modalOpen, setModalOpen] = useState(false);
 
   const details = getVerificationDetails({ role, fullName: name });
-  const badgeColor = color || (role === 'admin' ? '#EAB308' : '#1D9BF0');
+  const badgeColor =
+    color ||
+    (role === 'admin'
+      ? '#8E8E93'
+      : role === 'alumni'
+      ? '#EAB308'
+      : '#1D9BF0');
 
   function handlePress(e: any) {
     e?.stopPropagation?.();
@@ -140,7 +146,7 @@ export function VerifiedBadge({
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                <Ionicons name="checkmark-circle" size={14} color={badgeColor} />
                 <AppText variant="caption" weight="semiBold">
                   Verified Institutional Standing
                 </AppText>

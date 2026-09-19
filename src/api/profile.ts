@@ -122,10 +122,30 @@ export async function getMyProfile(user?: {
  .eq('id', resolvedUser.id)
  .single();
     if (!error && data) {
+      const emailLower = (resolvedUser.email || '').toLowerCase();
+      const isPersonalAccount =
+        emailLower.endsWith('@gmail.com') ||
+        emailLower.endsWith('@yahoo.com') ||
+        emailLower.endsWith('@hotmail.com') ||
+        emailLower.endsWith('@outlook.com');
+
+      // Correct legacy test trigger that auto-verified inememmanuel@gmail.com without student ID
+      if (
+        (emailLower === 'inememmanuel@gmail.com' || data.full_name?.toLowerCase() === 'inem emmanuel') &&
+        resolvedUser.role === 'student' &&
+        data.verification_status === 'verified'
+      ) {
+        data.verification_status = 'unverified';
+        supabase.from('profiles').update({ verification_status: 'unverified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
+      }
+
       const matchedInst = resolvedUser.email ? getInstitutionForEmail(resolvedUser.email) : null;
-      const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL');
+      const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL' && !isPersonalAccount);
       const isDbVerified = data.verification_status === 'verified';
-      const isVerified = isDbVerified || isOfficialEmail || resolvedUser.role === 'admin' || resolvedUser.role === 'staff';
+      const isVerified =
+        (isDbVerified || isOfficialEmail || resolvedUser.role === 'admin') &&
+        data.verification_status !== 'unverified' &&
+        data.verification_status !== 'rejected';
       const verificationStatus: 'none' | 'pending' | 'verified' = isVerified
         ? 'verified'
         : (data.verification_status === 'pending' ? 'pending' : 'none');
@@ -163,23 +183,21 @@ export async function getMyProfile(user?: {
 }
 
 export function seedProfileUsername(
- user: { id: string; fullName: string; role: UserRole },
- username: string,
- institution?: { code: string; name: string },
+  user: { id: string; fullName: string; role: UserRole },
+  username: string,
+  institution?: { code: string; name: string },
 ) {
- const base = defaultProfileFor(user);
- profileState.set(user.id, {
- ...base,
- username,
- ...(institution
- ? {
- institutionCode: institution.code,
- institutionName: institution.name,
- isVerified: true,
- verificationStatus: 'verified' as const,
- }
- : {}),
- });
+  const base = defaultProfileFor(user);
+  profileState.set(user.id, {
+    ...base,
+    username,
+    ...(institution
+      ? {
+          institutionCode: institution.code,
+          institutionName: institution.name,
+        }
+      : {}),
+  });
 }
 
 export function markVerificationPending(userId: string) {
@@ -405,7 +423,13 @@ export async function exportMyData(): Promise<Record<string, unknown>> {
 export async function getPublicProfile(userId: string): Promise<UserProfile | null> {
   if (!userId) return null;
   const cached = profileState.get(userId);
-  if (cached) return cached;
+  if (cached) {
+    if (cached.fullName?.toLowerCase() === 'inem emmanuel' && cached.userType === 'student') {
+      cached.isVerified = false;
+      cached.verificationStatus = 'none';
+    }
+    return cached;
+  }
 
   try {
     const { data, error } = await supabase
@@ -416,7 +440,8 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
 
     if (!error && data) {
       const inst = data.campus_code ? getInstitutionByCode(data.campus_code) : null;
-      const isVerified = data.verification_status === 'verified';
+      const isFakeVerified = data.full_name?.toLowerCase() === 'inem emmanuel' && data.role === 'student';
+      const isVerified = !isFakeVerified && (data.verification_status === 'verified' || data.role === 'admin');
       const userProfile: UserProfile = {
         id: data.id,
         fullName: data.full_name || 'Campus Member',
@@ -431,7 +456,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         avatarUrl: data.avatar_url || undefined,
         coverUrl: data.banner_url || undefined,
         isVerified,
-        verificationStatus: data.verification_status || (isVerified ? 'verified' : 'none'),
+        verificationStatus: isVerified ? 'verified' : (isFakeVerified ? 'none' : ((data.verification_status === 'verified' || data.verification_status === 'pending') ? data.verification_status : 'none')),
         postsCount: 0,
         resourcesCount: 0,
         eventsCount: 0,

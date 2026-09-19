@@ -62,7 +62,7 @@ export function PostCard({ post }: { post: Post }) {
  const [lightboxCaption, setLightboxCaption] = useState<string | undefined>(undefined);
 
  // User Profile Inspector Modal
- const [inspectUser, setInspectUser] = useState<{ id: string; name: string; role: any; avatarUrl?: string | null } | null>(null);
+ const [inspectUser, setInspectUser] = useState<{ id: string; name: string; role: any; avatarUrl?: string | null; isVerified?: boolean } | null>(null);
 
  // Poll state
  const [poll, setPoll] = useState(post.poll);
@@ -131,7 +131,7 @@ export function PostCard({ post }: { post: Post }) {
  <Pressable
  onPress={() => {
  haptics.light();
- setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl });
+ setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl, isVerified: post.authorVerified });
  }}
  style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flex: 1, minWidth: 0 }}
  >
@@ -629,6 +629,7 @@ export function PostCard({ post }: { post: Post }) {
  userName={inspectUser.name}
  userRole={inspectUser.role}
  userAvatarUrl={inspectUser.avatarUrl}
+ isVerified={inspectUser.isVerified}
  />
  ) : null}
 

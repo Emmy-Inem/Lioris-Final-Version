@@ -7,6 +7,7 @@ import { AppText } from './AppText';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { UserTypeBadge } from './UserTypeBadge';
+import { VerifiedBadge } from './VerifiedBadge';
 import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -37,6 +38,7 @@ interface UserProfileModalProps {
  coverImageUrl?: string | null;
  department?: string;
  institution?: string;
+ isVerified?: boolean;
 }
 
 export function UserProfileModal({
@@ -49,6 +51,7 @@ export function UserProfileModal({
  coverImageUrl,
  department = 'Computer Science & AI',
  institution = 'Campus',
+ isVerified = false,
 }: UserProfileModalProps) {
  const { colors, spacing, radius, isDark } = useTheme();
  const segments = useSegments();
@@ -282,8 +285,8 @@ export function UserProfileModal({
  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
  {effectiveName}
  </AppText>
- {fetchedProfile?.isVerified ? (
- <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+ {(effectiveRole === 'admin' || (fetchedProfile ? (fetchedProfile.verificationStatus === 'verified' && fetchedProfile.isVerified) : isVerified)) ? (
+ <VerifiedBadge size={18} role={effectiveRole} name={effectiveName} />
  ) : null}
  <UserTypeBadge role={effectiveRole} />
  </View>

@@ -57,10 +57,21 @@ export function getVerificationDetails(
     return {
       isVerified: true,
       type: 'official',
-      badgeColor: '#EAB308', // Official Gold for Administrators
+      badgeColor: '#8E8E93', // Official Grey for Administrators
       label: 'Platform Administration',
       explanation: 'Verified official administrative entity with platform governance authority.',
       institution: (user as any).institutionName || 'Campus Central',
+    };
+  }
+
+  if (user.role === 'alumni') {
+    return {
+      isVerified: true,
+      type: 'alumni',
+      badgeColor: '#EAB308', // Official Yellow for Alumni
+      label: 'Verified Alumni',
+      explanation: 'Verified graduate with confirmed university degree credentials.',
+      institution: (user as any).institutionName || 'Alumni Chapter',
     };
   }
 
@@ -72,17 +83,6 @@ export function getVerificationDetails(
       label: 'Verified Faculty / Staff',
       explanation: 'Verified university faculty member or academic department staff.',
       institution: (user as any).institutionName || 'University Faculty',
-    };
-  }
-
-  if (user.role === 'alumni') {
-    return {
-      isVerified: true,
-      type: 'alumni',
-      badgeColor: '#1D9BF0', // Authentic Social Blue
-      label: 'Verified Alumni',
-      explanation: 'Verified graduate with confirmed university degree credentials.',
-      institution: (user as any).institutionName || 'Alumni Chapter',
     };
   }
 
