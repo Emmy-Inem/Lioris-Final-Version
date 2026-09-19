@@ -10,7 +10,10 @@ import { AppButton } from '@/components/AppButton';
 import { PublishThreadModal } from '@/components/PublishThreadModal';
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications';
 import { createPost } from '@/api/posts';
-import { getMyProfile } from '@/api/profile';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { submitVerificationRequest } from '@/api/verification';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
 import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import { useToast } from '@/context/ToastContext';
 
@@ -43,6 +46,36 @@ export function DesktopTopBar() {
     queryFn: () => getMyProfile(user!),
     enabled: !!user,
   });
+
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const isRestrictedGuest = isUnverifiedPersonalUser(profile);
+
+  async function handleSubmitVerification(data: {
+    institutionClaimed: string;
+    documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
+    documentReference?: string;
+    documentPhotoUri?: string | null;
+    photoBlob?: Blob;
+  }) {
+    if (!user) return;
+    try {
+      await submitVerificationRequest({
+        userId: user.id,
+        applicantName: profile?.fullName ?? user.fullName,
+        documentType: data.documentType,
+        documentReference: data.documentReference,
+        institutionClaimed: data.institutionClaimed,
+        documentPhotoUri: data.documentPhotoUri,
+        photoBlob: data.photoBlob,
+      });
+      markVerificationPending(user.id);
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setVerificationModalOpen(false);
+      toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not submit verification request. Please try again.');
+    }
+  }
 
   const { data: notifications } = useQuery({
     queryKey: ['notifications', user?.id],
@@ -412,38 +445,49 @@ export function DesktopTopBar() {
  <AppText variant="caption" tone="secondary">
  Navigation: <AppText weight="bold" variant="caption">↑ ↓ Enter</AppText> • Dismiss: <AppText weight="bold" variant="caption">Esc</AppText>
  </AppText>
- <Pressable
- onPress={() => {
- setCommandPaletteOpen(false);
- setComposerOpen(true);
- }}
- >
- <AppText variant="caption" weight="bold" tone="brand">
- + Create Post
- </AppText>
- </Pressable>
- </View>
- </Pressable>
- </Pressable>
- </Modal>
+                <Pressable
+                  onPress={() => {
+                    setCommandPaletteOpen(false);
+                    if (isRestrictedGuest) {
+                      setVerificationModalOpen(true);
+                      return;
+                    }
+                    setComposerOpen(true);
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="brand">
+                    + Create Post
+                  </AppText>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
- {/* Quick Composer Modal */}
- {composerOpen && (
- <PublishThreadModal
- visible={composerOpen}
- onClose={() => setComposerOpen(false)}
-        onPublish={async (payload) => {
-          if (!user) return;
-          await createPost({
-            ...payload,
-            authorInstitutionCode: profile?.institutionCode || 'GLOBAL',
-          });
-          await queryClient.invalidateQueries({ queryKey: ['feed'] });
-          toast.success('Forum discussion published successfully!');
-          setComposerOpen(false);
-        }}
- />
- )}
+        {/* Quick Composer Modal */}
+        {composerOpen && (
+          <PublishThreadModal
+            visible={composerOpen}
+            onClose={() => setComposerOpen(false)}
+            onPublish={async (payload) => {
+              if (!user) return;
+              await createPost({
+                ...payload,
+                authorInstitutionCode: profile?.institutionCode || 'GLOBAL',
+              });
+              await queryClient.invalidateQueries({ queryKey: ['feed'] });
+              toast.success('Forum discussion published successfully!');
+              setComposerOpen(false);
+            }}
+          />
+        )}
+
+        <ApplyForVerificationModal
+          visible={verificationModalOpen}
+          onClose={() => setVerificationModalOpen(false)}
+          onSubmit={handleSubmitVerification}
+          defaultInstitution={profile?.institutionCode}
+        />
  </View>
  );
 }

@@ -13,14 +13,23 @@ import { SolidCard } from './SolidCard';
 import { NewChatModal } from './NewChatModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
 import { listConversations, archiveConversation, getOrCreateConversationWithUser, UserToMessage } from '@/api/messaging';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { submitVerificationRequest } from '@/api/verification';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { VerificationRequiredGate } from './VerificationRequiredGate';
+import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 
 export function MessagesListScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
+  const { user } = useAuth();
+  const toast = useToast();
   const segments = useSegments();
   const roleGroup = segments[0] || '(student)';
   const queryClient = useQueryClient();
@@ -28,13 +37,49 @@ export function MessagesListScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [newChatModalOpen, setNewChatModalOpen] = useState(false);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   useRealtimeChannel();
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+  const isRestrictedGuest = isUnverifiedPersonalUser(profile);
+
+  async function handleSubmitVerification(data: {
+    institutionClaimed: string;
+    documentType: any;
+    documentReference?: string;
+    documentPhotoUri?: string | null;
+    photoBlob?: Blob;
+  }) {
+    if (!user) return;
+    try {
+      await submitVerificationRequest({
+        userId: user.id,
+        applicantName: profile?.fullName ?? user.fullName,
+        documentType: data.documentType,
+        documentReference: data.documentReference,
+        institutionClaimed: data.institutionClaimed,
+        documentPhotoUri: data.documentPhotoUri,
+        photoBlob: data.photoBlob,
+      });
+      markVerificationPending(user.id);
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setVerificationModalOpen(false);
+      toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not submit verification request. Please try again.');
+    }
+  }
 
   const messagingEnabled = isFeatureEnabled('e2ee_messaging');
 
   const { data: conversations, isLoading } = useQuery({
     queryKey: ['conversations'],
     queryFn: listConversations,
+    enabled: !isRestrictedGuest,
   });
 
   async function handleArchive(id: string) {
@@ -81,6 +126,27 @@ export function MessagesListScreen() {
             Direct chat and messaging have been temporarily disabled by campus administration. Please check back later or use forum discussions.
           </AppText>
         </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isRestrictedGuest) {
+    return (
+      <ScreenContainer glow={false} fluidWidth={isDesktop}>
+        {!isDesktop && <AppHeader />}
+        <View style={{ flex: 1, padding: spacing.lg, justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <VerificationRequiredGate
+            campusCode={profile?.institutionCode}
+            featureName="chat"
+            onStartVerification={() => setVerificationModalOpen(true)}
+          />
+        </View>
+        <ApplyForVerificationModal
+          visible={verificationModalOpen}
+          onClose={() => setVerificationModalOpen(false)}
+          onSubmit={handleSubmitVerification}
+          defaultInstitution={profile?.institutionCode}
+        />
       </ScreenContainer>
     );
   }

@@ -21,7 +21,10 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, togglePostRepost, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
+import { getMyProfile } from '@/api/profile';
 import { submitReport } from '@/api/moderation';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { VerificationRequiredGate } from './VerificationRequiredGate';
 import { haptics } from '@/utils/haptics';
 
 const STOCK_IMAGES: Record<string, any> = {
@@ -58,6 +61,14 @@ export function PostDetailScreen() {
     queryFn: () => (id ? getPost(id) : Promise.resolve(null)),
     enabled: !!id,
   });
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+
+  const isRestrictedGuest = isUnverifiedPersonalUser(profile);
 
   const [liked, setLiked] = useState(!!post?.isLikedByMe);
   const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
@@ -486,19 +497,24 @@ export function PostDetailScreen() {
  </View>
  </SolidCard>
 
- {/* Comments Count & Header */}
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, marginTop: spacing.xs }}>
- <AppText variant="h3" weight="bold">
- Discussion ({comments?.length ?? post.commentsCount})
- </AppText>
- <AppText variant="caption" tone="brand" weight="bold">
- Live Thread
- </AppText>
- </View>
+        {/* Comments Count & Header */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, marginTop: spacing.xs }}>
+          <AppText variant="h3" weight="bold">
+            Discussion ({comments?.length ?? post.commentsCount})
+          </AppText>
+          <AppText variant="caption" tone="brand" weight="bold">
+            {isRestrictedGuest ? 'Preview Locked' : 'Live Thread'}
+          </AppText>
+        </View>
 
- {/* Conversation Replies Tree */}
- {comments && comments.length > 0 ? (
- <View style={{ position: 'relative', marginBottom: spacing.md }}>
+        {/* Conversation Replies Tree or Verification Gate */}
+        {isRestrictedGuest ? (
+          <VerificationRequiredGate
+            campusCode={post.institutionCode}
+            featureName="comments"
+          />
+        ) : comments && comments.length > 0 ? (
+          <View style={{ position: 'relative', marginBottom: spacing.md }}>
  {comments.map((c, index) => {
  const isCommentLiked = commentLikedByMe[c.id] ?? !!c.isLikedByMe;
  const cLikes = commentLikes[c.id] ?? c.likesCount;
@@ -603,77 +619,79 @@ export function PostDetailScreen() {
  )}
  </ScrollView>
 
-      {/* Sticky Bottom Reply Composer Bar */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: isDark ? 'rgba(10, 19, 38, 0.96)' : 'rgba(255, 255, 255, 0.98)',
-          borderTopWidth: 1,
-          borderColor: colors.border,
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
-          zIndex: 20,
-          alignItems: 'center',
-        }}
-      >
-        <View style={{ width: '100%', maxWidth: isDesktop ? 800 : undefined }}>
-          {replyingToAuthor ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
-              <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToAuthor}</AppText>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
-                <Ionicons name="close" size={14} color={colors.brandPrimary} />
-              </Pressable>
-            </View>
-          ) : null}
+      {/* Sticky Bottom Reply Composer Bar (Hidden for unverified personal guests) */}
+      {!isRestrictedGuest && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+            borderTopWidth: 1,
+            borderColor: colors.border,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            zIndex: 20,
+            alignItems: 'center',
+          }}
+        >
+          <View style={{ width: '100%', maxWidth: isDesktop ? 800 : undefined }}>
+            {replyingToAuthor ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
+                <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToAuthor}</AppText>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
+                  <Ionicons name="close" size={14} color={colors.brandPrimary} />
+                </Pressable>
+              </View>
+            ) : null}
 
-          <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
-            <Avatar name={user?.fullName ?? 'You'} size={32} role={user?.role} />
+            <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+              <Avatar name={user?.fullName ?? 'You'} size={32} role={user?.role} />
 
-            <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 4 }}>
-              <TextInput accessibilityLabel="Write a reply"
-                placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Write a reply..."}
-                placeholderTextColor={colors.textSecondary}
-                value={newReply}
-                onChangeText={setNewReply}
-                multiline
-                style={{ flex: 1, color: colors.textPrimary, fontSize: 13, maxHeight: 72, paddingVertical: 2 }}
-              />
+              <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <TextInput accessibilityLabel="Write a reply"
+                  placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Write a reply..."}
+                  placeholderTextColor={colors.textSecondary}
+                  value={newReply}
+                  onChangeText={setNewReply}
+                  multiline
+                  style={{ flex: 1, color: colors.textPrimary, fontSize: 13, maxHeight: 72, paddingVertical: 2 }}
+                />
 
-              <Pressable accessibilityRole="button" accessibilityLabel={attachedReplyMedia ? 'Remove attached image' : 'Attach an image'}
-                onPress={() => {
-                  haptics.light();
-                  setAttachedReplyMedia(attachedReplyMedia ? null : COMMENT_MEDIA_PRESETS[0].id);
+                <Pressable accessibilityRole="button" accessibilityLabel={attachedReplyMedia ? 'Remove attached image' : 'Attach an image'}
+                  onPress={() => {
+                    haptics.light();
+                    setAttachedReplyMedia(attachedReplyMedia ? null : COMMENT_MEDIA_PRESETS[0].id);
+                  }}
+                  hitSlop={6}
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons name={attachedReplyMedia ? "image" : "image-outline"} size={18} color={attachedReplyMedia ? colors.brandPrimary : colors.textSecondary} />
+                </Pressable>
+              </View>
+
+              <Pressable
+                onPress={handleAddReply}
+                disabled={submittingReply || (!newReply.trim() && !attachedReplyMedia)}
+                style={{
+                  backgroundColor: (!newReply.trim() && !attachedReplyMedia) ? colors.border : colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 14,
+                  height: 36,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
                 }}
-                hitSlop={6}
-                style={{ padding: 4 }}
               >
-                <Ionicons name={attachedReplyMedia ? "image" : "image-outline"} size={18} color={attachedReplyMedia ? colors.brandPrimary : colors.textSecondary} />
+                <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'inverse'}>
+                  {submittingReply ? '...' : 'Reply'}
+                </AppText>
               </Pressable>
             </View>
-
-            <Pressable
-              onPress={handleAddReply}
-              disabled={submittingReply || (!newReply.trim() && !attachedReplyMedia)}
-              style={{
-                backgroundColor: (!newReply.trim() && !attachedReplyMedia) ? colors.border : colors.brandPrimary,
-                borderRadius: radius.pill,
-                paddingHorizontal: 14,
-                height: 36,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'inverse'}>
-                {submittingReply ? '...' : 'Reply'}
-              </AppText>
-            </Pressable>
           </View>
         </View>
-      </View>
+      )}
 
  {/* User Profile Modal Inspector */}
  {inspectUser ? (

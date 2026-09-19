@@ -45,6 +45,11 @@ import {
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { CAMPUS_LANDMARKS, CAMPUS_CENTERS, CampusLandmark } from '@/api/campusMap';
 import { EventAttendeeInfo, EventCategory, EventAgendaItem } from '@/api/types';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { submitVerificationRequest } from '@/api/verification';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { VerificationRequiredGate } from './VerificationRequiredGate';
+import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { haptics } from '@/utils/haptics';
 
 const EVENT_MEDIA_MAP: Record<string, any> = {
@@ -86,6 +91,41 @@ export function EventDetailScreen() {
     queryFn: () => getEvent(id),
     enabled: !!id,
   });
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+  const isRestrictedGuest = isUnverifiedPersonalUser(profile);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+
+  async function handleSubmitVerification(data: {
+    institutionClaimed: string;
+    documentType: any;
+    documentReference?: string;
+    documentPhotoUri?: string | null;
+    photoBlob?: Blob;
+  }) {
+    if (!user) return;
+    try {
+      await submitVerificationRequest({
+        userId: user.id,
+        applicantName: profile?.fullName ?? user.fullName,
+        documentType: data.documentType,
+        documentReference: data.documentReference,
+        institutionClaimed: data.institutionClaimed,
+        documentPhotoUri: data.documentPhotoUri,
+        photoBlob: data.photoBlob,
+      });
+      markVerificationPending(user.id);
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setVerificationModalOpen(false);
+      toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not submit verification request. Please try again.');
+    }
+  }
 
   const [contactingOrganizer, setContactingOrganizer] = useState(false);
   const [campusMapOpen, setCampusMapOpen] = useState(false);
@@ -404,6 +444,11 @@ export function EventDetailScreen() {
 
   async function handleToggleRsvp() {
     if (!event) return;
+    if (isRestrictedGuest) {
+      haptics.light();
+      setVerificationModalOpen(true);
+      return;
+    }
     haptics.medium();
     setSubmittingRsvp(true);
     try {
@@ -427,6 +472,11 @@ export function EventDetailScreen() {
 
   function handleLaunchMaps() {
     if (!event) return;
+    if (isRestrictedGuest) {
+      haptics.light();
+      setVerificationModalOpen(true);
+      return;
+    }
     haptics.light();
     const query = matchedLandmark
       ? `${matchedLandmark.latitude},${matchedLandmark.longitude}`
@@ -817,10 +867,12 @@ export function EventDetailScreen() {
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-                  <AppText weight="bold" variant="bodySmall">
-                    {event.location}
+                  <AppText weight="bold" variant="bodySmall" tone={isRestrictedGuest ? 'secondary' : 'primary'}>
+                    {isRestrictedGuest
+                      ? `🔒 Exclusive to Verified ${event.campusCode || 'Campus'} Students`
+                      : event.location}
                   </AppText>
-                  {matchedLandmark && (
+                  {!isRestrictedGuest && matchedLandmark && (
                     <Badge label="✓ Verified Campus Venue" tone="success" />
                   )}
                 </View>
@@ -996,7 +1048,14 @@ export function EventDetailScreen() {
 
             {/* Tab 3: Campus Map & Navigation */}
             {activeTab === 'map' && (
-              <View style={{ gap: spacing.md }}>
+              isRestrictedGuest ? (
+                <VerificationRequiredGate
+                  campusCode={event.campusCode}
+                  featureName="venue"
+                  onStartVerification={() => setVerificationModalOpen(true)}
+                />
+              ) : (
+                <View style={{ gap: spacing.md }}>
                 <View
                   style={{
                     height: 360,
@@ -1080,7 +1139,7 @@ export function EventDetailScreen() {
                   />
                 </View>
               </View>
-            )}
+            ))}
           </View>
 
           {/* Right Column: Sticky Action & Ticket Registration Card */}
@@ -1117,8 +1176,14 @@ export function EventDetailScreen() {
 
               <View style={{ marginBottom: spacing.md }}>
                 <AppButton
-                  label={isRsvpd ? 'Release / Cancel Seat' : 'Claim Your Seat (RSVP)'}
-                  variant={isRsvpd ? 'secondary' : 'primary'}
+                  label={
+                    isRestrictedGuest
+                      ? 'Verify Student ID to RSVP'
+                      : isRsvpd
+                      ? 'Release / Cancel Seat'
+                      : 'Claim Your Seat (RSVP)'
+                  }
+                  variant={isRestrictedGuest ? 'primary' : isRsvpd ? 'secondary' : 'primary'}
                   loading={submittingRsvp}
                   onPress={handleToggleRsvp}
                   fullWidth
@@ -1153,10 +1218,16 @@ export function EventDetailScreen() {
               <AppText weight="bold" variant="caption" tone="secondary" style={{ letterSpacing: 0.5, marginBottom: spacing.xs, textTransform: 'uppercase' }}>
                 Venue Location
               </AppText>
-              <AppText variant="bodySmall" weight="medium" style={{ marginBottom: spacing.sm }}>
-                {event.location}
+              <AppText variant="bodySmall" weight="medium" tone={isRestrictedGuest ? 'secondary' : 'primary'} style={{ marginBottom: spacing.sm }}>
+                {isRestrictedGuest
+                  ? `🔒 Exclusive to Verified ${event.campusCode || 'Campus'} Students`
+                  : event.location}
               </AppText>
-              <AppButton label="Open Navigation" variant="ghost" onPress={handleLaunchMaps} />
+              <AppButton
+                label={isRestrictedGuest ? 'Verify to View Venue' : 'Open Navigation'}
+                variant="ghost"
+                onPress={handleLaunchMaps}
+              />
             </SolidCard>
           </View>
         </View>
@@ -1399,10 +1470,12 @@ export function EventDetailScreen() {
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-                <AppText weight="bold" variant="bodySmall" tone="primary">
-                  {event.location}
+                <AppText weight="bold" variant="bodySmall" tone={isRestrictedGuest ? 'secondary' : 'primary'}>
+                  {isRestrictedGuest
+                    ? `🔒 Exclusive to Verified ${event.campusCode || 'Campus'} Students`
+                    : event.location}
                 </AppText>
-                {matchedLandmark && <Badge label="✓ Verified" tone="success" />}
+                {!isRestrictedGuest && matchedLandmark && <Badge label="✓ Verified" tone="success" />}
               </View>
             </View>
 
@@ -1438,9 +1511,9 @@ export function EventDetailScreen() {
                 </AppText>
                 <View style={{ width: 140 }}>
                   <AppButton
-                    label={isRsvpd ? 'Cancel Seat' : 'RSVP Now'}
+                    label={isRestrictedGuest ? 'Verify to RSVP' : isRsvpd ? 'Cancel Seat' : 'RSVP Now'}
                     size="sm"
-                    variant={isRsvpd ? 'secondary' : 'primary'}
+                    variant={isRestrictedGuest ? 'primary' : isRsvpd ? 'secondary' : 'primary'}
                     loading={submittingRsvp}
                     onPress={handleToggleRsvp}
                   />
@@ -1604,7 +1677,14 @@ export function EventDetailScreen() {
 
             {/* Tab 3: Campus Map */}
             {activeTab === 'map' && (
-              <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
+              isRestrictedGuest ? (
+                <VerificationRequiredGate
+                  campusCode={event.campusCode}
+                  featureName="venue"
+                  onStartVerification={() => setVerificationModalOpen(true)}
+                />
+              ) : (
+                <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
                 <View
                   style={{
                     height: 280,
@@ -1687,7 +1767,7 @@ export function EventDetailScreen() {
                   </View>
                 </View>
               </View>
-            )}
+            ))}
           </View>
         </ScrollView>
       )}
@@ -2185,7 +2265,7 @@ export function EventDetailScreen() {
         visible={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
         imageSource={heroImageSource}
-        caption={`${event.title} - ${event.location}`}
+        caption={isRestrictedGuest ? event.title : `${event.title} - ${event.location}`}
       />
 
       {/* Campus Map Focused Modal */}
@@ -2355,6 +2435,12 @@ export function EventDetailScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <ApplyForVerificationModal
+        visible={verificationModalOpen}
+        onClose={() => setVerificationModalOpen(false)}
+        onSubmit={handleSubmitVerification}
+        defaultInstitution={event?.campusCode || profile?.institutionCode}
+      />
     </ScreenContainer>
   );
 }

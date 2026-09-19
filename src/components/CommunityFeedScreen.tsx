@@ -22,7 +22,11 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts, createPost } from '@/api/posts';
 import { listCommunities, proposeCommunity, ForumCommunityRecord } from '@/api/communities';
-import { getMyProfile } from '@/api/profile';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { submitVerificationRequest } from '@/api/verification';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { GuestTeaserBanner } from './GuestTeaserBanner';
+import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { useViewScope } from '@/hooks/useViewScope';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
@@ -168,6 +172,45 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
       ? profile.institutionCode
       : undefined;
+
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const isRestrictedGuest = isUnverifiedPersonalUser(profile);
+
+  function handleOpenComposer() {
+    haptics.light();
+    if (isRestrictedGuest) {
+      setVerificationModalOpen(true);
+      return;
+    }
+    setComposerOpen(true);
+  }
+
+  async function handleSubmitVerification(data: {
+    institutionClaimed: string;
+    documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
+    documentReference?: string;
+    documentPhotoUri?: string | null;
+    photoBlob?: Blob;
+  }) {
+    if (!user) return;
+    try {
+      await submitVerificationRequest({
+        userId: user.id,
+        applicantName: profile?.fullName ?? user.fullName,
+        documentType: data.documentType,
+        documentReference: data.documentReference,
+        institutionClaimed: data.institutionClaimed,
+        documentPhotoUri: data.documentPhotoUri,
+        photoBlob: data.photoBlob,
+      });
+      markVerificationPending(user.id);
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setVerificationModalOpen(false);
+      toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not submit verification request. Please try again.');
+    }
+  }
 
  const { data: rawPosts, isLoading, refetch, isRefetching } = useQuery({
  queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel],
@@ -608,9 +651,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         </GlassCard>
       )}
 
+      {/* Guest Preview Mode Banner */}
+      <GuestTeaserBanner />
+
       {/* Interactive Quick Thread Composer Bar */}
       <Pressable
-        onPress={() => setComposerOpen(true)}
+        onPress={handleOpenComposer}
         accessibilityRole="button"
         accessibilityLabel="Start a new thread or create a poll"
         style={{ marginTop: 2, marginBottom: spacing.sm }}
@@ -950,7 +996,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: spacing.sm }}>
                 <Avatar name={user?.fullName || 'User'} uri={profile?.avatarUrl} size={42} />
                 <Pressable
-                  onPress={() => setComposerOpen(true)}
+                  onPress={handleOpenComposer}
                   style={{
                     flex: 1,
                     backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
@@ -972,21 +1018,21 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.divider }}>
                 <View style={{ flexDirection: 'row', gap: spacing.md }}>
                   <Pressable
-                    onPress={() => setComposerOpen(true)}
+                    onPress={handleOpenComposer}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                   >
                     <Ionicons name="image-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="caption" weight="semiBold" tone="secondary">Photo / Media</AppText>
                   </Pressable>
                   <Pressable
-                    onPress={() => setComposerOpen(true)}
+                    onPress={handleOpenComposer}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                   >
                     <Ionicons name="stats-chart-outline" size={16} color="#10B981" />
                     <AppText variant="caption" weight="semiBold" tone="secondary">Create Poll</AppText>
                   </Pressable>
                   <Pressable
-                    onPress={() => setComposerOpen(true)}
+                    onPress={handleOpenComposer}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                   >
                     <Ionicons name="pricetag-outline" size={16} color="#F59E0B" />
@@ -995,7 +1041,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </View>
 
                 <Pressable
-                  onPress={() => setComposerOpen(true)}
+                  onPress={handleOpenComposer}
                   style={{
                     backgroundColor: colors.brandPrimary,
                     paddingHorizontal: 16,
@@ -1251,6 +1297,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  </ActionSheetModal>
 
     <PublishThreadModal visible={composerOpen} onClose={() => setComposerOpen(false)} onPublish={handlePublish} />
+    <ApplyForVerificationModal
+      visible={verificationModalOpen}
+      onClose={() => setVerificationModalOpen(false)}
+      onSubmit={handleSubmitVerification}
+      defaultInstitution={profile?.institutionCode}
+    />
     <UserProfileQuickViewModal user={quickViewUser} visible={!!quickViewUser} onClose={() => setQuickViewUser(null)} />
 
     {/* Sub-Forum Rules & Guidelines Modal */}
@@ -1514,10 +1566,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     {/* Floating Action Button (FAB) - Only shown on mobile viewports so it does not block Community Rules on desktop */}
     {!isDesktop && (
       <Pressable
-        onPress={() => {
-          haptics.medium();
-          setComposerOpen(true);
-        }}
+        onPress={handleOpenComposer}
         accessibilityRole="button"
         accessibilityLabel="Create new thread"
         style={({ hovered }: any) => [
