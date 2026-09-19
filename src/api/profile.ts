@@ -38,10 +38,9 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
  // every demo account (all @ui.edu.ng). The substring ladder that used to
  // live here only ran for *unrecognised* domains, where it guessed badly -
  // `includes('oau')` assigned joaustin@some-school.edu to Obafemi Awolowo.
- // An unknown domain has no campus, so fall back to the default explicitly.
   if (!instCode || instCode === 'GLOBAL') {
-    instCode = 'UI';
-    instName = 'University of Ibadan';
+    instCode = undefined;
+    instName = undefined;
   }
 
   const matchedInst = user.email ? getInstitutionForEmail(user.email) : null;
@@ -57,10 +56,10 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
     userType: user.role,
     graduationYear: undefined,
     bio: '',
-    department: 'Computer Science',
+    department: 'General Studies',
     interests: [],
-    institutionName: instName || 'University of Ibadan',
-    institutionCode: instCode || 'UI',
+    institutionName: instName,
+    institutionCode: instCode,
     avatarUrl: undefined,
     coverUrl: undefined,
     isVerified,
@@ -136,38 +135,25 @@ export async function getMyProfile(user?: {
         supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
       }
 
-      const isStudent = data.role === 'student' || resolvedUser.role === 'student';
       const rawCampus = data.campus_code;
-      let campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
-      if (isStudent && (!campusCode || campusCode === 'GLOBAL')) {
-        campusCode = 'UI';
-      }
-      const inst = (campusCode && campusCode !== 'GLOBAL' ? getInstitutionByCode(campusCode) : null) || {
-        code: 'UI',
-        name: 'University of Ibadan',
-        domain: 'ui.edu.ng',
+      const campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
+      const inst = (campusCode && campusCode !== 'GLOBAL') ? getInstitutionByCode(campusCode) : null;
+
+      const merged: UserProfile = {
+        ...fallback,
+        fullName: data.full_name || fallback.fullName,
+        username: data.username || fallback.username,
+        bio: data.bio || fallback.bio,
+        department: data.department || fallback.department,
+        interests: data.interests || fallback.interests,
+        institutionName: inst?.name || fallback.institutionName || 'Campus Workspace',
+        institutionCode: inst?.code || fallback.institutionCode,
+        avatarUrl: data.avatar_url || fallback.avatarUrl,
+        coverUrl: data.banner_url || fallback.coverUrl,
+        isVerified,
+        verificationStatus,
       };
-
-      // Quietly sync back to Supabase if the student's campus_code was set to GLOBAL or empty
-      if (isStudent && (data.campus_code === 'GLOBAL' || !data.campus_code)) {
-        supabase.from('profiles').update({ campus_code: 'UI' }).eq('id', resolvedUser.id).then(() => {}, () => {});
-      }
-
- const merged: UserProfile = {
- ...fallback,
- fullName: data.full_name || fallback.fullName,
- username: data.username || fallback.username,
- bio: data.bio || fallback.bio,
- department: data.department || fallback.department,
- interests: data.interests || fallback.interests,
- institutionName: inst.name,
- institutionCode: inst.code,
- avatarUrl: data.avatar_url || fallback.avatarUrl,
- coverUrl: data.banner_url || fallback.coverUrl,
- isVerified,
- verificationStatus,
- };
- profileState.set(resolvedUser.id, merged);
+      profileState.set(resolvedUser.id, merged);
  return merged;
  }
  } catch {
@@ -425,9 +411,8 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         graduationYear: undefined,
         bio: data.bio || '',
         department: data.department || 'Academic',
-        interests: data.interests || [],
-        institutionName: inst?.name || 'University of Ibadan',
-        institutionCode: inst?.code || data.campus_code || 'UI',
+        institutionName: inst?.name || (data.campus_code && data.campus_code !== 'GLOBAL' ? data.campus_code : 'Campus'),
+        institutionCode: inst?.code || data.campus_code || undefined,
         avatarUrl: data.avatar_url || undefined,
         coverUrl: data.banner_url || undefined,
         isVerified,

@@ -107,9 +107,9 @@ export function PublishEventModal({
   const isAlumniHost = defaultScope === 'alumni' || user?.role === 'alumni';
 
   // Strictly bind to the current workspace's university institution
-  const activeCampus = (defaultCampus && defaultCampus !== 'GLOBAL') ? defaultCampus : (homeInstitutionCode || 'UI');
-  const institution = getInstitutionByCode(activeCampus);
-  const institutionName = institution?.name ?? 'University of Ibadan';
+  const activeCampus = (defaultCampus && defaultCampus !== 'GLOBAL') ? defaultCampus : homeInstitutionCode;
+  const institution = activeCampus ? getInstitutionByCode(activeCampus) : undefined;
+  const institutionName = institution?.name ?? 'Campus';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -252,7 +252,7 @@ export function PublishEventModal({
     haptics.medium();
     setSubmitting(true);
     try {
-      const finalCampus = visibilityScope === 'global' ? 'GLOBAL' : targetCampus.toUpperCase();
+      const finalCampus = visibilityScope === 'global' ? 'GLOBAL' : (targetCampus ? targetCampus.toUpperCase() : 'GLOBAL');
       await createEvent({
         title: title.trim(),
         description: description.trim() || 'No description provided.',
@@ -495,7 +495,7 @@ export function PublishEventModal({
               />
             ) : eventType === 'Physical Event' ? (
               <VerifiedCampusLocationPicker
-                campusCode={targetCampus}
+                campusCode={targetCampus || ''}
                 value={location}
                 onChangeLocation={(loc) => setLocation(loc)}
                 placeholder="Search verified campus halls & auditoriums..."

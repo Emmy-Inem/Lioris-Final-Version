@@ -35,7 +35,7 @@ export default function RegisterScreen() {
  const { isDesktop } = useResponsive();
  const { register } = useAuth();
  const [portal, setPortal] = useState<Extract<UserRole, 'student' | 'alumni'>>('student');
- const [selectedCampusCode, setSelectedCampusCode] = useState<string>('UNILAG');
+ const [selectedCampusCode, setSelectedCampusCode] = useState<string>('');
  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
  const [waitlistName, setWaitlistName] = useState('');
  const [waitlistUniversity, setWaitlistUniversity] = useState('');
@@ -127,26 +127,37 @@ export default function RegisterScreen() {
  return;
  }
 
- if (Platform.OS === 'web' && !captchaToken) {
- setErrorMessage('Please complete the security check above before continuing.');
- return;
- }
+  if (Platform.OS === 'web' && !captchaToken) {
+    setErrorMessage('Please complete the security check above before continuing.');
+    return;
+  }
 
- setSubmitting(true);
- try {
-  const createdUser = await register({
-    fullName: fullName.trim(),
-    username: username.trim().replace(/^@/, ''),
-    email: email.trim(),
-    password,
-    userType: portal,
-    botField,
-    acceptedTermsVersion: TERMS_VERSION,
-    confirmedAge18: true,
-    captchaToken: captchaToken || undefined,
-  });
-  seedProfileUsername(createdUser, username.trim().replace(/^@/, ''), matchedInstitution ?? getInstitutionByCode(selectedCampusCode) ?? undefined);
- router.replace('/');
+  const effectiveCampusCode = matchedInstitution?.code || selectedCampusCode;
+  if (!effectiveCampusCode) {
+    setErrorMessage('Please select your university from the supported universities list.');
+    return;
+  }
+
+  setSubmitting(true);
+  try {
+    const createdUser = await register({
+      fullName: fullName.trim(),
+      username: username.trim().replace(/^@/, ''),
+      email: email.trim(),
+      password,
+      userType: portal,
+      campusCode: effectiveCampusCode,
+      botField,
+      acceptedTermsVersion: TERMS_VERSION,
+      confirmedAge18: true,
+      captchaToken: captchaToken || undefined,
+    });
+    seedProfileUsername(
+      createdUser,
+      username.trim().replace(/^@/, ''),
+      matchedInstitution ?? (effectiveCampusCode ? getInstitutionByCode(effectiveCampusCode) : undefined) ?? undefined
+    );
+    router.replace('/');
  } catch (err: any) {
  turnstileRef.current?.reset();
  setCaptchaToken(null);

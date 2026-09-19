@@ -140,7 +140,7 @@ export function DesktopSidebar() {
   const campusName =
     profile?.institutionName && profile.institutionCode !== 'GLOBAL'
       ? profile.institutionName
-      : 'University of Ibadan';
+      : 'Campus';
 
   return (
     <View

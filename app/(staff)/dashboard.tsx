@@ -86,7 +86,7 @@ export default function StaffDashboard() {
   });
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Dr. Faculty Member';
-  const institutionName = profile?.institutionName || LAUNCH_INSTITUTIONS.find((i) => i.code === effectiveCampus)?.name || 'University of Ibadan';
+  const institutionName = profile?.institutionName || LAUNCH_INSTITUTIONS.find((i) => i.code === effectiveCampus)?.name || 'Campus Workspace';
   const openReportsCount = openReports?.length ?? 0;
   const pendingResourcesCount = pendingResources?.length ?? 0;
   const upcomingEvents = (events ?? []).slice(0, 2);

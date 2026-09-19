@@ -294,7 +294,7 @@ export function PostDetailScreen() {
   </AppText>
   </View>
   <AppText tone="secondary" variant="caption">
-  {timeAgo(post.createdAt)} | {post.institutionCode ?? 'University of Ibadan'}
+  {timeAgo(post.createdAt)}{post.institutionCode ? ` • ${post.institutionCode}` : ''}
   </AppText>
   </View>
  <Ionicons name="chevron-forward"size={16} color={colors.textSecondary} />

@@ -16,7 +16,7 @@ interface ChangeWorkspaceScopeModalProps {
   visible: boolean;
   onClose: () => void;
   homeInstitution: string;
-  homeInstitutionCode: string;
+  homeInstitutionCode?: string;
   scope: 'campus' | 'global';
   onSelectScope: (scope: 'campus' | 'global') => void;
 }
@@ -37,8 +37,8 @@ export function ChangeWorkspaceScopeModal({
   const isAdmin = user?.role === 'admin';
 
   // Guest explored workspaces list (exclude home institution and global)
-  const cleanHomeCode = (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL') ? homeInstitutionCode : 'UI';
-  const cleanHomeName = (homeInstitution && !homeInstitution.includes('Global')) ? homeInstitution : 'University of Ibadan';
+  const cleanHomeCode = (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL') ? homeInstitutionCode : '';
+  const cleanHomeName = (homeInstitution && !homeInstitution.includes('Global')) ? homeInstitution : 'Campus Workspace';
 
   const [guestWorkspaces, setGuestWorkspaces] = useState<{ code: string; name: string; description: string }[]>(
     LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== cleanHomeCode && inst.code !== 'GLOBAL').map((inst) => ({

@@ -118,7 +118,7 @@ export function UserProfileQuickViewModal({
                 <Badge label="Verified" tone="neutral" />
               </View>
               <AppText tone="secondary" variant="bodySmall">
-                {user.department ?? 'Faculty of Science • University of Ibadan'}
+                {user.department ?? 'Academic Department'}
               </AppText>
               {user.level && (
                 <AppText tone="secondary" variant="caption" style={{ fontWeight: '600' }}>

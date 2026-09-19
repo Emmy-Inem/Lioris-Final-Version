@@ -26,7 +26,7 @@ export default function BuildProfileScreen() {
   const toast = useToast();
 
   const detectedCampus = user?.email ? getInstitutionForEmail(user.email)?.code : undefined;
-  const [campusCode, setCampusCode] = useState<string>(detectedCampus || 'FUNAAB');
+  const [campusCode, setCampusCode] = useState<string>(detectedCampus || '');
   const [department, setDepartment] = useState<string | null>(null);
   const [faculty, setFaculty] = useState<string | null>(null);
   const [level, setLevel] = useState<string>('100L');
@@ -100,6 +100,11 @@ export default function BuildProfileScreen() {
 
   async function handleContinue() {
     setErrorMessage(null);
+    if (!campusCode) {
+      setErrorMessage('Please select your university from the list above.');
+      haptics.error();
+      return;
+    }
     if (!department) {
       setErrorMessage('Please select your academic department to continue.');
       haptics.error();

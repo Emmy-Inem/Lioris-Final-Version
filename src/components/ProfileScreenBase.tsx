@@ -45,7 +45,7 @@ const COVER_PRESETS = [
 const PROFILE_TABS = ['Posts & Activity', 'Academic & Credentials'] as const;
 
 export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
- const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
  const { user } = useAuth();
  const { isDesktop } = useResponsive();
  const insets = useSafeAreaInsets();
@@ -305,30 +305,59 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
   const activeCover = profile.coverUrl
     ? (COVER_PRESETS.find((c) => c.id === profile.coverUrl)?.src
-       ?? (profile.coverUrl.startsWith('http') ? { uri: profile.coverUrl } : null)
-       ?? require('../../assets/images/campus_students_photo.jpg'))
-    : require('../../assets/images/campus_students_photo.jpg');
+       ?? ((profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:')) ? { uri: profile.coverUrl } : null))
+    : null;
 
   const handleSelectAvatar = handleSelectPresetAvatar;
   const handleSelectCover = handleSelectPresetCover;
 
- return (
- <ScreenContainer noPadding glow={true}>
- {!isDesktop && (
- <View style={{ paddingHorizontal: spacing.lg }}>
- <AppHeader />
- </View>
- )}
- <ScrollView style={{ flex: 1, width: '100%' }}
- showsVerticalScrollIndicator={false}
- keyboardShouldPersistTaps="handled"
- nestedScrollEnabled
- contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140 }}
- >
- {/* Cover Photo Header */}
- <View style={{ height: isDesktop ? 220 : 180, position: 'relative', width: '100%', overflow: 'hidden' }}>
- <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' }} />
+  return (
+    <ScreenContainer noPadding glow={true}>
+      {!isDesktop && (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <AppHeader />
+        </View>
+      )}
+      <ScrollView
+        style={{ flex: 1, width: '100%' }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140 }}
+      >
+        {/* Cover Photo Header */}
+        <View style={{ height: isDesktop ? 220 : 180, position: 'relative', width: '100%', overflow: 'hidden' }}>
+          {activeCover ? (
+            <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          ) : (
+            <View
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: isDark ? '#0F1A30' : '#E2E8F0',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: colors.brandPrimary,
+                  opacity: isDark ? 0.2 : 0.08,
+                }}
+              />
+              <Ionicons
+                name="image-outline"
+                size={36}
+                color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'}
+              />
+            </View>
+          )}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' }} />
 
  {/* Change Photo Trigger */}
  <Pressable
@@ -578,9 +607,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  Academic Identity & Cohort
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.md, flexWrap: 'wrap' }}>
- <DetailColumn label="Department" value={profile.department ?? 'Computer Science'} icon="book-outline" />
- <DetailColumn label="Grad Class" value={profile.graduationYear ? String(profile.graduationYear) : '2026'} icon="school-outline" />
- <DetailColumn label="Campus Node" value={profile.institutionName ?? 'University of Ibadan'} icon="business-outline" />
+          <DetailColumn label="Department" value={profile.department || 'Not specified'} icon="book-outline" />
+          <DetailColumn label="Grad Class" value={profile.graduationYear ? String(profile.graduationYear) : 'Not specified'} icon="school-outline" />
+          <DetailColumn label="Campus Node" value={profile.institutionName || 'Campus Node'} icon="business-outline" />
  </View>
  </SolidCard>
  </View>

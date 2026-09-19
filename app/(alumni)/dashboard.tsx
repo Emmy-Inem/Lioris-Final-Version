@@ -19,6 +19,7 @@ import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
 import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
+import { AppTutorialModal } from '@/components/AppTutorialModal';
 import { JobCard } from '@/components/JobCard';
 import { EventCard } from '@/components/EventCard';
 import { Ionicons } from '@expo/vector-icons';
@@ -819,6 +820,7 @@ export default function AlumniDashboard() {
       </ScrollView>
       <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
       <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
+      <AppTutorialModal userId={user?.id} />
     </ScreenContainer>
   );
 }

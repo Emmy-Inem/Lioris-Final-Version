@@ -28,10 +28,24 @@ export const FUNAAB_STRUCTURE: AcademicStructure = {
   groupType: 'College',
   groups: [
     {
+      faculty: 'College of Computer Sciences (COCS)',
+      code: 'COCS',
+      departments: [
+        'Software Engineering',
+        'Computer Science',
+        'Cyber Security',
+        'Information Technology',
+        'Data Science',
+        'Information Systems',
+      ],
+    },
+    {
       faculty: 'College of Physical Sciences (COLPHYS)',
       code: 'COLPHYS',
       departments: [
         'Computer Science',
+        'Software Engineering',
+        'Cyber Security',
         'Mathematics',
         'Statistics',
         'Physics',

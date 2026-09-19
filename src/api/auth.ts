@@ -310,7 +310,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
 
   // Ensure self-registration can only produce student or alumni accounts
   const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
-  const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || 'UI';
+  const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || null;
 
   const { data, error } = await supabase.auth.signUp({
     email: cleanEmail,

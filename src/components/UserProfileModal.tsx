@@ -48,7 +48,7 @@ export function UserProfileModal({
  userAvatarUrl,
  coverImageUrl,
  department = 'Computer Science & AI',
- institution = 'University of Ibadan',
+ institution = 'Campus',
 }: UserProfileModalProps) {
  const { colors, spacing, radius, isDark } = useTheme();
  const segments = useSegments();
@@ -96,12 +96,8 @@ export function UserProfileModal({
  : ['Course Studies', 'Campus Life', 'Projects'];
 
  const coverSource = effectiveCover
- ? (STOCK_IMAGES[effectiveCover] ?? { uri: effectiveCover })
- : effectiveRole === 'alumni'
- ? STOCK_IMAGES.campus_library_study
- : effectiveRole === 'staff'
- ? STOCK_IMAGES.student_rep_group
- : STOCK_IMAGES.campus_students_photo;
+ ? (STOCK_IMAGES[effectiveCover] ?? ((effectiveCover.startsWith('http') || effectiveCover.startsWith('file') || effectiveCover.startsWith('data:')) ? { uri: effectiveCover } : null))
+ : null;
 
  async function handleToggleConnect() {
  haptics.medium();
@@ -198,6 +194,7 @@ export function UserProfileModal({
  >
  {/* Scrollable Cover Photo Banner (Scrolls naturally with content) */}
  <View style={{ height: 160, position: 'relative', width: '100%', backgroundColor: colors.divider }}>
+ {coverSource ? (
  <Image
  source={coverSource}
  style={{ width: '100%', height: '100%' }}
@@ -205,7 +202,35 @@ export function UserProfileModal({
  cachePolicy="memory-disk"
  transition={200}
  />
- <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+ ) : (
+ <View
+ style={{
+ width: '100%',
+ height: '100%',
+ backgroundColor: colors.surface,
+ alignItems: 'center',
+ justifyContent: 'center',
+ }}
+ >
+ <View
+ style={{
+ position: 'absolute',
+ top: 0,
+ left: 0,
+ right: 0,
+ bottom: 0,
+ backgroundColor: colors.brandPrimary,
+ opacity: 0.12,
+ }}
+ />
+ <Ionicons
+ name="image-outline"
+ size={32}
+ color={colors.textSecondary}
+ />
+ </View>
+ )}
+ <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' }} />
  </View>
 
  {/* Profile Content Body */}

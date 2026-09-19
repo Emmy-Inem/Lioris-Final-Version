@@ -14,6 +14,7 @@ import { AppButton } from './AppButton';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { ChangeWorkspaceScopeModal } from './ChangeWorkspaceScopeModal';
+import { AppTutorialModal } from './AppTutorialModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -98,6 +99,7 @@ export function SettingsScreen() {
   const toast = useToast();
   const { scope, setScope, activeCampusCode, homeInstitutionCode } = useCampusScope();
   const [workspaceScopeModalOpen, setWorkspaceScopeModalOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   const isSuperAdmin = user?.actualRole === 'admin';
   const SETTINGS_SECTIONS = isSuperAdmin
@@ -430,9 +432,9 @@ export function SettingsScreen() {
     profile?.institutionName && profile.institutionCode !== 'GLOBAL'
       ? profile.institutionName
       : LAUNCH_INSTITUTIONS.find((i) => i.code === homeInstitutionCode && i.code !== 'GLOBAL')?.name ||
-        'University of Ibadan';
+        'Campus';
 
-  const departmentDisplay = profile?.department || 'Computer Science & AI';
+  const departmentDisplay = profile?.department || 'Department not specified';
 
   const academicStandingDisplay =
     user?.role === 'student'
@@ -587,13 +589,13 @@ export function SettingsScreen() {
                     borderBottomColor: colors.border,
                   }}
                 >
-                  <Avatar name={profile?.fullName ?? user?.fullName ?? 'Diana Prince'} size={isDesktop ? 60 : 48} />
+                  <Avatar name={profile?.fullName ?? user?.fullName ?? 'User'} size={isDesktop ? 60 : 48} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
-                      {profile?.fullName ?? user?.fullName ?? 'Diana Prince'}
+                      {profile?.fullName ?? user?.fullName ?? 'User'}
                     </AppText>
                     <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
-                      {profile?.email ?? user?.email ?? 'diana.prince@ui.edu.ng'}
+                      {profile?.email ?? user?.email ?? ''}
                     </AppText>
                     <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
                       <Badge label="Verified Academic" tone="success" />
@@ -632,6 +634,14 @@ export function SettingsScreen() {
                 </View>
 
                 <View style={{ paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                  <AppButton
+                    label="Explore App Tour & Features"
+                    variant="secondary"
+                    onPress={() => {
+                      haptics.light();
+                      setTutorialOpen(true);
+                    }}
+                  />
                   <AppButton
                     label="Contact Support / Report a Problem"
                     variant="secondary"
@@ -1805,6 +1815,7 @@ export function SettingsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <AppTutorialModal userId={user?.id} forceOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} />
     </ScreenContainer>
   );
 }

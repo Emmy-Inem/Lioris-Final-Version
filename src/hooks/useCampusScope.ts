@@ -42,7 +42,7 @@ export function useCampusScope() {
     ? profile.institutionCode
     : (deducedFromEmail && deducedFromEmail !== 'GLOBAL')
     ? deducedFromEmail
-    : 'UI';
+    : undefined;
   const homeInstitutionCode = rawHome;
   const campusCode = scope === 'global' ? 'GLOBAL' : (activeCampusCode && activeCampusCode !== 'GLOBAL' ? activeCampusCode : homeInstitutionCode);
 

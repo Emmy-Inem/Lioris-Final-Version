@@ -13,6 +13,7 @@ import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { AICopilotModal } from '@/components/AICopilotModal';
 import { CurrencyConverterModal } from '@/components/CurrencyConverterModal';
 import { CampusMapModal } from '@/components/CampusMapModal';
+import { AppTutorialModal } from '@/components/AppTutorialModal';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Avatar } from '@/components/Avatar';
@@ -113,9 +114,8 @@ export default function StudentDashboard() {
   const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Student';
   const activeCover = profile?.coverUrl
     ? (COVER_PRESETS.find((c) => c.id === profile.coverUrl)?.src
-       ?? (profile.coverUrl.startsWith('http') ? { uri: profile.coverUrl } : null)
-       ?? require('../../assets/images/campus_students_photo.jpg'))
-    : require('../../assets/images/campus_students_photo.jpg');
+       ?? ((profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:')) ? { uri: profile.coverUrl } : null))
+    : null;
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -314,8 +314,37 @@ export default function StudentDashboard() {
             overflow: 'hidden',
           }}
         >
-          <View style={{ height: isDesktop ? 160 : 120, position: 'relative', width: '100%' }}>
-            <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          <View style={{ height: isDesktop ? 160 : 120, position: 'relative', width: '100%', overflow: 'hidden' }}>
+            {activeCover ? (
+              <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <View
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: isDark ? '#0F1A30' : '#E2E8F0',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: colors.brandPrimary,
+                    opacity: isDark ? 0.2 : 0.08,
+                  }}
+                />
+                <Ionicons
+                  name="image-outline"
+                  size={28}
+                  color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'}
+                />
+              </View>
+            )}
             <View
               style={{
                 position: 'absolute',
@@ -349,7 +378,7 @@ export default function StudentDashboard() {
               >
                 <Ionicons name="school" size={13} color="#68D391" style={heroTextShadowStyle} />
                 <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
-                  {profile?.institutionName ?? 'University of Ibadan'}
+                  {profile?.institutionName ?? 'Campus Node'}
                 </AppText>
               </View>
 
@@ -1172,6 +1201,7 @@ export default function StudentDashboard() {
       <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
       <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
       <CampusMapModal visible={campusMapOpen} onClose={() => setCampusMapOpen(false)} campusFilter={effectiveCampus} />
+      <AppTutorialModal userId={user?.id} />
     </ScreenContainer>
   );
 }

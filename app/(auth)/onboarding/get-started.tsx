@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { OnboardingShell } from '@/components/OnboardingShell';
-import { DirectoryCard } from '@/components/DirectoryCard';
 import { EventCard } from '@/components/EventCard';
 import { ChipSelect } from '@/components/ChipSelect';
 import { AppButton } from '@/components/AppButton';
@@ -11,19 +10,12 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
 import { useToast } from '@/context/ToastContext';
-import { searchAlumniDirectory } from '@/api/connections';
 import { listStudyGroups, joinStudyGroup } from '@/api/studyGroups';
 import { listEvents } from '@/api/events';
 
 /**
- * Final onboarding step for both roles. Replaces three screens that either
- * did nothing real (browse-directory was a read-only preview;
- * connect-classmates never saved a connection) or duplicated each other
- * (student's join-community and alumni's join-event were the same "pick
- * something real to join" idea, just role-split into separate files) with
- * one screen that does two genuinely functional things: suggests people to
- * connect with (DirectoryCard's Connect button is real), and lets you join
- * a study group (student) or see upcoming events to RSVP to (alumni).
+ * Final onboarding step for both roles. Lets students join study groups
+ * and lets alumni view upcoming campus events right away.
  */
 export default function GetStartedScreen() {
   const { spacing } = useTheme();
@@ -33,11 +25,6 @@ export default function GetStartedScreen() {
   const isAlumni = user?.role === 'alumni';
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-
-  const { data: people, isLoading: peopleLoading } = useQuery({
-    queryKey: ['directory', 'onboarding-suggestions', user?.role ?? 'student'],
-    queryFn: () => searchAlumniDirectory({ roles: ['student', 'alumni'] }),
-  });
 
   const { data: groups, isLoading: groupsLoading } = useQuery({
     queryKey: ['study-groups', 'onboarding'],
@@ -86,20 +73,14 @@ export default function GetStartedScreen() {
     <OnboardingShell
       currentPath="/(auth)/onboarding/get-started"
       title="Get started"
-      subtitle="A few suggested people to connect with, plus something real to join - you can always find more later."
+      subtitle={
+        isAlumni
+          ? "Here are upcoming alumni gatherings to help you get started - you can always find more later."
+          : "Join campus study groups for your courses - you can always discover more on your dashboard."
+      }
       footer={<AppButton label="Go to my dashboard" onPress={handleFinish} loading={submitting} fullWidth />}
     >
-      <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
-        PEOPLE TO CONNECT WITH
-      </AppText>
-      {!peopleLoading && people?.slice(0, 2).map((entry) => <DirectoryCard key={entry.id} entry={entry} />)}
-      {!peopleLoading && (people?.length ?? 0) === 0 ? (
-        <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
-          No suggestions available yet - check the directory later.
-        </AppText>
-      ) : null}
-
-      <View style={{ marginTop: spacing.lg }}>
+      <View style={{ marginTop: spacing.xs }}>
         {isAlumni ? (
           <>
             <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>

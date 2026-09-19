@@ -60,9 +60,9 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const { campusCode, homeInstitutionCode } = useCampusScope();
 
   // Strictly bind to the current workspace's university institution
-  const currentCampus = (campusCode && campusCode !== 'GLOBAL') ? campusCode : (homeInstitutionCode || 'UI');
-  const institution = getInstitutionByCode(currentCampus);
-  const institutionName = institution?.name ?? 'University of Ibadan';
+  const currentCampus = (campusCode && campusCode !== 'GLOBAL') ? campusCode : homeInstitutionCode;
+  const institution = currentCampus ? getInstitutionByCode(currentCampus) : undefined;
+  const institutionName = institution?.name ?? 'Campus';
 
   // Automatic Horizontal Carousel State
   const [activeSlide, setActiveSlide] = useState(0);
