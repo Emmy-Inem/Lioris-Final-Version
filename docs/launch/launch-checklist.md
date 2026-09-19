@@ -48,6 +48,7 @@ Rules: one commander at a time; the commander decides rollback. Write every prod
 - [ ] Admin/staff accounts created, MFA enrolled, and a break-glass admin documented (two admins minimum: the app blocks removal of the last active admin).
 - [ ] Support inbox and DPO mailbox exist and are monitored (**DOMAIN** if they use `@lioris.app`; until then use an interim address and update the legal constants).
 - [ ] Test accounts for each role (student, alumni, staff, admin) exist for smoke tests; note they are demo accounts and must not exist in production with weak passwords.
+- [ ] **DOMAIN:** replace every `https://lioris-final-version.vercel.app` in `public/index.html` (og:url, og:image, twitter:image) with the final domain, then re-share a link in WhatsApp/X to confirm the preview card. Crawlers cache previews, so do this BEFORE the first public share. (`app/+html.tsx` is not used by the single-page export.)
 - [ ] **DOMAIN:** domain purchased, DNS at the registrar or Cloudflare, `lioris.app` and `www.lioris.app` added to the Vercel project (redirect www to apex or vice versa), certificate issued, and the redirect/origin lists updated (below).
 
 ## 2. Order of operations on launch day (T-0)

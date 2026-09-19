@@ -1,6 +1,11 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import { type PropsWithChildren } from 'react';
 
+// Absolute site URL used for canonical/social-preview tags (crawlers require absolute URLs).
+// Set EXPO_PUBLIC_SITE_URL when the production domain changes; no trailing slash.
+const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL || 'https://lioris-final-version.vercel.app').replace(/\/+$/, '');
+const OG_IMAGE_URL = `${SITE_URL}/og-image.jpg`;
+
 /**
  * This file is web-only and used to configure the root HTML for every web page.
  * The <head> elements defined here are included on every page for mobile viewports,
@@ -28,27 +33,27 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* Open Graph / Facebook / WhatsApp / Telegram / iMessage */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://lioris-campus.vercel.app" />
+        <meta property="og:url" content={SITE_URL} />
         <meta property="og:site_name" content="Lioris" />
         <meta property="og:title" content="Lioris | The Unified Campus Network" />
         <meta
           property="og:description"
           content="Connect with verified university students and alumni. Access course past questions, academic forums, campus events, and career mentorship."
         />
-        <meta property="og:image" content="https://lioris-campus.vercel.app/og-image.jpg" />
+        <meta property="og:image" content={OG_IMAGE_URL} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Lioris Campus Network" />
+        <meta property="og:image:alt" content="Lioris logo on a dark blue background" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://lioris-campus.vercel.app" />
+        <meta name="twitter:url" content={SITE_URL} />
         <meta name="twitter:title" content="Lioris | The Unified Campus Network" />
         <meta
           name="twitter:description"
           content="Connect with verified university students and alumni. Access course past questions, academic forums, campus events, and career mentorship."
         />
-        <meta name="twitter:image" content="https://lioris-campus.vercel.app/og-image.jpg" />
+        <meta name="twitter:image" content={OG_IMAGE_URL} />
         {/* Favicons, Apple Touch Icon, and Web App Manifest */}
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

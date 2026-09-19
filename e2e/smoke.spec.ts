@@ -91,9 +91,9 @@ test.describe('registration guard rails', () => {
     await waitForApp(page);
 
     await page.getByPlaceholder('Inem Light').fill('E2E Tester');
-    await page.getByPlaceholder('you@unilag.edu.ng or any email').fill('e2e.tester@example.com');
-    await page.getByPlaceholder('••••••••••••').first().fill('Str0ng!Passw0rd#1');
-    await page.getByPlaceholder('e.g. ineme.17').fill('e2e.tester');
+    await page.getByPlaceholder('you@campus.edu.ng or personal email').fill('e2e.tester@example.com');
+    await page.getByPlaceholder('••••••••').first().fill('Str0ng!Passw0rd#1');
+    await page.getByPlaceholder('e.g. starboy').fill('e2e.tester');
 
     const submit = page.getByRole('button', { name: 'Configure & Join' });
 
