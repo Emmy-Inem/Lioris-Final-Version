@@ -20,7 +20,7 @@ import {
  sendPasswordResetEmail,
  verifyPasswordResetOtpAndSetPassword,
 } from '@/api/auth';
-import { TurnstileWidget } from '@/components/TurnstileWidget';
+import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
 import { haptics } from '@/utils/haptics';
 
 const SLIDES = [
@@ -99,6 +99,7 @@ export default function LoginScreen() {
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+ const turnstileRef = React.useRef<TurnstileWidgetRef>(null);
  const [waitlistEmail, setWaitlistEmail] = useState('');
  const [waitlistSchool, setWaitlistSchool] = useState('');
  const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
@@ -206,6 +207,8 @@ export default function LoginScreen() {
  await login(email.trim(), password, captchaToken || undefined);
  router.replace('/');
  } catch (err: any) {
+ turnstileRef.current?.reset();
+ setCaptchaToken(null);
  if (isEmailConfirmationRequired(err)) {
  router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email } });
  return;
@@ -213,7 +216,6 @@ export default function LoginScreen() {
  haptics.error();
  if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
  setErrorMessage('Security verification failed or expired. Please complete the security check again.');
- setCaptchaToken(null);
  return;
  }
  const msg = err?.message || 'Incorrect email or password. Please verify your credentials and try again.';
@@ -337,6 +339,7 @@ export default function LoginScreen() {
  ) : null}
 
  <TurnstileWidget
+   ref={turnstileRef}
    onVerify={(token) => setCaptchaToken(token)}
    onExpire={() => setCaptchaToken(null)}
  />

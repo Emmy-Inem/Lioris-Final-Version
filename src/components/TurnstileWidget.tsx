@@ -1,8 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { Platform, View, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/theme/ThemeProvider';
 import { AppText } from '@/components/AppText';
 import { Ionicons } from '@expo/vector-icons';
+
+export interface TurnstileWidgetRef {
+  reset: () => void;
+}
 
 interface TurnstileWidgetProps {
   onVerify: (token: string) => void;
@@ -33,11 +37,15 @@ declare global {
 
 const TURNSTILE_SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAE8rvj6r5JOLLpDJ';
 
-export function TurnstileWidget({ onVerify, onExpire, onError, style }: TurnstileWidgetProps) {
+export const TurnstileWidget = forwardRef<TurnstileWidgetRef, TurnstileWidgetProps>(function TurnstileWidget(
+  { onVerify, onExpire, onError, style },
+  ref
+) {
   const { colors, isDark } = useTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
 
   // Keep references to callbacks to prevent re-renders in parent forms from tearing down the widget
   const onVerifyRef = useRef(onVerify);
@@ -46,6 +54,21 @@ export function TurnstileWidget({ onVerify, onExpire, onError, style }: Turnstil
   onExpireRef.current = onExpire;
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+
+  const resetWidget = () => {
+    setIsVerified(false);
+    if (window.turnstile && widgetIdRef.current) {
+      try {
+        window.turnstile.reset(widgetIdRef.current);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    reset: resetWidget,
+  }));
 
   const renderWidget = () => {
     if (!containerRef.current || !window.turnstile) return;
@@ -64,16 +87,19 @@ export function TurnstileWidget({ onVerify, onExpire, onError, style }: Turnstil
       const id = window.turnstile.render(containerRef.current, {
         sitekey: TURNSTILE_SITE_KEY,
         theme: isDark ? 'dark' : 'light',
-        size: 'flexible',
+        size: 'normal',
         callback: (token: string) => {
           setLoadError(null);
+          setIsVerified(true);
           onVerifyRef.current(token);
         },
         'expired-callback': () => {
+          setIsVerified(false);
           onExpireRef.current?.();
         },
         'error-callback': (errorCode?: string) => {
           console.warn('Turnstile security check error:', errorCode);
+          setIsVerified(false);
           setLoadError('Security check failed to verify. Tap to retry.');
           onErrorRef.current?.();
         },
@@ -81,6 +107,7 @@ export function TurnstileWidget({ onVerify, onExpire, onError, style }: Turnstil
       widgetIdRef.current = id;
     } catch (e: any) {
       console.warn('Failed to render Turnstile widget:', e);
+      setIsVerified(false);
       setLoadError('Could not initialize security check. Tap to retry.');
     }
   };
@@ -154,25 +181,25 @@ export function TurnstileWidget({ onVerify, onExpire, onError, style }: Turnstil
         ref={containerRef}
         style={{
           minHeight: 65,
-          width: '100%',
-          maxWidth: 320,
+          width: 300,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
         }}
       />
+      {isVerified && (
+        <View style={styles.verifiedRow}>
+          <Ionicons name="checkmark-circle" size={15} color="#10B981" />
+          <AppText variant="caption" style={{ color: '#10B981', marginLeft: 4, fontWeight: '600' }}>
+            Security verification complete
+          </AppText>
+        </View>
+      )}
       {loadError && (
         <Pressable
           onPress={() => {
             setLoadError(null);
-            if (window.turnstile && widgetIdRef.current) {
-              try {
-                window.turnstile.reset(widgetIdRef.current);
-                return;
-              } catch {
-                // fall through to re-render
-              }
-            }
+            resetWidget();
             renderWidget();
           }}
           style={styles.errorContainer}
@@ -185,7 +212,7 @@ export function TurnstileWidget({ onVerify, onExpire, onError, style }: Turnstil
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -193,6 +220,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 12,
     width: '100%',
+  },
+  verifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
   errorContainer: {
     flexDirection: 'row',

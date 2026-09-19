@@ -21,7 +21,7 @@ import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { MIN_AGE, MIN_AGE_WITH_CONSENT, TERMS_VERSION } from '@/constants/legal';
-import { TurnstileWidget } from '@/components/TurnstileWidget';
+import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
 
 const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
  { value: 'student', label: 'Student Portal', icon: 'school' },
@@ -42,6 +42,7 @@ export default function RegisterScreen() {
  const [acceptedTerms, setAcceptedTerms] = useState(false);
  const [confirmedAge, setConfirmedAge] = useState(false);
  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+ const turnstileRef = React.useRef<TurnstileWidgetRef>(null);
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
 
@@ -105,6 +106,8 @@ export default function RegisterScreen() {
  seedProfileUsername(createdUser, username, matchedInstitution ?? undefined);
  router.replace('/');
  } catch (err: any) {
+ turnstileRef.current?.reset();
+ setCaptchaToken(null);
  if (isEmailConfirmationRequired(err)) {
  // Account exists; the address must be confirmed with the emailed code before sign-in.
  router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email } });
@@ -112,7 +115,6 @@ export default function RegisterScreen() {
  }
  if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
  setErrorMessage('Security verification failed or expired. Please complete the security check again.');
- setCaptchaToken(null);
  return;
  }
  setErrorMessage(err?.message || 'Registration failed. Please check your details and try again.');
@@ -357,6 +359,7 @@ export default function RegisterScreen() {
 
   {/* Cloudflare Turnstile CAPTCHA */}
   <TurnstileWidget
+    ref={turnstileRef}
     onVerify={(token) => setCaptchaToken(token)}
     onExpire={() => setCaptchaToken(null)}
   />

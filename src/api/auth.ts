@@ -154,7 +154,12 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 
   if (signInError || !signInData?.session || !signInData?.user) {
     recordLoginFailure(cleanEmail);
-    throw new Error('Invalid email or password. Please verify your credentials and try again.');
+    if (signInError?.code === 'captcha_failed' || signInError?.message?.toLowerCase().includes('captcha')) {
+      const err: any = new Error('Security verification failed or expired. Please complete the security check again.');
+      err.code = 'captcha_failed';
+      throw err;
+    }
+    throw new Error(signInError?.message || 'Invalid email or password. Please verify your credentials and try again.');
   }
 
   // Clear failures upon successful authentication

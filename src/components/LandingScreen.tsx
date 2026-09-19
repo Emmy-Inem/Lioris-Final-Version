@@ -276,21 +276,22 @@ export function LandingScreen() {
             }}
           >
             {/* Clean Typographic Eyebrow (No pill box) */}
-            <AppText
-              variant="caption"
-              weight="bold"
-              style={{
-                color: colors.brandAccent,
-                letterSpacing: 1.5,
-                marginBottom: 12,
-                fontSize: 13,
-                textAlign: 'center',
-                alignSelf: 'center',
-                maxWidth: '90%',
-              }}
-            >
-              THE VERIFIED UNIVERSITY COMMUNITY PLATFORM
-            </AppText>
+            <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 }}>
+              <AppText
+                variant="caption"
+                weight="bold"
+                style={{
+                  color: colors.brandAccent,
+                  letterSpacing: isDesktop ? 1.5 : 1.2,
+                  marginBottom: 12,
+                  fontSize: isDesktop ? 13 : 11.5,
+                  textAlign: 'center',
+                  width: '100%',
+                }}
+              >
+                THE VERIFIED UNIVERSITY COMMUNITY PLATFORM
+              </AppText>
+            </View>
 
             {/* Headline */}
             <AppText
@@ -1240,25 +1241,25 @@ export function LandingScreen() {
               style={{
                 flexDirection: isDesktop ? 'row' : 'column',
                 justifyContent: 'space-between',
-                gap: isDesktop ? 40 : 28,
+                gap: isDesktop ? 40 : 0,
               }}
             >
               {/* Column 1: Brand & Contact Info */}
-              <View style={{ flex: 1.3, gap: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flex: isDesktop ? 1.4 : undefined, marginBottom: isDesktop ? 0 : 36 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <LiorisLogo size={32} variant="symbol" />
                   <LiorisLogo size={20} variant="wordmark" tintColor={isDark ? '#FFFFFF' : colors.textPrimary} />
                 </View>
-                <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 22, maxWidth: 320 }}>
+                <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 22, maxWidth: 340, marginBottom: 16 }}>
                   The unified university platform connecting verified students and alumni through departmental forums,
                   curated academic resource vaults, campus events, and career mentorship.
                 </AppText>
 
                 {/* Direct Contact Details */}
-                <View style={{ gap: 8, marginTop: 4 }}>
+                <View style={{ gap: 10 }}>
                   <Pressable
                     onPress={() => Linking.openURL(`mailto:${DATA_CONTROLLER.contactEmail}`)}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
                   >
                     <Ionicons name="mail-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="bodySmall" weight="semiBold" style={{ color: isDark ? '#E2E8F0' : '#1E293B' }}>
@@ -1268,7 +1269,7 @@ export function LandingScreen() {
 
                   <Pressable
                     onPress={() => Linking.openURL(`mailto:${DPO_EMAIL}`)}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
                   >
                     <Ionicons name="shield-checkmark-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="bodySmall" weight="semiBold" style={{ color: isDark ? '#E2E8F0' : '#1E293B' }}>
@@ -1279,61 +1280,69 @@ export function LandingScreen() {
               </View>
 
               {/* Column 2: Platform Links */}
-              <View style={{ flex: 1, gap: 10 }}>
-                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+              <View style={{ flex: isDesktop ? 1 : undefined, marginBottom: isDesktop ? 0 : 36 }}>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1.2, marginBottom: 14 }}>
                   PLATFORM
                 </AppText>
-                {[
-                  { label: 'Student Portal', href: '/(auth)/login' },
-                  { label: 'Alumni Circle', href: '/(auth)/login' },
-                  { label: 'Academic Resources', href: '/(auth)/register' },
-                  { label: 'Campus Forum', href: '/(auth)/register' },
-                  { label: 'Career Board', href: '/(auth)/login' },
-                ].map((item) => (
-                  <Pressable key={item.label} onPress={() => router.push(item.href as any)}>
-                    <AppText variant="bodySmall" tone="secondary" style={{ paddingVertical: 2 }}>
-                      {item.label}
-                    </AppText>
-                  </Pressable>
-                ))}
+                <View style={{ gap: 10 }}>
+                  {[
+                    { label: 'Student Portal', href: '/(auth)/login' },
+                    { label: 'Alumni Circle', href: '/(auth)/login' },
+                    { label: 'Academic Resources', href: '/(auth)/register' },
+                    { label: 'Campus Forum', href: '/(auth)/register' },
+                    { label: 'Career Board', href: '/(auth)/login' },
+                  ].map((item) => (
+                    <Pressable key={item.label} onPress={() => router.push(item.href as any)} style={{ paddingVertical: 4 }}>
+                      <AppText variant="bodySmall" tone="secondary">
+                        {item.label}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
 
               {/* Column 3: Active Campuses */}
-              <View style={{ flex: 1, gap: 10 }}>
-                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+              <View style={{ flex: isDesktop ? 1 : undefined, marginBottom: isDesktop ? 0 : 36 }}>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1.2, marginBottom: 14 }}>
                   CAMPUS HUBS
                 </AppText>
-                {[
-                  'University of Ibadan (UI)',
-                  'University of Lagos (UNILAG)',
-                  'FUNAAB (Abeokuta)',
-                  'University of Nigeria (UNN)',
-                  'Obafemi Awolowo Univ (OAU)',
-                  'Covenant University (CU)',
-                ].map((campus) => (
-                  <AppText key={campus} variant="bodySmall" tone="secondary" style={{ paddingVertical: 2 }}>
-                    {campus}
-                  </AppText>
-                ))}
+                <View style={{ gap: 10 }}>
+                  {[
+                    'University of Ibadan (UI)',
+                    'University of Lagos (UNILAG)',
+                    'FUNAAB (Abeokuta)',
+                    'University of Nigeria (UNN)',
+                    'Obafemi Awolowo Univ (OAU)',
+                    'Covenant University (CU)',
+                  ].map((campus) => (
+                    <View key={campus} style={{ paddingVertical: 4 }}>
+                      <AppText variant="bodySmall" tone="secondary">
+                        {campus}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
               </View>
 
               {/* Column 4: Real Legal Pages */}
-              <View style={{ flex: 1, gap: 10 }}>
-                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1 }}>
+              <View style={{ flex: isDesktop ? 1 : undefined, marginBottom: isDesktop ? 0 : 28 }}>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1.2, marginBottom: 14 }}>
                   LEGAL & PRIVACY
                 </AppText>
-                {[
-                  { label: 'Privacy Policy', href: '/privacy' },
-                  { label: 'Terms of Service', href: '/terms' },
-                  { label: 'Community Guidelines', href: '/community-rules' },
-                ].map((legal) => (
-                  <Pressable key={legal.label} onPress={() => router.push(legal.href as any)}>
-                    <AppText variant="bodySmall" weight="medium" style={{ color: colors.brandPrimary, paddingVertical: 2 }}>
-                      {legal.label} →
-                    </AppText>
-                  </Pressable>
-                ))}
-                <AppText variant="caption" tone="secondary" style={{ marginTop: 6, lineHeight: 18 }}>
+                <View style={{ gap: 10 }}>
+                  {[
+                    { label: 'Privacy Policy', href: '/privacy' },
+                    { label: 'Terms of Service', href: '/terms' },
+                    { label: 'Community Guidelines', href: '/community-rules' },
+                  ].map((legal) => (
+                    <Pressable key={legal.label} onPress={() => router.push(legal.href as any)} style={{ paddingVertical: 4 }}>
+                      <AppText variant="bodySmall" weight="medium" style={{ color: colors.brandPrimary }}>
+                        {legal.label} →
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+                <AppText variant="caption" tone="secondary" style={{ marginTop: 14, lineHeight: 18, maxWidth: 280 }}>
                   Zero commercial advertisements. Institutional domain verification enforced.
                 </AppText>
               </View>
@@ -1344,6 +1353,7 @@ export function LandingScreen() {
               style={{
                 height: 1,
                 backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                marginVertical: 12,
               }}
             />
 
@@ -1352,30 +1362,30 @@ export function LandingScreen() {
                 flexDirection: isDesktop ? 'row' : 'column',
                 justifyContent: 'space-between',
                 alignItems: isDesktop ? 'center' : 'flex-start',
-                gap: 12,
+                gap: 16,
               }}
             >
-              <AppText variant="caption" tone="secondary">
+              <AppText variant="caption" tone="secondary" style={{ lineHeight: 18 }}>
                 © 2026 Lioris Campus Inc. All rights reserved. Registered Educational Platform.
               </AppText>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                <Pressable onPress={() => router.push('/privacy' as any)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+                <Pressable onPress={() => router.push('/privacy' as any)} style={{ paddingVertical: 4 }}>
                   <AppText variant="caption" tone="secondary">
                     Privacy
                   </AppText>
                 </Pressable>
-                <Pressable onPress={() => router.push('/terms' as any)}>
+                <Pressable onPress={() => router.push('/terms' as any)} style={{ paddingVertical: 4 }}>
                   <AppText variant="caption" tone="secondary">
                     Terms
                   </AppText>
                 </Pressable>
-                <Pressable onPress={() => router.push('/community-rules' as any)}>
+                <Pressable onPress={() => router.push('/community-rules' as any)} style={{ paddingVertical: 4 }}>
                   <AppText variant="caption" tone="secondary">
                     Guidelines
                   </AppText>
                 </Pressable>
-                <Pressable onPress={() => scrollToSection('hero')}>
+                <Pressable onPress={() => scrollToSection('hero')} style={{ paddingVertical: 4 }}>
                   <AppText variant="caption" tone="brand" weight="bold">
                     Back to Top ↑
                   </AppText>
