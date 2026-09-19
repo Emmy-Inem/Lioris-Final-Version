@@ -50,7 +50,7 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[
           styles.overlay,
@@ -88,7 +88,7 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
                 </AppText>
               </View>
             </View>
-            <Pressable onPress={onClose} hitSlop={10} style={[styles.closeBtn, { backgroundColor: colors.divider }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={10} style={[styles.closeBtn, { backgroundColor: colors.divider }]}>
               <Ionicons name="close" size={18} color={colors.textPrimary} />
             </Pressable>
           </View>

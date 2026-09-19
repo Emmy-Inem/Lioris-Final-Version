@@ -3,16 +3,22 @@ import { View } from'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from'react-native-reanimated';
 import { AppText } from'./AppText';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useReducedMotion } from'@/theme/useReducedMotion';
 
 function Dot({ delay, color }: { delay: number; color: string }) {
+ const reduceMotion = useReducedMotion();
  const translateY = useSharedValue(0);
 
  useEffect(() => {
+ if (reduceMotion) {
+ translateY.value = 0;
+ return;
+ }
  translateY.value = withDelay(
  delay,
  withRepeat(withSequence(withTiming(-6, { duration: 350 }), withTiming(0, { duration: 350 })), -1, false),
  );
- }, [delay, translateY]);
+ }, [delay, translateY, reduceMotion]);
 
  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
 

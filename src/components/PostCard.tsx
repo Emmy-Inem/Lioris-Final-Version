@@ -349,6 +349,7 @@ export function PostCard({ post }: { post: Post }) {
  <Pressable
  onPress={handleToggleLike}
  accessibilityRole="button"accessibilityLabel={liked ? 'Remove like' : 'Like thread'}
+ accessibilityState={{ selected: liked }}
  style={{
  flexDirection: 'row',
  alignItems: 'center',
@@ -396,7 +397,8 @@ export function PostCard({ post }: { post: Post }) {
  Alert.alert('Repost failed', err?.message || 'Please try again.');
  }
  }}
- accessibilityRole="button"accessibilityLabel="Repost to cohort"style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
+ accessibilityRole="button"accessibilityLabel="Repost to cohort"
+ accessibilityState={{ selected: reposted }}style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
  >
  <Ionicons name="repeat"size={18} color={reposted ? colors.brandPrimary : colors.textSecondary} />
  <AppText variant="bodySmall"tone={reposted ? 'brand' : 'secondary'} weight={reposted ? 'bold' : 'regular'}>
@@ -411,7 +413,8 @@ export function PostCard({ post }: { post: Post }) {
  setBookmarked((b) => !b);
  Alert.alert(bookmarked ? 'Bookmark Removed' : 'Saved', 'Saved to your profile bookmarks.');
  }}
- accessibilityRole="button"accessibilityLabel="Bookmark thread"style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
+ accessibilityRole="button"accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark thread'}
+ accessibilityState={{ selected: bookmarked }}style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
  >
  <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={17} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
  <AppText variant="bodySmall"tone={bookmarked ? 'brand' : 'secondary'} weight={bookmarked ? 'bold' : 'regular'}>
@@ -562,7 +565,7 @@ export function PostCard({ post }: { post: Post }) {
 
       {/* Report Modal */}
       <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, 16) }}
         >
@@ -575,7 +578,7 @@ export function PostCard({ post }: { post: Post }) {
                   Report Policy Violation
                 </AppText>
               </View>
-              <Pressable onPress={() => setReportOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReportOpen(false)} hitSlop={8} style={{ padding: 4 }}>
                 <Ionicons name="close" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>

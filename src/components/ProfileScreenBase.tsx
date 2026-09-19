@@ -365,7 +365,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           <View style={isDesktop ? { width: 360, gap: spacing.md, marginTop: -60 } : undefined}>
  <SolidCard radius={22} style={{ padding: spacing.lg, position: 'relative' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.sm }}>
- <Pressable onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Change profile photo" onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
  <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={isDesktop ? 96 : 76} />
  <View
  style={{
@@ -593,7 +593,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
     {/* Photo & Cover Customizer Modal */}
     <Modal visible={photoPickerOpen} transparent animationType="slide" onRequestClose={() => setPhotoPickerOpen(false)}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+      <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setPhotoPickerOpen(false)} />
         <View
           style={{
@@ -627,7 +627,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                 Customize Photos
               </AppText>
             </View>
-            <Pressable onPress={() => setPhotoPickerOpen(false)} hitSlop={8}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setPhotoPickerOpen(false)} hitSlop={8}>
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -676,7 +676,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                       backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.background,
                     }}
                   >
-                    <Image source={preset.src} style={{ width: 56, height: 56, borderRadius: 28, marginBottom: 4 }} />
+                    <Image source={preset.src} contentFit="cover" alt="" style={{ width: 56, height: 56, borderRadius: 28, marginBottom: 4 }} />
                     <AppText variant="caption" weight="bold" numberOfLines={1}>
                       {preset.label}
                     </AppText>
@@ -729,7 +729,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
     {/* Edit Profile Details Modal */}
     <Modal visible={editModalOpen} transparent animationType="fade" onRequestClose={() => setEditModalOpen(false)}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, 16) }}
       >
@@ -739,7 +739,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             <AppText variant="h3" weight="bold">
               Edit Profile
             </AppText>
-            <Pressable onPress={() => setEditModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setEditModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
               <Ionicons name="close" size={20} color={colors.textSecondary} />
             </Pressable>
           </View>

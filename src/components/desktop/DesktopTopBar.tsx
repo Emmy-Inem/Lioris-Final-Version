@@ -116,6 +116,7 @@ export function DesktopTopBar() {
         <Ionicons name="search" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
         <TextInput
           placeholder="Search campus discussions, courses, events..."
+          accessibilityLabel="Search campus discussions, courses and events"
           placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -212,6 +213,9 @@ export function DesktopTopBar() {
         <View style={{ position: 'relative' }}>
           <Pressable
             onPress={() => setNotifDropdownOpen(!notifDropdownOpen)}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+            accessibilityState={{ expanded: notifDropdownOpen }}
             style={({ hovered }: any) => [
               styles.iconButton,
               {
@@ -327,7 +331,7 @@ export function DesktopTopBar() {
 
  {/* Global Command Palette (⌘K) Modal */}
  <Modal visible={commandPaletteOpen} transparent animationType="fade" onRequestClose={() => setCommandPaletteOpen(false)}>
- <Pressable
+ <Pressable accessibilityViewIsModal accessible={false} importantForAccessibility="no"
  style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
  onPress={() => setCommandPaletteOpen(false)}
  >
@@ -350,7 +354,7 @@ export function DesktopTopBar() {
  {/* Search Input */}
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0' }}>
  <Ionicons name="search" size={20} color={colors.textSecondary} />
- <TextInput
+ <TextInput accessibilityLabel="Type a command, course, thread or page to navigate"
  placeholder="Type a command, course, thread or page to navigate..."
  placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
  value={searchQuery}
@@ -358,7 +362,7 @@ export function DesktopTopBar() {
  autoFocus
  style={{ flex: 1, fontSize: 15, color: isDark ? '#F8FAFC' : '#0F172A', outlineStyle: 'none' as any }}
  />
- <Pressable onPress={() => setCommandPaletteOpen(false)} hitSlop={8}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setCommandPaletteOpen(false)} hitSlop={8}>
  <Ionicons name="close" size={20} color={isDark ? '#94A3B8' : '#64748B'} />
  </Pressable>
  </View>

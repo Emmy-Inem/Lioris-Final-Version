@@ -27,6 +27,7 @@ export function AppTextField({
  const [focused, setFocused] = useState(false);
  const [isSecure, setIsSecure] = useState(!!secureTextEntry);
 
+ const errorId = React.useId();
  const accessibleLabel = label || (typeof rest.placeholder === 'string' ? rest.placeholder : undefined);
 
  return (
@@ -42,7 +43,7 @@ export function AppTextField({
  {
  minHeight: minTouchTarget,
  borderRadius: radius.md,
- borderColor: error ? colors.critical : focused ? colors.brandPrimary : colors.border,
+ borderColor: error ? colors.critical : focused ? colors.brandPrimary : colors.inputBorder,
  backgroundColor: colors.surface,
  },
  ]}
@@ -58,6 +59,8 @@ export function AppTextField({
  <TextInput
  accessibilityLabel={accessibleLabel}
  accessibilityState={{ disabled: rest.editable === false }}
+ aria-invalid={error ? true : undefined}
+ aria-describedby={error ? errorId : undefined}
  placeholderTextColor={colors.textSecondary}
  secureTextEntry={showPasswordToggle ? isSecure : secureTextEntry}
  onFocus={(e) => {
@@ -84,7 +87,8 @@ export function AppTextField({
  <Pressable
  onPress={() => setIsSecure(!isSecure)}
  hitSlop={8}
- style={{ paddingHorizontal: spacing.md, justifyContent: 'center', alignItems: 'center' }}
+ style={{ paddingHorizontal: spacing.md, minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
+ accessibilityRole="button"
  accessibilityLabel={isSecure ? 'Show password' : 'Hide password'}
  >
  <Ionicons
@@ -97,7 +101,12 @@ export function AppTextField({
  </View>
  {error ? (
  <AppText
- variant="caption"tone="critical"accessibilityLiveRegion="polite"style={{ marginTop: spacing.xs }}
+ nativeID={errorId}
+ variant="caption"
+ tone="critical"
+ accessibilityRole="alert"
+ accessibilityLiveRegion="polite"
+ style={{ marginTop: spacing.xs }}
  >
  {error}
  </AppText>

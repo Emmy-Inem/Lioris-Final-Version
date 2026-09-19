@@ -54,6 +54,32 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+/**
+ * Web-only global accessibility CSS: a visible keyboard focus ring (some
+ * components set `outline-style: none`, which would otherwise leave keyboard
+ * users without a focus indicator) and reduced-motion support for CSS
+ * transitions/animations.
+ */
+function useWebA11yStyles(ringColor: string) {
+ useEffect(() => {
+ if (!isWeb || typeof document === 'undefined') return;
+ const id = 'lioris-a11y-css';
+ let el = document.getElementById(id) as HTMLStyleElement | null;
+ if (!el) {
+ el = document.createElement('style');
+ el.id = id;
+ document.head.appendChild(el);
+ }
+ el.textContent =
+ `a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,` +
+ `[role="button"]:focus-visible,[role="link"]:focus-visible,[role="tab"]:focus-visible,[role="checkbox"]:focus-visible,` +
+ `[role="switch"]:focus-visible,[role="radio"]:focus-visible,[role="menuitem"]:focus-visible,[tabindex="0"]:focus-visible{` +
+ `outline:2px solid ${ringColor} !important;outline-offset:2px !important;}` +
+ `@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:0.01ms !important;` +
+ `animation-iteration-count:1 !important;transition-duration:0.01ms !important;scroll-behavior:auto !important;}}`;
+ }, [ringColor]);
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
  const systemScheme = useColorScheme();
  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
@@ -147,6 +173,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  glassBlur,
  };
  }, [isDark, themeMode, customAccent, scope, activeCampusCode, profile?.institutionCode]);
+
+ useWebA11yStyles(value.colors.brandPrimary);
 
  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

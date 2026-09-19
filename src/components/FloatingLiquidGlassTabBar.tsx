@@ -167,7 +167,7 @@ function TabItem({
         accessibilityRole="tab"
         accessibilityState={{ selected: isFocused }}
         accessibilityLabel={label}
-        hitSlop={4}
+        hitSlop={8}
       >
         <Ionicons name={iconName} size={18} color={iconColor} />
 
@@ -329,7 +329,12 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
   }
 
   return (
-    <View style={[styles.floatingWrapper, { bottom: bottomInset }]} pointerEvents="box-none">
+    <View
+      style={[styles.floatingWrapper, { bottom: bottomInset }]}
+      pointerEvents="box-none"
+      accessibilityRole="tablist"
+      accessibilityLabel="Main navigation"
+    >
       <Animated.View
         {...({ dataSet: { component: 'floating-liquid-glass-bar' } } as any)}
         style={[

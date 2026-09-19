@@ -186,7 +186,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
 
  return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1, justifyContent: isDesktop ? 'center' : 'flex-end', alignItems: isDesktop ? 'center' : 'stretch', padding: isDesktop ? spacing.lg : 0 }}
       >
@@ -226,7 +226,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
                 Share Academic File
               </AppText>
             </View>
-            <Pressable onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
           </View>

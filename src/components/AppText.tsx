@@ -1,6 +1,7 @@
 import React from'react';
 import { Text as RNText, TextProps, TextStyle } from'react-native';
 import { useTheme } from'@/theme/ThemeProvider';
+import { ensureContrast } from'@/theme/contrast';
 import {
  fontFamily,
  fontFamilyMedium,
@@ -40,8 +41,9 @@ export function AppText({
  primary: colors.textPrimary,
  secondary: colors.textSecondary,
  inverse: colors.textInverse,
- brand: colors.brandPrimary,
- accent: colors.brandAccent,
+ brand: ensureContrast(colors.brandPrimary, colors.surface),
+ // Accent is a fill colour first (orange/amber); as text it is nudged to AA (4.5:1).
+ accent: ensureContrast(colors.brandAccent, colors.surface),
  critical: colors.critical,
  };
 
@@ -59,10 +61,12 @@ export function AppText({
  // whenever onPress is present; an explicit accessibilityRole passed
  // in still wins since rest is spread after this default.
  const isPressable = typeof rest.onPress === 'function';
+ // Screen-reader heading landmarks: h1-h3 (and display) variants are headings.
+ const isHeading = variant === 'h1' || variant === 'h2' || variant === 'h3' || variant === 'display';
 
  return (
  <RNText
- accessibilityRole={isPressable ? 'button' : undefined}
+ accessibilityRole={isPressable ? 'button' : isHeading ? 'header' : undefined}
  style={[computedStyle, style]}
  {...rest}
  />

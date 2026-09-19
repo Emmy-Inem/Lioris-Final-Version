@@ -123,7 +123,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
 
   return (
     <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{
           flex: 1,

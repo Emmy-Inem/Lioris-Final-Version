@@ -79,7 +79,7 @@ export function VerifiedBadge({
       </Pressable>
 
       <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => setModalOpen(false)}>
-        <Pressable
+        <Pressable accessibilityViewIsModal
           onPress={() => setModalOpen(false)}
           style={{
             flex: 1,

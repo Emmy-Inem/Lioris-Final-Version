@@ -230,7 +230,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
       {/* Escrow Checkout Modal */}
       <Modal visible={checkoutModalOpen} transparent animationType="fade" onRequestClose={() => setCheckoutModalOpen(false)}>
-        <View
+        <View accessibilityViewIsModal
           style={{
             flex: 1,
             backgroundColor: 'rgba(0,0,0,0.5)',
@@ -250,7 +250,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
                     Campus Pickup & Handover
                   </AppText>
                 </View>
-                <Pressable onPress={() => setCheckoutModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setCheckoutModalOpen(false)} hitSlop={8} style={{ padding: 4 }}>
                   <Ionicons name="close" size={20} color={colors.textSecondary} />
                 </Pressable>
               </View>

@@ -96,7 +96,7 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
  </View>
 
       <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => setModalOpen(false)}>
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{
             flex: 1,

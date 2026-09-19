@@ -145,7 +145,13 @@ export function ResourceCard({
               {resource.downloadsCount + (downloaded ? 1 : 0)}
             </AppText>
           </View>
-          <Pressable onPress={handleToggleUpvote} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Pressable
+ onPress={handleToggleUpvote}
+ hitSlop={8}
+ accessibilityRole="button"
+ accessibilityLabel={`${upvoted ? 'Remove upvote' : 'Upvote'}, ${upvotes} upvotes`}
+ accessibilityState={{ selected: upvoted }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Ionicons
               name={upvoted ? 'thumbs-up' : 'thumbs-up-outline'}
               size={14}

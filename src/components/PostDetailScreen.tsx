@@ -428,7 +428,13 @@ export function PostDetailScreen() {
 
  {/* Action Buttons Bar */}
  <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingTop: spacing.sm }}>
- <Pressable onPress={handleToggleLike} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}>
+ <Pressable
+ onPress={handleToggleLike}
+ accessibilityRole="button"
+ accessibilityLabel={liked ? 'Remove like' : 'Like thread'}
+ accessibilityState={{ selected: liked }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
+ >
  <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={liked ? '#E53E3E' : colors.textSecondary} />
  <AppText variant="caption"weight="bold"style={{ color: liked ? '#E53E3E' : colors.textSecondary }}>
  {liked ? 'Liked' : 'Like'}
@@ -437,6 +443,9 @@ export function PostDetailScreen() {
 
  <Pressable
  onPress={handleToggleRepost}
+ accessibilityRole="button"
+ accessibilityLabel="Repost to cohort"
+ accessibilityState={{ selected: reposted }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
  <Ionicons name="repeat"size={20} color={reposted ? colors.brandPrimary : colors.textSecondary} />
@@ -451,6 +460,9 @@ export function PostDetailScreen() {
  setBookmarked((b) => !b);
  Alert.alert(bookmarked ? 'Bookmark Removed' : 'Saved', 'Added to your bookmarks.');
  }}
+ accessibilityRole="button"
+ accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark thread'}
+ accessibilityState={{ selected: bookmarked }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
  <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
@@ -510,7 +522,7 @@ export function PostDetailScreen() {
  ) : null}
 
  {/* Comment Author Avatar (Tap to View User Profile) */}
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel={`View ${c.authorName}'s profile`}
  onPress={() => {
  haptics.light();
  setInspectUser({ id: `author-${c.id}`, name: c.authorName, role: c.authorRole, avatarUrl: c.authorAvatarUrl });
@@ -540,7 +552,7 @@ export function PostDetailScreen() {
  </AppText>
 
  {commentImage ? (
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="View attached image full screen"
  onPress={() => {
  haptics.light();
  setLightboxMedia(c.imageUrl ?? null);
@@ -611,7 +623,7 @@ export function PostDetailScreen() {
           {replyingToAuthor ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
               <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToAuthor}</AppText>
-              <Pressable onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
                 <Ionicons name="close" size={14} color={colors.brandPrimary} />
               </Pressable>
             </View>
@@ -621,7 +633,7 @@ export function PostDetailScreen() {
             <Avatar name={user?.fullName ?? 'You'} size={32} role={user?.role} />
 
             <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 4 }}>
-              <TextInput
+              <TextInput accessibilityLabel="Write a reply"
                 placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Write a reply..."}
                 placeholderTextColor={colors.textSecondary}
                 value={newReply}
@@ -630,7 +642,7 @@ export function PostDetailScreen() {
                 style={{ flex: 1, color: colors.textPrimary, fontSize: 13, maxHeight: 72, paddingVertical: 2 }}
               />
 
-              <Pressable
+              <Pressable accessibilityRole="button" accessibilityLabel={attachedReplyMedia ? 'Remove attached image' : 'Attach an image'}
                 onPress={() => {
                   haptics.light();
                   setAttachedReplyMedia(attachedReplyMedia ? null : COMMENT_MEDIA_PRESETS[0].id);

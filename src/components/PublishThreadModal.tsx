@@ -213,7 +213,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
 
   return (
     <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{
           flex: 1,
@@ -253,7 +253,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                   {isAdmin ? 'Admin Thread / Broadcast' : 'New Post'}
                 </AppText>
               </View>
-              <Pressable onPress={onClose} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={8}>
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -326,7 +326,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                   style={{ width: '100%', height: 160, borderRadius: radius.md, backgroundColor: '#000' }}
                   contentFit="cover"
                 />
-                <Pressable
+                <Pressable accessibilityRole="button" accessibilityLabel="Close"
                   onPress={() => { setCustomMediaUri(null); haptics.light(); }}
                   hitSlop={8}
                   style={{
@@ -502,7 +502,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                       />
                     </View>
                     {pollOptions.length > 2 && (
-                      <Pressable onPress={() => handleRemovePollOption(idx)} hitSlop={8}>
+                      <Pressable accessibilityRole="button" accessibilityLabel="Delete" onPress={() => handleRemovePollOption(idx)} hitSlop={8}>
                         <Ionicons name="trash-outline" size={18} color={colors.critical} />
                       </Pressable>
                     )}

@@ -230,7 +230,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
           {!isDesktop && (
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel="Go back"
               onPress={() => router.back()}
               hitSlop={12}
               style={{
@@ -486,7 +486,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           <AppText tone="brand" variant="caption" numberOfLines={1} style={{ flex: 1 }}>
             Replying to: {replyingTo.content}
           </AppText>
-          <Pressable onPress={() => setReplyingTo(null)} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReplyingTo(null)} hitSlop={8}>
             <Ionicons name="close" size={16} color={colors.brandPrimary} />
           </Pressable>
         </View>
@@ -505,7 +505,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           borderTopColor: colors.border,
         }}
       >
-        <Pressable
+        <Pressable accessibilityRole="button" accessibilityLabel="Add"
           hitSlop={8}
           onPress={() => {
             haptics.light();
@@ -529,7 +529,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
             borderColor: colors.border,
           }}
         >
-          <TextInput
+          <TextInput accessibilityLabel="Type message"
             value={draft}
             onChangeText={setDraft}
             placeholder="Type message..."
@@ -541,7 +541,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           />
         </View>
 
-        <Pressable
+        <Pressable accessibilityRole="button" accessibilityLabel="Send"
           onPress={() => handleSend()}
           disabled={!draft.trim()}
           style={{

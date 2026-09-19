@@ -403,7 +403,7 @@ export function AICopilotModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[
           styles.overlay,
@@ -452,7 +452,7 @@ export function AICopilotModal({
                 </AppText>
               </Pressable>
 
-              <Pressable
+              <Pressable accessibilityRole="button" accessibilityLabel="Close"
                 onPress={onClose}
                 hitSlop={12}
                 style={[styles.closeBtn, { backgroundColor: colors.textSecondary + '15' }]}
@@ -616,7 +616,7 @@ export function AICopilotModal({
                   Chalkboard / Diagram ready for multimodal solving
                 </AppText>
               </View>
-              <Pressable
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear"
                 onPress={() => setAttachedImage(null)}
                 hitSlop={8}
                 style={{ padding: 4 }}
@@ -641,7 +641,7 @@ export function AICopilotModal({
               />
             </Pressable>
 
-            <TextInput
+            <TextInput accessibilityLabel="Message the AI assistant"
               value={prompt}
               onChangeText={setPrompt}
               onSubmitEditing={() => handleSend()}
@@ -657,7 +657,7 @@ export function AICopilotModal({
               style={[styles.textInput, { color: colors.textPrimary }]}
             />
 
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel="Send message"
               onPress={() => handleSend()}
               disabled={(!prompt.trim() && !attachedImage) || loading}
               style={[

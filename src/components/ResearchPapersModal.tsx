@@ -132,7 +132,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[
           styles.overlay,
@@ -170,7 +170,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
               </AppText>
             </View>
 
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel="Close"
               onPress={onClose}
               hitSlop={12}
               style={[styles.closeBtn, { backgroundColor: `${colors.textSecondary}15` }]}
@@ -183,7 +183,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
           <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
             <View style={[styles.searchBar, { borderColor: colors.border, backgroundColor: colors.background }]}>
               <Ionicons name="search" size={16} color={colors.textSecondary} />
-              <TextInput
+              <TextInput accessibilityLabel="Search topics, author, DOI, or thesis keywords"
                 value={query}
                 onChangeText={setQuery}
                 onSubmitEditing={() => handleSearch(query)}
@@ -193,7 +193,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                 style={[styles.searchInput, { color: colors.textPrimary }]}
               />
               {query.length > 0 && (
-                <Pressable onPress={() => setQuery('')}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setQuery('')}>
                   <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
                 </Pressable>
               )}

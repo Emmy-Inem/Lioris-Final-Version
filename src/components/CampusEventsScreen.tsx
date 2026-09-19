@@ -217,7 +217,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
         }}
       >
         <Ionicons name="search-outline" size={16} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
-        <TextInput
+        <TextInput accessibilityLabel="Search events"
           placeholder={isAlumniScope ? 'Search alumni reunions, dinners, homecomings...' : 'Search campus events, hackathons, seminars...'}
           placeholderTextColor={colors.textSecondary}
           value={searchQuery}
@@ -229,7 +229,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           }}
         />
         {searchQuery.trim() ? (
-          <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')} hitSlop={8}>
             <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
           </Pressable>
         ) : null}
@@ -377,7 +377,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                 }}
               >
                 <Ionicons name="search" size={16} color={colors.textSecondary} />
-                <TextInput
+                <TextInput accessibilityLabel="Search events"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   placeholder={isAlumniScope ? 'Search alumni reunions, dinners, homecomings...' : 'Search campus events, webinars, workshops...'}
@@ -385,7 +385,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                   style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                 />
                 {searchQuery ? (
-                  <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')} hitSlop={8}>
                     <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
                   </Pressable>
                 ) : null}

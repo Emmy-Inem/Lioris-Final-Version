@@ -96,7 +96,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  {/* Pagination Indicators */}
  <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
  {displayEvents.map((_, idx) => (
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel={`Go to slide ${idx + 1}`}
  key={idx}
  onPress={() => scrollToSlide(idx)}
  hitSlop={8}
@@ -112,7 +112,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
 
  {/* Prev / Next Arrows */}
  <View style={{ flexDirection: 'row', gap: 4, marginLeft: 4 }}>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="Go back"
  onPress={() => scrollToSlide((activeIndex - 1 + displayEvents.length) % displayEvents.length)}
  hitSlop={8}
  style={{
@@ -128,7 +128,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  >
  <Ionicons name="chevron-back"size={14} color={colors.textPrimary} />
  </Pressable>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel="Next event"
  onPress={() => scrollToSlide((activeIndex + 1) % displayEvents.length)}
  hitSlop={8}
  style={{

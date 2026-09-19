@@ -330,7 +330,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           }}
         >
           <Ionicons name="search" size={15} color={colors.textSecondary} />
-          <TextInput
+          <TextInput accessibilityLabel="Search discussions, topics, codes"
             value={query}
             onChangeText={setQuery}
             placeholder="Search discussions, topics, codes..."
@@ -338,7 +338,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
           />
           {query ? (
-            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setQuery('')} hitSlop={8}>
               <Ionicons name="close-circle" size={15} color={colors.textSecondary} />
             </Pressable>
           ) : null}
@@ -1255,7 +1255,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
     {/* Sub-Forum Rules & Guidelines Modal */}
     <Modal visible={rulesModalOpen} transparent animationType="fade" onRequestClose={() => setRulesModalOpen(false)}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+      <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setRulesModalOpen(false)} />
         <View
           style={{
@@ -1280,7 +1280,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </AppText>
               </View>
             </View>
-            <Pressable onPress={() => setRulesModalOpen(false)} hitSlop={8}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setRulesModalOpen(false)} hitSlop={8}>
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -1326,7 +1326,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
     {/* Communities Directory Modal */}
     <Modal visible={subForumsDirectoryOpen} transparent animationType="slide" onRequestClose={() => setSubForumsDirectoryOpen(false)}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
+      <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setSubForumsDirectoryOpen(false)} />
         <View
           style={{
@@ -1366,7 +1366,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </AppText>
               </View>
             </View>
-            <Pressable onPress={() => setSubForumsDirectoryOpen(false)} hitSlop={8}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setSubForumsDirectoryOpen(false)} hitSlop={8}>
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -1454,7 +1454,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     {/* Propose a Community Modal - held for root-admin approval before it
         becomes a real, postable space (see src/api/communities.ts) */}
     <Modal visible={proposeCommunityOpen} transparent animationType="fade" onRequestClose={() => setProposeCommunityOpen(false)}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, 16) }}
       >
@@ -1476,7 +1476,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <AppText variant="h3" weight="bold">
                 Propose a Community
               </AppText>
-              <Pressable onPress={() => setProposeCommunityOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setProposeCommunityOpen(false)} hitSlop={8} style={{ padding: 4 }}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
             </View>

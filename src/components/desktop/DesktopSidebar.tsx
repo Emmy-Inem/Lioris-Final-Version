@@ -142,6 +142,8 @@ export function DesktopSidebar() {
 
   return (
     <View
+      role="navigation"
+      accessibilityLabel="Main navigation"
       style={[
         styles.sidebar,
         {
@@ -158,6 +160,8 @@ export function DesktopSidebar() {
  <View style={[styles.logoRow, { justifyContent: collapsed ? 'center' : 'space-between' }]}>
         <Pressable
           onPress={() => router.push(role === 'admin' ? ('/(admin)/platform-config' as any) : (`/(${role})/dashboard` as any))}
+          accessibilityRole="link"
+          accessibilityLabel="Lioris home"
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
         >
  <LiorisLogo size={36} variant="symbol" />
@@ -175,6 +179,7 @@ export function DesktopSidebar() {
  onPress={() => setCollapsed(!collapsed)}
  accessibilityRole="button"
  accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+ accessibilityState={{ expanded: !collapsed }}
  style={({ hovered }: any) => [
  styles.collapseBtn,
  {
@@ -223,6 +228,9 @@ export function DesktopSidebar() {
  >
  <Pressable
  onPress={() => setViewScope('campus')}
+ accessibilityRole="button"
+ accessibilityLabel="Show my campus feed"
+ accessibilityState={{ selected: viewScope === 'campus' }}
  style={{
  flex: 1,
  paddingVertical: 3,
@@ -244,6 +252,9 @@ export function DesktopSidebar() {
  </Pressable>
  <Pressable
  onPress={() => setViewScope('global')}
+ accessibilityRole="button"
+ accessibilityLabel="Show global feed"
+ accessibilityState={{ selected: viewScope === 'global' }}
  style={{
  flex: 1,
  paddingVertical: 3,
@@ -310,8 +321,10 @@ export function DesktopSidebar() {
             <Pressable
               key={item.id}
               onPress={() => router.push(item.href as any)}
-              accessibilityRole="button"
+              accessibilityRole="link"
               accessibilityLabel={item.label}
+              accessibilityState={{ selected: isActive }}
+              aria-current={isActive ? 'page' : undefined}
               style={({ hovered }: any) => [
                 styles.navButton,
                 {
@@ -398,6 +411,8 @@ export function DesktopSidebar() {
       >
         <Pressable
           onPress={() => router.push(`/(${role})/profile` as any)}
+          accessibilityRole="link"
+          accessibilityLabel={`Open profile for ${user?.fullName || 'your account'}`}
           style={[styles.userCard, { justifyContent: collapsed ? 'center' : 'flex-start' }]}
         >
           <Avatar

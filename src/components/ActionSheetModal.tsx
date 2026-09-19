@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useReducedMotion } from'@/theme/useReducedMotion';
 
 interface ActionSheetModalProps {
  visible: boolean;
@@ -23,25 +24,26 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
  */
 export function ActionSheetModal({ visible, onClose, children }: ActionSheetModalProps) {
  const { colors, spacing } = useTheme();
+ const reduceMotion = useReducedMotion();
  const translateY = useSharedValue(80);
  const backdropOpacity = useSharedValue(0);
 
  useEffect(() => {
  if (visible) {
- translateY.value = withSpring(0, { damping: 18, stiffness: 260 });
- backdropOpacity.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) });
+ translateY.value = reduceMotion ? 0 : withSpring(0, { damping: 18, stiffness: 260 });
+ backdropOpacity.value = withTiming(1, { duration: reduceMotion ? 0 : 150, easing: Easing.out(Easing.quad) });
  } else {
  translateY.value = 80;
  backdropOpacity.value = 0;
  }
- }, [visible, translateY, backdropOpacity]);
+ }, [visible, reduceMotion, translateY, backdropOpacity]);
 
  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+      <View accessibilityViewIsModal accessibilityLabel="Options" style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
         <AnimatedPressable
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }, backdropStyle]}
           onPress={onClose}

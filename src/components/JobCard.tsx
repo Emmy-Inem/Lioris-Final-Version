@@ -149,7 +149,7 @@ export function JobCard({ job }: { job: JobListing }) {
 
       {/* Interactive Application Modal */}
       <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => setModalOpen(false)}>
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalOverlay}
         >
@@ -180,7 +180,7 @@ export function JobCard({ job }: { job: JobListing }) {
                     {job.company} • {job.location}
                   </AppText>
                 </View>
-                <Pressable style={{ flexShrink: 0, padding: 4 }} onPress={() => setModalOpen(false)} hitSlop={12}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close" style={{ flexShrink: 0, padding: 4 }} onPress={() => setModalOpen(false)} hitSlop={12}>
                   <Ionicons name="close" size={20} color={colors.textSecondary} />
                 </Pressable>
               </View>
@@ -200,7 +200,7 @@ export function JobCard({ job }: { job: JobListing }) {
                   <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
                     Cover Note / Pitch (Optional)
                   </AppText>
-                  <TextInput
+                  <TextInput accessibilityLabel="Introduce yourself and explain why you're a great fit for this role"
                     value={coverNote}
                     onChangeText={setCoverNote}
                     placeholder="Introduce yourself and explain why you're a great fit for this role..."
@@ -225,7 +225,7 @@ export function JobCard({ job }: { job: JobListing }) {
                   <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
                     Portfolio / GitHub / LinkedIn Link (Optional)
                   </AppText>
-                  <TextInput
+                  <TextInput accessibilityLabel="https://github.com/"
                     value={portfolioLink}
                     onChangeText={setPortfolioLink}
                     placeholder="https://github.com/..."

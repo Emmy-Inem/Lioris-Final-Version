@@ -154,6 +154,8 @@ export default function RegisterScreen() {
  <AppTextField
  label="School Email"
  autoCapitalize="none"
+ autoComplete="email"
+ textContentType="emailAddress"
  keyboardType="email-address"
  value={email}
  onChangeText={setEmail}
@@ -181,6 +183,8 @@ export default function RegisterScreen() {
  <AppTextField
  label="Password (Min 12 characters)"
  secureTextEntry={!showPassword}
+ autoComplete="new-password"
+ textContentType="newPassword"
  value={password}
  onChangeText={setPassword}
  placeholder="••••••••••••"
@@ -190,7 +194,7 @@ export default function RegisterScreen() {
  accessibilityRole="button"
  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
  style={{ position: 'absolute', right: spacing.md, top: 40 }}
- hitSlop={8}
+ hitSlop={14}
  >
  <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={18} color={colors.textSecondary} />
  </Pressable>
@@ -268,8 +272,9 @@ export default function RegisterScreen() {
   onPress={() => setConfirmedAge((v) => !v)}
   accessibilityRole="checkbox"
   accessibilityState={{ checked: confirmedAge }}
+  aria-checked={confirmedAge}
   accessibilityLabel="I confirm that I am 18 years old or older, or a university student aged 16–17 registering with parent or guardian consent"
-  hitSlop={8}
+  hitSlop={12}
   >
   <Ionicons
   name={confirmedAge ? 'checkbox' : 'square-outline'}
@@ -287,8 +292,9 @@ export default function RegisterScreen() {
  onPress={() => setAcceptedTerms((v) => !v)}
  accessibilityRole="checkbox"
  accessibilityState={{ checked: acceptedTerms }}
+ aria-checked={acceptedTerms}
  accessibilityLabel="I accept the Terms of Service, Privacy Policy, and Community Rules"
- hitSlop={8}
+ hitSlop={12}
  >
  <Ionicons
  name={acceptedTerms ? 'checkbox' : 'square-outline'}
@@ -365,6 +371,8 @@ export default function RegisterScreen() {
  <View style={{ flex: 1.1, position: 'relative', overflow: 'hidden', backgroundColor: '#0F172A', padding: spacing.xxl, justifyContent: 'space-between' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
+ alt=""
+ accessible={false}
  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 }}
  contentFit="cover"
  />
@@ -372,7 +380,7 @@ export default function RegisterScreen() {
 
  {/* Logo & Back to Overview */}
  <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
- <Pressable onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Lioris home" onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
  <LiorisLogo size={44} variant="symbol" />
  <LiorisLogo size={28} variant="wordmark" tintColor="#FFFFFF" />
  </Pressable>
@@ -413,7 +421,7 @@ export default function RegisterScreen() {
  <AppText variant="caption" tone="inverse" style={{ opacity: 0.7 }}>
  © 2026 Lioris Campus Inc. All rights reserved.
  </AppText>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
  onPress={toggleTheme}
  style={{
  width: 36,

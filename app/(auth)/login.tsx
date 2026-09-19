@@ -41,6 +41,53 @@ const SLIDES = [
  },
 ];
 
+// Development-only shortcut that pre-fills seeded demo credentials. It renders nothing in
+// production builds (`__DEV__` is false there), so neither the buttons nor the shared demo
+// password ship in the public bundle. Real accounts must never rely on this password.
+function DemoAccountPicker({
+ onPick,
+ style,
+}: {
+ onPick: (email: string, password: string) => void;
+ style?: { marginTop?: number };
+}) {
+ const { colors, spacing, radius } = useTheme();
+ if (!__DEV__) return null;
+ const demos = [
+ { label: 'Student', email: 'diana.prince@ui.edu.ng' },
+ { label: 'Staff', email: 'dr.adeyemi@ui.edu.ng' },
+ { label: 'Admin', email: 'admin@ui.edu.ng' },
+ { label: 'Alumni', email: 'alumni.adeola@ui.edu.ng' },
+ ];
+ return (
+ <SolidCard style={{ padding: spacing.md, ...style }}>
+ <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, letterSpacing: 1 }}>
+ DEV ONLY: DEMO ACCOUNTS
+ </AppText>
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+ {demos.map((demo) => (
+ <Pressable
+ key={demo.label}
+ accessibilityRole="button"
+ accessibilityLabel={`Fill in the ${demo.label} demo account`}
+ onPress={() => onPick(demo.email, 'password123')}
+ style={{
+ backgroundColor: colors.pastelPrimaryBg,
+ paddingHorizontal: 10,
+ paddingVertical: 5,
+ borderRadius: radius.pill,
+ }}
+ >
+ <AppText variant="caption" weight="bold" tone="brand">
+ {demo.label}
+ </AppText>
+ </Pressable>
+ ))}
+ </View>
+ </SolidCard>
+ );
+}
+
 export default function LoginScreen() {
  const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
  const { isDesktop } = useResponsive();
@@ -218,6 +265,8 @@ export default function LoginScreen() {
  label=""
  placeholder="School Email (.edu / .edu.ng)"
  autoCapitalize="none"
+ autoComplete="email"
+ textContentType="emailAddress"
  keyboardType="email-address"
  value={email}
  onChangeText={(text) => {
@@ -228,6 +277,8 @@ export default function LoginScreen() {
  <AppTextField
  label=""
  placeholder="Password (Min 6 Characters)"
+ autoComplete="current-password"
+ textContentType="password"
  secureTextEntry
  showPasswordToggle
  value={password}
@@ -296,6 +347,8 @@ export default function LoginScreen() {
  <View style={{ flex: 1.1, position: 'relative', overflow: 'hidden', backgroundColor: '#0F172A', padding: spacing.xxl, justifyContent: 'space-between' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
+ alt=""
+ accessible={false}
  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 }}
  contentFit="cover"
  />
@@ -303,7 +356,7 @@ export default function LoginScreen() {
 
         {/* Logo & Back to Overview */}
         <View style={{ zIndex: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Pressable onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Lioris home" onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <LiorisLogo size={44} variant="symbol" />
             <LiorisLogo size={28} variant="wordmark" tintColor="#FFFFFF" />
           </Pressable>
@@ -358,7 +411,7 @@ export default function LoginScreen() {
  <AppText variant="caption" tone="inverse" style={{ opacity: 0.7 }}>
  © 2026 Lioris Campus Inc. All rights reserved.
  </AppText>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
  onPress={toggleTheme}
  style={{
  width: 36,
@@ -379,38 +432,8 @@ export default function LoginScreen() {
  <View style={{ maxWidth: 440, width: '100%', alignSelf: 'center' }}>
  {formContent}
 
- {/* Demo Accounts List */}
- <SolidCard style={{ marginTop: spacing.xl, padding: spacing.md }}>
- <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, letterSpacing: 1 }}>
- QUICK 1-CLICK DEMO ACCOUNTS
- </AppText>
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
- {[
- { label: 'Student', email: 'diana.prince@ui.edu.ng' },
- { label: 'Staff', email: 'dr.adeyemi@ui.edu.ng' },
- { label: 'Admin', email: 'admin@ui.edu.ng' },
- { label: 'Alumni', email: 'alumni.adeola@ui.edu.ng' },
- ].map((demo) => (
- <Pressable
- key={demo.label}
- onPress={() => {
- setEmail(demo.email);
- setPassword('password123');
- }}
- style={{
- backgroundColor: colors.pastelPrimaryBg,
- paddingHorizontal: 10,
- paddingVertical: 5,
- borderRadius: radius.pill,
- }}
- >
- <AppText variant="caption" weight="bold" tone="brand">
- {demo.label}
- </AppText>
- </Pressable>
- ))}
- </View>
- </SolidCard>
+ {/* Dev-only demo accounts: never rendered (nor bundled with a password) in production builds. */}
+ <DemoAccountPicker style={{ marginTop: spacing.xl }} onPick={(demoEmail, demoPassword) => { setEmail(demoEmail); setPassword(demoPassword); }} />
  </View>
  </View>
  </View>
@@ -420,6 +443,8 @@ export default function LoginScreen() {
  <View style={{ height: 230, position: 'relative', overflow: 'hidden' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
+ alt=""
+ accessible={false}
  style={{ width: '100%', height: '100%' }}
  contentFit="cover"
  />
@@ -445,7 +470,7 @@ export default function LoginScreen() {
  </Pressable>
  </View>
  <View style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
- <Pressable
+ <Pressable accessibilityRole="button" accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
  onPress={toggleTheme}
  hitSlop={8}
  style={{
@@ -473,37 +498,7 @@ export default function LoginScreen() {
  </WaveCard>
 
  <View style={{ paddingHorizontal: spacing.lg }}>
- <SolidCard style={{ padding: spacing.md }}>
- <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, letterSpacing: 1 }}>
- QUICK 1-CLICK DEMO ACCOUNTS
- </AppText>
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
- {[
- { label: 'Student', email: 'diana.prince@ui.edu.ng' },
- { label: 'Staff', email: 'dr.adeyemi@ui.edu.ng' },
- { label: 'Admin', email: 'admin@ui.edu.ng' },
- { label: 'Alumni', email: 'alumni.adeola@ui.edu.ng' },
- ].map((demo) => (
- <Pressable
- key={demo.label}
- onPress={() => {
- setEmail(demo.email);
- setPassword('password123');
- }}
- style={{
- backgroundColor: colors.pastelPrimaryBg,
- paddingHorizontal: 10,
- paddingVertical: 5,
- borderRadius: radius.pill,
- }}
- >
- <AppText variant="caption" weight="bold" tone="brand">
- {demo.label}
- </AppText>
- </Pressable>
- ))}
- </View>
- </SolidCard>
+ <DemoAccountPicker onPick={(demoEmail, demoPassword) => { setEmail(demoEmail); setPassword(demoPassword); }} />
 
  <SolidCard style={{ alignItems: 'center', marginTop: spacing.lg }}>
  <View
@@ -578,13 +573,13 @@ export default function LoginScreen() {
 
  {/* Forgot Password Modal */}
  <Modal visible={forgotModalOpen} transparent animationType="fade" onRequestClose={() => setForgotModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
+ <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
  <SolidCard style={{ width: '100%', maxWidth: 420 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
  <AppText variant="h3" weight="bold">
  Reset Password
  </AppText>
- <Pressable onPress={() => setForgotModalOpen(false)} hitSlop={8}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setForgotModalOpen(false)} hitSlop={8}>
  <Ionicons name="close" size={20} color={colors.textSecondary} />
  </Pressable>
  </View>

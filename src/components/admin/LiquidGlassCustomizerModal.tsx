@@ -38,7 +38,7 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View
+      <View accessibilityViewIsModal
         style={[
           styles.overlay,
           {
@@ -103,7 +103,7 @@ export function LiquidGlassCustomizerModal({ visible, onClose }: LiquidGlassCust
               </View>
             </View>
 
-            <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={10} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={isDark ? '#94A3B8' : '#64748B'} />
             </Pressable>
           </View>

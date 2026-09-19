@@ -38,7 +38,7 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{
           flex: 1,
@@ -104,7 +104,7 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
                 Search campus classmates, staff & mentors
               </AppText>
             </View>
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel="Close"
               onPress={onClose}
               hitSlop={8}
               style={{
@@ -136,7 +136,7 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
               }}
             >
               <Ionicons name="search" size={16} color={colors.textSecondary} />
-              <TextInput
+              <TextInput accessibilityLabel="Search by name"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Search by name..."
@@ -145,7 +145,7 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
                 style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
               />
               {searchQuery ? (
-                <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')} hitSlop={8}>
                   <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
                 </Pressable>
               ) : null}

@@ -145,7 +145,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.70)', justifyContent: 'flex-end' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
@@ -350,14 +350,14 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  }}
  >
  <Ionicons name="search"size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
- <TextInput
+ <TextInput accessibilityLabel="Search title, course code or department"
  placeholder="Search title, course code or department..."placeholderTextColor={colors.textSecondary}
  value={searchQuery}
  onChangeText={setSearchQuery}
  style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
  />
  {searchQuery ? (
- <Pressable onPress={() => setSearchQuery('')}>
+ <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')}>
  <Ionicons name="close-circle"size={16} color={colors.textSecondary} />
  </Pressable>
  ) : null}

@@ -1,10 +1,11 @@
-import {
- useFonts,
- Inter_400Regular,
- Inter_500Medium,
- Inter_600SemiBold,
- Inter_700Bold,
-} from'@expo-google-fonts/inter';
+import { useFonts } from '@expo-google-fonts/inter/useFonts';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+
+// Per-weight imports (not the package barrel) so the web export only bundles
+// the four weights we actually use instead of all 18 Inter TTFs (~6 MB).
 
 /**
  * iOS uses the system font (SF Pro) and needs no loading step.

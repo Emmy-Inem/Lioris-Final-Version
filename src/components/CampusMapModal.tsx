@@ -147,7 +147,7 @@ export function CampusMapModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[
           styles.overlay,
@@ -183,7 +183,7 @@ export function CampusMapModal({
                 Interactive amenities, ATMs, clinics, food spots & faculty navigation
               </AppText>
             </View>
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel="Close"
               onPress={onClose}
               hitSlop={12}
               style={[styles.closeBtn, { backgroundColor: `${colors.textSecondary}15` }]}
@@ -286,7 +286,7 @@ export function CampusMapModal({
           <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginTop: 10, alignItems: 'center' }}>
             <View style={[styles.searchBar, { flex: 1, borderColor: colors.border, backgroundColor: colors.background }]}>
               <Ionicons name="search" size={16} color={colors.textSecondary} />
-              <TextInput
+              <TextInput accessibilityLabel="Search ATM, clinic, cafeteria, faculty"
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Search ATM, clinic, cafeteria, faculty..."
@@ -294,13 +294,13 @@ export function CampusMapModal({
                 style={[styles.searchInput, { color: colors.textPrimary }]}
               />
               {query.length > 0 && (
-                <Pressable onPress={() => setQuery('')}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setQuery('')}>
                   <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
                 </Pressable>
               )}
             </View>
 
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel="Refresh nearby places"
               onPress={() => {
                 toast.info('Querying OpenStreetMap servers (can take up to 20 seconds)...');
                 loadAmenities(activeCampus, true);
@@ -410,7 +410,7 @@ export function CampusMapModal({
                       )}
                     </View>
 
-                    <Pressable
+                    <Pressable accessibilityRole="button" accessibilityLabel="Get directions"
                       onPress={(e) => {
                         e.stopPropagation();
                         openDirections(item);
