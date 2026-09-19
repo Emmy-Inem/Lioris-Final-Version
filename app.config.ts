@@ -60,7 +60,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     versionCode: 1,
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundColor: '#0B1220',
+      // Android 13+ themed icons: single-colour silhouette of the emblem, tinted by the system.
+      monochromeImage: './assets/images/android-icon-monochrome.png',
+      backgroundColor: '#FFFFFF',
     },
     // Gallery access goes through the system photo picker (expo-image-picker),
     // so no broad storage/media permissions are declared here. expo-image-picker
@@ -98,10 +100,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
+        // Transparent emblem: light splash on white (the master artwork), dark splash on brand navy.
         image: './assets/images/splash.png',
         imageWidth: 200,
         resizeMode: 'contain',
-        backgroundColor: '#0B1220',
+        backgroundColor: '#FFFFFF',
+        dark: {
+          image: './assets/images/splash.png',
+          backgroundColor: '#0B1220',
+        },
       },
     ],
   ],
