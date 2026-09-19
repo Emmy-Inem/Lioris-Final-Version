@@ -6,44 +6,64 @@ import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { FACULTIES } from '@/data/departments';
+import { getAcademicStructure } from '@/data/departments';
 import { haptics } from '@/utils/haptics';
 
 interface DepartmentPickerProps {
   value: string | null;
-  onChange: (department: string) => void;
+  onChange: (department: string, facultyOrCollege?: string) => void;
+  campusCode?: string;
   label?: string;
   placeholder?: string;
 }
 
 /**
- * Searchable, faculty-grouped department picker - replaces the flat 8-chip
- * list onboarding used to show (Computer Science, Engineering, Business,
- * Biology, Psychology, Economics, Art & Design, Other) with the full
- * ALL_DEPARTMENTS list (src/data/departments.ts). A flat chip row doesn't
- * scale to ~70 options, so this is a field that opens a modal with a search
- * box instead.
+ * Searchable, campus-aware academic department picker.
+ *
+ * Automatically adapts between "College" (e.g. FUNAAB: COLPHYS, COLENG, COLBIOS)
+ * and "Faculty" (e.g. UI, UNILAG: Science, Engineering, Arts, Law).
+ * Provides horizontal filter chips for instant filtering by College/Faculty,
+ * as well as instant debounced text search across all departments.
  */
-export function DepartmentPicker({ value, onChange, label = 'Department', placeholder = 'Search or select your department' }: DepartmentPickerProps) {
+export function DepartmentPicker({
+  value,
+  onChange,
+  campusCode,
+  label = 'Department',
+  placeholder = 'Search or select your department',
+}: DepartmentPickerProps) {
   const { colors, spacing, radius, minTouchTarget } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [activeGroupCode, setActiveGroupCode] = useState<string | null>(null);
 
-  const filteredFaculties = useMemo(() => {
+  const structure = useMemo(() => getAcademicStructure(campusCode), [campusCode]);
+  const groupLabel = structure.groupType; // 'College' | 'Faculty'
+
+  const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return FACULTIES;
-    return FACULTIES.map((group) => ({
-      faculty: group.faculty,
-      departments: group.departments.filter((d) => d.toLowerCase().includes(q)),
-    })).filter((group) => group.departments.length > 0);
-  }, [query]);
+    return structure.groups
+      .filter((group) => {
+        if (!activeGroupCode) return true;
+        return (group.code || group.faculty) === activeGroupCode;
+      })
+      .map((group) => ({
+        ...group,
+        departments: group.departments.filter((d) => {
+          if (!q) return true;
+          return d.toLowerCase().includes(q) || group.faculty.toLowerCase().includes(q);
+        }),
+      }))
+      .filter((group) => group.departments.length > 0);
+  }, [structure, query, activeGroupCode]);
 
-  function handleSelect(department: string) {
+  function handleSelect(department: string, facultyOrCollege: string) {
     haptics.light();
-    onChange(department);
+    onChange(department, facultyOrCollege);
     setQuery('');
+    setActiveGroupCode(null);
     setOpen(false);
   }
 
@@ -76,7 +96,8 @@ export function DepartmentPicker({ value, onChange, label = 'Department', placeh
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <KeyboardAvoidingView accessibilityViewIsModal
+        <KeyboardAvoidingView
+          accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{
             flex: 1,
@@ -93,8 +114,8 @@ export function DepartmentPicker({ value, onChange, label = 'Department', placeh
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               borderRadius: isDesktop ? 24 : undefined,
-              maxHeight: isDesktop ? '85%' : '80%',
-              maxWidth: 540,
+              maxHeight: isDesktop ? '85%' : '85%',
+              maxWidth: 580,
               width: '100%',
               alignSelf: 'center',
               paddingTop: spacing.lg,
@@ -116,45 +137,133 @@ export function DepartmentPicker({ value, onChange, label = 'Department', placeh
               />
             )}
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <AppText variant="h2" weight="bold">
-                Select department
-              </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+              <View>
+                <AppText variant="h2" weight="bold">
+                  Select Department
+                </AppText>
+                <AppText variant="caption" tone="secondary">
+                  Showing {groupLabel.toLowerCase()}s for {structure.campusCode}
+                </AppText>
+              </View>
               <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </Pressable>
             </View>
 
             <AppTextField
-              placeholder="Search departments..."
+              placeholder={`Search departments or ${groupLabel.toLowerCase()}s...`}
               value={query}
               onChangeText={setQuery}
               leftIcon="search"
               autoFocus
             />
 
-            <ScrollView style={{ marginBottom: spacing.sm }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              {filteredFaculties.length === 0 ? (
-                <AppText tone="secondary" style={{ paddingVertical: spacing.lg, textAlign: 'center' }}>
-                  No departments match "{query}".
-                </AppText>
-              ) : (
-                filteredFaculties.map((group) => (
-                  <View key={group.faculty} style={{ marginBottom: spacing.md }}>
-                    <AppText
-                      variant="caption"
-                      weight="bold"
-                      tone="secondary"
-                      style={{ textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: spacing.xs }}
+            {/* Horizontal Filter Chips for Colleges / Faculties */}
+            <View style={{ marginBottom: spacing.sm, marginTop: -spacing.xs }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+              >
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    setActiveGroupCode(null);
+                  }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: radius.pill,
+                    backgroundColor: activeGroupCode === null ? colors.brandPrimary : colors.divider,
+                  }}
+                >
+                  <AppText
+                    variant="caption"
+                    weight="bold"
+                    tone={activeGroupCode === null ? 'inverse' : 'secondary'}
+                  >
+                    All {groupLabel}s
+                  </AppText>
+                </Pressable>
+
+                {structure.groups.map((group) => {
+                  const key = group.code || group.faculty;
+                  const isSelected = activeGroupCode === key;
+                  const displayChip = group.code || group.faculty.replace(/^Faculty of (the )?|^College of /, '');
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => {
+                        haptics.light();
+                        setActiveGroupCode(isSelected ? null : key);
+                      }}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: radius.pill,
+                        backgroundColor: isSelected ? colors.brandPrimary : colors.divider,
+                      }}
                     >
-                      {group.faculty}
-                    </AppText>
+                      <AppText
+                        variant="caption"
+                        weight="bold"
+                        tone={isSelected ? 'inverse' : 'secondary'}
+                      >
+                        {displayChip}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Department List */}
+            <ScrollView
+              style={{ flex: 1, marginBottom: spacing.sm }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {filteredGroups.length === 0 ? (
+                <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
+                  <Ionicons name="school-outline" size={36} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+                  <AppText tone="secondary" style={{ textAlign: 'center' }}>
+                    No departments match "{query}".
+                  </AppText>
+                </View>
+              ) : (
+                filteredGroups.map((group) => (
+                  <View key={group.faculty} style={{ marginBottom: spacing.md }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 4,
+                        borderBottomWidth: 1,
+                        borderBottomColor: colors.divider,
+                        marginBottom: spacing.xs,
+                      }}
+                    >
+                      <AppText
+                        variant="caption"
+                        weight="bold"
+                        tone="brand"
+                        style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}
+                      >
+                        {group.faculty}
+                      </AppText>
+                      <AppText variant="caption" tone="secondary">
+                        {group.departments.length} depts
+                      </AppText>
+                    </View>
+
                     {group.departments.map((dept) => {
                       const isSelected = dept === value;
                       return (
                         <Pressable
                           key={dept}
-                          onPress={() => handleSelect(dept)}
+                          onPress={() => handleSelect(dept, group.faculty)}
                           accessibilityRole="button"
                           accessibilityState={{ selected: isSelected }}
                           style={{
@@ -162,12 +271,20 @@ export function DepartmentPicker({ value, onChange, label = 'Department', placeh
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             paddingVertical: spacing.sm,
+                            paddingHorizontal: spacing.xs,
+                            borderRadius: radius.sm,
+                            backgroundColor: isSelected ? colors.pastelPrimaryBg : 'transparent',
                           }}
                         >
-                          <AppText tone={isSelected ? 'brand' : 'primary'} weight={isSelected ? 'bold' : 'regular'}>
-                            {dept}
-                          </AppText>
-                          {isSelected ? <Ionicons name="checkmark" size={18} color={colors.brandPrimary} /> : null}
+                          <View style={{ flex: 1 }}>
+                            <AppText tone={isSelected ? 'brand' : 'primary'} weight={isSelected ? 'bold' : 'regular'}>
+                              {dept}
+                            </AppText>
+                            <AppText variant="caption" tone="secondary">
+                              {group.code ? `${group.code} • ` : ''}{group.faculty}
+                            </AppText>
+                          </View>
+                          {isSelected ? <Ionicons name="checkmark-circle" size={20} color={colors.brandPrimary} /> : null}
                         </Pressable>
                       );
                     })}

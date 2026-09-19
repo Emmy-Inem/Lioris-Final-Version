@@ -206,6 +206,26 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
  };
 }
 
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function defaultSessionUser(userEmail: string, role: UserRole, fullName: string): SessionUser {
+  return {
+    id: generateUUID(),
+    fullName,
+    email: userEmail,
+    role,
+    actualRole: role,
+    onboardingComplete: false,
+    mfaVerified: !roleRequiresMfa(role),
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -222,12 +242,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (token) {
         const stored = await getSessionUser();
         if (mounted && stored) {
-          const isOnboarding = stored.onboardingComplete === false && Boolean(stored.onboardingStep);
+          const isComplete = Boolean(stored.onboardingComplete);
           const initialUser = {
             ...stored,
             role: stored.role as UserRole,
             actualRole: (stored.actualRole ?? stored.role) as UserRole,
-            onboardingComplete: !isOnboarding,
+            onboardingComplete: isComplete,
+            onboardingStep: isComplete ? undefined : (stored.onboardingStep || firstOnboardingStep(stored.role as UserRole)),
             mfaVerified: stored.mfaVerified ?? !roleRequiresMfa(stored.role as UserRole),
           } as SessionUser;
           userRef.current = initialUser;
@@ -277,10 +298,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Local flags and the department heuristic stay as fallbacks for
           // the brief window before every row is backfilled.
           const isOnboarded =
-            profile?.onboarding_complete ??
-            userRef.current?.onboardingComplete ??
-            storedUser?.onboardingComplete ??
-            (Boolean(profile?.department) || role === 'admin' || role === 'staff');
+            profile?.onboarding_complete === true ||
+            (profile?.onboarding_complete !== false && Boolean(profile?.department)) ||
+            role === 'admin' ||
+            role === 'staff';
 
           const nextUser: SessionUser = {
             id: session.user.id,
@@ -340,10 +361,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ? ((userRef.current?.role || storedUser?.role) as UserRole)
             : role;
         const isOnboarded =
-          profile?.onboarding_complete ??
-          userRef.current?.onboardingComplete ??
-          storedUser?.onboardingComplete ??
-          (Boolean(profile?.department) || role === 'admin' || role === 'staff');
+          profile?.onboarding_complete === true ||
+          (profile?.onboarding_complete !== false && Boolean(profile?.department)) ||
+          role === 'admin' ||
+          role === 'staff';
 
         const nextUser: SessionUser = {
           id: session.user.id,
@@ -390,18 +411,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
         }
 
-        // Trust a previously-persisted onboardingComplete flag for this same
-        // user first, matching the initAuth/onAuthStateChange logic above -
-        // otherwise a user whose onboarding chain doesn't set `department`
-        // (e.g. alumni, see src/auth/onboardingSteps.ts) gets bounced back
-        // into onboarding forever after finishing it once.
-        const storedUser = await getSessionUser();
-        const previouslyOnboarded =
-          storedUser?.id === session.user.id ? storedUser.onboardingComplete : undefined;
         const isOnboarded =
-          prof?.onboarding_complete ??
-          previouslyOnboarded ??
-          (Boolean(prof?.department) || session.user.role === 'admin' || session.user.role === 'staff');
+          prof?.onboarding_complete === true ||
+          (prof?.onboarding_complete !== false && Boolean(prof?.department)) ||
+          session.user.role === 'admin' ||
+          session.user.role === 'staff';
 
         const nextUser: SessionUser = {
           ...session.user,

@@ -319,6 +319,8 @@ export async function updateMyProfile(
  if (patch.fullName !== undefined) dbPatch.full_name = patch.fullName;
  if (patch.bio !== undefined) dbPatch.bio = patch.bio;
  if (patch.department !== undefined) dbPatch.department = patch.department;
+  if (patch.faculty !== undefined) dbPatch.faculty = patch.faculty;
+  if (patch.academicLevel !== undefined) dbPatch.level = patch.academicLevel;
  if (patch.interests !== undefined) dbPatch.interests = patch.interests;
  if (patch.institutionCode !== undefined) dbPatch.campus_code = patch.institutionCode;
  if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;

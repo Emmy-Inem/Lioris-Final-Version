@@ -13,6 +13,8 @@ export interface UserProfile {
  connectionsCount?: number;
  bio?: string | null;
  department?: string | null;
+ faculty?: string | null;
+ academicLevel?: string | null;
  interests?: string[];
  institutionName?: string;
  institutionCode?: string;

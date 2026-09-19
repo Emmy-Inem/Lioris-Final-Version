@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     custom_accent_color TEXT DEFAULT '#2563EB',
     trust_score NUMERIC(5,2) DEFAULT 80.00,
     is_suspended BOOLEAN DEFAULT FALSE,
+    onboarding_complete BOOLEAN DEFAULT FALSE,
     last_active_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
