@@ -915,12 +915,14 @@ export function EventDetailScreen() {
                         </AppText>
                       </View>
                     </View>
-                    <AppButton
-                      label="Contact Organizer"
-                      variant="ghost"
-                      loading={contactingOrganizer}
-                      onPress={handleContactOrganizer}
-                    />
+                    {isFeatureEnabled('e2ee_messaging') && (
+                      <AppButton
+                        label="Contact Organizer"
+                        variant="ghost"
+                        loading={contactingOrganizer}
+                        onPress={handleContactOrganizer}
+                      />
+                    )}
                   </View>
                 </SolidCard>
               </View>
@@ -1522,13 +1524,15 @@ export function EventDetailScreen() {
                         </AppText>
                       </View>
                     </View>
-                    <AppButton
-                      label="Contact"
-                      size="sm"
-                      variant="ghost"
-                      loading={contactingOrganizer}
-                      onPress={handleContactOrganizer}
-                    />
+                    {isFeatureEnabled('e2ee_messaging') && (
+                      <AppButton
+                        label="Contact"
+                        size="sm"
+                        variant="ghost"
+                        loading={contactingOrganizer}
+                        onPress={handleContactOrganizer}
+                      />
+                    )}
                   </View>
                 </SolidCard>
               </View>

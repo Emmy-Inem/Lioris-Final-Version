@@ -9,6 +9,7 @@ import { Avatar } from'./Avatar';
 import { Badge } from'./Badge';
 import { UserProfileModal } from'./UserProfileModal';
 import { useTheme } from'@/theme/ThemeProvider';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { AlumniDirectoryEntry } from'@/api/types';
 import { sendConnectionRequest } from'@/api/connections';
 import { getOrCreateConversationWithUser } from'@/api/messaging';
@@ -26,6 +27,7 @@ const ROLE_GROUPS = ['(student)', '(alumni)', '(staff)', '(admin)'];
 
 export function DirectoryCard({ entry }: { entry: AlumniDirectoryEntry }) {
  const { spacing } = useTheme();
+ const { isFeatureEnabled } = useFeatureFlags();
  const segments = useSegments();
  const roleGroup = segments[0];
  const queryClient = useQueryClient();
@@ -95,7 +97,9 @@ export function DirectoryCard({ entry }: { entry: AlumniDirectoryEntry }) {
  {status === 'none' && (
  <AppButton label="Connect "onPress={handleConnect} loading={submitting} />
  )}
+ {isFeatureEnabled('e2ee_messaging') && (
  <AppButton label="Message"variant="secondary"onPress={handleMessage} />
+ )}
  </View>
  </SolidCard>
 

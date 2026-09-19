@@ -22,7 +22,9 @@ export type FeatureKey =
   | 'campus_map'
   | 'ai_study_copilot'
   | 'currency_converter'
-  | 'forum_trends';
+  | 'forum_trends'
+  | 'alumni_network'
+  | 'campus_announcements';
 
 export interface FeatureFlagMeta {
   key: FeatureKey;
@@ -162,13 +164,29 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     description: 'Live exchange rates converting NGN marketplace prices and alumni gifts into USD, EUR, and GBP.',
     defaultOn: true,
   },
+  {
+    key: 'alumni_network',
+    label: 'Alumni Network & Directory',
+    category: 'Campus Life',
+    tier: 'P1',
+    description: 'Enables alumni directory search, fellow graduates discovery, and connection requests.',
+    defaultOn: true,
+  },
+  {
+    key: 'campus_announcements',
+    label: 'Campus Broadcasts & Announcements',
+    category: 'Campus Life',
+    tier: 'P1',
+    description: 'Displays university administration broadcasts, faculty bulletins, and emergency announcements.',
+    defaultOn: true,
+  },
 ];
 
 export const DEFAULT_FLAGS: Record<FeatureKey, boolean> = Object.fromEntries(
   FEATURE_CATALOG.map((f) => [f.key, f.defaultOn]),
 ) as Record<FeatureKey, boolean>;
 
-const STORAGE_KEY = 'lioris_runtime_feature_flags_v7';
+const STORAGE_KEY = 'lioris_runtime_feature_flags_v8';
 const isWeb = Platform.OS === 'web';
 
 async function getStoredFlags(): Promise<string | null> {

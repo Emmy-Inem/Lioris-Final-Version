@@ -9,6 +9,7 @@ import { Badge } from './Badge';
 import { SolidCard } from './SolidCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useAuth } from '@/auth/AuthContext';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { haptics } from '@/utils/haptics';
@@ -36,6 +37,7 @@ export function UserProfileQuickViewModal({
 }: UserProfileQuickViewModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
   const { user: currentUser } = useAuth();
   const roleGroup = currentUser?.role ? `(${currentUser.role})` : '(student)';
   const [startingChat, setStartingChat] = useState(false);
@@ -134,14 +136,16 @@ export function UserProfileQuickViewModal({
 
             {/* Action Buttons */}
             <View style={{ gap: spacing.sm }}>
-              <AppButton
-                label="Send Direct Message"
-                icon="chatbubble-ellipses-outline"
-                variant="primary"
-                fullWidth
-                loading={startingChat}
-                onPress={() => handleSendDirectMessage(user)}
-              />
+              {isFeatureEnabled('e2ee_messaging') && (
+                <AppButton
+                  label="Send Direct Message"
+                  icon="chatbubble-ellipses-outline"
+                  variant="primary"
+                  fullWidth
+                  loading={startingChat}
+                  onPress={() => handleSendDirectMessage(user)}
+                />
+              )}
               <AppButton
                 label="Dismiss"
                 variant="ghost"

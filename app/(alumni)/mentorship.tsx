@@ -14,6 +14,7 @@ import { AppButton } from'@/components/AppButton';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { listMentorships, respondToMentorshipRequest } from '@/api/mentorship';
 import { createNotification } from '@/api/notifications';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
@@ -30,6 +31,7 @@ const STATUS_TONE = {
 export default function AlumniMentorshipScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
   const queryClient = useQueryClient();
   const { data: mentorships, isLoading } = useQuery({
     queryKey: ['mentorships'],
@@ -160,15 +162,17 @@ export default function AlumniMentorshipScreen() {
                         onPress={() => handleStartMentorshipCall(m.id, studentName, m.studentDepartment)}
                       />
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <AppButton
-                        label="Message"
-                        variant="secondary"
-                        fullWidth
-                        size="sm"
-                        onPress={() => handleOpenChat(m.studentId, studentName)}
-                      />
-                    </View>
+                    {isFeatureEnabled('e2ee_messaging') && (
+                      <View style={{ flex: 1 }}>
+                        <AppButton
+                          label="Message"
+                          variant="secondary"
+                          fullWidth
+                          size="sm"
+                          onPress={() => handleOpenChat(m.studentId, studentName)}
+                        />
+                      </View>
+                    )}
                   </View>
                 ) : null}
               </SolidCard>

@@ -49,15 +49,16 @@ export default function AlumniLayout() {
       ),
     }}
   />
- <Tabs.Screen
- name="forum"
- options={{
- title: 'Forum',
- tabBarIcon: ({ focused, size }) => (
- <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />
- ),
- }}
- />
+  <Tabs.Screen
+    name="forum"
+    options={{
+      href: isFeatureEnabled('discussion_workspaces') ? undefined : null,
+      title: 'Forum',
+      tabBarIcon: ({ focused, size }) => (
+        <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />
+      ),
+    }}
+  />
   <Tabs.Screen
     name="events-list"
     options={{

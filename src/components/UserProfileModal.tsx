@@ -11,6 +11,7 @@ import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sendConnectionRequest, checkConnectionStatus, deleteConnection } from '@/api/connections';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
@@ -136,6 +137,7 @@ export function UserProfileModal({
  }
 
  const { isDesktop } = useResponsive();
+ const { isFeatureEnabled } = useFeatureFlags();
  const insets = useSafeAreaInsets();
 
  return (
@@ -238,12 +240,14 @@ export function UserProfileModal({
  loading={connecting}
  size="sm"
  />
+ {isFeatureEnabled('e2ee_messaging') && (
  <AppButton
  label="Message"
  variant="secondary"
  onPress={handleStartChat}
  size="sm"
  />
+ )}
  </View>
  </View>
 

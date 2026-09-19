@@ -13,12 +13,14 @@ import { SolidCard } from './SolidCard';
 import { NewChatModal } from './NewChatModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
 import { listConversations, archiveConversation, getOrCreateConversationWithUser, UserToMessage } from '@/api/messaging';
 
 export function MessagesListScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
   const segments = useSegments();
   const roleGroup = segments[0] || '(student)';
   const queryClient = useQueryClient();
@@ -27,6 +29,8 @@ export function MessagesListScreen() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [newChatModalOpen, setNewChatModalOpen] = useState(false);
   useRealtimeChannel();
+
+  const messagingEnabled = isFeatureEnabled('e2ee_messaging');
 
   const { data: conversations, isLoading } = useQuery({
     queryKey: ['conversations'],
@@ -61,6 +65,25 @@ export function MessagesListScreen() {
   });
 
   const activeSelectedId = selectedConversationId ?? (filtered.length > 0 ? filtered[0].id : null);
+
+  if (!messagingEnabled) {
+    return (
+      <ScreenContainer glow={false} fluidWidth={isDesktop}>
+        {!isDesktop && <AppHeader />}
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, minHeight: 400 }}>
+          <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md }}>
+            <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.textSecondary} />
+          </View>
+          <AppText variant="h2" weight="bold" style={{ textAlign: 'center', marginBottom: spacing.xs }}>
+            Direct Messaging Disabled
+          </AppText>
+          <AppText tone="secondary" style={{ textAlign: 'center', maxWidth: 420, lineHeight: 20 }}>
+            Direct chat and messaging have been temporarily disabled by campus administration. Please check back later or use forum discussions.
+          </AppText>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer glow={false} fluidWidth={isDesktop}>

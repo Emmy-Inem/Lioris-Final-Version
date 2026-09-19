@@ -202,30 +202,33 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  </AppText>
  </Pressable>
 
- <Pressable
- onPress={handleMessageSeller}
- disabled={messaging}
- accessibilityRole="button"accessibilityLabel={`Message ${item.sellerName}`}
- style={{
- flex: 1,
- flexDirection: 'row',
- alignItems: 'center',
- justifyContent: 'center',
- gap: 2,
- borderWidth: 1,
- borderColor: colors.border,
- borderRadius: radius.sm,
- paddingVertical: 5,
- opacity: messaging ? 0.6 : 1,
- }}
- >
- <Ionicons name="chatbubble-outline"size={10} color={colors.textPrimary} />
- <AppText variant="caption"weight="bold"style={{ fontSize: 9 }}>
- Chat
- </AppText>
- </Pressable>
- </View>
- ) : null}
+  {isFeatureEnabled('e2ee_messaging') && (
+    <Pressable
+      onPress={handleMessageSeller}
+      disabled={messaging}
+      accessibilityRole="button"
+      accessibilityLabel={`Message ${item.sellerName}`}
+      style={{
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: radius.sm,
+        paddingVertical: 5,
+        opacity: messaging ? 0.6 : 1,
+      }}
+    >
+      <Ionicons name="chatbubble-outline" size={10} color={colors.textPrimary} />
+      <AppText variant="caption" weight="bold" style={{ fontSize: 9 }}>
+        Chat
+      </AppText>
+    </Pressable>
+  )}
+  </View>
+  ) : null}
  </View>
 
       {/* Escrow Checkout Modal */}

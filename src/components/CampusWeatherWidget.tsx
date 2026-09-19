@@ -84,7 +84,13 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
       style={{
         marginBottom: spacing.md,
       }}
-      contentStyle={styles.card}
+      contentStyle={[
+        styles.card,
+        {
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.65)' : 'rgba(255, 255, 255, 0.85)',
+        },
+      ]}
     >
       {loading && !weather ? (
         <View style={styles.loadingContainer}>
@@ -95,79 +101,168 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
         </View>
       ) : weather ? (
         <View>
-          {/* Header Row */}
+          {/* Header: Campus location + Live status */}
           <View style={styles.headerRow}>
             <View style={styles.campusInfo}>
-              <Ionicons name="location" size={14} color={colors.brandPrimary} />
-              <AppText variant="caption" weight="bold" numberOfLines={1} style={{ marginLeft: 4 }}>
+              <View style={[styles.pinIconWrap, { backgroundColor: colors.brandPrimary + '18' }]}>
+                <Ionicons name="location" size={13} color={colors.brandPrimary} />
+              </View>
+              <AppText variant="caption" weight="bold" numberOfLines={1} style={{ marginLeft: 6, fontSize: 13 }}>
                 {weather.campus.name}
               </AppText>
               <Pressable
                 onPress={cycleCampus}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Switch campus weather"
                 style={[
                   styles.switchChip,
                   {
-                    borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)',
-                    borderWidth: 1,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.10)',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.90)',
                   },
                 ]}
               >
-                <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 10.5 }}>
+                <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 11 }}>
                   {weather.campus.shortName} ▾
                 </AppText>
               </Pressable>
             </View>
-            <Badge label="LIVE METEO" tone="success" />
+
+            <View style={[styles.liveBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.10)', borderColor: isDark ? 'rgba(34, 197, 94, 0.35)' : 'rgba(34, 197, 94, 0.25)' }]}>
+              <View style={styles.liveDot} />
+              <AppText variant="caption" weight="bold" style={{ color: colors.success, fontSize: 10, letterSpacing: 0.5 }}>
+                LIVE METEO
+              </AppText>
+            </View>
           </View>
 
           {/* Main Weather Metric Row */}
           <View style={styles.mainRow}>
             <View style={styles.leftTempCol}>
               <View style={styles.tempWithIcon}>
-                <Ionicons
-                  name={getWeatherIcon(weather.iconName)}
-                  size={32}
-                  color={weather.iconName === 'sunny' ? '#f59e0b' : colors.brandPrimary}
-                />
-                <AppText variant="h1" weight="bold" style={styles.tempText}>
-                  {weather.temperature}°C
+                <View
+                  style={[
+                    styles.iconCircle,
+                    {
+                      backgroundColor:
+                        weather.iconName === 'sunny'
+                          ? 'rgba(245, 158, 11, 0.15)'
+                          : weather.iconName === 'rainy' || weather.iconName === 'thunderstorm'
+                          ? 'rgba(59, 130, 246, 0.15)'
+                          : isDark
+                          ? 'rgba(148, 163, 184, 0.15)'
+                          : 'rgba(100, 116, 139, 0.10)',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={getWeatherIcon(weather.iconName)}
+                    size={30}
+                    color={
+                      weather.iconName === 'sunny'
+                        ? '#f59e0b'
+                        : weather.iconName === 'rainy' || weather.iconName === 'thunderstorm'
+                        ? '#3b82f6'
+                        : colors.brandPrimary
+                    }
+                  />
+                </View>
+                <View>
+                  <AppText variant="h1" weight="bold" style={styles.tempText}>
+                    {weather.temperature}°<AppText style={{ fontSize: 18, fontWeight: '500', color: colors.textSecondary }}>C</AppText>
+                  </AppText>
+                  <AppText variant="caption" weight="semiBold" tone="secondary" style={{ marginTop: -2 }}>
+                    {weather.condition} • Feels {weather.apparentTemperature}°C
+                  </AppText>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Micro-metric Pills (Humidity, Precipitation, High/Low) */}
+          <View style={styles.metricsGrid}>
+            <View
+              style={[
+                styles.metricPill,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                },
+              ]}
+            >
+              <Ionicons name="water-outline" size={14} color={colors.brandPrimary} />
+              <View style={{ marginLeft: 6 }}>
+                <AppText variant="caption" weight="bold" style={{ fontSize: 12 }}>
+                  {weather.humidity}%
+                </AppText>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 9.5 }}>
+                  Humidity
                 </AppText>
               </View>
-              <AppText variant="caption" weight="semiBold" tone="secondary">
-                {weather.condition} • Feels {weather.apparentTemperature}°C
-              </AppText>
             </View>
 
-            <View style={styles.rightStatsCol}>
-              <View style={styles.statItem}>
-                <Ionicons name="water-outline" size={12} color={colors.textSecondary} />
-                <AppText variant="caption" tone="secondary" style={styles.statText}>
-                  {weather.humidity}% Hum
+            <View
+              style={[
+                styles.metricPill,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                },
+              ]}
+            >
+              <Ionicons name="umbrella-outline" size={14} color="#3b82f6" />
+              <View style={{ marginLeft: 6 }}>
+                <AppText variant="caption" weight="bold" style={{ fontSize: 12 }}>
+                  {weather.precipitationProbability}%
+                </AppText>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 9.5 }}>
+                  Rain Chance
                 </AppText>
               </View>
-              <View style={styles.statItem}>
-                <Ionicons name="umbrella-outline" size={12} color={colors.textSecondary} />
-                <AppText variant="caption" tone="secondary" style={styles.statText}>
-                  {weather.precipitationProbability}% Rain
-                </AppText>
-              </View>
-              <View style={styles.statItem}>
-                <Ionicons name="thermometer-outline" size={12} color={colors.textSecondary} />
-                <AppText variant="caption" tone="secondary" style={styles.statText}>
+            </View>
+
+            <View
+              style={[
+                styles.metricPill,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                },
+              ]}
+            >
+              <Ionicons name="thermometer-outline" size={14} color="#f59e0b" />
+              <View style={{ marginLeft: 6 }}>
+                <AppText variant="caption" weight="bold" style={{ fontSize: 12 }}>
                   {weather.tempMax}° / {weather.tempMin}°
                 </AppText>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 9.5 }}>
+                  High / Low
+                </AppText>
               </View>
             </View>
           </View>
 
-          {/* Walking / Transit Advice */}
-          <View style={[styles.adviceBox, { backgroundColor: isDark ? 'rgba(124, 58, 237, 0.12)' : 'rgba(124, 58, 237, 0.08)', borderWidth: 1, borderColor: isDark ? 'rgba(167, 139, 250, 0.20)' : 'rgba(124, 58, 237, 0.12)' }]}>
-            <AppText variant="caption" style={{ lineHeight: 16, color: colors.textPrimary }}>
-              {weather.transitAdvice}
-            </AppText>
-          </View>
+          {/* Walking / Transit Advice Banner */}
+          {weather.transitAdvice ? (
+            <View
+              style={[
+                styles.adviceBox,
+                {
+                  backgroundColor: isDark ? 'rgba(124, 58, 237, 0.10)' : 'rgba(124, 58, 237, 0.06)',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(167, 139, 250, 0.22)' : 'rgba(124, 58, 237, 0.16)',
+                },
+              ]}
+            >
+              <View style={styles.adviceContent}>
+                <Ionicons name="footsteps-outline" size={14} color={colors.brandPrimary} style={{ marginTop: 1, marginRight: 6 }} />
+                <AppText variant="caption" style={{ flex: 1, lineHeight: 16, color: colors.textPrimary, fontSize: 11.5 }}>
+                  {weather.transitAdvice}
+                </AppText>
+              </View>
+            </View>
+          ) : null}
         </View>
       ) : null}
     </GlassCard>
@@ -176,20 +271,20 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
 
 const styles = StyleSheet.create({
   card: {
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   campusInfo: {
     flexDirection: 'row',
@@ -197,17 +292,40 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  pinIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   switchChip: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginLeft: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginLeft: 8,
+    borderWidth: 1,
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#22c55e',
   },
   mainRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   leftTempCol: {
     flex: 1,
@@ -216,28 +334,41 @@ const styles = StyleSheet.create({
   tempWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tempText: {
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: -0.5,
   },
-  rightStatsCol: {
-    alignItems: 'flex-end',
-    gap: 2,
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
   },
-  statItem: {
+  metricPill: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  statText: {
-    fontSize: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   adviceBox: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  adviceContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
 });

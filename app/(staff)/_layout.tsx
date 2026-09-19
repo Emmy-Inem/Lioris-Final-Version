@@ -7,10 +7,12 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
 import { FloatingLiquidGlassTabBar } from '@/components/FloatingLiquidGlassTabBar';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 export default function StaffLayout() {
  const { colors, isDark } = useTheme();
  const { isDesktop } = useResponsive();
+ const { isFeatureEnabled } = useFeatureFlags();
 
  const tabsContent = (
  <Tabs
@@ -46,6 +48,7 @@ export default function StaffLayout() {
   <Tabs.Screen
     name="announcements"
     options={{
+      href: isFeatureEnabled('campus_announcements') ? undefined : null,
       title: 'Broadcasts',
       tabBarIcon: ({ focused, size }) => (
         <TabIcon name={focused ? 'megaphone' : 'megaphone-outline'} focused={focused} size={size} />
@@ -64,6 +67,7 @@ export default function StaffLayout() {
   <Tabs.Screen
     name="events-list"
     options={{
+      href: isFeatureEnabled('campus_events') ? undefined : null,
       title: 'Events',
       tabBarIcon: ({ focused, size }) => (
         <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} size={size} />
@@ -73,6 +77,7 @@ export default function StaffLayout() {
   <Tabs.Screen
     name="forum"
     options={{
+      href: isFeatureEnabled('discussion_workspaces') ? undefined : null,
       title: 'Forum',
       tabBarIcon: ({ focused, size }) => (
         <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />

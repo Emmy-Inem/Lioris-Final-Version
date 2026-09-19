@@ -124,6 +124,44 @@ export function CampusRadioPlayer() {
     );
   }
 
+function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: string }) {
+  const [heights, setHeights] = useState([6, 12, 8, 16, 10]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      setHeights([4, 6, 4, 8, 5]);
+      return;
+    }
+    const interval = setInterval(() => {
+      setHeights([
+        Math.floor(Math.random() * 12) + 6,
+        Math.floor(Math.random() * 16) + 8,
+        Math.floor(Math.random() * 10) + 6,
+        Math.floor(Math.random() * 18) + 8,
+        Math.floor(Math.random() * 14) + 6,
+      ]);
+    }, 160);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2.5, height: 22, paddingBottom: 2 }}>
+      {heights.map((h, i) => (
+        <View
+          key={i}
+          style={{
+            width: 3,
+            height: h,
+            borderRadius: 1.5,
+            backgroundColor: color,
+            opacity: isPlaying ? 0.95 : 0.35,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
   return (
     <GlassCard
       radius={20}
@@ -131,24 +169,34 @@ export function CampusRadioPlayer() {
       style={{
         marginBottom: spacing.md,
       }}
-      contentStyle={styles.playerCard}
+      contentStyle={[
+        styles.playerCard,
+        {
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.65)' : 'rgba(255, 255, 255, 0.85)',
+        },
+      ]}
     >
       {/* Top Header Row */}
       <View style={styles.topRow}>
         <View style={styles.stationBadgeGroup}>
-          <Ionicons
-            name="radio"
-            size={18}
-            color={radioState.isPlaying ? colors.brandPrimary : colors.textSecondary}
-          />
-          <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+          <View style={[styles.radioIconWrap, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : colors.brandPrimary + '15' }]}>
+            <Ionicons
+              name="radio"
+              size={15}
+              color={radioState.isPlaying ? '#22c55e' : colors.brandPrimary}
+            />
+          </View>
+          <AppText variant="bodySmall" weight="bold" numberOfLines={1} style={{ fontSize: 13 }}>
             {current.name}
           </AppText>
-          <Badge
-            label={radioState.isPlaying ? 'ON AIR' : radioState.isLoading ? 'BUFFERING' : 'LIVE'}
-            tone={radioState.isPlaying ? 'success' : radioState.isLoading ? 'warning' : 'neutral'}
-          />
-          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+          <View style={[styles.liveBadge, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', borderColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.35)' : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)' }]}>
+            <View style={[styles.liveDot, { backgroundColor: radioState.isPlaying ? '#22c55e' : colors.textSecondary }]} />
+            <AppText variant="caption" weight="bold" style={{ color: radioState.isPlaying ? colors.success : colors.textSecondary, fontSize: 10, letterSpacing: 0.5 }}>
+              {radioState.isPlaying ? 'ON AIR' : radioState.isLoading ? 'CONNECTING' : 'PAUSED'}
+            </AppText>
+          </View>
+          <AppText variant="caption" tone="secondary" style={{ fontSize: 11, fontWeight: '600' }}>
             {current.frequency}
           </AppText>
         </View>
@@ -157,28 +205,50 @@ export function CampusRadioPlayer() {
           <Pressable
             onPress={() => setShowStations(!showStations)}
             hitSlop={8}
-            style={[styles.smallBtn, { backgroundColor: colors.brandPrimary + '15' }]}
+            accessibilityRole="button"
+            accessibilityLabel="Browse radio stations"
+            style={[
+              styles.smallBtn,
+              {
+                backgroundColor: showStations ? colors.brandPrimary : colors.brandPrimary + '15',
+                borderColor: colors.brandPrimary + '30',
+                borderWidth: 1,
+              },
+            ]}
           >
-            <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
+            <AppText
+              variant="caption"
+              weight="bold"
+              style={{
+                color: showStations ? '#FFFFFF' : colors.brandPrimary,
+                fontSize: 11,
+              }}
+            >
               {showStations ? 'Close ▴' : 'Browse Stations ▾'}
             </AppText>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Minimise radio player" onPress={() => setMinimized(true)} hitSlop={8} style={styles.iconBtn}>
-            <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Minimise radio player"
+            onPress={() => setMinimized(true)}
+            hitSlop={8}
+            style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderRadius: 8 }]}
+          >
+            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
           </Pressable>
         </View>
       </View>
 
       {/* Station Subtitle & Description */}
-      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginVertical: 3 }}>
+      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 4, marginBottom: 8, fontSize: 11.5 }}>
         {current.campusOrCity} • {current.description}
       </AppText>
 
       {/* Error / Buffering Indicator */}
       {radioState.errorMessage ? (
-        <View style={styles.errorRow}>
-          <Ionicons name="alert-circle" size={14} color={colors.warning} />
-          <AppText variant="caption" style={{ color: colors.warning, fontSize: 11, marginLeft: 4 }}>
+        <View style={[styles.errorRow, { backgroundColor: 'rgba(239, 68, 68, 0.10)', borderColor: 'rgba(239, 68, 68, 0.20)', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginBottom: 8 }]}>
+          <Ionicons name="alert-circle" size={14} color={colors.critical} />
+          <AppText variant="caption" style={{ color: colors.critical, fontSize: 11, marginLeft: 4 }}>
             {radioState.errorMessage} — retrying...
           </AppText>
         </View>
@@ -186,11 +256,12 @@ export function CampusRadioPlayer() {
 
       {/* STATIONS BROWSER & ONLINE SEARCH PANEL */}
       {showStations && (
-        <View style={[styles.browserContainer, { borderColor: colors.divider, backgroundColor: colors.background }]}>
+        <View style={[styles.browserContainer, { borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)', backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(248, 250, 252, 0.95)' }]}>
           {/* Search Bar */}
           <View style={[styles.searchBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
             <Ionicons name="search" size={15} color={colors.textSecondary} />
-            <TextInput accessibilityLabel="Search 40,000+ stations (e.g. Lagos, Ibadan, Wazobia, Lofi)"
+            <TextInput
+              accessibilityLabel="Search 40,000+ stations (e.g. Lagos, Ibadan, Wazobia, Lofi)"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search 40,000+ stations (e.g. Lagos, Ibadan, Wazobia, Lofi)..."
@@ -206,7 +277,7 @@ export function CampusRadioPlayer() {
           </View>
 
           {/* Category Filter Chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginVertical: 6 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginVertical: 8 }}>
             {CATEGORIES.map((cat) => {
               const isSelected = activeCategory === cat;
               return (
@@ -216,7 +287,7 @@ export function CampusRadioPlayer() {
                   style={[
                     styles.catChip,
                     {
-                      backgroundColor: isSelected ? colors.brandPrimary : colors.surface,
+                      backgroundColor: isSelected ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
                       borderColor: isSelected ? colors.brandPrimary : colors.border,
                     },
                   ]}
@@ -234,7 +305,7 @@ export function CampusRadioPlayer() {
           </ScrollView>
 
           {/* Station List */}
-          <ScrollView style={{ maxHeight: 210 }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false}>
             {filteredStations.map((st) => {
               const isCurrent = st.id === current.id;
               return (
@@ -243,27 +314,30 @@ export function CampusRadioPlayer() {
                   onPress={() => handleStationSelect(st)}
                   style={[
                     styles.stationRow,
-                    isCurrent && { backgroundColor: colors.brandPrimary + '15', borderRadius: 10 },
+                    isCurrent && { backgroundColor: colors.brandPrimary + '18', borderRadius: 10 },
                   ]}
                 >
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <AppText variant="caption" weight="bold" numberOfLines={1}>
+                      <AppText variant="caption" weight="bold" numberOfLines={1} style={{ fontSize: 12 }}>
                         {st.name} ({st.frequency})
                       </AppText>
                       {st.codec ? (
                         <Badge label={st.codec} tone="neutral" />
                       ) : null}
                     </View>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10 }}>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
                       {st.campusOrCity} • {st.category}
                     </AppText>
                   </View>
 
                   {isCurrent ? (
-                    <Ionicons name="volume-high" size={16} color={colors.brandPrimary} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <EqualizerVisualizer isPlaying={radioState.isPlaying} color={colors.brandPrimary} />
+                      <Ionicons name="volume-high" size={16} color={colors.brandPrimary} />
+                    </View>
                   ) : (
-                    <Ionicons name="play-circle-outline" size={18} color={colors.textSecondary} />
+                    <Ionicons name="play-circle-outline" size={20} color={colors.textSecondary} />
                   )}
                 </Pressable>
               );
@@ -273,11 +347,24 @@ export function CampusRadioPlayer() {
       )}
 
       {/* Audio Playback Controls Row */}
-      <View style={styles.controlsRow}>
+      <View style={[styles.controlsRow, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
         <View style={styles.leftControls}>
-          <Pressable accessibilityRole="button" accessibilityLabel={radioState.isPlaying ? 'Pause radio' : 'Play radio'}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={radioState.isPlaying ? 'Pause radio' : 'Play radio'}
             onPress={() => campusRadio.togglePlay()}
-            style={[styles.playBtn, { backgroundColor: colors.brandPrimary }]}
+            style={({ hovered }: any) => [
+              styles.playBtn,
+              {
+                backgroundColor: colors.brandPrimary,
+                opacity: hovered ? 0.92 : 1,
+              },
+              Platform.OS === 'web' && ({
+                boxShadow: radioState.isPlaying
+                  ? '0 4px 14px rgba(59, 130, 246, 0.45)'
+                  : '0 2px 8px rgba(0, 0, 0, 0.15)',
+              } as any),
+            ]}
           >
             {radioState.isLoading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
@@ -286,26 +373,49 @@ export function CampusRadioPlayer() {
                 name={radioState.isPlaying ? 'pause' : 'play'}
                 size={20}
                 color="#FFFFFF"
+                style={{ marginLeft: radioState.isPlaying ? 0 : 2 }}
               />
             )}
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next station" onPress={nextStation} hitSlop={8} style={styles.iconBtn}>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Next station"
+            onPress={nextStation}
+            hitSlop={8}
+            style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderRadius: 10 }]}
+          >
             <Ionicons name="play-forward" size={18} color={colors.textPrimary} />
           </Pressable>
+
           <View style={styles.nowPlayingIndicator}>
-            <AppText variant="caption" weight="semiBold" numberOfLines={1}>
-              {radioState.isPlaying ? 'Streaming Live Audio' : 'Paused'}
-            </AppText>
-            {current.bitrate ? (
-              <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                {current.bitrate} kbps • High-Fidelity
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppText variant="caption" weight="semiBold" numberOfLines={1} style={{ fontSize: 12 }}>
+                {radioState.isPlaying ? 'Streaming Live Audio' : 'Audio Paused'}
               </AppText>
-            ) : null}
+              <EqualizerVisualizer isPlaying={radioState.isPlaying} color={colors.brandPrimary} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
+              <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5 }}>
+                {current.bitrate || 128} kbps • High-Fidelity
+              </AppText>
+              <View style={[styles.hqPill, { backgroundColor: colors.brandPrimary + '15', borderColor: colors.brandPrimary + '30' }]}>
+                <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 9 }}>
+                  HQ STEREO
+                </AppText>
+              </View>
+            </View>
           </View>
         </View>
 
         <View style={styles.rightControls}>
-          <Pressable accessibilityRole="button" accessibilityLabel={radioState.isMuted ? 'Unmute radio' : 'Mute radio'} onPress={() => campusRadio.toggleMute()} hitSlop={8} style={styles.iconBtn}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={radioState.isMuted ? 'Unmute radio' : 'Mute radio'}
+            onPress={() => campusRadio.toggleMute()}
+            hitSlop={8}
+            style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderRadius: 10 }]}
+          >
             <Ionicons
               name={radioState.isMuted ? 'volume-mute' : 'volume-high'}
               size={18}
@@ -320,7 +430,7 @@ export function CampusRadioPlayer() {
 
 const styles = StyleSheet.create({
   playerCard: {
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
   },
   minimizedPill: {
@@ -351,29 +461,49 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  radioIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   smallBtn: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
     borderRadius: 10,
   },
   iconBtn: {
-    padding: 4,
+    padding: 6,
   },
   errorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
   },
   browserContainer: {
     borderWidth: 1,
     borderRadius: 14,
-    marginVertical: 8,
-    padding: 10,
+    marginVertical: 10,
+    padding: 12,
   },
   searchBox: {
     flexDirection: 'row',
@@ -381,7 +511,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 10,
-    height: 36,
+    height: 38,
   },
   searchInput: {
     flex: 1,
@@ -391,25 +521,26 @@ const styles = StyleSheet.create({
   },
   catChip: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
     borderWidth: 1,
   },
   stationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
-    paddingTop: 6,
+    marginTop: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
   },
   leftControls: {
     flexDirection: 'row',
@@ -421,11 +552,18 @@ const styles = StyleSheet.create({
   nowPlayingIndicator: {
     flex: 1,
     minWidth: 0,
+    marginLeft: 2,
+  },
+  hqPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
   },
   playBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -45,7 +45,8 @@ export default function StudentLayout() {
  }}
  />
  <Tabs.Screen
- name="feed"options={{
+ name="feed" options={{
+          href: isFeatureEnabled('discussion_workspaces') ? undefined : null,
  title: 'Forum',
  tabBarIcon: ({ focused, size }) => (
  <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} size={size} />

@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { View, ScrollView, Alert, Pressable } from'react-native';
+import { View, ScrollView, Alert, Pressable, Platform } from'react-native';
 import { Link, router } from'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { ScreenContainer } from'@/components/ScreenContainer';

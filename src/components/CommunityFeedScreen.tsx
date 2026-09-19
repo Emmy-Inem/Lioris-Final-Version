@@ -1511,51 +1511,46 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       </KeyboardAvoidingView>
     </Modal>
 
-    {/* Floating Action Button (FAB) - Elevated Pill with Post text on Desktop */}
-    <Pressable
-      onPress={() => {
-        haptics.medium();
-        setComposerOpen(true);
-      }}
-      accessibilityRole="button"
-      accessibilityLabel="Create new thread"
-      style={({ hovered }: any) => [
-        {
-          position: (Platform.OS === 'web' ? 'fixed' : 'absolute') as any,
-          bottom: isDesktop ? 32 : 88,
-          right: isDesktop ? 36 : 20,
-          height: isDesktop ? 46 : 48,
-          minWidth: isDesktop ? 104 : 48,
-          paddingHorizontal: isDesktop ? 18 : 0,
-          borderRadius: radius.pill,
-          backgroundColor: colors.brandPrimary,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25,
-          shadowRadius: 10,
-          elevation: 8,
-          zIndex: 1000,
-          opacity: hovered ? 0.92 : 1,
-        },
-        Platform.OS === 'web' && ({
-          cursor: 'pointer',
-          boxShadow: isDark
-            ? '0 6px 20px rgba(59, 130, 246, 0.45)'
-            : '0 6px 18px rgba(37, 99, 235, 0.35)',
-        } as any),
-      ]}
-    >
-      <Ionicons name="add" size={isDesktop ? 20 : 26} color="#FFFFFF" />
-      {isDesktop && (
-        <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 14 }}>
-          Post
-        </AppText>
-      )}
-    </Pressable>
+    {/* Floating Action Button (FAB) - Only shown on mobile viewports so it does not block Community Rules on desktop */}
+    {!isDesktop && (
+      <Pressable
+        onPress={() => {
+          haptics.medium();
+          setComposerOpen(true);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Create new thread"
+        style={({ hovered }: any) => [
+          {
+            position: (Platform.OS === 'web' ? 'fixed' : 'absolute') as any,
+            bottom: 88,
+            right: 20,
+            height: 48,
+            width: 48,
+            borderRadius: 24,
+            backgroundColor: colors.brandPrimary,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+            elevation: 8,
+            zIndex: 1000,
+            opacity: hovered ? 0.92 : 1,
+          },
+          Platform.OS === 'web' && ({
+            cursor: 'pointer',
+            boxShadow: isDark
+              ? '0 6px 20px rgba(59, 130, 246, 0.45)'
+              : '0 6px 18px rgba(37, 99, 235, 0.35)',
+          } as any),
+        ]}
+      >
+        <Ionicons name="add" size={26} color="#FFFFFF" />
+      </Pressable>
+    )}
   </ScreenContainer>
   );
 }
