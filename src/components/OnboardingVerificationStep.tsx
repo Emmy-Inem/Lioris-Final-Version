@@ -55,7 +55,7 @@ export function OnboardingVerificationStep({ currentPath, mode }: OnboardingVeri
   async function handleSubmit(payload: {
     institutionClaimed: string;
     documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
-    documentReference: string;
+    documentReference?: string;
     documentPhotoUri?: string | null;
     photoBlob?: Blob;
   }) {

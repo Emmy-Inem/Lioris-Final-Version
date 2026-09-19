@@ -44,31 +44,36 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
     instName = 'University of Ibadan';
   }
 
- const created: UserProfile = {
- id: user.id,
- fullName: user.fullName,
- username,
- email: resolvedEmail,
- userType: user.role,
- graduationYear: undefined,
- bio: '',
- department: 'Computer Science',
- interests: [],
- institutionName: instName || 'University of Ibadan',
- institutionCode: instCode || 'UI',
- avatarUrl: undefined,
- coverUrl: undefined,
- isVerified: isAdmin,
- verificationStatus: isAdmin ? 'verified' : 'none',
- postsCount: 0,
- resourcesCount: 0,
- eventsCount: 0,
- badgesCount: 0,
- followersCount: 0,
- followingCount: 0,
- };
- profileState.set(user.id, created);
- return created;
+  const matchedInst = user.email ? getInstitutionForEmail(user.email) : null;
+  const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL');
+  const isVerified = isAdmin || isOfficialEmail;
+  const verificationStatus: 'none' | 'pending' | 'verified' = isVerified ? 'verified' : 'none';
+
+  const created: UserProfile = {
+    id: user.id,
+    fullName: user.fullName || 'User',
+    username,
+    email: resolvedEmail,
+    userType: user.role,
+    graduationYear: undefined,
+    bio: '',
+    department: 'Computer Science',
+    interests: [],
+    institutionName: instName || 'University of Ibadan',
+    institutionCode: instCode || 'UI',
+    avatarUrl: undefined,
+    coverUrl: undefined,
+    isVerified,
+    verificationStatus,
+    postsCount: 0,
+    resourcesCount: 0,
+    eventsCount: 0,
+    badgesCount: 0,
+    followersCount: 0,
+    followingCount: 0,
+  };
+  profileState.set(user.id, created);
+  return created;
 }
 
 export async function getMyProfile(user?: {
@@ -117,26 +122,36 @@ export async function getMyProfile(user?: {
  .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, is_suspended')
  .eq('id', resolvedUser.id)
  .single();
- if (!error && data) {
- const isVerified = data.verification_status === 'verified';
- const verificationStatus = data.verification_status || (isVerified ? 'verified' : 'none');
- 
-    const isStudent = data.role === 'student' || resolvedUser.role === 'student';
-    const rawCampus = data.campus_code;
-    let campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
-    if (isStudent && (!campusCode || campusCode === 'GLOBAL')) {
-      campusCode = 'UI';
-    }
-    const inst = (campusCode && campusCode !== 'GLOBAL' ? getInstitutionByCode(campusCode) : null) || {
-      code: 'UI',
-      name: 'University of Ibadan',
-      domain: 'ui.edu.ng',
-    };
+    if (!error && data) {
+      const matchedInst = resolvedUser.email ? getInstitutionForEmail(resolvedUser.email) : null;
+      const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL');
+      const isDbVerified = data.verification_status === 'verified';
+      const isVerified = isDbVerified || isOfficialEmail || resolvedUser.role === 'admin' || resolvedUser.role === 'staff';
+      const verificationStatus: 'none' | 'pending' | 'verified' = isVerified
+        ? 'verified'
+        : (data.verification_status === 'pending' ? 'pending' : 'none');
 
-    // Quietly sync back to Supabase if the student's campus_code was set to GLOBAL or empty
-    if (isStudent && (data.campus_code === 'GLOBAL' || !data.campus_code)) {
-      supabase.from('profiles').update({ campus_code: 'UI' }).eq('id', resolvedUser.id).then(() => {}, () => {});
-    }
+      // Quietly sync verified status if official institutional email
+      if (isOfficialEmail && data.verification_status !== 'verified') {
+        supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
+      }
+
+      const isStudent = data.role === 'student' || resolvedUser.role === 'student';
+      const rawCampus = data.campus_code;
+      let campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
+      if (isStudent && (!campusCode || campusCode === 'GLOBAL')) {
+        campusCode = 'UI';
+      }
+      const inst = (campusCode && campusCode !== 'GLOBAL' ? getInstitutionByCode(campusCode) : null) || {
+        code: 'UI',
+        name: 'University of Ibadan',
+        domain: 'ui.edu.ng',
+      };
+
+      // Quietly sync back to Supabase if the student's campus_code was set to GLOBAL or empty
+      if (isStudent && (data.campus_code === 'GLOBAL' || !data.campus_code)) {
+        supabase.from('profiles').update({ campus_code: 'UI' }).eq('id', resolvedUser.id).then(() => {}, () => {});
+      }
 
  const merged: UserProfile = {
  ...fallback,

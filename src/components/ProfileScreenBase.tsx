@@ -269,7 +269,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  async function handleSubmitVerification(data: {
  institutionClaimed: string;
  documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
- documentReference: string;
+ documentReference?: string;
  documentPhotoUri?: string | null;
  photoBlob?: Blob;
  }) {

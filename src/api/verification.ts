@@ -9,7 +9,7 @@ export interface VerificationRequest {
  userId: string;
  applicantName: string;
  documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
- documentReference: string;
+ documentReference?: string;
  institutionClaimed: string;
  submittedAt: string;
  status: 'pending' | 'approved' | 'rejected';
@@ -22,7 +22,7 @@ export interface SubmitVerificationPayload {
  userId: string;
  applicantName: string;
  documentType: VerificationRequest['documentType'];
- documentReference: string;
+ documentReference?: string;
  institutionClaimed: string;
  documentPhotoUri?: string | null;
  photoBlob?: Blob;
@@ -91,7 +91,9 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
           requested_role: 'student',
           id_card_front_url: photoUrl,
           status: 'pending',
-          review_notes: `${payload.documentType}: ${payload.documentReference}`,
+          review_notes: payload.documentReference
+            ? `${payload.documentType}: ${payload.documentReference}`
+            : payload.documentType,
         });
         if (error) {
           throw new Error('We could not submit your verification request. Please try again.');
@@ -107,13 +109,14 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
       throw err instanceof Error ? err : new Error('Verification submission failed.');
     }
 
- const created: VerificationRequest = {
- id: reqId,
- ...payload,
- documentPhotoUri: photoUrl,
- submittedAt: new Date().toISOString(),
- status: 'pending',
- };
+    const created: VerificationRequest = {
+      id: reqId,
+      ...payload,
+      documentReference: payload.documentReference || undefined,
+      documentPhotoUri: photoUrl,
+      submittedAt: new Date().toISOString(),
+      status: 'pending',
+    };
 
  verificationState = [...verificationState, created];
  return created;

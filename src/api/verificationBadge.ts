@@ -1,4 +1,5 @@
 import { UserProfile, UserRole } from './types';
+import { getInstitutionForEmail } from './institutions';
 
 export interface VerificationDetails {
   isVerified: boolean;
@@ -31,9 +32,14 @@ export function getVerificationDetails(
     };
   }
 
+  const userEmail = (user as any)?.email;
+  const matchedInst = userEmail ? getInstitutionForEmail(userEmail) : null;
+  const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL');
+
   const isVerified =
     user.isVerified === true ||
     user.verificationStatus === 'verified' ||
+    isOfficialEmail ||
     user.role === 'admin' ||
     user.role === 'staff';
 
@@ -86,7 +92,7 @@ export function getVerificationDetails(
     type: 'student',
     badgeColor: '#1D9BF0', // Authentic Social Blue
     label: 'Verified Campus Member',
-    explanation: 'Official university matriculation identity confirmed via institutional email & student credentials.',
+    explanation: 'Official university identity confirmed via institutional email & student credentials.',
     institution: (user as any).institutionName || 'University Registry',
   };
 }

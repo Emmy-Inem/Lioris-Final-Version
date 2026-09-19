@@ -13,126 +13,125 @@ import { haptics } from '@/utils/haptics';
 const DOCUMENT_TYPES = ['Student ID', 'Admission Letter', 'Staff ID', 'Alumni Certificate'] as const;
 
 interface ApplyForVerificationModalProps {
- visible: boolean;
- onClose: () => void;
- onSubmit: (payload: {
- institutionClaimed: string;
- documentType: (typeof DOCUMENT_TYPES)[number];
- documentReference: string;
- documentPhotoUri?: string | null;
- photoBlob?: Blob;
- }) => void;
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (payload: {
+    institutionClaimed: string;
+    documentType: (typeof DOCUMENT_TYPES)[number];
+    documentReference?: string;
+    documentPhotoUri?: string | null;
+    photoBlob?: Blob;
+  }) => void;
+  defaultInstitution?: string;
 }
 
 /**
  * Backs the Profile screen's "Apply for Verification" banner for
  * accounts that didn't auto-verify at registration.
  */
-export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyForVerificationModalProps) {
- const { colors, spacing, radius, isDark } = useTheme();
- const [institutionClaimed, setInstitutionClaimed] = useState('');
- const [documentType, setDocumentType] = useState<(typeof DOCUMENT_TYPES)[number]>('Student ID');
- const [documentReference, setDocumentReference] = useState('');
- const [documentPhotoUri, setDocumentPhotoUri] = useState<string | null>(null);
- const [errorMessage, setErrorMessage] = useState<string | null>(null);
- const opacity = useSharedValue(0);
- const scale = useSharedValue(0.92);
+export function ApplyForVerificationModal({ visible, onClose, onSubmit, defaultInstitution }: ApplyForVerificationModalProps) {
+  const { colors, spacing, radius, isDark } = useTheme();
+  const [institutionClaimed, setInstitutionClaimed] = useState(defaultInstitution || '');
+  const [documentType, setDocumentType] = useState<(typeof DOCUMENT_TYPES)[number]>('Student ID');
+  const [documentReference, setDocumentReference] = useState('');
+  const [documentPhotoUri, setDocumentPhotoUri] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.92);
 
- useEffect(() => {
- if (visible) {
- opacity.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.quad) });
- scale.value = withSpring(1, { damping: 16, stiffness: 220 });
- setErrorMessage(null);
- } else {
- opacity.value = 0;
- scale.value = 0.92;
- }
- }, [visible, opacity, scale]);
+  useEffect(() => {
+    if (visible) {
+      opacity.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.quad) });
+      scale.value = withSpring(1, { damping: 16, stiffness: 220 });
+      setErrorMessage(null);
+      if (defaultInstitution && !institutionClaimed) {
+        setInstitutionClaimed(defaultInstitution);
+      }
+    } else {
+      opacity.value = 0;
+      scale.value = 0.92;
+    }
+  }, [visible, opacity, scale, defaultInstitution]);
 
- const animatedStyle = useAnimatedStyle(() => ({
- opacity: opacity.value,
- transform: [{ scale: scale.value }],
- }));
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
 
- async function pickDocumentPhoto() {
- if (Platform.OS === 'web' && typeof document !== 'undefined') {
- const input = document.createElement('input');
- input.type = 'file';
- input.accept = 'image/*';
- input.style.display = 'none';
- document.body.appendChild(input);
- input.onchange = (e: Event) => {
- const file = (e.target as HTMLInputElement).files?.[0];
- document.body.removeChild(input);
- if (!file) return;
- const reader = new FileReader();
- reader.onload = (ev) => {
- const dataUrl = ev.target?.result as string;
- if (dataUrl) {
- setDocumentPhotoUri(dataUrl);
- haptics.light();
- if (errorMessage) setErrorMessage(null);
- }
- };
- reader.readAsDataURL(file);
- };
- input.click();
- return;
- }
+  async function pickDocumentPhoto() {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.onchange = (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        document.body.removeChild(input);
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target?.result as string;
+          if (dataUrl) {
+            setDocumentPhotoUri(dataUrl);
+            haptics.light();
+            if (errorMessage) setErrorMessage(null);
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+      return;
+    }
 
- const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
- if (!permission.granted) return;
- const result = await ImagePicker.launchImageLibraryAsync({
- mediaTypes: ['images'],
- quality: 0.8,
- });
- if (!result.canceled && result.assets[0]) {
- setDocumentPhotoUri(result.assets[0].uri);
- if (errorMessage) setErrorMessage(null);
- haptics.light();
- }
- }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setDocumentPhotoUri(result.assets[0].uri);
+      if (errorMessage) setErrorMessage(null);
+      haptics.light();
+    }
+  }
 
- async function handleSubmit() {
- setErrorMessage(null);
- if (!institutionClaimed.trim()) {
- setErrorMessage('Please enter your university or institution name.');
- haptics.error();
- return;
- }
- if (!documentReference.trim()) {
- setErrorMessage('Please enter your document ID or matric number.');
- haptics.error();
- return;
- }
- if (!documentPhotoUri) {
- setErrorMessage('Please upload a clear photo of your student ID, admission letter or certificate so a moderator can verify you.');
- haptics.error();
- return;
- }
- haptics.success();
- let photoBlob: Blob | undefined;
- if (documentPhotoUri) {
- try {
- const res = await fetch(documentPhotoUri);
- photoBlob = await res.blob();
- } catch {
- // pass
- }
- }
- onSubmit({
- institutionClaimed: institutionClaimed.trim(),
- documentType,
- documentReference: documentReference.trim(),
- documentPhotoUri,
- photoBlob,
- });
- onClose();
- setDocumentPhotoUri(null);
- setInstitutionClaimed('');
- setDocumentReference('');
- setErrorMessage(null);
- }
+  async function handleSubmit() {
+    setErrorMessage(null);
+    if (!institutionClaimed.trim()) {
+      setErrorMessage('Please enter your university or institution name.');
+      haptics.error();
+      return;
+    }
+    if (!documentPhotoUri) {
+      setErrorMessage('Please upload a clear photo of your student ID, admission letter or certificate so a moderator can verify you.');
+      haptics.error();
+      return;
+    }
+    haptics.success();
+    let photoBlob: Blob | undefined;
+    if (documentPhotoUri) {
+      try {
+        const res = await fetch(documentPhotoUri);
+        photoBlob = await res.blob();
+      } catch {
+        // pass
+      }
+    }
+    onSubmit({
+      institutionClaimed: institutionClaimed.trim(),
+      documentType,
+      documentReference: documentReference.trim() || undefined,
+      documentPhotoUri,
+      photoBlob,
+    });
+    onClose();
+    setDocumentPhotoUri(null);
+    setInstitutionClaimed(defaultInstitution || '');
+    setDocumentReference('');
+    setErrorMessage(null);
+  }
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -205,10 +204,10 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit }: ApplyF
             </View>
 
             <AppTextField
-              label="Document reference / ID number"
+              label="Document reference (optional)"
               value={documentReference}
               onChangeText={setDocumentReference}
-              placeholder="e.g. Matric No. OAU/2021/04521"
+              placeholder="e.g. Admission letter or Student ID number"
             />
 
             <Pressable

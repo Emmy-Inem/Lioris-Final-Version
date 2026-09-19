@@ -15,6 +15,7 @@ import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
 import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
@@ -212,6 +213,9 @@ export default function AlumniDashboard() {
             </View>
           </View>
         </GlassCard>
+
+        {/* Verification Notice for unverified personal email accounts */}
+        <UnverifiedAccountNotice />
 
         {/* Alma Mater Live Campus Weather */}
         {isFeatureEnabled('live_weather') && <CampusWeatherWidget />}

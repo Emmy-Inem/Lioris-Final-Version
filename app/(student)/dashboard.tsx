@@ -18,6 +18,7 @@ import { AppButton } from '@/components/AppButton';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
 import { EventCard } from '@/components/EventCard';
@@ -381,6 +382,9 @@ export default function StudentDashboard() {
             </View>
           </View>
         </GlassCard>
+
+        {/* Verification Notice for unverified personal email accounts */}
+        <UnverifiedAccountNotice />
 
         {/* Live Campus Weather & Transit Widget */}
         <CampusWeatherWidget campusCode={effectiveCampus} />
