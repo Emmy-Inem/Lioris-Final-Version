@@ -7,6 +7,7 @@
 // not subject to CORS and simply receive no Access-Control-Allow-Origin header.
 
 export const DEFAULT_ALLOWED_ORIGINS = [
+  'https://lioris-campus.vercel.app',
   'https://lioris-final-version.vercel.app',
   'https://lioris.app',
   'https://www.lioris.app',
