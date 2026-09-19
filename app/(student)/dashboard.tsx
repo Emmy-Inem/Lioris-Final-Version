@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Pressable, Alert, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -154,37 +155,37 @@ export default function StudentDashboard() {
             overflow: 'hidden',
           }}
         >
-          <View style={{ height: isDesktop ? 160 : 120, position: 'relative', width: '100%', overflow: 'hidden' }}>
+          <View style={{ height: isDesktop ? 175 : 148, position: 'relative', width: '100%', overflow: 'hidden' }}>
             {activeCover ? (
               <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
             ) : (
-              <View
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: isDark ? '#0F1A30' : '#E2E8F0',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: colors.brandPrimary,
-                    opacity: isDark ? 0.2 : 0.08,
-                  }}
-                />
-                <Ionicons
-                  name="image-outline"
-                  size={28}
-                  color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'}
-                />
-              </View>
+              <LinearGradient
+                colors={isDark ? ['#0d1b2a', '#1e293b', '#0f172a'] : ['#dbeafe', '#bfdbfe', '#93c5fd']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ width: '100%', height: '100%' }}
+              />
             )}
+
+            {/* Ambient Multi-Stop Gradient Overlay for Rich Glass Depth and High Contrast */}
+            <LinearGradient
+              colors={[
+                'rgba(10, 16, 30, 0.2)',
+                'rgba(10, 16, 30, 0.55)',
+                isDark ? 'rgba(8, 14, 28, 0.94)' : 'rgba(15, 23, 42, 0.86)',
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            />
+
+            {/* Hero Content Overlay */}
             <View
               style={{
                 position: 'absolute',
@@ -192,43 +193,70 @@ export default function StudentDashboard() {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: isDark ? 'rgba(10, 19, 38, 0.65)' : 'rgba(15, 23, 42, 0.45)',
-              }}
-            />
-
-            <View
-              style={{
-                position: 'absolute',
-                top: 12,
-                left: 14,
-                right: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
+                padding: isDesktop ? spacing.lg : 14,
+                justifyContent: 'space-between',
               }}
             >
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  flexShrink: 1,
-                }}
-              >
-                <Ionicons name="school" size={13} color="#68D391" style={heroTextShadowStyle} />
-                <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
-                  {profile?.institutionName ?? 'Campus Workspace'}
-                </AppText>
+              {/* Top Row: Institution Badge */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.16)',
+                    paddingHorizontal: 10,
+                    paddingVertical: 4.5,
+                    borderRadius: radius.pill,
+                    maxWidth: '85%',
+                  }}
+                >
+                  <Ionicons name="school" size={13} color="#68D391" style={heroTextShadowStyle} />
+                  <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1} style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
+                    {profile?.institutionName ?? 'Campus Workspace'}
+                  </AppText>
+                </View>
               </View>
-            </View>
-          </View>
 
-          <View style={{ padding: isDesktop ? spacing.lg : 14 }}>
-            <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
+              {/* Bottom Row: Floating DP on the Left + Identity Metadata */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} uri={profile?.avatarUrl} size={48} />
+                {/* Floating DP on Left Side of Cover */}
+                <Pressable
+                  onPress={() => router.push('/(student)/profile')}
+                  accessibilityRole="button"
+                  accessibilityLabel="View profile"
+                  style={{
+                    borderRadius: 999,
+                    borderWidth: 2.5,
+                    borderColor: '#FFFFFF',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 8,
+                    elevation: 6,
+                    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+                  }}
+                >
+                  <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} uri={profile?.avatarUrl} size={isDesktop ? 58 : 50} />
+                </Pressable>
+
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 18 : 16, lineHeight: isDesktop ? 22 : 20 }}>
+                    <AppText
+                      weight="bold"
+                      tone="inverse"
+                      numberOfLines={1}
+                      style={[
+                        {
+                          fontSize: isDesktop ? 18 : 16,
+                          lineHeight: isDesktop ? 22 : 20,
+                          color: '#FFFFFF',
+                        },
+                        heroTextShadowStyle,
+                      ]}
+                    >
                       Welcome back, {firstName}
                     </AppText>
                     {profile?.verificationStatus === 'verified' || user?.role === 'admin' ? (
@@ -236,9 +264,19 @@ export default function StudentDashboard() {
                     ) : null}
                     <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
-                  <AppText tone="secondary" variant="bodySmall" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11 }}>
-                    {/* "UI Node" as a fallback asserted University of Ibadan for
-                        anyone whose campus wasn't resolved yet. */}
+
+                  <AppText
+                    numberOfLines={1}
+                    style={[
+                      {
+                        marginTop: 2,
+                        fontSize: isDesktop ? 12 : 11,
+                        lineHeight: 15,
+                        color: 'rgba(255, 255, 255, 0.85)',
+                      },
+                      heroTextShadowStyle,
+                    ]}
+                  >
                     {[profile?.department, profile?.institutionCode].filter(Boolean).join(' • ') ||
                       'Complete your profile'}
                   </AppText>
@@ -246,9 +284,9 @@ export default function StudentDashboard() {
                   {profile?.verificationStatus !== 'verified' && user?.role !== 'admin' ? (
                     <Pressable
                       onPress={() => router.push('/(student)/profile')}
-                      style={{ alignSelf: 'flex-start', marginTop: 4 }}
+                      style={{ alignSelf: 'flex-start', marginTop: 3 }}
                     >
-                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11, textDecorationLine: 'underline' }}>
+                      <AppText variant="caption" tone="inverse" style={[{ fontSize: 11, textDecorationLine: 'underline', opacity: 0.95 }, heroTextShadowStyle]}>
                         Verify student ID →
                       </AppText>
                     </Pressable>

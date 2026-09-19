@@ -3,6 +3,7 @@ import { ScrollView, View, Pressable, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { SolidCard } from '@/components/SolidCard';
@@ -155,12 +156,31 @@ export default function AlumniDashboard() {
             overflow: 'hidden',
           }}
         >
-          <View style={{ height: isDesktop ? 160 : 115, position: 'relative', width: '100%' }}>
+          <View style={{ height: isDesktop ? 175 : 148, position: 'relative', width: '100%', overflow: 'hidden' }}>
             <Image
               source={require('../../assets/images/campus_library_study.jpg')}
               style={{ width: '100%', height: '100%' }}
               contentFit="cover"
             />
+            {/* Ambient Multi-Stop Gradient Overlay */}
+            <LinearGradient
+              colors={[
+                'rgba(10, 16, 30, 0.2)',
+                'rgba(10, 16, 30, 0.55)',
+                isDark ? 'rgba(8, 14, 28, 0.94)' : 'rgba(15, 23, 42, 0.86)',
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            />
+
+            {/* Hero Content Overlay */}
             <View
               style={{
                 position: 'absolute',
@@ -168,76 +188,106 @@ export default function AlumniDashboard() {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: isDark ? 'rgba(10, 19, 38, 0.75)' : 'rgba(15, 23, 42, 0.65)',
+                padding: isDesktop ? spacing.lg : 14,
+                justifyContent: 'space-between',
               }}
-            />
-
-            <View style={{ position: 'absolute', top: 12, left: 12, right: 12, flexDirection: 'row' }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Ionicons name="school" size={13} color="#FCD34D" style={[{ flexShrink: 0 }, heroTextShadowStyle]} />
-                <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
-                  Alumni Fellowship • {profile?.institutionName ?? 'University Chapter'}
-                </AppText>
+            >
+              {/* Top Row: Institution Badge */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.16)',
+                    paddingHorizontal: 10,
+                    paddingVertical: 4.5,
+                    borderRadius: radius.pill,
+                    maxWidth: '85%',
+                  }}
+                >
+                  <Ionicons name="school" size={13} color="#FCD34D" style={[{ flexShrink: 0 }, heroTextShadowStyle]} />
+                  <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1} style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
+                    Alumni Fellowship • {profile?.institutionName ?? 'University Chapter'}
+                  </AppText>
+                </View>
               </View>
-            </View>
-          </View>
 
-          <View style={{ padding: isDesktop ? spacing.lg : 14 }}>
-            <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0, width: '100%' }}>
-                <Avatar name={fullName} uri={profile?.avatarUrl} size={isDesktop ? 52 : 44} role="alumni" />
+              {/* Bottom Row: Floating DP on the Left + Identity Metadata */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Pressable
+                  onPress={() => router.push('/(alumni)/profile')}
+                  accessibilityRole="button"
+                  accessibilityLabel="View profile"
+                  style={{
+                    borderRadius: 999,
+                    borderWidth: 2.5,
+                    borderColor: '#FFFFFF',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 8,
+                    elevation: 6,
+                    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+                  }}
+                >
+                  <Avatar name={fullName} uri={profile?.avatarUrl} size={isDesktop ? 58 : 50} role="alumni" />
+                </Pressable>
+
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <AppText
                       weight="bold"
+                      tone="inverse"
                       numberOfLines={1}
-                      style={{ fontSize: isDesktop ? 20 : 16, lineHeight: isDesktop ? 26 : 22, flexShrink: 1 }}
+                      style={[
+                        {
+                          fontSize: isDesktop ? 18 : 16,
+                          lineHeight: isDesktop ? 22 : 20,
+                          color: '#FFFFFF',
+                        },
+                        heroTextShadowStyle,
+                      ]}
                     >
                       {fullName}
                     </AppText>
                     {profile?.verificationStatus === 'verified' && (
                       <VerifiedBadge role="alumni" size={14} />
                     )}
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
+                    <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11.5, fontWeight: '500' }}>
-                    {profile?.department || 'Alumni Network'}
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5, opacity: 0.8 }}>
-                    {profile?.graduationYear ? `Class of '${String(profile.graduationYear).slice(-2)} • ` : ''}{profile?.institutionName || 'University Chapter'}
-                  </AppText>
-                </View>
-              </View>
 
-              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: isDesktop ? 0 : 4 }}>
-                {profile?.verificationStatus === 'pending' ? (
-                  <Badge label="⏳ Verification In Review" tone="neutral" />
-                ) : profile?.verificationStatus !== 'verified' ? (
-                  <Pressable
-                    onPress={() => router.push('/(alumni)/profile')}
-                    style={{
-                      backgroundColor: colors.pastelPrimaryBg,
-                      borderRadius: radius.pill,
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderWidth: 1,
-                      borderColor: colors.brandPrimary,
-                    }}
+                  <AppText
+                    numberOfLines={1}
+                    style={[
+                      {
+                        marginTop: 2,
+                        fontSize: isDesktop ? 12 : 11,
+                        lineHeight: 15,
+                        color: 'rgba(255, 255, 255, 0.85)',
+                      },
+                      heroTextShadowStyle,
+                    ]}
                   >
-                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-                      Verify Alumni Credentials →
-                    </AppText>
-                  </Pressable>
-                ) : null}
-                {profile?.graduationYear ? (
-                  <Badge label={`Class of '${String(profile.graduationYear).slice(-2)}`} tone="neutral" />
-                ) : null}
+                    {[
+                      profile?.department,
+                      profile?.graduationYear ? `Class of '${String(profile.graduationYear).slice(-2)}` : null,
+                    ].filter(Boolean).join(' • ') || 'Alumni Network'}
+                  </AppText>
+
+                  {profile?.verificationStatus !== 'verified' && (
+                    <Pressable
+                      onPress={() => router.push('/(alumni)/profile')}
+                      style={{ alignSelf: 'flex-start', marginTop: 3 }}
+                    >
+                      <AppText variant="caption" tone="inverse" style={[{ fontSize: 11, textDecorationLine: 'underline', opacity: 0.95 }, heroTextShadowStyle]}>
+                        Verify Alumni Credentials →
+                      </AppText>
+                    </Pressable>
+                  )}
+                </View>
               </View>
             </View>
           </View>

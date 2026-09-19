@@ -50,10 +50,10 @@ const STUDENT_STEPS: NavStep[] = [
     title: 'Home Dashboard',
     iconActive: 'home',
     iconInactive: 'home-outline',
-    simpleText: 'Your main screen for daily updates, campus announcements, and quick access to student portals.',
+    simpleText: 'Your central dashboard giving you a quick summary of what is happening across all your other pages in one place.',
     points: [
-      { icon: 'megaphone-outline', text: 'Campus news and announcements' },
-      { icon: 'link-outline', text: 'Quick shortcuts to academic portals' },
+      { icon: 'grid-outline', text: 'Summary of forum posts, events, and campus updates' },
+      { icon: 'apps-outline', text: 'Quick shortcuts to student tools and portals' },
     ],
   },
   {
@@ -83,13 +83,13 @@ const STUDENT_STEPS: NavStep[] = [
   {
     tabName: 'Resources',
     badge: 'Tab 4 of 4',
-    title: 'Academic Resources',
-    iconActive: 'folder',
-    iconInactive: 'folder-outline',
-    simpleText: 'Access study materials including past examination papers, lecture modules, and course syllabus notes.',
+    title: 'Resources Library',
+    iconActive: 'library',
+    iconInactive: 'library-outline',
+    simpleText: 'Explore your campus resources library with past examination questions, lecture notes, syllabus modules, and revision guides.',
     points: [
-      { icon: 'document-text-outline', text: 'Past examination question archives' },
-      { icon: 'download-outline', text: 'Lecture handouts and study notes' },
+      { icon: 'library-outline', text: 'Comprehensive past questions archive' },
+      { icon: 'document-text-outline', text: 'Lecture modules, course notes, and revision materials' },
     ],
   },
 ];
@@ -101,10 +101,10 @@ const ALUMNI_STEPS: NavStep[] = [
     title: 'Alumni Dashboard',
     iconActive: 'home',
     iconInactive: 'home-outline',
-    simpleText: 'Your main dashboard to stay connected with your university, campus initiatives, and alumni news.',
+    simpleText: 'Your main dashboard giving you a summary of activities, career highlights, and connections across your university network.',
     points: [
-      { icon: 'school-outline', text: 'University news and initiatives' },
-      { icon: 'apps-outline', text: 'Quick alumni workspace tools' },
+      { icon: 'grid-outline', text: 'Summary of career openings and alumni highlights' },
+      { icon: 'apps-outline', text: 'Quick shortcuts to alumni tools and chapters' },
     ],
   },
   {
