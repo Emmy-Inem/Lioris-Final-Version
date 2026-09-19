@@ -36,12 +36,25 @@ const RESOURCE_CATEGORIES = [
   { id: 'bookmarked', label: 'Bookmarked', filter: 'Bookmarked', icon: 'bookmark' as const },
 ];
 
+const UNIVERSITY_PORTAL_FILTERS = [
+  { code: 'CURRENT', label: 'My Campus' },
+  { code: 'ALL', label: 'All Universities' },
+  { code: 'UNILAG', label: 'UNILAG' },
+  { code: 'UI', label: 'UI' },
+  { code: 'FUNAAB', label: 'FUNAAB' },
+  { code: 'UNN', label: 'UNN' },
+  { code: 'OAU', label: 'OAU' },
+  { code: 'CU', label: 'Covenant (CU)' },
+  { code: 'GLOBAL', label: 'National Portals' },
+];
+
 export default function ResourcesScreen() {
- const { colors, spacing, radius, isDark } = useTheme();
- const { user } = useAuth();
- const { isDesktop } = useResponsive();
- const queryClient = useQueryClient();
- const [query, setQuery] = useState('');
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { user } = useAuth();
+  const { isDesktop } = useResponsive();
+  const queryClient = useQueryClient();
+  const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>('CURRENT');
+  const [query, setQuery] = useState('');
  const debouncedQuery = useDebouncedValue(query);
  const [uploadModalOpen, setUploadModalOpen] = useState(false);
  const [adminManageOpen, setAdminManageOpen] = useState(false);
@@ -98,16 +111,18 @@ export default function ResourcesScreen() {
   };
 
   const { campusCode, homeInstitutionCode } = useCampusScope();
-  const effectiveCampus =
-    homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
-      ? homeInstitutionCode
-      : campusCode && campusCode !== 'GLOBAL'
+  const currentCampus =
+    (campusCode && campusCode !== 'GLOBAL')
       ? campusCode
-      : '';
+      : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL')
+      ? homeInstitutionCode
+      : 'UI';
+
+  const activePortalCampus = selectedPortalFilter === 'CURRENT' ? currentCampus : selectedPortalFilter;
 
   const { data: portalLinks = [] } = useQuery({
-    queryKey: ['portalLinks', effectiveCampus],
-    queryFn: () => listPortalLinks(effectiveCampus || undefined),
+    queryKey: ['portalLinks', activePortalCampus],
+    queryFn: () => listPortalLinks(activePortalCampus),
   });
 
  const { data: resources, isLoading, refetch, isRefetching } = useQuery({
@@ -277,15 +292,74 @@ export default function ResourcesScreen() {
       {/* Section 1: Compact University Portal Shortcuts */}
       <View style={{ marginBottom: spacing.md }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, fontSize: 10.5 }}>
-            PORTAL SHORTCUTS
-          </AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, fontSize: 10.5 }}>
+              PORTAL DIRECTORY
+            </AppText>
+            {selectedPortalFilter !== 'CURRENT' && selectedPortalFilter !== 'ALL' && (
+              <View
+                style={{
+                  backgroundColor: `${colors.brandPrimary}20`,
+                  paddingHorizontal: 6,
+                  paddingVertical: 1,
+                  borderRadius: radius.pill,
+                }}
+              >
+                <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 9.5 }}>
+                  {selectedPortalFilter}
+                </AppText>
+              </View>
+            )}
+          </View>
           <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5 }}>
             {portalLinks.filter((p) => p.active).length} links
           </AppText>
         </View>
 
+        {/* University Selector Filter Pills */}
         <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 8 }}
+          contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
+        >
+          {UNIVERSITY_PORTAL_FILTERS.map((item) => {
+            const isSelected = selectedPortalFilter === item.code;
+            return (
+              <Pressable
+                key={item.code}
+                onPress={() => {
+                  haptics.light();
+                  setSelectedPortalFilter(item.code);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter portals for ${item.label}`}
+                style={{
+                  paddingHorizontal: 11,
+                  paddingVertical: 4,
+                  borderRadius: radius.pill,
+                  backgroundColor: isSelected ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                  borderWidth: 1,
+                  borderColor: isSelected ? colors.brandPrimary : colors.border,
+                }}
+              >
+                <AppText
+                  weight={isSelected ? 'bold' : 'regular'}
+                  variant="caption"
+                  style={{
+                    fontSize: 10.5,
+                    color: isSelected ? colors.textInverse : colors.textSecondary,
+                  }}
+                >
+                  {item.code === 'CURRENT' ? `My Campus (${currentCampus})` : item.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <ScrollView
+          ref={portalsScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           {...({ 'data-horizontal-scroll': 'true' } as any)}
@@ -303,16 +377,16 @@ export default function ResourcesScreen() {
                 radius={16}
                 padded={false}
                 style={{
-                  width: isDesktop ? 180 : 160,
+                  width: isDesktop ? 185 : 165,
                   padding: 10,
-                  minHeight: 106,
+                  minHeight: 108,
                   justifyContent: 'space-between',
                 }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.textSecondary} />
-                  <AppText tone="secondary" variant="caption" style={{ fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    {portal.category || 'Portal'}
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, maxWidth: 110, textAlign: 'right' }}>
+                    {portal.campusCode && portal.campusCode !== 'GLOBAL' && (selectedPortalFilter === 'ALL' || selectedPortalFilter === 'CURRENT') ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
                   </AppText>
                 </View>
 
