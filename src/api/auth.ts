@@ -48,7 +48,84 @@ export function isEmailConfirmationRequired(err: unknown): err is EmailConfirmat
 
 function isEmailNotConfirmedError(error: { message?: string; code?: string } | null | undefined): boolean {
   if (!error) return false;
-  return error.code === 'email_not_confirmed' || /email not confirmed/i.test(error.message ?? '');
+  const msg = (error.message ?? '').toLowerCase();
+  const code = (error.code ?? '').toLowerCase();
+  return (
+    code === 'email_not_confirmed' ||
+    code === 'email_unconfirmed' ||
+    msg.includes('email not confirmed') ||
+    msg.includes('email has not been confirmed') ||
+    msg.includes('confirm your email') ||
+    msg.includes('not confirmed')
+  );
+}
+
+/**
+ * Checks if a username is available (case-insensitive).
+ * Calls the `check_username_available` RPC with fallback to querying `profiles`.
+ */
+export async function checkUsernameAvailable(username: string): Promise<boolean> {
+  const clean = username.trim().replace(/^@/, '').toLowerCase();
+  if (!clean || clean.length < 3 || clean.length > 24) return false;
+
+  try {
+    const { data, error } = await supabase.rpc('check_username_available', { p_username: clean });
+    if (!error && typeof data === 'boolean') {
+      return data;
+    }
+  } catch {
+    // RPC may not be deployed yet; fall through to query
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('username', clean)
+      .limit(1);
+
+    if (!error) {
+      return !data || data.length === 0;
+    }
+  } catch {
+    // Fallback: assume available to not block user if offline/unreachable
+  }
+
+  return true;
+}
+
+/**
+ * Resolves a username handle to its registered email address.
+ * Allows users to log in using either their campus email or their @handle.
+ */
+export async function getEmailForUsername(username: string): Promise<string | null> {
+  const clean = username.trim().replace(/^@/, '').toLowerCase();
+  if (!clean || clean.includes('@')) return null;
+
+  try {
+    const { data, error } = await supabase.rpc('get_email_for_username', { p_username: clean });
+    if (!error && typeof data === 'string' && data.length > 0) {
+      return data;
+    }
+  } catch {
+    // RPC may not be deployed yet; fall through
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('email')
+      .ilike('username', clean)
+      .maybeSingle();
+
+    if (!error && data?.email) {
+      return data.email;
+    }
+  } catch {
+    // Fall through
+  }
+
+  return null;
 }
 
 // Client-side login throttle. This is only a UX nicety (it slows down accidental
@@ -136,7 +213,19 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
 // script against your own project, never via client code that self-elevates
 // on login.
 export async function login(payload: LoginPayload): Promise<AuthSession> {
-  const cleanEmail = payload.email.trim().toLowerCase();
+  const cleanInput = payload.email.trim();
+  let cleanEmail = cleanInput.toLowerCase();
+
+  // If user entered a username instead of email (e.g. 'ineme' or '@ineme'), resolve to their registered email
+  if (!cleanEmail.includes('@')) {
+    const resolved = await getEmailForUsername(cleanEmail);
+    if (resolved) {
+      cleanEmail = resolved.toLowerCase();
+    } else {
+      const handle = cleanInput.replace(/^@/, '');
+      throw new Error(`No account found with username @${handle}. Please check the username or sign in with your campus email.`);
+    }
+  }
 
   // Client-side throttle (UX only; Supabase Auth enforces the real limits)
   checkLoginRateLimit(cleanEmail);
@@ -205,10 +294,23 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
  throw new Error('Registration verification failed. Please try again.');
  }
 
- const cleanEmail = payload.email.trim();
- // Ensure self-registration can only produce student or alumni accounts
- const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
- const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || 'UI';
+  const cleanEmail = payload.email.trim();
+  const cleanUsername = payload.username.trim().replace(/^@/, '').toLowerCase();
+
+  // Validate username format
+  if (!cleanUsername || cleanUsername.length < 3 || cleanUsername.length > 24) {
+    throw new Error('Username must be 3-24 characters (letters, numbers, dots, underscores).');
+  }
+
+  // Pre-check username availability to prevent duplicate handles
+  const isAvailable = await checkUsernameAvailable(cleanUsername);
+  if (!isAvailable) {
+    throw new Error(`The username @${cleanUsername} is already taken. Please choose another username.`);
+  }
+
+  // Ensure self-registration can only produce student or alumni accounts
+  const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
+  const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || 'UI';
 
   const { data, error } = await supabase.auth.signUp({
     email: cleanEmail,
@@ -216,7 +318,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
     options: {
       data: {
         full_name: payload.fullName,
-        username: payload.username,
+        username: cleanUsername,
         role: assignedRole,
         campus_code: detectedCampus,
         terms_version: payload.acceptedTermsVersion ?? null,
@@ -227,28 +329,21 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
     },
   });
 
- if (error || !data?.user) {
- throw new Error(error?.message || 'Unable to register account. Please check your details.');
- }
+  if (error || !data?.user) {
+    throw new Error(error?.message || 'Unable to register account. Please check your details.');
+  }
 
- // With email confirmation on, signUp returns no session: the profile is created server-side
- // (auth trigger) and the user must enter the code we emailed. If the project has confirmation
- // switched off, sign-in works straight away and the account continues as before.
- let activeSession = data.session;
- if (!activeSession) {
- const { data: signInAfterReg, error: signInAfterRegError } = await supabase.auth.signInWithPassword({
- email: cleanEmail,
- password: payload.password,
- });
- if (signInAfterReg?.session) {
- activeSession = signInAfterReg.session;
- } else if (isEmailNotConfirmedError(signInAfterRegError)) {
- throw new EmailConfirmationRequiredError(cleanEmail);
- }
- }
- if (!activeSession) {
- throw new Error('Your account was created, but we could not sign you in. Please log in with your new password.');
- }
+  // Supabase returns an empty identities array if the email is already registered (user enumeration protection)
+  if (data.user.identities && data.user.identities.length === 0) {
+    throw new Error('An account with this email address already exists. Please sign in or reset your password.');
+  }
+
+  // With email confirmation on, signUp returns no session: the profile is created server-side
+  // (auth trigger) and the user must enter the 6-digit code we emailed to confirm their address.
+  let activeSession = data.session;
+  if (!activeSession) {
+    throw new EmailConfirmationRequiredError(cleanEmail);
+  }
 
  // The profile row is created server-side by the auth trigger; the client never
  // writes role / campus_code for itself.

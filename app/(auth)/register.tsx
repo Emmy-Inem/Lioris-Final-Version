@@ -15,7 +15,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { UserRole } from '@/api/types';
 import { isPasswordValid, passwordStrength, isValidEmailFormat, isValidUsername } from '@/utils/validation';
 import { seedProfileUsername } from '@/api/profile';
-import { isEmailConfirmationRequired } from '@/api/auth';
+import { isEmailConfirmationRequired, checkUsernameAvailable } from '@/api/auth';
 import { getInstitutionForEmail } from '@/api/institutions';
 import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
@@ -35,6 +35,7 @@ export default function RegisterScreen() {
  const [portal, setPortal] = useState<Extract<UserRole, 'student' | 'alumni'>>('student');
  const [fullName, setFullName] = useState('');
  const [username, setUsername] = useState('');
+ const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
  const [email, setEmail] = useState('');
  const [password, setPassword] = useState('');
  const [botField, setBotField] = useState('');
@@ -52,7 +53,35 @@ export default function RegisterScreen() {
  const emailFormatValid = isValidEmailFormat(email);
  const matchedInstitution = getInstitutionForEmail(email);
  const usernameTouched = username.length > 0;
- const usernameValid = isValidUsername(username);
+ const usernameValid = isValidUsername(username.trim().replace(/^@/, ''));
+
+ // Live debounced check for username availability
+ React.useEffect(() => {
+ const clean = username.trim().replace(/^@/, '').toLowerCase();
+ if (!clean || clean.length < 3 || !isValidUsername(clean)) {
+ setUsernameStatus('idle');
+ return;
+ }
+
+ let cancelled = false;
+ setUsernameStatus('checking');
+
+ const timer = setTimeout(async () => {
+ try {
+ const available = await checkUsernameAvailable(clean);
+ if (!cancelled) {
+ setUsernameStatus(available ? 'available' : 'taken');
+ }
+ } catch {
+ if (!cancelled) setUsernameStatus('idle');
+ }
+ }, 400);
+
+ return () => {
+ cancelled = true;
+ clearTimeout(timer);
+ };
+ }, [username]);
 
  const institutionOverride = matchedInstitution ? institutionThemeOverrides[matchedInstitution.code] : undefined;
  const heroFromColor = institutionOverride ? (isDark ? institutionOverride.dark.brandPrimaryPressed : institutionOverride.light.brandPrimaryPressed) : undefined;
@@ -76,6 +105,10 @@ export default function RegisterScreen() {
  setErrorMessage('Username must be 3-24 characters (letters, numbers, dots, underscores).');
  return;
  }
+  if (usernameStatus === 'taken') {
+    setErrorMessage(`Username @${username.trim().replace(/^@/, '')} is already taken. Please choose another.`);
+    return;
+  }
   if (!confirmedAge) {
     setErrorMessage(`Lioris is for university students and staff. Please confirm that you are at least ${MIN_AGE}, or an admitted student aged ${MIN_AGE_WITH_CONSENT}–17 with parent/guardian consent.`);
     return;
@@ -94,7 +127,7 @@ export default function RegisterScreen() {
  try {
   const createdUser = await register({
     fullName: fullName.trim(),
-    username,
+    username: username.trim().replace(/^@/, ''),
     email: email.trim(),
     password,
     userType: portal,
@@ -103,14 +136,14 @@ export default function RegisterScreen() {
     confirmedAge18: true,
     captchaToken: captchaToken || undefined,
   });
- seedProfileUsername(createdUser, username, matchedInstitution ?? undefined);
+ seedProfileUsername(createdUser, username.trim().replace(/^@/, ''), matchedInstitution ?? undefined);
  router.replace('/');
  } catch (err: any) {
  turnstileRef.current?.reset();
  setCaptchaToken(null);
  if (isEmailConfirmationRequired(err)) {
  // Account exists; the address must be confirmed with the emailed code before sign-in.
- router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email } });
+ router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email || email.trim() } });
  return;
  }
  if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
@@ -256,14 +289,37 @@ export default function RegisterScreen() {
  ) : null}
  {password.length > 0 ? <PasswordChecklist password={password} /> : null}
 
- <AppTextField
- label="Choose Username (@handle)"
- autoCapitalize="none"
- value={username}
- onChangeText={setUsername}
- placeholder="e.g. ineme.17"
- error={usernameTouched && !usernameValid ? '3-24 characters: letters, numbers, dots, underscores' : undefined}
- />
+  <AppTextField
+    label="Choose Username (@handle)"
+    autoCapitalize="none"
+    value={username}
+    onChangeText={(t) => {
+      setUsername(t.replace(/^@/, ''));
+      if (errorMessage) setErrorMessage(null);
+    }}
+    placeholder="e.g. ineme.17"
+    error={
+      usernameTouched && !usernameValid
+        ? '3-24 characters: letters, numbers, dots, underscores'
+        : usernameStatus === 'taken'
+        ? `@${username.trim().replace(/^@/, '')} is already taken. Please choose another.`
+        : undefined
+    }
+  />
+  {usernameStatus === 'available' && usernameValid ? (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -spacing.sm, marginBottom: spacing.md }}>
+      <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+      <AppText variant="bodySmall" style={{ color: colors.success }}>
+        @{username.trim().replace(/^@/, '')} is available
+      </AppText>
+    </View>
+  ) : usernameStatus === 'checking' ? (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -spacing.sm, marginBottom: spacing.md }}>
+      <AppText variant="bodySmall" tone="secondary">
+        Checking availability...
+      </AppText>
+    </View>
+  ) : null}
 
  <AppTextField label="Display Full Name" value={fullName} onChangeText={setFullName} placeholder="Inem Light" />
 

@@ -209,10 +209,10 @@ export default function LoginScreen() {
  } catch (err: any) {
  turnstileRef.current?.reset();
  setCaptchaToken(null);
- if (isEmailConfirmationRequired(err)) {
- router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email } });
- return;
- }
+    if (isEmailConfirmationRequired(err)) {
+      router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email || (email.includes('@') ? email.trim() : undefined) } });
+      return;
+    }
  haptics.error();
  if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
  setErrorMessage('Security verification failed or expired. Please complete the security check again.');
@@ -277,66 +277,73 @@ export default function LoginScreen() {
  : 'Sign in to reconnect with classmates and give back to your campus community.'}
  </AppText>
 
- <AppTextField
- label=""
- placeholder="School Email (.edu / .edu.ng)"
- autoCapitalize="none"
- autoComplete="email"
- textContentType="emailAddress"
- keyboardType="email-address"
- value={email}
- onChangeText={(text) => {
- setEmail(text);
- if (errorMessage) setErrorMessage(null);
- }}
- />
- <AppTextField
- label=""
- placeholder="Password (Min 6 Characters)"
- autoComplete="current-password"
- textContentType="password"
- secureTextEntry
- showPasswordToggle
- value={password}
- onChangeText={(text) => {
- setPassword(text);
- if (errorMessage) setErrorMessage(null);
- }}
- />
+  <AppTextField
+    label=""
+    placeholder="School Email or Username (@handle)"
+    autoCapitalize="none"
+    autoComplete="email"
+    textContentType="emailAddress"
+    value={email}
+    onChangeText={(text) => {
+      setEmail(text);
+      if (errorMessage) setErrorMessage(null);
+    }}
+  />
+  <AppTextField
+    label=""
+    placeholder="Password (Min 6 Characters)"
+    autoComplete="current-password"
+    textContentType="password"
+    secureTextEntry
+    showPasswordToggle
+    value={password}
+    onChangeText={(text) => {
+      setPassword(text);
+      if (errorMessage) setErrorMessage(null);
+    }}
+  />
 
- <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md, marginTop: -spacing.xs }}>
- <Pressable onPress={() => { setForgotStep('request'); setForgotError(null); setForgotModalOpen(true); }}>
- <AppText variant="caption" tone="brand" weight="semiBold">
- Forgot Password?
- </AppText>
- </Pressable>
- </View>
+  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md, marginTop: -spacing.xs }}>
+    <Pressable onPress={() => { setForgotStep('request'); setForgotError(null); setForgotModalOpen(true); }}>
+      <AppText variant="caption" tone="brand" weight="semiBold">
+        Forgot Password?
+      </AppText>
+    </Pressable>
+  </View>
 
- {errorMessage ? (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 8,
- backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
- borderColor: colors.critical,
- borderWidth: 1,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="alert-circle" size={18} color={colors.critical} />
- <AppText
- variant="bodySmall"
- weight="semiBold"
- style={{ color: colors.critical, flex: 1 }}
- >
- {errorMessage}
- </AppText>
- </View>
- ) : null}
+  {errorMessage ? (
+    <View
+      style={{
+        backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+        borderColor: colors.critical,
+        borderWidth: 1,
+        borderRadius: radius.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        marginBottom: spacing.md,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Ionicons name="alert-circle" size={18} color={colors.critical} />
+        <AppText
+          variant="bodySmall"
+          weight="semiBold"
+          style={{ color: colors.critical, flex: 1 }}
+        >
+          {errorMessage}
+        </AppText>
+      </View>
+      <Pressable
+        onPress={() => router.push({ pathname: '/(auth)/verify-email', params: { email: email.includes('@') ? email.trim() : undefined } })}
+        hitSlop={8}
+        style={{ marginTop: 6, alignSelf: 'flex-start' }}
+      >
+        <AppText variant="caption" tone="brand" weight="bold">
+          Need to verify your email? Enter your 6-digit code →
+        </AppText>
+      </Pressable>
+    </View>
+  ) : null}
 
  <TurnstileWidget
    ref={turnstileRef}
