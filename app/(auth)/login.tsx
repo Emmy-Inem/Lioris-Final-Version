@@ -80,6 +80,10 @@ export default function LoginScreen() {
  haptics.success();
  } catch (err: any) {
  haptics.error();
+ if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
+ setForgotError('Security verification failed. Please complete the security check.');
+ return;
+ }
  setForgotError(err?.message || 'Could not send recovery code. Please verify your email.');
  } finally {
  setSubmittingForgot(false);
@@ -144,6 +148,11 @@ export default function LoginScreen() {
  haptics.error();
  return;
  }
+ if (Platform.OS === 'web' && !captchaToken) {
+ setErrorMessage('Please complete the security check above before signing in.');
+ haptics.error();
+ return;
+ }
  haptics.medium();
  setSubmitting(true);
  try {
@@ -155,6 +164,11 @@ export default function LoginScreen() {
  return;
  }
  haptics.error();
+ if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
+ setErrorMessage('Security verification failed or expired. Please complete the security check again.');
+ setCaptchaToken(null);
+ return;
+ }
  const msg = err?.message || 'Incorrect email or password. Please verify your credentials and try again.';
  setErrorMessage(msg);
  } finally {

@@ -84,6 +84,11 @@ export default function RegisterScreen() {
  return;
  }
 
+ if (Platform.OS === 'web' && !captchaToken) {
+ setErrorMessage('Please complete the security check above before continuing.');
+ return;
+ }
+
  setSubmitting(true);
  try {
   const createdUser = await register({
@@ -103,6 +108,11 @@ export default function RegisterScreen() {
  if (isEmailConfirmationRequired(err)) {
  // Account exists; the address must be confirmed with the emailed code before sign-in.
  router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email } });
+ return;
+ }
+ if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
+ setErrorMessage('Security verification failed or expired. Please complete the security check again.');
+ setCaptchaToken(null);
  return;
  }
  setErrorMessage(err?.message || 'Registration failed. Please check your details and try again.');

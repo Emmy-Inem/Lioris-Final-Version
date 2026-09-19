@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import { Platform, View, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Platform, View, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/theme/ThemeProvider';
+import { AppText } from '@/components/AppText';
+import { Ionicons } from '@expo/vector-icons';
 
 interface TurnstileWidgetProps {
   onVerify: (token: string) => void;
@@ -18,7 +20,7 @@ declare global {
           sitekey: string;
           theme?: 'light' | 'dark' | 'auto';
           callback?: (token: string) => void;
-          'error-callback'?: () => void;
+          'error-callback'?: (errorCode?: string) => void;
           'expired-callback'?: () => void;
           size?: 'normal' | 'compact' | 'flexible';
         }
@@ -26,16 +28,62 @@ declare global {
       reset: (widgetId?: string) => void;
       remove: (widgetId?: string) => void;
     };
-    onTurnstileLoaded?: () => void;
   }
 }
 
 const TURNSTILE_SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAE8rvj6r5JOLLpDJ';
 
 export function TurnstileWidget({ onVerify, onExpire, onError, style }: TurnstileWidgetProps) {
-  const { isDark } = useTheme();
-  const containerRef = useRef<any>(null);
+  const { colors, isDark } = useTheme();
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Keep references to callbacks to prevent re-renders in parent forms from tearing down the widget
+  const onVerifyRef = useRef(onVerify);
+  onVerifyRef.current = onVerify;
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
+  const renderWidget = () => {
+    if (!containerRef.current || !window.turnstile) return;
+    setLoadError(null);
+
+    if (widgetIdRef.current) {
+      try {
+        window.turnstile.remove(widgetIdRef.current);
+      } catch {
+        // ignore
+      }
+      widgetIdRef.current = null;
+    }
+
+    try {
+      const id = window.turnstile.render(containerRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: isDark ? 'dark' : 'light',
+        size: 'flexible',
+        callback: (token: string) => {
+          setLoadError(null);
+          onVerifyRef.current(token);
+        },
+        'expired-callback': () => {
+          onExpireRef.current?.();
+        },
+        'error-callback': (errorCode?: string) => {
+          console.warn('Turnstile security check error:', errorCode);
+          setLoadError('Security check failed to verify. Tap to retry.');
+          onErrorRef.current?.();
+        },
+      });
+      widgetIdRef.current = id;
+    } catch (e: any) {
+      console.warn('Failed to render Turnstile widget:', e);
+      setLoadError('Could not initialize security check. Tap to retry.');
+    }
+  };
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') {
@@ -43,61 +91,47 @@ export function TurnstileWidget({ onVerify, onExpire, onError, style }: Turnstil
     }
 
     let isMounted = true;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-    function renderWidget() {
-      if (!isMounted || !containerRef.current || !window.turnstile) return;
-      if (widgetIdRef.current) {
-        try {
-          window.turnstile.remove(widgetIdRef.current);
-        } catch {
-          // ignore
-        }
-        widgetIdRef.current = null;
-      }
-
-      try {
-        const id = window.turnstile.render(containerRef.current, {
-          sitekey: TURNSTILE_SITE_KEY,
-          theme: isDark ? 'dark' : 'light',
-          size: 'normal',
-          callback: (token: string) => {
-            if (isMounted) onVerify(token);
-          },
-          'expired-callback': () => {
-            if (isMounted) onExpire?.();
-          },
-          'error-callback': () => {
-            if (isMounted) onError?.();
-          },
-        });
-        widgetIdRef.current = id;
-      } catch (e) {
-        console.warn('Failed to render Turnstile widget:', e);
-      }
-    }
-
-    // Check if script already injected
     const SCRIPT_ID = 'cf-turnstile-script';
     let script = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
 
-    if (!script) {
-      script = document.createElement('script');
-      script.id = SCRIPT_ID;
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        renderWidget();
-      };
-      document.head.appendChild(script);
-    } else if (window.turnstile) {
+    if (window.turnstile) {
       renderWidget();
     } else {
-      script.addEventListener('load', renderWidget);
+      if (!script) {
+        script = document.createElement('script');
+        script.id = SCRIPT_ID;
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+
+      // Poll until window.turnstile is available
+      let attempts = 0;
+      pollInterval = setInterval(() => {
+        if (!isMounted) {
+          if (pollInterval) clearInterval(pollInterval);
+          return;
+        }
+        if (window.turnstile) {
+          if (pollInterval) clearInterval(pollInterval);
+          renderWidget();
+        } else {
+          attempts++;
+          if (attempts > 30) {
+            // After 6 seconds, stop polling and show retry prompt
+            if (pollInterval) clearInterval(pollInterval);
+            setLoadError('Security check is taking longer than expected. Tap to reload.');
+          }
+        }
+      }, 200);
     }
 
     return () => {
       isMounted = false;
+      if (pollInterval) clearInterval(pollInterval);
       if (widgetIdRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
@@ -107,7 +141,7 @@ export function TurnstileWidget({ onVerify, onExpire, onError, style }: Turnstil
         widgetIdRef.current = null;
       }
     };
-  }, [isDark, onVerify, onExpire, onError]);
+  }, [isDark]);
 
   if (Platform.OS !== 'web') {
     return null;
@@ -116,7 +150,39 @@ export function TurnstileWidget({ onVerify, onExpire, onError, style }: Turnstil
   return (
     <View style={[styles.container, style]}>
       {/* HTML Div rendered in React Native Web */}
-      <div ref={containerRef} style={{ minHeight: 65, display: 'flex', justifyContent: 'center' }} />
+      <div
+        ref={containerRef}
+        style={{
+          minHeight: 65,
+          width: '100%',
+          maxWidth: 320,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      />
+      {loadError && (
+        <Pressable
+          onPress={() => {
+            setLoadError(null);
+            if (window.turnstile && widgetIdRef.current) {
+              try {
+                window.turnstile.reset(widgetIdRef.current);
+                return;
+              } catch {
+                // fall through to re-render
+              }
+            }
+            renderWidget();
+          }}
+          style={styles.errorContainer}
+        >
+          <Ionicons name="refresh-circle-outline" size={16} color={colors.critical} />
+          <AppText variant="caption" style={{ color: colors.critical, marginLeft: 4 }}>
+            {loadError}
+          </AppText>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -126,5 +192,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 12,
+    width: '100%',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
 });

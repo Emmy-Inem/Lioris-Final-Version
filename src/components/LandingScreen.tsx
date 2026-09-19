@@ -279,7 +279,15 @@ export function LandingScreen() {
             <AppText
               variant="caption"
               weight="bold"
-              style={{ color: colors.brandAccent, letterSpacing: 1.5, marginBottom: 12, fontSize: 13 }}
+              style={{
+                color: colors.brandAccent,
+                letterSpacing: 1.5,
+                marginBottom: 12,
+                fontSize: 13,
+                textAlign: 'center',
+                alignSelf: 'center',
+                maxWidth: '90%',
+              }}
             >
               THE VERIFIED UNIVERSITY COMMUNITY PLATFORM
             </AppText>
