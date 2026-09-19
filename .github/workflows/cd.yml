@@ -1,0 +1,173 @@
+﻿name: Continuous Deployment
+
+on:
+  push:
+    branches: [main]          # Web deploy + OTA update on every merge to main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'  # Native EAS production build on version tags (e.g. v1.2.0)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false   # Never cancel a deploy mid-flight
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Web: deploy to Vercel (production)
+# Runs only on pushes to main. Vercel CLI is used directly so we have full
+# control over the deploy and can surface its URL in the job summary.
+# Requires repository secret: VERCEL_TOKEN
+# Requires Vercel env vars already set in vercel.json (they are).
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  deploy-web:
+    name: Deploy Web → Vercel (production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+
+      - name: Export web bundle (production)
+        run: npx expo export --platform web --clear
+        env:
+          APP_ENV: production
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.EXPO_PUBLIC_TURNSTILE_SITE_KEY }}
+
+      - name: Deploy to Vercel (production)
+        id: vercel-deploy
+        run: |
+          DEPLOY_URL=$(npx vercel --prod \
+            --token "$VERCEL_TOKEN" \
+            --yes \
+            2>&1 | tail -n1)
+          echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "### Web Deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Status:** Deployed to production" >> "$GITHUB_STEP_SUMMARY"
+          echo "**URL:** $DEPLOY_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Commit:** \`$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Mobile OTA: Expo Updates publish to the production channel
+# Pushes an over-the-air update so existing app installs get the new JS bundle
+# instantly without requiring a new App Store / Play Store build.
+# Runs only on main (not on tags — the native build job handles tags).
+# Requires repository secret: EXPO_TOKEN
+# ─────────────────────────────────────────────────────────────────────────────
+  publish-ota:
+    name: Publish OTA Update → Expo (production channel)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install EAS CLI
+        run: npm install --global eas-cli@latest
+
+      - name: Publish Expo update (production channel)
+        run: |
+          eas update \
+            --branch production \
+            --channel production \
+            --message "OTA: ${{ github.sha }} — ${{ github.event.head_commit.message }}" \
+            --non-interactive
+          echo "### OTA Update" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Channel:** production" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Commit:** \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Message:** ${{ github.event.head_commit.message }}" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 — Mobile Native: EAS production build + store submission
+# Triggered only when a version tag is pushed (e.g. git tag v1.2.0 && git push --tags).
+# Builds both iOS and Android natively on EAS cloud, then submits to
+# App Store Connect and Google Play automatically.
+# Requires repository secrets: EXPO_TOKEN, APPLE_APP_SPECIFIC_PASSWORD (for ASC),
+#   and Google Play JSON key configured in EAS submit settings.
+# ─────────────────────────────────────────────────────────────────────────────
+  build-native:
+    name: EAS Production Build + Submit (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ios, android]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install EAS CLI
+        run: npm install --global eas-cli@latest
+
+      - name: Build ${{ matrix.platform }} (production profile)
+        run: |
+          eas build \
+            --platform ${{ matrix.platform }} \
+            --profile production \
+            --non-interactive \
+            --wait
+          echo "### Native Build — ${{ matrix.platform }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Platform:** ${{ matrix.platform }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Tag:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Status:** Build submitted to EAS — check https://expo.dev for progress" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Submit ${{ matrix.platform }} to store
+        run: |
+          eas submit \
+            --platform ${{ matrix.platform }} \
+            --profile production \
+            --latest \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
