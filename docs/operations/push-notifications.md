@@ -40,7 +40,18 @@ app INSERTs a row into public.notifications          (one row per recipient; bro
 
    or run `scripts/deploy-supabase.sh` / `scripts/deploy-supabase.ps1`.
 
-## 2. Create the Database Webhook (Supabase dashboard)
+## 2. Create the Database Webhook
+
+> **Production status (2026-09-19): DONE, do not create the dashboard webhook.** Production uses a trigger
+> instead (`trg_notifications_send_push` -> `public.notify_push_on_notification()` -> `pg_net` -> `send-push`),
+> with the shared secret kept in Supabase Vault as `push_webhook_secret`. The exact SQL is in
+> `supabase_push_webhook_2026.sql` (secret-free; its header explains the one-time secret setup for a new
+> database). Creating the dashboard hook as well would send every push **twice**.
+> To rotate the secret: `supabase secrets set PUSH_WEBHOOK_SECRET=<new>` and
+> `select vault.update_secret(id, '<new>') from vault.secrets where name = 'push_webhook_secret';`.
+> To disable pushes: `alter table public.notifications disable trigger trg_notifications_send_push;`.
+>
+> The dashboard steps below remain valid for a project that does not use the trigger.
 
 1. Open the project -> **Database** -> **Webhooks** (enable Webhooks if prompted) -> **Create a new hook**.
 2. **Name**: `send-push-on-notification`
