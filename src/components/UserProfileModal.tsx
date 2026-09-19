@@ -285,8 +285,11 @@ export function UserProfileModal({
  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
  {effectiveName}
  </AppText>
- {(effectiveRole === 'admin' || (fetchedProfile ? (fetchedProfile.verificationStatus === 'verified' && fetchedProfile.isVerified) : isVerified)) ? (
- <VerifiedBadge size={18} role={effectiveRole} name={effectiveName} />
+  {/* Verification badge: admin always gets grey badge regardless of displayed role.
+       fetchedProfile.isVerified is the canonical source — it already accounts for admin role
+       at the API level. Fall back to the isVerified prop while the profile is loading. */}
+  {(fetchedProfile ? fetchedProfile.isVerified : isVerified) ? (
+  <VerifiedBadge size={18} role={effectiveRole} name={effectiveName} />
  ) : null}
  <UserTypeBadge role={effectiveRole} />
  </View>

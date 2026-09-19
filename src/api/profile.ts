@@ -2,7 +2,7 @@ import { api } from './client';
 import { UserProfile, UserRole } from './types';
 
 import { supabase } from './supabase';
-import { getInstitutionByCode, getInstitutionForEmail, LAUNCH_INSTITUTIONS } from './institutions';
+import { getInstitutionByCode, getInstitutionForEmail } from './institutions';
 import { clearTokens, getSessionUser } from '../auth/tokenStorage';
 
 export function nextLevelXp(level: number): number {
@@ -16,63 +16,67 @@ export function nextLevelXp(level: number): number {
 const profileState = new Map<string, UserProfile>();
 
 /**
+ * Evict a single user from the in-memory profile cache so the next
+ * getPublicProfile / getMyProfile call fetches fresh data from Supabase.
+ * Call this after any admin verification action (approve / reject / direct).
+ */
+export function invalidateProfileCache(userId: string) {
+  profileState.delete(userId);
+}
+
+/**
  * Default empty profile used while a user's `profiles` record is loading
  * from Supabase, or as a base for empty fields.
  */
 function defaultProfileFor(user: { id: string; fullName: string; role: UserRole; email?: string }): UserProfile {
  if (profileState.has(user.id)) return profileState.get(user.id)!;
 
- const isAlumni = user.role === 'alumni';
- const isStaff = user.role === 'staff';
  const isAdmin = user.role === 'admin';
  const resolvedEmail = user.email || `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`;
  const username = user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
 
- // Authoritatively derive campus institution from email domain or demo identity
+ // Authoritatively derive campus institution from email domain
  const emailLower = resolvedEmail.toLowerCase();
  let inst = getInstitutionForEmail(emailLower);
  let instCode = inst?.code;
  let instName = inst?.name;
 
- // getInstitutionForEmail already matches on the email domain, including
- // every demo account (all @ui.edu.ng). The substring ladder that used to
- // live here only ran for *unrecognised* domains, where it guessed badly -
- // `includes('oau')` assigned joaustin@some-school.edu to Obafemi Awolowo.
-  if (!instCode || instCode === 'GLOBAL') {
-    instCode = undefined;
-    instName = undefined;
-  }
+ if (!instCode || instCode === 'GLOBAL') {
+   instCode = undefined;
+   instName = undefined;
+ }
 
-  const matchedInst = user.email ? getInstitutionForEmail(user.email) : null;
-  const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL');
-  const isVerified = isAdmin || isOfficialEmail;
-  const verificationStatus: 'none' | 'pending' | 'verified' = isVerified ? 'verified' : 'none';
+ const matchedInst = user.email ? getInstitutionForEmail(user.email) : null;
+ const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL');
+ // Admins are always verified regardless of email or DB status
+ const isVerified = isAdmin || isOfficialEmail;
+ const verificationStatus: 'none' | 'pending' | 'verified' = isVerified ? 'verified' : 'none';
 
-  const created: UserProfile = {
-    id: user.id,
-    fullName: user.fullName || 'User',
-    username,
-    email: resolvedEmail,
-    userType: user.role,
-    graduationYear: undefined,
-    bio: '',
-    department: 'General Studies',
-    interests: [],
-    institutionName: instName,
-    institutionCode: instCode,
-    avatarUrl: undefined,
-    coverUrl: undefined,
-    isVerified,
-    verificationStatus,
-    postsCount: 0,
-    resourcesCount: 0,
-    eventsCount: 0,
-    badgesCount: 0,
-    followersCount: 0,
-    followingCount: 0,
-  };
-  profileState.set(user.id, created);
-  return created;
+ const created: UserProfile = {
+   id: user.id,
+   fullName: user.fullName || 'User',
+   username,
+   email: resolvedEmail,
+   userType: user.role,
+   graduationYear: undefined,
+   bio: '',
+   department: 'General Studies',
+   interests: [],
+   institutionName: instName,
+   institutionCode: instCode,
+   avatarUrl: undefined,
+   coverUrl: undefined,
+   isVerified,
+   verificationStatus,
+   postsCount: 0,
+   resourcesCount: 0,
+   eventsCount: 0,
+   badgesCount: 0,
+   followersCount: 0,
+   followingCount: 0,
+ };
+ profileState.set(user.id, created);
+ return created;
 }
 
 export async function getMyProfile(user?: {
@@ -121,59 +125,57 @@ export async function getMyProfile(user?: {
  .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, is_suspended')
  .eq('id', resolvedUser.id)
  .single();
-    if (!error && data) {
-      const emailLower = (resolvedUser.email || '').toLowerCase();
-      const isPersonalAccount =
-        emailLower.endsWith('@gmail.com') ||
-        emailLower.endsWith('@yahoo.com') ||
-        emailLower.endsWith('@hotmail.com') ||
-        emailLower.endsWith('@outlook.com');
+   if (!error && data) {
+     const emailLower = (resolvedUser.email || '').toLowerCase();
+     const isPersonalAccount =
+       emailLower.endsWith('@gmail.com') ||
+       emailLower.endsWith('@yahoo.com') ||
+       emailLower.endsWith('@hotmail.com') ||
+       emailLower.endsWith('@outlook.com');
 
-      // Correct legacy test trigger that auto-verified inememmanuel@gmail.com without student ID
-      if (
-        (emailLower === 'inememmanuel@gmail.com' || data.full_name?.toLowerCase() === 'inem emmanuel') &&
-        resolvedUser.role === 'student' &&
-        data.verification_status === 'verified'
-      ) {
-        data.verification_status = 'unverified';
-        supabase.from('profiles').update({ verification_status: 'unverified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
-      }
+     // Use DB role as authoritative source (may differ from auth metadata if admin changed it)
+     const dbRole = (data.role || resolvedUser.role) as UserRole;
+     const isAdmin = dbRole === 'admin';
 
-      const matchedInst = resolvedUser.email ? getInstitutionForEmail(resolvedUser.email) : null;
-      const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL' && !isPersonalAccount);
-      const isDbVerified = data.verification_status === 'verified';
-      const isVerified =
-        (isDbVerified || isOfficialEmail || resolvedUser.role === 'admin') &&
-        data.verification_status !== 'unverified' &&
-        data.verification_status !== 'rejected';
-      const verificationStatus: 'none' | 'pending' | 'verified' = isVerified
-        ? 'verified'
-        : (data.verification_status === 'pending' ? 'pending' : 'none');
+     const matchedInst = resolvedUser.email ? getInstitutionForEmail(resolvedUser.email) : null;
+     const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL' && !isPersonalAccount);
+     const isDbVerified = data.verification_status === 'verified';
 
-      // Quietly sync verified status if official institutional email
-      if (isOfficialEmail && data.verification_status !== 'verified') {
-        supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
-      }
+     // Admins are always verified; DB-verified or official-email users are verified
+     // unless explicitly rejected (rejected status overrides official email)
+     const isVerified =
+       isAdmin ||
+       ((isDbVerified || isOfficialEmail) && data.verification_status !== 'rejected');
 
-      const rawCampus = data.campus_code;
-      const campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
-      const inst = (campusCode && campusCode !== 'GLOBAL') ? getInstitutionByCode(campusCode) : null;
+     const verificationStatus: 'none' | 'pending' | 'verified' = isVerified
+       ? 'verified'
+       : (data.verification_status === 'pending' ? 'pending' : 'none');
 
-      const merged: UserProfile = {
-        ...fallback,
-        fullName: data.full_name || fallback.fullName,
-        username: data.username || fallback.username,
-        bio: data.bio || fallback.bio,
-        department: data.department || fallback.department,
-        interests: data.interests || fallback.interests,
-        institutionName: inst?.name || fallback.institutionName || 'Campus Workspace',
-        institutionCode: inst?.code || fallback.institutionCode,
-        avatarUrl: data.avatar_url || fallback.avatarUrl,
-        coverUrl: data.banner_url || fallback.coverUrl,
-        isVerified,
-        verificationStatus,
-      };
-      profileState.set(resolvedUser.id, merged);
+     // Quietly sync verified status if official institutional email and not yet verified
+     if (isOfficialEmail && !isAdmin && data.verification_status !== 'verified') {
+       supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
+     }
+
+     const rawCampus = data.campus_code;
+     const campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
+     const inst = (campusCode && campusCode !== 'GLOBAL') ? getInstitutionByCode(campusCode) : null;
+
+     const merged: UserProfile = {
+       ...fallback,
+       fullName: data.full_name || fallback.fullName,
+       username: data.username || fallback.username,
+       bio: data.bio || fallback.bio,
+       department: data.department || fallback.department,
+       interests: data.interests || fallback.interests,
+       institutionName: inst?.name || fallback.institutionName || 'Campus Workspace',
+       institutionCode: inst?.code || fallback.institutionCode,
+       avatarUrl: data.avatar_url || fallback.avatarUrl,
+       coverUrl: data.banner_url || fallback.coverUrl,
+       userType: dbRole,
+       isVerified,
+       verificationStatus,
+     };
+     profileState.set(resolvedUser.id, merged);
  return merged;
  }
  } catch {
@@ -335,37 +337,37 @@ export async function updateMyProfile(
  const dbPatch: any = {
  updated_at: new Date().toISOString(),
  };
-    if (patch.fullName !== undefined) dbPatch.full_name = patch.fullName.trim();
-    if (patch.username !== undefined) {
-      const cleanUsername = patch.username.trim().toLowerCase().replace(/[^a-z0-9._]/g, '');
-      dbPatch.username = cleanUsername;
-      updated.username = cleanUsername;
-    }
-    if (patch.bio !== undefined) dbPatch.bio = patch.bio;
-    if (patch.department !== undefined) dbPatch.department = patch.department;
-    if (patch.faculty !== undefined) dbPatch.faculty = patch.faculty;
-    if (patch.academicLevel !== undefined) dbPatch.level = patch.academicLevel;
-    if (patch.interests !== undefined) dbPatch.interests = patch.interests;
-    if (patch.institutionCode !== undefined) dbPatch.campus_code = patch.institutionCode;
-    if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
-    if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
+   if (patch.fullName !== undefined) dbPatch.full_name = patch.fullName.trim();
+   if (patch.username !== undefined) {
+     const cleanUsername = patch.username.trim().toLowerCase().replace(/[^a-z0-9._]/g, '');
+     dbPatch.username = cleanUsername;
+     updated.username = cleanUsername;
+   }
+   if (patch.bio !== undefined) dbPatch.bio = patch.bio;
+   if (patch.department !== undefined) dbPatch.department = patch.department;
+   if (patch.faculty !== undefined) dbPatch.faculty = patch.faculty;
+   if (patch.academicLevel !== undefined) dbPatch.level = patch.academicLevel;
+   if (patch.interests !== undefined) dbPatch.interests = patch.interests;
+   if (patch.institutionCode !== undefined) dbPatch.campus_code = patch.institutionCode;
+   if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
+   if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
 
-    if (userId !== 'me') {
-      const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
-      if (error) {
-        if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
-          throw new Error('This username is already taken. Please choose another.');
-        }
-        console.warn('[Profile] Supabase update warning:', error.message);
-        throw new Error(error.message);
-      }
-    }
-  } catch (err: any) {
-    if (err?.message?.includes('already taken') || (err?.message && !err.message.includes('fetch'))) {
-      throw err;
-    }
-    // Session fallback for offline/network
-  }
+   if (userId !== 'me') {
+     const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
+     if (error) {
+       if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
+         throw new Error('This username is already taken. Please choose another.');
+       }
+       console.warn('[Profile] Supabase update warning:', error.message);
+       throw new Error(error.message);
+     }
+   }
+ } catch (err: any) {
+   if (err?.message?.includes('already taken') || (err?.message && !err.message.includes('fetch'))) {
+     throw err;
+   }
+   // Session fallback for offline/network
+ }
 
  return updated;
 }
@@ -424,10 +426,6 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   if (!userId) return null;
   const cached = profileState.get(userId);
   if (cached) {
-    if (cached.fullName?.toLowerCase() === 'inem emmanuel' && cached.userType === 'student') {
-      cached.isVerified = false;
-      cached.verificationStatus = 'none';
-    }
     return cached;
   }
 
@@ -440,14 +438,16 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
 
     if (!error && data) {
       const inst = data.campus_code ? getInstitutionByCode(data.campus_code) : null;
-      const isFakeVerified = data.full_name?.toLowerCase() === 'inem emmanuel' && data.role === 'student';
-      const isVerified = !isFakeVerified && (data.verification_status === 'verified' || data.role === 'admin');
+      const dbRole = (data.role || 'student') as UserRole;
+      const isAdmin = dbRole === 'admin';
+      // Admins are always verified; others rely on DB verification_status
+      const isVerified = isAdmin || data.verification_status === 'verified';
       const userProfile: UserProfile = {
         id: data.id,
         fullName: data.full_name || 'Campus Member',
         username: data.username || data.full_name?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user',
         email: '',
-        userType: (data.role || 'student') as UserRole,
+        userType: dbRole,
         graduationYear: undefined,
         bio: data.bio || '',
         department: data.department || 'Academic',
@@ -456,7 +456,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         avatarUrl: data.avatar_url || undefined,
         coverUrl: data.banner_url || undefined,
         isVerified,
-        verificationStatus: isVerified ? 'verified' : (isFakeVerified ? 'none' : ((data.verification_status === 'verified' || data.verification_status === 'pending') ? data.verification_status : 'none')),
+        verificationStatus: isVerified ? 'verified' : (data.verification_status === 'pending' ? 'pending' : 'none'),
         postsCount: 0,
         resourcesCount: 0,
         eventsCount: 0,
@@ -472,3 +472,4 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   }
   return null;
 }
+

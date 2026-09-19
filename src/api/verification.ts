@@ -3,6 +3,7 @@ import { createNotification } from './notifications';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
+import { invalidateProfileCache } from './profile';
 
 export interface VerificationRequest {
  id: string;
@@ -185,11 +186,14 @@ export async function respondToVerificationRequest(
       .from('profiles')
       .update({ verification_status: 'verified' })
       .eq('id', reqRow.user_id);
+    // Evict from local cache so next view fetches the updated status
+    invalidateProfileCache(reqRow.user_id);
   } else if (status === 'rejected' && reqRow?.user_id) {
     await supabase
       .from('profiles')
-      .update({ verification_status: 'unverified' })
+      .update({ verification_status: 'none' })
       .eq('id', reqRow.user_id);
+    invalidateProfileCache(reqRow.user_id);
   }
   } catch (err) {
     console.warn('[Verification] Status update backend warning:', err);
@@ -245,7 +249,7 @@ export async function respondToVerificationRequest(
 
 export async function adminDirectVerifyUser(userId: string, isVerified: boolean): Promise<boolean> {
   try {
-    const status = isVerified ? 'verified' : 'unverified';
+    const status = isVerified ? 'verified' : 'none';
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -254,6 +258,9 @@ export async function adminDirectVerifyUser(userId: string, isVerified: boolean)
       .eq('id', userId);
 
     if (error) throw error;
+
+    // Evict from local cache so the next getPublicProfile fetches fresh data
+    invalidateProfileCache(userId);
 
     await recordAuditLogEntry({
       action: isVerified ? 'verification_approved' : 'verification_rejected',
