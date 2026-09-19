@@ -15,6 +15,7 @@ import { ErrorBoundary, RouteErrorBoundary } from '@/components/ErrorBoundary';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 import { OfflineBanner, setupNetworkAwareQueries } from '@/components/OfflineBanner';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
+import { ReConsentGate } from '@/components/ReConsentGate';
 import { addNotificationResponseListener } from '@/notifications/push';
 
 import { loadBlockedUserIds } from '@/api/connections';
@@ -304,6 +305,7 @@ function AppShell() {
  <ErrorBoundary>
  <Slot />
  </ErrorBoundary>
+ <ReConsentGate />
  <AlertHost />
  </>
  );
