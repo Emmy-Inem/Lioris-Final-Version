@@ -24,7 +24,8 @@ export type FeatureKey =
   | 'currency_converter'
   | 'forum_trends'
   | 'alumni_network'
-  | 'campus_announcements';
+  | 'campus_announcements'
+  | 'staff_role';
 
 export interface FeatureFlagMeta {
   key: FeatureKey;
@@ -179,6 +180,14 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     tier: 'P1',
     description: 'Displays university administration broadcasts, faculty bulletins, and emergency announcements.',
     defaultOn: true,
+  },
+  {
+    key: 'staff_role',
+    label: 'Staff Portal & Faculty Role Access',
+    category: 'Campus Life',
+    tier: 'P1',
+    description: 'Enables faculty & staff portal, moderation console, and staff view in role switcher.',
+    defaultOn: false,
   },
 ];
 

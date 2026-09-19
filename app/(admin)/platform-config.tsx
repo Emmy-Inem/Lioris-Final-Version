@@ -1,4 +1,4 @@
-﻿import React, { useState } from'react';
+import React, { useState } from'react';
 import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
 import { router } from'expo-router';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -18,6 +18,7 @@ import { UserProfilesTab } from'@/components/admin/UserProfilesTab';
 import { ResourcesModerationTab } from'@/components/admin/ResourcesModerationTab';
 import { ApprovalsModerationTab } from'@/components/admin/ApprovalsModerationTab';
 import { FeatureFlagsTab } from '@/components/admin/FeatureFlagsTab';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { ManagePortalLinksModal } from '@/components/admin/ManagePortalLinksModal';
 import { LiquidGlassCustomizerModal } from '@/components/admin/LiquidGlassCustomizerModal';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -37,6 +38,7 @@ export default function PlatformConfigScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user, switchRole } = useAuth();
+  const { isFeatureEnabled } = useFeatureFlags();
   const isSuperAdmin = user?.actualRole === 'admin';
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Feature Flags');
@@ -133,10 +135,12 @@ export default function PlatformConfigScreen() {
           <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
             {[
               { role: 'student', label: 'Student Portal', path: '/(student)/dashboard' },
-              { role: 'staff', label: 'Faculty Staff', path: '/(staff)/dashboard' },
+              { role: 'staff', label: 'Faculty Staff', path: '/(staff)/dashboard', flagKey: 'staff_role' },
               { role: 'alumni', label: 'Alumni Fellow', path: '/(alumni)/dashboard' },
               { role: 'admin', label: 'Root Admin', path: '/(admin)/platform-config' },
-            ].map((r) => {
+            ]
+              .filter((r) => !r.flagKey || isFeatureEnabled(r.flagKey as any))
+              .map((r) => {
               const active = user?.role === r.role;
               return (
                 <Pressable

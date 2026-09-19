@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform, View } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -13,6 +13,10 @@ export default function StaffLayout() {
  const { colors, isDark } = useTheme();
  const { isDesktop } = useResponsive();
  const { isFeatureEnabled } = useFeatureFlags();
+
+ if (!isFeatureEnabled('staff_role')) {
+   return <Redirect href="/(student)/dashboard" />;
+ }
 
  const tabsContent = (
  <Tabs

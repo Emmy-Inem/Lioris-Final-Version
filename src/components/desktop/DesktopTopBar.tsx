@@ -176,7 +176,9 @@ export function DesktopTopBar() {
  },
  ]}
  >
-              {(['student', 'alumni', 'staff', 'admin'] as const).map((r) => (
+              {(['student', 'alumni', 'staff', 'admin'] as const)
+                .filter((r) => r !== 'staff' || isFeatureEnabled('staff_role'))
+                .map((r) => (
                 <Pressable
                   key={r}
                   onPress={async () => {
@@ -322,12 +324,6 @@ export function DesktopTopBar() {
  )}
  </View>
 
- {/* Quick Composer Action Button */}
- <AppButton
- label="+ Post"
- variant="primary"
- onPress={() => setComposerOpen(true)}
- />
  </View>
 
  {/* Global Command Palette (⌘K) Modal */}

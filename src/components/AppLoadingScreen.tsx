@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useReducedMotion } from '@/theme/useReducedMotion';
 
-const FAVICON_ASSET = require('../../assets/images/favicon.png');
+const FAVICON_ASSET = require('../../assets/images/lioris_emblem.png');
 
 interface AppLoadingScreenProps {
   message?: string;

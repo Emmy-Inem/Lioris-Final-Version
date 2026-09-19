@@ -131,7 +131,7 @@ export function DesktopSidebar() {
   const navItems: (NavItem & { flagKey?: FeatureKey })[] =
     role === 'admin'
       ? adminNavItems
-      : role === 'staff'
+      : role === 'staff' && isFeatureEnabled('staff_role')
       ? staffNavItems
       : role === 'alumni'
       ? alumniNavItems
