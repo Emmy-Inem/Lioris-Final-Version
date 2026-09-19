@@ -61,7 +61,7 @@ BEGIN
             v_domain_campus := public.campus_for_email(v_user_email);
         EXCEPTION WHEN OTHERS THEN
             v_domain_campus := NULL;
-        END IF;
+        END;
 
         IF v_domain_campus IS NOT NULL AND v_domain_campus <> v_clean_code AND v_caller_role <> 'admin' THEN
             RAISE EXCEPTION 'Institutional email accounts are locked to their official university domain: %', v_domain_campus;
@@ -166,7 +166,7 @@ BEGIN
                     v_domain_campus := public.campus_for_email(OLD.email);
                 EXCEPTION WHEN OTHERS THEN
                     v_domain_campus := NULL;
-                END IF;
+                END;
 
                 IF v_domain_campus IS NOT NULL AND v_domain_campus <> NEW.campus_code THEN
                     -- Locked to official university email domain
