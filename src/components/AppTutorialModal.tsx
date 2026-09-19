@@ -10,7 +10,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
 
-const STORAGE_KEY_PREFIX = 'lioris_bottom_nav_tour_';
+const STORAGE_KEY_PREFIX = 'lioris_nav_walkthrough_';
 
 async function getStorageItem(key: string): Promise<string | null> {
   if (Platform.OS === 'web') {
@@ -37,10 +37,8 @@ interface NavStep {
   tabName: string;
   badge: string;
   title: string;
-  emoji: string;
   iconActive: keyof typeof Ionicons.glyphMap;
   iconInactive: keyof typeof Ionicons.glyphMap;
-  color: string;
   simpleText: string;
   points: { icon: keyof typeof Ionicons.glyphMap; text: string }[];
 }
@@ -48,58 +46,50 @@ interface NavStep {
 const STUDENT_STEPS: NavStep[] = [
   {
     tabName: 'Home',
-    badge: 'TAB 1 OF 4',
-    title: 'Home: Your Main Screen',
-    emoji: '🏠',
+    badge: 'Tab 1 of 4',
+    title: 'Home Dashboard',
     iconActive: 'home',
     iconInactive: 'home-outline',
-    color: '#1A3DFF',
-    simpleText: 'This is your starting point! Check fresh campus updates, see announcements, and tap handy shortcuts.',
+    simpleText: 'Your main screen for daily updates, campus announcements, and quick access to student portals.',
     points: [
-      { icon: 'flash', text: 'Quick links to student portals' },
-      { icon: 'megaphone', text: 'Important school news & alerts' },
+      { icon: 'megaphone-outline', text: 'Campus news and announcements' },
+      { icon: 'link-outline', text: 'Quick shortcuts to academic portals' },
     ],
   },
   {
     tabName: 'Forum',
-    badge: 'TAB 2 OF 4',
-    title: 'Forum: The Campus Chat Room',
-    emoji: '💬',
+    badge: 'Tab 2 of 4',
+    title: 'Campus Forum',
     iconActive: 'chatbubbles',
     iconInactive: 'chatbubbles-outline',
-    color: '#8B5CF6',
-    simpleText: 'Talk with other students in your school! Ask course questions, share study tips, and make friends.',
+    simpleText: 'Discuss academic topics, ask course questions, and connect with students in your department.',
     points: [
-      { icon: 'help-circle', text: 'Ask questions about your courses' },
-      { icon: 'people', text: 'Meet students in your department' },
+      { icon: 'help-circle-outline', text: 'Ask and answer course questions' },
+      { icon: 'people-outline', text: 'Department and campus discussions' },
     ],
   },
   {
     tabName: 'Events',
-    badge: 'TAB 3 OF 4',
-    title: 'Events: Fun & Meetups',
-    emoji: '📅',
+    badge: 'Tab 3 of 4',
+    title: 'Campus Events',
     iconActive: 'calendar',
     iconInactive: 'calendar-outline',
-    color: '#F59E0B',
-    simpleText: 'Find fun activities happening on campus! See sports, workshops, parties, and club hangouts.',
+    simpleText: 'Discover academic seminars, faculty workshops, and campus activities happening around your school.',
     points: [
-      { icon: 'ticket', text: 'Save your spot in one tap' },
-      { icon: 'location', text: 'See exactly where & when to go' },
+      { icon: 'calendar-outline', text: 'Upcoming event dates and schedules' },
+      { icon: 'location-outline', text: 'Venues, halls, and session links' },
     ],
   },
   {
     tabName: 'Resources',
-    badge: 'TAB 4 OF 4',
-    title: 'Resources: Your Study Backpack',
-    emoji: '📚',
+    badge: 'Tab 4 of 4',
+    title: 'Academic Resources',
     iconActive: 'folder',
     iconInactive: 'folder-outline',
-    color: '#10B981',
-    simpleText: 'Everything you need to pass your exams! Download past test papers, class handouts, and revision notes.',
+    simpleText: 'Access study materials including past examination papers, lecture modules, and course syllabus notes.',
     points: [
-      { icon: 'document-text', text: 'Real past exam papers to practice' },
-      { icon: 'download', text: 'Download notes to study anytime' },
+      { icon: 'document-text-outline', text: 'Past examination question archives' },
+      { icon: 'download-outline', text: 'Lecture handouts and study notes' },
     ],
   },
 ];
@@ -107,64 +97,56 @@ const STUDENT_STEPS: NavStep[] = [
 const ALUMNI_STEPS: NavStep[] = [
   {
     tabName: 'Home',
-    badge: 'TAB 1 OF 4',
-    title: 'Home: Your Alumni Desk',
-    emoji: '🏠',
+    badge: 'Tab 1 of 4',
+    title: 'Alumni Dashboard',
     iconActive: 'home',
     iconInactive: 'home-outline',
-    color: '#1A3DFF',
-    simpleText: 'Your main dashboard to stay connected with your university and see top network highlights.',
+    simpleText: 'Your main dashboard to stay connected with your university, campus initiatives, and alumni news.',
     points: [
-      { icon: 'school', text: 'University news & projects' },
-      { icon: 'flash', text: 'Quick shortcuts for alumni' },
+      { icon: 'school-outline', text: 'University news and initiatives' },
+      { icon: 'apps-outline', text: 'Quick alumni workspace tools' },
     ],
   },
   {
     tabName: 'Careers',
-    badge: 'TAB 2 OF 4',
-    title: 'Careers: Job Board & Hiring',
-    emoji: '💼',
+    badge: 'Tab 2 of 4',
+    title: 'Career Board',
     iconActive: 'briefcase',
     iconInactive: 'briefcase-outline',
-    color: '#0284C7',
-    simpleText: 'Share open job vacancies, find new career opportunities, or hire smart students from your school.',
+    simpleText: 'Browse open opportunities, share job vacancies, and recruit graduates from your alma mater.',
     points: [
-      { icon: 'briefcase', text: 'Browse & post job vacancies' },
-      { icon: 'ribbon', text: 'Help junior graduates get hired' },
+      { icon: 'briefcase-outline', text: 'Browse and post job vacancies' },
+      { icon: 'ribbon-outline', text: 'Support fresh graduates with employment' },
     ],
   },
   {
     tabName: 'Forum',
-    badge: 'TAB 3 OF 4',
-    title: 'Forum: Alumni Discussions',
-    emoji: '💬',
+    badge: 'Tab 3 of 4',
+    title: 'Alumni Forum',
     iconActive: 'chatbubbles',
     iconInactive: 'chatbubbles-outline',
-    color: '#8B5CF6',
-    simpleText: 'Catch up with old classmates, exchange industry news, and answer questions from students.',
+    simpleText: 'Network with fellow graduates, discuss industry trends, and share professional guidance.',
     points: [
-      { icon: 'chatbubbles', text: 'Connect with fellow alumni' },
-      { icon: 'bulb', text: 'Share career advice & wisdom' },
+      { icon: 'chatbubbles-outline', text: 'Professional alumni discussions' },
+      { icon: 'bulb-outline', text: 'Industry experience and guidance' },
     ],
   },
   {
     tabName: 'Events',
-    badge: 'TAB 4 OF 4',
-    title: 'Events: Reunions & Talks',
-    emoji: '📅',
+    badge: 'Tab 4 of 4',
+    title: 'Alumni Events',
     iconActive: 'calendar',
     iconInactive: 'calendar-outline',
-    color: '#F59E0B',
-    simpleText: 'Join alumni homecomings, industry workshops, and guest lectures hosted by your school.',
+    simpleText: 'Attend alumni reunions, homecoming gatherings, and professional development sessions.',
     points: [
-      { icon: 'people', text: 'Alumni reunions & dinners' },
-      { icon: 'mic', text: 'Live webinars & tech talks' },
+      { icon: 'people-outline', text: 'Reunions and networking dinners' },
+      { icon: 'mic-outline', text: 'Webinars and keynote lectures' },
     ],
   },
 ];
 
 export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTutorialModalProps) {
-  const { colors, spacing, isDark } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
   const [visible, setVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -240,23 +222,23 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
         />
 
         <GlassCard
-          radius={26}
+          radius={24}
           padded={false}
           style={{
             width: '100%',
-            maxWidth: 440,
+            maxWidth: 420,
             overflow: 'hidden',
             backgroundColor: isDark ? '#0F1A30' : '#FFFFFF',
-            borderWidth: 1.5,
+            borderWidth: 1,
             borderColor: colors.border,
           }}
         >
-          {/* Top Banner with Close Button */}
+          {/* Header Row with Badge & Close */}
           <View
             style={{
-              paddingTop: spacing.lg,
-              paddingBottom: spacing.sm,
-              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.md,
+              paddingBottom: spacing.xs,
+              paddingHorizontal: spacing.md,
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -267,11 +249,13 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
             <Pressable
               onPress={handleDismiss}
               hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Close navigation guide"
               style={{
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
@@ -281,17 +265,17 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
           </View>
 
           {/* Body Content */}
-          <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
-            {/* Visual Interactive Bottom Bar Mockup */}
+          <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
+            {/* Standard Bottom Bar Replica */}
             <View
               style={{
                 marginTop: spacing.xs,
                 marginBottom: spacing.md,
                 padding: spacing.xs,
-                borderRadius: 20,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                borderRadius: 18,
+                backgroundColor: isDark ? '#0A1326' : '#F1F5F9',
                 borderWidth: 1,
-                borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                borderColor: colors.border,
               }}
             >
               <AppText
@@ -299,13 +283,13 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
                 tone="secondary"
                 style={{
                   textAlign: 'center',
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: '600',
+                  letterSpacing: 0.8,
                   marginBottom: 6,
-                  letterSpacing: 0.5,
                 }}
               >
-                👇 BOTTOM NAVIGATION BAR
+                BOTTOM NAVIGATION
               </AppText>
 
               <View
@@ -313,10 +297,12 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'space-around',
-                  backgroundColor: isDark ? '#0A1326' : '#F1F5F9',
-                  borderRadius: 16,
-                  paddingVertical: 7,
-                  paddingHorizontal: 6,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
+                  borderRadius: 14,
+                  paddingVertical: 6,
+                  paddingHorizontal: 4,
+                  borderWidth: 1,
+                  borderColor: colors.border,
                 }}
               >
                 {steps.map((s, idx) => {
@@ -328,26 +314,30 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
                         haptics.light();
                         setCurrentStep(idx);
                       }}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={s.tabName}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 5,
                         paddingVertical: 6,
-                        paddingHorizontal: isActive ? 12 : 8,
-                        borderRadius: 12,
-                        backgroundColor: isActive ? s.color : 'transparent',
+                        paddingHorizontal: isActive ? 10 : 7,
+                        borderRadius: 10,
+                        backgroundColor: isActive ? colors.brandPrimary : 'transparent',
                       }}
                     >
                       <Ionicons
                         name={isActive ? s.iconActive : s.iconInactive}
-                        size={18}
+                        size={17}
                         color={isActive ? '#FFFFFF' : colors.textSecondary}
                       />
                       {isActive && (
                         <AppText
+                          variant="caption"
                           weight="bold"
                           tone="inverse"
-                          style={{ fontSize: 12 }}
+                          style={{ fontSize: 11 }}
                         >
                           {s.tabName}
                         </AppText>
@@ -358,52 +348,48 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
               </View>
             </View>
 
-            {/* Big Friendly Hero Icon */}
-            <View style={{ alignItems: 'center', marginVertical: spacing.sm }}>
+            {/* Clean Standard Icon */}
+            <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
               <View
                 style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 36,
-                  backgroundColor: `${step.color}18`,
-                  borderWidth: 2,
-                  borderColor: `${step.color}45`,
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  backgroundColor: colors.pastelPrimaryBg,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name={step.iconActive} size={36} color={step.color} />
+                <Ionicons name={step.iconActive} size={26} color={colors.brandPrimary} />
               </View>
             </View>
 
-            {/* Title & Short Kid-Friendly Description */}
+            {/* Title & Concise Description */}
             <AppText
-              variant="h2"
+              variant="h3"
               weight="bold"
               style={{
                 textAlign: 'center',
-                marginBottom: 6,
-                fontSize: 19,
-                lineHeight: 25,
+                marginBottom: 4,
               }}
             >
               {step.title}
             </AppText>
 
             <AppText
+              variant="bodySmall"
               tone="secondary"
               style={{
-                fontSize: 14,
-                lineHeight: 20,
                 textAlign: 'center',
+                lineHeight: 19,
                 marginBottom: spacing.md,
               }}
             >
               {step.simpleText}
             </AppText>
 
-            {/* 2 Simple Feature Badges */}
-            <View style={{ gap: 8, marginBottom: spacing.md }}>
+            {/* Feature Bullet Rows */}
+            <View style={{ gap: 6, marginBottom: spacing.md }}>
               {step.points.map((pt, i) => (
                 <View
                   key={i}
@@ -412,22 +398,22 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
                     alignItems: 'center',
                     gap: 10,
                     backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                    paddingVertical: 9,
+                    paddingVertical: 8,
                     paddingHorizontal: 12,
-                    borderRadius: 12,
+                    borderRadius: radius.md,
                     borderWidth: 1,
-                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    borderColor: colors.border,
                   }}
                 >
-                  <Ionicons name={pt.icon} size={18} color={step.color} />
-                  <AppText weight="medium" style={{ fontSize: 13, flex: 1 }}>
+                  <Ionicons name={pt.icon} size={16} color={colors.brandPrimary} />
+                  <AppText variant="bodySmall" weight="medium" style={{ flex: 1 }}>
                     {pt.text}
                   </AppText>
                 </View>
               ))}
             </View>
 
-            {/* Dots Indicator */}
+            {/* Pagination Dots */}
             <View
               style={{
                 flexDirection: 'row',
@@ -441,16 +427,16 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
                 <View
                   key={i}
                   style={{
-                    width: i === currentStep ? 20 : 6,
+                    width: i === currentStep ? 18 : 6,
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: i === currentStep ? step.color : colors.border,
+                    backgroundColor: i === currentStep ? colors.brandPrimary : colors.border,
                   }}
                 />
               ))}
             </View>
 
-            {/* Buttons */}
+            {/* Action Buttons */}
             <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
                 {currentStep > 0 ? (
@@ -470,9 +456,9 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
                 )}
               </View>
 
-              <View style={{ flex: 1.6 }}>
+              <View style={{ flex: 1.5 }}>
                 <AppButton
-                  label={isLast ? 'Got it! 🎉' : 'Next Tab 👉'}
+                  label={isLast ? 'Done' : 'Next'}
                   variant="primary"
                   onPress={handleNext}
                   fullWidth
