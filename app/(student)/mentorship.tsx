@@ -1,5 +1,5 @@
-﻿import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import React, { useState } from'react';
+import { Alert, Linking, Modal, Pressable, ScrollView, View } from'react-native';
 import { Image } from'expo-image';
 import { router } from'expo-router';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -70,20 +70,47 @@ export default function StudentMentorshipScreen() {
               {...({ 'data-horizontal-scroll': 'true' } as any)}
             >
               {myApplications.map((app) => (
-                <SolidCard key={app.id} radius={12} style={{ width: 220 }}>
+                <SolidCard key={app.id} radius={14} style={{ width: 250, padding: 12 }}>
                   <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
                     {app.mentorName}
                   </AppText>
                   {app.focusArea ? (
                     <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
-                      Focus: {app.focusArea}
+                      Track: {app.focusArea}
                     </AppText>
                   ) : null}
-                  <View style={{ marginTop: 6 }}>
+                  {app.documentName ? (
+                    <Pressable
+                      onPress={() => {
+                        if (app.documentUrl) Linking.openURL(app.documentUrl);
+                      }}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel="View attached proposal"
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        marginTop: 4,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Ionicons name="document-attach" size={13} color={colors.brandPrimary} />
+                      <AppText variant="caption" tone="brand" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
+                        {app.documentName}
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                  <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Badge
                       label={app.status.toUpperCase()}
                       tone={app.status === 'active' ? 'success' : app.status === 'declined' ? 'critical' : 'warning'}
                     />
+                    {app.cadence ? (
+                      <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                        {app.cadence}
+                      </AppText>
+                    ) : null}
                   </View>
                 </SolidCard>
               ))}

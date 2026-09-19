@@ -261,6 +261,14 @@ export interface Mentorship {
  mentorName: string;
  status: MentorshipStatus;
  focusArea?: string | null;
+ academicLevel?: string | null;
+ pitch?: string | null;
+ goals?: string | null;
+ cadence?: string | null;
+ planOutline?: string | null;
+ documentUrl?: string | null;
+ documentName?: string | null;
+ createdAt?: string | null;
 }
 
 export type ReportStatus = 'open' | 'under_review' | 'resolved' | 'dismissed';

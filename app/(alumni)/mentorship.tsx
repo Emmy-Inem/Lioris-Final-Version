@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+import { Alert, Linking, Modal, Pressable, ScrollView, View } from'react-native';
 import { router } from'expo-router';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
@@ -131,16 +131,99 @@ export default function AlumniMentorshipScreen() {
                   <Badge label={m.status.toUpperCase()} tone={STATUS_TONE[m.status]} />
                 </View>
 
-                {m.focusArea ? (
-                  <View style={{ backgroundColor: colors.divider, padding: spacing.sm, borderRadius: radius.md, marginVertical: spacing.sm }}>
-                    <AppText variant="caption" weight="bold" tone="secondary">
-                      REQUESTED FOCUS:
-                    </AppText>
-                    <AppText variant="bodySmall" weight="medium" style={{ marginTop: 2 }}>
-                      {m.focusArea}
-                    </AppText>
+                {/* Proposal & Focus Details */}
+                <View style={{ backgroundColor: colors.divider, padding: spacing.sm, borderRadius: radius.md, marginVertical: spacing.sm, gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <AppText variant="caption" weight="bold" tone="secondary">
+                        TRACK:
+                      </AppText>
+                      <AppText variant="caption" weight="bold" tone="brand">
+                        {m.focusArea || 'Academic Guidance'}
+                      </AppText>
+                    </View>
+                    {m.academicLevel ? (
+                      <Badge label={m.academicLevel} tone="neutral" />
+                    ) : null}
                   </View>
-                ) : null}
+
+                  {m.pitch ? (
+                    <View style={{ marginTop: 2 }}>
+                      <AppText variant="caption" weight="bold" tone="secondary">
+                        STUDENT STATEMENT:
+                      </AppText>
+                      <AppText variant="bodySmall" style={{ marginTop: 2 }}>
+                        {m.pitch}
+                      </AppText>
+                    </View>
+                  ) : null}
+
+                  {m.goals ? (
+                    <View style={{ marginTop: 2 }}>
+                      <AppText variant="caption" weight="bold" tone="secondary">
+                        KEY GOALS:
+                      </AppText>
+                      <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 2 }}>
+                        {m.goals}
+                      </AppText>
+                    </View>
+                  ) : null}
+
+                  {m.cadence ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                      <AppText variant="caption" tone="secondary">
+                        Proposed Cadence: <AppText variant="caption" weight="bold">{m.cadence}</AppText>
+                      </AppText>
+                    </View>
+                  ) : null}
+
+                  {m.planOutline ? (
+                    <View style={{ marginTop: 2 }}>
+                      <AppText variant="caption" weight="bold" tone="secondary">
+                        PROPOSED ROADMAP:
+                      </AppText>
+                      <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                        {m.planOutline}
+                      </AppText>
+                    </View>
+                  ) : null}
+
+                  {/* Supporting Attached Document */}
+                  {m.documentUrl ? (
+                    <Pressable
+                      onPress={() => {
+                        if (m.documentUrl) Linking.openURL(m.documentUrl);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel="View student attached document"
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: 8,
+                        borderRadius: radius.sm,
+                        backgroundColor: colors.brandPrimary + '15',
+                        borderWidth: 1,
+                        borderColor: colors.brandPrimary + '35',
+                        marginTop: 4,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                        <Ionicons name="document-text" size={18} color={colors.brandPrimary} />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <AppText variant="caption" weight="bold" numberOfLines={1}>
+                            {m.documentName || 'Student Proposal / CV'}
+                          </AppText>
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                            Click to view attached document ↗
+                          </AppText>
+                        </View>
+                      </View>
+                      <Ionicons name="open-outline" size={16} color={colors.brandPrimary} />
+                    </Pressable>
+                  ) : null}
+                </View>
 
                 {m.status === 'pending' ? (
                   <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>

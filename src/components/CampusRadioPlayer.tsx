@@ -180,25 +180,29 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
       {/* Top Header Row */}
       <View style={styles.topRow}>
         <View style={styles.stationBadgeGroup}>
-          <View style={[styles.radioIconWrap, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : colors.brandPrimary + '15' }]}>
+          <View style={[styles.radioIconWrap, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : colors.brandPrimary + '15', flexShrink: 0 }]}>
             <Ionicons
               name="radio"
               size={15}
               color={radioState.isPlaying ? '#22c55e' : colors.brandPrimary}
             />
           </View>
-          <AppText variant="bodySmall" weight="bold" numberOfLines={1} style={{ fontSize: 13 }}>
+          <AppText variant="bodySmall" weight="bold" numberOfLines={1} style={{ fontSize: 13, flex: 1, minWidth: 0 }}>
             {current.name}
           </AppText>
-          <View style={[styles.liveBadge, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', borderColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.35)' : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)' }]}>
-            <View style={[styles.liveDot, { backgroundColor: radioState.isPlaying ? '#22c55e' : colors.textSecondary }]} />
-            <AppText variant="caption" weight="bold" style={{ color: radioState.isPlaying ? colors.success : colors.textSecondary, fontSize: 10, letterSpacing: 0.5 }}>
-              {radioState.isPlaying ? 'ON AIR' : radioState.isLoading ? 'CONNECTING' : 'PAUSED'}
-            </AppText>
-          </View>
-          <AppText variant="caption" tone="secondary" style={{ fontSize: 11, fontWeight: '600' }}>
-            {current.frequency}
-          </AppText>
+          {isDesktop && (
+            <>
+              <View style={[styles.liveBadge, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', borderColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.35)' : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)', flexShrink: 0 }]}>
+                <View style={[styles.liveDot, { backgroundColor: radioState.isPlaying ? '#22c55e' : colors.textSecondary }]} />
+                <AppText variant="caption" weight="bold" style={{ color: radioState.isPlaying ? colors.success : colors.textSecondary, fontSize: 10, letterSpacing: 0.5 }}>
+                  {radioState.isPlaying ? 'ON AIR' : radioState.isLoading ? 'CONNECTING' : 'PAUSED'}
+                </AppText>
+              </View>
+              <AppText variant="caption" tone="secondary" style={{ fontSize: 11, fontWeight: '600', flexShrink: 0 }}>
+                {current.frequency}
+              </AppText>
+            </>
+          )}
         </View>
 
         <View style={styles.headerActions}>
@@ -213,6 +217,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
                 backgroundColor: showStations ? colors.brandPrimary : colors.brandPrimary + '15',
                 borderColor: colors.brandPrimary + '30',
                 borderWidth: 1,
+                flexShrink: 0,
               },
             ]}
           >
@@ -224,7 +229,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
                 fontSize: 11,
               }}
             >
-              {showStations ? 'Close ▴' : 'Browse Stations ▾'}
+              {showStations ? 'Close ▴' : isDesktop ? 'Browse Stations ▾' : 'Browse ▾'}
             </AppText>
           </Pressable>
           <Pressable
@@ -232,17 +237,37 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
             accessibilityLabel="Minimise radio player"
             onPress={() => setMinimized(true)}
             hitSlop={8}
-            style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderRadius: 8 }]}
+            style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderRadius: 8, flexShrink: 0 }]}
           >
             <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
           </Pressable>
         </View>
       </View>
 
-      {/* Station Subtitle & Description */}
-      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 4, marginBottom: 8, fontSize: 11.5 }}>
-        {current.campusOrCity} • {current.description}
-      </AppText>
+      {/* Sub-header on mobile: Status Badge + Frequency + Description */}
+      {!isDesktop ? (
+        <View style={styles.mobileMetaRow}>
+          <View style={[styles.liveBadge, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', borderColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.35)' : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)', flexShrink: 0 }]}>
+            <View style={[styles.liveDot, { backgroundColor: radioState.isPlaying ? '#22c55e' : colors.textSecondary }]} />
+            <AppText variant="caption" weight="bold" style={{ color: radioState.isPlaying ? colors.success : colors.textSecondary, fontSize: 9.5, letterSpacing: 0.5 }}>
+              {radioState.isPlaying ? 'ON AIR' : radioState.isLoading ? 'CONNECTING' : 'PAUSED'}
+            </AppText>
+          </View>
+          <View style={[styles.freqPill, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)' }]}>
+            <AppText variant="caption" tone="secondary" style={{ fontSize: 10, fontWeight: '700' }}>
+              {current.frequency}
+            </AppText>
+          </View>
+          <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 11 }}>
+            {current.campusOrCity} • {current.description}
+          </AppText>
+        </View>
+      ) : (
+        /* Station Subtitle & Description on Desktop */
+        <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 4, marginBottom: 8, fontSize: 11.5 }}>
+          {current.campusOrCity} • {current.description}
+        </AppText>
+      )}
 
       {/* Error / Buffering Indicator */}
       {radioState.errorMessage ? (
@@ -396,10 +421,10 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
               <EqualizerVisualizer isPlaying={radioState.isPlaying} color={colors.brandPrimary} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
-              <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5 }}>
+              <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5, flexShrink: 1 }}>
                 {current.bitrate || 128} kbps • High-Fidelity
               </AppText>
-              <View style={[styles.hqPill, { backgroundColor: colors.brandPrimary + '15', borderColor: colors.brandPrimary + '30' }]}>
+              <View style={[styles.hqPill, { backgroundColor: colors.brandPrimary + '15', borderColor: colors.brandPrimary + '30', flexShrink: 0 }]}>
                 <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 9 }}>
                   HQ STEREO
                 </AppText>
@@ -494,6 +519,20 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     padding: 6,
+  },
+  mobileMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  freqPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    flexShrink: 0,
   },
   errorRow: {
     flexDirection: 'row',

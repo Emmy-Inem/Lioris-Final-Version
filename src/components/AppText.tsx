@@ -33,6 +33,7 @@ export function AppText({
  weight = 'regular',
  tone = 'primary',
  style,
+ ellipsizeMode = 'tail',
  ...rest
 }: AppTextProps) {
  const { colors } = useTheme();
@@ -67,6 +68,7 @@ export function AppText({
  return (
  <RNText
  accessibilityRole={isPressable ? 'button' : isHeading ? 'header' : undefined}
+ ellipsizeMode={ellipsizeMode}
  style={[computedStyle, style]}
  {...rest}
  />

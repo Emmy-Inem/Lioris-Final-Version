@@ -33,16 +33,32 @@ export async function listMentorships(): Promise<Mentorship[]> {
 
  if (error) throw error;
 
- const dbMentorships: Mentorship[] = (data ?? []).map((row: any) => ({
- id: row.id,
- studentId: row.student_id,
- studentName: row.student?.full_name || 'Student Mentee',
- mentorId: row.mentor_id,
- mentorName: row.mentor?.full_name || 'Verified Mentor',
- status: row.status as any,
- focusArea: row.focus_area,
- createdAt: row.created_at,
- }));
+  const dbMentorships: Mentorship[] = (data ?? []).map((row: any) => {
+    let parsed: any = null;
+    if (row.focus_area && typeof row.focus_area === 'string' && row.focus_area.startsWith('{')) {
+      try {
+        parsed = JSON.parse(row.focus_area);
+      } catch {}
+    }
+    return {
+      id: row.id,
+      studentId: row.student_id,
+      studentName: row.student?.full_name || 'Student Mentee',
+      studentDepartment: row.student?.department || null,
+      mentorId: row.mentor_id,
+      mentorName: row.mentor?.full_name || 'Verified Mentor',
+      status: row.status as any,
+      focusArea: parsed?.track || row.focus_area,
+      academicLevel: parsed?.level,
+      pitch: parsed?.pitch,
+      goals: parsed?.goals,
+      cadence: parsed?.cadence,
+      planOutline: parsed?.planOutline,
+      documentUrl: parsed?.documentUrl,
+      documentName: parsed?.documentName,
+      createdAt: row.created_at,
+    };
+  });
 
   const merged = [...dbMentorships];
   for (const item of [...locallyCreatedMentorships]) {
@@ -107,52 +123,117 @@ export async function searchMentors(query: MentorSearchQuery = {}): Promise<Ment
   }
 }
 
+export interface RequestMentorshipPayload {
+  mentorId: string;
+  focusArea: string;
+  academicLevel?: string;
+  pitch?: string;
+  goals?: string;
+  cadence?: string;
+  planOutline?: string;
+  documentUrl?: string;
+  documentName?: string;
+}
+
 /**
  * Throws if there's no authenticated student or the Supabase insert fails,
  * instead of quietly returning a fabricated "pending" request. Callers
  * must catch this and show a real error.
  */
 export async function requestMentorship(
- mentorId: string,
- focusArea?: string,
+  mentorIdOrPayload: string | RequestMentorshipPayload,
+  legacyFocusArea?: string,
 ): Promise<Mentorship> {
- const reqId = generateUUID();
+  const reqId = generateUUID();
 
- const { data: authData } = await supabase.auth.getUser();
- let studentId = authData?.user?.id;
- if (!studentId) {
- const stored = await getSessionUser();
- if (stored?.id) studentId = stored.id;
- }
+  const { data: authData } = await supabase.auth.getUser();
+  let studentId = authData?.user?.id;
+  if (!studentId) {
+    const stored = await getSessionUser();
+    if (stored?.id) studentId = stored.id;
+  }
 
- if (!studentId) {
- throw new Error('You need to be signed in to request a mentor.');
- }
+  if (!studentId) {
+    throw new Error('You need to be signed in to request a mentor.');
+  }
 
- const { error } = await supabase.from('mentorships').insert({
- id: reqId,
- student_id: studentId,
- mentor_id: mentorId,
- status: 'pending',
- focus_area: focusArea || 'Academic Guidance',
- });
+  const isPayloadObj = typeof mentorIdOrPayload === 'object';
+  const mentorId = isPayloadObj ? mentorIdOrPayload.mentorId : mentorIdOrPayload;
+  const focusArea = isPayloadObj ? mentorIdOrPayload.focusArea : (legacyFocusArea || 'Academic Guidance');
+  const academicLevel = isPayloadObj ? mentorIdOrPayload.academicLevel : undefined;
+  const pitch = isPayloadObj ? mentorIdOrPayload.pitch : undefined;
+  const goals = isPayloadObj ? mentorIdOrPayload.goals : undefined;
+  const cadence = isPayloadObj ? mentorIdOrPayload.cadence : undefined;
+  const planOutline = isPayloadObj ? mentorIdOrPayload.planOutline : undefined;
+  const documentUrl = isPayloadObj ? mentorIdOrPayload.documentUrl : undefined;
+  const documentName = isPayloadObj ? mentorIdOrPayload.documentName : undefined;
 
- if (error) {
- console.warn('[Mentorship] Request mentorship Supabase error:', error.message);
- throw new Error('Could not send this mentorship request. Please try again.');
- }
+  // Serialize structured proposal into focus_area JSON string so that all
+  // rich fields (goals, cadence, CV/document attachment, pitch) are reliably stored.
+  const storedFocusArea = JSON.stringify({
+    track: focusArea,
+    level: academicLevel,
+    pitch,
+    goals,
+    cadence,
+    planOutline,
+    documentUrl,
+    documentName,
+  });
 
- const created: Mentorship = {
- id: reqId,
- studentId,
- mentorId,
- mentorName: 'Verified Mentor',
- status: 'pending',
- focusArea,
- };
+  const { error } = await supabase.from('mentorships').insert({
+    id: reqId,
+    student_id: studentId,
+    mentor_id: mentorId,
+    status: 'pending',
+    focus_area: storedFocusArea,
+  });
 
- locallyCreatedMentorships = [...locallyCreatedMentorships, created];
- return created;
+  if (error) {
+    console.warn('[Mentorship] Request mentorship Supabase error:', error.message);
+    throw new Error('Could not send this mentorship request. Please try again.');
+  }
+
+  // Notify the mentor about the request and the attached proposal / document
+  try {
+    let studentName = 'A student';
+    const { data: studentProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', studentId)
+      .maybeSingle();
+    if (studentProfile?.full_name) studentName = studentProfile.full_name;
+
+    createNotification({
+      recipientId: mentorId,
+      type: 'system',
+      title: 'New Mentorship Request',
+      body: `${studentName} requested mentorship in ${focusArea}${documentName ? ` with attached document "${documentName}"` : ''}.`,
+      deepLinkPath: '/(alumni)/mentorship',
+    });
+  } catch (notifErr) {
+    console.warn('[Mentorship] Notification send failed:', notifErr);
+  }
+
+  const created: Mentorship = {
+    id: reqId,
+    studentId,
+    mentorId,
+    mentorName: 'Verified Mentor',
+    status: 'pending',
+    focusArea,
+    academicLevel,
+    pitch,
+    goals,
+    cadence,
+    planOutline,
+    documentUrl,
+    documentName,
+    createdAt: new Date().toISOString(),
+  };
+
+  locallyCreatedMentorships = [...locallyCreatedMentorships, created];
+  return created;
 }
 
 export async function respondToMentorshipRequest(

@@ -107,7 +107,7 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
               <View style={[styles.pinIconWrap, { backgroundColor: colors.brandPrimary + '18' }]}>
                 <Ionicons name="location" size={13} color={colors.brandPrimary} />
               </View>
-              <AppText variant="caption" weight="bold" numberOfLines={1} style={{ marginLeft: 6, fontSize: 13 }}>
+              <AppText variant="caption" weight="bold" numberOfLines={1} style={{ marginLeft: 6, fontSize: 13, flexShrink: 1 }}>
                 {weather.campus.name}
               </AppText>
               <Pressable
@@ -120,6 +120,7 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
                   {
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.10)',
                     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.90)',
+                    flexShrink: 0,
                   },
                 ]}
               >
@@ -129,7 +130,7 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
               </Pressable>
             </View>
 
-            <View style={[styles.liveBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.10)', borderColor: isDark ? 'rgba(34, 197, 94, 0.35)' : 'rgba(34, 197, 94, 0.25)' }]}>
+            <View style={[styles.liveBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.10)', borderColor: isDark ? 'rgba(34, 197, 94, 0.35)' : 'rgba(34, 197, 94, 0.25)', flexShrink: 0 }]}>
               <View style={styles.liveDot} />
               <AppText variant="caption" weight="bold" style={{ color: colors.success, fontSize: 10, letterSpacing: 0.5 }}>
                 LIVE METEO
