@@ -47,3 +47,9 @@ scratch/
 
 # Supabase CLI local link state (contains project ref, not for VCS)
 supabase/.temp/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
