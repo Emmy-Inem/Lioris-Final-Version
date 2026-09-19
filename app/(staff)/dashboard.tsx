@@ -58,11 +58,11 @@ export default function StaffDashboard() {
       ? campusCode
       : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
       ? profile.institutionCode
-      : 'UI';
+      : '';
 
   const { data: openReports } = useQuery({
     queryKey: ['reports', 'open', effectiveCampus],
-    queryFn: () => listReports({ status: 'open', institutionCode: effectiveCampus }),
+    queryFn: () => listReports({ status: 'open', institutionCode: effectiveCampus || undefined }),
   });
 
   const { data: pendingResources } = useQuery({

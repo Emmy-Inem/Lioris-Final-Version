@@ -61,16 +61,16 @@ export default function AlumniDashboard() {
       ? campusCode
       : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
       ? profile.institutionCode
-      : 'UI';
+      : '';
 
   const { data: posts } = useQuery({
     queryKey: ['feed', 'alumni-dash', effectiveCampus],
-    queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus, viewScope: 'campus' }),
+    queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus || undefined, viewScope: effectiveCampus ? 'campus' : 'global' }),
   });
 
   const { data: jobs } = useQuery({
     queryKey: ['jobs', 'alumni-dash', effectiveCampus],
-    queryFn: () => listJobs({ campusCode: effectiveCampus }),
+    queryFn: () => listJobs({ campusCode: effectiveCampus || undefined }),
     enabled: isFeatureEnabled('career_page'),
   });
 

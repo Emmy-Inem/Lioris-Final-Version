@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Alert, Modal, RefreshControl } from 'react-native';
+import { ScrollView, View, Pressable, Alert, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,8 +29,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useCampusScope } from '@/hooks/useCampusScope';
-import * as ImagePicker from 'expo-image-picker';
-import { getMyProfile, updateProfileImages, uploadAvatarImage, uploadCoverImage } from '@/api/profile';
+import { getMyProfile } from '@/api/profile';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
 import { listResources } from '@/api/resources';
@@ -39,23 +38,6 @@ import { listPortalLinks } from '@/api/portalLinks';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
-const COVER_PRESETS = [
-  { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
-  { id: 'campus_library_study', label: 'University Library', src: require('../../assets/images/campus_library_study.jpg') },
-  { id: 'student_rep_group', label: 'Student Senate', src: require('../../assets/images/student_rep_group.jpg') },
-  { id: 'event_tech_hackathon', label: 'Hackfest Arena', src: require('../../assets/images/event_tech_hackathon.jpg') },
-  { id: 'hero_student_3d', label: 'Futuristic Studio', src: require('../../assets/images/hero_student_3d.jpg') },
-];
-
-const AVATAR_PRESETS = [
-  { id: 'avatar_male', label: 'Male Student', src: require('../../assets/images/avatar_male.jpg') },
-  { id: 'avatar_female', label: 'Female Student', src: require('../../assets/images/avatar_female.jpg') },
-  { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
-  { id: 'avatar_female_2', label: 'Science Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
-  { id: 'avatar_mentor', label: 'Class Representative', src: require('../../assets/images/avatar_mentor.jpg') },
-  { id: 'class_rep_portrait', label: 'Department Executive', src: require('../../assets/images/class_rep_portrait.jpg') },
-];
-
 export default function StudentDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
@@ -63,7 +45,6 @@ export default function StudentDashboard() {
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { campusCode, homeInstitutionCode } = useCampusScope();
-  const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [campusMapOpen, setCampusMapOpen] = useState(false);
@@ -81,181 +62,40 @@ export default function StudentDashboard() {
       ? campusCode
       : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
       ? profile.institutionCode
-      : 'UI';
+      : '';
 
   const { data: recentPosts } = useQuery({
     queryKey: ['posts', 'dashboard-feed', effectiveCampus],
-    queryFn: () => listFeedPosts({ scope: 'student', viewerInstitutionCode: effectiveCampus, viewScope: 'campus' }),
+    queryFn: () => listFeedPosts({ scope: 'student', viewerInstitutionCode: effectiveCampus || undefined, viewScope: effectiveCampus ? 'campus' : 'global' }),
   });
 
   const { data: events } = useQuery({
     queryKey: ['events', 'student', effectiveCampus],
-    queryFn: () => listEvents({ scope: 'student', campusCode: effectiveCampus }),
+    queryFn: () => listEvents({ scope: 'student', campusCode: effectiveCampus || undefined }),
     enabled: isFeatureEnabled('campus_events'),
   });
 
   const { data: resources } = useQuery({
     queryKey: ['resources', 'dashboard', effectiveCampus],
-    queryFn: () => listResources({ approvalStatus: 'approved', campusCode: effectiveCampus }),
+    queryFn: () => listResources({ approvalStatus: 'approved', campusCode: effectiveCampus || undefined }),
     enabled: isFeatureEnabled('academic_resources'),
   });
 
   const { data: studyGroups } = useQuery({
     queryKey: ['study-groups', 'dashboard', effectiveCampus],
-    queryFn: () => listStudyGroups(effectiveCampus),
+    queryFn: () => listStudyGroups(effectiveCampus || undefined),
     enabled: isFeatureEnabled('study_groups'),
   });
 
   const { data: portalLinks } = useQuery({
     queryKey: ['portal-links', 'dashboard', effectiveCampus],
-    queryFn: () => listPortalLinks(effectiveCampus),
+    queryFn: () => listPortalLinks(effectiveCampus || undefined),
   });
 
   const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Student';
-  const activeCover = profile?.coverUrl
-    ? (COVER_PRESETS.find((c) => c.id === profile.coverUrl)?.src
-       ?? ((profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:')) ? { uri: profile.coverUrl } : null))
+  const activeCover = profile?.coverUrl && (profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:'))
+    ? { uri: profile.coverUrl }
     : null;
-
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
-
-  async function handleSelectAvatar(presetId: string) {
-    if (!user) return;
-    await updateProfileImages(user.id, { avatarUrl: presetId });
-    await queryClient.invalidateQueries({ queryKey: ['profile'] });
-    await queryClient.invalidateQueries({ queryKey: ['feed'] });
-    setPhotoPickerOpen(false);
-  }
-
-  async function handleSelectCover(presetId: string) {
-    if (!user) return;
-    await updateProfileImages(user.id, { coverUrl: presetId });
-    await queryClient.invalidateQueries({ queryKey: ['profile'] });
-    setPhotoPickerOpen(false);
-  }
-
-  async function handlePickCustomAvatar() {
-    if (!user) return;
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.style.display = 'none';
-      document.body.appendChild(input);
-      input.onchange = async (e: Event) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        document.body.removeChild(input);
-        if (!file) return;
-        setUploadingAvatar(true);
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const ext = file.name.split('.').pop() || 'jpg';
-          const publicUrl = await uploadAvatarImage(user.id, arrayBuffer, ext);
-          await updateProfileImages(user.id, { avatarUrl: publicUrl });
-          await queryClient.invalidateQueries({ queryKey: ['profile'] });
-          await queryClient.invalidateQueries({ queryKey: ['feed'] });
-          setPhotoPickerOpen(false);
-          Alert.alert('Photo Uploaded', 'Your profile avatar has been updated.');
-        } catch (err: any) {
-          Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
-        } finally {
-          setUploadingAvatar(false);
-        }
-      };
-      input.click();
-      return;
-    }
-
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission Required', 'Please grant photo library access.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]?.uri) {
-      setUploadingAvatar(true);
-      try {
-        const res = await fetch(result.assets[0].uri);
-        const blob = await res.blob();
-        const publicUrl = await uploadAvatarImage(user.id, blob, 'jpg');
-        await updateProfileImages(user.id, { avatarUrl: publicUrl });
-        await queryClient.invalidateQueries({ queryKey: ['profile'] });
-        await queryClient.invalidateQueries({ queryKey: ['feed'] });
-        setPhotoPickerOpen(false);
-        Alert.alert('Photo Uploaded', 'Your profile avatar has been updated.');
-      } catch (err: any) {
-        Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
-      } finally {
-        setUploadingAvatar(false);
-      }
-    }
-  }
-
-  async function handlePickCustomCover() {
-    if (!user) return;
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.style.display = 'none';
-      document.body.appendChild(input);
-      input.onchange = async (e: Event) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        document.body.removeChild(input);
-        if (!file) return;
-        setUploadingCover(true);
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const ext = file.name.split('.').pop() || 'jpg';
-          const publicUrl = await uploadCoverImage(user.id, arrayBuffer, ext);
-          await updateProfileImages(user.id, { coverUrl: publicUrl });
-          await queryClient.invalidateQueries({ queryKey: ['profile'] });
-          setPhotoPickerOpen(false);
-          Alert.alert('Cover Updated', 'Your campus banner has been updated.');
-        } catch (err: any) {
-          Alert.alert('Upload Failed', err?.message || 'Could not upload cover image.');
-        } finally {
-          setUploadingCover(false);
-        }
-      };
-      input.click();
-      return;
-    }
-
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission Required', 'Please grant photo library access.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.85,
-    });
-    if (!result.canceled && result.assets[0]?.uri) {
-      setUploadingCover(true);
-      try {
-        const res = await fetch(result.assets[0].uri);
-        const blob = await res.blob();
-        const publicUrl = await uploadCoverImage(user.id, blob, 'jpg');
-        await updateProfileImages(user.id, { coverUrl: publicUrl });
-        await queryClient.invalidateQueries({ queryKey: ['profile'] });
-        setPhotoPickerOpen(false);
-        Alert.alert('Cover Updated', 'Your campus banner has been updated.');
-      } catch (err: any) {
-        Alert.alert('Upload Failed', err?.message || 'Could not upload cover image.');
-      } finally {
-        setUploadingCover(false);
-      }
-    }
-  }
 
   function handleOpenPortal(url: string) {
     haptics.light();
@@ -363,7 +203,6 @@ export default function StudentDashboard() {
                 left: 14,
                 right: 14,
                 flexDirection: 'row',
-                justifyContent: 'space-between',
                 alignItems: 'center',
               }}
             >
@@ -373,32 +212,13 @@ export default function StudentDashboard() {
                   alignItems: 'center',
                   gap: 5,
                   flexShrink: 1,
-                  marginRight: spacing.sm,
                 }}
               >
                 <Ionicons name="school" size={13} color="#68D391" style={heroTextShadowStyle} />
                 <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
-                  {profile?.institutionName ?? 'Campus Node'}
+                  {profile?.institutionName ?? 'Campus Workspace'}
                 </AppText>
               </View>
-
-              <Pressable
-                onPress={() => {
-                  haptics.light();
-                  setPhotoPickerOpen(true);
-                }}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  flexShrink: 0,
-                }}
-              >
-                <Ionicons name="camera-outline" size={13} color="#FFFFFF" style={heroTextShadowStyle} />
-                <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11 }, heroTextShadowStyle]}>
-                  Customize
-                </AppText>
-              </Pressable>
             </View>
           </View>
 
@@ -1070,134 +890,6 @@ export default function StudentDashboard() {
         )}
       </ScrollView>
 
-      {/* Photo Customizer Modal */}
-      <Modal visible={photoPickerOpen} transparent animationType="fade" onRequestClose={() => setPhotoPickerOpen(false)}>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            justifyContent: isDesktop ? 'center' : 'flex-end',
-            alignItems: isDesktop ? 'center' : 'stretch',
-            padding: isDesktop ? spacing.lg : 0,
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: isDesktop ? 24 : undefined,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: spacing.lg,
-              maxHeight: isDesktop ? '85%' : '80%',
-              maxWidth: isDesktop ? 540 : undefined,
-              width: isDesktop ? '100%' : undefined,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Ionicons name="images" size={20} color={colors.textSecondary} />
-                <AppText variant="h3" weight="bold">
-                  Customize App Photos
-                </AppText>
-              </View>
-              <Pressable onPress={() => setPhotoPickerOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
-              {/* Custom Upload Buttons */}
-              <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-                <View style={{ flex: 1 }}>
-                  <AppButton
-                    label={uploadingAvatar ? 'Uploading...' : 'Upload DP'}
-                    variant="secondary"
-                    onPress={handlePickCustomAvatar}
-                    loading={uploadingAvatar}
-                    fullWidth
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppButton
-                    label={uploadingCover ? 'Uploading...' : 'Upload Cover'}
-                    variant="secondary"
-                    onPress={handlePickCustomCover}
-                    loading={uploadingCover}
-                    fullWidth
-                  />
-                </View>
-              </View>
-
-              <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
-                OR CHOOSE AVATAR PRESET
-              </AppText>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
-                {AVATAR_PRESETS.map((preset) => {
-                  const isSelected = profile?.avatarUrl === preset.id;
-                  return (
-                    <Pressable
-                      key={preset.id}
-                      onPress={() => handleSelectAvatar(preset.id)}
-                      style={{
-                        flexGrow: 1,
-                        flexBasis: isDesktop ? '30%' : '47%',
-                        alignItems: 'center',
-                        padding: spacing.sm,
-                        borderRadius: radius.md,
-                        borderWidth: 2,
-                        borderColor: isSelected ? colors.brandPrimary : colors.border,
-                        backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.background,
-                      }}
-                    >
-                      <Image source={preset.src} style={{ width: 52, height: 52, borderRadius: 26, marginBottom: 4 }} />
-                      <AppText variant="caption" weight="bold" numberOfLines={1}>
-                        {preset.label}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
-                CHOOSE CAMPUS BANNER
-              </AppText>
-              <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
-                {COVER_PRESETS.map((preset) => {
-                  const isSelected = profile?.coverUrl === preset.id;
-                  return (
-                    <Pressable
-                      key={preset.id}
-                      onPress={() => handleSelectCover(preset.id)}
-                      style={{
-                        height: 75,
-                        borderRadius: radius.md,
-                        overflow: 'hidden',
-                        position: 'relative',
-                        borderWidth: 2,
-                        borderColor: isSelected ? colors.brandPrimary : colors.border,
-                      }}
-                    >
-                      <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingLeft: spacing.md }}>
-                        <AppText variant="bodySmall" weight="bold" tone="inverse">
-                          {preset.label}
-                        </AppText>
-                        {isSelected ? (
-                          <AppText variant="caption" weight="bold" tone="brand" style={{ color: '#68D391' }}>
-                            Active Banner
-                          </AppText>
-                        ) : null}
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
-
-            <AppButton label="Done" onPress={() => setPhotoPickerOpen(false)} />
-          </View>
-        </View>
-      </Modal>
       <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
       <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
       <CampusMapModal visible={campusMapOpen} onClose={() => setCampusMapOpen(false)} campusFilter={effectiveCampus} />

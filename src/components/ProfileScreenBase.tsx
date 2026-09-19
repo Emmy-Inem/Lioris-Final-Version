@@ -25,117 +25,108 @@ import { listMyPosts } from '@/api/posts';
 import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 
-const AVATAR_PRESETS = [
-  { id: 'avatar_male', label: 'Male Student', src: require('../../assets/images/avatar_male.jpg') },
-  { id: 'avatar_female', label: 'Female Student', src: require('../../assets/images/avatar_female.jpg') },
-  { id: 'avatar_male_2', label: 'Engineering Student', src: require('../../assets/images/avatar_male_2.jpg') },
-  { id: 'avatar_female_2', label: 'Honor Scholar', src: require('../../assets/images/avatar_female_2.jpg') },
-  { id: 'avatar_alumni_2', label: 'Alumni Founder', src: require('../../assets/images/avatar_alumni_2.jpg') },
-  { id: 'avatar_mentor', label: 'Faculty & Mentor', src: require('../../assets/images/avatar_mentor.jpg') },
-];
-
-const COVER_PRESETS = [
-  { id: 'campus_students_photo', label: 'Campus Quad', src: require('../../assets/images/campus_students_photo.jpg') },
-  { id: 'campus_library_study', label: 'University Library', src: require('../../assets/images/campus_library_study.jpg') },
-  { id: 'student_rep_group', label: 'Student Senate', src: require('../../assets/images/student_rep_group.jpg') },
-  { id: 'event_tech_hackathon', label: 'Hackfest Arena', src: require('../../assets/images/event_tech_hackathon.jpg') },
-  { id: 'hero_student_3d', label: 'Futuristic Studio', src: require('../../assets/images/hero_student_3d.jpg') },
-];
-
 const PROFILE_TABS = ['Posts & Activity', 'Academic & Credentials'] as const;
 
 export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const { colors, spacing, radius, isDark } = useTheme();
- const { user } = useAuth();
- const { isDesktop } = useResponsive();
- const insets = useSafeAreaInsets();
- const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
- const [activeTab, setActiveTab] = useState<(typeof PROFILE_TABS)[number]>('Posts & Activity');
- const [verificationModalOpen, setVerificationModalOpen] = useState(false);
- const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<(typeof PROFILE_TABS)[number]>('Posts & Activity');
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
 
- // Edit profile state
- const [editModalOpen, setEditModalOpen] = useState(false);
- const [editName, setEditName] = useState('');
- const [editDepartment, setEditDepartment] = useState('');
- const [editGradYear, setEditGradYear] = useState('');
- const [editBio, setEditBio] = useState('');
- const [editInterests, setEditInterests] = useState('');
- const [savingProfile, setSavingProfile] = useState(false);
+  // Edit profile state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editGradYear, setEditGradYear] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editInterests, setEditInterests] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
- const { data: profile } = useQuery({
- queryKey: ['profile', 'me', user?.id],
- queryFn: () => getMyProfile(user!),
- enabled: !!user,
- });
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
 
- const { data: myPosts, isLoading: postsLoading } = useQuery({
- queryKey: ['my-posts', user?.id],
- queryFn: () => listMyPosts(user?.id),
- enabled: !!user,
- });
+  const { data: myPosts, isLoading: postsLoading } = useQuery({
+    queryKey: ['my-posts', user?.id],
+    queryFn: () => listMyPosts(user?.id),
+    enabled: !!user,
+  });
 
- function handleOpenEdit() {
- if (!profile) return;
- setEditName(profile.fullName);
- setEditDepartment(profile.department ?? 'Computer Science');
- setEditGradYear(profile.graduationYear ? String(profile.graduationYear) : '2026');
- setEditBio(profile.bio ?? '');
- setEditInterests((profile.interests ?? []).join(', '));
- setEditModalOpen(true);
- }
+  function handleOpenEdit() {
+    if (!profile) return;
+    setEditName(profile.fullName);
+    setEditUsername(profile.username || '');
+    setEditDepartment(profile.department ?? 'Computer Science');
+    setEditGradYear(profile.graduationYear ? String(profile.graduationYear) : '2026');
+    setEditBio(profile.bio ?? '');
+    setEditInterests((profile.interests ?? []).join(', '));
+    setEditModalOpen(true);
+  }
 
- async function handleSaveProfile() {
- if (!user) return;
- setSavingProfile(true);
- try {
- const interestsArray = editInterests
- .split(',')
- .map((i) => i.trim())
- .filter(Boolean);
+  async function handleSaveProfile() {
+    if (!user) return;
+    const cleanUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9._]/g, '');
+    if (cleanUsername.length < 3) {
+      Alert.alert('Invalid Username', 'Username must be at least 3 characters long and contain only lowercase letters, numbers, dots, or underscores.');
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const interestsArray = editInterests
+        .split(',')
+        .map((i) => i.trim())
+        .filter(Boolean);
 
- await updateMyProfile(user.id, {
- fullName: editName.trim(),
- department: editDepartment.trim(),
- graduationYear: parseInt(editGradYear, 10) || null,
- bio: editBio.trim(),
- interests: interestsArray,
- });
+      await updateMyProfile(user.id, {
+        fullName: editName.trim(),
+        username: cleanUsername,
+        department: editDepartment.trim(),
+        graduationYear: parseInt(editGradYear, 10) || null,
+        bio: editBio.trim(),
+        interests: interestsArray,
+      });
 
- await queryClient.invalidateQueries({ queryKey: ['profile'] });
- setEditModalOpen(false);
- Alert.alert('Profile Saved', 'Your public academic profile details have been updated.');
- } catch (err: any) {
- Alert.alert('Error', err?.message || 'Could not update profile details.');
- } finally {
- setSavingProfile(false);
- }
- }
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setEditModalOpen(false);
+      Alert.alert('Profile Saved', 'Your public academic profile details have been updated.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not update profile details.');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
- async function handleSelectPresetAvatar(presetId: string) {
- if (!user) return;
- try {
- await updateProfileImages(user.id, { avatarUrl: presetId });
- await queryClient.invalidateQueries({ queryKey: ['profile'] });
- setPhotoPickerOpen(false);
- Alert.alert('Avatar Updated', 'New profile avatar applied.');
- } catch (err: any) {
- Alert.alert('Error', err?.message || 'Could not apply avatar.');
- }
- }
+  async function handleRemoveAvatar() {
+    if (!user) return;
+    try {
+      await updateProfileImages(user.id, { avatarUrl: null });
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setPhotoPickerOpen(false);
+      Alert.alert('Avatar Removed', 'Your profile now uses the generic initial badge.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not remove avatar.');
+    }
+  }
 
- async function handleSelectPresetCover(presetId: string) {
- if (!user) return;
- try {
- await updateProfileImages(user.id, { coverUrl: presetId });
- await queryClient.invalidateQueries({ queryKey: ['profile'] });
- setPhotoPickerOpen(false);
- Alert.alert('Campus Banner Updated', 'New cover banner applied.');
- } catch (err: any) {
- Alert.alert('Error', err?.message || 'Could not apply cover.');
- }
- }
+  async function handleRemoveCover() {
+    if (!user) return;
+    try {
+      await updateProfileImages(user.id, { coverUrl: null });
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setPhotoPickerOpen(false);
+      Alert.alert('Cover Removed', 'Your profile now uses the generic cover placeholder.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not remove cover image.');
+    }
+  }
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -303,13 +294,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  );
  }
 
-  const activeCover = profile.coverUrl
-    ? (COVER_PRESETS.find((c) => c.id === profile.coverUrl)?.src
-       ?? ((profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:')) ? { uri: profile.coverUrl } : null))
+  const activeCover = profile.coverUrl && (profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:'))
+    ? { uri: profile.coverUrl }
     : null;
-
-  const handleSelectAvatar = handleSelectPresetAvatar;
-  const handleSelectCover = handleSelectPresetCover;
 
   return (
     <ScreenContainer noPadding glow={true}>
@@ -634,7 +621,6 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             width: '100%',
             maxWidth: 540,
             alignSelf: 'center',
-            maxHeight: '80%',
           }}
         >
           {!isDesktop && (
@@ -651,9 +637,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           )}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Ionicons name="images" size={20} color={colors.textSecondary} />
+              <Ionicons name="images-outline" size={20} color={colors.brandPrimary} />
               <AppText variant="h3" weight="bold">
-                Customize Photos
+                Update Profile Photos
               </AppText>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setPhotoPickerOpen(false)} hitSlop={8}>
@@ -661,97 +647,115 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </Pressable>
           </View>
 
-          <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
-            {/* Custom Upload Buttons */}
-            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-              <View style={{ flex: 1 }}>
-                <AppButton
-                  label={uploadingAvatar ? 'Uploading...' : 'Upload DP'}
-                  variant="secondary"
-                  onPress={handlePickCustomAvatar}
-                  loading={uploadingAvatar}
-                  fullWidth
-                />
+          <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
+            {/* Profile Avatar Card */}
+            <View
+              style={{
+                padding: spacing.md,
+                borderRadius: radius.md,
+                backgroundColor: colors.divider,
+                borderWidth: 1,
+                borderColor: colors.border,
+                gap: spacing.sm,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={48} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText weight="bold" variant="bodySmall">
+                    Profile Photo
+                  </AppText>
+                  <AppText tone="secondary" variant="caption">
+                    {profile.avatarUrl ? 'Custom photo active' : 'Default initials avatar'}
+                  </AppText>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <AppButton
-                  label={uploadingCover ? 'Uploading...' : 'Upload Cover'}
-                  variant="secondary"
-                  onPress={handlePickCustomCover}
-                  loading={uploadingCover}
-                  fullWidth
-                />
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <AppButton
+                    label={uploadingAvatar ? 'Uploading…' : 'Upload Photo'}
+                    variant="primary"
+                    size="sm"
+                    onPress={handlePickCustomAvatar}
+                    loading={uploadingAvatar}
+                    fullWidth
+                  />
+                </View>
+                {profile.avatarUrl ? (
+                  <View style={{ flex: 1 }}>
+                    <AppButton
+                      label="Remove Photo"
+                      variant="ghost"
+                      size="sm"
+                      onPress={handleRemoveAvatar}
+                      fullWidth
+                    />
+                  </View>
+                ) : null}
               </View>
             </View>
 
-            {/* Avatar Selector */}
-            <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
-              OR CHOOSE AVATAR PRESET
-            </AppText>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingRight: spacing.md, marginBottom: spacing.lg }}>
-              {AVATAR_PRESETS.map((preset) => {
-                const isSelected = profile.avatarUrl === preset.id;
-                return (
-                  <Pressable
-                    key={preset.id}
-                    onPress={() => handleSelectAvatar(preset.id)}
-                    style={{
-                      width: 90,
-                      alignItems: 'center',
-                      padding: spacing.sm,
-                      borderRadius: radius.md,
-                      borderWidth: 2,
-                      borderColor: isSelected ? colors.brandPrimary : colors.border,
-                      backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.background,
-                    }}
-                  >
-                    <Image source={preset.src} contentFit="cover" alt="" style={{ width: 56, height: 56, borderRadius: 28, marginBottom: 4 }} />
-                    <AppText variant="caption" weight="bold" numberOfLines={1}>
-                      {preset.label}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            {/* Cover Banner Selector */}
-            <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
-              CHOOSE CAMPUS BANNER
-            </AppText>
-            <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
-              {COVER_PRESETS.map((preset) => {
-                const isSelected = profile.coverUrl === preset.id;
-                return (
-                  <Pressable
-                    key={preset.id}
-                    onPress={() => handleSelectCover(preset.id)}
-                    style={{
-                      height: 75,
-                      borderRadius: radius.md,
-                      overflow: 'hidden',
-                      position: 'relative',
-                      borderWidth: 2,
-                      borderColor: isSelected ? colors.brandPrimary : colors.border,
-                    }}
-                  >
-                    <Image source={preset.src} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', paddingLeft: spacing.md }}>
-                      <AppText variant="bodySmall" weight="bold" tone="inverse">
-                        {preset.label}
-                      </AppText>
-                      {isSelected ? (
-                        <AppText variant="caption" weight="bold" tone="brand" style={{ color: '#68D391' }}>
-                          Active Cover
-                        </AppText>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                );
-              })}
+            {/* Cover Banner Card */}
+            <View
+              style={{
+                padding: spacing.md,
+                borderRadius: radius.md,
+                backgroundColor: colors.divider,
+                borderWidth: 1,
+                borderColor: colors.border,
+                gap: spacing.sm,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  style={{
+                    width: 48,
+                    height: 32,
+                    borderRadius: radius.sm,
+                    backgroundColor: colors.brandPrimary,
+                    opacity: 0.8,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="image" size={18} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText weight="bold" variant="bodySmall">
+                    Campus Cover Banner
+                  </AppText>
+                  <AppText tone="secondary" variant="caption">
+                    {activeCover ? 'Custom banner active' : 'Default banner placeholder'}
+                  </AppText>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <AppButton
+                    label={uploadingCover ? 'Uploading…' : 'Upload Banner'}
+                    variant="primary"
+                    size="sm"
+                    onPress={handlePickCustomCover}
+                    loading={uploadingCover}
+                    fullWidth
+                  />
+                </View>
+                {profile.coverUrl ? (
+                  <View style={{ flex: 1 }}>
+                    <AppButton
+                      label="Remove Banner"
+                      variant="ghost"
+                      size="sm"
+                      onPress={handleRemoveCover}
+                      fullWidth
+                    />
+                  </View>
+                ) : null}
+              </View>
             </View>
-          </ScrollView>
+          </View>
 
-          <AppButton label="Done" onPress={() => setPhotoPickerOpen(false)} />
+          <AppButton label="Done" variant="secondary" onPress={() => setPhotoPickerOpen(false)} />
         </View>
       </View>
     </Modal>
@@ -773,8 +777,17 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </Pressable>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flex: 1, width: '100%', maxHeight: 380 }}>
-            <AppTextField label="Full Name" value={editName} onChangeText={setEditName} />
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flex: 1, width: '100%', maxHeight: 420 }}>
+            <AppTextField label="Full Name" value={editName} onChangeText={setEditName} placeholder="e.g. Adeyemi John" />
+            <AppTextField
+              label="Username"
+              value={editUsername}
+              onChangeText={(t) => setEditUsername(t.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="e.g. adeyemi.dev"
+              helperText="Only lowercase letters, numbers, dots, and underscores."
+            />
             <DepartmentPicker value={editDepartment || null} onChange={setEditDepartment} />
             <AppTextField label="Graduation Year" value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />
             <AppTextField label="Skills & Interests (comma-separated)" value={editInterests} onChangeText={setEditInterests} />
@@ -786,7 +799,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             <AppButton
               label="Save Changes"
               loading={savingProfile}
-              disabled={!editName.trim()}
+              disabled={!editName.trim() || editUsername.trim().length < 3}
               onPress={handleSaveProfile}
             />
           </View>

@@ -103,12 +103,12 @@ export default function ResourcesScreen() {
       ? homeInstitutionCode
       : campusCode && campusCode !== 'GLOBAL'
       ? campusCode
-      : 'UI';
+      : '';
 
- const { data: portalLinks = [] } = useQuery({
- queryKey: ['portalLinks', effectiveCampus],
- queryFn: () => listPortalLinks(effectiveCampus),
- });
+  const { data: portalLinks = [] } = useQuery({
+    queryKey: ['portalLinks', effectiveCampus],
+    queryFn: () => listPortalLinks(effectiveCampus || undefined),
+  });
 
  const { data: resources, isLoading, refetch, isRefetching } = useQuery({
  queryKey: ['resources', debouncedQuery, filters, campusCode],

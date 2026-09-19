@@ -317,22 +317,37 @@ export async function updateMyProfile(
  const dbPatch: any = {
  updated_at: new Date().toISOString(),
  };
- if (patch.fullName !== undefined) dbPatch.full_name = patch.fullName;
- if (patch.bio !== undefined) dbPatch.bio = patch.bio;
- if (patch.department !== undefined) dbPatch.department = patch.department;
-  if (patch.faculty !== undefined) dbPatch.faculty = patch.faculty;
-  if (patch.academicLevel !== undefined) dbPatch.level = patch.academicLevel;
- if (patch.interests !== undefined) dbPatch.interests = patch.interests;
- if (patch.institutionCode !== undefined) dbPatch.campus_code = patch.institutionCode;
- if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
- if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
+    if (patch.fullName !== undefined) dbPatch.full_name = patch.fullName.trim();
+    if (patch.username !== undefined) {
+      const cleanUsername = patch.username.trim().toLowerCase().replace(/[^a-z0-9._]/g, '');
+      dbPatch.username = cleanUsername;
+      updated.username = cleanUsername;
+    }
+    if (patch.bio !== undefined) dbPatch.bio = patch.bio;
+    if (patch.department !== undefined) dbPatch.department = patch.department;
+    if (patch.faculty !== undefined) dbPatch.faculty = patch.faculty;
+    if (patch.academicLevel !== undefined) dbPatch.level = patch.academicLevel;
+    if (patch.interests !== undefined) dbPatch.interests = patch.interests;
+    if (patch.institutionCode !== undefined) dbPatch.campus_code = patch.institutionCode;
+    if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
+    if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
 
- if (userId !== 'me') {
- await supabase.from('profiles').update(dbPatch).eq('id', userId);
- }
- } catch {
- // Session fallback
- }
+    if (userId !== 'me') {
+      const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
+      if (error) {
+        if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
+          throw new Error('This username is already taken. Please choose another.');
+        }
+        console.warn('[Profile] Supabase update warning:', error.message);
+        throw new Error(error.message);
+      }
+    }
+  } catch (err: any) {
+    if (err?.message?.includes('already taken') || (err?.message && !err.message.includes('fetch'))) {
+      throw err;
+    }
+    // Session fallback for offline/network
+  }
 
  return updated;
 }

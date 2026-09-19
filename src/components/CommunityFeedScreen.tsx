@@ -167,7 +167,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       ? homeInstitutionCode
       : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
       ? profile.institutionCode
-      : 'UI';
+      : undefined;
 
  const { data: rawPosts, isLoading, refetch, isRefetching } = useQuery({
  queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel],

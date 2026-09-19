@@ -10,6 +10,7 @@ import { Pressable } from'react-native';
 interface AppTextFieldProps extends TextInputProps {
  label?: string;
  error?: string;
+ helperText?: string;
  leftIcon?: keyof typeof Ionicons.glyphMap;
  showPasswordToggle?: boolean;
 }
@@ -17,6 +18,7 @@ interface AppTextFieldProps extends TextInputProps {
 export function AppTextField({
  label,
  error,
+ helperText,
  leftIcon,
  showPasswordToggle,
  secureTextEntry,
@@ -109,6 +111,14 @@ export function AppTextField({
  style={{ marginTop: spacing.xs }}
  >
  {error}
+ </AppText>
+ ) : helperText ? (
+ <AppText
+ variant="caption"
+ tone="secondary"
+ style={{ marginTop: spacing.xs }}
+ >
+ {helperText}
  </AppText>
  ) : null}
  </View>

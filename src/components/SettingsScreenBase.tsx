@@ -3,12 +3,13 @@ import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, St
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
 import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
+import { DepartmentPicker } from './DepartmentPicker';
 import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { Avatar } from './Avatar';
@@ -20,7 +21,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
-import { deleteMyAccount, exportMyData, getMyProfile } from '@/api/profile';
+import { deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from '@/api/profile';
 import { roleRequiresMfa } from '@/auth/mfaPolicy';
 import { DPO_EMAIL, DSR_RESPONSE_DAYS, PRIVACY_VERSION, TERMS_VERSION } from '@/constants/legal';
 import { LAUNCH_INSTITUTIONS, getInstitutionByCode } from '@/api/institutions';
@@ -152,6 +153,22 @@ export function SettingsScreen() {
   const [supportMessage, setSupportMessage] = useState('');
   const [submittingSupport, setSubmittingSupport] = useState(false);
 
+  const queryClient = useQueryClient();
+
+  // Edit profile modal state in Settings
+  const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [editProfileError, setEditProfileError] = useState<string | null>(null);
+
+  // Missing Settings states
+  const [emailDigestAlerts, setEmailDigestAlerts] = useState(true);
+  const [directoryDiscovery, setDirectoryDiscovery] = useState(true);
+  const [isSigningOutOthers, setIsSigningOutOthers] = useState(false);
+
   // Hydrate preferences on mount
   useEffect(() => {
     (async () => {
@@ -162,10 +179,16 @@ export function SettingsScreen() {
           if (typeof parsed.push === 'boolean') setPushEnabled(parsed.push);
           if (typeof parsed.announcements === 'boolean') setAnnouncementAlerts(parsed.announcements);
           if (typeof parsed.events === 'boolean') setEventAlerts(parsed.events);
+          if (typeof parsed.emailDigest === 'boolean') setEmailDigestAlerts(parsed.emailDigest);
         }
         const bio = await getStoredPref('lioris_setting_biometrics');
         if (bio) {
           setBiometricShield(JSON.parse(bio) === true);
+        }
+        const privacy = await getStoredPref('lioris_setting_privacy');
+        if (privacy) {
+          const parsed = JSON.parse(privacy);
+          if (typeof parsed.directoryDiscovery === 'boolean') setDirectoryDiscovery(parsed.directoryDiscovery);
         }
       } catch {}
     })();
@@ -346,29 +369,36 @@ export function SettingsScreen() {
     }
   }
 
-  function saveNotifPreference(updated: { push: boolean; announcements: boolean; events: boolean }) {
+  function saveNotifPreference(updated: { push: boolean; announcements: boolean; events: boolean; emailDigest?: boolean }) {
     setStoredPref('lioris_setting_notifications', JSON.stringify(updated));
   }
 
   function handleTogglePush(next: boolean) {
     haptics.light();
     setPushEnabled(next);
-    saveNotifPreference({ push: next, announcements: announcementAlerts, events: eventAlerts });
+    saveNotifPreference({ push: next, announcements: announcementAlerts, events: eventAlerts, emailDigest: emailDigestAlerts });
     toast.info(next ? 'Push notifications enabled' : 'Push notifications muted');
   }
 
   function handleToggleAnnouncements(next: boolean) {
     haptics.light();
     setAnnouncementAlerts(next);
-    saveNotifPreference({ push: pushEnabled, announcements: next, events: eventAlerts });
+    saveNotifPreference({ push: pushEnabled, announcements: next, events: eventAlerts, emailDigest: emailDigestAlerts });
     toast.info(next ? 'Campus announcements enabled' : 'Campus announcements muted');
   }
 
   function handleToggleEvents(next: boolean) {
     haptics.light();
     setEventAlerts(next);
-    saveNotifPreference({ push: pushEnabled, announcements: announcementAlerts, events: next });
+    saveNotifPreference({ push: pushEnabled, announcements: announcementAlerts, events: next, emailDigest: emailDigestAlerts });
     toast.info(next ? 'Event reminder alerts enabled' : 'Event reminders muted');
+  }
+
+  function handleToggleEmailDigest(next: boolean) {
+    haptics.light();
+    setEmailDigestAlerts(next);
+    saveNotifPreference({ push: pushEnabled, announcements: announcementAlerts, events: eventAlerts, emailDigest: next });
+    toast.info(next ? 'Weekly email digest enabled' : 'Weekly email digest muted');
   }
 
   function handleToggleBiometrics(next: boolean) {
@@ -376,6 +406,78 @@ export function SettingsScreen() {
     setBiometricShield(next);
     setStoredPref('lioris_setting_biometrics', JSON.stringify(next));
     toast.info(next ? 'Biometric security lock activated' : 'Biometric security lock disabled');
+  }
+
+  function handleToggleDirectoryDiscovery(next: boolean) {
+    haptics.light();
+    setDirectoryDiscovery(next);
+    setStoredPref('lioris_setting_privacy', JSON.stringify({ directoryDiscovery: next }));
+    toast.info(next ? 'Profile discovery in campus directory enabled' : 'Profile hidden from public campus directory');
+  }
+
+  async function handleSignOutOtherDevices() {
+    haptics.medium();
+    Alert.alert(
+      'Sign Out Other Devices?',
+      'This will immediately end all other active web and mobile sessions associated with your account.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out Others',
+          style: 'destructive',
+          onPress: async () => {
+            setIsSigningOutOthers(true);
+            try {
+              await supabase.auth.signOut({ scope: 'others' });
+              toast.success('Successfully signed out of all other sessions.');
+            } catch (err: any) {
+              toast.error(err?.message || 'Could not sign out other sessions.');
+            } finally {
+              setIsSigningOutOthers(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function handleOpenEditSettingsProfile() {
+    if (!profile) return;
+    setEditFullName(profile.fullName || user?.fullName || '');
+    setEditUsername(profile.username || user?.fullName?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || '');
+    setEditDepartment(profile.department || '');
+    setEditBio(profile.bio || '');
+    setEditProfileError(null);
+    setEditProfileModalOpen(true);
+  }
+
+  async function handleSaveSettingsProfile() {
+    const cleanUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9._]/g, '');
+    if (!editFullName.trim()) {
+      setEditProfileError('Full Name cannot be blank.');
+      return;
+    }
+    if (cleanUsername.length < 3) {
+      setEditProfileError('Username must be at least 3 characters (letters, numbers, dots, underscores).');
+      return;
+    }
+    setSavingProfile(true);
+    setEditProfileError(null);
+    try {
+      await updateMyProfile(user!.id, {
+        fullName: editFullName.trim(),
+        username: cleanUsername,
+        department: editDepartment.trim(),
+        bio: editBio.trim(),
+      });
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setEditProfileModalOpen(false);
+      toast.success('Profile details updated successfully.');
+    } catch (err: any) {
+      setEditProfileError(err?.message || 'Failed to update profile.');
+    } finally {
+      setSavingProfile(false);
+    }
   }
 
   async function handleSubmitSupportRequest() {
@@ -594,7 +696,10 @@ export function SettingsScreen() {
                     <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
                       {profile?.fullName ?? user?.fullName ?? 'User'}
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                    <AppText tone="brand" variant="bodySmall" weight="bold" numberOfLines={1} style={{ marginTop: 1 }}>
+                      @{profile?.username || user?.fullName?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user'}
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 1 }}>
                       {profile?.email ?? user?.email ?? ''}
                     </AppText>
                     <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
@@ -634,6 +739,11 @@ export function SettingsScreen() {
                 </View>
 
                 <View style={{ paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                  <AppButton
+                    label="Edit Profile Details"
+                    variant="primary"
+                    onPress={handleOpenEditSettingsProfile}
+                  />
                   <AppButton
                     label="Explore App Tour & Features"
                     variant="secondary"
@@ -1179,6 +1289,18 @@ export function SettingsScreen() {
                     trackColor={{ false: colors.divider, true: colors.brandPrimary }}
                   />
                 </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, gap: 12 }}>
+                  <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
+                    <AppText weight="bold" variant="bodySmall">Weekly Academic Digest</AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>Summary of departmental discussions, scholarships & trending campus topics</AppText>
+                  </View>
+                  <Switch
+                    value={emailDigestAlerts}
+                    onValueChange={handleToggleEmailDigest}
+                    trackColor={{ false: colors.divider, true: colors.brandPrimary }}
+                  />
+                </View>
               </SolidCard>
             )}
 
@@ -1318,14 +1440,22 @@ export function SettingsScreen() {
                   )}
                 </View>
 
-                <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
                   <AppButton
                     label="Change Password"
                     variant="secondary"
+                    icon="key-outline"
                     onPress={() => {
                       setPasswordError(null);
                       setPasswordModalOpen(true);
                     }}
+                  />
+                  <AppButton
+                    label={isSigningOutOthers ? 'Signing out other sessions…' : 'Sign Out All Other Active Sessions'}
+                    variant="ghost"
+                    icon="log-out-outline"
+                    onPress={handleSignOutOtherDevices}
+                    loading={isSigningOutOthers}
                   />
                 </View>
               </SolidCard>
@@ -1393,7 +1523,19 @@ export function SettingsScreen() {
                   </AppText>
                 </View>
 
-                <View style={{ gap: spacing.sm }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, gap: 12 }}>
+                  <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
+                    <AppText weight="bold" variant="bodySmall">Campus Directory Discovery</AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>Allow verified classmates to discover your academic profile in search and study pods</AppText>
+                  </View>
+                  <Switch
+                    value={directoryDiscovery}
+                    onValueChange={handleToggleDirectoryDiscovery}
+                    trackColor={{ false: colors.divider, true: colors.brandPrimary }}
+                  />
+                </View>
+
+                <View style={{ gap: spacing.sm, paddingTop: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border }}>
                   <View>
                     <AppText weight="bold" variant="bodySmall">Export my data</AppText>
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
@@ -1815,6 +1957,108 @@ export function SettingsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Edit Profile Details Modal in Settings */}
+      <Modal
+        visible={editProfileModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditProfileModalOpen(false)}
+      >
+        <KeyboardAvoidingView accessibilityViewIsModal
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: spacing.md,
+            paddingBottom: Math.max(insets.bottom, 16),
+          }}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditProfileModalOpen(false)} />
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: 20,
+              padding: spacing.lg,
+              width: '100%',
+              maxWidth: 480,
+              gap: spacing.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Ionicons name="person-outline" size={20} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold">
+                  Edit Profile Details
+                </AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                onPress={() => setEditProfileModalOpen(false)}
+                hitSlop={8}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            {editProfileError && (
+              <AppText style={{ color: '#EF4444', fontSize: 12, lineHeight: 16 }}>
+                {editProfileError}
+              </AppText>
+            )}
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ maxHeight: 380 }}>
+              <View style={{ gap: spacing.sm }}>
+                <AppTextField
+                  label="Full Name"
+                  value={editFullName}
+                  onChangeText={setEditFullName}
+                  placeholder="e.g. Adeyemi John"
+                />
+                <AppTextField
+                  label="Username"
+                  value={editUsername}
+                  onChangeText={(t) => setEditUsername(t.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="e.g. adeyemi.dev"
+                  helperText="Only lowercase letters, numbers, dots, and underscores."
+                />
+                <DepartmentPicker value={editDepartment || null} onChange={setEditDepartment} />
+                <AppTextField
+                  label="Academic Bio"
+                  value={editBio}
+                  onChangeText={setEditBio}
+                  multiline
+                  numberOfLines={3}
+                  placeholder="Tell classmates about your academic focus or projects..."
+                />
+              </View>
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingTop: spacing.xs }}>
+              <AppButton
+                label="Cancel"
+                variant="ghost"
+                onPress={() => setEditProfileModalOpen(false)}
+              />
+              <AppButton
+                label="Save Changes"
+                loading={savingProfile}
+                disabled={!editFullName.trim() || editUsername.trim().length < 3}
+                onPress={handleSaveSettingsProfile}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <AppTutorialModal userId={user?.id} forceOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} />
     </ScreenContainer>
   );
