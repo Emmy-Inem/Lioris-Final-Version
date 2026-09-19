@@ -184,3 +184,16 @@ export function useTheme() {
  if (!ctx) throw new Error('useTheme must be used within a ThemeProvider');
  return ctx;
 }
+
+export function useSafeTheme(): { colors: ThemeColors; isDark: boolean } {
+ const ctx = useContext(ThemeContext);
+ const colorScheme = useColorScheme();
+ if (ctx) {
+ return { colors: ctx.colors, isDark: ctx.isDark };
+ }
+ const isDark = colorScheme === 'dark';
+ return {
+ colors: isDark ? darkColors : lightColors,
+ isDark,
+ };
+}

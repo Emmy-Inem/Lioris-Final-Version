@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Alert, Modal } from 'react-native';
+import { ScrollView, View, Pressable, Alert, Modal, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -262,6 +262,25 @@ export default function StudentDashboard() {
     void openExternalUrl(url);
   }
 
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    haptics.light();
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['posts'] }),
+        queryClient.invalidateQueries({ queryKey: ['events'] }),
+        queryClient.invalidateQueries({ queryKey: ['resources'] }),
+        queryClient.invalidateQueries({ queryKey: ['study-groups'] }),
+        queryClient.invalidateQueries({ queryKey: ['announcements'] }),
+        queryClient.invalidateQueries({ queryKey: ['portal-links'] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const upcomingEvents = (events ?? []).slice(0, 2);
   const featuredResources = (resources ?? []).slice(0, 3);
   const activePods = (studyGroups ?? []).slice(0, 3);
@@ -273,6 +292,14 @@ export default function StudentDashboard() {
         style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={isDesktop ? true : false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.brandPrimary}
+            colors={[colors.brandPrimary, colors.brandAccent]}
+          />
+        }
         contentContainerStyle={{
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
           paddingBottom: isDesktop ? 60 : 120,

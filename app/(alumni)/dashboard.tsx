@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable } from 'react-native';
+import { ScrollView, View, Pressable, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
@@ -41,6 +41,7 @@ export default function AlumniDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { isFeatureEnabled } = useFeatureFlags();
   const { campusCode, homeInstitutionCode } = useCampusScope();
   const [copilotOpen, setCopilotOpen] = useState(false);
@@ -105,6 +106,25 @@ export default function AlumniDashboard() {
   const upcomingEvents = (events ?? []).slice(0, 2);
   const pendingMentees = (mentorships ?? []).filter((m: any) => m.status === 'pending');
 
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    haptics.light();
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['posts'] }),
+        queryClient.invalidateQueries({ queryKey: ['jobs'] }),
+        queryClient.invalidateQueries({ queryKey: ['mentorships'] }),
+        queryClient.invalidateQueries({ queryKey: ['events'] }),
+        queryClient.invalidateQueries({ queryKey: ['announcements'] }),
+        queryClient.invalidateQueries({ queryKey: ['portal-links'] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
@@ -112,6 +132,14 @@ export default function AlumniDashboard() {
         style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={isDesktop ? true : false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.brandPrimary}
+            colors={[colors.brandPrimary, colors.brandAccent]}
+          />
+        }
         contentContainerStyle={{
           paddingTop: isDesktop ? spacing.lg : spacing.sm,
           paddingBottom: isDesktop ? 60 : 130,

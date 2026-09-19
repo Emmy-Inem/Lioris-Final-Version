@@ -85,16 +85,13 @@ export default function RootLayout() {
           html, body, #root {
             height: 100% !important;
             width: 100% !important;
-            overflow: hidden !important;
-            overscroll-behavior: none !important;
           }
 
-          /* Vertical scroll containers: smooth touch scroll & vertical pan */
+          /* Vertical scroll containers: smooth touch scroll & vertical pan with natural pull-to-refresh */
           div[style*="overflow-y: auto"],
           div[style*="overflow-y: scroll"],
           .r-overflowY-156q2ks {
             -webkit-overflow-scrolling: touch !important;
-            overscroll-behavior-y: contain !important;
             touch-action: pan-y !important;
           }
 
