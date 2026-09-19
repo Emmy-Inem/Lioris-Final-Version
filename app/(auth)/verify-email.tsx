@@ -13,6 +13,7 @@ import { useAuth } from '@/auth/AuthContext';
 import * as authApi from '@/api/auth';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
+import { persistCampus } from '@/hooks/useViewScope';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -25,7 +26,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export default function VerifyEmailScreen() {
   const { spacing, colors, radius, isDark } = useTheme();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ email?: string; token_hash?: string; type?: string; code?: string }>();
+  const params = useLocalSearchParams<{ email?: string; token_hash?: string; type?: string; code?: string; campus_code?: string }>();
   const knownEmail = (typeof params.email === 'string' && params.email.trim()) || user?.email || '';
   const [emailInput, setEmailInput] = useState('');
   const email = knownEmail || emailInput.trim();
@@ -36,6 +37,12 @@ export default function VerifyEmailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (params.campus_code) {
+      persistCampus(params.campus_code);
+    }
+  }, [params.campus_code]);
 
   useEffect(() => {
     if (cooldown <= 0) return undefined;

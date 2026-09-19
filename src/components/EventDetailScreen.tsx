@@ -106,7 +106,7 @@ export function EventDetailScreen() {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState<string>('Academic');
-  const [editCampus, setEditCampus] = useState<string>('UI');
+  const [editCampus, setEditCampus] = useState<string>('GLOBAL');
   const [editScope, setEditScope] = useState<'campus' | 'global'>('campus');
   const [editVenueType, setEditVenueType] = useState<'physical' | 'virtual' | 'external'>('physical');
   const [editLocation, setEditLocation] = useState('');
@@ -137,7 +137,7 @@ export function EventDetailScreen() {
   const matchedLandmark = useMemo(() => {
     if (!event?.location) return null;
     const locLower = event.location.toLowerCase().trim();
-    const campus = (event.campusCode || 'UI').toUpperCase();
+    const campus = (event.campusCode || 'GLOBAL').toUpperCase();
     return CAMPUS_LANDMARKS.find(
       (l) =>
         (l.campus.toUpperCase() === campus || campus === 'GLOBAL') &&
@@ -197,7 +197,7 @@ export function EventDetailScreen() {
     setEditTitle(event.title ?? '');
     setEditDescription(event.description ?? '');
     setEditCategory(event.category ? event.category.charAt(0).toUpperCase() + event.category.slice(1) : 'Academic');
-    setEditCampus(event.campusCode ?? 'UI');
+    setEditCampus(event.campusCode ?? 'GLOBAL');
     setEditScope((event.visibilityScope as any) === 'global' ? 'global' : 'campus');
     setEditVenueType(event.venueType ?? 'physical');
     setEditLocation(event.location ?? '');
@@ -1885,7 +1885,7 @@ export function EventDetailScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="school" size={15} color={colors.textSecondary} />
                   <AppText variant="caption" weight="bold" tone="secondary">
-                    Campus Workspace: {event?.campusCode || editCampus || 'UI'}
+                    Campus Workspace: {event?.campusCode || editCampus || 'GLOBAL'}
                   </AppText>
                 </View>
                 <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>

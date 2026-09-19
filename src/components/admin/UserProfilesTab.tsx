@@ -13,6 +13,7 @@ import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { UserProfile, UserRole } from'@/api/types';
+import { getInstitutionByCode } from'@/api/institutions';
 import { recordAuditLogEntry } from'@/api/auditLog';
 import { haptics } from'@/utils/haptics';
 
@@ -31,7 +32,10 @@ export function UserProfilesTab() {
  const { supabase } = await import('@/api/supabase');
  const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
  if (!error && data) {
- const mapped: UserProfile[] = data.map((p: any) => ({
+ const mapped: UserProfile[] = data.map((p: any) => {
+ const campusCode = p.campus_code || 'GLOBAL';
+ const inst = getInstitutionByCode(campusCode);
+ return {
  id: p.id,
  fullName: p.full_name || 'Campus Member',
  username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
@@ -39,11 +43,11 @@ export function UserProfilesTab() {
  userType: (p.role || 'student') as UserRole,
  graduationYear: 2026,
  connectionsCount: 88,
- bio: p.bio || `Verified ${p.role} on ${p.campus_code || 'UI'} node.`,
+ bio: p.bio || `Verified ${p.role} on ${campusCode} node.`,
  department: p.department || 'General Studies',
  interests: ['Academic Excellence', 'Campus Life'],
- institutionName: 'University of Ibadan',
- institutionCode: p.campus_code || 'UI',
+ institutionName: inst?.name || (campusCode === 'GLOBAL' ? 'Lioris Global Network' : `${campusCode} Campus`),
+ institutionCode: campusCode,
  avatarUrl: (p.avatar_url || 'avatar_male') as any,
  isVerified: p.verification_status === 'verified',
  verificationStatus: p.verification_status === 'verified' ? 'verified' : 'none',
@@ -54,7 +58,8 @@ export function UserProfilesTab() {
  badgesCount: 3,
  followersCount: 112,
  followingCount: 80,
- }));
+ };
+ });
  setUsers(mapped);
  }
  } catch (err) {

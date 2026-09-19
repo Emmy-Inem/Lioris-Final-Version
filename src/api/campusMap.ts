@@ -972,8 +972,8 @@ export async function fetchOverpassCampusAmenities(
   userLat?: number,
   userLon?: number
 ): Promise<CampusLandmark[]> {
-  const normalizedCampus = (campusCode || 'UI').toUpperCase();
-  const center = CAMPUS_CENTERS[normalizedCampus] || CAMPUS_CENTERS.UI;
+  const normalizedCampus = (campusCode && campusCode !== 'GLOBAL' ? campusCode : 'UNILAG').toUpperCase();
+  const center = CAMPUS_CENTERS[normalizedCampus] || CAMPUS_CENTERS.UNILAG || CAMPUS_CENTERS.UI;
   const centerLat = center.latitude;
   const centerLon = center.longitude;
 

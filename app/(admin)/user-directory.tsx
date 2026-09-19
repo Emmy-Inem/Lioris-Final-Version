@@ -113,7 +113,7 @@ export default function UserDirectoryScreen() {
  username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
  email: p.email || '',
  role: (p.role ? p.role.charAt(0).toUpperCase() + p.role.slice(1) : 'Student') as any,
- campus: p.campus_code || 'UI',
+ campus: p.campus_code || 'GLOBAL',
  department: p.department || 'General Studies',
  matricNo: p.student_id_number || 'Not Assigned',
  suspended: p.is_suspended ?? false,
@@ -169,25 +169,25 @@ export default function UserDirectoryScreen() {
  const [newEmail, setNewEmail] = useState('');
  const [newMatric, setNewMatric] = useState('');
  const [newDepartment, setNewDepartment] = useState('Computer Science');
- const [newRole, setNewRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
- const [newCampus, setNewCampus] = useState('UI');
- const [isProvisioning, setIsProvisioning] = useState(false);
+  const [newRole, setNewRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
+  const [newCampus, setNewCampus] = useState('UNILAG');
+  const [isProvisioning, setIsProvisioning] = useState(false);
 
- // Impersonation reason prompt (Alert.prompt is iOS-only, so use an inline modal)
- const [impersonateTarget, setImpersonateTarget] = useState<DirectoryUser | null>(null);
- const [impersonateReason, setImpersonateReason] = useState('');
+  // Impersonation reason prompt (Alert.prompt is iOS-only, so use an inline modal)
+  const [impersonateTarget, setImpersonateTarget] = useState<DirectoryUser | null>(null);
+  const [impersonateReason, setImpersonateReason] = useState('');
 
- // Account-deletion reason prompt: admin-delete-user requires a recorded reason (>= 10 chars).
- const [deleteTarget, setDeleteTarget] = useState<DirectoryUser | null>(null);
- const [deleteReason, setDeleteReason] = useState('');
- const [isDeleting, setIsDeleting] = useState(false);
+  // Account-deletion reason prompt: admin-delete-user requires a recorded reason (>= 10 chars).
+  const [deleteTarget, setDeleteTarget] = useState<DirectoryUser | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Edit User Modal State
   const toast = useToast();
   const [editModalUser, setEditModalUser] = useState<DirectoryUser | null>(null);
   const [editFullName, setEditFullName] = useState('');
   const [editMatric, setEditMatric] = useState('');
-  const [editCampus, setEditCampus] = useState('UI');
+  const [editCampus, setEditCampus] = useState('GLOBAL');
   const [editDepartment, setEditDepartment] = useState('');
   const [editRole, setEditRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
   const [editVerified, setEditVerified] = useState(false);
@@ -198,7 +198,7 @@ export default function UserDirectoryScreen() {
     setEditModalUser(target);
     setEditFullName(target.fullName);
     setEditMatric(target.matricNo === 'Not Assigned' ? '' : target.matricNo);
-    setEditCampus(target.campus || 'UI');
+    setEditCampus(target.campus || 'GLOBAL');
     setEditDepartment(target.department);
     setEditRole(target.role);
     setEditVerified(target.isVerified);

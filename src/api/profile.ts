@@ -4,6 +4,7 @@ import { UserProfile, UserRole } from './types';
 import { supabase } from './supabase';
 import { getInstitutionByCode, getInstitutionForEmail } from './institutions';
 import { clearTokens, getSessionUser } from '../auth/tokenStorage';
+import { persistCampus, getStoredCampus } from '@/hooks/useViewScope';
 
 export function nextLevelXp(level: number): number {
  if (level === 1) return 200;
@@ -156,9 +157,27 @@ export async function getMyProfile(user?: {
        supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
      }
 
-     const rawCampus = data.campus_code;
-     const campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
-     const inst = (campusCode && campusCode !== 'GLOBAL') ? getInstitutionByCode(campusCode) : null;
+      let rawCampus = data.campus_code;
+      if (!rawCampus || rawCampus === 'GLOBAL') {
+        const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: null }));
+        const metaCampus = authData?.user?.user_metadata?.campus_code as string | undefined;
+        const stored = await getStoredCampus();
+        const candidate = (metaCampus && metaCampus !== 'GLOBAL')
+          ? metaCampus
+          : (stored && stored !== 'GLOBAL')
+          ? stored
+          : undefined;
+
+        if (candidate) {
+          rawCampus = candidate;
+          persistCampus(candidate);
+          supabase.rpc('set_my_campus_code', { p_campus_code: candidate }).then(() => {}, () => {});
+          supabase.from('profiles').update({ campus_code: candidate }).eq('id', resolvedUser.id).then(() => {}, () => {});
+        }
+      }
+
+      const campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
+      const inst = (campusCode && campusCode !== 'GLOBAL') ? getInstitutionByCode(campusCode) : null;
 
      const merged: UserProfile = {
        ...fallback,
@@ -189,6 +208,9 @@ export function seedProfileUsername(
   username: string,
   institution?: { code: string; name: string },
 ) {
+  if (institution?.code && institution.code !== 'GLOBAL') {
+    persistCampus(institution.code);
+  }
   const base = defaultProfileFor(user);
   profileState.set(user.id, {
     ...base,
@@ -348,7 +370,14 @@ export async function updateMyProfile(
    if (patch.faculty !== undefined) dbPatch.faculty = patch.faculty;
    if (patch.academicLevel !== undefined) dbPatch.level = patch.academicLevel;
    if (patch.interests !== undefined) dbPatch.interests = patch.interests;
-   if (patch.institutionCode !== undefined) dbPatch.campus_code = patch.institutionCode;
+   if (patch.institutionCode !== undefined) {
+     const cleanCode = patch.institutionCode.trim().toUpperCase();
+     dbPatch.campus_code = cleanCode;
+     updated.institutionCode = cleanCode;
+     const inst = getInstitutionByCode(cleanCode);
+     if (inst) updated.institutionName = inst.name;
+     persistCampus(cleanCode);
+   }
    if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
    if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
 
@@ -360,6 +389,20 @@ export async function updateMyProfile(
        }
        console.warn('[Profile] Supabase update warning:', error.message);
        throw new Error(error.message);
+     }
+
+     if (patch.institutionCode !== undefined) {
+       const cleanCode = patch.institutionCode.trim().toUpperCase();
+       try {
+         await supabase.rpc('set_my_campus_code', { p_campus_code: cleanCode });
+       } catch {
+         // non-blocking
+       }
+       try {
+         await supabase.auth.updateUser({ data: { campus_code: cleanCode } });
+       } catch {
+         // non-blocking
+       }
      }
    }
  } catch (err: any) {

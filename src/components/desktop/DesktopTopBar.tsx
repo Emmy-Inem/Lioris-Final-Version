@@ -436,7 +436,7 @@ export function DesktopTopBar() {
           if (!user) return;
           await createPost({
             ...payload,
-            authorInstitutionCode: profile?.institutionCode || 'UI',
+            authorInstitutionCode: profile?.institutionCode || 'GLOBAL',
           });
           await queryClient.invalidateQueries({ queryKey: ['feed'] });
           toast.success('Forum discussion published successfully!');

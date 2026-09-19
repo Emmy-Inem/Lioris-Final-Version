@@ -550,7 +550,7 @@ export function EventsModerationTab() {
   {formVenueType === 'physical' ? (
     <View style={{ marginBottom: spacing.md }}>
       <VerifiedCampusLocationPicker
-        campusCode={editingEvent?.campusCode || 'UI'}
+        campusCode={editingEvent?.campusCode || 'GLOBAL'}
         value={formLocation}
         onChangeLocation={(loc) => setFormLocation(loc)}
         placeholder="Select or search verified campus venue..."

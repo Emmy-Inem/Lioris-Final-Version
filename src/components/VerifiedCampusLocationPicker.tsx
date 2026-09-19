@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Pressable, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
@@ -30,7 +30,7 @@ export function VerifiedCampusLocationPicker({
   const [isSearching, setIsSearching] = useState(false);
 
   // Normalize campus code
-  const campus = (campusCode || 'UI').toUpperCase();
+  const campus = (campusCode && campusCode !== 'GLOBAL' ? campusCode : 'GLOBAL').toUpperCase();
 
   // Find if current value matches a verified landmark
   const matchedLandmark = useMemo(() => {

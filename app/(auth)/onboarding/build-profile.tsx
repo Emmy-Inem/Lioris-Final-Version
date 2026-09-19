@@ -16,6 +16,7 @@ import { updateMyProfile, uploadAvatarImage } from '@/api/profile';
 import { LAUNCH_INSTITUTIONS, getInstitutionForEmail } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
+import { persistCampus, getStoredCampus } from '@/hooks/useViewScope';
 
 const ACADEMIC_LEVELS = ['100L', '200L', '300L', '400L', '500L', '600L', 'Postgraduate'];
 
@@ -41,19 +42,35 @@ export default function BuildProfileScreen() {
     async function loadExisting() {
       if (!user?.id) return;
       try {
+        const storedCampus = await getStoredCampus();
+        const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: null }));
+        const metaCampus = authData?.user?.user_metadata?.campus_code as string | undefined;
+
         const { data } = await supabase
           .from('profiles')
           .select('campus_code, department, faculty, level, bio, avatar_url')
           .eq('id', user.id)
           .maybeSingle();
 
-        if (mounted && data) {
-          if (data.campus_code) setCampusCode(data.campus_code);
-          if (data.department) setDepartment(data.department);
-          if (data.faculty) setFaculty(data.faculty);
-          if (data.level) setLevel(data.level);
-          if (data.bio) setBio(data.bio);
-          if (data.avatar_url) setPhotoUri(data.avatar_url);
+        if (mounted) {
+          const effectiveInitialCampus =
+            (data?.campus_code && data.campus_code !== 'GLOBAL')
+              ? data.campus_code
+              : (metaCampus && metaCampus !== 'GLOBAL')
+              ? metaCampus
+              : (storedCampus && storedCampus !== 'GLOBAL')
+              ? storedCampus
+              : detectedCampus;
+
+          if (effectiveInitialCampus) {
+            setCampusCode(effectiveInitialCampus);
+            persistCampus(effectiveInitialCampus);
+          }
+          if (data?.department) setDepartment(data.department);
+          if (data?.faculty) setFaculty(data.faculty);
+          if (data?.level) setLevel(data.level);
+          if (data?.bio) setBio(data.bio);
+          if (data?.avatar_url) setPhotoUri(data.avatar_url);
         }
       } catch {
         // Non-blocking
@@ -63,7 +80,7 @@ export default function BuildProfileScreen() {
     return () => {
       mounted = false;
     };
-  }, [user?.id]);
+  }, [user?.id, detectedCampus]);
 
   async function pickFromLibrary() {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -100,7 +117,7 @@ export default function BuildProfileScreen() {
 
   async function handleContinue() {
     setErrorMessage(null);
-    if (!campusCode) {
+    if (!campusCode || campusCode === 'GLOBAL') {
       setErrorMessage('Please select your university from the list above.');
       haptics.error();
       return;
@@ -128,6 +145,7 @@ export default function BuildProfileScreen() {
         }
       }
 
+      persistCampus(campusCode);
       await updateMyProfile({
         institutionCode: campusCode,
         department,
@@ -212,6 +230,7 @@ export default function BuildProfileScreen() {
                 onPress={() => {
                   haptics.light();
                   setCampusCode(inst.code);
+                  persistCampus(inst.code);
                   setDepartment(null);
                   setFaculty(null);
                 }}

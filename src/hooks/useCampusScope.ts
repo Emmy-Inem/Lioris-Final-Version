@@ -40,6 +40,8 @@ export function useCampusScope() {
 
   const rawHome = (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
     ? profile.institutionCode
+    : (activeCampusCode && activeCampusCode !== 'GLOBAL')
+    ? activeCampusCode
     : (deducedFromEmail && deducedFromEmail !== 'GLOBAL')
     ? deducedFromEmail
     : undefined;

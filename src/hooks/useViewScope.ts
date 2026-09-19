@@ -63,11 +63,17 @@ export function persistCampus(campusCode?: string) {
   }
 }
 
+export async function getStoredCampus(): Promise<string | null> {
+  try {
+    return isWeb ? webGet(STORAGE_CAMPUS_KEY) : await SecureStore.getItemAsync(STORAGE_CAMPUS_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function resetToDefaultCampusScope(qc = globalQueryClient) {
   qc.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
-  qc.setQueryData(ACTIVE_CAMPUS_KEY, undefined as string | undefined);
   persistScope('campus');
-  persistCampus(undefined);
 }
 
 let hydrated = false;
@@ -111,13 +117,12 @@ export function useViewScope() {
           isWeb ? webGet(STORAGE_SCOPE_KEY) : SecureStore.getItemAsync(STORAGE_SCOPE_KEY),
           isWeb ? webGet(STORAGE_CAMPUS_KEY) : SecureStore.getItemAsync(STORAGE_CAMPUS_KEY),
         ]);
-        // For students, NEVER inherit a stale 'global' scope or explored campus from a previous admin session.
-        // A student belongs strictly to their own campus workspace by default.
         if (isStudent) {
           queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
-          queryClient.setQueryData(ACTIVE_CAMPUS_KEY, undefined);
           persistScope('campus');
-          persistCampus(undefined);
+          if (storedCampus && storedCampus !== 'GLOBAL') {
+            queryClient.setQueryData(ACTIVE_CAMPUS_KEY, storedCampus);
+          }
         } else {
           if (storedScope === 'campus' || storedScope === 'global') {
             queryClient.setQueryData(VIEW_SCOPE_KEY, storedScope);

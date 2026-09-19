@@ -132,7 +132,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
         // Strict university workspace isolation:
         // Only members of that university see that university's events.
         const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
-        const activeCampus = (userCampus || 'UI').toUpperCase();
+        const activeCampus = (userCampus || 'GLOBAL').toUpperCase();
         if (activeCampus !== 'GLOBAL' && rowCampus !== 'GLOBAL' && rowCampus !== activeCampus) {
           return false;
         }
@@ -170,7 +170,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     // mock-data toggle is on).
     const pool = [...locallyCreatedEvents];
     const merged = [...dbEvents];
-    const activeCampus = (userCampus || 'UI').toUpperCase();
+    const activeCampus = (userCampus || 'GLOBAL').toUpperCase();
     for (const e of pool) {
       if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
         const eCampus = (e.campusCode || 'GLOBAL').toUpperCase();

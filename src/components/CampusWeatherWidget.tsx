@@ -8,6 +8,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useAuth } from '@/auth/AuthContext';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import { fetchCampusWeather, CampusWeather, CAMPUS_COORDINATES } from '@/api/weather';
 
 interface CampusWeatherWidgetProps {
@@ -20,12 +21,25 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
+  const { campusCode: scopedCampus, homeInstitutionCode } = useCampusScope();
+
+  const effectiveCampus = (campusCode && campusCode !== 'GLOBAL')
+    ? campusCode
+    : (scopedCampus && scopedCampus !== 'GLOBAL')
+    ? scopedCampus
+    : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL')
+    ? homeInstitutionCode
+    : 'UNILAG';
 
   const [weather, setWeather] = useState<CampusWeather | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedCampus, setSelectedCampus] = useState<string>(
-    campusCode || (user as any)?.institutionCode || (user as any)?.institutionId || 'UI'
-  );
+  const [selectedCampus, setSelectedCampus] = useState<string>(effectiveCampus);
+
+  useEffect(() => {
+    if (effectiveCampus && effectiveCampus !== selectedCampus) {
+      setSelectedCampus(effectiveCampus);
+    }
+  }, [effectiveCampus]);
 
   const isEnabled = isFeatureEnabled('live_weather');
 

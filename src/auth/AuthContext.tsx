@@ -19,7 +19,7 @@ import { registerForPushNotificationsAsync } from'@/notifications/push';
 import { supabase } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
 import { loadBlockedUserIds } from '@/api/connections';
-import { resetToDefaultCampusScope } from '@/hooks/useViewScope';
+import { resetToDefaultCampusScope, persistCampus } from '@/hooks/useViewScope';
 
 // ---------------------------------------------------------------------------
 // Admin "View As / Support Mode" impersonation - session backup helpers.
@@ -440,6 +440,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async register(payload) {
         isExplicitLogout.current = false;
+        if (payload.campusCode) {
+          persistCampus(payload.campusCode);
+        }
         const session = await authApi.register(payload);
         await setTokens(session.accessToken, session.refreshToken);
         const nextUser: SessionUser = {

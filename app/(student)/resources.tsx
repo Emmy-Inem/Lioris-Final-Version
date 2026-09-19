@@ -116,7 +116,7 @@ export default function ResourcesScreen() {
       ? campusCode
       : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL')
       ? homeInstitutionCode
-      : 'UI';
+      : 'ALL';
 
   const activePortalCampus = selectedPortalFilter === 'CURRENT' ? currentCampus : selectedPortalFilter;
 

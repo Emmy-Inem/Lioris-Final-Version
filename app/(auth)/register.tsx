@@ -22,6 +22,7 @@ import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { MIN_AGE, MIN_AGE_WITH_CONSENT, TERMS_VERSION } from '@/constants/legal';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
+import { persistCampus } from '@/hooks/useViewScope';
 
 const SUPPORTED_INSTITUTIONS = LAUNCH_INSTITUTIONS.filter((i) => i.code !== 'GLOBAL');
 
@@ -137,6 +138,7 @@ export default function RegisterScreen() {
     setErrorMessage('Please select your university from the supported universities list.');
     return;
   }
+  persistCampus(effectiveCampusCode);
 
   setSubmitting(true);
   try {
@@ -163,7 +165,7 @@ export default function RegisterScreen() {
  setCaptchaToken(null);
  if (isEmailConfirmationRequired(err)) {
  // Account exists; the address must be confirmed with the emailed code before sign-in.
- router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email || email.trim() } });
+ router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email || email.trim(), campus_code: effectiveCampusCode } });
  return;
  }
  if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
@@ -245,7 +247,10 @@ export default function RegisterScreen() {
        return (
          <Pressable
            key={inst.code}
-           onPress={() => setSelectedCampusCode(inst.code)}
+           onPress={() => {
+             setSelectedCampusCode(inst.code);
+             persistCampus(inst.code);
+           }}
            style={{
              paddingHorizontal: 14,
              paddingVertical: 8,
