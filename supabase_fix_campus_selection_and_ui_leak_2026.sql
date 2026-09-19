@@ -254,7 +254,7 @@ BEGIN
                 v_terms_at := (NEW.raw_user_meta_data->>'terms_accepted_at')::timestamptz;
             EXCEPTION WHEN OTHERS THEN
                 v_terms_at := NULL;
-            END IF;
+            END;
             v_terms_at := LEAST(COALESCE(v_terms_at, now()), now());
 
             v_age_raw := lower(COALESCE(NEW.raw_user_meta_data->>'age_confirmed_18', ''));
