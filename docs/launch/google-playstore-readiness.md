@@ -1,6 +1,6 @@
 # Google Play Store Launch Readiness & Audit Runbook
 
-Comprehensive audit, security verification, and release checklist for launching **Lioris** (`app.lioris.mobile`) on the Google Play Store.
+Comprehensive audit, security verification, and release checklist for launching **Lioris** (`lioris.app`) on the Google Play Store.
 
 ---
 
@@ -9,7 +9,7 @@ Comprehensive audit, security verification, and release checklist for launching 
 | Field | Configured Value | Status / Notes |
 |---|---|---|
 | **App Name** | `Lioris` | Configured in `app.config.ts` |
-| **Package Name** | `app.lioris.mobile` | Configured in `app.config.ts` (`android.package`) |
+| **Package Name** | `lioris.app` | Configured in `app.config.ts` (`android.package`) |
 | **Version Name** | `1.0.0` | Semver in `app.config.ts` |
 | **Version Code** | `1` | Integer in `app.config.ts` (`android.versionCode`) |
 | **Target SDK** | Android 15 (API level 35) | Expo SDK 52 default; complies with Google Play requirement (target API >= 34/35) |
