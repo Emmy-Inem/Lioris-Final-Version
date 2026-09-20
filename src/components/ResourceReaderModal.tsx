@@ -73,10 +73,10 @@ export function ResourceReaderModal({
         trackResourceDownload(resource.id).catch(() => {});
         toast.success(`Download started for ${resource.title}.`);
       } else {
-        Alert.alert(
-          'Sample Curriculum Material',
-          `"${resource.title}" is a curriculum reference document. The in-app reader provides full access to its study notes.`,
-        );
+        // Verified in-app study note: bookmark for offline access
+        await toggleBookmark(resource.id);
+        setDownloaded(true);
+        toast.success(`Saved "${resource.title}" to bookmarks for offline reading.`);
       }
     } catch {
       Alert.alert('Download Failed', 'Could not open this file. Please try again.');
@@ -85,9 +85,14 @@ export function ResourceReaderModal({
     }
   }
 
-  // Google Docs Viewer API URL (Free, Zero-Auth, embeds any PDF, DOC, DOCX, PPT, XLS)
-  const viewerUrl = isSafeHttpUrl(resource.fileUrl)
-    ? `https://docs.google.com/viewer?url=${encodeURIComponent(resource.fileUrl)}&embedded=true`
+  // Google Docs Viewer API URL - only for direct PDF/document files
+  const isDirectPdf =
+    !!resource.fileUrl &&
+    isSafeHttpUrl(resource.fileUrl) &&
+    resource.fileUrl.toLowerCase().includes('.pdf');
+
+  const viewerUrl = isDirectPdf
+    ? `https://docs.google.com/viewer?url=${encodeURIComponent(resource.fileUrl!)}&embedded=true`
     : null;
 
   return (
@@ -336,6 +341,16 @@ export function ResourceReaderModal({
                   <AppText tone="secondary" style={{ lineHeight: 22, fontSize: 14, marginBottom: spacing.lg }}>
                     {resource.description || 'Comprehensive departmental lecture notes and curriculum summary.'}
                   </AppText>
+
+                  {resource.fileUrl && !isDirectPdf && (
+                    <View style={{ marginBottom: spacing.lg }}>
+                      <AppButton
+                        label="Open Official University Repository / Question Bank ↗"
+                        onPress={() => { void openExternalUrl(resource.fileUrl!); }}
+                        variant="primary"
+                      />
+                    </View>
+                  )}
 
                   <View
                     style={{

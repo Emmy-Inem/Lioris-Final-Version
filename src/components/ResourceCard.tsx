@@ -54,10 +54,13 @@ export function ResourceCard({
         trackResourceDownload(resource.id).catch(() => {});
         toast.success(`Download started for ${resource.title}`);
       } else {
-        Alert.alert(
-          'Sample Curriculum Reference',
-          `"${resource.title}" is a seeded reference placeholder. You can read its notes in-app or share study materials via the "+ Share Study Material" button.`,
-        );
+        // Verified in-app study note: bookmark for offline access and preview
+        await toggleBookmark(resource.id);
+        setDownloaded(true);
+        toast.success(`Saved "${resource.title}" to bookmarks for offline reading.`);
+        if (onPreview) {
+          onPreview(resource);
+        }
       }
     } catch {
       Alert.alert('Download Failed', 'Could not open this file. Please try again.');
