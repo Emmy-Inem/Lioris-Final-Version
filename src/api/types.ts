@@ -64,7 +64,17 @@ export interface PostPoll {
  options: PostPollOption[];
  totalVotes: number;
  expiresIn?: string;
+ /** ISO timestamp when voting closes. Undefined = never closes (legacy rows). Persisted inside posts.poll_data. */
+ closesAt?: string;
+ /** Derived client-side from closesAt; true once voting is over. Never persisted. */
+ isClosed?: boolean;
 }
+
+/**
+ * 'draft' and 'scheduled' rows are invisible to everyone but their author
+ * (and admins/staff) - enforced by RLS, see supabase_posts_features_2026.sql.
+ */
+export type PostStatus = 'published' | 'draft' | 'scheduled';
 
 export interface Post {
  id: string;
@@ -99,6 +109,16 @@ export interface Post {
  courseTags?: string;
  /** "Thread"vs"Rapid-Fire Conversation"toggle in PublishThreadModal - previously collected but discarded. Stored as metadata only; doesn't change posting behavior, just shown as a small tag on PostCard. */
  postFormat?: 'Thread' | 'Rapid-Fire Conversation';
+ /** Mirrors posts.status. Undefined is treated as 'published' (rows written before the column existed). */
+ status?: PostStatus;
+ /** ISO; only meaningful when status === 'scheduled'. Mirrors posts.scheduled_at. */
+ scheduledAt?: string;
+ /** Mirrors a post_reposts row for the signed-in viewer. */
+ isRepostedByMe?: boolean;
+ /** Mirrors a saved_items row of kind 'post' for the signed-in viewer. */
+ isBookmarkedByMe?: boolean;
+ /** Set only on rows returned because the viewer reposted them (profile feed). */
+ repostOf?: { originalPostId: string; repostedAt: string };
 }
 
 export type EventCategory =

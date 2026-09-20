@@ -687,7 +687,322 @@ await probe('same-campus student can read peer email via profiles SELECT', () =>
 await probe('same-campus student can read peer student_id_number / trust_score / is_suspended columns (no error = readable)', () => as(U.s2, async (c) => { const r = await c.t(`SELECT student_id_number, trust_score, is_suspended, last_active_at FROM public.profiles WHERE id = $1`, [U.s1]); return { ok: r.ok }; }));
 await probe('service_role UPDATE of a protected profile column (role) is reverted by tr_prevent_profile_role_escalation', () => as('service_role', async (c) => { await c.q(`UPDATE public.profiles SET role = 'staff' WHERE id = $1`, [U.s5]); return (await c.q(`SELECT role::text role FROM public.profiles WHERE id = $1`, [U.s5])).rows[0]; }));
 
+// ---------------------------------------------------------------------------
+// supabase_posts_features_2026.sql  (reposts / drafts / scheduled / saved_items)
+// ---------------------------------------------------------------------------
+const readRepo = async (name) =>
+  (await import('node:fs')).promises.readFile(new URL(`../../${name}`, import.meta.url), 'utf8');
+
+console.log('\n== Applying supabase_posts_features_2026.sql ==');
+await check('posts features migration applies cleanly on top of both hardening files', async () => {
+  await db.exec(await readRepo('supabase_posts_features_2026.sql'));
+});
+await check('posts features migration is idempotent (second run)', async () => {
+  await db.exec(await readRepo('supabase_posts_features_2026.sql'));
+});
+
+// Fixtures (committed). Authored by s1 (UNILAG); s2 is a UNILAG peer.
+const P = { pub: id(50), draft: id(51), sched: id(52), due: id(53) };
+await admin(
+  `INSERT INTO public.posts (id, author_id, campus_code, visibility_scope, title, content, status, scheduled_at) VALUES
+     ($1, $5, 'UNILAG', 'campus', 'published one', 'body', 'published', NULL),
+     ($2, $5, 'UNILAG', 'campus', 'my draft',      'body', 'draft',     NULL),
+     ($3, $5, 'UNILAG', 'campus', 'scheduled',     'body', 'scheduled', now() + interval '2 days'),
+     ($4, $5, 'UNILAG', 'campus', 'due',           'body', 'scheduled', now() - interval '1 minute')`,
+  [P.pub, P.draft, P.sched, P.due, U.s1],
+);
+
+console.log('\n== drafts / scheduled visibility ==');
+await check('a second user cannot see another user\'s draft or scheduled post', async () => {
+  await as(U.s2, async (c) => {
+    const r = await c.q(`SELECT id FROM public.posts WHERE id = ANY($1::uuid[]) ORDER BY id`, [[P.pub, P.draft, P.sched, P.due]]);
+    eq(r.rows.map((x) => x.id), [P.pub], 's2 must only see the published post');
+  });
+});
+await check('the author sees their own draft and scheduled posts', async () => {
+  await as(U.s1, async (c) => {
+    const r = await c.q(`SELECT id FROM public.posts WHERE id = ANY($1::uuid[]) ORDER BY id`, [[P.pub, P.draft, P.sched, P.due]]);
+    eq(r.rows.length, 4, 'author must see all four of their own rows');
+  });
+});
+await check('admins and staff still see unpublished posts (moderation reach preserved)', async () => {
+  for (const who of [U.adminA, U.staffU]) {
+    await as(who, async (c) => {
+      const r = await c.q(`SELECT count(*)::int n FROM public.posts WHERE id = ANY($1::uuid[])`, [[P.pub, P.draft, P.sched, P.due]]);
+      eq(r.rows[0].n, 4, `${who} must see unpublished rows`);
+    });
+  }
+});
+await check('the campus rule from the original SELECT policy is still enforced (other university cannot see the campus post)', async () => {
+  await as(U.s3, async (c) => {   // s3 is UI, the posts are UNILAG/campus
+    const r = await c.q(`SELECT count(*)::int n FROM public.posts WHERE id = ANY($1::uuid[])`, [[P.pub, P.draft, P.sched, P.due]]);
+    eq(r.rows[0].n, 0, 'cross-campus leak');
+  });
+});
+await check('an author can publish their own draft, and status is constrained', async () => {
+  await as(U.s1, async (c) => {
+    const up = await c.t(`UPDATE public.posts SET status = 'published' WHERE id = $1`, [P.draft]);
+    assert(up.ok && up.n === 1, 'author could not publish own draft: ' + up.err?.message);
+    const bad = await c.t(`UPDATE public.posts SET status = 'nonsense' WHERE id = $1`, [P.draft]);
+    denied(bad, /posts_status_check|violates check/i, 'bogus status');
+    const noTime = await c.t(`UPDATE public.posts SET status = 'scheduled', scheduled_at = NULL WHERE id = $1`, [P.draft]);
+    denied(noTime, /posts_scheduled_at_check|violates check/i, 'scheduled without scheduled_at');
+  });
+});
+await check('a second user cannot publish someone else\'s draft', async () => {
+  await as(U.s2, async (c) => {
+    const up = await c.t(`UPDATE public.posts SET status = 'published' WHERE id = $1`, [P.draft]);
+    assert(up.ok && up.n === 0, 's2 changed another user\'s draft');
+  });
+});
+await check('publish_due_scheduled_posts() is service_role only and only flips rows that are due', async () => {
+  await as(U.s1, async (c) => {
+    denied(await c.t(`SELECT public.publish_due_scheduled_posts()`), /restricted to service_role|permission denied/i, 'authenticated call');
+  });
+  await as('service_role', async (c) => {
+    const n = (await c.q(`SELECT public.publish_due_scheduled_posts() n`)).rows[0].n;
+    eq(n, 1, 'exactly the one due row should publish');
+    const r = await c.su(`SELECT id, status FROM public.posts WHERE id = ANY($1::uuid[]) ORDER BY id`, [[P.sched, P.due]]);
+    eq(r.rows.find((x) => x.id === P.due).status, 'published', 'due row not published');
+    eq(r.rows.find((x) => x.id === P.sched).status, 'scheduled', 'future row must stay scheduled');
+  });
+});
+
+console.log('\n== reposts ==');
+await check('reposting twice is rejected by the unique constraint', async () => {
+  await as(U.s2, async (c) => {
+    const a = await c.t(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s2]);
+    assert(a.ok, 'first repost failed: ' + a.err?.message);
+    const b = await c.t(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s2]);
+    denied(b, /post_reposts_unique_per_user|duplicate key/i, 'second repost');
+  });
+});
+await check('a user cannot repost on someone else\'s behalf', async () => {
+  await as(U.s2, async (c) => {
+    denied(await c.t(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s1]), /row-level security/i, 'forged repost');
+  });
+});
+await check('inserting a repost increments reposts_count and deleting it decrements again', async () => {
+  await as(U.s2, async (c) => {
+    const before = (await c.su(`SELECT reposts_count n FROM public.posts WHERE id = $1`, [P.pub])).rows[0].n;
+    await c.q(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s2]);
+    eq((await c.su(`SELECT reposts_count n FROM public.posts WHERE id = $1`, [P.pub])).rows[0].n, before + 1, 'no increment');
+    const del = await c.t(`DELETE FROM public.post_reposts WHERE post_id = $1 AND user_id = $2`, [P.pub, U.s2]);
+    assert(del.ok && del.n === 1, 'own repost could not be deleted');
+    eq((await c.su(`SELECT reposts_count n FROM public.posts WHERE id = $1`, [P.pub])).rows[0].n, before, 'no decrement');
+  });
+});
+await check('a user cannot delete someone else\'s repost', async () => {
+  await as(U.s2, async (c) => {
+    await c.q(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s2]);
+    await c.su(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s4]);
+    const del = await c.t(`DELETE FROM public.post_reposts WHERE user_id = $1`, [U.s4]);
+    assert(del.ok && del.n === 0, 'deleted another user\'s repost');
+  });
+});
+await check('a suspended user cannot repost', async () => {
+  await as(U.s2, async (c) => {
+    // tr_prevent_profile_role_escalation would revert a self-suspension, so the
+    // suspension is applied the way an admin's RPC does: with that guard off.
+    await c.su(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+    await c.su(`UPDATE public.profiles SET is_suspended = true WHERE id = $1`, [U.s2]);
+    await c.su(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+    eq((await c.su(`SELECT is_suspended FROM public.profiles WHERE id = $1`, [U.s2])).rows[0].is_suspended, true, 'fixture: s2 not suspended');
+    denied(await c.t(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s2]), /row-level security/i, 'suspended repost');
+  });
+});
+await check('reposts are readable by any authenticated user (needed for counts and "did I repost")', async () => {
+  await as(U.s2, async (c) => {
+    await c.su(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s4]);
+    eq((await c.q(`SELECT count(*)::int n FROM public.post_reposts WHERE post_id = $1`, [P.pub])).rows[0].n, 1, 's2 must see s4\'s repost');
+  });
+  await as('anon', async (c) => { denied(await c.t(`SELECT * FROM public.post_reposts`), /permission denied|row-level security/i); });
+});
+
+console.log('\n== saved_items ==');
+await check('saved_items are invisible to other users and cannot be forged or deleted by them', async () => {
+  await as(U.s1, async (c) => {
+    await c.su(`INSERT INTO public.saved_items (user_id, kind, item_id, title) VALUES ($1, 'resource', 'res-1', 'Notes')`, [U.s1]);
+    eq((await c.q(`SELECT count(*)::int n FROM public.saved_items`)).rows[0].n, 1, 'owner must see their own row');
+  });
+  await as(U.s2, async (c) => {
+    await c.su(`INSERT INTO public.saved_items (user_id, kind, item_id, title) VALUES ($1, 'resource', 'res-1', 'Notes')`, [U.s1]);
+    eq((await c.q(`SELECT count(*)::int n FROM public.saved_items`)).rows[0].n, 0, 'saved items leaked to another user');
+    denied(await c.t(`INSERT INTO public.saved_items (user_id, kind, item_id) VALUES ($1, 'post', 'p-1')`, [U.s1]), /row-level security/i, 'forged save');
+    const del = await c.t(`DELETE FROM public.saved_items WHERE user_id = $1`, [U.s1]);
+    assert(del.ok && del.n === 0, 'deleted another user\'s saved item');
+  });
+  await as(U.adminA, async (c) => {
+    await c.su(`INSERT INTO public.saved_items (user_id, kind, item_id) VALUES ($1, 'post', 'p-9')`, [U.s1]);
+    eq((await c.q(`SELECT count(*)::int n FROM public.saved_items`)).rows[0].n, 0, 'admins must not read private saved items either');
+  });
+});
+await check('saving the same item twice is rejected; kind is constrained', async () => {
+  await as(U.s2, async (c) => {
+    assert((await c.t(`INSERT INTO public.saved_items (user_id, kind, item_id) VALUES ($1, 'event', 'e-1')`, [U.s2])).ok, 'first save failed');
+    denied(await c.t(`INSERT INTO public.saved_items (user_id, kind, item_id) VALUES ($1, 'event', 'e-1')`, [U.s2]), /saved_items_unique_per_user|duplicate key/i, 'duplicate save');
+    denied(await c.t(`INSERT INTO public.saved_items (user_id, kind, item_id) VALUES ($1, 'banana', 'x')`, [U.s2]), /check/i, 'bogus kind');
+  });
+});
+console.log('\n== poll votes (per voter) ==');
+// Two more posts: an open poll and one that closed an hour ago.
+const POLL = { open: id(60), closed: id(61) };
+const pollBlob = (closesAt) =>
+  JSON.stringify({
+    question: 'Best lecture slot?',
+    options: [
+      { id: 'opt-1', label: 'Morning', votes: 0 },
+      { id: 'opt-2', label: 'Afternoon', votes: 0 },
+      { id: 'opt-3', label: 'Evening', votes: 0 },
+    ],
+    totalVotes: 0,
+    ...(closesAt ? { closesAt } : {}),
+  });
+await admin(
+  `INSERT INTO public.posts (id, author_id, campus_code, visibility_scope, title, content, poll_data) VALUES
+     ($1, $3, 'UNILAG', 'global', 'open poll',   'body', $4::jsonb),
+     ($2, $3, 'UNILAG', 'global', 'closed poll', 'body', $5::jsonb)`,
+  [POLL.open, POLL.closed, U.s1, pollBlob(null), pollBlob(new Date(Date.now() - 3600_000).toISOString())],
+);
+
+const tally = async (c, postId) =>
+  (await c.su(
+    `SELECT jsonb_object_agg(o ->> 'id', o -> 'votes') opts, (poll_data ->> 'totalVotes')::int total
+       FROM public.posts, jsonb_array_elements(poll_data -> 'options') o
+      WHERE id = $1 GROUP BY poll_data`,
+    [postId],
+  )).rows[0];
+
+await check('two users vote independently and each sees only their own selection', async () => {
+  await as(U.s2, async (c) => {
+    await c.q(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s2]);
+    await c.su(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-3')`, [POLL.open, U.s4]);
+
+    // Each viewer's own vote is a row keyed by their id, not a flag in a shared blob.
+    const mine = await c.q(`SELECT option_id FROM public.post_poll_votes WHERE post_id = $1 AND user_id = auth.uid()`, [POLL.open]);
+    eq(mine.rows.map((r) => r.option_id), ['opt-1'], 's2 must see only their own vote');
+
+    const t = await tally(c, POLL.open);
+    eq([t.opts['opt-1'], t.opts['opt-2'], t.opts['opt-3'], t.total], [1, 0, 1, 2], 'shared tally wrong');
+
+    const stored = await c.su(`SELECT count(*)::int n FROM public.posts, jsonb_array_elements(poll_data -> 'options') o WHERE id = $1 AND o ? 'isVotedByMe'`, [POLL.open]);
+    eq(stored.rows[0].n, 0, 'isVotedByMe was persisted into the shared blob');
+  });
+});
+await check('isVotedByMe is stripped even when a client writes it straight into poll_data', async () => {
+  await as(U.s1, async (c) => {
+    await c.q(
+      `UPDATE public.posts SET poll_data = jsonb_set(poll_data, '{options}', '[{"id":"opt-1","label":"Morning","votes":99,"isVotedByMe":true}]'::jsonb) WHERE id = $1`,
+      [POLL.open],
+    );
+    const n = (await c.su(`SELECT count(*)::int n FROM public.posts, jsonb_array_elements(poll_data -> 'options') o WHERE id = $1 AND o ? 'isVotedByMe'`, [POLL.open])).rows[0].n;
+    eq(n, 0, 'the strip trigger let isVotedByMe through');
+  });
+});
+await check('changing a vote moves the tally by exactly one', async () => {
+  await as(U.s2, async (c) => {
+    await c.q(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s2]);
+    await c.su(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s4]);
+    const before = await tally(c, POLL.open);
+    eq([before.opts['opt-1'], before.total], [2, 2], 'setup tally wrong');
+
+    const up = await c.t(`UPDATE public.post_poll_votes SET option_id = 'opt-2' WHERE post_id = $1 AND user_id = $2`, [POLL.open, U.s2]);
+    assert(up.ok && up.n === 1, 'own vote could not be changed: ' + up.err?.message);
+
+    const t = await tally(c, POLL.open);
+    eq([t.opts['opt-1'], t.opts['opt-2'], t.opts['opt-3'], t.total], [1, 1, 0, 2], 'the change did not move exactly one vote');
+  });
+});
+await check('a user holds at most one vote per poll, and cannot vote for a non-existent option', async () => {
+  await as(U.s2, async (c) => {
+    await c.q(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s2]);
+    denied(await c.t(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-2')`, [POLL.open, U.s2]),
+      /post_poll_votes_one_per_user|duplicate key/i, 'second vote on the same poll');
+    denied(await c.t(`UPDATE public.post_poll_votes SET option_id = 'opt-99' WHERE post_id = $1 AND user_id = $2`, [POLL.open, U.s2]),
+      /option does not exist/i, 'bogus option');
+  });
+});
+await check('withdrawing a vote (tapping your current option again) clears it from the tally', async () => {
+  await as(U.s2, async (c) => {
+    await c.q(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s2]);
+    eq((await tally(c, POLL.open)).total, 1, 'setup');
+    const del = await c.t(`DELETE FROM public.post_poll_votes WHERE post_id = $1 AND user_id = auth.uid()`, [POLL.open]);
+    assert(del.ok && del.n === 1, 'own vote could not be withdrawn');
+    const t = await tally(c, POLL.open);
+    eq([t.opts['opt-1'], t.total], [0, 0], 'withdrawn vote still counted');
+  });
+});
+await check('a closed poll rejects a new vote and a change of vote', async () => {
+  await as(U.s2, async (c) => {
+    denied(await c.t(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.closed, U.s2]),
+      /closed/i, 'vote on a closed poll');
+    // A vote cast while the poll was open cannot be changed after it closes.
+    // The guard applies to the superuser too, so the poll is briefly reopened
+    // to plant the vote, then closed again.
+    const closesAt = (await c.su(`SELECT poll_data ->> 'closesAt' t FROM public.posts WHERE id = $1`, [POLL.closed])).rows[0].t;
+    await c.su(`UPDATE public.posts SET poll_data = poll_data - 'closesAt' WHERE id = $1`, [POLL.closed]);
+    await c.su(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.closed, U.s2]);
+    await c.su(`UPDATE public.posts SET poll_data = poll_data || jsonb_build_object('closesAt', $2::text) WHERE id = $1`, [POLL.closed, closesAt]);
+    denied(await c.t(`UPDATE public.post_poll_votes SET option_id = 'opt-2' WHERE post_id = $1 AND user_id = $2`, [POLL.closed, U.s2]),
+      /closed/i, 'changing a vote on a closed poll');
+  });
+});
+await check('a suspended user cannot vote or change a vote', async () => {
+  await as(U.s2, async (c) => {
+    await c.su(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s2]);
+    await c.su(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+    await c.su(`UPDATE public.profiles SET is_suspended = true WHERE id = $1`, [U.s2]);
+    await c.su(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+
+    const change = await c.t(`UPDATE public.post_poll_votes SET option_id = 'opt-2' WHERE post_id = $1 AND user_id = $2`, [POLL.open, U.s2]);
+    assert(change.ok && change.n === 0, 'a suspended user changed their vote');
+    await c.su(`DELETE FROM public.post_poll_votes WHERE post_id = $1`, [POLL.open]);
+    denied(await c.t(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s2]),
+      /row-level security/i, 'a suspended user voted');
+  });
+});
+await check('a user cannot vote as someone else, change someone else\'s vote or delete it', async () => {
+  await as(U.s2, async (c) => {
+    denied(await c.t(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s1]),
+      /row-level security/i, 'forged vote');
+    await c.su(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s4]);
+    const up = await c.t(`UPDATE public.post_poll_votes SET option_id = 'opt-2' WHERE user_id = $1`, [U.s4]);
+    assert(up.ok && up.n === 0, 'changed another user\'s vote');
+    const del = await c.t(`DELETE FROM public.post_poll_votes WHERE user_id = $1`, [U.s4]);
+    assert(del.ok && del.n === 0, 'deleted another user\'s vote');
+  });
+});
+await check('anon cannot read post_poll_votes', async () => {
+  await as('anon', async (c) => { denied(await c.t(`SELECT * FROM public.post_poll_votes`), /permission denied/i); });
+});
+
+await check('purge_user_data() clears post_reposts, saved_items and post_poll_votes for the purged user', async () => {
+  await as('postgres', async (c) => {
+    await c.q(`INSERT INTO public.post_reposts (post_id, user_id) VALUES ($1, $2)`, [P.pub, U.s4]);
+    await c.q(`INSERT INTO public.saved_items (user_id, kind, item_id) VALUES ($1, 'job', 'j-1')`, [U.s4]);
+    await c.q(`INSERT INTO public.post_poll_votes (post_id, user_id, option_id) VALUES ($1, $2, 'opt-1')`, [POLL.open, U.s4]);
+    const out = (await c.q(`SELECT public.purge_user_data($1) j`, [U.s4])).rows[0].j;
+    eq((await c.q(`SELECT count(*)::int n FROM public.post_reposts WHERE user_id = $1`, [U.s4])).rows[0].n, 0, 'reposts survived the purge');
+    eq((await c.q(`SELECT count(*)::int n FROM public.saved_items WHERE user_id = $1`, [U.s4])).rows[0].n, 0, 'saved items survived the purge');
+    eq((await c.q(`SELECT count(*)::int n FROM public.post_poll_votes WHERE user_id = $1`, [U.s4])).rows[0].n, 0, 'poll votes survived the purge');
+    // ...and the tally the purged vote contributed to was recounted.
+    eq((await tally(c, POLL.open)).total, 0, 'the purged vote is still in the tally');
+    assert(out.deleted['post_reposts.user_id'] === 1 && out.deleted['saved_items.user_id'] === 1 && out.deleted['post_poll_votes.user_id'] === 1,
+      'purge report did not mention all three tables: ' + JSON.stringify(out.deleted));
+  });
+});
+
 console.log('\n== Optional objects missing (guards) ==');
+await check('posts features migration applies on a database where pg_cron and optional objects are absent', async () => {
+  const db3 = await newDb();
+  await bootstrap(db3);
+  for (const m of MIGRATIONS) await applyFile(db3, m.file, m.strict, () => {});
+  const sql = await readRepo('supabase_posts_features_2026.sql');
+  await db3.exec(sql);
+  await db3.exec(sql);
+  eq((await db3.query(`SELECT count(*)::int n FROM pg_policies WHERE tablename IN ('post_reposts','saved_items')`)).rows[0].n, 7, 'expected 7 policies on the two new tables');
+  await db3.close();
+});
 await check('migration still applies when optional objects are absent (jobs, support_tickets, forum_communities, mentorships, profiles.push_token, cleanup_api_rate_limits)', async () => {
   const db2 = await newDb();
   await bootstrap(db2);
