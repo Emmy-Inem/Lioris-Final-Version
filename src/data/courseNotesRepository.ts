@@ -29,6 +29,20 @@ export interface PastExamProblem {
   modelSolution: string;
 }
 
+export interface LectureSlide {
+  slideNumber: number;
+  totalSlides: number;
+  category: string;
+  title: string;
+  subtitle?: string;
+  bullets?: string[];
+  paragraph?: string;
+  codeSnippet?: string;
+  formula?: string;
+  speakerNotes?: string;
+  isTitleSlide?: boolean;
+}
+
 export interface CourseNotesData {
   courseCode: string;
   courseTitle: string;
@@ -801,3 +815,99 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+/**
+ * Compiles course notes data into a complete sequence of 16:9 presentation slides
+ * with slide numbers, titles, bulleted takeaways, formulas, code snippets, and lecturer speaker notes.
+ */
+export function generateCourseSlides(notes: CourseNotesData): LectureSlide[] {
+  const slides: LectureSlide[] = [];
+
+  // 1. Title Slide
+  slides.push({
+    slideNumber: 1,
+    totalSlides: 0,
+    category: `${notes.courseCode} • Department of ${notes.department}`,
+    title: notes.courseTitle,
+    subtitle: `${notes.facultyOrCollege}\n${notes.semester} Semester • ${notes.level} (${notes.creditUnits} Units)`,
+    isTitleSlide: true,
+    speakerNotes: `Welcome to ${notes.courseCode}: ${notes.courseTitle}. This lecture slide presentation covers foundational theory, architecture, mathematical formulations, and examination review.`,
+  });
+
+  // 2. Course Outline & Learning Outcomes
+  slides.push({
+    slideNumber: 2,
+    totalSlides: 0,
+    category: 'Course Outline',
+    title: 'Course Objectives & Learning Outcomes',
+    paragraph: notes.overview,
+    bullets: notes.learningOutcomes,
+    speakerNotes: 'Core learning objectives mandated by the National Universities Commission (NUC) BMAS/CCMAS and departmental curriculum.',
+  });
+
+  // 3. Module & Topic Slides
+  for (const mod of notes.modules) {
+    slides.push({
+      slideNumber: slides.length + 1,
+      totalSlides: 0,
+      category: `Module ${mod.number}`,
+      title: `Module ${mod.number}: ${mod.title}`,
+      paragraph: mod.summary,
+      bullets: mod.topics.map(t => t.heading),
+      speakerNotes: `Overview of topics and learning objectives covered in Module ${mod.number}.`,
+    });
+
+    for (const topic of mod.topics) {
+      slides.push({
+        slideNumber: slides.length + 1,
+        totalSlides: 0,
+        category: `Module ${mod.number} • ${mod.title}`,
+        title: topic.heading,
+        paragraph: topic.content,
+        bullets: topic.keyPoints,
+        formula: topic.formula,
+        codeSnippet: topic.codeSnippet,
+        speakerNotes: `Key exam focus: Make sure you understand the foundational definitions, formulas, and practical implications of ${topic.heading}.`,
+      });
+    }
+  }
+
+  // 4. High-Yield Examination Takeaways
+  slides.push({
+    slideNumber: slides.length + 1,
+    totalSlides: 0,
+    category: 'Exam Revision',
+    title: 'High-Yield Examination Takeaways',
+    bullets: notes.highYieldTakeaways,
+    speakerNotes: 'Crucial concepts and recurring problem sets frequently tested in university examinations across FUNAAB, UNILAG, and UI.',
+  });
+
+  // 5. Past Examination Questions
+  for (const pq of notes.pastQuestions) {
+    slides.push({
+      slideNumber: slides.length + 1,
+      totalSlides: 0,
+      category: `Past Exam Problem • Question ${pq.questionNumber}`,
+      title: `Question ${pq.questionNumber} [${pq.type}]`,
+      paragraph: pq.question,
+      bullets: pq.options,
+      speakerNotes: `Model Solution:\n${pq.modelSolution}`,
+    });
+  }
+
+  // 6. Recommended Textbooks
+  slides.push({
+    slideNumber: slides.length + 1,
+    totalSlides: 0,
+    category: 'References',
+    title: 'Recommended Textbooks & Courseware',
+    bullets: notes.recommendedTextbooks,
+    speakerNotes: 'Consult these recommended textbooks in your university library or departmental repository for extended reading.',
+  });
+
+  const total = slides.length;
+  slides.forEach(s => { s.totalSlides = total; });
+
+  return slides;
+}
+
