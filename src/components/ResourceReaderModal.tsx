@@ -26,14 +26,12 @@ interface ResourceReaderModalProps {
   visible: boolean;
   resource: Resource | null;
   onClose: () => void;
-  onSendToCopilot?: (prompt: string) => void;
 }
 
 export function ResourceReaderModal({
   visible,
   resource,
   onClose,
-  onSendToCopilot,
 }: ResourceReaderModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
@@ -248,36 +246,6 @@ export function ResourceReaderModal({
               {resource.title}
             </AppText>
           </View>
-
-          {onSendToCopilot && (
-            <Pressable
-              onPress={() => {
-                onClose();
-                onSendToCopilot(
-                  `Please analyze and generate step-by-step revision flashcards and practice problems for the following course material:\nCourse: ${resource.courseCode} (${resource.department})\nTitle: ${resource.title}\nDescription: ${resource.description || 'General course notes'}`,
-                );
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Analyse this material with the AI study copilot"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                backgroundColor: colors.pastelPrimaryBg,
-                paddingHorizontal: 14,
-                minHeight: 44,
-                borderRadius: radius.pill,
-                borderWidth: 1,
-                borderColor: `${colors.brandPrimary}40`,
-              }}
-            >
-              <Ionicons name="sparkles" size={15} color={colors.brandPrimary} />
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 12 }}>
-                AI Study Copilot
-              </AppText>
-            </Pressable>
-          )}
         </View>
 
         {/* Main Content Area */}

@@ -27,7 +27,6 @@ import { useCampusScope } from '@/hooks/useCampusScope';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 import { AcademicLibraryModal } from '@/components/AcademicLibraryModal';
 import { ResearchPapersModal } from '@/components/ResearchPapersModal';
-import { AICopilotModal } from '@/components/AICopilotModal';
 import { ResourceReaderModal } from '@/components/ResourceReaderModal';
 import { useResourceBookmarks } from '@/utils/resourceBookmarks';
 import { Resource } from '@/api/types';
@@ -68,8 +67,6 @@ export default function ResourcesScreen() {
  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
   const [libraryModalOpen, setLibraryModalOpen] = useState(false);
   const [researchModalOpen, setResearchModalOpen] = useState(false);
-  const [copilotOpen, setCopilotOpen] = useState(false);
-  const [copilotPrompt, setCopilotPrompt] = useState<string | undefined>(undefined);
   const [readingResource, setReadingResource] = useState<Resource | null>(null);
   const { isFeatureEnabled } = useFeatureFlags();
   const { bookmarkedIds } = useResourceBookmarks();
@@ -1104,27 +1101,11 @@ export default function ResourcesScreen() {
       <ResearchPapersModal
         visible={researchModalOpen}
         onClose={() => setResearchModalOpen(false)}
-        onSendToCopilot={(p) => {
-          setCopilotPrompt(p);
-          setCopilotOpen(true);
-        }}
-      />
-      <AICopilotModal
-        visible={copilotOpen}
-        onClose={() => {
-          setCopilotOpen(false);
-          setCopilotPrompt(undefined);
-        }}
-        initialPrompt={copilotPrompt}
       />
       <ResourceReaderModal
         visible={!!readingResource}
         resource={readingResource}
         onClose={() => setReadingResource(null)}
-        onSendToCopilot={(p) => {
-          setCopilotPrompt(p);
-          setCopilotOpen(true);
-        }}
       />
     </ScreenContainer>
   );

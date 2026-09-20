@@ -10,7 +10,6 @@ import { AppButton } from '@/components/AppButton';
 import { StudyGroupCard } from '@/components/StudyGroupCard';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateStudyGroupModal } from '@/components/CreateStudyGroupModal';
-import { AICopilotModal } from '@/components/AICopilotModal';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useToast } from '@/context/ToastContext';
@@ -27,7 +26,6 @@ export default function StudyGroupsScreen() {
  const queryClient = useQueryClient();
   const toast = useToast();
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const { isFeatureEnabled } = useFeatureFlags();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All Pods');
@@ -83,14 +81,6 @@ export default function StudyGroupsScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: isDesktop ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
-          {isFeatureEnabled('ai_study_copilot') && (
-            <AppButton
-              label="AI Copilot"
-              variant="ghost"
-              size={isDesktop ? 'md' : 'sm'}
-              onPress={() => setCopilotOpen(true)}
-            />
-          )}
           <AppButton
             label="+ Create Pod"
             variant="primary"
@@ -276,7 +266,6 @@ export default function StudyGroupsScreen() {
         onClose={() => setCreateModalOpen(false)}
         onCreate={handleCreate}
       />
-      <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
     </ScreenContainer>
   );
 }

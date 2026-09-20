@@ -9,7 +9,6 @@ import { SolidCard } from '@/components/SolidCard';
 import { GlassCard } from '@/components/GlassCard';
 import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
-import { AICopilotModal } from '@/components/AICopilotModal';
 import { CurrencyConverterModal } from '@/components/CurrencyConverterModal';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
@@ -42,7 +41,6 @@ export default function StaffDashboard() {
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
   const { campusCode, homeInstitutionCode } = useCampusScope();
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   const { data: profile } = useQuery({
@@ -190,55 +188,6 @@ export default function StaffDashboard() {
 
         {/* Live Campus Radio Player */}
         {isFeatureEnabled('campus_radio') && <CampusRadioPlayer />}
-
-        {/* AI Faculty Teaching Copilot Banner */}
-        {isFeatureEnabled('ai_study_copilot') && (
-          <GlassCard
-            radius={20}
-            padded={false}
-            contentStyle={{
-              padding: spacing.md,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                <View
-                  style={{
-                    width: 38,
-                    height: 38,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Ionicons name="sparkles" size={22} color={colors.textSecondary} />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" style={{ fontSize: isDesktop ? 14 : 13, lineHeight: 16 }}>
-                    AI Teaching Assistant
-                  </AppText>
-                  <AppText variant="caption" tone="secondary" style={{ fontSize: isDesktop ? 12 : 10.5, lineHeight: 14, marginTop: 2 }}>
-                    Syllabus, quiz generation & rubrics
-                  </AppText>
-                </View>
-              </View>
-              <Pressable
-                onPress={() => setCopilotOpen(true)}
-                style={{
-                  backgroundColor: colors.brandPrimary,
-                  borderRadius: radius.pill,
-                  paddingHorizontal: isDesktop ? 12 : 10,
-                  paddingVertical: isDesktop ? 6 : 5,
-                  flexShrink: 0,
-                }}
-              >
-                <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                  Ask AI →
-                </AppText>
-              </Pressable>
-            </View>
-          </GlassCard>
-        )}
 
         {/* 2. Urgent Safety & Content Moderation Alerts */}
         {openReportsCount > 0 && (
@@ -609,7 +558,6 @@ export default function StaffDashboard() {
           </View>
         </View>
       </ScrollView>
-      <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
       <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
     </ScreenContainer>
   );

@@ -155,7 +155,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'AI & Tools',
     tier: 'P0',
     description: 'AI study assistant for concept explanation, past questions, and revision summaries (uses Google Gemini once the gemini-proxy key is configured; offline study templates otherwise).',
-    defaultOn: true,
+    defaultOn: false,
   },
   {
     key: 'currency_converter',

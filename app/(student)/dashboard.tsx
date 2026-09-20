@@ -11,7 +11,6 @@ import { SolidCard } from '@/components/SolidCard';
 import { GlassCard } from '@/components/GlassCard';
 import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
-import { AICopilotModal } from '@/components/AICopilotModal';
 import { CurrencyConverterModal } from '@/components/CurrencyConverterModal';
 import { CampusMapModal } from '@/components/CampusMapModal';
 import { AppTutorialModal } from '@/components/AppTutorialModal';
@@ -46,7 +45,6 @@ export default function StudentDashboard() {
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { campusCode, homeInstitutionCode } = useCampusScope();
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [campusMapOpen, setCampusMapOpen] = useState(false);
 
@@ -303,60 +301,6 @@ export default function StudentDashboard() {
 
         {/* Live Campus Radio Player */}
         <CampusRadioPlayer />
-
-        {/* AI Campus Study Copilot Quick Launcher */}
-        {isFeatureEnabled('ai_study_copilot') && (
-          <GlassCard
-            radius={18}
-            padded={false}
-            contentStyle={{
-              padding: spacing.md,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Ionicons name="sparkles" size={22} color={colors.textSecondary} />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13.5 : 12.5, lineHeight: 16 }}>
-                    AI Academic Study Copilot
-                  </AppText>
-                  <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10.5, lineHeight: 14, marginTop: 2 }}>
-                    Concept breakdowns & past questions
-                  </AppText>
-                </View>
-              </View>
-              <Pressable
-                onPress={() => setCopilotOpen(true)}
-                style={{
-                  backgroundColor: colors.brandPrimary,
-                  borderRadius: radius.pill,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  flexShrink: 0,
-                  marginLeft: 8,
-                }}
-              >
-                <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11 }}>
-                  Ask AI →
-                </AppText>
-              </Pressable>
-            </View>
-          </GlassCard>
-        )}
-
-        {/* Gamification & Streaks (Feature Flagged) */}
-
-        {/* AI Campus Study Copilot (Feature Flagged) */}
 
         {/* 2. Quick Student Everyday Productivity Actions */}
         <View>
@@ -926,7 +870,6 @@ export default function StudentDashboard() {
         )}
       </ScrollView>
 
-      <AICopilotModal visible={copilotOpen} onClose={() => setCopilotOpen(false)} />
       <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
       <CampusMapModal visible={campusMapOpen} onClose={() => setCampusMapOpen(false)} campusFilter={effectiveCampus} />
       <AppTutorialModal userId={user?.id} />

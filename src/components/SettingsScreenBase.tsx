@@ -31,6 +31,7 @@ import { submitReport } from '@/api/moderation';
 import { createSupportTicket, SupportTicketCategory } from '@/api/supportTickets';
 import * as authApi from '@/api/auth';
 import { haptics } from '@/utils/haptics';
+import { isBiometricsAvailable, authenticateWithBiometrics } from '@/utils/biometrics';
 
 // Cross-platform local persistence for lightweight UI preference toggles.
 // Mirrors the pattern already used in ThemeProvider.tsx: web uses
@@ -120,7 +121,7 @@ export function SettingsScreen() {
   const [pushEnabled, setPushEnabled] = useState(true);
   const [announcementAlerts, setAnnouncementAlerts] = useState(true);
   const [eventAlerts, setEventAlerts] = useState(true);
-  const [biometricShield, setBiometricShield] = useState(true);
+  const [biometricShield, setBiometricShield] = useState(false);
 
   // Change email modal
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -186,8 +187,10 @@ export function SettingsScreen() {
           if (typeof parsed.emailDigest === 'boolean') setEmailDigestAlerts(parsed.emailDigest);
         }
         const bio = await getStoredPref('lioris_setting_biometrics');
-        if (bio) {
+        if (bio !== null) {
           setBiometricShield(JSON.parse(bio) === true);
+        } else {
+          setBiometricShield(false);
         }
         const privacy = await getStoredPref('lioris_setting_privacy');
         if (privacy) {
@@ -405,11 +408,36 @@ export function SettingsScreen() {
     toast.info(next ? 'Weekly email digest enabled' : 'Weekly email digest muted');
   }
 
-  function handleToggleBiometrics(next: boolean) {
+  async function handleToggleBiometrics(next: boolean) {
     haptics.light();
-    setBiometricShield(next);
-    setStoredPref('lioris_setting_biometrics', JSON.stringify(next));
-    toast.info(next ? 'Biometric security lock activated' : 'Biometric security lock disabled');
+    if (!next) {
+      setBiometricShield(false);
+      await setStoredPref('lioris_setting_biometrics', 'false');
+      toast.info('Biometric security lock disabled');
+      return;
+    }
+
+    const bioStatus = await isBiometricsAvailable();
+    if (bioStatus.available) {
+      toast.info('Please verify your biometrics to activate the shield...');
+      const authResult = await authenticateWithBiometrics(
+        user ? { id: user.id, email: user.email, fullName: user.fullName || '' } : null
+      );
+      if (authResult.success) {
+        setBiometricShield(true);
+        await setStoredPref('lioris_setting_biometrics', 'true');
+        toast.success('Biometric & Passkey Shield activated');
+        haptics.success();
+      } else {
+        toast.error(authResult.error || 'Biometric verification failed or was cancelled');
+        haptics.error();
+      }
+    } else {
+      setBiometricShield(true);
+      await setStoredPref('lioris_setting_biometrics', 'true');
+      toast.info('Password Shield activated (device biometrics not supported on this browser)');
+      haptics.success();
+    }
   }
 
   function handleToggleDirectoryDiscovery(next: boolean) {

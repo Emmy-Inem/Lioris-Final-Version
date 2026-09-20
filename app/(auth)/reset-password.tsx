@@ -302,6 +302,39 @@ export default function ResetPasswordScreen() {
             </View>
           ) : null}
 
+          {/* Email Delivery / Spam Folder Notice */}
+          {!hasActiveRecoverySession && (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                gap: 10,
+                backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : '#FEF9C3',
+                borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : '#FDE047',
+                borderWidth: 1,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.lg,
+              }}
+            >
+              <Ionicons
+                name="mail-unread-outline"
+                size={20}
+                color={isDark ? '#FACC15' : '#CA8A04'}
+                style={{ marginTop: 2, flexShrink: 0 }}
+              />
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" weight="bold" style={{ color: isDark ? '#FEF08A' : '#854D0E', marginBottom: 2 }}>
+                  Check Your Spam / Junk Folder
+                </AppText>
+                <AppText variant="caption" style={{ color: isDark ? '#FEF08A' : '#854D0E', lineHeight: 16 }}>
+                  Automated password reset emails are sometimes flagged as spam by email providers (Gmail, Outlook, Yahoo). If you don't see our email in your inbox within 1-2 minutes, check your Spam/Junk folder and search for "Lioris".
+                </AppText>
+              </View>
+            </View>
+          )}
+
           {/* Mode 1: Active Recovery Session (From Magic Link / Token) */}
           {hasActiveRecoverySession ? (
             <>

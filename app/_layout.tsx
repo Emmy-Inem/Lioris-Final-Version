@@ -19,6 +19,7 @@ import { ReConsentGate } from '@/components/ReConsentGate';
 import { addNotificationResponseListener } from '@/notifications/push';
 
 import { loadBlockedUserIds } from '@/api/connections';
+import { AppLockOverlay } from '@/components/AppLockOverlay';
 
 import { FeatureFlagsProvider, useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { ToastProvider } from '@/context/ToastContext';
@@ -304,6 +305,7 @@ function AppShell() {
  </ErrorBoundary>
  <ReConsentGate />
  <AlertHost />
+ <AppLockOverlay />
  </>
  );
 }

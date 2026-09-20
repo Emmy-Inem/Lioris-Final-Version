@@ -718,6 +718,28 @@ export default function LoginScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
           />
+
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 8,
+              backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : '#FEF9C3',
+              borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : '#FDE047',
+              borderWidth: 1,
+              borderRadius: radius.md,
+              padding: spacing.sm,
+              marginTop: spacing.sm,
+              marginBottom: spacing.xs,
+            }}
+          >
+            <Ionicons name="information-circle" size={18} color={isDark ? '#FACC15' : '#CA8A04'} style={{ marginTop: 1, flexShrink: 0 }} />
+            <AppText variant="caption" style={{ color: isDark ? '#FEF08A' : '#854D0E', flex: 1, lineHeight: 16 }}>
+              <AppText weight="bold" style={{ color: isDark ? '#FEF08A' : '#854D0E' }}>Spam / Junk Folder Notice: </AppText>
+              Password recovery emails may be filtered to your Spam or Junk folder. If not received in 1-2 minutes, check Spam and search for "Lioris".
+            </AppText>
+          </View>
+
           <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
             <AppButton label="Cancel" variant="ghost" onPress={() => setForgotModalOpen(false)} />
             <AppButton
@@ -753,6 +775,26 @@ export default function LoginScreen() {
             </AppText>
             <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2 }}>
               We sent a recovery link and 6-digit code to {forgotEmail}. Click the email link or enter your code below.
+            </AppText>
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 8,
+              backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : '#FEF9C3',
+              borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : '#FDE047',
+              borderWidth: 1,
+              borderRadius: radius.md,
+              padding: spacing.sm,
+              marginBottom: spacing.md,
+            }}
+          >
+            <Ionicons name="mail-unread" size={18} color={isDark ? '#FACC15' : '#CA8A04'} style={{ marginTop: 1, flexShrink: 0 }} />
+            <AppText variant="caption" style={{ color: isDark ? '#FEF08A' : '#854D0E', flex: 1, lineHeight: 16 }}>
+              <AppText weight="bold" style={{ color: isDark ? '#FEF08A' : '#854D0E' }}>Can't find the email? </AppText>
+              Please check your <AppText weight="bold" style={{ color: isDark ? '#FEF08A' : '#854D0E' }}>Spam / Junk folder</AppText>. Mark the email as "Not Spam" or add Lioris to your safe sender list.
             </AppText>
           </View>
 

@@ -32,7 +32,6 @@ interface ResearchPapersModalProps {
   visible: boolean;
   onClose: () => void;
   initialTopic?: string;
-  onSendToCopilot?: (prompt: string) => void;
 }
 
 const RESEARCH_TOPICS = [
@@ -49,7 +48,6 @@ export function ResearchPapersModal({
   visible,
   onClose,
   initialTopic = '',
-  onSendToCopilot,
 }: ResearchPapersModalProps) {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
@@ -113,33 +111,6 @@ export function ResearchPapersModal({
     }
   }
 
-  /**
-   * Hands the paper to the AI study copilot in `explain` mode.
-   *
-   * This used to look like a dead button: the prompt did reach `resources.tsx`, which passed it to
-   * `AICopilotModal` as `initialPrompt` - but that modal only read the prop from a `useState`
-   * initialiser, which runs once on mount. The modal is always mounted and merely toggles
-   * `visible`, so the prompt was discarded and the copilot opened blank. AICopilotModal now seeds
-   * and auto-sends `initialPrompt` on every open, so this works end to end.
-   *
-   * The button only renders when a copilot handler was supplied, so there is no silent no-op path.
-   */
-  function handleAnalyzeWithAi(paper: ResearchPaper) {
-    if (onSendToCopilot) {
-      haptics.light();
-      const prompt = `Please review and summarize this research paper for my academic thesis:
-
-**Title:** ${paper.title}
-**Authors:** ${paper.authors.join(', ')} (${paper.year})
-**Venue:** ${paper.venue || 'Academic Journal'}
-**Abstract:** ${paper.abstract}
-
-Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Findings, and 4) How to cite this in a literature review.`;
-      toast.info('Sending this paper to your AI study copilot...');
-      onSendToCopilot(prompt);
-      onClose();
-    }
-  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -368,17 +339,6 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                         </AppText>
                       </Pressable>
 
-                      {onSendToCopilot && (
-                        <Pressable
-                          onPress={() => handleAnalyzeWithAi(paper)}
-                          style={[styles.smallActionBtn, { backgroundColor: `${colors.brandPrimary}12` }]}
-                        >
-                          <Ionicons name="sparkles" size={13} color={colors.brandPrimary} />
-                          <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
-                            Analyze AI
-                          </AppText>
-                        </Pressable>
-                      )}
 
                       <Pressable
                         onPress={() => handleOpenPaper(paper)}
