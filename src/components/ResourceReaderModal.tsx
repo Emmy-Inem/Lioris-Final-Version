@@ -21,6 +21,8 @@ import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { getCourseLectureNotes } from '@/data/courseNotesRepository';
+import { downloadResourceFile } from '@/utils/resourceDownloader';
 
 interface ResourceReaderModalProps {
   visible: boolean;
@@ -64,22 +66,23 @@ export function ResourceReaderModal({
     haptics.light();
     setDownloading(true);
     try {
-      if (resource.fileUrl) {
-        if (!isSafeHttpUrl(resource.fileUrl) || !(await openExternalUrl(resource.fileUrl))) {
-          Alert.alert('Download Unavailable', 'This resource has an invalid or unsafe file link.');
-          return;
-        }
+      const res = await downloadResourceFile(resource);
+      if (res.success) {
         setDownloaded(true);
         trackResourceDownload(resource.id).catch(() => {});
-        toast.success(`Download started for ${resource.title}.`);
+        haptics.success();
+        toast.success(
+          res.isNoteHtml
+            ? `Downloaded ${resource.courseCode || resource.title} lecture notes (.html)`
+            : `Download started for ${resource.title}`,
+        );
       } else {
-        // Verified in-app study note: bookmark for offline access
-        await toggleBookmark(resource.id);
-        setDownloaded(true);
-        toast.success(`Saved "${resource.title}" to bookmarks for offline reading.`);
+        haptics.error();
+        Alert.alert('Download Failed', res.error || 'Could not download this file. Please try again.');
       }
     } catch {
-      Alert.alert('Download Failed', 'Could not open this file. Please try again.');
+      haptics.error();
+      Alert.alert('Download Failed', 'Could not open or download this file. Please try again.');
     } finally {
       setDownloading(false);
     }
@@ -94,6 +97,8 @@ export function ResourceReaderModal({
   const viewerUrl = isDirectPdf
     ? `https://docs.google.com/viewer?url=${encodeURIComponent(resource.fileUrl!)}&embedded=true`
     : null;
+
+  const courseNotes = getCourseLectureNotes(resource);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -167,7 +172,7 @@ export function ResourceReaderModal({
 
             <View style={{ flexShrink: 0 }}>
               <AppButton
-                label={downloaded ? 'Saved' : 'Download'}
+                label={downloaded ? 'Downloaded ✓' : 'Download'}
                 variant={downloaded ? 'secondary' : 'primary'}
                 size="sm"
                 loading={downloading}
@@ -320,8 +325,15 @@ export function ResourceReaderModal({
                 </View>
               </View>
             ) : (
-              // In-app note view when no external file URL is present
-              <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
+              // Comprehensive In-App Lecture Notes & Curriculum View
+              <ScrollView
+                contentContainerStyle={{
+                  padding: spacing.lg,
+                  paddingBottom: Math.max(insets.bottom, spacing.xl),
+                  gap: spacing.lg,
+                }}
+              >
+                {/* 1. Course Header & Metadata Card */}
                 <View
                   style={{
                     backgroundColor: colors.surface,
@@ -331,54 +343,378 @@ export function ResourceReaderModal({
                     borderColor: colors.border,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.md }}>
-                    <Ionicons name="book-outline" size={24} color={colors.textSecondary} />
-                    <AppText variant="h2" weight="bold">
-                      {resource.title}
-                    </AppText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: spacing.sm }}>
+                    <Badge label={courseNotes.courseCode} tone="brand" />
+                    <Badge label={`${courseNotes.creditUnits} Units`} tone="neutral" />
+                    <Badge label={courseNotes.level} tone="neutral" />
+                    <Badge label={courseNotes.semester} tone="neutral" />
                   </View>
 
-                  <AppText tone="secondary" style={{ lineHeight: 22, fontSize: 14, marginBottom: spacing.lg }}>
-                    {resource.description || 'Comprehensive departmental lecture notes and curriculum summary.'}
+                  <AppText variant="h2" weight="bold" style={{ marginBottom: 4 }}>
+                    {courseNotes.courseTitle}
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md, lineHeight: 18 }}>
+                    {courseNotes.facultyOrCollege} • {courseNotes.department}
                   </AppText>
 
-                  {resource.fileUrl && !isDirectPdf && (
-                    <View style={{ marginBottom: spacing.lg }}>
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+                    <View style={{ flex: 1, minWidth: 180 }}>
                       <AppButton
-                        label="Open Official University Repository / Question Bank ↗"
-                        onPress={() => { void openExternalUrl(resource.fileUrl!); }}
+                        label={downloaded ? 'Downloaded ✓' : 'Download Complete Notes (.html / PDF)'}
                         variant="primary"
+                        size="sm"
+                        loading={downloading}
+                        onPress={handleDownload}
                       />
                     </View>
-                  )}
+                    {resource.fileUrl && !isDirectPdf && (
+                      <View style={{ flex: 1, minWidth: 180 }}>
+                        <AppButton
+                          label="Open University Portal / Repo ↗"
+                          onPress={() => { void openExternalUrl(resource.fileUrl!); }}
+                          variant="secondary"
+                          size="sm"
+                        />
+                      </View>
+                    )}
+                  </View>
+                </View>
 
-                  <View
-                    style={{
-                      backgroundColor: colors.divider,
-                      borderRadius: 12,
-                      padding: spacing.md,
-                      borderLeftWidth: 4,
-                      borderLeftColor: colors.border,
-                      marginBottom: spacing.lg,
-                    }}
-                  >
-                    <AppText weight="bold" variant="bodySmall" style={{ marginBottom: 4 }}>
-                      Verified Academic Material
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ lineHeight: 18 }}>
-                      Course: {resource.courseCode} • Department: {resource.department}
-                      {'\n'}Author: {resource.authorName} • Category: {resource.category}
+                {/* 2. Course Overview & Learning Outcomes */}
+                <View
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderRadius: 16,
+                    padding: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
+                    <Ionicons name="information-circle-outline" size={20} color={colors.brandPrimary} />
+                    <AppText variant="h3" weight="bold">
+                      Course Overview & Objectives
                     </AppText>
                   </View>
+                  <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 22, marginBottom: spacing.md }}>
+                    {courseNotes.overview}
+                  </AppText>
 
                   <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.xs }}>
-                    Key Examination Takeaways:
+                    Intended Learning Outcomes:
                   </AppText>
-                  <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 20 }}>
-                    • Review past exam trends and recommended problem sets associated with {resource.courseCode}.
-                    {'\n'}• Verify prerequisite formulas and lecture slide references.
-                    {'\n'}• Bookmark this resource for quick offline reference before finals.
+                  <View style={{ gap: 8 }}>
+                    {courseNotes.learningOutcomes.map((lo, i) => (
+                      <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                        <Ionicons name="checkmark-circle-outline" size={16} color={colors.brandPrimary} style={{ marginTop: 2 }} />
+                        <AppText variant="bodySmall" style={{ flex: 1, lineHeight: 20 }}>
+                          {lo}
+                        </AppText>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {/* 3. Multi-Module Detailed Lecture Notes */}
+                {courseNotes.modules.map((mod) => (
+                  <View
+                    key={mod.number}
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderRadius: 16,
+                      padding: spacing.lg,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
+                      <View
+                        style={{
+                          backgroundColor: colors.pastelPrimaryBg,
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <AppText weight="bold" tone="brand" variant="caption">
+                          Module {mod.number}
+                        </AppText>
+                      </View>
+                      <AppText variant="h3" weight="bold" style={{ flex: 1 }}>
+                        {mod.title}
+                      </AppText>
+                    </View>
+
+                    <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md, lineHeight: 20 }}>
+                      {mod.summary}
+                    </AppText>
+
+                    {/* Topics */}
+                    <View style={{ gap: spacing.md }}>
+                      {mod.topics.map((topic, tIdx) => (
+                        <View
+                          key={tIdx}
+                          style={{
+                            paddingTop: tIdx > 0 ? spacing.md : 0,
+                            borderTopWidth: tIdx > 0 ? 1 : 0,
+                            borderTopColor: colors.divider,
+                          }}
+                        >
+                          <AppText weight="bold" style={{ fontSize: 15, marginBottom: 6, color: colors.textPrimary }}>
+                            {topic.heading}
+                          </AppText>
+                          <AppText style={{ lineHeight: 22, fontSize: 13.5, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                            {topic.content}
+                          </AppText>
+
+                          {/* Formula callout */}
+                          {topic.formula ? (
+                            <View
+                              style={{
+                                backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : '#F1F5F9',
+                                borderRadius: 8,
+                                padding: spacing.sm,
+                                borderLeftWidth: 3,
+                                borderLeftColor: colors.brandPrimary,
+                                marginVertical: spacing.xs,
+                              }}
+                            >
+                              <AppText weight="bold" variant="caption" tone="brand" style={{ marginBottom: 2 }}>
+                                Mathematical Formulation:
+                              </AppText>
+                              <AppText
+                                style={{
+                                  fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                                  fontSize: 12.5,
+                                  lineHeight: 18,
+                                  color: colors.textPrimary,
+                                }}
+                              >
+                                {topic.formula}
+                              </AppText>
+                            </View>
+                          ) : null}
+
+                          {/* Code Snippet */}
+                          {topic.codeSnippet ? (
+                            <View
+                              style={{
+                                backgroundColor: '#0F172A',
+                                borderRadius: 8,
+                                padding: spacing.sm,
+                                marginVertical: spacing.xs,
+                              }}
+                            >
+                              <AppText weight="bold" variant="caption" style={{ color: '#94A3B8', marginBottom: 4 }}>
+                                Algorithm / Code Implementation:
+                              </AppText>
+                              <AppText
+                                style={{
+                                  fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                                  fontSize: 12,
+                                  lineHeight: 18,
+                                  color: '#38BDF8',
+                                }}
+                              >
+                                {topic.codeSnippet}
+                              </AppText>
+                            </View>
+                          ) : null}
+
+                          {/* Key Points */}
+                          {topic.keyPoints && topic.keyPoints.length > 0 ? (
+                            <View
+                              style={{
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+                                borderRadius: 8,
+                                padding: spacing.sm,
+                                marginTop: spacing.xs,
+                              }}
+                            >
+                              <AppText weight="bold" variant="caption" tone="secondary" style={{ marginBottom: 4 }}>
+                                Key Takeaways:
+                              </AppText>
+                              {topic.keyPoints.map((kp, kIdx) => (
+                                <View key={kIdx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 3 }}>
+                                  <AppText tone="secondary" style={{ fontSize: 12 }}>•</AppText>
+                                  <AppText variant="caption" tone="secondary" style={{ flex: 1, lineHeight: 17 }}>
+                                    {kp}
+                                  </AppText>
+                                </View>
+                              ))}
+                            </View>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+
+                {/* 4. High-Yield Examination Takeaways */}
+                <View
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderRadius: 16,
+                    padding: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderLeftWidth: 4,
+                    borderLeftColor: '#F59E0B',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
+                    <Ionicons name="sparkles" size={20} color="#D97706" />
+                    <AppText variant="h3" weight="bold" style={{ color: '#D97706' }}>
+                      High-Yield Examination Takeaways
+                    </AppText>
+                  </View>
+                  <View style={{ gap: 8, marginTop: spacing.xs }}>
+                    {courseNotes.highYieldTakeaways.map((takeaway, i) => (
+                      <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                        <AppText style={{ color: '#D97706', fontWeight: 'bold' }}>•</AppText>
+                        <AppText variant="bodySmall" style={{ flex: 1, lineHeight: 20 }}>
+                          {takeaway}
+                        </AppText>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {/* 5. Past Examination Questions & Model Solutions */}
+                <View
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderRadius: 16,
+                    padding: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Ionicons name="school-outline" size={20} color={colors.brandPrimary} />
+                    <AppText variant="h3" weight="bold">
+                      Past Examination Questions & Model Solutions
+                    </AppText>
+                  </View>
+                  <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md, lineHeight: 18 }}>
+                    Curated past university examination problems with step-by-step model solutions and marking rubrics.
                   </AppText>
+
+                  <View style={{ gap: spacing.md }}>
+                    {courseNotes.pastQuestions.map((pq, pIdx) => (
+                      <View
+                        key={pIdx}
+                        style={{
+                          backgroundColor: isDark ? 'rgba(30, 41, 59, 0.5)' : '#F8FAFC',
+                          borderRadius: 12,
+                          padding: spacing.md,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <Badge label={`Question ${pq.questionNumber}`} tone="brand" />
+                          <Badge label={pq.type} tone="neutral" />
+                        </View>
+                        <AppText weight="bold" style={{ fontSize: 13.5, lineHeight: 20, marginBottom: spacing.xs, color: colors.textPrimary }}>
+                          {pq.question}
+                        </AppText>
+
+                        {pq.options && pq.options.length > 0 ? (
+                          <View style={{ marginVertical: spacing.xs, gap: 4 }}>
+                            {pq.options.map((opt, oIdx) => (
+                              <View
+                                key={oIdx}
+                                style={{
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 6,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <AppText variant="caption" tone="secondary" style={{ lineHeight: 16 }}>
+                                  {opt}
+                                </AppText>
+                              </View>
+                            ))}
+                          </View>
+                        ) : null}
+
+                        <View
+                          style={{
+                            backgroundColor: isDark ? 'rgba(16, 185, 129, 0.1)' : '#ECFDF5',
+                            borderRadius: 8,
+                            padding: spacing.sm,
+                            marginTop: spacing.xs,
+                            borderLeftWidth: 3,
+                            borderLeftColor: '#10B981',
+                          }}
+                        >
+                          <AppText weight="bold" variant="caption" style={{ color: '#059669', marginBottom: 2 }}>
+                            Model Solution & Marking Guide:
+                          </AppText>
+                          <AppText style={{ fontSize: 12.5, lineHeight: 18, color: isDark ? '#A7F3D0' : '#065F46' }}>
+                            {pq.modelSolution}
+                          </AppText>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {/* 6. Recommended Textbooks & References */}
+                <View
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderRadius: 16,
+                    padding: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+                    <Ionicons name="library-outline" size={20} color={colors.textSecondary} />
+                    <AppText variant="h3" weight="bold">
+                      Recommended Textbooks & References
+                    </AppText>
+                  </View>
+                  <View style={{ gap: 6 }}>
+                    {courseNotes.recommendedTextbooks.map((tb, i) => (
+                      <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                        <Ionicons name="book-outline" size={14} color={colors.textSecondary} style={{ marginTop: 3 }} />
+                        <AppText variant="bodySmall" tone="secondary" style={{ flex: 1, lineHeight: 20 }}>
+                          {tb}
+                        </AppText>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {/* 7. Bottom Download Card */}
+                <View
+                  style={{
+                    backgroundColor: colors.pastelPrimaryBg,
+                    borderRadius: 16,
+                    padding: spacing.lg,
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                  }}
+                >
+                  <Ionicons name="cloud-download-outline" size={32} color={colors.brandPrimary} />
+                  <AppText weight="bold" style={{ fontSize: 16, textAlign: 'center' }}>
+                    Take These Lecture Notes Anywhere
+                  </AppText>
+                  <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', maxWidth: 360, lineHeight: 18 }}>
+                    Download the complete formatted notes as an offline-readable file (.html / PDF) to study anytime without internet.
+                  </AppText>
+                  <View style={{ width: '100%', maxWidth: 280, marginTop: spacing.xs }}>
+                    <AppButton
+                      label={downloaded ? 'Downloaded To Device ✓' : 'Download Complete Notes'}
+                      variant="primary"
+                      loading={downloading}
+                      onPress={handleDownload}
+                    />
+                  </View>
                 </View>
               </ScrollView>
             )}

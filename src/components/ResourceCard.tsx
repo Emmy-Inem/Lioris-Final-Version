@@ -14,6 +14,8 @@ import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
+import { downloadResourceFile } from '@/utils/resourceDownloader';
+
 export function ResourceCard({
   resource,
   onPreview,
@@ -45,25 +47,23 @@ export function ResourceCard({
     haptics.light();
     setDownloading(true);
     try {
-      if (resource.fileUrl) {
-        if (!isSafeHttpUrl(resource.fileUrl) || !(await openExternalUrl(resource.fileUrl))) {
-          Alert.alert('Download Unavailable', 'This resource has an invalid or unsafe file link.');
-          return;
-        }
+      const res = await downloadResourceFile(resource);
+      if (res.success) {
         setDownloaded(true);
         trackResourceDownload(resource.id).catch(() => {});
-        toast.success(`Download started for ${resource.title}`);
+        haptics.success();
+        toast.success(
+          res.isNoteHtml
+            ? `Downloaded ${resource.courseCode || resource.title} lecture notes (.html)`
+            : `Download started for ${resource.title}`,
+        );
       } else {
-        // Verified in-app study note: bookmark for offline access and preview
-        await toggleBookmark(resource.id);
-        setDownloaded(true);
-        toast.success(`Saved "${resource.title}" to bookmarks for offline reading.`);
-        if (onPreview) {
-          onPreview(resource);
-        }
+        haptics.error();
+        Alert.alert('Download Failed', res.error || 'Could not download this file. Please try again.');
       }
     } catch {
-      Alert.alert('Download Failed', 'Could not open this file. Please try again.');
+      haptics.error();
+      Alert.alert('Download Failed', 'Could not complete the download. Please try again.');
     } finally {
       setDownloading(false);
     }
