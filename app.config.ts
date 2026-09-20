@@ -117,7 +117,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     wsBaseUrl: WS_BASE_URL,
     appEnv: APP_ENV,
     eas: {
-      projectId: process.env.EAS_PROJECT_ID ?? '4df0ca1b-85d1-4475-a6e5-4752b07e7cc4',
+      projectId: process.env.EAS_PROJECT_ID ?? 'a30e59bc-4050-4706-8844-e4cb9d879c37',
     },
   },
   experiments: {
