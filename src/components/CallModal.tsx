@@ -179,7 +179,7 @@ export function CallModal({
             <Avatar name={partnerName} uri={partnerAvatar} size={38} />
             <View style={{ flex: 1, minWidth: 0, marginLeft: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <AppText weight="bold" variant="bodySmall" tone="inverse" numberOfLines={1}>
+                <AppText weight="bold" variant="bodySmall" tone="inverse">
                   {partnerName}
                 </AppText>
                 <Badge

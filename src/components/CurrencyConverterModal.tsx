@@ -80,10 +80,10 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
                 <Ionicons name="cash-outline" size={20} color={colors.textSecondary} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <AppText variant="h3" weight="bold" numberOfLines={1}>
+                <AppText variant="h3" weight="bold">
                   Live Currency & FX Rates
                 </AppText>
-                <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                <AppText variant="caption" tone="secondary">
                   Real-time interbank conversions for campus trade & gifts
                 </AppText>
               </View>

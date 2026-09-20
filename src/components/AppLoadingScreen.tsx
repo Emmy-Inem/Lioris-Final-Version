@@ -228,7 +228,6 @@ export function AppLoadingScreen({
               styles.messageText,
               { color: isDark ? '#E2E8F0' : '#1E293B' },
             ]}
-            numberOfLines={1}
           >
             {currentMessage}
           </Text>

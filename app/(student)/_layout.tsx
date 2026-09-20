@@ -75,6 +75,7 @@ export default function StudentLayout() {
  {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
  <Tabs.Screen name="events"options={{ href: null }} />
  <Tabs.Screen name="profile"options={{ href: null }} />
+ <Tabs.Screen name="saved" options={{ href: null }} />
  <Tabs.Screen name="mentorship"options={{ href: null }} />
  <Tabs.Screen name="notifications"options={{ href: null }} />
  <Tabs.Screen name="search"options={{ href: null }} />

@@ -572,10 +572,10 @@ export function SettingsScreen() {
           }}
         >
           <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
-            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
               Settings & Preferences
             </AppText>
-            <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+            <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
               Credentials, interface themes, notifications & security
             </AppText>
           </View>
@@ -693,13 +693,13 @@ export function SettingsScreen() {
                 >
                   <Avatar name={profile?.fullName ?? user?.fullName ?? 'User'} size={isDesktop ? 60 : 48} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+                    <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
                       {profile?.fullName ?? user?.fullName ?? 'User'}
                     </AppText>
-                    <AppText tone="brand" variant="bodySmall" weight="bold" numberOfLines={1} style={{ marginTop: 1 }}>
+                    <AppText tone="brand" variant="bodySmall" weight="bold" style={{ marginTop: 1 }}>
                       @{profile?.username || user?.fullName?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user'}
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 1 }}>
                       {profile?.email ?? user?.email ?? ''}
                     </AppText>
                     <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
@@ -714,7 +714,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="bodySmall" style={{ flexShrink: 0 }}>
                       Institution
                     </AppText>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flex: 1, textAlign: 'right' }}>
+                    <AppText weight="bold" variant="bodySmall" style={{ flex: 1, textAlign: 'right' }}>
                       {institutionDisplay}
                     </AppText>
                   </View>
@@ -723,7 +723,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="bodySmall" style={{ flexShrink: 0 }}>
                       Department
                     </AppText>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flex: 1, textAlign: 'right' }}>
+                    <AppText weight="bold" variant="bodySmall" style={{ flex: 1, textAlign: 'right' }}>
                       {departmentDisplay}
                     </AppText>
                   </View>
@@ -732,7 +732,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="bodySmall" style={{ flexShrink: 0 }}>
                       Academic Standing
                     </AppText>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flex: 1, textAlign: 'right' }}>
+                    <AppText weight="bold" variant="bodySmall" style={{ flex: 1, textAlign: 'right' }}>
                       {academicStandingDisplay}
                     </AppText>
                   </View>
@@ -800,14 +800,14 @@ export function SettingsScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
                     <Ionicons name={scope === 'campus' ? 'school' : 'globe'} size={20} color={colors.textSecondary} />
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                      <AppText weight="bold" variant="bodySmall">
                         {scope === 'campus'
                           ? (activeCampusCode && activeCampusCode !== homeInstitutionCode
                               ? `Exploring ${getInstitutionByCode(activeCampusCode)?.name ?? activeCampusCode}`
                               : institutionDisplay)
                           : 'All Lioris Global Feed'}
                       </AppText>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                      <AppText tone="secondary" variant="caption">
                         {scope === 'campus' ? 'My Campus Workspace' : 'Cross-university content'}
                       </AppText>
                     </View>
@@ -873,7 +873,7 @@ export function SettingsScreen() {
                           }}
                         >
                           <Ionicons name={t.icon} size={20} color={active ? colors.brandPrimary : colors.textSecondary} />
-                          <AppText variant="caption" weight="bold" tone={active ? 'brand' : 'primary'} numberOfLines={1}>
+                          <AppText variant="caption" weight="bold" tone={active ? 'brand' : 'primary'}>
                             {isDesktop ? t.fullLabel : t.label}
                           </AppText>
                         </Pressable>
@@ -944,7 +944,7 @@ export function SettingsScreen() {
                             {colors.brandPrimary}
                           </AppText>
                         </View>
-                        <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                        <AppText variant="caption" tone="secondary">
                           Buttons, active tabs, brand headers
                         </AppText>
                       </View>
@@ -987,7 +987,7 @@ export function SettingsScreen() {
                             {colors.brandAccent}
                           </AppText>
                         </View>
-                        <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                        <AppText variant="caption" tone="secondary">
                           Action tags, badges, notifications, highlights
                         </AppText>
                       </View>

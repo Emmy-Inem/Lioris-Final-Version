@@ -116,7 +116,7 @@ export function DesktopTopBar() {
       >
         <Ionicons name="search" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
         <TextInput
-          placeholder="Search campus discussions, courses, events..."
+          placeholder="Search Lioris"
           accessibilityLabel="Search campus discussions, courses and events"
           placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
           value={searchQuery}
@@ -297,10 +297,10 @@ export function DesktopTopBar() {
                     ]}
                   >
                     <View style={{ flex: 1 }}>
-                      <AppText variant="bodySmall" weight={!n.openedAt ? 'bold' : 'medium'} numberOfLines={1}>
+                      <AppText variant="bodySmall" weight={!n.openedAt ? 'bold' : 'medium'}>
                         {n.title}
                       </AppText>
-                      <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ marginTop: 2 }}>
+                      <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
                         {n.message || n.body}
                       </AppText>
                     </View>

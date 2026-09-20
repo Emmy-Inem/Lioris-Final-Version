@@ -23,7 +23,7 @@ export default function ConnectionRequestsScreen() {
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
-      <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1} style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
+      <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
         Connection Requests
       </AppText>
       <FlatList

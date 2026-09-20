@@ -174,7 +174,7 @@ export default function ResourcesScreen() {
           <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Campus Resources
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 12 : 11.5, lineHeight: 16, marginTop: 2 }}>
+          <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 12 : 11.5, lineHeight: 16, marginTop: 2 }}>
             Past questions, lecture notes & portal directories
           </AppText>
         </View>
@@ -317,10 +317,10 @@ export default function ResourcesScreen() {
                 </View>
 
                 <View style={{ marginVertical: 4 }}>
-                  <AppText weight="bold" variant="caption" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 15 }}>
+                  <AppText weight="bold" variant="caption" style={{ fontSize: 11.5, lineHeight: 15 }}>
                     {portal.title}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, marginTop: 2 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: 9.5, marginTop: 2 }}>
                     {portal.url.replace(/^https?:\/\//, '')}
                   </AppText>
                 </View>
@@ -370,7 +370,7 @@ export default function ResourcesScreen() {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Search by course code, title, topic..."
+              placeholder="Search resources"
               placeholderTextColor={colors.textSecondary}
               style={{
                 flex: 1,
@@ -567,7 +567,7 @@ export default function ResourcesScreen() {
           {/* Section: University Portal Directories */}
           <View style={{ marginBottom: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
-              <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1} style={{ letterSpacing: 1, flex: 1, minWidth: 0 }}>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 1, flex: 1, minWidth: 0 }}>
                 CAMPUS DIRECTORIES & OFFICIAL PORTALS
               </AppText>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
@@ -669,12 +669,12 @@ export default function ResourcesScreen() {
 
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
-                        <AppText weight="bold" variant="bodySmall" numberOfLines={2} style={{ flex: 1, lineHeight: 17 }}>
+                        <AppText weight="bold" variant="bodySmall" style={{ flex: 1, lineHeight: 17 }}>
                           {portal.title}
                         </AppText>
                         <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} style={{ marginTop: 2 }} />
                       </View>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 11 }}>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11 }}>
                         {(portal as any).description || portal.category || 'Portal Link'}
                       </AppText>
                     </View>
@@ -707,7 +707,7 @@ export default function ResourcesScreen() {
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search by course code, title, topic or department..."
+                  placeholder="Search resources"
                   placeholderTextColor={colors.textSecondary}
                   style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                 />

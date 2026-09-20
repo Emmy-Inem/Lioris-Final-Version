@@ -265,11 +265,11 @@ export function VerifiedCampusLocationPicker({
                         <View style={{ flex: 1, minWidth: 0, paddingRight: 6 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Ionicons name="checkmark-circle" size={13} color="#10B981" />
-                            <AppText weight="bold" numberOfLines={1} style={{ fontSize: 13 }}>
+                            <AppText weight="bold" style={{ fontSize: 13 }}>
                               {item.name}
                             </AppText>
                           </View>
-                          <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 11 }}>
+                          <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11 }}>
                             {item.description}
                           </AppText>
                         </View>

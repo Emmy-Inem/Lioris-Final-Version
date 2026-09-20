@@ -276,7 +276,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  >
  <Image source={preset.src} style={{ width: '100%', height: 60 }} contentFit="cover" />
  <View style={{ padding: 4, backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface }}>
- <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9 }} numberOfLines={1}>
+ <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9 }}>
  {preset.label}
  </AppText>
  </View>
@@ -351,7 +351,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  >
  <Ionicons name="search"size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
  <TextInput accessibilityLabel="Search title, course code or department"
- placeholder="Search title, course code or department..."placeholderTextColor={colors.textSecondary}
+ placeholder="Search resources"placeholderTextColor={colors.textSecondary}
  value={searchQuery}
  onChangeText={setSearchQuery}
  style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
@@ -388,11 +388,11 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  </AppText>
  </View>
 
- <AppText weight="bold"variant="bodySmall"numberOfLines={1} style={{ marginTop: 2 }}>
+ <AppText weight="bold"variant="bodySmall" style={{ marginTop: 2 }}>
  {item.title}
  </AppText>
 
- <AppText tone="secondary"variant="caption"numberOfLines={1}>
+ <AppText tone="secondary"variant="caption">
  {item.category} • {item.department}
  </AppText>
 

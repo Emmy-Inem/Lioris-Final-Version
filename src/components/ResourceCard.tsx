@@ -113,15 +113,15 @@ export function ResourceCard({
         </View>
 
         {/* Title & Department - Full Width */}
-        <AppText weight="bold" numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, marginTop: 2 }}>
+        <AppText weight="bold" style={{ fontSize: 15, lineHeight: 20, marginTop: 2 }}>
           {resource.title}
         </AppText>
-        <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11.5, lineHeight: 16, marginTop: 4 }}>
+        <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, lineHeight: 16, marginTop: 4 }}>
           {resource.department} • By {resource.authorName || 'Campus Student'}
         </AppText>
 
         {resource.description ? (
-          <AppText tone="secondary" numberOfLines={2} style={{ marginTop: spacing.xs, lineHeight: 17, fontSize: 12 }}>
+          <AppText tone="secondary" style={{ marginTop: spacing.xs, lineHeight: 17, fontSize: 12 }}>
             {resource.description}
           </AppText>
         ) : null}

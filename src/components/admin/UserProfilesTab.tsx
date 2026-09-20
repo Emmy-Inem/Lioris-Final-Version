@@ -205,7 +205,7 @@ export function UserProfilesTab() {
  {/* Search and Role Filter Bar */}
  <View style={{ marginBottom: spacing.sm }}>
  <AppTextField
- label=""placeholder="Search by name, email, department, campus..."value={searchQuery}
+ label=""placeholder="Search people"value={searchQuery}
  onChangeText={setSearchQuery}
  />
  </View>

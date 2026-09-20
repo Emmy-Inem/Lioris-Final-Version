@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,11 +21,30 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getMyProfile, markVerificationPending, updateMyProfile, updateProfileImages, uploadAvatarImage, uploadCoverImage } from '@/api/profile';
-import { listMyPosts } from '@/api/posts';
+import { deletePost, listMyDrafts, listMyPosts, listMyScheduled, publishDraft } from '@/api/posts';
 import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 
-const PROFILE_TABS = ['Posts & Activity', 'Academic & Credentials'] as const;
+/* Short labels so the segmented control fits a 375px phone on one line with no
+   ragged wrapping and no ellipsis. The control also scrolls horizontally so it
+   still reads in full at any width / font scale. */
+const PROFILE_TABS = ['Posts', 'Drafts', 'Scheduled', 'Academic'] as const;
+type ProfileTab = (typeof PROFILE_TABS)[number];
+
+/** Turns an ISO timestamp into plain words, e.g. "Tuesday, 3 June at 14:30". */
+function scheduledLabel(iso?: string): string {
+  if (!iso) return 'Not scheduled yet';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return 'Not scheduled yet';
+  const when = date.toLocaleString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return date.getTime() > Date.now() ? `Goes live ${when}` : `Was due ${when}`;
+}
 
 export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -33,8 +52,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const segments = useSegments();
+  const roleGroup = segments[0] || '(student)';
 
-  const [activeTab, setActiveTab] = useState<(typeof PROFILE_TABS)[number]>('Posts & Activity');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('Posts');
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
 
@@ -54,11 +75,62 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     enabled: !!user,
   });
 
+  /* NOTE for other agents: the profile activity list uses the key
+     ['my-posts', userId]. Anything that deletes / publishes / reposts a post
+     must invalidate ['my-posts'] so this list refreshes. */
   const { data: myPosts, isLoading: postsLoading } = useQuery({
     queryKey: ['my-posts', user?.id],
     queryFn: () => listMyPosts(user?.id),
     enabled: !!user,
   });
+
+  const { data: myDrafts, isLoading: draftsLoading } = useQuery({
+    queryKey: ['my-drafts', user?.id],
+    queryFn: () => listMyDrafts(),
+    enabled: !!user,
+  });
+
+  const { data: myScheduled, isLoading: scheduledLoading } = useQuery({
+    queryKey: ['my-scheduled', user?.id],
+    queryFn: () => listMyScheduled(),
+    enabled: !!user,
+  });
+
+  const [busyPostId, setBusyPostId] = useState<string | null>(null);
+
+  async function refreshAuthoring() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['my-posts'] }),
+      queryClient.invalidateQueries({ queryKey: ['my-drafts'] }),
+      queryClient.invalidateQueries({ queryKey: ['my-scheduled'] }),
+      queryClient.invalidateQueries({ queryKey: ['feed'] }),
+    ]);
+  }
+
+  async function handlePublishNow(postId: string) {
+    setBusyPostId(postId);
+    try {
+      await publishDraft(postId);
+      await refreshAuthoring();
+      Alert.alert('Published', 'Your thread is now live on the forum.');
+    } catch (err: any) {
+      Alert.alert('Could Not Publish', err?.message || 'Please try again.');
+    } finally {
+      setBusyPostId(null);
+    }
+  }
+
+  async function handleDeleteAuthoredPost(postId: string) {
+    setBusyPostId(postId);
+    try {
+      await deletePost(postId);
+      await refreshAuthoring();
+    } catch (err: any) {
+      Alert.alert('Could Not Delete', err?.message || 'Please try again.');
+    } finally {
+      setBusyPostId(null);
+    }
+  }
 
   function handleOpenEdit() {
     if (!profile) return;
@@ -310,10 +382,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140 }}
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}
       >
         {/* Cover Photo Header */}
-        <View style={{ height: isDesktop ? 220 : 180, position: 'relative', width: '100%', overflow: 'hidden' }}>
+        <View style={{ height: isDesktop ? 220 : 150, position: 'relative', width: '100%', overflow: 'hidden' }}>
           {activeCover ? (
             <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
           ) : (
@@ -374,12 +446,12 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           style={
             isDesktop
               ? { flexDirection: 'row', gap: 28, paddingHorizontal: 32, alignItems: 'flex-start' }
-              : { paddingHorizontal: spacing.lg, marginTop: -45 }
+              : { paddingHorizontal: spacing.lg, marginTop: -40 }
           }
         >
           {/* Left Column: Identity & Bio Card */}
           <View style={isDesktop ? { width: 360, gap: spacing.md, marginTop: -60 } : undefined}>
- <SolidCard radius={22} style={{ padding: spacing.lg, position: 'relative' }}>
+ <SolidCard radius={22} style={{ padding: isDesktop ? spacing.lg : spacing.md, position: 'relative' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.sm }}>
  <Pressable accessibilityRole="button" accessibilityLabel="Change profile photo" onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
  <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={isDesktop ? 96 : 76} />
@@ -432,7 +504,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
         <View style={{ marginTop: spacing.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <AppText weight="bold" numberOfLines={1} style={{ flexShrink: 1, fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
+            <AppText weight="bold" style={{ flexShrink: 1, fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
               {profile.fullName}
             </AppText>
             {profile.verificationStatus === 'verified' || user?.role === 'admin' ? (
@@ -465,15 +537,45 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           </AppText>
         ) : null}
 
-        {/* Quick Metrics Bar */}
-        <View style={{ flexDirection: 'row', gap: spacing.xs, marginVertical: spacing.md }}>
-          <StatChip label="Authored" value={myPosts?.length ?? profile.postsCount ?? 0} />
+        {/* Quick Metrics Bar - stays on one line at 375px */}
+        <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, marginBottom: spacing.sm }}>
+          <StatChip label="Posts" value={myPosts?.length ?? profile.postsCount ?? 0} />
           <StatChip label="Connections" value={profile.connectionsCount ?? 0} />
         </View>
 
+        {/* Saved / bookmarks entry point - the phone-friendly way into the hub */}
+        <Pressable
+          onPress={() => router.push(`/${roleGroup}/saved` as any)}
+          accessibilityRole="button"
+          accessibilityLabel="Open your saved items"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            minHeight: 48,
+            paddingHorizontal: spacing.md,
+            borderRadius: radius.md,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.divider,
+            marginBottom: spacing.sm,
+          }}
+        >
+          <Ionicons name="bookmark" size={18} color={colors.brandPrimary} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppText weight="bold" variant="bodySmall" style={{ flexShrink: 1 }}>
+              Saved Items
+            </AppText>
+            <AppText tone="secondary" variant="caption" style={{ flexShrink: 1, flexWrap: 'wrap' }}>
+              Threads, resources, events and jobs you bookmarked
+            </AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        </Pressable>
+
         {/* Verification Callout if not verified */}
         {profile.verificationStatus === 'pending' ? (
-          <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.divider, marginBottom: spacing.xs }}>
+          <View style={{ padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.divider, marginBottom: spacing.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
               <View style={{ flex: 1 }}>
@@ -487,7 +589,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </View>
           </View>
         ) : profile.verificationStatus !== 'verified' ? (
-          <View style={{ padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.divider, marginBottom: spacing.xs }}>
+          <View style={{ padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.divider, marginBottom: spacing.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, marginRight: spacing.sm }}>
                 <AppText weight="bold" variant="bodySmall">
@@ -530,54 +632,91 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </View>
 
  {/* Right Column: Tabbed Activity Stream */}
- <View style={isDesktop ? { flex: 1, paddingTop: spacing.md } : { marginTop: spacing.md }}>
- {/* Interactive Profile Tabs */}
+ <View style={isDesktop ? { flex: 1, paddingTop: spacing.md } : { marginTop: spacing.sm }}>
+ {/* Segmented tabs. Short labels + horizontal scroll so nothing wraps
+     raggedly or gets clipped on a 375px phone. No ellipsis anywhere. */}
+ <ScrollView
+ horizontal
+ showsHorizontalScrollIndicator={false}
+ contentContainerStyle={{ flexGrow: 1 }}
+ style={{ flexGrow: 0, marginBottom: spacing.sm }}
+ >
  <View
  style={{
  flexDirection: 'row',
- gap: spacing.xs,
- marginBottom: spacing.md,
+ gap: 2,
  backgroundColor: colors.surface,
  padding: 4,
  borderRadius: radius.pill,
  borderWidth: 1,
  borderColor: colors.border,
+ flexGrow: 1,
  }}
  >
  {PROFILE_TABS.map((tab) => {
  const selected = activeTab === tab;
+ const count =
+ tab === 'Posts' ? myPosts?.length ?? 0
+ : tab === 'Drafts' ? myDrafts?.length ?? 0
+ : tab === 'Scheduled' ? myScheduled?.length ?? 0
+ : 0;
  return (
  <Pressable
  key={tab}
  onPress={() => setActiveTab(tab)}
+ accessibilityRole="button"
+ accessibilityState={{ selected }}
+ accessibilityLabel={tab === 'Academic' ? 'Academic and credentials' : `${tab}, ${count}`}
  style={{
- flex: 1,
- paddingVertical: 8,
- borderRadius: radius.pill,
+ flexGrow: 1,
+ flexDirection: 'row',
  alignItems: 'center',
+ justifyContent: 'center',
+ gap: 4,
+ minHeight: 40,
+ paddingHorizontal: spacing.sm,
+ borderRadius: radius.pill,
  backgroundColor: selected ? colors.brandPrimary : 'transparent',
  }}
  >
  <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
  {tab}
  </AppText>
+ {tab !== 'Academic' && count > 0 ? (
+ <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+ {count}
+ </AppText>
+ ) : null}
  </Pressable>
  );
  })}
  </View>
+ </ScrollView>
 
- {/* Tab Content 1: Posts & Activity */}
- {activeTab === 'Posts & Activity' ? (
+ {/* Tab Content 1: Posts & Activity (includes reposts) */}
+ {activeTab === 'Posts' ? (
  <View style={{ gap: spacing.sm }}>
  {postsLoading ? (
- <AppText tone="secondary" style={{ textAlign: 'center', padding: spacing.lg }}>Loading your posts...</AppText>
+ <AppText tone="secondary" style={{ textAlign: 'center', padding: spacing.md }}>Loading your posts...</AppText>
  ) : myPosts && myPosts.length > 0 ? (
- myPosts.map((p) => <PostCard key={p.id} post={p} />)
+ myPosts.map((p) => (
+ <View key={p.repostOf ? `repost-${p.id}` : p.id}>
+ {p.repostOf ? (
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, paddingLeft: 4 }}>
+ <Ionicons name="repeat" size={14} color={colors.textSecondary} />
+ <AppText variant="caption" weight="bold" tone="secondary" style={{ flexShrink: 1 }}>
+ You reposted
+ </AppText>
+ </View>
+ ) : null}
+ <PostCard post={p} />
+ </View>
+ ))
  ) : (
- <SolidCard radius={20} style={{ alignItems: 'center', padding: spacing.xxl }}>
- <Ionicons name="chatbubbles-outline" size={36} color={colors.textSecondary} style={{ marginBottom: spacing.sm }} />
- <AppText variant="h3" weight="bold" style={{ marginBottom: 4 }}>No Threads Published Yet</AppText>
- <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md, maxWidth: 360 }}>
+ <SolidCard radius={20} style={{ alignItems: 'center', padding: spacing.lg }}>
+ <Ionicons name="chatbubbles-outline" size={32} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+ <AppText variant="h3" weight="bold" style={{ marginBottom: 4, textAlign: 'center' }}>No Threads Published Yet</AppText>
+ <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.sm, maxWidth: 360 }}>
  Share study questions, poll your cohort, or showcase projects on the Forum!
  </AppText>
  <AppButton label="Publish First Thread" onPress={() => router.push('./feed' as any)} />
@@ -586,11 +725,71 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </View>
  ) : null}
 
- {/* Tab Content 2: Academic & Credentials */}
- {activeTab === 'Academic & Credentials' ? (
- <View style={{ gap: spacing.md }}>
+ {/* Tab Content 2: Drafts (own profile only) */}
+ {activeTab === 'Drafts' ? (
+ <View style={{ gap: spacing.sm }}>
+ {draftsLoading ? (
+ <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+ <ActivityIndicator color={colors.brandPrimary} />
+ </View>
+ ) : myDrafts && myDrafts.length > 0 ? (
+ myDrafts.map((d) => (
+ <AuthoringRow
+ key={d.id}
+ title={d.title || d.content || 'Untitled draft'}
+ statusLine="Saved as a draft. Only you can see it."
+ busy={busyPostId === d.id}
+ onPublish={() => handlePublishNow(d.id)}
+ onDelete={() => handleDeleteAuthoredPost(d.id)}
+ />
+ ))
+ ) : (
+ <SolidCard radius={20} style={{ padding: spacing.lg, alignItems: 'center' }}>
+ <Ionicons name="document-text-outline" size={30} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+ <AppText weight="bold" style={{ textAlign: 'center' }}>No drafts saved</AppText>
+ <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginTop: 4, maxWidth: 360 }}>
+ Start a thread and save it as a draft to finish writing it later.
+ </AppText>
+ </SolidCard>
+ )}
+ </View>
+ ) : null}
+
+ {/* Tab Content 3: Scheduled (own profile only) */}
+ {activeTab === 'Scheduled' ? (
+ <View style={{ gap: spacing.sm }}>
+ {scheduledLoading ? (
+ <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+ <ActivityIndicator color={colors.brandPrimary} />
+ </View>
+ ) : myScheduled && myScheduled.length > 0 ? (
+ myScheduled.map((s) => (
+ <AuthoringRow
+ key={s.id}
+ title={s.title || s.content || 'Untitled thread'}
+ statusLine={scheduledLabel(s.scheduledAt)}
+ busy={busyPostId === s.id}
+ onPublish={() => handlePublishNow(s.id)}
+ onDelete={() => handleDeleteAuthoredPost(s.id)}
+ />
+ ))
+ ) : (
+ <SolidCard radius={20} style={{ padding: spacing.lg, alignItems: 'center' }}>
+ <Ionicons name="time-outline" size={30} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+ <AppText weight="bold" style={{ textAlign: 'center' }}>Nothing scheduled</AppText>
+ <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginTop: 4, maxWidth: 360 }}>
+ Pick a future time when you publish a thread and it will wait here until then.
+ </AppText>
+ </SolidCard>
+ )}
+ </View>
+ ) : null}
+
+ {/* Tab Content 4: Academic & Credentials */}
+ {activeTab === 'Academic' ? (
+ <View style={{ gap: spacing.sm }}>
  <SolidCard radius={20}>
- <AppText weight="bold" variant="h3" tone="brand" style={{ marginBottom: spacing.md }}>
+ <AppText weight="bold" variant="h3" tone="brand" style={{ marginBottom: spacing.sm }}>
  Academic Identity & Cohort
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.md, flexWrap: 'wrap' }}>
@@ -813,6 +1012,42 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  onSubmit={handleSubmitVerification}
  />
  </ScreenContainer>
+ );
+}
+
+function AuthoringRow({
+ title,
+ statusLine,
+ busy,
+ onPublish,
+ onDelete,
+}: {
+ title: string;
+ statusLine: string;
+ busy?: boolean;
+ onPublish: () => void;
+ onDelete: () => void;
+}) {
+ const { colors, spacing } = useTheme();
+ return (
+ <SolidCard radius={18} style={{ padding: spacing.md, gap: spacing.sm }}>
+ <View>
+ <AppText weight="bold" style={{ flexShrink: 1, flexWrap: 'wrap', lineHeight: 20 }}>
+ {title}
+ </AppText>
+ <AppText tone="secondary" variant="bodySmall" style={{ flexShrink: 1, flexWrap: 'wrap', marginTop: 4, lineHeight: 18 }}>
+ {statusLine}
+ </AppText>
+ </View>
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+ <View style={{ flexGrow: 1, flexBasis: 140 }}>
+ <AppButton label="Publish now" size="sm" onPress={onPublish} loading={busy} disabled={busy} fullWidth />
+ </View>
+ <View style={{ flexGrow: 1, flexBasis: 100 }}>
+ <AppButton label="Delete" variant="ghost" size="sm" onPress={onDelete} disabled={busy} fullWidth />
+ </View>
+ </View>
+ </SolidCard>
  );
 }
 

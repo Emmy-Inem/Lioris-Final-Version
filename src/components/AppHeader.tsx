@@ -69,7 +69,7 @@ export function AppHeader() {
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 }}>
         {/* Direct Messages Button */}
         {messagingEnabled && (
           <Pressable
@@ -82,9 +82,9 @@ export function AppHeader() {
             }}
             style={[
               {
-                width: 34,
-                height: 34,
-                borderRadius: 17,
+                width: 32,
+                height: 32,
+                borderRadius: 16,
                 backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
                 borderWidth: 1,
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
@@ -133,6 +133,37 @@ export function AppHeader() {
           </Pressable>
         )}
 
+        {/* Saved / Bookmarks Button */}
+        <Pressable
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Saved items"
+          onPress={() => {
+            haptics.light();
+            router.push(`/${roleGroup}/saved` as any);
+          }}
+          style={[
+            {
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+            Platform.OS === 'web' &&
+              ({
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: isDark ? 'none' : 'inset 0 1px 1px #fff',
+              } as any),
+          ]}
+        >
+          <Ionicons name="bookmark-outline" size={17} color={colors.textPrimary} />
+        </Pressable>
+
         {/* Global Search Button */}
         <Pressable
           hitSlop={8}
@@ -144,9 +175,9 @@ export function AppHeader() {
           }}
           style={[
             {
-              width: 34,
-              height: 34,
-              borderRadius: 17,
+              width: 32,
+              height: 32,
+              borderRadius: 16,
               backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
               borderWidth: 1,
               borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
@@ -177,9 +208,9 @@ export function AppHeader() {
           }}
           style={[
             {
-              width: 34,
-              height: 34,
-              borderRadius: 17,
+              width: 32,
+              height: 32,
+              borderRadius: 16,
               backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
               borderWidth: 1,
               borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',

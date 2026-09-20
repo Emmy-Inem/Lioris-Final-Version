@@ -162,17 +162,16 @@ export default function StaffDashboard() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <AppText
                       weight="bold"
-                      numberOfLines={1}
                       style={{ fontSize: isDesktop ? 22 : 16, lineHeight: isDesktop ? 28 : 22 }}
                     >
                       Welcome, {fullName}
                     </AppText>
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11.5, fontWeight: '500' }}>
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11.5, fontWeight: '500' }}>
                     {profile?.department || 'Department of Computer Science'}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5, opacity: 0.8 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10.5, opacity: 0.8 }}>
                     Faculty Member • {profile?.institutionCode || 'UI Node'}
                   </AppText>
                 </View>
@@ -215,10 +214,10 @@ export default function StaffDashboard() {
                   <Ionicons name="sparkles" size={22} color={colors.textSecondary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 14 : 13, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 14 : 13, lineHeight: 16 }}>
                     AI Teaching Assistant
                   </AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ fontSize: isDesktop ? 12 : 10.5, lineHeight: 14, marginTop: 2 }}>
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: isDesktop ? 12 : 10.5, lineHeight: 14, marginTop: 2 }}>
                     Syllabus, quiz generation & rubrics
                   </AppText>
                 </View>
@@ -261,10 +260,10 @@ export default function StaffDashboard() {
                   <Ionicons name="shield-half" size={18} color="#FFFFFF" />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" style={{ color: '#EA580C', fontSize: isDesktop ? 13.5 : 12.5 }} numberOfLines={1}>
+                  <AppText weight="bold" style={{ color: '#EA580C', fontSize: isDesktop ? 13.5 : 12.5 }}>
                     {openReportsCount} Pending Content Flag{openReportsCount > 1 ? 's' : ''}
                   </AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10.5 }}>
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: isDesktop ? 11 : 10.5 }}>
                     Requires faculty review on moderation desk
                   </AppText>
                 </View>
@@ -307,10 +306,10 @@ export default function StaffDashboard() {
                 >
                   <Ionicons name="chatbubble-ellipses" size={20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Direct Messages
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                       Faculty chat
                     </AppText>
                   </View>
@@ -340,10 +339,10 @@ export default function StaffDashboard() {
                 >
                   <Ionicons name="cash-outline" size={20} color="#10B981" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Grant & FX Rates
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                       Rate converter
                     </AppText>
                   </View>
@@ -368,10 +367,10 @@ export default function StaffDashboard() {
               >
                 <Ionicons name="megaphone" size={20} color={colors.textSecondary} />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Broadcast
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                     Post notices
                   </AppText>
                 </View>
@@ -396,10 +395,10 @@ export default function StaffDashboard() {
               >
                 <Ionicons name="shield-checkmark" size={20} color="#EF4444" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Moderation
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                     {openReportsCount > 0 ? `${openReportsCount} flags` : 'Queue clear'}
                   </AppText>
                 </View>
@@ -424,10 +423,10 @@ export default function StaffDashboard() {
               >
                 <Ionicons name="calendar" size={20} color="#3B82F6" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Faculty Events
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                     Seminars & talks
                   </AppText>
                 </View>
@@ -452,10 +451,10 @@ export default function StaffDashboard() {
               >
                 <Ionicons name="chatbubbles" size={20} color="#EC4899" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Faculty Forum
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                     Academic feed
                   </AppText>
                 </View>
@@ -489,7 +488,6 @@ export default function StaffDashboard() {
               <Ionicons name="calendar-outline" size={16} color="#3B82F6" style={{ flexShrink: 0 }} />
               <AppText
                 weight="bold"
-                numberOfLines={1}
                 style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
               >
                 Faculty Events
@@ -527,7 +525,6 @@ export default function StaffDashboard() {
               <Ionicons name="chatbubbles-outline" size={16} color="#EC4899" style={{ flexShrink: 0 }} />
               <AppText
                 weight="bold"
-                numberOfLines={1}
                 style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
               >
                 Faculty Pulse
@@ -550,10 +547,10 @@ export default function StaffDashboard() {
                         <Avatar name={post.authorName ?? 'Student'} size={28} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <AppText variant="caption" weight="bold" numberOfLines={1}>
+                        <AppText variant="caption" weight="bold">
                           {post.authorName ?? 'Student'}
                         </AppText>
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }} numberOfLines={1}>
+                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
                           {post.department ?? 'Computer Science'}
                         </AppText>
                       </View>
@@ -566,7 +563,7 @@ export default function StaffDashboard() {
                   <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }}>
                     {post.title}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={2}>
+                  <AppText tone="secondary" variant="caption">
                     {post.content}
                   </AppText>
                 </SolidCard>
@@ -581,7 +578,6 @@ export default function StaffDashboard() {
             <Ionicons name="school-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
             <AppText
               weight="bold"
-              numberOfLines={1}
               style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
             >
               Official Faculty Services
@@ -599,10 +595,10 @@ export default function StaffDashboard() {
                     <Ionicons name={portal.icon || 'globe-outline'} size={22} color={colors.textSecondary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       {portal.title}
                     </AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
+                    <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
                       {portal.category} • Official Faculty Portal
                     </AppText>
                   </View>

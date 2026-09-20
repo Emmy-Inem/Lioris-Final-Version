@@ -1753,7 +1753,7 @@ export function EventDetailScreen() {
               <Ionicons name="search-outline" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
               <TextInput accessibilityLabel="Search by name, department, or matric"
                 style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
-                placeholder="Search by name, department, or matric..."
+                placeholder="Search attendees"
                 placeholderTextColor={colors.textSecondary}
                 value={rosterSearch}
                 onChangeText={setRosterSearch}
@@ -1790,12 +1790,12 @@ export function EventDetailScreen() {
                       <Avatar name={item.fullName} size={36} role={(item.role as any) || 'student'} />
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <AppText weight="bold" numberOfLines={1} style={{ fontSize: 13.5 }}>
+                          <AppText weight="bold" style={{ fontSize: 13.5 }}>
                             {item.fullName}
                           </AppText>
                           {item.matricNumber && <Badge label={item.matricNumber} tone="neutral" />}
                         </View>
-                        <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                        <AppText tone="secondary" variant="caption">
                           {item.department || 'Student'} • {new Date(item.registeredAt).toLocaleDateString()}
                         </AppText>
                       </View>
@@ -1968,7 +1968,7 @@ export function EventDetailScreen() {
                   onChangeLocation={(loc) => setEditLocation(loc)}
                   roomDetail={editRoomDetail}
                   onChangeRoomDetail={setEditRoomDetail}
-                  placeholder="Search verified campus venues..."
+                  placeholder="Search venues"
                 />
               ) : (
                 <AppTextField

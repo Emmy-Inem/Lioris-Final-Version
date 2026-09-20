@@ -19,10 +19,10 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
         <Avatar name={mentor.fullName} uri={mentor.avatarUrl} size={52} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <AppText variant="h3" weight="bold" numberOfLines={1}>
+          <AppText variant="h3" weight="bold">
             {mentor.fullName}
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+          <AppText tone="secondary" variant="bodySmall">
             {[mentor.company, mentor.department].filter(Boolean).join(' · ')}
           </AppText>
         </View>
@@ -39,7 +39,7 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
       </View>
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md }}>
-        <AppText tone="secondary" variant="caption" numberOfLines={1}>
+        <AppText tone="secondary" variant="caption">
           {typeof mentor.availableSlots === 'number'
             ? `${mentor.availableSlots} slot${mentor.availableSlots === 1 ? '' : 's'} available`
             : 'Open to mentorship requests'}

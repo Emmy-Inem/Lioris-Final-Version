@@ -70,7 +70,7 @@ export default function StudyGroupsScreen() {
           <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Study Pods
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+          <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
             Collaborative course squads, exam revision circles & peer sprints
           </AppText>
         </View>
@@ -123,7 +123,7 @@ export default function StudyGroupsScreen() {
                   <TextInput
                     value={searchQuery}
                     onChangeText={setSearchQuery}
-                    placeholder="Search by course code, topic, or study pod..."
+                    placeholder="Search study groups"
                     placeholderTextColor={colors.textSecondary}
                     style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                   />
@@ -205,7 +205,7 @@ export default function StudyGroupsScreen() {
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="Search courses, topics, or study pods..."
+                placeholder="Search study groups"
                 placeholderTextColor={colors.textSecondary}
                 style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
               />

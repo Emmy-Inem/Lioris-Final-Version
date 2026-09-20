@@ -42,7 +42,7 @@ export function AlumniGradientHeader() {
  <AppText tone="secondary" variant="bodySmall">
  Welcome back
  </AppText>
- <AppText variant="h2" weight="bold" numberOfLines={1}>
+ <AppText variant="h2" weight="bold">
  {user?.fullName ?? 'Alumni'}
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>

@@ -53,7 +53,7 @@ export default function StaffAnnouncementsScreen() {
       {!isDesktop && <AppHeader />}
       <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.sm, paddingBottom: spacing.sm }}>
-          <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
             Announcements
           </AppText>
           <AppButton label={composing ? 'Cancel' : 'New'} variant={composing ? 'ghost' : 'primary'} size="sm" onPress={() => setComposing((v) => !v)} />

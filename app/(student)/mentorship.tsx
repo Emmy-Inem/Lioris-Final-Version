@@ -46,7 +46,7 @@ export default function StudentMentorshipScreen() {
       <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
         {/* Top Header & Intro */}
         <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
             Alumni Mentorship
           </AppText>
           <AppText tone="secondary" variant="bodySmall">
@@ -71,11 +71,11 @@ export default function StudentMentorshipScreen() {
             >
               {myApplications.map((app) => (
                 <SolidCard key={app.id} radius={14} style={{ width: 250, padding: 12 }}>
-                  <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                  <AppText weight="bold" variant="bodySmall">
                     {app.mentorName}
                   </AppText>
                   {app.focusArea ? (
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
                       Track: {app.focusArea}
                     </AppText>
                   ) : null}
@@ -96,7 +96,7 @@ export default function StudentMentorshipScreen() {
                       }}
                     >
                       <Ionicons name="document-attach" size={13} color={colors.brandPrimary} />
-                      <AppText variant="caption" tone="brand" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
+                      <AppText variant="caption" tone="brand" style={{ fontSize: 11, flex: 1 }}>
                         {app.documentName}
                       </AppText>
                     </Pressable>
@@ -120,7 +120,7 @@ export default function StudentMentorshipScreen() {
 
         <AppTextField
           label=""
-          placeholder="Search mentors by name, company, or skills..."
+          placeholder="Search mentors"
           value={query}
           onChangeText={setQuery}
         />

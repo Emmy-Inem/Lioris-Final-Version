@@ -75,7 +75,6 @@ export function AnnouncementsWidget({
  <Ionicons name="megaphone" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
  <AppText
  weight="bold"
- numberOfLines={1}
  style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}
  >
  {title}
@@ -140,14 +139,12 @@ export function AnnouncementsWidget({
               variant="caption"
               weight="bold"
               style={{ color: topAnnouncement.priority === 'critical' ? '#991B1B' : colors.textPrimary }}
-              numberOfLines={1}
             >
               {topAnnouncement.title}
             </AppText>
             <AppText
               variant="caption"
               tone="secondary"
-              numberOfLines={1}
               style={{ fontSize: 11 }}
             >
               {topAnnouncement.content}
@@ -222,7 +219,6 @@ export function AnnouncementsWidget({
  <Ionicons name="megaphone" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
  <AppText
  weight="bold"
- numberOfLines={1}
  style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}
  >
  {title}

@@ -289,7 +289,7 @@ export function CampusMapModal({
               <TextInput accessibilityLabel="Search ATM, clinic, cafeteria, faculty"
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search ATM, clinic, cafeteria, faculty..."
+                placeholder="Search places"
                 placeholderTextColor={colors.textSecondary}
                 style={[styles.searchInput, { color: colors.textPrimary }]}
               />

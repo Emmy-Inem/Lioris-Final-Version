@@ -84,6 +84,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="audit-logs" options={{ href: null }} />
       <Tabs.Screen name="moderation-audit-log" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen name="saved" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="search" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />

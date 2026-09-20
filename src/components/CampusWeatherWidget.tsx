@@ -107,7 +107,7 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
               <View style={[styles.pinIconWrap, { backgroundColor: colors.brandPrimary + '18' }]}>
                 <Ionicons name="location" size={13} color={colors.brandPrimary} />
               </View>
-              <AppText variant="caption" weight="bold" numberOfLines={1} style={{ marginLeft: 6, fontSize: 13, flexShrink: 1 }}>
+              <AppText variant="caption" weight="bold" style={{ marginLeft: 6, fontSize: 13, flexShrink: 1 }}>
                 {weather.campus.name}
               </AppText>
               <Pressable

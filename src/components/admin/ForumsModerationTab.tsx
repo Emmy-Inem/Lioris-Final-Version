@@ -338,7 +338,6 @@ export function ForumsModerationTab() {
                 <AppText
                   tone="secondary"
                   variant="bodySmall"
-                  numberOfLines={3}
                   style={{ marginBottom: community.approvalStatus === 'rejected' && community.rejectionReason ? spacing.xs : spacing.md }}
                 >
                   {community.description}
@@ -408,7 +407,7 @@ export function ForumsModerationTab() {
           {/* Search bar */}
           <View style={{ marginBottom: spacing.sm }}>
             <AppTextField
-              label="" placeholder="Search forum posts by title, content, author..." value={searchQuery}
+              label="" placeholder="Search posts" value={searchQuery}
               onChangeText={setSearchQuery}
             />
           </View>
@@ -464,7 +463,7 @@ export function ForumsModerationTab() {
                 {post.isPinned ? <Badge label="Pinned" tone="neutral" /> : null}
               </View>
 
-              <AppText tone="secondary" variant="bodySmall" numberOfLines={3} style={{ marginBottom: spacing.md }}>
+              <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
                 {post.content}
               </AppText>
 

@@ -28,7 +28,7 @@ export default function StaffModerationScreen() {
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.xs }}>
-        <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+        <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" style={{ flexShrink: 1 }}>
           Staff Workdesk
         </AppText>
         {profile?.institutionCode ? <Badge label={`${profile.institutionCode} Node`} tone="neutral" /> : null}
@@ -59,7 +59,6 @@ export default function StaffModerationScreen() {
             weight="bold"
             variant="bodySmall"
             tone={activeTab === 'reports' ? 'inverse' : 'secondary'}
-            numberOfLines={1}
             style={{ fontSize: isDesktop ? 13 : 11.5 }}
           >
             Reports Queue
@@ -86,7 +85,6 @@ export default function StaffModerationScreen() {
             weight="bold"
             variant="bodySmall"
             tone={activeTab === 'approvals' ? 'inverse' : 'secondary'}
-            numberOfLines={1}
             style={{ fontSize: isDesktop ? 13 : 11.5 }}
           >
             {isDesktop ? 'Verifications & Approvals' : 'Approvals Desk'}

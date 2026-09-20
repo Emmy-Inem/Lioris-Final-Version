@@ -237,10 +237,10 @@ export function RequestMentorshipModal({
               }}
             >
               <View style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
-                <AppText variant="h3" weight="bold" numberOfLines={1}>
+                <AppText variant="h3" weight="bold">
                   Request Mentorship
                 </AppText>
-                <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
                   Present your goals and proposal to {mentor.fullName}
                 </AppText>
               </View>
@@ -285,12 +285,12 @@ export function RequestMentorshipModal({
                 <Avatar name={mentor.fullName} uri={mentor.avatarUrl} size={46} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                    <AppText variant="bodySmall" weight="bold">
                       {mentor.fullName}
                     </AppText>
                     <Badge label="Verified Mentor" tone="brand" />
                   </View>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
                     {[mentor.company, mentor.department].filter(Boolean).join(' • ') || 'Alumni Fellow'}
                   </AppText>
                 </View>
@@ -479,7 +479,7 @@ export function RequestMentorshipModal({
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                       <Ionicons name="document-text" size={20} color={colors.brandPrimary} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <AppText variant="caption" weight="bold" numberOfLines={1}>
+                        <AppText variant="caption" weight="bold">
                           {selectedFile.name}
                         </AppText>
                         {selectedFile.size ? (

@@ -133,7 +133,7 @@ export default function MarketplaceScreen() {
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search items, laptops, textbooks, furniture..."
+                  placeholder="Search listings"
                   placeholderTextColor={colors.textSecondary}
                   style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                 />
@@ -243,7 +243,7 @@ export default function MarketplaceScreen() {
             </AppText>
           </Pressable>
         </View>
-        <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+        <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
           Buy & sell books, gadgets, and campus gear - meet on campus for a safe exchange
         </AppText>
       </View>
@@ -267,7 +267,7 @@ export default function MarketplaceScreen() {
  <TextInput
  value={query}
  onChangeText={setQuery}
- placeholder="Search textbooks, tech, appliances..."
+ placeholder="Search listings"
  placeholderTextColor={colors.textSecondary}
  style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
  />

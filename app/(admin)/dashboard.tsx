@@ -89,7 +89,7 @@ export default function AdminDashboard() {
                         </AppText>
                       </View>
                     </View>
-                    <AppText variant="h1" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 22, marginTop: 4 }}>
+                    <AppText variant="h1" weight="bold" tone="inverse" style={{ fontSize: 22, marginTop: 4 }}>
                       Welcome, {user?.fullName?.split(' ')[0] ?? 'Admin'}
                     </AppText>
                   </View>
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
                           <AppText variant="bodySmall" weight="bold" style={{ color: '#10B981' }}>
                             {pendingVerificationsCount} ID Verification Request{pendingVerificationsCount > 1 ? 's' : ''} Pending
                           </AppText>
-                          <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                          <AppText variant="caption" tone="secondary">
                             Review matric credentials and grant verified badges
                           </AppText>
                         </View>
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
                           <AppText variant="bodySmall" weight="bold" style={{ color: '#EF4444' }}>
                             {openReportsCount} Content Moderation Flag{openReportsCount > 1 ? 's' : ''} Open
                           </AppText>
-                          <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                          <AppText variant="caption" tone="secondary">
                             Review reported student submissions and forum posts
                           </AppText>
                         </View>
@@ -204,10 +204,10 @@ export default function AdminDashboard() {
                   >
                     <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.textSecondary} />
                     <View style={{ minWidth: 0 }}>
-                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                      <AppText weight="bold" variant="bodySmall">
                         Direct Messages
                       </AppText>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                         Student & staff chat
                       </AppText>
                     </View>
@@ -241,10 +241,10 @@ export default function AdminDashboard() {
                     )}
                   </View>
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       ID Verifications
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Matric & alumni IDs
                     </AppText>
                   </View>
@@ -277,10 +277,10 @@ export default function AdminDashboard() {
                     )}
                   </View>
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Moderation Queue
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Reported campus content
                     </AppText>
                   </View>
@@ -306,10 +306,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="options-outline" size={22} color={colors.textSecondary} />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Feature Switches
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Toggle campus modules
                     </AppText>
                   </View>
@@ -335,10 +335,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="people-outline" size={22} color="#8B5CF6" />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       User Directory
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Manage all accounts
                     </AppText>
                   </View>
@@ -364,10 +364,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Command Desk
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       System params & alerts
                     </AppText>
                   </View>
@@ -393,10 +393,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="key-outline" size={22} color="#F59E0B" />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Security Audit
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Forensic activity logs
                     </AppText>
                   </View>
@@ -422,10 +422,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="folder-open-outline" size={22} color={colors.brandAccent} />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Academic Resources
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Past papers & notes
                     </AppText>
                   </View>
@@ -451,10 +451,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="calendar-outline" size={22} color="#EC4899" />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Events Hub
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Campus events & summits
                     </AppText>
                   </View>
@@ -480,10 +480,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="construct-outline" size={22} color="#3B82F6" />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       System Config
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Multi-tenant & security
                     </AppText>
                   </View>
@@ -509,10 +509,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="help-buoy-outline" size={22} color="#06B6D4" />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Support Desk
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Triage & 1-click remedies
                     </AppText>
                   </View>
@@ -538,10 +538,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="layers-outline" size={22} color="#8B5CF6" />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Content Desk
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Global posts & media
                     </AppText>
                   </View>
@@ -570,10 +570,10 @@ export default function AdminDashboard() {
                     <Badge label="+ New Thread" tone="neutral" />
                   </View>
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       Forum
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Post official threads & polls
                     </AppText>
                   </View>
@@ -599,10 +599,10 @@ export default function AdminDashboard() {
                 >
                   <Ionicons name="pulse-outline" size={22} color="#10B981" />
                   <View style={{ minWidth: 0 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                    <AppText weight="bold" variant="bodySmall">
                       System Health
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 10 }}>
                       Live ping & sync cleanup
                     </AppText>
                   </View>
@@ -630,8 +630,8 @@ export default function AdminDashboard() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
                       <Ionicons name="settings" size={20} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <AppText weight="bold" variant="bodySmall" tone="brand" numberOfLines={1}>Admin Desk & Broadcast</AppText>
-                        <AppText tone="secondary" variant="caption" numberOfLines={1}>System params & alerts</AppText>
+                        <AppText weight="bold" variant="bodySmall" tone="brand">Admin Desk & Broadcast</AppText>
+                        <AppText tone="secondary" variant="caption">System params & alerts</AppText>
                       </View>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.brandPrimary} style={{ flexShrink: 0 }} />
@@ -647,8 +647,8 @@ export default function AdminDashboard() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
                       <Ionicons name="shield-half" size={20} color={colors.critical} style={{ flexShrink: 0 }} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <AppText weight="bold" variant="bodySmall" numberOfLines={1}>Moderation Queue</AppText>
-                        <AppText tone="secondary" variant="caption" numberOfLines={1}>Content review & reports</AppText>
+                        <AppText weight="bold" variant="bodySmall">Moderation Queue</AppText>
+                        <AppText tone="secondary" variant="caption">Content review & reports</AppText>
                       </View>
                     </View>
                     {(openReports?.length ?? 0) > 0 ? (
@@ -690,8 +690,8 @@ export default function AdminDashboard() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
                         <Ionicons name={item.icon} size={18} color={colors.textPrimary} style={{ flexShrink: 0 }} />
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <AppText weight="bold" variant="bodySmall" numberOfLines={1}>{item.label}</AppText>
-                          <AppText tone="secondary" variant="caption" numberOfLines={1}>{item.desc}</AppText>
+                          <AppText weight="bold" variant="bodySmall">{item.label}</AppText>
+                          <AppText tone="secondary" variant="caption">{item.desc}</AppText>
                         </View>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />

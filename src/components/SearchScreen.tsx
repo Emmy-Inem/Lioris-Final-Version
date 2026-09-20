@@ -66,7 +66,7 @@ export function SearchScreen() {
         <View style={{ flex: 1 }}>
           <AppTextField
             label=""
-            placeholder="Search threads, events, study resources..."
+            placeholder="Search Lioris"
             value={query}
             onChangeText={setQuery}
             autoFocus

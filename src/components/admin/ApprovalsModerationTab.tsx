@@ -203,7 +203,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 2 }}>
  SYLLABUS SUMMARY:
  </AppText>
- <AppText tone="secondary"variant="bodySmall"numberOfLines={2}>
+ <AppText tone="secondary"variant="bodySmall">
  {res.description}
  </AppText>
  </View>

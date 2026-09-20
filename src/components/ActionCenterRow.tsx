@@ -38,7 +38,7 @@ export function ActionCenterRow({ actions }: { actions: QuickAction[] }) {
  >
  <Ionicons name={action.icon} size={26} color={colors.textSecondary} />
  </View>
- <AppText variant="caption"weight="semiBold"style={{ textAlign: 'center' }} numberOfLines={2}>
+ <AppText variant="caption"weight="semiBold"style={{ textAlign: 'center' }}>
  {action.label}
  </AppText>
  </Pressable>

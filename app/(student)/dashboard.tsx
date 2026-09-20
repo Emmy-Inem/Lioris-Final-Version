@@ -214,7 +214,7 @@ export default function StudentDashboard() {
                   }}
                 >
                   <Ionicons name="school" size={13} color="#68D391" style={heroTextShadowStyle} />
-                  <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1} style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
+                  <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
                     {profile?.institutionName ?? 'Campus Workspace'}
                   </AppText>
                 </View>
@@ -247,7 +247,6 @@ export default function StudentDashboard() {
                     <AppText
                       weight="bold"
                       tone="inverse"
-                      numberOfLines={1}
                       style={[
                         {
                           fontSize: isDesktop ? 18 : 16,
@@ -266,7 +265,6 @@ export default function StudentDashboard() {
                   </View>
 
                   <AppText
-                    numberOfLines={1}
                     style={[
                       {
                         marginTop: 2,
@@ -329,10 +327,10 @@ export default function StudentDashboard() {
                   <Ionicons name="sparkles" size={22} color={colors.textSecondary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13.5 : 12.5, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13.5 : 12.5, lineHeight: 16 }}>
                     AI Academic Study Copilot
                   </AppText>
-                  <AppText tone="secondary" numberOfLines={2} style={{ fontSize: isDesktop ? 11 : 10.5, lineHeight: 14, marginTop: 2 }}>
+                  <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10.5, lineHeight: 14, marginTop: 2 }}>
                     Concept breakdowns & past questions
                   </AppText>
                 </View>
@@ -385,8 +383,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="chatbubble-ellipses" size={isDesktop ? 22 : 20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Direct Messages</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Chats & calls</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Direct Messages</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Chats & calls</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -414,8 +412,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="cash-outline" size={isDesktop ? 22 : 20} color="#10B981" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>FX Converter</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Live rates & NGN</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>FX Converter</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Live rates & NGN</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -439,8 +437,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="folder-open" size={isDesktop ? 22 : 20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Resources</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Past Qs & notes</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Resources</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Past Qs & notes</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -465,8 +463,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="people" size={isDesktop ? 22 : 20} color="#10B981" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Study Pods</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Course revision</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Study Pods</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Course revision</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -490,8 +488,8 @@ export default function StudentDashboard() {
               >
                 <Ionicons name="chatbubbles" size={isDesktop ? 22 : 20} color="#EC4899" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Forum</AppText>
-                  <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Ask questions</AppText>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Forum</AppText>
+                  <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Ask questions</AppText>
                 </View>
               </GlassCard>
             </Pressable>
@@ -515,8 +513,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="calendar" size={isDesktop ? 22 : 20} color="#3B82F6" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Events & RSVPs</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Talks & summits</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Events & RSVPs</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Talks & summits</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -541,8 +539,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="cart" size={isDesktop ? 22 : 20} color="#F59E0B" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Marketplace</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Buy, sell & swap</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Marketplace</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Buy, sell & swap</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -567,8 +565,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="briefcase" size={isDesktop ? 22 : 20} color="#6366F1" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Career & Jobs</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Internships & gigs</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Career & Jobs</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Internships & gigs</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -593,8 +591,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="ribbon" size={isDesktop ? 22 : 20} color="#A855F7" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Mentorship</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Alumni advisors</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Mentorship</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Alumni advisors</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -619,8 +617,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="time" size={isDesktop ? 22 : 20} color="#0D9488" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>My Schedule</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Timetable & tests</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>My Schedule</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>Timetable & tests</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -648,8 +646,8 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="map" size={isDesktop ? 22 : 20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Map & POIs</AppText>
-                    <AppText tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>ATMs, halls & food</AppText>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>Campus Map & POIs</AppText>
+                    <AppText tone="secondary" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>ATMs, halls & food</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -666,7 +664,7 @@ export default function StudentDashboard() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                 <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} style={{ flexShrink: 0 }} />
-                <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
+                <AppText weight="bold" style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                   Campus Events
                 </AppText>
               </View>
@@ -702,7 +700,7 @@ export default function StudentDashboard() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                 <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} style={{ flexShrink: 0 }} />
-                <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
+                <AppText weight="bold" style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                   Course Materials
                 </AppText>
               </View>
@@ -730,7 +728,7 @@ export default function StudentDashboard() {
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                           <Badge label={res.courseCode || 'GEN'} tone="neutral" />
-                          <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                          <AppText variant="caption" tone="secondary">
                             {res.department || 'Academic'}
                           </AppText>
                         </View>
@@ -738,11 +736,11 @@ export default function StudentDashboard() {
                           <Badge label={res.category || 'Notes'} tone="neutral" />
                         </View>
                       </View>
-                      <AppText variant="bodySmall" weight="bold" numberOfLines={2} style={{ lineHeight: 18 }}>
+                      <AppText variant="bodySmall" weight="bold" style={{ lineHeight: 18 }}>
                         {res.title}
                       </AppText>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                        <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ flex: 1, minWidth: 0 }}>
+                        <AppText variant="caption" tone="secondary" style={{ flex: 1, minWidth: 0 }}>
                           By {res.authorName || 'Student'} • {res.downloadsCount ?? 0} downloads
                         </AppText>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, paddingLeft: 8 }}>
@@ -766,7 +764,7 @@ export default function StudentDashboard() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                 <Ionicons name="people-outline" size={18} color="#10B981" style={{ flexShrink: 0 }} />
-                <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
+                <AppText weight="bold" style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                   Study Pods
                 </AppText>
               </View>
@@ -794,7 +792,7 @@ export default function StudentDashboard() {
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                           <Badge label={group.courseCode || 'Study Pod'} tone="success" />
-                          <AppText variant="bodySmall" weight="bold" numberOfLines={2} style={{ flex: 1, lineHeight: 18 }}>
+                          <AppText variant="bodySmall" weight="bold" style={{ flex: 1, lineHeight: 18 }}>
                             {group.name}
                           </AppText>
                         </View>
@@ -805,7 +803,7 @@ export default function StudentDashboard() {
                           </AppText>
                         </View>
                       </View>
-                      <AppText tone="secondary" variant="caption" numberOfLines={2}>
+                      <AppText tone="secondary" variant="caption">
                         {group.description || 'Collaborative study pod for shared review and academic discussion.'}
                       </AppText>
                     </SolidCard>
@@ -821,7 +819,7 @@ export default function StudentDashboard() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
               <Ionicons name="chatbubbles-outline" size={18} color="#EC4899" style={{ flexShrink: 0 }} />
-              <AppText weight="bold" numberOfLines={1} style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
+              <AppText weight="bold" style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}>
                 Campus Discussions
               </AppText>
             </View>
@@ -854,7 +852,7 @@ export default function StudentDashboard() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                       <Avatar name={post.authorName ?? 'Student'} size={28} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <AppText variant="caption" weight="bold" numberOfLines={1}>
+                        <AppText variant="caption" weight="bold">
                           {post.authorName ?? 'Student'}
                         </AppText>
                       </View>
@@ -864,10 +862,10 @@ export default function StudentDashboard() {
                     </View>
                   </View>
 
-                  <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }} numberOfLines={2}>
+                  <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }}>
                     {post.title}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={2}>
+                  <AppText tone="secondary" variant="caption">
                     {post.content}
                   </AppText>
 
@@ -912,10 +910,10 @@ export default function StudentDashboard() {
                       <Ionicons name={portal.icon || 'globe-outline'} size={24} color={colors.textSecondary} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText variant="bodySmall" weight="bold" numberOfLines={2}>
+                      <AppText variant="bodySmall" weight="bold">
                         {portal.title}
                       </AppText>
-                      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                      <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
                         {portal.category} • Official University Portal
                       </AppText>
                     </View>

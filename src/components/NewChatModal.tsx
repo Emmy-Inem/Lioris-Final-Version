@@ -178,7 +178,7 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
                 <Avatar name={item.fullName} uri={item.avatarUrl} size={44} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flexShrink: 1 }}>
+                    <AppText weight="bold" variant="bodySmall" style={{ flexShrink: 1 }}>
                       {item.fullName}
                     </AppText>
                     <Badge
@@ -194,7 +194,7 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
                       }
                     />
                   </View>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
                     {item.department || `${item.campusCode || 'Campus'} Member`}
                   </AppText>
                 </View>

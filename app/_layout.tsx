@@ -245,7 +245,7 @@ export default function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <AppLoadingScreen message="Launching Lioris Campus Platform..." />
+          <AppLoadingScreen message="Launching Lioris Campus Platform" />
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );
@@ -291,7 +291,7 @@ function AppShell() {
  const { isLoading } = useFeatureFlags();
 
  if (isLoading) {
- return <AppLoadingScreen message="Launching Lioris Campus Platform..." />;
+ return <AppLoadingScreen message="Launching Lioris Campus Platform" />;
  }
 
  return (

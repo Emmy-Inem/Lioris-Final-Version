@@ -346,7 +346,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
                 <Ionicons name="shield-half" size={22} color={colors.critical} />
-                <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+                <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" style={{ flexShrink: 1 }}>
                   Moderation Enforcement Action 
                 </AppText>
               </View>

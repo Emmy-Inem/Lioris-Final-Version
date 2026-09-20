@@ -736,10 +736,10 @@ export default function UserDirectoryScreen() {
       {/* Header & Quick Action Row */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: spacing.sm }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
             User Directory
           </AppText>
-          <AppText tone="secondary" variant="caption" numberOfLines={1}>Manage identities, matric records & role privileges</AppText>
+          <AppText tone="secondary" variant="caption">Manage identities, matric records & role privileges</AppText>
         </View>
         <View style={{ flexShrink: 0 }}>
           <AppButton
@@ -887,7 +887,7 @@ export default function UserDirectoryScreen() {
                         <Avatar name={item.fullName} size={44} role={item.role.toLowerCase() as any} />
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flexShrink: 1 }}>
+                            <AppText weight="bold" variant="bodySmall" style={{ flexShrink: 1 }}>
                               {item.fullName}
                             </AppText>
                             <UserTypeBadge role={item.role.toLowerCase() as any} />
@@ -895,10 +895,10 @@ export default function UserDirectoryScreen() {
                               <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
                             )}
                           </View>
-                          <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                          <AppText tone="secondary" variant="caption">
                             @{item.username} • {item.matricNo}
                           </AppText>
-                          <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                          <AppText tone="secondary" variant="caption">
                             {item.campus} • {item.department}
                           </AppText>
                           {item.suspended && (
@@ -931,7 +931,7 @@ export default function UserDirectoryScreen() {
         <>
           <AppTextField
             label=""
-            placeholder="Search by name, @handle, matric, or email..."
+            placeholder="Search people"
             value={query}
             onChangeText={setQuery}
           />
@@ -972,7 +972,7 @@ export default function UserDirectoryScreen() {
                     <Avatar name={item.fullName} size={44} role={item.role.toLowerCase() as any} />
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flexShrink: 1 }}>
+                        <AppText weight="bold" variant="bodySmall" style={{ flexShrink: 1 }}>
                           {item.fullName}
                         </AppText>
                         <UserTypeBadge role={item.role.toLowerCase() as any} />
@@ -980,10 +980,10 @@ export default function UserDirectoryScreen() {
                           <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
                         )}
                       </View>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                      <AppText tone="secondary" variant="caption">
                         @{item.username} • {item.matricNo}
                       </AppText>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                      <AppText tone="secondary" variant="caption">
                         {item.campus} • {item.department}
                       </AppText>
                       {item.suspended && (
@@ -1122,7 +1122,7 @@ export default function UserDirectoryScreen() {
             <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+                  <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
                     Identity Record
                   </AppText>
                 </View>
@@ -1187,7 +1187,7 @@ export default function UserDirectoryScreen() {
  borderRadius: 12,
  }}
  >
- <AppText variant="caption" weight="bold" numberOfLines={2}>
+ <AppText variant="caption" weight="bold">
  {entry.summary}
  </AppText>
  <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 2 }}>

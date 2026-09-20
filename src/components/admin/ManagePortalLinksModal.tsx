@@ -387,7 +387,7 @@ export function ManagePortalLinksModal({ visible, onClose }: { visible: boolean;
  </AppText>
  <Badge label={link.category} tone={link.active ? 'brand' : 'neutral'} />
  </View>
- <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+ <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
  {link.url}
  </AppText>
  </View>

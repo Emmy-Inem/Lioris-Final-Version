@@ -295,7 +295,7 @@ export function EventsModerationTab() {
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
  <View style={{ flex: 1, marginRight: spacing.sm }}>
  <AppTextField
- label=""placeholder="Search events by title, organizer, location..."value={searchQuery}
+ label=""placeholder="Search events"value={searchQuery}
  onChangeText={setSearchQuery}
  />
  </View>
@@ -390,7 +390,7 @@ export function EventsModerationTab() {
 
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
  <Ionicons name="location-outline"size={13} color={colors.textSecondary} />
- <AppText tone="secondary"variant="caption"numberOfLines={1} style={{ flex: 1 }}>
+ <AppText tone="secondary"variant="caption" style={{ flex: 1 }}>
  {event.location}
  </AppText>
  </View>
@@ -403,7 +403,7 @@ export function EventsModerationTab() {
  </View>
  </View>
 
- <AppText tone="secondary"variant="bodySmall"numberOfLines={2} style={{ marginBottom: spacing.md }}>
+ <AppText tone="secondary"variant="bodySmall" style={{ marginBottom: spacing.md }}>
  {event.description}
  </AppText>
 
@@ -540,7 +540,7 @@ export function EventsModerationTab() {
  backgroundColor: formVenueType === v ? colors.pastelPrimaryBg : colors.surface,
  }}
  >
- <AppText variant="caption"weight="bold"tone={formVenueType === v ? 'brand' : 'secondary'} numberOfLines={1}>
+ <AppText variant="caption"weight="bold"tone={formVenueType === v ? 'brand' : 'secondary'}>
  {VENUE_TYPE_LABELS[v]}
  </AppText>
  </Pressable>
@@ -641,7 +641,7 @@ export function EventsModerationTab() {
  >
  <Image source={preset.src} style={{ width: '100%', height: 60 }} contentFit="cover" />
  <View style={{ padding: 4, backgroundColor: colors.surface }}>
- <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} numberOfLines={1}>
+ <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'}>
  {preset.label}
  </AppText>
  </View>
@@ -714,10 +714,10 @@ export function EventsModerationTab() {
               </AppText>
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <AppText variant="bodySmall" weight="semiBold" numberOfLines={1}>
+              <AppText variant="bodySmall" weight="semiBold">
                 {att.fullName || att.name || 'Student'}
               </AppText>
-              <AppText variant="caption" tone="secondary" numberOfLines={1}>
+              <AppText variant="caption" tone="secondary">
                 {att.matricNumber || att.department || att.role}
               </AppText>
             </View>

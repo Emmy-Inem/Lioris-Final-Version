@@ -71,6 +71,7 @@ export function DesktopSidebar() {
     { id: 'calendar', label: 'Calendar & Schedule', href: '/(student)/calendar', icon: 'calendar-outline', flagKey: 'utility_cards' },
     { id: 'messages', label: 'Messages', href: '/(student)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Notifications', href: '/(student)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
+    { id: 'saved', label: 'Saved Items', href: '/(student)/saved', icon: 'bookmark' },
     { id: 'profile', label: 'My Academic Profile', href: '/(student)/profile', icon: 'person' },
     { id: 'settings', label: 'Settings & Security', href: '/(student)/settings', icon: 'settings' },
   ];
@@ -86,6 +87,7 @@ export function DesktopSidebar() {
     { id: 'connections', label: 'Connection Requests', href: '/(alumni)/connection-requests', icon: 'person-add', flagKey: 'alumni_network' },
     { id: 'messages', label: 'Messages', href: '/(alumni)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Notifications', href: '/(alumni)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
+    { id: 'saved', label: 'Saved Items', href: '/(alumni)/saved', icon: 'bookmark' },
     { id: 'profile', label: 'My Alumni Profile', href: '/(alumni)/profile', icon: 'person' },
     { id: 'settings', label: 'Settings', href: '/(alumni)/settings', icon: 'settings' },
   ];
@@ -101,6 +103,7 @@ export function DesktopSidebar() {
     { id: 'forum', label: 'Faculty Forum', href: '/(staff)/forum', icon: 'chatbubbles', flagKey: 'discussion_workspaces' },
     { id: 'messages', label: 'Direct Messages', href: '/(staff)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Staff Alerts', href: '/(staff)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
+    { id: 'saved', label: 'Saved Items', href: '/(staff)/saved', icon: 'bookmark' },
     { id: 'profile', label: 'Faculty Profile', href: '/(staff)/profile', icon: 'person' },
     { id: 'settings', label: 'Console Settings', href: '/(staff)/settings', icon: 'settings' },
   ];
@@ -123,6 +126,7 @@ export function DesktopSidebar() {
     { id: 'forum', label: 'Forum', href: '/(admin)/forum', icon: 'chatbubbles', flagKey: 'discussion_workspaces' },
     { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Alerts', href: '/(admin)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
+    { id: 'saved', label: 'Saved Items', href: '/(admin)/saved', icon: 'bookmark' },
     { id: 'settings', label: 'Settings', href: '/(admin)/settings', icon: 'settings' },
   ];
 
@@ -212,7 +216,7 @@ export function DesktopSidebar() {
  ]}
  >
  <View style={styles.activeDot} />
- <AppText variant="caption" weight="semiBold" numberOfLines={1} style={{ flex: 1, fontSize: 11 }}>
+ <AppText variant="caption" weight="semiBold" style={{ flex: 1, fontSize: 11 }}>
  {campusName}
  </AppText>
  </View>
@@ -357,7 +361,6 @@ export function DesktopSidebar() {
 
               {!collapsed && (
                 <AppText
-                  numberOfLines={1}
                   weight={isActive ? 'bold' : 'medium'}
                   style={{
                     flex: 1,
@@ -424,7 +427,7 @@ export function DesktopSidebar() {
           />
           {!collapsed && (
             <View style={{ flex: 1, marginLeft: 8, minWidth: 0 }}>
-              <AppText variant="bodySmall" weight="bold" numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 16 }}>
+              <AppText variant="bodySmall" weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
                 {user?.fullName || 'Campus Member'}
               </AppText>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
@@ -446,7 +449,7 @@ export function DesktopSidebar() {
                     {role}
                   </AppText>
                 </View>
-                <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5, flex: 1, minWidth: 0 }}>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5, flex: 1, minWidth: 0 }}>
                   {profile?.department || 'Member'}
                 </AppText>
               </View>

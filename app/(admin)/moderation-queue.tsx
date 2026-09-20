@@ -14,7 +14,7 @@ export default function AdminModerationQueueScreen() {
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
-        <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
+        <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
           Moderation Queue
         </AppText>
       </View>

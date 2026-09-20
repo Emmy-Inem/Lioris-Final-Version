@@ -152,7 +152,7 @@ export function DepartmentPicker({
             </View>
 
             <AppTextField
-              placeholder={`Search departments or ${groupLabel.toLowerCase()}s...`}
+              placeholder={'Search departments'}
               value={query}
               onChangeText={setQuery}
               leftIcon="search"

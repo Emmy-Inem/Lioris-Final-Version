@@ -222,7 +222,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
               <Ionicons name="cloud-upload" size={20} color={colors.brandPrimary} />
-              <AppText variant="h2" weight="bold" numberOfLines={1}>
+              <AppText variant="h2" weight="bold">
                 Share Academic File
               </AppText>
             </View>
@@ -262,7 +262,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
                   color={selectedFile ? colors.brandPrimary : colors.textSecondary}
                 />
                 <View style={{ flex: 1 }}>
-                  <AppText weight="semiBold" variant="bodySmall" numberOfLines={1}>
+                  <AppText weight="semiBold" variant="bodySmall">
                     {selectedFile ? selectedFile.name : 'Attach Document (PDF, ZIP)'}
                   </AppText>
                   {selectedFile?.size ? (
