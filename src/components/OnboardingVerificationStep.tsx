@@ -12,6 +12,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
 import { supabase } from '@/api/supabase';
 import { submitVerificationRequest } from '@/api/verification';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 type VerificationState = 'loading' | 'verified' | 'pending' | 'needs_documents';
 
@@ -73,7 +74,7 @@ export function OnboardingVerificationStep({ currentPath, mode }: OnboardingVeri
       });
       setState('pending');
     } catch (err: any) {
-      setErrorMessage(err?.message || 'We could not submit your documents. Please try again.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'We could not submit your documents. Please try again.'));
     }
   }
 

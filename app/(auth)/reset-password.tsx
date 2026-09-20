@@ -16,6 +16,7 @@ import { supabase } from '@/api/supabase';
 import { checkPassword, isPasswordValid } from '@/utils/validation';
 import { haptics } from '@/utils/haptics';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -79,11 +80,11 @@ export default function ResetPasswordScreen() {
             setHasActiveRecoverySession(true);
             setSuccessMessage('Recovery link verified! Please enter your new password below.');
           } else if (error && !cancelled) {
-            setErrorMessage(error.message || 'Invalid or expired recovery link.');
+            setErrorMessage(getFriendlyErrorMessage(error, 'Invalid or expired recovery link.'));
           }
         } catch (err: any) {
           if (!cancelled) {
-            setErrorMessage(err?.message || 'Failed to verify recovery link.');
+            setErrorMessage(getFriendlyErrorMessage(err, 'Failed to verify recovery link.'));
           }
         } finally {
           if (!cancelled) setSubmitting(false);
@@ -132,7 +133,7 @@ export default function ResetPasswordScreen() {
         setCaptchaToken(null);
         return;
       }
-      setErrorMessage(err?.message || 'Could not send recovery email. Please check the address and try again.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'Could not send recovery email. Please check the address and try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -174,7 +175,7 @@ export default function ResetPasswordScreen() {
       }, 2000);
     } catch (err: any) {
       haptics.error();
-      setErrorMessage(err?.message || 'Failed to update password. Please request a new recovery link.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'Failed to update password. Please request a new recovery link.'));
     } finally {
       setSubmitting(false);
     }
@@ -229,7 +230,7 @@ export default function ResetPasswordScreen() {
       }, 2000);
     } catch (err: any) {
       haptics.error();
-      setErrorMessage(err?.message || 'Invalid or expired recovery code. Please request a fresh code.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'Invalid or expired recovery code. Please request a fresh code.'));
     } finally {
       setSubmitting(false);
     }

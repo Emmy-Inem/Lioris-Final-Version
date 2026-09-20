@@ -28,6 +28,7 @@ import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { GuestTeaserBanner } from './GuestTeaserBanner';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { useViewScope } from '@/hooks/useViewScope';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
@@ -114,7 +115,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       setNewCommunityDescription('');
       toast.info(`"${created.label}" submitted! It will appear once a root admin approves it.`);
     } catch (err: any) {
-      toast.error(err?.message || 'Could not submit this community. Please try again.');
+      toast.error(getFriendlyErrorMessage(err, 'Could not submit this community. Please try again.'));
     } finally {
       setSubmittingCommunity(false);
     }
@@ -208,7 +209,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       setVerificationModalOpen(false);
       toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
     } catch (err: any) {
-      toast.error(err?.message || 'Could not submit verification request. Please try again.');
+      toast.error(getFriendlyErrorMessage(err, 'Could not submit verification request. Please try again.'));
     }
   }
 

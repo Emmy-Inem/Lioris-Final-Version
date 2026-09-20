@@ -24,6 +24,7 @@ import { getMyProfile, markVerificationPending, updateMyProfile, updateProfileIm
 import { deletePost, listMyDrafts, listMyPosts, listMyScheduled, publishDraft } from '@/api/posts';
 import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 /* Short labels so the segmented control fits a 375px phone on one line with no
    ragged wrapping and no ellipsis. The control also scrolls horizontally so it
@@ -153,7 +154,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
       await refreshAuthoring();
       Alert.alert('Published', 'Your thread is now live on the forum.');
     } catch (err: any) {
-      Alert.alert('Could Not Publish', err?.message || 'Please try again.');
+      Alert.alert('Could Not Publish', getFriendlyErrorMessage(err, 'Could not publish draft. Please try again.'));
     } finally {
       setBusyPostId(null);
     }
@@ -165,7 +166,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
       await deletePost(postId);
       await refreshAuthoring();
     } catch (err: any) {
-      Alert.alert('Could Not Delete', err?.message || 'Please try again.');
+      Alert.alert('Could Not Delete', getFriendlyErrorMessage(err, 'Could not delete post. Please try again.'));
     } finally {
       setBusyPostId(null);
     }
@@ -211,7 +212,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
       setEditModalOpen(false);
       Alert.alert('Profile Saved', 'Your public academic profile details have been updated.');
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not update profile details.');
+      Alert.alert('Error', getFriendlyErrorMessage(err, 'Could not update profile details.'));
     } finally {
       setSavingProfile(false);
     }
@@ -225,7 +226,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
       setPhotoPickerOpen(false);
       Alert.alert('Avatar Removed', 'Your profile now uses the generic initial badge.');
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not remove avatar.');
+      Alert.alert('Error', getFriendlyErrorMessage(err, 'Could not remove avatar.'));
     }
   }
 
@@ -237,7 +238,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
       setPhotoPickerOpen(false);
       Alert.alert('Cover Removed', 'Your profile now uses the generic cover placeholder.');
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not remove cover image.');
+      Alert.alert('Error', getFriendlyErrorMessage(err, 'Could not remove cover image.'));
     }
   }
 
@@ -268,7 +269,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           setPhotoPickerOpen(false);
           Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
         } catch (err: any) {
-          Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
+          Alert.alert('Upload Failed', getFriendlyErrorMessage(err, 'Could not upload photo.'));
         } finally {
           setUploadingAvatar(false);
         }
@@ -300,7 +301,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         setPhotoPickerOpen(false);
         Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
       } catch (err: any) {
-        Alert.alert('Upload Failed', err?.message || 'Could not upload photo.');
+        Alert.alert('Upload Failed', getFriendlyErrorMessage(err, 'Could not upload photo.'));
       } finally {
         setUploadingAvatar(false);
       }
@@ -331,7 +332,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           setPhotoPickerOpen(false);
           Alert.alert('Cover Updated', 'Your custom campus banner is now live.');
         } catch (err: any) {
-          Alert.alert('Upload Failed', err?.message || 'Could not upload cover image.');
+          Alert.alert('Upload Failed', getFriendlyErrorMessage(err, 'Could not upload cover image.'));
         } finally {
           setUploadingCover(false);
         }
@@ -363,49 +364,49 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         setPhotoPickerOpen(false);
         Alert.alert('Cover Updated', 'Your custom campus banner is now live.');
       } catch (err: any) {
-        Alert.alert('Upload Failed', err?.message || 'Could not upload cover image.');
+        Alert.alert('Upload Failed', getFriendlyErrorMessage(err, 'Could not upload cover image.'));
       } finally {
         setUploadingCover(false);
       }
     }
   }
 
- async function handleSubmitVerification(data: {
- institutionClaimed: string;
- documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
- documentReference?: string;
- documentPhotoUri?: string | null;
- photoBlob?: Blob;
- }) {
- if (!user) return;
- try {
- await submitVerificationRequest({
- userId: user.id,
- applicantName: profile?.fullName ?? user.fullName,
- documentType: data.documentType,
- documentReference: data.documentReference,
- institutionClaimed: data.institutionClaimed,
- documentPhotoUri: data.documentPhotoUri,
- photoBlob: data.photoBlob,
- });
- markVerificationPending(user.id);
- await queryClient.invalidateQueries({ queryKey: ['profile'] });
- setVerificationModalOpen(false);
- Alert.alert('Application Submitted', 'Your verification request is now pending review by campus moderators.');
- } catch (err: any) {
- Alert.alert('Application Failed', err?.message ?? 'Please try again later.');
- }
- }
+  async function handleSubmitVerification(data: {
+    institutionClaimed: string;
+    documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
+    documentReference?: string;
+    documentPhotoUri?: string | null;
+    photoBlob?: Blob;
+  }) {
+    if (!user) return;
+    try {
+      await submitVerificationRequest({
+        userId: user.id,
+        applicantName: profile?.fullName ?? user.fullName,
+        documentType: data.documentType,
+        documentReference: data.documentReference,
+        institutionClaimed: data.institutionClaimed,
+        documentPhotoUri: data.documentPhotoUri,
+        photoBlob: data.photoBlob,
+      });
+      markVerificationPending(user.id);
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setVerificationModalOpen(false);
+      Alert.alert('Application Submitted', 'Your verification request is now pending review by campus moderators.');
+    } catch (err: any) {
+      Alert.alert('Application Failed', getFriendlyErrorMessage(err, 'Please try again later.'));
+    }
+  }
 
- if (!profile) {
- return (
- <ScreenContainer noPadding glow={false}>
- <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
- <AppText tone="secondary">Loading profile...</AppText>
- </View>
- </ScreenContainer>
- );
- }
+  if (!profile) {
+    return (
+      <ScreenContainer noPadding glow={false}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <AppText tone="secondary">Loading profile...</AppText>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   const activeCover = profile.coverUrl && (profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:'))
     ? { uri: profile.coverUrl }

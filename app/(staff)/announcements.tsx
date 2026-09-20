@@ -14,6 +14,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listAnnouncements, publishAnnouncement, PublishAnnouncementPayload } from '@/api/announcements';
 import { haptics } from '@/utils/haptics';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 const AUDIENCES: PublishAnnouncementPayload['audienceScope'][] = ['student', 'alumni', 'staff', 'global'];
 const PRIORITIES: PublishAnnouncementPayload['priority'][] = ['normal', 'high', 'critical'];
@@ -42,7 +43,7 @@ export default function StaffAnnouncementsScreen() {
       setContent('');
       setComposing(false);
     } catch (err: any) {
-      Alert.alert('Could not publish', err?.message || 'Please try again.');
+      Alert.alert('Could not publish', getFriendlyErrorMessage(err, 'Could not publish announcement. Please try again.'));
     } finally {
       setSubmitting(false);
     }

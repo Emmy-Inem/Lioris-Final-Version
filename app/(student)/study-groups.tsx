@@ -17,6 +17,7 @@ import { useToast } from '@/context/ToastContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listStudyGroups, createStudyGroup } from '@/api/studyGroups';
 import { useCampusScope } from '@/hooks/useCampusScope';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 const COURSE_FILTERS = ['All Pods', 'CSC 401', 'CSC 412', 'MAT 201', 'EEE 301', 'Public Circles'];
 
@@ -40,7 +41,7 @@ export default function StudyGroupsScreen() {
       queryClient.invalidateQueries({ queryKey: ['study-groups'] });
       toast.show('Study pod created successfully!');
     } catch (err: any) {
-      toast.show(err?.message || 'Could not create study pod.');
+      toast.show(getFriendlyErrorMessage(err, 'Could not create study pod. Please try again.'));
     }
   }
 

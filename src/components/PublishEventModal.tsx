@@ -17,6 +17,7 @@ import { EventCategory } from '@/api/types';
 import { getInstitutionByCode } from '@/api/institutions';
 import { VerifiedCampusLocationPicker } from './VerifiedCampusLocationPicker';
 import { haptics } from '@/utils/haptics';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 const EVENT_TYPES = ['Lioris Live Event (In-App)', 'Physical Event', 'External Event'] as const;
 
@@ -286,7 +287,7 @@ export function PublishEventModal({
       setErrorMessage(null);
     } catch (err: any) {
       haptics.error();
-      setErrorMessage(err?.message || 'Could not publish event. Please try again.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'Could not publish event. Please try again.'));
     } finally {
       setSubmitting(false);
     }

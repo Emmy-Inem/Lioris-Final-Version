@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import { getInstitutionByCode, getInstitutionForEmail } from './institutions';
 import { clearTokens, getSessionUser } from '../auth/tokenStorage';
 import { persistCampus, getStoredCampus } from '@/hooks/useViewScope';
+import { getFriendlyErrorMessage } from '../utils/errors';
 
 export function nextLevelXp(level: number): number {
  if (level === 1) return 200;
@@ -383,15 +384,15 @@ export async function updateMyProfile(
    if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
    if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
 
-   if (userId !== 'me') {
-     const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
-     if (error) {
-       if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
-         throw new Error('This username is already taken. Please choose another.');
-       }
-       console.warn('[Profile] Supabase update warning:', error.message);
-       throw new Error(error.message);
-     }
+    if (userId !== 'me') {
+      const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
+      if (error) {
+        if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
+          throw new Error('This username is already taken. Please choose another.');
+        }
+        console.warn('[Profile] Supabase update warning:', error.message);
+        throw new Error(getFriendlyErrorMessage(error, 'Could not update your profile. Please try again.'));
+      }
 
      if (patch.institutionCode !== undefined) {
        const cleanCode = patch.institutionCode.trim().toUpperCase();

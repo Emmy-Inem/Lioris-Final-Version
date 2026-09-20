@@ -14,6 +14,7 @@ import * as authApi from '@/api/auth';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 import { persistCampus } from '@/hooks/useViewScope';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -64,7 +65,7 @@ export default function VerifyEmailScreen() {
       const hashParams = new URLSearchParams(hash);
       const errorDesc = hashParams.get('error_description');
       if (errorDesc) {
-        setErrorMessage(decodeURIComponent(errorDesc.replace(/\+/g, ' ')));
+        setErrorMessage(getFriendlyErrorMessage(decodeURIComponent(errorDesc.replace(/\+/g, ' '))));
       }
     }
   }, []);
@@ -118,9 +119,9 @@ export default function VerifyEmailScreen() {
       haptics.success();
       // The auth listener signs the user in; the resolver then routes into the app.
       router.replace('/');
-    } catch {
+    } catch (err: any) {
       haptics.error();
-      setErrorMessage('That code is wrong or has expired. Check the latest email, or request a new code.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'That code is wrong or has expired. Check the latest email, or request a new code.'));
     } finally {
       setSubmitting(false);
     }
@@ -141,7 +142,7 @@ export default function VerifyEmailScreen() {
       setNotice(`A new code is on its way to ${email}. Check your spam folder if it does not arrive.`);
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'We could not send a new code right now.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'We could not send a new code right now.'));
     } finally {
       setResending(false);
     }

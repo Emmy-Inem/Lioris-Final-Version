@@ -10,6 +10,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { createJob } from '@/api/jobs';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 interface CreateJobModalProps {
   visible: boolean;
@@ -107,7 +108,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
       onClose();
     } catch (err: any) {
       haptics.error();
-      showError(err?.message || 'Failed to publish job opening. Please try again.');
+      showError(getFriendlyErrorMessage(err, 'Failed to publish job opening. Please try again.'));
     } finally {
       setSubmitting(false);
     }

@@ -24,6 +24,7 @@ import { togglePostLike, togglePostRepost, listPostComments, createPostComment, 
 import { toggleSavedItem, SAVED_ITEMS_KEY } from'@/api/bookmarks';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 /** Every cache that can show a post: the feed, the profile's "Authored" list and the saved list. */
 async function invalidatePostCaches(queryClient: ReturnType<typeof useQueryClient>, postId?: string) {
@@ -169,7 +170,7 @@ export function PostCard({ post }: { post: Post }) {
  } catch (err: any) {
  setPoll(previous);
  haptics.error();
- Alert.alert('Vote not counted', err?.message || 'Could not record your vote. Please try again.');
+ Alert.alert('Vote not counted', getFriendlyErrorMessage(err, 'Could not record your vote. Please try again.'));
  }
  }
 
@@ -190,7 +191,7 @@ export function PostCard({ post }: { post: Post }) {
  } catch (err: any) {
  setBookmarked(!next);
  haptics.error();
- Alert.alert(next ? 'Could not save' : 'Could not remove', err?.message || 'Please try again.');
+ Alert.alert(next ? 'Could not save' : 'Could not remove', getFriendlyErrorMessage(err, 'Please try again.'));
  } finally {
  setSavingBookmark(false);
  }
@@ -212,7 +213,7 @@ export function PostCard({ post }: { post: Post }) {
  } catch (err: any) {
  setReposted(!next);
  setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
- Alert.alert('Repost failed', err?.message || 'Please try again.');
+ Alert.alert('Repost failed', getFriendlyErrorMessage(err, 'Could not repost at this time. Please try again.'));
  }
  }
 
@@ -233,7 +234,7 @@ export function PostCard({ post }: { post: Post }) {
  );
  } catch (err: any) {
  haptics.error();
- Alert.alert('Delete failed', err?.message || 'The post could not be deleted. Please try again.');
+ Alert.alert('Delete failed', getFriendlyErrorMessage(err, 'The post could not be deleted. Please try again.'));
  } finally {
  setDeleting(false);
  }
@@ -712,7 +713,7 @@ export function PostCard({ post }: { post: Post }) {
                     setReportReason('');
                     Alert.alert('Report Dispatched', 'Campus moderators have been notified.');
                   } catch (err: any) {
-                    Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
+                    Alert.alert('Report Failed', getFriendlyErrorMessage(err, 'Could not submit your report. Please try again.'));
                   }
                 }}
               />

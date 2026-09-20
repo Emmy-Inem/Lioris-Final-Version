@@ -13,6 +13,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
 import { confirmMfaEnrollment, enrollMfaFactor, listMfaFactors, unenrollMfaFactor } from '@/api/auth';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 type Mode = 'loading' | 'challenge' | 'enroll' | 'error';
 
@@ -54,7 +55,7 @@ export default function VerifyMfaScreen() {
       setEnrollment(fresh);
       setMode('enroll');
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Could not load two-factor authentication. Please try again.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'Could not load two-factor authentication. Please try again.'));
       setMode('error');
     }
   }, []);
@@ -102,7 +103,7 @@ export default function VerifyMfaScreen() {
       await confirmMfaEnrollment(enrollment.factorId, code.trim());
     } catch (err: any) {
       haptics.error();
-      setErrorMessage(err?.message || 'Invalid code. Please check your authenticator app and try again.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'Invalid code. Please check your authenticator app and try again.'));
       setSubmitting(false);
       return;
     }

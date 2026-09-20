@@ -14,6 +14,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 import { listCommunities } from '@/api/communities';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 const POLL_DURATIONS = [
   { label: '1 hour', hours: 1 },
@@ -190,6 +191,12 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     input.onchange = (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
+      if (file.size > 10 * 1024 * 1024) {
+        setErrorMessage('The selected file is too large. Maximum allowed file size is 10 MB.');
+        haptics.error();
+        (e.target as HTMLInputElement).value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
         const dataUrl = ev.target?.result as string;
@@ -218,7 +225,13 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
         quality: 0.85,
       });
       if (!result.canceled && result.assets && result.assets[0]) {
-        setCustomMediaUri(result.assets[0].uri);
+        const asset = result.assets[0];
+        if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+          setErrorMessage('The selected image is too large. Maximum allowed file size is 10 MB.');
+          haptics.error();
+          return;
+        }
+        setCustomMediaUri(asset.uri);
         haptics.light();
       }
     } catch {
@@ -320,14 +333,13 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
       }
     } catch (err: any) {
       haptics.error();
-      setErrorMessage(
-        err?.message ||
-          (status === 'draft'
-            ? 'Could not save this draft. Please try again.'
-            : status === 'scheduled'
-            ? 'Could not schedule this post. Please try again.'
-            : 'Could not publish this post. Please try again.'),
-      );
+      const defaultMsg =
+        status === 'draft'
+          ? 'Could not save this draft. Please try again.'
+          : status === 'scheduled'
+          ? 'Could not schedule this post. Please try again.'
+          : 'Could not publish this post. Please try again.';
+      setErrorMessage(getFriendlyErrorMessage(err, defaultMsg));
     } finally {
       setSubmitting(false);
     }

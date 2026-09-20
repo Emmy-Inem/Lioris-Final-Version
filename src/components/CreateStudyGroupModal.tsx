@@ -8,6 +8,7 @@ import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 interface CreateStudyGroupModalProps {
   visible: boolean;
@@ -54,7 +55,7 @@ export function CreateStudyGroupModal({ visible, onClose, onCreate }: CreateStud
       reset();
     } catch (err: any) {
       haptics.error();
-      setErrorMessage(err?.message || 'Could not create study group. Please try again.');
+      setErrorMessage(getFriendlyErrorMessage(err, 'Could not create study group. Please try again.'));
     } finally {
       setSubmitting(false);
     }

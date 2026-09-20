@@ -11,6 +11,7 @@ import { useToast } from '@/context/ToastContext';
 import { markVerificationPending } from '@/api/profile';
 import { submitVerificationRequest } from '@/api/verification';
 import type { CampusAccess } from '@/api/campusAccess';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 export type CampusLockedReason = CampusAccess['reason'];
 
@@ -131,7 +132,7 @@ export function CampusLockedCard({
       setApplyOpen(false);
       toast.success('Verification submitted. A campus moderator is reviewing it now.');
     } catch (err: any) {
-      toast.error(err?.message || 'Could not submit your verification. Please try again.');
+      toast.error(getFriendlyErrorMessage(err, 'Could not submit your verification. Please try again.'));
     }
   }
 

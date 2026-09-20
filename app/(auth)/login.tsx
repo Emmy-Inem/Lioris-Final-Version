@@ -22,6 +22,7 @@ import {
 } from '@/api/auth';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
 import { haptics } from '@/utils/haptics';
+import { getFriendlyErrorMessage, isCredentialError, isNetworkError } from '@/utils/errors';
 
 const SLIDES = [
  {
@@ -133,7 +134,7 @@ export default function LoginScreen() {
  setForgotError('Security verification failed. Please complete the security check.');
  return;
  }
- setForgotError(err?.message || 'Could not send recovery code. Please verify your email.');
+ setForgotError(getFriendlyErrorMessage(err, 'Could not send recovery code. Please verify your email.'));
  } finally {
  setSubmittingForgot(false);
  }
@@ -164,7 +165,7 @@ export default function LoginScreen() {
  setForgotNewPassword('');
  } catch (err: any) {
  haptics.error();
- setForgotError(err?.message || 'Invalid or expired recovery code. Please try again.');
+ setForgotError(getFriendlyErrorMessage(err, 'Invalid or expired recovery code. Please try again.'));
  } finally {
  setSubmittingForgot(false);
  }
@@ -214,8 +215,11 @@ export default function LoginScreen() {
  setErrorMessage('Security verification required. Please complete the security check below and try again.');
  return;
  }
- const msg = err?.message || 'Incorrect email or password. Please verify your credentials and try again.';
- setErrorMessage(msg);
+ const friendlyMsg = getFriendlyErrorMessage(
+ err,
+ 'Incorrect password. Please verify your password and try again, or reset it if forgotten.',
+ );
+ setErrorMessage(friendlyMsg);
  } finally {
  setSubmitting(false);
  }
@@ -328,45 +332,83 @@ export default function LoginScreen() {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-        <Ionicons name="alert-circle" size={18} color={colors.critical} style={{ marginTop: 2 }} />
-        <AppText
-          variant="bodySmall"
-          weight="semiBold"
-          style={{ color: colors.critical, flex: 1 }}
-        >
-          {errorMessage}
-        </AppText>
-      </View>
-      <View style={{ marginTop: 8, gap: 6 }}>
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/(auth)/verify-email',
-              params: { email: email.includes('@') ? email.trim() : undefined },
-            })
+        <Ionicons
+          name={
+            isNetworkError(errorMessage)
+              ? 'cloud-offline'
+              : isCredentialError(errorMessage)
+              ? 'lock-closed'
+              : 'alert-circle'
           }
-          hitSlop={8}
-          style={{ alignSelf: 'flex-start' }}
-        >
-          <AppText variant="caption" tone="brand" weight="bold">
-            Need to confirm your email? Enter your 6-digit code →
+          size={18}
+          color={colors.critical}
+          style={{ marginTop: 2 }}
+        />
+        <View style={{ flex: 1 }}>
+          {isCredentialError(errorMessage) ? (
+            <AppText variant="bodySmall" weight="bold" style={{ color: colors.critical, marginBottom: 2 }}>
+              Incorrect Password
+            </AppText>
+          ) : isNetworkError(errorMessage) ? (
+            <AppText variant="bodySmall" weight="bold" style={{ color: colors.critical, marginBottom: 2 }}>
+              Network Unavailable
+            </AppText>
+          ) : null}
+          <AppText variant="caption" weight="medium" style={{ color: colors.critical, lineHeight: 18 }}>
+            {errorMessage}
           </AppText>
-        </Pressable>
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/(auth)/reset-password' as any,
-              params: { email: email.includes('@') ? email.trim() : undefined },
-            })
-          }
-          hitSlop={8}
-          style={{ alignSelf: 'flex-start' }}
-        >
-          <AppText variant="caption" tone="brand" weight="bold">
-            Forgot your password? Reset it here →
-          </AppText>
-        </Pressable>
+        </View>
       </View>
+
+      {isCredentialError(errorMessage) ? (
+        <View style={{ marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(239,68,68,0.2)' : '#FECACA', gap: 6 }}>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/(auth)/reset-password' as any,
+                params: { email: email.includes('@') ? email.trim() : undefined },
+              })
+            }
+            hitSlop={8}
+            style={{ alignSelf: 'flex-start' }}
+          >
+            <AppText variant="caption" tone="brand" weight="bold">
+              Forgot your password? Reset it here →
+            </AppText>
+          </Pressable>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/(auth)/verify-email',
+                params: { email: email.includes('@') ? email.trim() : undefined },
+              })
+            }
+            hitSlop={8}
+            style={{ alignSelf: 'flex-start' }}
+          >
+            <AppText variant="caption" tone="brand" weight="semiBold" style={{ opacity: 0.9 }}>
+              Unconfirmed campus email? Enter your 6-digit code →
+            </AppText>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={{ marginTop: 8, gap: 6 }}>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/(auth)/verify-email',
+                params: { email: email.includes('@') ? email.trim() : undefined },
+              })
+            }
+            hitSlop={8}
+            style={{ alignSelf: 'flex-start' }}
+          >
+            <AppText variant="caption" tone="brand" weight="bold">
+              Need to confirm your email? Enter your 6-digit code →
+            </AppText>
+          </Pressable>
+        </View>
+      )}
     </View>
   ) : null}
 

@@ -23,6 +23,7 @@ import { LiorisLogo } from '@/components/LiorisLogo';
 import { MIN_AGE, MIN_AGE_WITH_CONSENT, TERMS_VERSION } from '@/constants/legal';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
 import { persistCampus } from '@/hooks/useViewScope';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 const SUPPORTED_INSTITUTIONS = LAUNCH_INSTITUTIONS.filter((i) => i.code !== 'GLOBAL');
 
@@ -172,7 +173,7 @@ export default function RegisterScreen() {
  setErrorMessage('Security verification failed or expired. Please complete the security check again.');
  return;
  }
- setErrorMessage(err?.message || 'Registration failed. Please check your details and try again.');
+ setErrorMessage(getFriendlyErrorMessage(err, 'Registration failed. Please check your details and try again.'));
  } finally {
  setSubmitting(false);
  }
@@ -471,31 +472,40 @@ export default function RegisterScreen() {
  </AppText>
  </View>
 
- {errorMessage ? (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 8,
- backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
- borderColor: colors.critical,
- borderWidth: 1,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="alert-circle" size={18} color={colors.critical} />
- <AppText
- variant="bodySmall"
- weight="semiBold"
- style={{ color: colors.critical, flex: 1 }}
- >
- {errorMessage}
- </AppText>
- </View>
- ) : null}
+        {errorMessage ? (
+          <View
+            style={{
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+              borderColor: colors.critical,
+              borderWidth: 1,
+              borderRadius: radius.md,
+              padding: spacing.md,
+              marginBottom: spacing.md,
+              gap: 6,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="alert-circle" size={18} color={colors.critical} />
+              <AppText
+                variant="bodySmall"
+                weight="semiBold"
+                style={{ color: colors.critical, flex: 1 }}
+              >
+                {errorMessage}
+              </AppText>
+            </View>
+            {errorMessage.toLowerCase().includes('already exists') ? (
+              <Pressable
+                onPress={() => router.push('/(auth)/login' as any)}
+                style={{ alignSelf: 'flex-start', marginTop: 2, paddingVertical: 2 }}
+              >
+                <AppText variant="caption" weight="bold" tone="brand">
+                  Sign in to your account now →
+                </AppText>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
 
   {/* Cloudflare Turnstile CAPTCHA */}
   <TurnstileWidget

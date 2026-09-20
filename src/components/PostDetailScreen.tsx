@@ -26,6 +26,7 @@ import { submitReport } from '@/api/moderation';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { VerificationRequiredGate } from './VerificationRequiredGate';
 import { haptics } from '@/utils/haptics';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 
 const STOCK_IMAGES: Record<string, any> = {
   event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
@@ -159,12 +160,12 @@ export function PostDetailScreen() {
      if (typeof serverCount === 'number') setRepostsCount(serverCount);
      queryClient.invalidateQueries({ queryKey: ['feed'] });
      queryClient.invalidateQueries({ queryKey: ['post', post.id] });
-   } catch (err: any) {
-     setReposted(!next);
-     setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
-     Alert.alert('Repost failed', err?.message || 'Please try again.');
-   }
- }
+    } catch (err: any) {
+      setReposted(!next);
+      setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
+      Alert.alert('Repost failed', getFriendlyErrorMessage(err, 'Could not repost at this time. Please try again.'));
+    }
+  }
 
  async function handleVote(optionId: string) {
    if (!poll || !post) return;
@@ -206,8 +207,9 @@ export function PostDetailScreen() {
      await queryClient.invalidateQueries({ queryKey: ['feed'] });
      await queryClient.invalidateQueries({ queryKey: ['post', post.id] });
      haptics.success();
-   } catch {
-     Alert.alert('Error', 'Could not submit reply.');
+   } catch (err: any) {
+     haptics.error();
+     Alert.alert('Reply Failed', getFriendlyErrorMessage(err, 'Could not submit reply. Please try again.'));
    } finally {
      setSubmittingReply(false);
    }
@@ -750,7 +752,7 @@ export function PostDetailScreen() {
  Alert.alert('Post Deleted', 'Your thread has been deleted.');
  router.back();
  } catch (err: any) {
- Alert.alert('Error', err?.message || 'Could not delete post.');
+ Alert.alert('Error', getFriendlyErrorMessage(err, 'Could not delete post.'));
  }
  },
  },

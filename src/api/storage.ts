@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { isLocalMediaUri, isSafeHttpUrl } from '../utils/safeUrl';
+import { getFriendlyErrorMessage } from '../utils/errors';
 
 type Bucket = 'resources' | 'avatars' | 'verifications' | 'campus-media';
 
@@ -178,7 +179,7 @@ export async function uploadMediaFile(
  });
  if (error) {
  console.warn(`[Storage] Upload to "${bucket}" bucket failed:`, error.message);
- throw new Error(`Upload failed: ${error.message}`);
+ throw new Error(getFriendlyErrorMessage(error, 'File upload failed. Please try again.'));
  }
 
  // Private buckets: hand back the path, never a URL. Only `avatars` is public.

@@ -21,6 +21,7 @@ import { getMyProfile } from '@/api/profile';
 import { getInstitutionByCode } from '@/api/institutions';
 import { useToast } from '@/context/ToastContext';
 import { resolveActivePortalTarget } from '@/utils/campusPortalScope';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
@@ -173,7 +174,7 @@ export default function ResourcesScreen() {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
       toast.success('Resource uploaded successfully! Pending moderation review.');
     } catch (err: any) {
-      toast.error(err?.message || 'Could not upload resource. Please try again.');
+      toast.error(getFriendlyErrorMessage(err, 'Could not upload resource. Please try again.'));
     }
   }
 

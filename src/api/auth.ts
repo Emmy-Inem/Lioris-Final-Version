@@ -7,6 +7,7 @@ import { getInstitutionForEmail } from './institutions';
 import { recordAuditLogEntry } from './auditLog';
 import { unregisterDevicePushToken } from './notifications';
 import { checkPassword, isPasswordValid } from '../utils/validation';
+import { getFriendlyErrorMessage } from '../utils/errors';
 
 export function getAuthRedirectUrl(path: string = 'reset-password'): string {
   const cleanPath = path.replace(/^\//, '');
@@ -261,7 +262,11 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
       err.code = 'captcha_failed';
       throw err;
     }
-    throw new Error(signInError?.message || 'Invalid email or password. Please verify your credentials and try again.');
+    const friendly = getFriendlyErrorMessage(
+      signInError,
+      'Incorrect password. Please verify your password and try again, or reset it if forgotten.',
+    );
+    throw new Error(friendly);
   }
 
   // Clear failures upon successful authentication
@@ -343,7 +348,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
   });
 
   if (error || !data?.user) {
-    throw new Error(error?.message || 'Unable to register account. Please check your details.');
+    throw new Error(getFriendlyErrorMessage(error, 'Unable to register account. Please check your details.'));
   }
 
   // Supabase returns an empty identities array if the email is already registered (user enumeration protection)
@@ -385,7 +390,7 @@ export async function sendPasswordResetEmail(email: string, captchaToken?: strin
     redirectTo,
   });
   if (error) {
-    throw new Error(error.message || 'Could not send recovery email. Please check your email.');
+    throw new Error(getFriendlyErrorMessage(error, 'Could not send recovery email. Please check your email address.'));
   }
   return { success: true };
 }
@@ -403,7 +408,7 @@ export async function updateUserPassword(newPassword: string): Promise<{ success
   });
 
   if (error) {
-    throw new Error(error.message || 'Failed to update password.');
+    throw new Error(getFriendlyErrorMessage(error, 'Failed to update password. Please try again.'));
   }
 
   return { success: true };
@@ -431,7 +436,7 @@ export async function verifyPasswordResetOtpAndSetPassword(
  });
 
  if (error || !data.session) {
- throw new Error(error?.message || 'Invalid or expired recovery code.');
+ throw new Error(getFriendlyErrorMessage(error, 'Invalid or expired recovery code.'));
  }
 
  const { error: updateError } = await supabase.auth.updateUser({
@@ -439,7 +444,7 @@ export async function verifyPasswordResetOtpAndSetPassword(
  });
 
  if (updateError) {
- throw new Error(updateError.message || 'Failed to update password.');
+ throw new Error(getFriendlyErrorMessage(updateError, 'Failed to update password.'));
  }
 
  return { success: true };
@@ -476,7 +481,7 @@ export async function verifyEmail(code: string, email?: string): Promise<{ verif
  return { verified: true };
  }
 
- throw new Error(error?.message || emailError?.message || 'Invalid verification code. Please check your email.');
+ throw new Error(getFriendlyErrorMessage(error || emailError, 'Invalid verification code. Please check your email.'));
 }
 
 // Real Supabase TOTP MFA verification via supabase.auth.mfa - no custom
