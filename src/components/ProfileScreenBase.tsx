@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -28,7 +28,7 @@ import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 /* Short labels so the segmented control fits a 375px phone on one line with no
    ragged wrapping and no ellipsis. The control also scrolls horizontally so it
    still reads in full at any width / font scale. */
-const PROFILE_TABS = ['Posts', 'Drafts', 'Scheduled', 'Academic'] as const;
+const PROFILE_TABS = ['Posts', 'Drafts & Scheduled', 'Academic'] as const;
 type ProfileTab = (typeof PROFILE_TABS)[number];
 
 /** Turns an ISO timestamp into plain words, e.g. "Tuesday, 3 June at 14:30". */
@@ -108,6 +108,32 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     queryFn: () => listMyScheduled(),
     enabled: !!user,
   });
+
+  const [unpublishedSubFilter, setUnpublishedSubFilter] = useState<'all' | 'drafts' | 'scheduled'>('all');
+
+  const allUnpublished = useMemo(() => {
+    const scheduled = (myScheduled || []).map((s) => ({
+      id: s.id,
+      title: s.title || s.content || 'Untitled thread',
+      statusLine: scheduledLabel(s.scheduledAt),
+      type: 'scheduled' as const,
+      timestamp: s.scheduledAt ? new Date(s.scheduledAt).getTime() : 0,
+    }));
+    const drafts = (myDrafts || []).map((d) => ({
+      id: d.id,
+      title: d.title || d.content || 'Untitled draft',
+      statusLine: 'Saved as a draft. Only you can see it.',
+      type: 'draft' as const,
+      timestamp: d.createdAt ? new Date(d.createdAt).getTime() : 0,
+    }));
+    return [...scheduled, ...drafts];
+  }, [myDrafts, myScheduled]);
+
+  const displayedUnpublished = useMemo(() => {
+    if (unpublishedSubFilter === 'drafts') return allUnpublished.filter((item) => item.type === 'draft');
+    if (unpublishedSubFilter === 'scheduled') return allUnpublished.filter((item) => item.type === 'scheduled');
+    return allUnpublished;
+  }, [allUnpublished, unpublishedSubFilter]);
 
   const [busyPostId, setBusyPostId] = useState<string | null>(null);
 
@@ -673,8 +699,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  const selected = activeTab === tab;
  const count =
  tab === 'Posts' ? myPosts?.length ?? 0
- : tab === 'Drafts' ? myDrafts?.length ?? 0
- : tab === 'Scheduled' ? myScheduled?.length ?? 0
+ : tab === 'Drafts & Scheduled' ? allUnpublished.length
  : 0;
  return (
  <Pressable
@@ -741,65 +766,84 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </View>
  ) : null}
 
- {/* Tab Content 2: Drafts (own profile only) */}
- {activeTab === 'Drafts' ? (
- <View style={{ gap: spacing.sm }}>
- {draftsLoading ? (
- <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
- <ActivityIndicator color={colors.brandPrimary} />
- </View>
- ) : myDrafts && myDrafts.length > 0 ? (
- myDrafts.map((d) => (
- <AuthoringRow
- key={d.id}
- title={d.title || d.content || 'Untitled draft'}
- statusLine="Saved as a draft. Only you can see it."
- busy={busyPostId === d.id}
- onPublish={() => handlePublishNow(d.id)}
- onDelete={() => handleDeleteAuthoredPost(d.id)}
- />
- ))
- ) : (
- <SolidCard radius={20} style={{ padding: spacing.lg, alignItems: 'center' }}>
- <Ionicons name="document-text-outline" size={30} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
- <AppText weight="bold" style={{ textAlign: 'center' }}>No drafts saved</AppText>
- <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginTop: 4, maxWidth: 360 }}>
- Start a thread and save it as a draft to finish writing it later.
- </AppText>
- </SolidCard>
- )}
- </View>
- ) : null}
+        {/* Tab Content 2: Drafts & Scheduled (own profile only) */}
+        {activeTab === 'Drafts & Scheduled' ? (
+          <View style={{ gap: spacing.sm }}>
+            {draftsLoading || scheduledLoading ? (
+              <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+                <ActivityIndicator color={colors.brandPrimary} />
+              </View>
+            ) : allUnpublished.length > 0 ? (
+              <>
+                {/* Sub-filter row */}
+                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 2 }}>
+                  {[
+                    { id: 'all', label: `All (${allUnpublished.length})` },
+                    { id: 'drafts', label: `Drafts (${myDrafts?.length ?? 0})` },
+                    { id: 'scheduled', label: `Scheduled (${myScheduled?.length ?? 0})` },
+                  ].map((sub) => {
+                    const isSubActive = unpublishedSubFilter === sub.id;
+                    return (
+                      <Pressable
+                        key={sub.id}
+                        onPress={() => setUnpublishedSubFilter(sub.id as any)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSubActive }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: radius.pill,
+                          backgroundColor: isSubActive ? colors.brandPrimary : (isDark ? colors.surface : colors.divider),
+                          borderWidth: 1,
+                          borderColor: isSubActive ? colors.brandPrimary : colors.border,
+                        }}
+                      >
+                        <AppText
+                          variant="caption"
+                          weight="bold"
+                          tone={isSubActive ? 'inverse' : 'secondary'}
+                        >
+                          {sub.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
 
- {/* Tab Content 3: Scheduled (own profile only) */}
- {activeTab === 'Scheduled' ? (
- <View style={{ gap: spacing.sm }}>
- {scheduledLoading ? (
- <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
- <ActivityIndicator color={colors.brandPrimary} />
- </View>
- ) : myScheduled && myScheduled.length > 0 ? (
- myScheduled.map((s) => (
- <AuthoringRow
- key={s.id}
- title={s.title || s.content || 'Untitled thread'}
- statusLine={scheduledLabel(s.scheduledAt)}
- busy={busyPostId === s.id}
- onPublish={() => handlePublishNow(s.id)}
- onDelete={() => handleDeleteAuthoredPost(s.id)}
- />
- ))
- ) : (
- <SolidCard radius={20} style={{ padding: spacing.lg, alignItems: 'center' }}>
- <Ionicons name="time-outline" size={30} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
- <AppText weight="bold" style={{ textAlign: 'center' }}>Nothing scheduled</AppText>
- <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginTop: 4, maxWidth: 360 }}>
- Pick a future time when you publish a thread and it will wait here until then.
- </AppText>
- </SolidCard>
- )}
- </View>
- ) : null}
+                {displayedUnpublished.length > 0 ? (
+                  displayedUnpublished.map((item) => (
+                    <AuthoringRow
+                      key={item.id}
+                      title={item.title}
+                      statusLine={item.statusLine}
+                      type={item.type}
+                      busy={busyPostId === item.id}
+                      onPublish={() => handlePublishNow(item.id)}
+                      onDelete={() => handleDeleteAuthoredPost(item.id)}
+                    />
+                  ))
+                ) : (
+                  <SolidCard radius={20} style={{ padding: spacing.md, alignItems: 'center' }}>
+                    <AppText tone="secondary" variant="bodySmall">
+                      No {unpublishedSubFilter === 'drafts' ? 'drafts' : 'scheduled threads'} saved.
+                    </AppText>
+                  </SolidCard>
+                )}
+              </>
+            ) : (
+              <SolidCard radius={20} style={{ padding: spacing.lg, alignItems: 'center' }}>
+                <Ionicons name="time-outline" size={32} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+                <AppText weight="bold" variant="h3" style={{ textAlign: 'center' }}>No Drafts or Scheduled Threads</AppText>
+                <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginTop: 4, maxWidth: 360 }}>
+                  Start a thread and save it as a draft to finish writing it later, or pick a future time to schedule publication.
+                </AppText>
+                <View style={{ marginTop: spacing.md }}>
+                  <AppButton label="Compose a Thread" onPress={() => router.push('./feed' as any)} />
+                </View>
+              </SolidCard>
+            )}
+          </View>
+        ) : null}
 
  {/* Tab Content 4: Academic & Credentials */}
  {activeTab === 'Academic' ? (
@@ -1066,39 +1110,76 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 }
 
 function AuthoringRow({
- title,
- statusLine,
- busy,
- onPublish,
- onDelete,
+  title,
+  statusLine,
+  type,
+  busy,
+  onPublish,
+  onDelete,
 }: {
- title: string;
- statusLine: string;
- busy?: boolean;
- onPublish: () => void;
- onDelete: () => void;
+  title: string;
+  statusLine: string;
+  type?: 'draft' | 'scheduled';
+  busy?: boolean;
+  onPublish: () => void;
+  onDelete: () => void;
 }) {
- const { colors, spacing } = useTheme();
- return (
- <SolidCard radius={18} style={{ padding: spacing.md, gap: spacing.sm }}>
- <View>
- <AppText weight="bold" style={{ flexShrink: 1, flexWrap: 'wrap', lineHeight: 20 }}>
- {title}
- </AppText>
- <AppText tone="secondary" variant="bodySmall" style={{ flexShrink: 1, flexWrap: 'wrap', marginTop: 4, lineHeight: 18 }}>
- {statusLine}
- </AppText>
- </View>
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
- <View style={{ flexGrow: 1, flexBasis: 140 }}>
- <AppButton label="Publish now" size="sm" onPress={onPublish} loading={busy} disabled={busy} fullWidth />
- </View>
- <View style={{ flexGrow: 1, flexBasis: 100 }}>
- <AppButton label="Delete" variant="ghost" size="sm" onPress={onDelete} disabled={busy} fullWidth />
- </View>
- </View>
- </SolidCard>
- );
+  const { colors, spacing, radius, isDark } = useTheme();
+  const isScheduled = type === 'scheduled';
+  const badgeBg = isScheduled
+    ? (isDark ? 'rgba(124, 58, 237, 0.2)' : '#EDE9FE')
+    : (isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7');
+  const badgeText = isScheduled
+    ? (isDark ? '#C4B5FD' : '#6D28D9')
+    : (isDark ? '#FCD34D' : '#B45309');
+  const badgeBorder = isScheduled
+    ? (isDark ? 'rgba(124, 58, 237, 0.35)' : '#DDD6FE')
+    : (isDark ? 'rgba(245, 158, 11, 0.35)' : '#FDE68A');
+  const badgeIcon = isScheduled ? 'time-outline' : 'document-text-outline';
+  const badgeLabel = isScheduled ? 'Scheduled' : 'Draft';
+
+  return (
+    <SolidCard radius={18} style={{ padding: spacing.md, gap: spacing.sm }}>
+      <View>
+        {type ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: radius.pill,
+                backgroundColor: badgeBg,
+                borderWidth: 1,
+                borderColor: badgeBorder,
+              }}
+            >
+              <Ionicons name={badgeIcon as any} size={12} color={badgeText} />
+              <AppText variant="caption" weight="bold" style={{ color: badgeText, fontSize: 11 }}>
+                {badgeLabel}
+              </AppText>
+            </View>
+          </View>
+        ) : null}
+        <AppText weight="bold" style={{ flexShrink: 1, flexWrap: 'wrap', lineHeight: 20 }}>
+          {title}
+        </AppText>
+        <AppText tone="secondary" variant="bodySmall" style={{ flexShrink: 1, flexWrap: 'wrap', marginTop: 4, lineHeight: 18 }}>
+          {statusLine}
+        </AppText>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        <View style={{ flexGrow: 1, flexBasis: 140 }}>
+          <AppButton label="Publish now" size="sm" onPress={onPublish} loading={busy} disabled={busy} fullWidth />
+        </View>
+        <View style={{ flexGrow: 1, flexBasis: 100 }}>
+          <AppButton label="Delete" variant="ghost" size="sm" onPress={onDelete} disabled={busy} fullWidth />
+        </View>
+      </View>
+    </SolidCard>
+  );
 }
 
 function StatChip({ label, value }: { label: string; value: number }) {
