@@ -15,6 +15,121 @@ export interface VerificationRequest {
  submittedAt: string;
  status: 'pending' | 'approved' | 'rejected';
  documentPhotoUri?: string | null;
+ /**
+  * Path of the uploaded evidence inside the PRIVATE `verifications` storage bucket,
+  * e.g. `<user-id>/<request-id>.jpg`. Null when the applicant never uploaded anything
+  * (older rows) or when the stored value could not be resolved back to a path.
+  * NEVER build a public URL from this - use `getVerificationDocumentUrl`.
+  */
+ documentStoragePath?: string | null;
+}
+
+/** Bucket that holds verification evidence. Private: ID documents live here. */
+const VERIFICATIONS_BUCKET = 'verifications';
+
+/**
+ * Turns whatever is sitting in `verifications.id_card_front_url` into a storage path.
+ *
+ * Rows written before this change stored a 30-day *signed URL* in that column, which has since
+ * expired for anything older than a month - a reviewer opening one got a broken image. Both
+ * shapes are handled: a bare path is returned as-is, and a signed/public URL has the object path
+ * pulled back out of it.
+ */
+export function resolveVerificationDocumentPath(stored?: string | null): string | null {
+ if (!stored) return null;
+ const value = stored.trim();
+ if (!value) return null;
+
+ if (!/^https?:\/\//i.test(value)) {
+  // Already a storage path. Drop a leading slash or bucket segment if one crept in.
+  const cleaned = value.replace(/^\/+/, '').replace(new RegExp(`^${VERIFICATIONS_BUCKET}/`), '');
+  return cleaned || null;
+ }
+
+ try {
+  const pathname = new URL(value).pathname;
+  const marker = `/${VERIFICATIONS_BUCKET}/`;
+  const idx = pathname.indexOf(marker);
+  if (idx === -1) return null;
+  const path = decodeURIComponent(pathname.slice(idx + marker.length));
+  return path || null;
+ } catch {
+  return null;
+ }
+}
+
+export type VerificationDocumentKind = 'image' | 'pdf' | 'unknown';
+
+export interface VerificationDocument {
+ /** Short-lived signed URL. Do not cache it and do not log it. */
+ signedUrl: string;
+ path: string;
+ kind: VerificationDocumentKind;
+ /** Seconds the signed URL stays valid. */
+ expiresIn: number;
+}
+
+function documentKindForPath(path: string): VerificationDocumentKind {
+ const lower = path.toLowerCase();
+ if (lower.endsWith('.pdf')) return 'pdf';
+ if (/\.(jpe?g|png|webp|gif|heic|heif)$/.test(lower)) return 'image';
+ return 'unknown';
+}
+
+/**
+ * Mints a short-lived signed URL for a verification document so a reviewer can actually look at
+ * the evidence before approving. The bucket is private (admins read the whole bucket, campus staff
+ * read their own campus's applicants) so this is the only correct way to display it.
+ *
+ * Returns null when the request carries no document at all. Throws with a reviewer-facing message
+ * when a document is referenced but cannot be opened.
+ */
+export async function getVerificationDocumentUrl(
+ request: Pick<VerificationRequest, 'documentStoragePath' | 'documentPhotoUri'>,
+ expiresInSeconds = 300,
+): Promise<VerificationDocument | null> {
+ const path =
+  resolveVerificationDocumentPath(request.documentStoragePath) ??
+  resolveVerificationDocumentPath(request.documentPhotoUri);
+ if (!path) return null;
+
+ const { data, error } = await supabase.storage
+  .from(VERIFICATIONS_BUCKET)
+  .createSignedUrl(path, expiresInSeconds);
+
+ if (error || !data?.signedUrl) {
+  throw new Error(
+   'This document could not be opened. It may have been removed by the retention job, or your account may not have permission to read it.',
+  );
+ }
+
+ return {
+  signedUrl: data.signedUrl,
+  path,
+  kind: documentKindForPath(path),
+  expiresIn: expiresInSeconds,
+ };
+}
+
+/** Splits `review_notes` ("Student ID: ABC/123") back into a document type and reference. */
+function parseReviewNotes(
+ notes?: string | null,
+): { documentType: VerificationRequest['documentType']; documentReference?: string } {
+ const known: VerificationRequest['documentType'][] = [
+  'Student ID',
+  'Admission Letter',
+  'Staff ID',
+  'Alumni Certificate',
+ ];
+ const raw = (notes || '').trim();
+ for (const type of known) {
+  if (raw === type) return { documentType: type };
+  if (raw.startsWith(`${type}:`)) {
+   const ref = raw.slice(type.length + 1).trim();
+   return { documentType: type, documentReference: ref || undefined };
+  }
+ }
+ return { documentType: 'Student ID', documentReference: raw || undefined };
 }
 
 let verificationState: VerificationRequest[] = [];
@@ -32,6 +147,7 @@ export interface SubmitVerificationPayload {
 export async function submitVerificationRequest(payload: SubmitVerificationPayload): Promise<VerificationRequest> {
  const reqId = generateUUID();
  let photoUrl = payload.documentPhotoUri || null;
+ let documentPath: string | null = null;
 
  try {
  const { data: authData } = await supabase.auth.getUser();
@@ -57,18 +173,18 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
  }
  {
  const filePath = `${authUserId}/${reqId}.jpg`;
- const { error: uploadError } = await supabase.storage.from('verifications').upload(filePath, photoBlobToUpload, {
+ const { error: uploadError } = await supabase.storage.from(VERIFICATIONS_BUCKET).upload(filePath, photoBlobToUpload, {
  contentType: 'image/jpeg',
  upsert: true,
  });
  if (uploadError) {
  throw new Error('We could not upload your document. Please check your connection and try again.');
  }
- // Generate secure temporary signed URL for authorized viewing
- const { data: signedUrlData } = await supabase.storage
- .from('verifications')
- .createSignedUrl(filePath, 60 * 60 * 24 * 30);
- photoUrl = signedUrlData?.signedUrl || filePath;
+ // Persist the storage PATH, not a signed URL. A signed URL expires (the old code baked in a
+ // 30-day one), so any review after that window showed the admin a dead link. Reviewers mint a
+ // fresh 5-minute signed URL at the moment they open the document instead.
+ documentPath = filePath;
+ photoUrl = filePath;
  }
 
         let campusCode = 'GLOBAL';
@@ -115,6 +231,7 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
       ...payload,
       documentReference: payload.documentReference || undefined,
       documentPhotoUri: photoUrl,
+      documentStoragePath: documentPath,
       submittedAt: new Date().toISOString(),
       status: 'pending',
     };
@@ -131,17 +248,21 @@ export async function listVerificationRequests(): Promise<VerificationRequest[]>
  .order('created_at', { ascending: false });
 
  if (!error && data && data.length > 0) {
- const dbRequests: VerificationRequest[] = data.map((row: any) => ({
+ const dbRequests: VerificationRequest[] = data.map((row: any) => {
+ const parsed = parseReviewNotes(row.review_notes);
+ return {
  id: row.id,
  userId: row.user_id,
  applicantName: row.profiles?.full_name || 'Campus Applicant',
- documentType: 'Student ID',
- documentReference: row.review_notes || 'ID-VERIFY',
+ documentType: parsed.documentType,
+ documentReference: parsed.documentReference,
  institutionClaimed: row.campus_code || 'University Campus',
  submittedAt: row.created_at,
- status: row.status === 'approved' ? 'approved' : row.status === 'rejected' ? 'rejected' : 'pending',
+ status: (row.status === 'approved' ? 'approved' : row.status === 'rejected' ? 'rejected' : 'pending') as VerificationRequest['status'],
  documentPhotoUri: row.id_card_front_url,
- }));
+ documentStoragePath: resolveVerificationDocumentPath(row.id_card_front_url),
+ };
+ });
  return dbRequests.filter((v) => v.status === 'pending');
  }
  } catch {
@@ -208,16 +329,18 @@ export async function respondToVerificationRequest(
         .maybeSingle();
 
       if (vRow) {
+        const parsed = parseReviewNotes(vRow.review_notes);
         updated = {
           id: vRow.id,
           userId: vRow.user_id,
           applicantName: vRow.profiles?.full_name || 'Campus Applicant',
-          documentType: 'Student ID',
-          documentReference: vRow.review_notes || 'ID-VERIFY',
+          documentType: parsed.documentType,
+          documentReference: parsed.documentReference,
           institutionClaimed: vRow.campus_code || 'University Campus',
           submittedAt: vRow.created_at,
           status,
           documentPhotoUri: vRow.id_card_front_url,
+          documentStoragePath: resolveVerificationDocumentPath(vRow.id_card_front_url),
         };
       }
     } catch {

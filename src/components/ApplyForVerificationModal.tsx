@@ -158,11 +158,11 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit, defaultI
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
               <Ionicons name="shield-checkmark" size={20} color={colors.brandPrimary} />
-              <AppText variant="h3" weight="bold" numberOfLines={1}>
+              <AppText variant="h3" weight="bold" style={{ flexShrink: 1 }}>
                 Apply for Verification
               </AppText>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={10} style={{ padding: 4 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={10} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
           </View>

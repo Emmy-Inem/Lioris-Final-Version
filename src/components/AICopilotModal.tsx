@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -24,8 +24,10 @@ import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 import {
   askAiStudyCopilot,
+  CopilotError,
   CopilotMode,
   CopilotResponse,
+  MAX_PROMPT_CHARS,
   MultimodalAttachment,
 } from '@/api/aiCopilot';
 
@@ -38,19 +40,28 @@ interface AICopilotModalProps {
 
 interface ChatMessage {
   id: string;
-  sender: 'user' | 'ai';
+  /**
+   * 'ai' is a genuine Gemini answer. 'template' is a pre-written offline study scaffold and is
+   * always badged as such - it must never be dressed up as a model answer. 'error' is an honest
+   * failure notice; 'system' is the opening greeting.
+   */
+  sender: 'user' | 'ai' | 'template' | 'error' | 'system';
   text: string;
   mode?: CopilotMode;
-  source?: string;
+  /** Gemini model id as reported by the proxy. Only set on 'ai' messages. */
+  model?: string;
   timestamp: string;
   imageUri?: string;
+  /** Present on an 'error' message when a labelled offline template can be offered instead. */
+  offlineTemplate?: CopilotResponse;
+  /** True once the user has asked to see that template, so the offer disappears. */
+  templateShown?: boolean;
 }
 
 const INITIAL_GREETING: ChatMessage = {
   id: 'welcome',
-  sender: 'ai',
-  text: 'Hello! I am your Lioris AI study assistant powered by Google Gemini. Ask me to explain concepts, break down past questions, generate revision flashcards, or attach chalkboard math and diagrams.',
-  source: 'Google Gemini 3.6 Flash',
+  sender: 'system',
+  text: 'Hello! I am your Lioris study assistant, powered by Google Gemini. Ask me to explain a concept, break down a past question, or generate revision flashcards - you can also attach a photo of chalkboard maths or a diagram. You need to be signed in to your Lioris account to use it.',
   timestamp: 'Just now',
 };
 
@@ -287,9 +298,39 @@ export function AICopilotModal({
     previewUri: string;
   } | null>(null);
 
+  const scrollRef = useRef<ScrollView | null>(null);
+  // Remembers the last seeded prompt so re-renders do not fire the same auto-question twice.
+  const autoSentPromptRef = useRef<string | null>(null);
+
+  const scrollToEnd = useCallback(() => {
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+  }, []);
+
+  /**
+   * `initialPrompt` used to be read only by `useState(initialPrompt || '')`, which runs once when
+   * the modal first mounts. Because the modal stays mounted and merely toggles `visible`, every
+   * later hand-off (e.g. "Analyze AI" in the research modal) was silently dropped and the copilot
+   * opened empty. Seed it on each open instead, and send it straight away.
+   */
+  useEffect(() => {
+    if (!visible) {
+      autoSentPromptRef.current = null;
+      return;
+    }
+    const seed = (initialPrompt || '').trim();
+    if (!seed || autoSentPromptRef.current === seed) return;
+    autoSentPromptRef.current = seed;
+    setActiveMode('explain');
+    setPrompt('');
+    void handleSend(seed, 'explain');
+    // handleSend is re-created on every render; depending on it here would loop.
+  }, [visible, initialPrompt]);
+
   const isEnabled = isFeatureEnabled('ai_study_copilot');
 
   if (!isEnabled) return null;
+
+  const promptTooLong = prompt.trim().length > MAX_PROMPT_CHARS;
 
   function handleNewConversation() {
     haptics.medium();
@@ -390,21 +431,50 @@ export function AICopilotModal({
         sender: 'ai',
         text: res.content,
         mode: res.mode,
-        source: res.source,
+        model: res.model,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: any) {
-      toast.warning('AI response generation issue');
+      // Never quietly substitute a canned template for an answer: say what actually failed.
+      const copilotError = err instanceof CopilotError ? err : null;
+      const errorMsg: ChatMessage = {
+        id: 'err-' + Date.now(),
+        sender: 'error',
+        text:
+          copilotError?.message ||
+          'Something went wrong while contacting the AI service. Please try again.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        offlineTemplate: copilotError?.offlineTemplate,
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      haptics.error();
     } finally {
       setLoading(false);
     }
   }
 
+  function handleShowOfflineTemplate(errorMessageId: string, template: CopilotResponse) {
+    haptics.light();
+    setMessages((prev) => {
+      const next = prev.map((m) => (m.id === errorMessageId ? { ...m, templateShown: true } : m));
+      return [
+        ...next,
+        {
+          id: 'tpl-' + Date.now(),
+          sender: 'template' as const,
+          text: template.content,
+          mode: template.mode,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ];
+    });
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView accessibilityViewIsModal
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[
           styles.overlay,
           {
@@ -433,7 +503,7 @@ export function AICopilotModal({
                 <AppText variant="h3" weight="bold">
                   {isDesktop ? 'Lioris Academic AI' : 'Lioris AI'}
                 </AppText>
-                <Badge label="Google Gemini 3.6 Flash" tone="brand" />
+                <Badge label="Google Gemini" tone="brand" />
               </View>
               <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
                 {initialCourse ? `Focus: ${initialCourse} • Multimodal Math & Exam Revision` : 'Multimodal math, chalkboard diagrams, and exam revision powered by Google Gemini'}
@@ -464,7 +534,7 @@ export function AICopilotModal({
 
           {/* Quick Prompts Carousel */}
           <View style={{ marginBottom: 10 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
               {QUICK_PROMPTS.map((qp) => {
                 const isSelected = activeMode === qp.mode;
                 return (
@@ -509,12 +579,30 @@ export function AICopilotModal({
 
           {/* Chat Messages */}
           <ScrollView
+            ref={scrollRef}
             style={{ flex: 1 }}
             contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onContentSizeChange={scrollToEnd}
           >
             {messages.map((msg) => {
               const isUser = msg.sender === 'user';
+              const isError = msg.sender === 'error';
+              const isTemplate = msg.sender === 'template';
+
+              const bubbleBackground = isUser
+                ? colors.brandPrimary
+                : isError
+                ? colors.roseBg
+                : colors.background;
+              const bubbleBorder = isUser
+                ? colors.brandPrimary
+                : isError
+                ? colors.critical
+                : colors.border;
+
               return (
                 <View
                   key={msg.id}
@@ -527,8 +615,8 @@ export function AICopilotModal({
                     style={[
                       styles.msgBubble,
                       {
-                        backgroundColor: isUser ? colors.brandPrimary : colors.background,
-                        borderColor: isUser ? colors.brandPrimary : colors.border,
+                        backgroundColor: bubbleBackground,
+                        borderColor: bubbleBorder,
                         borderRadius: radius.lg,
                         borderBottomRightRadius: isUser ? 4 : radius.lg,
                         borderBottomLeftRadius: isUser ? radius.lg : 4,
@@ -536,15 +624,22 @@ export function AICopilotModal({
                       },
                     ]}
                   >
-                    {/* Header for AI response */}
+                    {/* Attribution header - says exactly what produced this bubble */}
                     {!isUser && (
                       <View style={styles.msgHeader}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name="sparkles" size={13} color={colors.textSecondary} />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 1 }}>
+                          <Ionicons
+                            name={isError ? 'alert-circle' : isTemplate ? 'document-text-outline' : 'sparkles'}
+                            size={13}
+                            color={isError ? colors.critical : colors.textSecondary}
+                          />
                           <AppText variant="caption" weight="bold" style={{ color: colors.textSecondary, fontSize: 11 }}>
-                            Lioris AI
+                            {isError ? 'AI unavailable' : isTemplate ? 'Offline study template' : 'Lioris AI'}
                           </AppText>
-                          {msg.source && <Badge label={msg.source === 'Academic Reasoning Engine' ? 'Offline template' : msg.source} tone={msg.source === 'Academic Reasoning Engine' ? 'neutral' : 'brand'} />}
+                          {msg.sender === 'ai' && (
+                            <Badge label={msg.model ? `Google ${msg.model}` : 'Google Gemini'} tone="brand" />
+                          )}
+                          {isTemplate && <Badge label="Not an AI answer" tone="neutral" />}
                         </View>
                         <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
                           {msg.timestamp}
@@ -561,6 +656,29 @@ export function AICopilotModal({
 
                     {/* Message Body */}
                     <FormattedAcademicContent text={msg.text} isUser={isUser} colors={colors} />
+
+                    {/* Offer the offline template only as an explicitly labelled extra */}
+                    {isError && msg.offlineTemplate && !msg.templateShown && (
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => handleShowOfflineTemplate(msg.id, msg.offlineTemplate!)}
+                        style={{
+                          marginTop: 10,
+                          minHeight: 44,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          paddingHorizontal: 12,
+                          borderRadius: radius.md,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                        }}
+                      >
+                        <AppText variant="caption" weight="bold" tone="primary" style={{ textAlign: 'center' }}>
+                          Show an offline study template instead
+                        </AppText>
+                      </Pressable>
+                    )}
                   </View>
                 </View>
               );
@@ -609,21 +727,28 @@ export function AICopilotModal({
                 resizeMode="cover"
               />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <AppText variant="caption" weight="bold" numberOfLines={1}>
-                  Photo Attached
+                <AppText variant="caption" weight="bold">
+                  Photo attached
                 </AppText>
-                <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                  Chalkboard / Diagram ready for multimodal solving
+                <AppText variant="caption" tone="secondary">
+                  Chalkboard / diagram ready for multimodal solving
                 </AppText>
               </View>
-              <Pressable accessibilityRole="button" accessibilityLabel="Clear"
+              <Pressable accessibilityRole="button" accessibilityLabel="Remove attached photo"
                 onPress={() => setAttachedImage(null)}
-                hitSlop={8}
-                style={{ padding: 4 }}
+                hitSlop={12}
+                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
               >
                 <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
               </Pressable>
             </View>
+          )}
+
+          {/* Over-length warning, shown before the user wastes a round-trip */}
+          {promptTooLong && (
+            <AppText variant="caption" style={{ color: colors.critical, marginBottom: 6 }}>
+              {`That question is ${prompt.trim().length.toLocaleString()} characters. The limit is ${MAX_PROMPT_CHARS.toLocaleString()} - please shorten it.`}
+            </AppText>
           )}
 
           {/* Input Bar */}
@@ -631,7 +756,8 @@ export function AICopilotModal({
             <Pressable
               onPress={handlePickPhoto}
               hitSlop={8}
-              style={{ padding: 4, marginRight: 4 }}
+              style={styles.inputIconBtn}
+              accessibilityRole="button"
               accessibilityLabel="Attach chalkboard or diagram photo"
             >
               <Ionicons
@@ -645,30 +771,40 @@ export function AICopilotModal({
               value={prompt}
               onChangeText={setPrompt}
               onSubmitEditing={() => handleSend()}
+              editable={!loading}
+              multiline
               placeholder={
                 activeMode === 'math_solve'
-                  ? 'Attach chalkboard photo or paste formula...'
+                  ? 'Attach chalkboard photo or paste formula'
                   : activeMode === 'flashcards'
-                  ? 'Enter topic or attach notes for flashcards...'
-                  : 'Ask anything (e.g. solve Dijkstra algorithm)...'
+                  ? 'Enter topic or attach notes for flashcards'
+                  : 'Ask anything (e.g. solve Dijkstra algorithm)'
               }
               placeholderTextColor={colors.textSecondary}
               returnKeyType="send"
+              blurOnSubmit
               style={[styles.textInput, { color: colors.textPrimary }]}
             />
 
-            <Pressable accessibilityRole="button" accessibilityLabel="Send message"
+            <Pressable accessibilityRole="button" accessibilityLabel={loading ? 'Waiting for the AI response' : 'Send message'}
               onPress={() => handleSend()}
-              disabled={(!prompt.trim() && !attachedImage) || loading}
+              disabled={(!prompt.trim() && !attachedImage) || loading || promptTooLong}
+              accessibilityState={{ disabled: (!prompt.trim() && !attachedImage) || loading || promptTooLong }}
               style={[
                 styles.sendBtn,
                 {
                   backgroundColor:
-                    prompt.trim() || attachedImage ? colors.brandPrimary : colors.border,
+                    (prompt.trim() || attachedImage) && !loading && !promptTooLong
+                      ? colors.brandPrimary
+                      : colors.border,
                 },
               ]}
             >
-              <Ionicons name="arrow-up" size={18} color="#ffffff" />
+              {loading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Ionicons name="arrow-up" size={18} color="#ffffff" />
+              )}
             </Pressable>
           </View>
         </View>
@@ -693,29 +829,33 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingBottom: 10,
     borderBottomWidth: 1,
     marginBottom: 8,
+    gap: 8,
+    flexWrap: 'wrap',
   },
   headerActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    minHeight: 44,
     borderRadius: 14,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   quickChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 12,
   },
   msgContainer: {
@@ -745,24 +885,36 @@ const styles = StyleSheet.create({
   },
   inputBar: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Bottom-aligned so the row grows downward as the (multiline) field wraps and the
+    // send button stays on the same line as the last row of text.
+    alignItems: 'flex-end',
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 10,
-    height: 46,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    minHeight: 52,
+  },
+  inputIconBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textInput: {
     flex: 1,
     fontSize: 13.5,
-    height: '100%',
+    minHeight: 44,
+    maxHeight: 120,
     paddingHorizontal: 4,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   sendBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 6,
+    marginLeft: 4,
   },
 });

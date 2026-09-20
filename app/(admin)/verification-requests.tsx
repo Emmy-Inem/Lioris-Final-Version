@@ -1,5 +1,5 @@
-﻿import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
+﻿import React, { useEffect, useState } from'react';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, View } from'react-native';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
 import { ScreenContainer } from'@/components/ScreenContainer';
@@ -13,11 +13,18 @@ import { Avatar } from'@/components/Avatar';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listVerificationRequests, respondToVerificationRequest, VerificationRequest } from '@/api/verification';
+import {
+  getVerificationDocumentUrl,
+  listVerificationRequests,
+  respondToVerificationRequest,
+  VerificationDocument,
+  VerificationRequest,
+} from '@/api/verification';
 import { grantVerification, markVerificationRejected } from '@/api/profile';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { createNotification } from '@/api/notifications';
 import { haptics } from '@/utils/haptics';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 
 const REJECTION_REASONS = [
   'Document photo is blurry / unreadable',
@@ -27,6 +34,169 @@ const REJECTION_REASONS = [
   'Invalid document type submitted',
 ];
 
+type DocumentState =
+  | { status: 'loading' }
+  | { status: 'ready'; document: VerificationDocument }
+  | { status: 'missing' }
+  | { status: 'error'; message: string };
+
+/**
+ * Loads and displays the applicant's actual uploaded evidence.
+ *
+ * Before this existed the reviewer saw a *mocked-up* ID card drawn from the applicant's name and
+ * an avatar placeholder - it looked like a scanned document but contained no uploaded data at
+ * all, so every approval was effectively blind.
+ *
+ * The `verifications` bucket is private (it holds government ID photos), so the image is fetched
+ * through a five-minute signed URL minted on open. No public URL is ever constructed.
+ */
+function VerificationDocumentPanel({
+  request,
+  onExpand,
+}: {
+  request: VerificationRequest;
+  onExpand: (document: VerificationDocument) => void;
+}) {
+  const { colors, spacing, radius } = useTheme();
+  const [state, setState] = useState<DocumentState>({ status: 'loading' });
+  const [imageFailed, setImageFailed] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setState({ status: 'loading' });
+    setImageFailed(false);
+
+    getVerificationDocumentUrl(request)
+      .then((document) => {
+        if (cancelled) return;
+        setState(document ? { status: 'ready', document } : { status: 'missing' });
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setState({
+          status: 'error',
+          message: err?.message || 'This document could not be loaded.',
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [request.id, request.documentStoragePath, request.documentPhotoUri, reloadToken]);
+
+  const frameStyle = {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    backgroundColor: colors.divider,
+    overflow: 'hidden' as const,
+  };
+
+  if (state.status === 'loading') {
+    return (
+      <View style={[frameStyle, { paddingVertical: spacing.xl, alignItems: 'center', gap: spacing.sm }]}>
+        <ActivityIndicator size="large" color={colors.brandPrimary} />
+        <AppText tone="secondary" variant="caption">Loading the uploaded document...</AppText>
+      </View>
+    );
+  }
+
+  if (state.status === 'missing') {
+    return (
+      <View style={[frameStyle, { padding: spacing.lg, alignItems: 'center', gap: spacing.xs }]}>
+        <Ionicons name="document-outline" size={36} color={colors.textSecondary} />
+        <AppText weight="bold" variant="bodySmall" style={{ textAlign: 'center' }}>
+          No document was uploaded
+        </AppText>
+        <AppText tone="secondary" variant="caption" style={{ textAlign: 'center' }}>
+          This application has no file attached, so there is nothing to check against. Reject it and
+          ask the applicant to re-apply with a photo of their ID.
+        </AppText>
+      </View>
+    );
+  }
+
+  if (state.status === 'error') {
+    return (
+      <View style={[frameStyle, { padding: spacing.lg, alignItems: 'center', gap: spacing.sm }]}>
+        <Ionicons name="alert-circle-outline" size={36} color={colors.critical} />
+        <AppText weight="bold" variant="bodySmall" style={{ textAlign: 'center' }}>
+          The document could not be loaded
+        </AppText>
+        <AppText tone="secondary" variant="caption" style={{ textAlign: 'center' }}>
+          {state.message}
+        </AppText>
+        <AppButton label="Try again" variant="secondary" size="sm" onPress={() => setReloadToken((t) => t + 1)} />
+      </View>
+    );
+  }
+
+  const { document } = state;
+
+  if (document.kind === 'image' && !imageFailed) {
+    return (
+      <View style={{ gap: spacing.xs }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open the document full screen"
+          onPress={() => onExpand(document)}
+          style={[frameStyle, { minHeight: 240 }]}
+        >
+          <Image
+            source={{ uri: document.signedUrl }}
+            style={{ width: '100%', height: 260 }}
+            resizeMode="contain"
+            onError={() => setImageFailed(true)}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              right: 8,
+              bottom: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: 10,
+              minHeight: 32,
+              borderRadius: radius.pill,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+            }}
+          >
+            <Ionicons name="expand" size={13} color="#FFFFFF" />
+            <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF', fontSize: 11 }}>
+              Tap to zoom
+            </AppText>
+          </View>
+        </Pressable>
+        <AppText tone="secondary" variant="caption">
+          Uploaded evidence, loaded over a 5-minute private link. Do not share this screen.
+        </AppText>
+      </View>
+    );
+  }
+
+  // PDFs, unknown types, and images the <Image> element refused to decode.
+  return (
+    <View style={[frameStyle, { padding: spacing.lg, alignItems: 'center', gap: spacing.sm }]}>
+      <Ionicons name="document-text-outline" size={36} color={colors.textSecondary} />
+      <AppText weight="bold" variant="bodySmall" style={{ textAlign: 'center' }}>
+        {document.kind === 'pdf' ? 'This document is a PDF' : 'This document cannot be previewed inline'}
+      </AppText>
+      <AppText tone="secondary" variant="caption" style={{ textAlign: 'center' }}>
+        Open it in a new tab to review it. The link expires in {Math.round(document.expiresIn / 60)} minutes.
+      </AppText>
+      <AppButton
+        label="Open document"
+        size="sm"
+        onPress={() => {
+          void openExternalUrl(document.signedUrl);
+        }}
+      />
+    </View>
+  );
+}
+
 export default function VerificationRequestsScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
@@ -34,6 +204,7 @@ export default function VerificationRequestsScreen() {
   const { data: requests, isLoading } = useQuery({ queryKey: ['verification-requests'], queryFn: listVerificationRequests });
 
   const [inspectDocRequest, setInspectDocRequest] = useState<VerificationRequest | null>(null);
+  const [fullScreenDocument, setFullScreenDocument] = useState<VerificationDocument | null>(null);
   const [rejectModalRequest, setRejectModalRequest] = useState<VerificationRequest | null>(null);
   const [selectedRejectReason, setSelectedRejectReason] = useState(REJECTION_REASONS[0]);
   const [customRejectNote, setCustomRejectNote] = useState('');
@@ -244,10 +415,10 @@ export default function VerificationRequestsScreen() {
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs, gap: spacing.sm }}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
+            <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
               Verify Credentials
             </AppText>
-            <AppText tone="secondary" variant="caption" numberOfLines={1}>Review student matriculation records & IDs</AppText>
+            <AppText tone="secondary" variant="caption">Review student matriculation records & IDs</AppText>
           </View>
           <View style={{ flexShrink: 0 }}>
             <Badge label={`${requests?.length ?? 0} Pending`} tone="neutral" />
@@ -300,10 +471,10 @@ export default function VerificationRequestsScreen() {
                       <Avatar name={req.applicantName} size={42} role="student" />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                      <AppText weight="bold" variant="bodySmall">
                         {req.applicantName}
                       </AppText>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                      <AppText tone="secondary" variant="caption">
                         Institution: {req.institutionClaimed}
                       </AppText>
                     </View>
@@ -314,27 +485,43 @@ export default function VerificationRequestsScreen() {
                 </View>
 
                 {/* Document Reference Box */}
-                <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 14, marginVertical: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 14, marginVertical: spacing.sm, borderWidth: 1, borderColor: colors.border, gap: 4 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' }}>
                     <AppText variant="caption" tone="secondary">Matric / Certificate Ref</AppText>
-                    <AppText variant="caption" weight="bold">{req.documentReference}</AppText>
+                    <AppText variant="caption" weight="bold" style={{ flexShrink: 1, textAlign: 'right' }}>
+                      {req.documentReference || 'Not provided'}
+                    </AppText>
                   </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  {/* Surfaced up-front so an admin can see, without opening anything, whether there
+                      is any evidence at all to review. */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' }}>
+                    <AppText variant="caption" tone="secondary">Uploaded evidence</AppText>
+                    <AppText
+                      variant="caption"
+                      weight="bold"
+                      style={{ flexShrink: 1, textAlign: 'right', color: req.documentStoragePath ? colors.success : colors.critical }}
+                    >
+                      {req.documentStoragePath ? 'Document attached' : 'No document uploaded'}
+                    </AppText>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' }}>
                     <AppText variant="caption" tone="secondary">Status</AppText>
-                    <AppText variant="caption" weight="bold">Awaiting Admin Verification</AppText>
+                    <AppText variant="caption" weight="bold" style={{ flexShrink: 1, textAlign: 'right' }}>
+                      Awaiting Admin Verification
+                    </AppText>
                   </View>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 6, marginTop: spacing.xs }}>
-                  <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', gap: 6, marginTop: spacing.xs, flexWrap: 'wrap' }}>
+                  <View style={{ flex: 1, minWidth: 110 }}>
                     <AppButton
-                      label="Inspect"
+                      label="View document"
                       variant="ghost"
                       size="sm"
                       onPress={() => setInspectDocRequest(req)}
                     />
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex: 1, minWidth: 100 }}>
                     <AppButton
                       label="Approve"
                       size="sm"
@@ -342,7 +529,7 @@ export default function VerificationRequestsScreen() {
                       onPress={() => handleApprove(req)}
                     />
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex: 1, minWidth: 100 }}>
                     <AppButton
                       label="Reject"
                       variant="secondary"
@@ -361,68 +548,151 @@ export default function VerificationRequestsScreen() {
         ) : null}
       </ScrollView>
 
-      {/* Inspect ID Card Modal */}
+      {/* Inspect Document Modal - shows the applicant's ACTUAL uploaded evidence */}
       <Modal visible={!!inspectDocRequest} transparent animationType="fade" onRequestClose={() => setInspectDocRequest(null)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: spacing.md }}>
           {inspectDocRequest && (
-            <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm }}>
+            <SolidCard radius={24} style={{ width: '100%', maxWidth: 440, maxHeight: '92%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md, gap: spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 }}>
                   <View style={{ flexShrink: 0 }}>
                     <Ionicons name="document-text" size={20} color={colors.brandPrimary} />
                   </View>
-                  <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+                  <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" style={{ flexShrink: 1 }}>
                     Credential Verification
- </AppText>
- </View>
- <Pressable onPress={() => setInspectDocRequest(null)} hitSlop={8} style={{ flexShrink: 0 }}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
+                  </AppText>
+                </View>
+                <Pressable
+                  onPress={() => setInspectDocRequest(null)}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close"
+                  style={{ flexShrink: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                </Pressable>
+              </View>
 
- {/* Simulated ID Card Mockup */}
- <View style={{ backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.brandPrimary, borderRadius: 16, padding: spacing.lg, marginBottom: spacing.md }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.divider, paddingBottom: spacing.sm, marginBottom: spacing.md }}>
- <View>
- <AppText weight="bold"tone="brand"style={{ fontSize: 13, textTransform: 'uppercase' }}>
- {inspectDocRequest.institutionClaimed} UNIVERSITY
- </AppText>
- <AppText tone="secondary"style={{ fontSize: 10 }}>OFFICIAL IDENTITY CARD</AppText>
- </View>
- <Ionicons name="school"size={28} color={colors.brandPrimary} />
- </View>
-
- <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center', marginBottom: spacing.md }}>
- <Avatar name={inspectDocRequest.applicantName} size={58} role="student" />
- <View style={{ flex: 1 }}>
- <AppText weight="bold"style={{ fontSize: 15 }}>{inspectDocRequest.applicantName}</AppText>
- <AppText tone="secondary"variant="caption">Matric: {inspectDocRequest.documentReference}</AppText>
- <AppText tone="secondary"variant="caption">Faculty of Technology</AppText>
- </View>
- </View>
-
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.xs }}>
-                    <AppText tone="secondary" style={{ fontSize: 10 }}>Valid Through: 2026/2027 Session</AppText>
-                    <AppText tone="brand" weight="bold" style={{ fontSize: 10 }}>SECURE EMBED</AppText>
+              <ScrollView
+                style={{ flexGrow: 0 }}
+                contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.sm }}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* What the applicant claimed */}
+                <View style={{ backgroundColor: colors.divider, borderRadius: 14, padding: spacing.md, gap: 6 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' }}>
+                    <AppText variant="caption" tone="secondary">Applicant</AppText>
+                    <AppText variant="caption" weight="bold" style={{ flexShrink: 1, textAlign: 'right' }}>
+                      {inspectDocRequest.applicantName}
+                    </AppText>
                   </View>
- </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' }}>
+                    <AppText variant="caption" tone="secondary">Institution claimed</AppText>
+                    <AppText variant="caption" weight="bold" style={{ flexShrink: 1, textAlign: 'right' }}>
+                      {inspectDocRequest.institutionClaimed}
+                    </AppText>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' }}>
+                    <AppText variant="caption" tone="secondary">Document type</AppText>
+                    <AppText variant="caption" weight="bold" style={{ flexShrink: 1, textAlign: 'right' }}>
+                      {inspectDocRequest.documentType}
+                    </AppText>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' }}>
+                    <AppText variant="caption" tone="secondary">Reference given</AppText>
+                    <AppText variant="caption" weight="bold" style={{ flexShrink: 1, textAlign: 'right' }}>
+                      {inspectDocRequest.documentReference || 'Not provided'}
+                    </AppText>
+                  </View>
+                </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm }}>
- <View style={{ flex: 1 }}>
- <AppButton
- label="Grant Verified Status"onPress={() => {
- const req = inspectDocRequest;
- setInspectDocRequest(null);
- handleApprove(req);
- }}
- fullWidth
- />
- </View>
- </View>
- </SolidCard>
- )}
- </View>
- </Modal>
+                {/* The real uploaded file */}
+                <View style={{ gap: spacing.xs }}>
+                  <AppText variant="caption" weight="bold" tone="secondary">
+                    UPLOADED DOCUMENT
+                  </AppText>
+                  <VerificationDocumentPanel request={inspectDocRequest} onExpand={setFullScreenDocument} />
+                </View>
+              </ScrollView>
+
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' }}>
+                <View style={{ flex: 1, minWidth: 130 }}>
+                  <AppButton
+                    label="Reject"
+                    variant="secondary"
+                    onPress={() => {
+                      const req = inspectDocRequest;
+                      setInspectDocRequest(null);
+                      setRejectModalRequest(req);
+                    }}
+                    fullWidth
+                  />
+                </View>
+                <View style={{ flex: 1, minWidth: 130 }}>
+                  <AppButton
+                    label="Grant Verified Status"
+                    onPress={() => {
+                      const req = inspectDocRequest;
+                      setInspectDocRequest(null);
+                      handleApprove(req);
+                    }}
+                    fullWidth
+                  />
+                </View>
+              </View>
+            </SolidCard>
+          )}
+        </View>
+      </Modal>
+
+      {/* Full-screen document viewer */}
+      <Modal
+        visible={!!fullScreenDocument}
+        animationType="fade"
+        onRequestClose={() => setFullScreenDocument(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: '#000000' }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: spacing.md,
+              paddingTop: spacing.xl,
+              paddingBottom: spacing.sm,
+              gap: spacing.sm,
+            }}
+          >
+            <AppText weight="bold" style={{ color: '#FFFFFF', flexShrink: 1 }}>
+              Uploaded verification document
+            </AppText>
+            <Pressable
+              onPress={() => setFullScreenDocument(null)}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Close full screen document"
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="close" size={26} color="#FFFFFF" />
+            </Pressable>
+          </View>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            maximumZoomScale={4}
+            minimumZoomScale={1}
+            centerContent
+          >
+            {fullScreenDocument && (
+              <Image
+                source={{ uri: fullScreenDocument.signedUrl }}
+                style={{ width: '100%', height: 560 }}
+                resizeMode="contain"
+              />
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
 
  {/* Rejection Reason Modal */}
  <Modal visible={!!rejectModalRequest} transparent animationType="slide"onRequestClose={() => setRejectModalRequest(null)}>
@@ -431,7 +701,7 @@ export default function VerificationRequestsScreen() {
  <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm }}>
  <View style={{ flex: 1, minWidth: 0 }}>
- <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+ <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" style={{ flexShrink: 1 }}>
  Decline Verification Submission
  </AppText>
  </View>
@@ -499,7 +769,7 @@ export default function VerificationRequestsScreen() {
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm }}>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+                <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" style={{ flexShrink: 1 }}>
                   Decline {selectedIds.size} Verification Submission{selectedIds.size === 1 ? '' : 's'}
                 </AppText>
               </View>
