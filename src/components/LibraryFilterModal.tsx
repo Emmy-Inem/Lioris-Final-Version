@@ -17,7 +17,7 @@ export interface LibraryFilters {
 
 const RESOURCE_TYPES = ['All Types', 'Notes', 'Past Questions', 'Projects'];
 const DEPARTMENTS = ['All Depts', ...ALL_DEPARTMENTS];
-const STUDY_LEVELS = ['All Levels', '100 Lvl', '200 Lvl', '300 Lvl', '400 Lvl'];
+const STUDY_LEVELS = ['All Levels', '100 Lvl', '200 Lvl', '300 Lvl', '400 Lvl', '500 Lvl', 'Postgraduate'];
 const RATINGS = ['All Ratings', '3.0+ Stars', '4.0+ Stars', '4.5+ Stars'];
 const SORT_OPTIONS = ['Newest Shared', 'Highest Quality Rated'];
 

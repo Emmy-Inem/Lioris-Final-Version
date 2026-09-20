@@ -5,6 +5,7 @@ import { isUserBlocked } from './connections';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
+import { VERIFIED_ACADEMIC_RESOURCES } from '../data/verifiedResources';
 
 // Content types a resource upload may be stored with.
 const ALLOWED_RESOURCE_MIME_TYPES = new Set([
@@ -27,33 +28,43 @@ const ALLOWED_RESOURCE_MIME_TYPES = new Set([
 let locallyCreatedResources: Resource[] = [];
 
 export interface ResourcesQuery {
- q?: string;
- category?: Resource['category'];
- department?: string;
- approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
- campusCode?: string;
+  q?: string;
+  category?: Resource['category'];
+  department?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
+  campusCode?: string;
+  academicLevel?: string;
 }
 
 function filterResources(pool: Resource[], query: ResourcesQuery): Resource[] {
- let results = [...pool];
- if (query.approvalStatus && query.approvalStatus !== 'all') {
- results = results.filter((r) => r.approvalStatus === query.approvalStatus);
- } else if (!query.approvalStatus) {
- results = results.filter((r) => r.approvalStatus !== 'rejected');
- }
- if (query.category) results = results.filter((r) => r.category === query.category);
- if (query.department) results = results.filter((r) => r.department === query.department);
- if (query.q) {
- const q = query.q.toLowerCase();
- results = results.filter(
- (r) =>
- r.title.toLowerCase().includes(q) ||
- r.courseCode.toLowerCase().includes(q) ||
- r.department.toLowerCase().includes(q) ||
- r.authorName.toLowerCase().includes(q),
- );
- }
- return results;
+  let results = [...pool];
+  if (query.approvalStatus && query.approvalStatus !== 'all') {
+    results = results.filter((r) => r.approvalStatus === query.approvalStatus);
+  } else if (!query.approvalStatus) {
+    results = results.filter((r) => r.approvalStatus !== 'rejected');
+  }
+  if (query.category) results = results.filter((r) => r.category === query.category);
+  if (query.department) results = results.filter((r) => r.department === query.department);
+  if (query.academicLevel && query.academicLevel !== 'All Levels') {
+    const normalized = query.academicLevel.replace(/\s*Lvl$/i, 'L').trim().toLowerCase();
+    results = results.filter((r) => {
+      if (!r.academicLevel) return true;
+      return r.academicLevel.toLowerCase() === normalized;
+    });
+  }
+  if (query.q) {
+    const q = query.q.toLowerCase();
+    results = results.filter(
+      (r) =>
+        r.title.toLowerCase().includes(q) ||
+        r.courseCode.toLowerCase().includes(q) ||
+        r.department.toLowerCase().includes(q) ||
+        r.authorName.toLowerCase().includes(q) ||
+        (r.description && r.description.toLowerCase().includes(q)) ||
+        (r.syllabusTopic && r.syllabusTopic.toLowerCase().includes(q)),
+    );
+  }
+  return results;
 }
 
 function mapResourceTypeToCategory(type?: string): Resource['category'] {
@@ -129,22 +140,23 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         approvalStatus: row.is_approved ? 'approved' : 'pending',
         fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
         campusCode: row.campus_code || 'GLOBAL',
+        academicLevel: row.academic_level,
+        semester: row.semester,
+        syllabusTopic: row.syllabus_topic,
       }));
 
-    // Merge unique - local pool only ever contributes this session's own
-    // just-created resources (always) plus seed fixtures (only when the
-    // admin mock-data toggle is on).
-    const pool = [...locallyCreatedResources];
+    // Merge unique - local pool includes locally created items and verified academic catalog
+    const pool = [...locallyCreatedResources, ...VERIFIED_ACADEMIC_RESOURCES];
     const merged = [...dbResources];
     for (const r of pool) {
-      if (!merged.some((m) => m.id === r.id) && !isUserBlocked(r.authorId)) {
+      if (!merged.some((m) => m.id === r.id || (m.title.toLowerCase() === r.title.toLowerCase() && m.courseCode.toLowerCase() === r.courseCode.toLowerCase())) && !isUserBlocked(r.authorId)) {
         if (isStaffOrAdmin && !(query as any).campusCode) {
           merged.push(r);
         } else {
           const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
           const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
           if (targetCampus === 'GLOBAL') {
-            if (rCampus === 'GLOBAL') merged.push(r);
+            merged.push(r);
           } else if (rCampus === targetCampus || rCampus === 'GLOBAL') {
             merged.push(r);
           }
@@ -152,10 +164,16 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
       }
     }
     return filterResources(merged, query);
- } catch (err) {
- console.warn('[Resources] listResources failed, showing local pool only:', err);
- return filterResources([...locallyCreatedResources], query);
- }
+  } catch (err) {
+    console.warn('[Resources] listResources failed, showing verified/local pool only:', err);
+    const targetCampus = ((query as any).campusCode || 'GLOBAL').toUpperCase();
+    const fallbackPool = [...locallyCreatedResources, ...VERIFIED_ACADEMIC_RESOURCES].filter((r) => {
+      const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
+      if (targetCampus === 'GLOBAL') return true;
+      return rCampus === targetCampus || rCampus === 'GLOBAL';
+    });
+    return filterResources(fallbackPool, query);
+  }
 }
 
 export async function listPendingResources(): Promise<Resource[]> {

@@ -156,6 +156,7 @@ export default function ResourcesScreen() {
             ? undefined
             : (filters.resourceType as any),
         department: filters.department === 'All Depts' ? undefined : filters.department,
+        academicLevel: filters.studyLevel === 'All Levels' ? undefined : filters.studyLevel,
         campusCode: effectiveCampus,
       }),
   });
