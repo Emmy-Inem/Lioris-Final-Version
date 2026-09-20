@@ -282,7 +282,7 @@ export function UserProfileModal({
  {/* User Name & Academic Role Meta */}
  <View style={{ marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
- <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
+ <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
  {effectiveName}
  </AppText>
   {/* Verification badge: admin always gets grey badge regardless of displayed role.
@@ -295,7 +295,7 @@ export function UserProfileModal({
  </View>
 
  {effectiveInstitution || effectiveDepartment ? (
- <AppText tone="secondary" weight="semiBold" variant="bodySmall" numberOfLines={2} style={{ marginTop: 3, fontSize: 12, lineHeight: 16 }}>
+ <AppText tone="secondary" weight="semiBold" variant="bodySmall" style={{ marginTop: 3, fontSize: 12, lineHeight: 16 }}>
  {[effectiveInstitution, effectiveDepartment].filter(Boolean).join(' | ')}
  </AppText>
  ) : null}

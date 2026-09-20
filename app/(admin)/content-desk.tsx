@@ -171,7 +171,7 @@ export default function ContentDeskScreen() {
 
       {/* Screen Header */}
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>
-        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
           Unified Content Desk
         </AppText>
         <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
@@ -229,7 +229,7 @@ export default function ContentDeskScreen() {
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder={`Search ${activeTab} by title, author, or content...`}
+          placeholder={`Search ${activeTab}`}
           placeholderTextColor={colors.textSecondary}
           style={{ flex: 1, color: colors.textPrimary, fontSize: 14, padding: 0 }}
         />
@@ -265,10 +265,10 @@ export default function ContentDeskScreen() {
                       By {item.author} ({item.authorRole}) • {new Date(item.createdAt).toLocaleDateString()}
                     </AppText>
                   </View>
-                  <AppText weight="bold" numberOfLines={2} style={{ fontSize: 15, marginTop: 4 }}>
+                  <AppText weight="bold" style={{ fontSize: 15, marginTop: 4 }}>
                     {item.title}
                   </AppText>
-                  <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ marginTop: 2 }}>
+                  <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
                     {item.subtitle}
                   </AppText>
                 </View>

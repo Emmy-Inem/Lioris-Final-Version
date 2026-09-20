@@ -247,12 +247,12 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           )}
           <Avatar name={partnerName} uri={partnerAvatar} size={38} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+            <AppText weight="bold" variant="bodySmall">
               {partnerName}
             </AppText>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
               <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.success, flexShrink: 0 }} />
-              <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>
+              <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                 {subtitleText}
               </AppText>
             </View>
@@ -338,10 +338,10 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                       <Ionicons name={isVoice ? 'call' : 'videocam'} size={20} color="#FFFFFF" />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                      <AppText weight="bold" variant="bodySmall">
                         {isVoice ? 'Campus Voice Call' : 'Campus Video Room'}
                       </AppText>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>
+                      <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                         Live Encrypted WebRTC
                       </AppText>
                     </View>
@@ -483,7 +483,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           }}
         >
           <Ionicons name="arrow-undo" size={14} color={colors.brandPrimary} />
-          <AppText tone="brand" variant="caption" numberOfLines={1} style={{ flex: 1 }}>
+          <AppText tone="brand" variant="caption" style={{ flex: 1 }}>
             Replying to: {replyingTo.content}
           </AppText>
           <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReplyingTo(null)} hitSlop={8}>

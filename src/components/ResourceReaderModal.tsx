@@ -93,94 +93,62 @@ export function ResourceReaderModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: colors.background }}>
-        {/* Modal Top Navigation Bar */}
+        {/*
+          Modal Top Navigation Bar.
+
+          This used to be a single row holding the close button, a two-label pill tab switcher,
+          a bookmark icon and a Download button. At 375px that row needed roughly 430px, so the
+          Download button was clipped off the right edge. It is now two rows: icon actions on the
+          first, a full-width segmented tab control on the second. Every control is at least 44px
+          and nothing is truncated.
+        */}
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             paddingHorizontal: spacing.md,
             paddingTop: Math.max(insets.top, spacing.sm),
             paddingBottom: spacing.sm,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
             backgroundColor: colors.surface,
+            gap: spacing.sm,
           }}
         >
-          <Pressable
-            onPress={onClose}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Close Reader"
-            style={{
-              padding: 6,
-              borderRadius: radius.pill,
-              backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-            }}
-          >
-            <Ionicons name="close" size={20} color={colors.textPrimary} />
-          </Pressable>
-
-          {/* Center Tabs: In-App Document Preview vs Study Notes */}
-          <View
-            style={{
-              flexDirection: 'row',
-              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-              borderRadius: radius.pill,
-              padding: 2,
-            }}
-          >
+          {/* Row 1: close, spacer, bookmark, download */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <Pressable
-              onPress={() => setActiveTab('preview')}
+              onPress={onClose}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Close reader"
               style={{
-                paddingHorizontal: 12,
-                paddingVertical: 5,
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
                 borderRadius: radius.pill,
-                backgroundColor: activeTab === 'preview' ? colors.brandPrimary : 'transparent',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
               }}
             >
-              <AppText
-                variant="caption"
-                weight="bold"
-                style={{
-                  color: activeTab === 'preview' ? '#FFFFFF' : colors.textSecondary,
-                  fontSize: 11,
-                }}
-              >
-                Document Reader
-              </AppText>
+              <Ionicons name="close" size={20} color={colors.textPrimary} />
             </Pressable>
-            <Pressable
-              onPress={() => setActiveTab('notes')}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-                borderRadius: radius.pill,
-                backgroundColor: activeTab === 'notes' ? colors.brandPrimary : 'transparent',
-              }}
-            >
-              <AppText
-                variant="caption"
-                weight="bold"
-                style={{
-                  color: activeTab === 'notes' ? '#FFFFFF' : colors.textSecondary,
-                  fontSize: 11,
-                }}
-              >
-                Study Notes & Info
-              </AppText>
-            </Pressable>
-          </View>
 
-          {/* Right Action Icons: Bookmark & Download */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <AppText variant="caption" tone="secondary" weight="bold">
+                {activeTab === 'preview' ? 'Document reader' : 'Study notes & info'}
+              </AppText>
+            </View>
+
             <Pressable
               onPress={handleToggleBookmark}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={bookmarked ? 'Remove Bookmark' : 'Bookmark Lecture Note'}
+              accessibilityState={{ selected: bookmarked }}
+              accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark this lecture note'}
               style={{
-                padding: 6,
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
                 borderRadius: radius.pill,
                 backgroundColor: bookmarked ? colors.pastelPrimaryBg : 'transparent',
               }}
@@ -192,13 +160,59 @@ export function ResourceReaderModal({
               />
             </Pressable>
 
-            <AppButton
-              label={downloaded ? 'Saved' : 'Download'}
-              variant={downloaded ? 'secondary' : 'primary'}
-              size="sm"
-              loading={downloading}
-              onPress={handleDownload}
-            />
+            <View style={{ flexShrink: 0 }}>
+              <AppButton
+                label={downloaded ? 'Saved' : 'Download'}
+                variant={downloaded ? 'secondary' : 'primary'}
+                size="sm"
+                loading={downloading}
+                onPress={handleDownload}
+              />
+            </View>
+          </View>
+
+          {/* Row 2: full-width segmented tabs - each half is tappable edge to edge */}
+          <View
+            style={{
+              flexDirection: 'row',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+              borderRadius: radius.pill,
+              padding: 3,
+              gap: 3,
+            }}
+          >
+            {([
+              { key: 'preview' as const, label: 'Document Reader' },
+              { key: 'notes' as const, label: 'Study Notes & Info' },
+            ]).map((tab) => (
+              <Pressable
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === tab.key }}
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 8,
+                  borderRadius: radius.pill,
+                  backgroundColor: activeTab === tab.key ? colors.brandPrimary : 'transparent',
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  weight="bold"
+                  style={{
+                    color: activeTab === tab.key ? '#FFFFFF' : colors.textSecondary,
+                    fontSize: 12,
+                    textAlign: 'center',
+                  }}
+                >
+                  {tab.label}
+                </AppText>
+              </Pressable>
+            ))}
           </View>
         </View>
 
@@ -218,7 +232,7 @@ export function ResourceReaderModal({
           }}
         >
           <View style={{ flex: 1, minWidth: 180 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
               <Badge label={resource.courseCode} tone="neutral" />
               <Badge label={resource.category} tone="neutral" />
               {resource.fileSize && (
@@ -227,7 +241,7 @@ export function ResourceReaderModal({
                 </AppText>
               )}
             </View>
-            <AppText weight="bold" numberOfLines={1} style={{ fontSize: 13, color: colors.textPrimary }}>
+            <AppText weight="bold" style={{ fontSize: 13, color: colors.textPrimary }}>
               {resource.title}
             </AppText>
           </View>
@@ -240,20 +254,23 @@ export function ResourceReaderModal({
                   `Please analyze and generate step-by-step revision flashcards and practice problems for the following course material:\nCourse: ${resource.courseCode} (${resource.department})\nTitle: ${resource.title}\nDescription: ${resource.description || 'General course notes'}`,
                 );
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Analyse this material with the AI study copilot"
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 4,
+                justifyContent: 'center',
+                gap: 6,
                 backgroundColor: colors.pastelPrimaryBg,
-                paddingHorizontal: 10,
-                paddingVertical: 5,
+                paddingHorizontal: 14,
+                minHeight: 44,
                 borderRadius: radius.pill,
                 borderWidth: 1,
                 borderColor: `${colors.brandPrimary}40`,
               }}
             >
-              <Ionicons name="sparkles" size={13} color={colors.brandPrimary} />
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10.5 }}>
+              <Ionicons name="sparkles" size={15} color={colors.brandPrimary} />
+              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 12 }}>
                 AI Study Copilot
               </AppText>
             </Pressable>

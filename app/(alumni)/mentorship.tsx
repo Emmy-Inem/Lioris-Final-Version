@@ -88,7 +88,7 @@ export default function AlumniMentorshipScreen() {
         contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 130 }}
       >
         <View style={{ paddingTop: isDesktop ? spacing.md : spacing.xs, marginBottom: spacing.sm }}>
-          <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+          <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
             Alumni Mentorship Desk
           </AppText>
           <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
@@ -105,7 +105,6 @@ export default function AlumniMentorshipScreen() {
 
         <AppText
           weight="bold"
-          numberOfLines={1}
           style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, marginBottom: spacing.xs }}
         >
           Mentorship Inquiries ({mentorships?.length ?? 0})
@@ -120,10 +119,10 @@ export default function AlumniMentorshipScreen() {
                   <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flex: 1, minWidth: 0 }}>
                     <Avatar name={studentName} size={40} />
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                      <AppText variant="bodySmall" weight="bold">
                         {studentName}
                       </AppText>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>
+                      <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                         {m.studentDepartment ? `${m.studentDepartment} • Mentee` : 'Undergraduate Scholar'}
                       </AppText>
                     </View>
@@ -212,7 +211,7 @@ export default function AlumniMentorshipScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                         <Ionicons name="document-text" size={18} color={colors.brandPrimary} />
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <AppText variant="caption" weight="bold" numberOfLines={1}>
+                          <AppText variant="caption" weight="bold">
                             {m.documentName || 'Student Proposal / CV'}
                           </AppText>
                           <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
@@ -301,10 +300,10 @@ function StatBox({ label, value, icon }: { label: string; value: number; icon: k
       }}
     >
       <Ionicons name={icon} size={16} color={colors.textSecondary} style={{ marginBottom: 2 }} />
-      <AppText variant="h3" weight="bold" numberOfLines={1}>
+      <AppText variant="h3" weight="bold">
         {value}
       </AppText>
-      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, textAlign: 'center' }}>
+      <AppText tone="secondary" variant="caption" style={{ fontSize: 9.5, textAlign: 'center' }}>
         {label}
       </AppText>
     </View>

@@ -48,7 +48,7 @@ export default function CalendarScreen() {
     <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
       Calendar & Timetable
     </AppText>
-    <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+    <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
       Class lectures, test deadlines & campus schedule
     </AppText>
   </View>

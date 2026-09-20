@@ -498,7 +498,7 @@ export function PublishEventModal({
                 campusCode={targetCampus || ''}
                 value={location}
                 onChangeLocation={(loc) => setLocation(loc)}
-                placeholder="Search verified campus halls & auditoriums..."
+                placeholder="Search venues"
               />
             ) : (
               <AppTextField

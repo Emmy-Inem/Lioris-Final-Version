@@ -25,7 +25,7 @@ export default function AlumniNetworkScreen() {
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>
-        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+        <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
           Alumni Network
         </AppText>
         <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
@@ -52,7 +52,7 @@ export default function AlumniNetworkScreen() {
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search by name, company, or degree..."
+          placeholder="Search alumni"
           placeholderTextColor={colors.textSecondary}
           style={{
             flex: 1,

@@ -33,7 +33,7 @@ export function ShortcutsBoard({ links }: { links: ShortcutLink[] }) {
  >
  <SolidCard radius={16} style={{ alignItems: 'center', paddingVertical: spacing.md }}>
  <Ionicons name={link.icon} size={22} color={colors.brandAccent} />
- <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: spacing.xs, textAlign: 'center' }} numberOfLines={1}>
+ <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: spacing.xs, textAlign: 'center' }}>
  {link.label}
  </AppText>
  </SolidCard>

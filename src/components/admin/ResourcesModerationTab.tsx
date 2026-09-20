@@ -293,7 +293,7 @@ export function ResourcesModerationTab() {
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
  <View style={{ flex: 1, marginRight: spacing.sm }}>
  <AppTextField
- label=""placeholder="Search by course, title, uploader..."value={searchQuery}
+ label=""placeholder="Search resources"value={searchQuery}
  onChangeText={setSearchQuery}
  />
  </View>
@@ -398,7 +398,7 @@ export function ResourcesModerationTab() {
  <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: 2 }}>
  SYLLABUS & DOCUMENT EXCERPT:
  </AppText>
- <AppText tone="secondary"variant="bodySmall"numberOfLines={3}>
+ <AppText tone="secondary"variant="bodySmall">
  {resource.description}
  </AppText>
  </View>

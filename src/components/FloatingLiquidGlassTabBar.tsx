@@ -175,7 +175,6 @@ function TabItem({
           <AppText
             variant="caption"
             weight="bold"
-            numberOfLines={1}
             style={{
               color: '#FFFFFF',
               fontSize: 12,

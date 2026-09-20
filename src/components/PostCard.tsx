@@ -21,8 +21,42 @@ import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { Post } from'@/api/types';
 import { togglePostLike, togglePostRepost, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
+import { toggleSavedItem, SAVED_ITEMS_KEY } from'@/api/bookmarks';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
+
+/** Every cache that can show a post: the feed, the profile's "Authored" list and the saved list. */
+async function invalidatePostCaches(queryClient: ReturnType<typeof useQueryClient>, postId?: string) {
+ await Promise.all([
+ queryClient.invalidateQueries({ queryKey: ['feed'] }),
+ queryClient.invalidateQueries({ queryKey: ['my-posts'] }),
+ queryClient.invalidateQueries({ queryKey: ['my-drafts'] }),
+ queryClient.invalidateQueries({ queryKey: ['my-scheduled'] }),
+ queryClient.invalidateQueries({ queryKey: ['profile'] }),
+ postId ? queryClient.invalidateQueries({ queryKey: ['post', postId] }) : Promise.resolve(),
+ ]);
+}
+
+/** "Closes in 3h" / "Poll closed" for a poll's closesAt timestamp. */
+function pollClosingLabel(closesAt?: string, isClosed?: boolean) {
+ if (!closesAt) return isClosed ? 'Poll closed' : 'Active poll';
+ const ms = new Date(closesAt).getTime() - Date.now();
+ if (Number.isNaN(ms)) return isClosed ? 'Poll closed' : 'Active poll';
+ if (ms <= 0) return 'Poll closed';
+ const minutes = Math.floor(ms / 60000);
+ if (minutes < 60) return `Closes in ${Math.max(1, minutes)}m`;
+ const hours = Math.floor(minutes / 60);
+ if (hours < 24) return `Closes in ${hours}h`;
+ return `Closes in ${Math.floor(hours / 24)}d`;
+}
+
+function isPollClosed(poll?: { closesAt?: string; isClosed?: boolean } | null) {
+ if (!poll) return false;
+ if (poll.isClosed) return true;
+ if (!poll.closesAt) return false;
+ const t = new Date(poll.closesAt).getTime();
+ return !Number.isNaN(t) && t <= Date.now();
+}
 
 const STOCK_IMAGES: Record<string, any> = {
  event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
@@ -51,10 +85,18 @@ export function PostCard({ post }: { post: Post }) {
 
  const [liked, setLiked] = useState(!!post.isLikedByMe);
  const [likesCount, setLikesCount] = useState(post.likesCount);
- const [reposted, setReposted] = useState(false);
+ const [reposted, setReposted] = useState(!!post.isRepostedByMe);
  const [repostsCount, setRepostsCount] = useState(post.repostsCount);
- const [bookmarked, setBookmarked] = useState(false);
+ const [bookmarked, setBookmarked] = useState(!!post.isBookmarkedByMe);
+ const [savingBookmark, setSavingBookmark] = useState(false);
  const [menuOpen, setMenuOpen] = useState(false);
+ const [deleting, setDeleting] = useState(false);
+
+ React.useEffect(() => {
+ setReposted(!!post.isRepostedByMe);
+ setBookmarked(!!post.isBookmarkedByMe);
+ setRepostsCount(post.repostsCount);
+ }, [post.isRepostedByMe, post.isBookmarkedByMe, post.repostsCount]);
 
  // Full screen image lightbox
  const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -66,6 +108,7 @@ export function PostCard({ post }: { post: Post }) {
 
  // Poll state
  const [poll, setPoll] = useState(post.poll);
+ const pollClosed = isPollClosed(poll);
 
  // Report state
  const [reportOpen, setReportOpen] = useState(false);
@@ -94,23 +137,123 @@ export function PostCard({ post }: { post: Post }) {
  }
  }
 
+ /**
+  * Voting again on another option moves the vote; voting on your current option clears it.
+  * The optimistic update mirrors that, and any refusal from the server (closed poll, etc.)
+  * rolls back and shows the message voteOnPoll threw.
+  */
  async function handleVote(optionId: string) {
- if (!poll) return;
+ if (!poll || pollClosed) return;
  haptics.medium();
- const hasVoted = poll.options.some((o) => o.isVotedByMe);
- if (hasVoted) return;
 
- const nextOptions = poll.options.map((opt) =>
- opt.id === optionId ? { ...opt, votes: opt.votes + 1, isVotedByMe: true } : opt,
- );
- const nextPoll = {
- ...poll,
- options: nextOptions,
- totalVotes: poll.totalVotes + 1,
- };
- setPoll(nextPoll);
- await voteOnPoll(post.id, optionId);
+ const previous = poll;
+ const current = poll.options.find((o) => o.isVotedByMe);
+ const clearing = current?.id === optionId;
+
+ const nextOptions = poll.options.map((opt) => {
+ const wasMine = !!opt.isVotedByMe;
+ const willBeMine = !clearing && opt.id === optionId;
+ const delta = (willBeMine ? 1 : 0) - (wasMine ? 1 : 0);
+ return { ...opt, votes: Math.max(0, opt.votes + delta), isVotedByMe: willBeMine };
+ });
+ const totalDelta = (clearing ? -1 : current ? 0 : 1);
+ setPoll({ ...poll, options: nextOptions, totalVotes: Math.max(0, poll.totalVotes + totalDelta) });
+
+ try {
+ const serverPoll = await voteOnPoll(post.id, optionId);
+ if (serverPoll && typeof serverPoll === 'object' && 'options' in serverPoll) {
+ setPoll(serverPoll as typeof poll);
+ }
  queryClient.invalidateQueries({ queryKey: ['feed'] });
+ queryClient.invalidateQueries({ queryKey: ['post', post.id] });
+ } catch (err: any) {
+ setPoll(previous);
+ haptics.error();
+ Alert.alert('Vote not counted', err?.message || 'Could not record your vote. Please try again.');
+ }
+ }
+
+ /** Saves/unsaves this post into the one shared saved_items store. */
+ async function handleToggleBookmark() {
+ if (savingBookmark) return;
+ haptics.light();
+ const next = !bookmarked;
+ setBookmarked(next);
+ setSavingBookmark(true);
+ try {
+ await toggleSavedItem('post', post.id, next, {
+ title: post.title,
+ subtitle: `${post.authorName} • c/${post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}`,
+ });
+ await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
+ await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('post') });
+ } catch (err: any) {
+ setBookmarked(!next);
+ haptics.error();
+ Alert.alert(next ? 'Could not save' : 'Could not remove', err?.message || 'Please try again.');
+ } finally {
+ setSavingBookmark(false);
+ }
+ }
+
+ async function handleToggleRepost() {
+ haptics.light();
+ const next = !reposted;
+ setReposted(next);
+ setRepostsCount((prev) => Math.max(0, prev + (next ? 1 : -1)));
+ try {
+ const result = await togglePostRepost(post.id, next);
+ if (result && typeof result === 'object') {
+ setReposted(result.reposted);
+ setRepostsCount(result.count);
+ }
+ queryClient.invalidateQueries({ queryKey: ['feed'] });
+ queryClient.invalidateQueries({ queryKey: ['my-posts'] });
+ } catch (err: any) {
+ setReposted(!next);
+ setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
+ Alert.alert('Repost failed', err?.message || 'Please try again.');
+ }
+ }
+
+ /**
+  * deletePost throws when the database refused the delete, so nothing is removed
+  * optimistically - the row only disappears once the server confirmed it.
+  */
+ async function handleDelete(moderation: boolean) {
+ if (deleting) return;
+ setDeleting(true);
+ try {
+ await deletePost(post.id);
+ await invalidatePostCaches(queryClient, post.id);
+ haptics.medium();
+ Alert.alert(
+ moderation ? 'Post Removed' : 'Post Deleted',
+ moderation ? 'The thread was removed by moderator action.' : 'Your thread has been removed from the feed and your profile.',
+ );
+ } catch (err: any) {
+ haptics.error();
+ Alert.alert('Delete failed', err?.message || 'The post could not be deleted. Please try again.');
+ } finally {
+ setDeleting(false);
+ }
+ }
+
+ function confirmDelete(moderation: boolean) {
+ Alert.alert(
+ moderation ? 'Takedown Post' : 'Delete Your Post',
+ moderation
+ ? 'Are you sure you want to remove this thread from the community feed? This action is logged.'
+ : 'Are you sure you want to delete this thread? This cannot be undone.',
+ [
+ { text: 'Cancel', style: 'cancel' },
+ {
+ text: moderation ? 'Takedown & Delete' : 'Delete Post',
+ style: 'destructive',
+ onPress: () => { handleDelete(moderation); },
+ },
+ ],
+ );
  }
 
  function handleOpenDedicatedPost() {
@@ -138,7 +281,7 @@ export function PostCard({ post }: { post: Post }) {
  <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={44} role={post.authorRole} />
  <View style={{ flex: 1, minWidth: 0 }}>
     {/* Row 1: Name · Verified badge · Role */}
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
       <AppText weight="bold" variant="bodySmall" style={{ flexShrink: 1 }}>
         {post.authorName}
       </AppText>
@@ -157,7 +300,7 @@ export function PostCard({ post }: { post: Post }) {
       </AppText>
     </View>
     {/* Row 2: Channel · Pinned · Time — all inline on one line */}
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1, flexWrap: 'nowrap' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1, flexWrap: 'wrap' }}>
       <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5, flexShrink: 0 }}>
         c/{post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}
       </AppText>
@@ -195,10 +338,12 @@ export function PostCard({ post }: { post: Post }) {
 
  {/* Thread Title & Content (Tap to Open Full Screen Post) */}
  <Pressable onPress={handleOpenDedicatedPost} style={{ marginTop: spacing.xs, marginBottom: spacing.sm }}>
- <AppText weight="bold" numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, marginBottom: 4 }}>
+ <AppText weight="bold" style={{ fontSize: 15, lineHeight: 20, marginBottom: 4, flexShrink: 1 }}>
  {post.title}
  </AppText>
- <AppText tone="primary" variant="bodySmall" numberOfLines={2} style={{ lineHeight: 20, fontSize: 13 }}>
+ {/* The body is the ONE clamped field left: this is a dense feed row and tapping
+     the card opens the full thread, where the text is shown in full. */}
+ <AppText tone="primary" variant="bodySmall" numberOfLines={4} style={{ lineHeight: 20, fontSize: 13, flexShrink: 1 }}>
  {post.content}
  </AppText>
  </Pressable>
@@ -243,9 +388,9 @@ export function PostCard({ post }: { post: Post }) {
  borderColor: colors.border,
  }}
  >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
- <Ionicons name="bar-chart-outline"size={16} color={colors.textSecondary} />
- <AppText weight="bold"variant="bodySmall">
+ <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: spacing.sm }}>
+ <Ionicons name="bar-chart-outline"size={16} color={colors.textSecondary} style={{ marginTop: 2 }} />
+ <AppText weight="bold"variant="bodySmall"style={{ flex: 1, flexShrink: 1 }}>
  {poll.question}
  </AppText>
  </View>
@@ -257,7 +402,10 @@ export function PostCard({ post }: { post: Post }) {
  <Pressable
  key={opt.id}
  onPress={() => handleVote(opt.id)}
- disabled={hasVotedAny}
+ disabled={pollClosed}
+ accessibilityRole="button"
+ accessibilityState={{ selected: !!opt.isVotedByMe, disabled: pollClosed }}
+ accessibilityLabel={opt.isVotedByMe ? `${opt.label}, your vote. Tap to remove it.` : `Vote for ${opt.label}`}
  style={{
  position: 'relative',
  backgroundColor: colors.surface,
@@ -270,7 +418,7 @@ export function PostCard({ post }: { post: Post }) {
  overflow: 'hidden',
  }}
  >
- {hasVotedAny ? (
+ {hasVotedAny || pollClosed ? (
  <View
  style={{
  position: 'absolute',
@@ -293,12 +441,12 @@ export function PostCard({ post }: { post: Post }) {
  <AppText
  weight={opt.isVotedByMe ? 'bold' : 'medium'}
  variant="bodySmall"tone={opt.isVotedByMe ? 'brand' : 'primary'}
- numberOfLines={1}
+ style={{ flex: 1, flexShrink: 1 }}
  >
  {opt.label}
  </AppText>
  </View>
- {hasVotedAny ? (
+ {hasVotedAny || pollClosed ? (
  <AppText weight="bold"variant="caption"tone={opt.isVotedByMe ? 'brand' : 'secondary'}>
  {percentage}% ({opt.votes})
  </AppText>
@@ -308,15 +456,19 @@ export function PostCard({ post }: { post: Post }) {
  );
  })}
 
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
- <AppText tone="secondary"variant="caption">
- {poll.totalVotes} votes | {poll.expiresIn ?? 'Active poll'}
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, gap: 8, flexWrap: 'wrap' }}>
+ <AppText tone="secondary"variant="caption"style={{ flexShrink: 1 }}>
+ {poll.totalVotes} {poll.totalVotes === 1 ? 'vote' : 'votes'} • {pollClosingLabel(poll.closesAt, poll.isClosed)}
  </AppText>
- {poll.options.some((o) => o.isVotedByMe) && (
- <AppText tone="brand"variant="caption"weight="bold">
- Vote recorded
+ {poll.options.some((o) => o.isVotedByMe) ? (
+ <AppText tone="brand"variant="caption"weight="bold"style={{ flexShrink: 1 }}>
+ {pollClosed ? 'You voted' : 'Voted - tap another option to change, or tap yours to undo'}
  </AppText>
- )}
+ ) : pollClosed ? (
+ <AppText tone="secondary"variant="caption"weight="bold"style={{ flexShrink: 1 }}>
+ Voting has ended
+ </AppText>
+ ) : null}
  </View>
  </View>
  ) : null}
@@ -383,21 +535,8 @@ export function PostCard({ post }: { post: Post }) {
 
  {/* Repost / Share to Cohort */}
  <Pressable
- onPress={async () => {
- haptics.light();
- const next = !reposted;
- setReposted(next);
- setRepostsCount((prev) => Math.max(0, prev + (next ? 1 : -1)));
- try {
- const serverCount = await togglePostRepost(post.id, next);
- if (typeof serverCount === 'number') setRepostsCount(serverCount);
- } catch (err: any) {
- setReposted(!next);
- setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
- Alert.alert('Repost failed', err?.message || 'Please try again.');
- }
- }}
- accessibilityRole="button"accessibilityLabel="Repost to cohort"
+ onPress={handleToggleRepost}
+ accessibilityRole="button"accessibilityLabel={reposted ? 'Undo repost' : 'Repost to cohort'}
  accessibilityState={{ selected: reposted }}style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
  >
  <Ionicons name="repeat"size={18} color={reposted ? colors.brandPrimary : colors.textSecondary} />
@@ -408,12 +547,9 @@ export function PostCard({ post }: { post: Post }) {
 
  {/* Bookmark Pill */}
  <Pressable
- onPress={() => {
- haptics.light();
- setBookmarked((b) => !b);
- Alert.alert(bookmarked ? 'Bookmark Removed' : 'Saved', 'Saved to your profile bookmarks.');
- }}
- accessibilityRole="button"accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark thread'}
+ onPress={handleToggleBookmark}
+ disabled={savingBookmark}
+ accessibilityRole="button"accessibilityLabel={bookmarked ? 'Remove from saved items' : 'Save this post'}
  accessibilityState={{ selected: bookmarked }}style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
  >
  <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={17} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
@@ -443,32 +579,12 @@ export function PostCard({ post }: { post: Post }) {
  <Pressable
  onPress={() => {
  setMenuOpen(false);
- Alert.alert(
- 'Delete Your Post',
- 'Are you sure you want to delete this thread from the community? This cannot be undone.',
- [
- { text: 'Cancel', style: 'cancel' },
- {
- text: 'Delete Post',
- style: 'destructive',
- onPress: async () => {
- try {
- await deletePost(post.id);
- await queryClient.invalidateQueries({ queryKey: ['feed'] });
- haptics.medium();
- Alert.alert('Post Deleted', 'Your thread has been removed from the community feed.');
- } catch (err: any) {
- Alert.alert('Error', err?.message || 'Could not delete post.');
- }
- },
- },
- ],
- );
+ confirmDelete(false);
  }}
- style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 }}
  >
  <Ionicons name="trash-outline" size={18} color={colors.critical} />
- <AppText style={{ color: colors.critical }} weight="bold">Delete My Post</AppText>
+ <AppText style={{ color: colors.critical, flexShrink: 1 }} weight="bold">Delete My Post</AppText>
  </Pressable>
  </>
  )}
@@ -485,7 +601,7 @@ export function PostCard({ post }: { post: Post }) {
  onPress={async () => {
  setMenuOpen(false);
  await updatePost(post.id, { isPinned: !post.isPinned });
- await queryClient.invalidateQueries({ queryKey: ['feed'] });
+ await invalidatePostCaches(queryClient, post.id);
  Alert.alert('Moderation Action', post.isPinned ? 'Thread unpinned.' : 'Thread pinned as an official announcement.');
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
@@ -497,27 +613,12 @@ export function PostCard({ post }: { post: Post }) {
  <Pressable
  onPress={() => {
  setMenuOpen(false);
- Alert.alert(
- 'Takedown Post',
- 'Are you sure you want to remove this thread from the community feed? This action is logged.',
- [
- { text: 'Cancel', style: 'cancel' },
- {
- text: 'Takedown & Delete',
- style: 'destructive',
- onPress: async () => {
- await deletePost(post.id);
- await queryClient.invalidateQueries({ queryKey: ['feed'] });
- Alert.alert('Post Removed', 'The thread was removed by moderator action.');
- },
- },
- ]
- );
+ confirmDelete(true);
  }}
- style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 }}
  >
  <Ionicons name="trash-outline"size={18} color={colors.critical} />
- <AppText style={{ color: colors.critical }} weight="bold">Takedown & Delete Thread</AppText>
+ <AppText style={{ color: colors.critical, flexShrink: 1 }} weight="bold">Takedown & Delete Thread</AppText>
  </Pressable>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
  </>

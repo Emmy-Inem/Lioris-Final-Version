@@ -187,7 +187,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
               color={radioState.isPlaying ? '#22c55e' : colors.brandPrimary}
             />
           </View>
-          <AppText variant="bodySmall" weight="bold" numberOfLines={1} style={{ fontSize: 13, flex: 1, minWidth: 0 }}>
+          <AppText variant="bodySmall" weight="bold" style={{ fontSize: 13, flex: 1, minWidth: 0 }}>
             {current.name}
           </AppText>
           {isDesktop && (
@@ -258,13 +258,13 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
               {current.frequency}
             </AppText>
           </View>
-          <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 11 }}>
+          <AppText variant="caption" tone="secondary" style={{ flex: 1, minWidth: 0, fontSize: 11 }}>
             {current.campusOrCity} • {current.description}
           </AppText>
         </View>
       ) : (
         /* Station Subtitle & Description on Desktop */
-        <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 4, marginBottom: 8, fontSize: 11.5 }}>
+        <AppText variant="caption" tone="secondary" style={{ marginTop: 4, marginBottom: 8, fontSize: 11.5 }}>
           {current.campusOrCity} • {current.description}
         </AppText>
       )}
@@ -289,7 +289,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
               accessibilityLabel="Search 40,000+ stations (e.g. Lagos, Ibadan, Wazobia, Lofi)"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search 40,000+ stations (e.g. Lagos, Ibadan, Wazobia, Lofi)..."
+              placeholder="Search stations"
               placeholderTextColor={colors.textSecondary}
               style={[styles.searchInput, { color: colors.textPrimary }]}
             />
@@ -344,14 +344,14 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
                 >
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <AppText variant="caption" weight="bold" numberOfLines={1} style={{ fontSize: 12 }}>
+                      <AppText variant="caption" weight="bold" style={{ fontSize: 12 }}>
                         {st.name} ({st.frequency})
                       </AppText>
                       {st.codec ? (
                         <Badge label={st.codec} tone="neutral" />
                       ) : null}
                     </View>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
+                    <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
                       {st.campusOrCity} • {st.category}
                     </AppText>
                   </View>
@@ -415,13 +415,13 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
 
           <View style={styles.nowPlayingIndicator}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <AppText variant="caption" weight="semiBold" numberOfLines={1} style={{ fontSize: 12 }}>
+              <AppText variant="caption" weight="semiBold" style={{ fontSize: 12 }}>
                 {radioState.isPlaying ? 'Streaming Live Audio' : 'Audio Paused'}
               </AppText>
               <EqualizerVisualizer isPlaying={radioState.isPlaying} color={colors.brandPrimary} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
-              <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5, flexShrink: 1 }}>
+              <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5, flexShrink: 1 }}>
                 {current.bitrate || 128} kbps • High-Fidelity
               </AppText>
               <View style={[styles.hqPill, { backgroundColor: colors.brandPrimary + '15', borderColor: colors.brandPrimary + '30', flexShrink: 0 }]}>

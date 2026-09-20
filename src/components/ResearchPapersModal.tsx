@@ -113,8 +113,20 @@ export function ResearchPapersModal({
     }
   }
 
+  /**
+   * Hands the paper to the AI study copilot in `explain` mode.
+   *
+   * This used to look like a dead button: the prompt did reach `resources.tsx`, which passed it to
+   * `AICopilotModal` as `initialPrompt` - but that modal only read the prop from a `useState`
+   * initialiser, which runs once on mount. The modal is always mounted and merely toggles
+   * `visible`, so the prompt was discarded and the copilot opened blank. AICopilotModal now seeds
+   * and auto-sends `initialPrompt` on every open, so this works end to end.
+   *
+   * The button only renders when a copilot handler was supplied, so there is no silent no-op path.
+   */
   function handleAnalyzeWithAi(paper: ResearchPaper) {
     if (onSendToCopilot) {
+      haptics.light();
       const prompt = `Please review and summarize this research paper for my academic thesis:
 
 **Title:** ${paper.title}
@@ -123,10 +135,9 @@ export function ResearchPapersModal({
 **Abstract:** ${paper.abstract}
 
 Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Findings, and 4) How to cite this in a literature review.`;
+      toast.info('Sending this paper to your AI study copilot...');
       onSendToCopilot(prompt);
       onClose();
-    } else {
-      toast.info('AI Copilot study analysis');
     }
   }
 
@@ -165,7 +176,7 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                 </AppText>
                 <Badge label="250M+ Papers" tone="neutral" />
               </View>
-              <AppText variant="caption" tone="secondary" numberOfLines={1}>
+              <AppText variant="caption" tone="secondary">
                 Semantic Scholar & OpenAlex peer-reviewed academic papers & APA citation engine
               </AppText>
             </View>
@@ -193,7 +204,12 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                 style={[styles.searchInput, { color: colors.textPrimary }]}
               />
               {query.length > 0 && (
-                <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setQuery('')}>
+                <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                hitSlop={12}
+                onPress={() => setQuery('')}
+              >
                   <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
                 </Pressable>
               )}
@@ -313,16 +329,18 @@ Please provide: 1) Core Research Contribution, 2) Methodology Summary, 3) Key Fi
                       onPress={() => setExpandedId(isExpanded ? null : paper.id)}
                       style={{ marginTop: 6 }}
                     >
+                      {/* The only clamp kept in this file: a long abstract in a dense list row.
+                          The full text is one tap away on this same Pressable. */}
                       <AppText
                         variant="caption"
                         tone="secondary"
-                        numberOfLines={isExpanded ? undefined : 2}
+                        numberOfLines={isExpanded ? undefined : 3}
                         style={{ lineHeight: 18 }}
                       >
                         {paper.abstract}
                       </AppText>
-                      <AppText variant="caption" tone="primary" weight="bold" style={{ marginTop: 2, fontSize: 11 }}>
-                        {isExpanded ? 'Show less ↑' : 'Read abstract preview ↓'}
+                      <AppText variant="caption" tone="primary" weight="bold" style={{ marginTop: 4, fontSize: 11 }}>
+                        {isExpanded ? 'Show less' : 'Read the full abstract'}
                       </AppText>
                     </Pressable>
 

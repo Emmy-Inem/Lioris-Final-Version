@@ -173,7 +173,7 @@ export function NotificationsScreen() {
               {/* Title & Body */}
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ flex: 1, minWidth: 0, paddingRight: 6 }}>
+                  <AppText weight="bold" variant="bodySmall" style={{ flex: 1, minWidth: 0, paddingRight: 6 }}>
                     {item.title}
                   </AppText>
                   <AppText tone="secondary" variant="caption" style={{ fontSize: 11, flexShrink: 0 }}>
@@ -391,7 +391,7 @@ export function NotificationsScreen() {
             </Pressable>
           </View>
         </View>
-        <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+        <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
           {unreadCount > 0 ? `${unreadCount} unread campus updates` : 'All caught up'}
         </AppText>
       </View>

@@ -98,12 +98,12 @@ export default function PlatformConfigScreen() {
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'flex-start' : 'flex-start', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: 8 }}>
           <View style={{ flex: 1, minWidth: 0, width: '100%' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, flexWrap: 'wrap' }}>
-              <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+              <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" style={{ flexShrink: 1 }}>
                 Staff & Admin Workdesk
               </AppText>
               <Badge label="Lioris Root Admin" tone="critical" />
             </View>
-            <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ marginTop: 2 }}>
+            <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
               Centralized university moderation, live nodes & control tower
             </AppText>
           </View>
@@ -431,7 +431,7 @@ export default function PlatformConfigScreen() {
  <View style={{ flexShrink: 0 }}>
  <Ionicons name="megaphone-outline"size={20} color={colors.critical} />
  </View>
- <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" numberOfLines={1}>
+ <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
  Broadcast Flash Alert
  </AppText>
  </View>
@@ -543,16 +543,16 @@ function EcosystemTile({
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, gap: spacing.xs }}>
           <Ionicons name={icon} size={22} color={colors.textSecondary} />
           {badge ? (
-            <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 9.5, flexShrink: 0, maxWidth: 90 }} numberOfLines={1}>
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 9.5, flexShrink: 0, maxWidth: 90 }}>
               {badge}
             </AppText>
           ) : null}
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ fontSize: 13 }}>
+          <AppText weight="bold" variant="bodySmall" style={{ fontSize: 13 }}>
             {label}
           </AppText>
-          <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11, marginTop: 1 }}>
+          <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 1 }}>
             {description}
           </AppText>
         </View>

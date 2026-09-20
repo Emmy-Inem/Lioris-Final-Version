@@ -142,7 +142,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               variant="bodySmall"
               weight="medium"
               style={{ flex: 1, color: '#F8FAFC', fontSize: 13 }}
-              numberOfLines={2}
             >
               {currentToast.message}
             </AppText>

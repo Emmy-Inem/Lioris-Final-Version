@@ -62,7 +62,7 @@ export function ImpersonationBanner() {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0 }}>
         <Ionicons name="eye-outline" size={16} color="#FFFFFF" />
-        <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1} style={{ flexShrink: 1 }}>
+        <AppText variant="caption" weight="bold" tone="inverse" style={{ flexShrink: 1 }}>
           Viewing as {impersonation.targetName || 'user'} - Admin Support Mode ({formatCountdown(msRemaining)})
         </AppText>
       </View>

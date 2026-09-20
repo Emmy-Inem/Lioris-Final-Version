@@ -23,16 +23,16 @@ const COURSE_FILTERS = ['All Pods', 'CSC 401', 'CSC 412', 'MAT 201', 'EEE 301', 
 export default function StudyGroupsScreen() {
  const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
-  const toast = useToast();
  const queryClient = useQueryClient();
- const [createModalOpen, setCreateModalOpen] = useState(false);
+  const toast = useToast();
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const { isFeatureEnabled } = useFeatureFlags();
- const [searchQuery, setSearchQuery] = useState('');
- const [selectedFilter, setSelectedFilter] = useState('All Pods');
- const { campusCode } = useCampusScope();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState('All Pods');
+  const { campusCode } = useCampusScope();
 
- const { data: groups, isLoading } = useQuery({ queryKey: ['study-groups', campusCode], queryFn: () => listStudyGroups(campusCode) });
+  const { data: groups, isLoading } = useQuery({ queryKey: ['study-groups', campusCode], queryFn: () => listStudyGroups(campusCode) });
 
   async function handleCreate(payload: Parameters<typeof createStudyGroup>[0]) {
     try {
@@ -76,7 +76,7 @@ export default function StudyGroupsScreen() {
           <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Study Pods
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+          <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
             Collaborative course squads, exam revision circles & peer sprints
           </AppText>
         </View>
@@ -129,7 +129,7 @@ export default function StudyGroupsScreen() {
                   <TextInput
                     value={searchQuery}
                     onChangeText={setSearchQuery}
-                    placeholder="Search by course code, topic, or study pod..."
+                    placeholder="Search study groups"
                     placeholderTextColor={colors.textSecondary}
                     style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                   />
@@ -211,7 +211,7 @@ export default function StudyGroupsScreen() {
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="Search courses, topics, or study pods..."
+                placeholder="Search study groups"
                 placeholderTextColor={colors.textSecondary}
                 style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
               />

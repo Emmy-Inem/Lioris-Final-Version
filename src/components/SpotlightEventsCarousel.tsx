@@ -217,12 +217,12 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
 
  {/* Event Details */}
  <View>
- <AppText variant="h2" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 18, lineHeight: 23, marginBottom: 4 }}>
+ <AppText variant="h2" weight="bold" tone="inverse" style={{ fontSize: 18, lineHeight: 23, marginBottom: 4 }}>
  {item.title}
  </AppText>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
  <Ionicons name="location-outline" size={13} color="#FFFFFF" style={{ flexShrink: 0 }} />
- <AppText tone="inverse" variant="caption" numberOfLines={1} style={{ opacity: 0.9, flex: 1 }}>
+ <AppText tone="inverse" variant="caption" style={{ opacity: 0.9, flex: 1 }}>
  {item.location} • {new Date(item.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
  </AppText>
  </View>

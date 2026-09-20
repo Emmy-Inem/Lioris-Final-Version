@@ -250,7 +250,7 @@ export default function SupportDeskScreen() {
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <View>
-            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
               Support & Resolution Desk
             </AppText>
             <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
@@ -310,7 +310,7 @@ export default function SupportDeskScreen() {
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search by user name, matric number, email, or issue description..."
+          placeholder="Search tickets"
           placeholderTextColor={colors.textSecondary}
           style={{ flex: 1, color: colors.textPrimary, fontSize: 14, padding: 0 }}
         />
@@ -342,7 +342,7 @@ export default function SupportDeskScreen() {
                   <Avatar name={item.userName} size={38} role={(item.userRole as any) || 'student'} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
-                      <AppText weight="bold" numberOfLines={1} style={{ fontSize: 14 }}>
+                      <AppText weight="bold" style={{ fontSize: 14 }}>
                         {item.userName}
                       </AppText>
                       {item.userMatric && (
@@ -351,7 +351,7 @@ export default function SupportDeskScreen() {
                       <Badge label={(item.userRole || 'student').toUpperCase()} tone="neutral" />
                       {item.userCampus && <Badge label={item.userCampus} tone="neutral" />}
                     </View>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                    <AppText tone="secondary" variant="caption">
                       {item.userEmail || 'No email registered'} • {new Date(item.createdAt).toLocaleDateString()}
                     </AppText>
                   </View>
@@ -363,18 +363,18 @@ export default function SupportDeskScreen() {
               <View style={{ marginTop: spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Badge label={CATEGORY_LABELS[item.category] || item.category} tone="neutral" />
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: 14.5, flex: 1 }}>
+                  <AppText weight="bold" style={{ fontSize: 14.5, flex: 1 }}>
                     {item.title}
                   </AppText>
                 </View>
-                <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ marginTop: 4 }}>
+                <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 4 }}>
                   {item.description}
                 </AppText>
               </View>
 
               {item.adminNotes && (
                 <View style={{ marginTop: 6, padding: 8, backgroundColor: isDark ? '#1F2937' : '#F3F4F6', borderRadius: radius.sm }}>
-                  <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                  <AppText variant="caption" tone="secondary">
                     Admin Note: {item.adminNotes}
                   </AppText>
                 </View>

@@ -373,7 +373,7 @@ export default function SuperAdminConfigScreen() {
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
       <View style={{ marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
-        <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" numberOfLines={1}>
+        <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
           Super Admin Configuration
         </AppText>
       </View>
@@ -661,7 +661,7 @@ function Section({ number, title, emoji, children }: { number: number; title: st
  const { spacing } = useTheme();
  return (
  <View style={{ marginBottom: spacing.lg }}>
- <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }} numberOfLines={2}>
+ <AppText variant="h3"weight="bold"style={{ marginBottom: spacing.md }}>
  {number}. {title} {emoji}
  </AppText>
  <SolidCard>{children}</SolidCard>
@@ -700,10 +700,10 @@ function Row({
  }}
  >
  <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
- <AppText weight="bold"variant="bodySmall" numberOfLines={1}>
+ <AppText weight="bold"variant="bodySmall">
  {title}
  </AppText>
- <AppText tone="secondary"variant="caption" numberOfLines={2}>
+ <AppText tone="secondary"variant="caption">
  {description}
  </AppText>
  </View>
@@ -740,10 +740,10 @@ function ToggleRow({
  }}
  >
  <View style={{ flex: 1, minWidth: 0, marginRight: spacing.md }}>
- <AppText weight="bold"variant="bodySmall"style={titleTone === 'critical' ? { color: colors.critical } : undefined} numberOfLines={1}>
+ <AppText weight="bold"variant="bodySmall"style={titleTone === 'critical' ? { color: colors.critical } : undefined}>
  {title}
  </AppText>
- <AppText tone="secondary"variant="caption" numberOfLines={2}>
+ <AppText tone="secondary"variant="caption">
  {description}
  </AppText>
  </View>

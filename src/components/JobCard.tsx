@@ -102,10 +102,10 @@ export function JobCard({ job }: { job: JobListing }) {
             <Badge label={job.type} tone={job.type === 'Internship' ? 'accent' : 'brand'} />
             {job.remote && <Badge label="Remote" tone="success" />}
           </View>
-          <AppText variant="h3" weight="bold" style={{ marginTop: 2 }} numberOfLines={2}>
+          <AppText variant="h3" weight="bold" style={{ marginTop: 2 }}>
             {job.title}
           </AppText>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={1}>
+          <AppText tone="secondary" variant="bodySmall">
             {job.company} | {job.location}
           </AppText>
         </View>
@@ -124,7 +124,7 @@ export function JobCard({ job }: { job: JobListing }) {
           borderTopColor: colors.divider,
         }}
       >
-        <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ flexShrink: 1, minWidth: 60 }}>
+        <AppText tone="secondary" variant="caption" style={{ flexShrink: 1, minWidth: 60 }}>
           Posted by {job.postedByName}
         </AppText>
 
@@ -173,7 +173,7 @@ export function JobCard({ job }: { job: JobListing }) {
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
                 <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
-                  <AppText variant="h3" weight="bold" numberOfLines={2}>
+                  <AppText variant="h3" weight="bold">
                     Notify Poster: {job.title}
                   </AppText>
                   <AppText tone="secondary" variant="bodySmall">

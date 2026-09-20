@@ -201,7 +201,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Pressable onPress={handleOpenEvent} style={{ flex: 1, paddingRight: 4 }}>
-                <AppText weight="bold" numberOfLines={2} style={{ fontSize: 15, lineHeight: 20 }}>
+                <AppText weight="bold" style={{ fontSize: 15, lineHeight: 20 }}>
                   {event.title}
                 </AppText>
               </Pressable>
@@ -234,7 +234,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
 
             <Pressable onPress={handleOpenEvent} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 4, flex: 1, minWidth: 0 }}>
               <Ionicons name="time-outline" size={13} color={colors.textSecondary} style={{ marginTop: 2 }} />
-              <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ flex: 1, lineHeight: 15 }}>
+              <AppText tone="secondary" variant="caption" style={{ flex: 1, lineHeight: 15 }}>
                 {time} | {event.location}
               </AppText>
             </Pressable>
@@ -243,7 +243,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
 
  {/* Description */}
  <Pressable onPress={handleOpenEvent}>
- <AppText tone="secondary"variant="bodySmall"numberOfLines={2} style={{ marginTop: spacing.sm, lineHeight: 18 }}>
+ <AppText tone="secondary"variant="bodySmall" style={{ marginTop: spacing.sm, lineHeight: 18 }}>
  {event.description}
  </AppText>
  </Pressable>
@@ -262,7 +262,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
  >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
           <Ionicons name="people" size={16} color={colors.textSecondary} />
-          <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1}>
+          <AppText variant="caption" weight="bold" tone="secondary">
             {rsvpCount} attending{event.capacity ? ` (${event.capacity} max)` : ''}
           </AppText>
         </View>

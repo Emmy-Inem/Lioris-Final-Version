@@ -55,14 +55,14 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
             <Badge label={group.isPublic ? 'Public Pod' : 'Private Pod'} tone="neutral" />
-            <AppText tone="secondary" variant="caption" numberOfLines={1}>
+            <AppText tone="secondary" variant="caption">
               {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
             </AppText>
           </View>
-          <AppText variant="h3" weight="bold" numberOfLines={2} style={{ marginTop: 2 }}>
+          <AppText variant="h3" weight="bold" style={{ marginTop: 2 }}>
             {group.name}
           </AppText>
-          <AppText tone="secondary" variant="caption" weight="bold" numberOfLines={1}>
+          <AppText tone="secondary" variant="caption" weight="bold">
             {group.courseCode}
           </AppText>
         </View>
@@ -89,7 +89,7 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
           >
             <Ionicons name="people" size={16} color={colors.textSecondary} />
           </View>
-          <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
+          <AppText variant="caption" tone="secondary" style={{ fontSize: 11, flex: 1 }}>
             {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
           </AppText>
         </View>

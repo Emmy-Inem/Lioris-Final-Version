@@ -209,7 +209,7 @@ export default function AlumniDashboard() {
                   }}
                 >
                   <Ionicons name="school" size={13} color="#FCD34D" style={[{ flexShrink: 0 }, heroTextShadowStyle]} />
-                  <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={1} style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
+                  <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
                     Alumni Fellowship • {profile?.institutionName ?? 'University Chapter'}
                   </AppText>
                 </View>
@@ -241,7 +241,6 @@ export default function AlumniDashboard() {
                     <AppText
                       weight="bold"
                       tone="inverse"
-                      numberOfLines={1}
                       style={[
                         {
                           fontSize: isDesktop ? 18 : 16,
@@ -260,7 +259,6 @@ export default function AlumniDashboard() {
                   </View>
 
                   <AppText
-                    numberOfLines={1}
                     style={[
                       {
                         marginTop: 2,
@@ -325,10 +323,10 @@ export default function AlumniDashboard() {
                   <Ionicons name="sparkles" size={22} color={colors.textSecondary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 14 : 13, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 14 : 13, lineHeight: 16 }}>
                     AI Career Copilot
                   </AppText>
-                  <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ fontSize: isDesktop ? 12 : 10.5, lineHeight: 14, marginTop: 2 }}>
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: isDesktop ? 12 : 10.5, lineHeight: 14, marginTop: 2 }}>
                     Interviews, coaching & resume review
                   </AppText>
                 </View>
@@ -384,10 +382,10 @@ export default function AlumniDashboard() {
                 >
                   <Ionicons name="chatbubble-ellipses" size={20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Direct Messages
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                       Mentees & fellows
                     </AppText>
                   </View>
@@ -417,10 +415,10 @@ export default function AlumniDashboard() {
                 >
                   <Ionicons name="cash-outline" size={20} color="#10B981" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       FX & Endowments
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                       Live rate converter
                     </AppText>
                   </View>
@@ -446,10 +444,10 @@ export default function AlumniDashboard() {
                 >
                   <Ionicons name="briefcase" size={20} color={colors.textSecondary} />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Careers
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                       Post & find jobs
                     </AppText>
                   </View>
@@ -476,10 +474,10 @@ export default function AlumniDashboard() {
                 >
                   <Ionicons name="people" size={20} color="#10B981" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Mentorship
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                       {pendingMentees.length > 0 ? `${pendingMentees.length} requests` : 'Guide students'}
                     </AppText>
                   </View>
@@ -506,10 +504,10 @@ export default function AlumniDashboard() {
                 >
                   <Ionicons name="calendar" size={20} color="#3B82F6" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Events
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                       Reunions & talks
                     </AppText>
                   </View>
@@ -536,10 +534,10 @@ export default function AlumniDashboard() {
                 >
                   <Ionicons name="cart" size={20} color="#D97706" />
                   <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       Campus Trade
                     </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                       Books & gear
                     </AppText>
                   </View>
@@ -565,10 +563,10 @@ export default function AlumniDashboard() {
               >
                 <Ionicons name="chatbubbles" size={20} color="#EC4899" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Global Forum
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                     Fellowship feed
                   </AppText>
                 </View>
@@ -593,10 +591,10 @@ export default function AlumniDashboard() {
               >
                 <Ionicons name="people-circle" size={20} color="#8B5CF6" />
                 <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                     Alumni Network
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
                     Fellow directory
                   </AppText>
                 </View>
@@ -616,7 +614,6 @@ export default function AlumniDashboard() {
                 <Ionicons name="briefcase-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
                 <AppText
                   weight="bold"
-                  numberOfLines={1}
                   style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
                 >
                   Career Board
@@ -656,7 +653,6 @@ export default function AlumniDashboard() {
                 <Ionicons name="ribbon-outline" size={16} color="#10B981" style={{ flexShrink: 0 }} />
                 <AppText
                   weight="bold"
-                  numberOfLines={1}
                   style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
                 >
                   Student Mentorship
@@ -687,10 +683,10 @@ export default function AlumniDashboard() {
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                           <Avatar name={item.studentName || 'Student'} size={28} />
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13.5 : 12.5 }}>
+                            <AppText weight="bold" style={{ fontSize: isDesktop ? 13.5 : 12.5 }}>
                               {item.studentName || 'Student Mentee'}
                             </AppText>
-                            <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: isDesktop ? 11 : 10 }}>
+                            <AppText variant="caption" tone="secondary" style={{ fontSize: isDesktop ? 11 : 10 }}>
                               Focus: {item.focusArea || 'Career Guidance'}
                             </AppText>
                           </View>
@@ -718,7 +714,6 @@ export default function AlumniDashboard() {
                 <Ionicons name="calendar-outline" size={16} color="#3B82F6" style={{ flexShrink: 0 }} />
                 <AppText
                   weight="bold"
-                  numberOfLines={1}
                   style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
                 >
                   Reunions & Events
@@ -757,7 +752,6 @@ export default function AlumniDashboard() {
               <Ionicons name="chatbubbles-outline" size={16} color="#EC4899" style={{ flexShrink: 0 }} />
               <AppText
                 weight="bold"
-                numberOfLines={1}
                 style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
               >
                 Campus Discussions
@@ -792,10 +786,10 @@ export default function AlumniDashboard() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                       <Avatar name={post.authorName ?? 'Fellow'} size={26} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <AppText variant="caption" weight="bold" numberOfLines={1}>
+                        <AppText variant="caption" weight="bold">
                           {post.authorName ?? 'Fellow'}
                         </AppText>
-                        <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10 }}>
+                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
                           {post.department ?? 'Alumni Network'}
                         </AppText>
                       </View>
@@ -803,10 +797,10 @@ export default function AlumniDashboard() {
                     <Badge label={post.category ?? 'Discussion'} tone="neutral" />
                   </View>
 
-                  <AppText variant="bodySmall" weight="semiBold" numberOfLines={1} style={{ marginTop: 2, marginBottom: 2 }}>
+                  <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 2, marginBottom: 2 }}>
                     {post.title}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={2}>
+                  <AppText tone="secondary" variant="caption">
                     {post.content}
                   </AppText>
 
@@ -836,7 +830,6 @@ export default function AlumniDashboard() {
             <Ionicons name="school-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
             <AppText
               weight="bold"
-              numberOfLines={1}
               style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
             >
               Alumni & Graduate Services
@@ -854,10 +847,10 @@ export default function AlumniDashboard() {
                     <Ionicons name={portal.icon || 'globe-outline'} size={22} color={colors.textSecondary} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
                       {portal.title}
                     </AppText>
-                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
+                    <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
                       {portal.category} • Official Alumni Service
                     </AppText>
                   </View>

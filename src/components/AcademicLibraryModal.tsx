@@ -141,7 +141,7 @@ export function AcademicLibraryModal({
                   Global Academic Library
                 </AppText>
               </View>
-              <AppText variant="caption" tone="secondary" numberOfLines={1}>
+              <AppText variant="caption" tone="secondary">
                 Open-access textbooks, research papers & university references
               </AppText>
             </View>
@@ -237,10 +237,10 @@ export function AcademicLibraryModal({
 
                       {/* Details */}
                       <View style={styles.bookInfo}>
-                        <AppText variant="bodySmall" weight="bold" numberOfLines={2}>
+                        <AppText variant="bodySmall" weight="bold">
                           {book.title}
                         </AppText>
-                        <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                        <AppText variant="caption" tone="secondary">
                           {book.authors.join(', ')} {book.firstPublishYear ? `(${book.firstPublishYear})` : ''}
                         </AppText>
 
@@ -335,8 +335,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   filterPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 14,
     borderWidth: 1,
   },

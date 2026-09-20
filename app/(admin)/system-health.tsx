@@ -163,7 +163,7 @@ export default function SystemHealthScreen() {
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <View>
-            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
+            <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
               Database & System Health
             </AppText>
             <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
@@ -214,10 +214,10 @@ export default function SystemHealthScreen() {
                 />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 18 : 16 }}>
+                <AppText weight="bold" style={{ fontSize: isDesktop ? 18 : 16 }}>
                   Supabase PostgreSQL: {isOptimal ? 'Online & Optimal' : 'Degraded Response'}
                 </AppText>
-                <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                <AppText tone="secondary" variant="caption">
                   Target Host: fdtnbluslkabwsmspbem.supabase.co
                 </AppText>
               </View>
@@ -401,7 +401,7 @@ export default function SystemHealthScreen() {
                       accessibilityLabel={`${expanded ? 'Hide' : 'Show'} stack trace`}
                     >
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                        <AppText weight="bold" style={{ fontSize: 14, flex: 1 }} numberOfLines={expanded ? undefined : 2}>
+                        <AppText weight="bold" style={{ fontSize: 14, flex: 1 }}>
                           {group.message}
                         </AppText>
                         <Badge

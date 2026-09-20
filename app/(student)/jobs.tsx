@@ -117,7 +117,7 @@ export default function JobsScreen() {
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search by job title, company, skills..."
+                  placeholder="Search jobs"
                   placeholderTextColor={colors.textSecondary}
                   style={{ flex: 1, color: colors.textPrimary, fontSize: 13, outlineStyle: 'none' as any }}
                 />
@@ -220,7 +220,7 @@ export default function JobsScreen() {
               </AppText>
             </Pressable>
           </View>
-          <AppText tone="secondary" variant="bodySmall" numberOfLines={2} style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
+          <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
             Verified student roles, alumni referrals & industry gigs
           </AppText>
         </View>
@@ -244,7 +244,7 @@ export default function JobsScreen() {
  <TextInput
  value={query}
  onChangeText={setQuery}
- placeholder="Search jobs, company, keywords..."
+ placeholder="Search jobs"
  placeholderTextColor={colors.textSecondary}
  style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
  />

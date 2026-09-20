@@ -82,6 +82,7 @@ export default function AlumniLayout() {
  {/* Reachable via header avatar / dashboard / Alumni Hub links, not bottom tabs. */}
   <Tabs.Screen name="events" options={{ href: null }} />
   <Tabs.Screen name="profile" options={{ href: null }} />
+  <Tabs.Screen name="saved" options={{ href: null }} />
  <Tabs.Screen name="notifications" options={{ href: null }} />
  <Tabs.Screen name="search" options={{ href: null }} />
  <Tabs.Screen name="connection-requests" options={{ href: null }} />

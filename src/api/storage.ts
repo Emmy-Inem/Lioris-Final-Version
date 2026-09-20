@@ -3,6 +3,13 @@ import { isLocalMediaUri, isSafeHttpUrl } from '../utils/safeUrl';
 
 type Bucket = 'resources' | 'avatars' | 'verifications' | 'campus-media';
 
+/**
+ * Buckets whose objects are NOT world-readable. Uploads to these return the
+ * storage PATH; a URL is minted per read via ./signedUrls. `avatars` is
+ * deliberately absent - it stays public.
+ */
+const PRIVATE_BUCKETS: ReadonlySet<Bucket> = new Set<Bucket>(['resources', 'campus-media', 'verifications']);
+
 const BUCKET_LIMITS: Record<string, { maxSize: number; label: string }> = {
  resources: { maxSize: 50 * 1024 * 1024, label: '50MB' },
  avatars: { maxSize: 5 * 1024 * 1024, label: '5MB' },
@@ -90,9 +97,20 @@ function mimeFromUri(uri: string): string | undefined {
 }
 
 /**
- * Uploads a file to Supabase Storage under `${auth.uid}/...` and returns its
- * public URL - or, for the private `verifications` bucket, the storage PATH
- * (callers must create signed URLs from it on demand).
+ * Uploads a file to Supabase Storage under `${auth.uid}/...`.
+ *
+ * What comes back depends on whether the bucket is public:
+ *  - `avatars` is PUBLIC - returns a public URL, as before. A profile picture
+ *    is not campus-private, and signing one per row in every list would be a
+ *    real performance cost for no security gain.
+ *  - `resources`, `campus-media` and `verifications` are PRIVATE - returns the
+ *    storage PATH. Callers must store the PATH (never a signed URL: it
+ *    expires) and mint a URL on demand with `resolveMediaUrl` / `useSignedUrl`
+ *    from ./signedUrls.
+ *
+ * `resources` and `campus-media` were public buckets behind a storage policy
+ * of `USING (bucket_id IN (...))` - i.e. readable with no credentials at all.
+ * See src/api/signedUrls.ts for what that exposed and why this changed.
  *
  * Throws when the user is not signed in, the file type/size is not allowed for
  * the bucket, or the upload fails.
@@ -163,8 +181,8 @@ export async function uploadMediaFile(
  throw new Error(`Upload failed: ${error.message}`);
  }
 
- // The verifications bucket is private: hand back the path, never a public URL.
- if (bucket === 'verifications') {
+ // Private buckets: hand back the path, never a URL. Only `avatars` is public.
+ if (PRIVATE_BUCKETS.has(bucket)) {
  return filePath;
  }
 
@@ -176,14 +194,20 @@ export async function uploadMediaFile(
 }
 
 /**
- * Normalises a user-supplied media reference into a URL that is safe to store:
- * - safe http(s) URLs are kept as-is;
+ * Normalises a user-supplied media reference into a value that is safe to
+ * STORE in a row:
+ * - safe http(s) URLs (an externally hosted image someone pasted) are kept as-is;
  * - `asset:` references are kept only when `allowAsset` is set;
- * - on-device URIs (file://, content://, blob:, data:image...) are uploaded to storage;
+ * - on-device URIs (file://, content://, blob:, data:image...) are uploaded to
+ *   storage and the storage PATH is returned for the private buckets;
  * - anything else (javascript:, data:text/html, ...) throws.
  * Upload failures throw - callers must not fall back to the raw local URI.
+ *
+ * Named `persistMediaReference`, not `resolveMediaUrl`, because the value it
+ * returns is what goes INTO the database. Turning that stored value back into
+ * something renderable is `resolveMediaUrl` in ./signedUrls.
  */
-export async function resolveMediaUrl(
+export async function persistMediaReference(
  value: string,
  folder: string,
  options: { bucket?: Bucket; allowAsset?: boolean } = {}
@@ -199,3 +223,9 @@ export async function resolveMediaUrl(
  }
  throw new Error('Unsupported media link. Please choose a photo or video from your device.');
 }
+
+/**
+ * Backwards-compatibility alias for `persistMediaReference`.
+ * @deprecated Use `persistMediaReference` from `./storage` when saving, or `resolveMediaUrl` from `./signedUrls` when reading.
+ */
+export const resolveMediaUrl = persistMediaReference;
