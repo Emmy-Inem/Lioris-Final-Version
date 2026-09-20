@@ -135,10 +135,11 @@ SELECT
   campus_code,
   department,
   faculty,
-  academic_level,
-  graduation_year,
+  level,
+  level AS academic_level,
+  NULL::integer AS graduation_year,
   bio,
-  is_verified,
+  (verification_status = 'verified') AS is_verified,
   verification_status,
   created_at
 FROM public.profiles;
@@ -171,13 +172,13 @@ USING (
   OR (
     (status IS NULL OR status = 'published')
     AND (
-      visibility_scope = 'global'
-      OR (visibility_scope = 'student' AND public.auth_profile_role() = 'student')
-      OR (visibility_scope = 'alumni'  AND public.auth_profile_role() = 'alumni')
-      OR (visibility_scope = 'staff'   AND public.auth_profile_role() = 'staff')
+      audience_scope = 'global'
+      OR (audience_scope = 'student' AND public.auth_profile_role() = 'student')
+      OR (audience_scope = 'alumni'  AND public.auth_profile_role() = 'alumni')
+      OR (audience_scope = 'staff'   AND public.auth_profile_role() = 'staff')
     )
     AND (
-      scope_visibility = 'global'
+      visibility_scope = 'global'
       OR campus_code IS NULL
       OR campus_code = 'GLOBAL'
       OR campus_code = public.auth_campus_access()
@@ -192,7 +193,7 @@ WITH CHECK (
   auth.uid() = author_id
   AND NOT (SELECT COALESCE(is_suspended, false) FROM public.profiles WHERE id = auth.uid())
   AND (
-    scope_visibility = 'global'
+    visibility_scope = 'global'
     OR campus_code IS NULL
     OR campus_code = 'GLOBAL'
     OR campus_code = public.auth_campus_access()
@@ -217,7 +218,7 @@ CREATE POLICY "Users can create events"
 ON public.events FOR INSERT TO authenticated
 WITH CHECK (
   auth.uid() = creator_id
-  AND status = 'pending_approval'
+  AND (status IS NULL OR status = 'pending_approval' OR public.auth_profile_role() IN ('admin', 'staff'))
   AND NOT (SELECT COALESCE(is_suspended, false) FROM public.profiles WHERE id = auth.uid())
   AND (
     campus_code IS NULL
