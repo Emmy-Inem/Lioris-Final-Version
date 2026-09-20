@@ -31,7 +31,12 @@ import { submitReport } from '@/api/moderation';
 import { createSupportTicket, SupportTicketCategory } from '@/api/supportTickets';
 import * as authApi from '@/api/auth';
 import { haptics } from '@/utils/haptics';
-import { isBiometricsAvailable, authenticateWithBiometrics } from '@/utils/biometrics';
+import {
+  isBiometricsAvailable,
+  authenticateWithBiometrics,
+  getBiometricMethodLabel,
+  setShieldEnabled,
+} from '@/utils/biometrics';
 
 // Cross-platform local persistence for lightweight UI preference toggles.
 // Mirrors the pattern already used in ThemeProvider.tsx: web uses
@@ -412,21 +417,33 @@ export function SettingsScreen() {
     haptics.light();
     if (!next) {
       setBiometricShield(false);
-      await setStoredPref('lioris_setting_biometrics', 'false');
+      await setShieldEnabled(false);
       toast.info('Biometric security lock disabled');
+      return;
+    }
+
+    // The lock can only be unlocked with a biometric or with the account password, and the password
+    // check needs the web security check (Turnstile). Outside the browser neither is available, so
+    // turning the lock on there would shut the user out of their own app.
+    if (Platform.OS !== 'web') {
+      toast.info('The app lock is only available in the web app for now.');
       return;
     }
 
     const bioStatus = await isBiometricsAvailable();
     if (bioStatus.available) {
-      toast.info('Please verify your biometrics to activate the shield...');
+      toast.info(`Verify with your ${getBiometricMethodLabel()} to turn the lock on...`);
       const authResult = await authenticateWithBiometrics(
         user ? { id: user.id, email: user.email, fullName: user.fullName || '' } : null
       );
       if (authResult.success) {
         setBiometricShield(true);
-        await setStoredPref('lioris_setting_biometrics', 'true');
-        toast.success('Biometric & Passkey Shield activated');
+        await setShieldEnabled(true);
+        toast.success(
+          authResult.enrolled
+            ? `Biometric lock is on. Your ${getBiometricMethodLabel()} is now set up.`
+            : 'Biometric lock is on',
+        );
         haptics.success();
       } else {
         toast.error(authResult.error || 'Biometric verification failed or was cancelled');
@@ -434,8 +451,8 @@ export function SettingsScreen() {
       }
     } else {
       setBiometricShield(true);
-      await setStoredPref('lioris_setting_biometrics', 'true');
-      toast.info('Password Shield activated (device biometrics not supported on this browser)');
+      await setShieldEnabled(true);
+      toast.info('Password lock is on (this browser has no biometric option)');
       haptics.success();
     }
   }

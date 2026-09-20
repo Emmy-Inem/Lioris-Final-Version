@@ -1,6 +1,13 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { supabase } from '@/api/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/api/supabase';
+import {
+  base64UrlToBuffer,
+  classifyPasswordCheckError,
+  describeBiometricMethod,
+  PasswordCheckFailure,
+} from './webauthnEncoding';
 
 export const BIOMETRICS_ENABLED_KEY = 'lioris_setting_biometrics';
 export const BIOMETRICS_CREDENTIAL_ID_KEY = 'lioris_biometric_cred_id';
@@ -54,6 +61,32 @@ export async function removeStoredPref(key: string): Promise<void> {
   } catch {}
 }
 
+type ShieldListener = (enabled: boolean) => void;
+const shieldListeners = new Set<ShieldListener>();
+
+/**
+ * Turns the App Shield on or off and tells the lock overlay straight away. Settings used to write
+ * the preference directly, but the overlay only read it once at startup, so toggling the shield had
+ * no effect until the app was reloaded (and turning it off left the lock armed).
+ */
+export async function setShieldEnabled(enabled: boolean): Promise<void> {
+  await setStoredPref(BIOMETRICS_ENABLED_KEY, enabled ? 'true' : 'false');
+  shieldListeners.forEach((listener) => listener(enabled));
+}
+
+export function subscribeToShield(listener: ShieldListener): () => void {
+  shieldListeners.add(listener);
+  return () => {
+    shieldListeners.delete(listener);
+  };
+}
+
+/** Name of the unlock method on this device, e.g. "fingerprint or screen lock". */
+export function getBiometricMethodLabel(): string {
+  if (!isWeb || typeof navigator === 'undefined') return 'device biometrics';
+  return describeBiometricMethod(navigator.userAgent || '');
+}
+
 /**
  * Check whether device biometrics / platform passkey authenticator is available.
  */
@@ -95,50 +128,51 @@ export async function isBiometricsAvailable(): Promise<{
   }
 }
 
-function bufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return typeof btoa !== 'undefined' ? btoa(binary) : '';
+export interface BiometricResult {
+  success: boolean;
+  error?: string;
+  /** The user dismissed the prompt (or the device has no saved passkey for this site). */
+  cancelled?: boolean;
+  /** No passkey existed yet, so one was created as part of this call. */
+  enrolled?: boolean;
 }
 
-function base64ToBuffer(base64: string): ArrayBuffer {
-  const binary = typeof atob !== 'undefined' ? atob(base64) : '';
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes.buffer;
+function webAuthnSupported(): boolean {
+  return isWeb && typeof window !== 'undefined' && !!window.PublicKeyCredential && !!navigator.credentials;
+}
+
+function getRpId(): string | undefined {
+  const hostname = window.location.hostname;
+  // WebAuthn requires a valid domain or localhost (no IP addresses)
+  const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+  return isIp ? undefined : hostname || 'localhost';
+}
+
+function randomChallenge(): Uint8Array {
+  const challenge = new Uint8Array(32);
+  window.crypto.getRandomValues(challenge);
+  return challenge;
 }
 
 /**
- * Register a biometric/passkey credential on this device.
+ * Register a biometric/passkey credential on this device. Creating the credential already asks the
+ * device to verify the user (fingerprint / face / screen lock), so a successful call is itself a
+ * successful biometric check.
  */
 export async function registerBiometrics(
   userId: string,
   userEmail?: string,
   userName?: string,
-): Promise<{ success: boolean; error?: string }> {
-  if (!isWeb || typeof window === 'undefined' || !window.PublicKeyCredential || !navigator.credentials) {
+): Promise<BiometricResult> {
+  if (!webAuthnSupported()) {
     return { success: false, error: 'Biometric passkey not supported in this environment.' };
   }
 
   try {
-    const challenge = new Uint8Array(32);
-    if (window.crypto && window.crypto.getRandomValues) {
-      window.crypto.getRandomValues(challenge);
-    }
-
-    const hostname = window.location.hostname;
-    // WebAuthn requires a valid domain or localhost (no IP addresses)
-    const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-    const rpId = isIp ? undefined : (hostname || 'localhost');
-
-    const creationOptions: CredentialCreationOptions = {
+    const rpId = getRpId();
+    const credential = (await navigator.credentials.create({
       publicKey: {
-        challenge,
+        challenge: randomChallenge() as BufferSource,
         rp: {
           name: 'Lioris Campus Platform',
           ...(rpId ? { id: rpId } : {}),
@@ -155,108 +189,146 @@ export async function registerBiometrics(
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
           userVerification: 'required',
+          // Discoverable where the device supports it, so the passkey can still be found if the
+          // stored credential id is lost (cleared site data, another tab, a restored backup).
+          residentKey: 'preferred',
         },
         timeout: 60000,
         attestation: 'none',
       },
-    };
+    })) as PublicKeyCredential | null;
 
-    const credential = (await navigator.credentials.create(creationOptions)) as PublicKeyCredential | null;
     if (credential && credential.id) {
       await setStoredPref(BIOMETRICS_CREDENTIAL_ID_KEY, credential.id);
-      return { success: true };
+      return { success: true, enrolled: true };
     }
     return { success: false, error: 'Credential creation did not return a valid credential.' };
   } catch (err: any) {
-    // User cancelled or biometric prompt dismissed
     if (err?.name === 'NotAllowedError') {
-      return { success: false, error: 'Biometric verification was cancelled or timed out.' };
+      return { success: false, cancelled: true, error: 'Biometric verification was cancelled or timed out.' };
+    }
+    if (err?.name === 'InvalidStateError') {
+      return { success: false, error: 'A passkey for this account already exists on this device.' };
     }
     return { success: false, error: err?.message || 'Biometric registration failed.' };
   }
 }
 
 /**
- * Authenticate with device biometrics (Face ID, Touch ID, Windows Hello, Android Biometrics).
+ * Authenticate with device biometrics (fingerprint, Face ID, Touch ID, Windows Hello).
+ *
+ * If this device has no saved passkey yet, one is created instead of asking the browser to look up
+ * a passkey that does not exist. Doing the lookup anyway is what produced Android's "No passkeys
+ * available" sheet and a dead end: the unlock could never succeed and Settings could never turn
+ * the shield on.
  */
 export async function authenticateWithBiometrics(
   user?: { id: string; email?: string; fullName?: string } | null,
-): Promise<{ success: boolean; error?: string }> {
-  if (!isWeb || typeof window === 'undefined' || !window.PublicKeyCredential || !navigator.credentials) {
+): Promise<BiometricResult> {
+  if (!webAuthnSupported()) {
     return { success: false, error: 'Biometrics unavailable on this device.' };
   }
 
   const storedCredId = await getStoredPref(BIOMETRICS_CREDENTIAL_ID_KEY);
 
-  try {
-    const challenge = new Uint8Array(32);
-    if (window.crypto && window.crypto.getRandomValues) {
-      window.crypto.getRandomValues(challenge);
+  let allowedId: ArrayBuffer | null = null;
+  if (storedCredId) {
+    try {
+      allowedId = base64UrlToBuffer(storedCredId);
+    } catch {
+      // A corrupt stored id can never work; forget it and enrol afresh.
+      await removeStoredPref(BIOMETRICS_CREDENTIAL_ID_KEY);
     }
+  }
 
-    const hostname = window.location.hostname;
-    const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-    const rpId = isIp ? undefined : (hostname || 'localhost');
+  if (!allowedId) {
+    if (!user) return { success: false, error: 'Please sign in again to set up biometrics.' };
+    return registerBiometrics(user.id, user.email, user.fullName);
+  }
 
-    const requestOptions: CredentialRequestOptions = {
+  try {
+    const rpId = getRpId();
+    const assertion = await navigator.credentials.get({
       publicKey: {
-        challenge,
+        challenge: randomChallenge() as BufferSource,
         ...(rpId ? { rpId } : {}),
         userVerification: 'required',
         timeout: 60000,
-        ...(storedCredId
-          ? {
-              allowCredentials: [
-                {
-                  id: base64ToBuffer(storedCredId),
-                  type: 'public-key',
-                  transports: ['internal'],
-                },
-              ],
-            }
-          : {}),
+        allowCredentials: [{ id: allowedId, type: 'public-key', transports: ['internal'] }],
       },
-    };
-
-    const assertion = await navigator.credentials.get(requestOptions);
-    if (assertion) {
-      return { success: true };
-    }
-    return { success: false, error: 'Biometric verification failed.' };
+    });
+    return assertion ? { success: true } : { success: false, error: 'Biometric verification failed.' };
   } catch (err: any) {
     if (err?.name === 'NotAllowedError') {
-      return { success: false, error: 'Biometric prompt was cancelled.' };
-    }
-    // If no credential was found or registered yet, attempt quick registration if user info is present
-    if (user && (!storedCredId || err?.name === 'InvalidStateError')) {
-      const regResult = await registerBiometrics(user.id, user.email, user.fullName);
-      return regResult;
+      // The browser reports "cancelled" and "no matching passkey on this device" identically.
+      return {
+        success: false,
+        cancelled: true,
+        error: 'Biometric check was cancelled, or this device has no saved passkey. Use your password, or set biometrics up again.',
+      };
     }
     return { success: false, error: err?.message || 'Biometric authentication failed.' };
   }
 }
 
+/** Throws away the saved passkey id and creates a fresh one (the "set up again" recovery path). */
+export async function reEnrollBiometrics(user: {
+  id: string;
+  email?: string;
+  fullName?: string;
+}): Promise<BiometricResult> {
+  await removeStoredPref(BIOMETRICS_CREDENTIAL_ID_KEY);
+  return registerBiometrics(user.id, user.email, user.fullName);
+}
+
+export interface PasswordCheckResult {
+  success: boolean;
+  failure?: PasswordCheckFailure;
+}
+
 /**
- * Fallback: Verify password with Supabase auth so the user can unlock using their password.
+ * Checks the account password so the user can unlock with it.
+ *
+ * Two things the previous version got wrong:
+ *  - It sent no captcha token. Supabase Auth on this project rejects every password sign-in without
+ *    one, so even the CORRECT password failed - and the overlay reported that as "Incorrect
+ *    password" whatever the real reason. The caller now passes a Turnstile token and gets the real
+ *    failure back.
+ *  - It called signInWithPassword on the app's own client, which replaces the live session. For an
+ *    admin that drops the session to AAL1 and can bounce them to the MFA screen. The check now runs
+ *    on a throwaway client that never touches the stored session, and signs that client out again.
  */
 export async function verifyPasswordFallback(
   email?: string,
   password?: string,
-): Promise<{ success: boolean; error?: string }> {
+  captchaToken?: string,
+): Promise<PasswordCheckResult> {
   if (!email || !password) {
-    return { success: false, error: 'Please enter your password.' };
+    return { success: false, failure: 'unknown' };
   }
 
+  const checker = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: 'lioris-lock-verify',
+    },
+  });
+
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await checker.auth.signInWithPassword({
       email,
       password,
+      ...(captchaToken ? { options: { captchaToken } } : {}),
     });
-    if (error) {
-      return { success: false, error: error.message };
+    if (error || !data?.session) {
+      return { success: false, failure: classifyPasswordCheckError(error) };
     }
+    // Revoke just this throwaway session so unlocking does not leave extra sessions behind.
+    await checker.auth.signOut({ scope: 'local' }).catch(() => {});
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Password verification failed.' };
+    return { success: false, failure: classifyPasswordCheckError({ message: err?.message }) };
   }
 }
