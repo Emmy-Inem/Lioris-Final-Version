@@ -224,6 +224,7 @@ Deno.serve(async (req: Request) => {
     const deepLinkPath = safeDeepLink(record.action_url);
     const data: Record<string, string> = {};
     if (deepLinkPath) data.deepLinkPath = deepLinkPath;
+    if (type) data.type = type;
 
     const messages = tokens.map((to: string) => ({
       to,

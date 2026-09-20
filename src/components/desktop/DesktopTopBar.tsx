@@ -16,6 +16,7 @@ import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
 import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import { useToast } from '@/context/ToastContext';
+import { resolveNotificationRoute } from '@/utils/notificationRouter';
 
 const RAW_QUICK_COMMANDS: { id: string; title: string; subtitle: string; icon: any; href: string; flagKey?: FeatureKey }[] = [
   { id: 'feed', title: 'Forum & Discussions', subtitle: 'Browse student threads, polls and queries', icon: 'chatbubbles-outline', href: '/(student)/feed', flagKey: 'discussion_workspaces' },
@@ -312,11 +313,8 @@ export function DesktopTopBar() {
                         await markNotificationRead(n.id);
                         queryClient.invalidateQueries({ queryKey: ['notifications'] });
                       }
-                      if (n.deepLinkPath) {
-                        router.push(n.deepLinkPath as any);
-                      } else {
-                        router.push(`/(${role})/notifications` as any);
-                      }
+                      const targetRoute = resolveNotificationRoute(n.deepLinkPath, n.type, role);
+                      router.push(targetRoute as any);
                     }}
                     style={({ hovered }: any) => [
                       styles.notifItem,

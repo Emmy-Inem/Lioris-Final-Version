@@ -22,6 +22,8 @@ import {
 } from '@/api/notifications';
 import { listIncomingConnectionRequests, listSuggestedConnections } from '@/api/connections';
 import { AppNotification } from '@/api/types';
+import { useAuth } from '@/auth/AuthContext';
+import { resolveNotificationRoute } from '@/utils/notificationRouter';
 
 const NOTIFICATION_ICONS: Record<
  AppNotification['type'],
@@ -45,6 +47,7 @@ export function NotificationsScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [tab, setTab] = useState<'Alerts' | 'Connections'>('Alerts');
   const [filter, setFilter] = useState<'all' | 'unread' | 'announcements' | 'academic'>('all');
 
@@ -66,9 +69,12 @@ export function NotificationsScreen() {
       await markNotificationRead(notification.id);
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-    if (notification.deepLinkPath) {
-      router.push(notification.deepLinkPath as any);
+    if (notification.type === 'system' && notification.title?.toLowerCase().includes('connection')) {
+      setTab('Connections');
+      return;
     }
+    const targetRoute = resolveNotificationRoute(notification.deepLinkPath, notification.type, user?.role);
+    router.push(targetRoute as any);
   }
 
   async function handleDelete(id: string) {
@@ -242,11 +248,30 @@ export function NotificationsScreen() {
                 Quick Campus Shortcuts
               </AppText>
 
-              {[
-                { label: 'Browse Campus Discussions', icon: 'chatbubbles-outline' as const, href: '/(student)/feed' },
-                { label: 'Explore Events & Meetups', icon: 'calendar-outline' as const, href: '/(student)/events-list' },
-                { label: 'Academic Past Questions Vault', icon: 'folder-open-outline' as const, href: '/(student)/resources' },
-              ].map((item) => (
+              {(user?.role === 'staff'
+                ? [
+                    { label: 'Campus Announcements Desk', icon: 'megaphone-outline' as const, href: '/(staff)/announcements' },
+                    { label: 'Explore Events & Calendar', icon: 'calendar-outline' as const, href: '/(staff)/events-list' },
+                    { label: 'Content Moderation Desk', icon: 'shield-checkmark-outline' as const, href: '/(staff)/moderation' },
+                  ]
+                : user?.role === 'alumni'
+                ? [
+                    { label: 'Alumni Network Directory', icon: 'people-outline' as const, href: '/(alumni)/network' },
+                    { label: 'Mentorship Opportunities', icon: 'school-outline' as const, href: '/(alumni)/mentorship' },
+                    { label: 'Events & Alumni Reunions', icon: 'calendar-outline' as const, href: '/(alumni)/events-list' },
+                  ]
+                : user?.role === 'admin'
+                ? [
+                    { label: 'Platform System Health', icon: 'pulse-outline' as const, href: '/(admin)/system-health' },
+                    { label: 'User Directory & Verification', icon: 'people-outline' as const, href: '/(admin)/user-directory' },
+                    { label: 'Content Moderation Queue', icon: 'shield-checkmark-outline' as const, href: '/(admin)/moderation-queue' },
+                  ]
+                : [
+                    { label: 'Browse Campus Discussions', icon: 'chatbubbles-outline' as const, href: '/(student)/feed' },
+                    { label: 'Explore Events & Meetups', icon: 'calendar-outline' as const, href: '/(student)/events-list' },
+                    { label: 'Academic Past Questions Vault', icon: 'folder-open-outline' as const, href: '/(student)/resources' },
+                  ]
+              ).map((item) => (
                 <Pressable
                   key={item.label}
                   onPress={() => router.push(item.href as any)}

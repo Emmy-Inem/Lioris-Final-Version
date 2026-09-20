@@ -78,6 +78,7 @@ import { getSessionUser } from '../auth/tokenStorage';
 export async function sendConnectionRequest(recipientId: string): Promise<Connection> {
  const connId = generateUUID();
  let senderId = 'me';
+ let senderName = 'A campus member';
 
  try {
  const { data: authData } = await supabase.auth.getUser();
@@ -89,6 +90,11 @@ export async function sendConnectionRequest(recipientId: string): Promise<Connec
  }
 
  if (senderId && senderId !== 'me') {
+ const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', senderId).maybeSingle();
+ if (profile?.full_name) {
+ senderName = profile.full_name;
+ }
+
  const { error } = await supabase.from('connections').upsert({
  id: connId,
  requester_id: senderId,
@@ -113,10 +119,10 @@ export async function sendConnectionRequest(recipientId: string): Promise<Connec
 
  createNotification({
  recipientId,
- type: 'system',
+ type: 'message',
  title: 'New connection request',
- body: 'Someone on your campus wants to connect with you.',
- deepLinkPath: '/(alumni)/connection-requests',
+ body: `${senderName} wants to connect with you.`,
+ deepLinkPath: '/notifications',
  });
 
  return created;
@@ -160,6 +166,7 @@ export async function respondToConnectionRequest(
  type: 'system',
  title: 'Connection accepted',
  body: `${responderName} accepted your connection request - start a conversation!`,
+ deepLinkPath: '/messages',
  });
  }
 

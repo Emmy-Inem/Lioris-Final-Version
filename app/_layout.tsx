@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { useLoadFonts } from '@/theme/useLoadFonts';
-import { AuthProvider } from '@/auth/AuthContext';
+import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { queryClient } from '@/api/queryClient';
 import { ErrorBoundary, RouteErrorBoundary } from '@/components/ErrorBoundary';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';
@@ -17,6 +17,7 @@ import { OfflineBanner, setupNetworkAwareQueries } from '@/components/OfflineBan
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { ReConsentGate } from '@/components/ReConsentGate';
 import { addNotificationResponseListener } from '@/notifications/push';
+import { resolveNotificationRoute } from '@/utils/notificationRouter';
 
 import { loadBlockedUserIds } from '@/api/connections';
 import { AppLockOverlay } from '@/components/AppLockOverlay';
@@ -235,12 +236,6 @@ export default function RootLayout() {
     }
   }, []);
 
-  useEffect(() => {
-    const subscription = addNotificationResponseListener((path) => {
-      router.push(path as any);
-    });
-    return () => subscription.remove();
-  }, []);
 
   if (!appIsReady) {
     return (
@@ -289,9 +284,20 @@ function StatusBarForTheme() {
  * there's nothing stale left for any consumer to get stuck on.
  */
 function AppShell() {
- const { isLoading } = useFeatureFlags();
+  const { isLoading } = useFeatureFlags();
+  const { user } = useAuth();
 
- if (isLoading) {
+  useEffect(() => {
+    const subscription = addNotificationResponseListener((path, data) => {
+      const resolved = resolveNotificationRoute(path, data?.type, user?.role);
+      if (resolved) {
+        router.push(resolved as any);
+      }
+    });
+    return () => subscription.remove();
+  }, [user?.role]);
+
+  if (isLoading) {
  return <AppLoadingScreen message="Launching Lioris Campus Platform" />;
  }
 

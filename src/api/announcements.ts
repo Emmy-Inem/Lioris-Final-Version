@@ -146,8 +146,9 @@ export async function publishAnnouncement(
  const notifs = targetIds.map((id) => ({
  recipient_id: id,
  type: 'announcement',
- title: payload.priority === 'critical' ? ` ${payload.title}` : payload.title,
+ title: payload.priority === 'critical' ? `⚠️ ${payload.title}` : payload.title,
  body: payload.content,
+ action_url: '/dashboard',
  is_read: false,
  }));
  // Still bulk-insert (not one row at a time), just chunked so a single

@@ -65,7 +65,7 @@ export default function PlatformConfigScreen() {
       type: 'announcement',
       title: broadcastTitle.trim(),
       body: broadcastBody.trim(),
-      deepLinkPath: '/(student)/dashboard',
+      deepLinkPath: '/dashboard',
     });
 
     recordAuditLogEntry({

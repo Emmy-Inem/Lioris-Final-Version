@@ -234,6 +234,7 @@ export async function updateSupportTicket(
         type: 'system',
         title: 'Support Ticket Resolved',
         body: 'Your support ticket "' + ticket.title + '" has been reviewed and resolved by administration.',
+        deepLinkPath: '/settings',
       });
     }
   }

@@ -264,7 +264,7 @@ export default function SuperAdminConfigScreen() {
         type: 'system_announcement',
         title: `📢 ${pushTitle.trim()}`,
         body: pushBody.trim(),
-        deepLinkPath: '/(student)/dashboard',
+        deepLinkPath: '/dashboard',
       });
       await recordAuditLogEntry({
         action: 'global_push_broadcast',

@@ -131,6 +131,7 @@ export async function resolveReport(
  action === 'resolved'
  ? `Thanks for the report - we took action on the ${target.targetType} you flagged.`
  : `We reviewed the ${target.targetType} you reported and didn't find a policy violation this time.`,
+ deepLinkPath: '/dashboard',
  });
 
  // Fairness/transparency: also tell the person the decision actually
@@ -152,6 +153,7 @@ export async function resolveReport(
  target.targetType === 'user'
  ? `Campus moderation has taken action on your account for violating community guidelines (reason: ${target.reason}). Contact support if you believe this is an error.`
  : `Your ${label} was removed for violating community guidelines (reason: ${target.reason}). If you believe this was a mistake, contact support.`,
+ deepLinkPath: '/settings',
  });
  }
  }

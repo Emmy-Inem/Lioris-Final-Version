@@ -526,6 +526,7 @@ export async function respondToVerificationRequest(
         status === 'approved'
           ? `Your ${updated.institutionClaimed} verification was approved. Your profile now shows the verified badge.`
           : `Your ${updated.institutionClaimed} verification wasn't approved this time. Check your submitted details and try again.`,
+      deepLinkPath: '/profile',
     });
   }
 
@@ -561,6 +562,7 @@ export async function adminDirectVerifyUser(userId: string, isVerified: boolean)
       body: isVerified
         ? 'A platform administrator has verified your account. Your profile now proudly displays the verification badge!'
         : 'Your account verification status has been updated by an administrator.',
+      deepLinkPath: '/profile',
     });
 
     return true;

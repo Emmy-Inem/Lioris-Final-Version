@@ -231,7 +231,7 @@ export async function requestMentorship(
       type: 'system',
       title: 'New Mentorship Request',
       body: `${studentName} requested mentorship in ${focusArea}${documentName ? ` with attached document "${documentName}"` : ''}.`,
-      deepLinkPath: '/(alumni)/mentorship',
+      deepLinkPath: '/mentorship',
     });
   } catch (notifErr) {
     console.warn('[Mentorship] Notification send failed:', notifErr);
@@ -309,6 +309,7 @@ export async function respondToMentorshipRequest(
  action === 'accept'
  ? `${mentorName} accepted your mentorship request - say hello!`
  : `${mentorName} wasn't able to take on a new mentee right now.`,
+ deepLinkPath: '/mentorship',
  });
  }
 

@@ -69,12 +69,15 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
  * near the app root (see app/_layout.tsx).
  */
 export function addNotificationResponseListener(
- onDeepLink: (path: string) => void,
+  onDeepLink: (path: string, notificationData?: Record<string, any>) => void,
 ) {
- return Notifications.addNotificationResponseReceivedListener((response) => {
- const path = response.notification.request.content.data?.deepLinkPath as
- | string
- | undefined;
- if (path) onDeepLink(path);
- });
+  return Notifications.addNotificationResponseReceivedListener((response) => {
+    const data = response.notification.request.content.data as
+      | Record<string, any>
+      | undefined;
+    const path = (data?.deepLinkPath || data?.action_url || data?.path) as
+      | string
+      | undefined;
+    if (path) onDeepLink(path, data);
+  });
 }
