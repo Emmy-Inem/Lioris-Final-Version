@@ -675,7 +675,7 @@ export default function ResourcesScreen() {
                 Campus Resources & Academic Library
               </AppText>
               <AppText tone="secondary" variant="bodySmall">
-                Official university portal shortcuts, verified departmental past questions & curated study notes
+                Official university portal shortcuts, plus past questions and study notes shared by students on your campus
               </AppText>
             </View>
 
