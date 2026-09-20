@@ -113,6 +113,18 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetRef, TurnstileWidgetPro
   };
 
   useEffect(() => {
+    let timer: any;
+    if (!isVerified && !loadError && Platform.OS === 'web') {
+      timer = setTimeout(() => {
+        if (!isVerified) {
+          setLoadError('Verification taking longer than usual? Tap to retry.');
+        }
+      }, 12000);
+    }
+    return () => clearTimeout(timer);
+  }, [isVerified, loadError]);
+
+  useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') {
       return;
     }

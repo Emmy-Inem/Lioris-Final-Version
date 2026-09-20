@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -49,6 +49,25 @@ export default function VerifyEmailScreen() {
     const timer = setTimeout(() => setCooldown((s) => s - 1), 1000);
     return () => clearTimeout(timer);
   }, [cooldown]);
+
+  // If the user is already signed in or becomes signed in via email link session, proceed
+  useEffect(() => {
+    if (user) {
+      router.replace('/');
+    }
+  }, [user]);
+
+  // Check URL hash on web for error descriptions (e.g. expired link)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hash) {
+      const hash = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hash);
+      const errorDesc = hashParams.get('error_description');
+      if (errorDesc) {
+        setErrorMessage(decodeURIComponent(errorDesc.replace(/\+/g, ' ')));
+      }
+    }
+  }, []);
 
   // If a token_hash link was clicked from the email, automatically verify and log in
   useEffect(() => {

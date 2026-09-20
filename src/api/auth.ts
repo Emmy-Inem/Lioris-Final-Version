@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 import { api } from './client';
 import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
@@ -5,6 +7,14 @@ import { getInstitutionForEmail } from './institutions';
 import { recordAuditLogEntry } from './auditLog';
 import { unregisterDevicePushToken } from './notifications';
 import { checkPassword, isPasswordValid } from '../utils/validation';
+
+export function getAuthRedirectUrl(path: string = 'reset-password'): string {
+  const cleanPath = path.replace(/^\//, '');
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/${cleanPath}`;
+  }
+  return Linking.createURL(cleanPath);
+}
 
 export interface LoginPayload {
  email: string;
@@ -190,6 +200,9 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email: cleanEmail,
+    options: {
+      emailRedirectTo: getAuthRedirectUrl('verify-email'),
+    },
   });
   if (error) {
     throw new Error(
@@ -366,12 +379,33 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
 export async function sendPasswordResetEmail(email: string, captchaToken?: string): Promise<{ success: boolean }> {
   const cleanEmail = email.trim();
   if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+  const redirectTo = getAuthRedirectUrl('reset-password');
   const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
     captchaToken,
+    redirectTo,
   });
   if (error) {
     throw new Error(error.message || 'Could not send recovery email. Please check your email.');
   }
+  return { success: true };
+}
+
+export async function updateUserPassword(newPassword: string): Promise<{ success: boolean }> {
+  if (!newPassword || !isPasswordValid(newPassword)) {
+    const unmet = checkPassword(newPassword ?? '')
+      .filter((c) => !c.met)
+      .map((c) => c.label.toLowerCase());
+    throw new Error(`New password does not meet the password policy: ${unmet.join(', ')}.`);
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to update password.');
+  }
+
   return { success: true };
 }
 

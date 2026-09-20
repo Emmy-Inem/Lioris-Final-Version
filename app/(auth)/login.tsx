@@ -197,11 +197,6 @@ export default function LoginScreen() {
  haptics.error();
  return;
  }
- if (Platform.OS === 'web' && !captchaToken) {
- setErrorMessage('Please complete the security check above before signing in.');
- haptics.error();
- return;
- }
  haptics.medium();
  setSubmitting(true);
  try {
@@ -210,13 +205,13 @@ export default function LoginScreen() {
  } catch (err: any) {
  turnstileRef.current?.reset();
  setCaptchaToken(null);
-    if (isEmailConfirmationRequired(err)) {
-      router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email || (email.includes('@') ? email.trim() : undefined) } });
-      return;
-    }
+ if (isEmailConfirmationRequired(err)) {
+ router.replace({ pathname: '/(auth)/verify-email', params: { email: err.email || (email.includes('@') ? email.trim() : undefined) } });
+ return;
+ }
  haptics.error();
  if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
- setErrorMessage('Security verification failed or expired. Please complete the security check again.');
+ setErrorMessage('Security verification required. Please complete the security check below and try again.');
  return;
  }
  const msg = err?.message || 'Incorrect email or password. Please verify your credentials and try again.';
@@ -305,7 +300,15 @@ export default function LoginScreen() {
   />
 
   <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md, marginTop: -spacing.xs }}>
-    <Pressable onPress={() => { setForgotStep('request'); setForgotError(null); setForgotModalOpen(true); }}>
+    <Pressable
+      onPress={() =>
+        router.push({
+          pathname: '/(auth)/reset-password' as any,
+          params: { email: email.includes('@') ? email.trim() : undefined },
+        })
+      }
+      hitSlop={8}
+    >
       <AppText variant="caption" tone="brand" weight="semiBold">
         Forgot Password?
       </AppText>
@@ -324,8 +327,8 @@ export default function LoginScreen() {
         marginBottom: spacing.md,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Ionicons name="alert-circle" size={18} color={colors.critical} />
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+        <Ionicons name="alert-circle" size={18} color={colors.critical} style={{ marginTop: 2 }} />
         <AppText
           variant="bodySmall"
           weight="semiBold"
@@ -334,15 +337,36 @@ export default function LoginScreen() {
           {errorMessage}
         </AppText>
       </View>
-      <Pressable
-        onPress={() => router.push({ pathname: '/(auth)/verify-email', params: { email: email.includes('@') ? email.trim() : undefined } })}
-        hitSlop={8}
-        style={{ marginTop: 6, alignSelf: 'flex-start' }}
-      >
-        <AppText variant="caption" tone="brand" weight="bold">
-          Need to verify your email? Enter your 6-digit code →
-        </AppText>
-      </Pressable>
+      <View style={{ marginTop: 8, gap: 6 }}>
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: '/(auth)/verify-email',
+              params: { email: email.includes('@') ? email.trim() : undefined },
+            })
+          }
+          hitSlop={8}
+          style={{ alignSelf: 'flex-start' }}
+        >
+          <AppText variant="caption" tone="brand" weight="bold">
+            Need to confirm your email? Enter your 6-digit code →
+          </AppText>
+        </Pressable>
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: '/(auth)/reset-password' as any,
+              params: { email: email.includes('@') ? email.trim() : undefined },
+            })
+          }
+          hitSlop={8}
+          style={{ alignSelf: 'flex-start' }}
+        >
+          <AppText variant="caption" tone="brand" weight="bold">
+            Forgot your password? Reset it here →
+          </AppText>
+        </Pressable>
+      </View>
     </View>
   ) : null}
 
@@ -636,78 +660,111 @@ export default function LoginScreen() {
  </View>
  ) : null}
 
- {forgotStep === 'request' ? (
- <>
- <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
- Enter your registered campus email address and we'll send you a password recovery code.
- </AppText>
- <AppTextField
- label="Campus Email"
- placeholder="name@student.unilag.edu.ng"
- value={forgotEmail}
- onChangeText={(text) => {
- setForgotEmail(text);
- if (forgotError) setForgotError(null);
- }}
- autoCapitalize="none"
- keyboardType="email-address"
- />
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel" variant="ghost" onPress={() => setForgotModalOpen(false)} />
- <AppButton
- label="Send Code"
- disabled={!forgotEmail.trim() || submittingForgot}
- loading={submittingForgot}
- onPress={handleSendRecoveryCode}
- />
- </View>
- </>
- ) : (
- <>
- <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
- <Ionicons name="shield-checkmark" size={36} color={colors.brandPrimary} />
- <AppText weight="bold" variant="h3" style={{ marginTop: spacing.xs }}>
- Enter Recovery Code
- </AppText>
- <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2 }}>
- We sent a 6-digit recovery code to {forgotEmail}.
- </AppText>
- </View>
+      {forgotStep === 'request' ? (
+        <>
+          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+            Enter your registered campus email address and we'll send you a password recovery link and code.
+          </AppText>
+          <AppTextField
+            label="Campus Email"
+            placeholder="name@student.unilag.edu.ng"
+            value={forgotEmail}
+            onChangeText={(text) => {
+              setForgotEmail(text);
+              if (forgotError) setForgotError(null);
+            }}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+            <AppButton label="Cancel" variant="ghost" onPress={() => setForgotModalOpen(false)} />
+            <AppButton
+              label="Send Link & Code"
+              disabled={!forgotEmail.trim() || submittingForgot}
+              loading={submittingForgot}
+              onPress={handleSendRecoveryCode}
+            />
+          </View>
+          <View style={{ alignItems: 'center', marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider }}>
+            <Pressable
+              onPress={() => {
+                setForgotModalOpen(false);
+                router.push({
+                  pathname: '/(auth)/reset-password' as any,
+                  params: { email: forgotEmail.trim() || undefined },
+                });
+              }}
+              hitSlop={8}
+            >
+              <AppText tone="brand" variant="caption" weight="semiBold">
+                Open Full Reset Password Screen →
+              </AppText>
+            </Pressable>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
+            <Ionicons name="shield-checkmark" size={36} color={colors.brandPrimary} />
+            <AppText weight="bold" variant="h3" style={{ marginTop: spacing.xs }}>
+              Enter Recovery Code
+            </AppText>
+            <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2 }}>
+              We sent a recovery link and 6-digit code to {forgotEmail}. Click the email link or enter your code below.
+            </AppText>
+          </View>
 
- <AppTextField
- label="6-Digit Recovery Code"
- placeholder="123456"
- value={forgotOtp}
- onChangeText={(text) => {
- setForgotOtp(text);
- if (forgotError) setForgotError(null);
- }}
- keyboardType="number-pad"
- maxLength={6}
- />
+          <AppTextField
+            label="6-Digit Recovery Code"
+            placeholder="123456"
+            value={forgotOtp}
+            onChangeText={(text) => {
+              setForgotOtp(text);
+              if (forgotError) setForgotError(null);
+            }}
+            keyboardType="number-pad"
+            maxLength={6}
+          />
 
- <AppTextField
- label="New Password"
- placeholder="At least 8 characters"
- value={forgotNewPassword}
- onChangeText={(text) => {
- setForgotNewPassword(text);
- if (forgotError) setForgotError(null);
- }}
- secureTextEntry
- />
+          <AppTextField
+            label="New Password"
+            placeholder="At least 8 characters"
+            value={forgotNewPassword}
+            onChangeText={(text) => {
+              setForgotNewPassword(text);
+              if (forgotError) setForgotError(null);
+            }}
+            secureTextEntry
+          />
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Back" variant="ghost" onPress={() => setForgotStep('request')} />
- <AppButton
- label="Update Password"
- disabled={!forgotOtp.trim() || !forgotNewPassword || submittingForgot}
- loading={submittingForgot}
- onPress={handleResetPasswordSubmit}
- />
- </View>
- </>
- )}
+          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+            <AppButton label="Back" variant="ghost" onPress={() => setForgotStep('request')} />
+            <AppButton
+              label="Update Password"
+              disabled={!forgotOtp.trim() || !forgotNewPassword || submittingForgot}
+              loading={submittingForgot}
+              onPress={handleResetPasswordSubmit}
+            />
+          </View>
+
+          <View style={{ alignItems: 'center', marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider }}>
+            <Pressable
+              onPress={() => {
+                setForgotModalOpen(false);
+                router.push({
+                  pathname: '/(auth)/reset-password' as any,
+                  params: { email: forgotEmail.trim() || undefined, code: forgotOtp.trim() || undefined },
+                });
+              }}
+              hitSlop={8}
+            >
+              <AppText tone="brand" variant="caption" weight="semiBold">
+                Open Full Reset Password Screen →
+              </AppText>
+            </Pressable>
+          </View>
+        </>
+      )}
  </SolidCard>
  </View>
  </Modal>

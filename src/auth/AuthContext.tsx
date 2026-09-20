@@ -159,6 +159,8 @@ interface AuthContextValue {
   * impersonated user.
   */
  endImpersonation: () => Promise<void>;
+ isPasswordRecovery: boolean;
+ clearPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -229,6 +231,7 @@ function defaultSessionUser(userEmail: string, role: UserRole, fullName: string)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [impersonation, setImpersonation] = useState<ImpersonationState>(DEFAULT_IMPERSONATION);
   const userRef = React.useRef<SessionUser | null>(null);
   userRef.current = user;
@@ -330,6 +333,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 3. Supabase Auth State Change Listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Handle password recovery flow (e.g. magic link clicked or OTP recovery session initiated)
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        if (session) {
+          await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+        }
+        router.replace('/(auth)/reset-password' as any);
+        return;
+      }
+
       // Crucial: on screen unlock or background token refresh, DO NOT overwrite active role or profile!
       if (event === 'TOKEN_REFRESHED' && session) {
         await setTokens(session.access_token, session.refresh_token ?? session.access_token);
@@ -683,8 +696,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.replace('/(auth)/login');
         }
       },
+      isPasswordRecovery,
+      clearPasswordRecovery() {
+        setIsPasswordRecovery(false);
+      },
     }),
-    [user, isLoading, impersonation],
+    [user, isLoading, impersonation, isPasswordRecovery],
   );
 
   // Auto-expiry: while impersonating, end the session automatically once

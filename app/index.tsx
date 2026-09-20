@@ -25,11 +25,15 @@ const DASHBOARD_BY_ROLE = {
 } as const;
 
 export default function Index() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isPasswordRecovery } = useAuth();
   const { isFeatureEnabled } = useFeatureFlags();
 
   if (isLoading) {
     return <AppLoadingScreen message="Verifying session and security tokens..." />;
+  }
+
+  if (isPasswordRecovery) {
+    return <Redirect href={'/(auth)/reset-password' as any} />;
   }
 
   if (!user) {
