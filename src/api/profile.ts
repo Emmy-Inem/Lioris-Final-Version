@@ -123,7 +123,7 @@ export async function getMyProfile(user?: {
  try {
  const { data, error } = await supabase
  .from('profiles')
- .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, is_suspended')
+ .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, verification_status, role, is_suspended')
  .eq('id', resolvedUser.id)
  .single();
    if (!error && data) {
@@ -185,6 +185,8 @@ export async function getMyProfile(user?: {
        username: data.username || fallback.username,
        bio: data.bio || fallback.bio,
        department: data.department || fallback.department,
+       faculty: data.faculty || fallback.faculty,
+       academicLevel: data.level || fallback.academicLevel,
        interests: data.interests || fallback.interests,
        institutionName: inst?.name || fallback.institutionName || 'Campus Workspace',
        institutionCode: inst?.code || fallback.institutionCode,

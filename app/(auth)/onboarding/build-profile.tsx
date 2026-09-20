@@ -18,7 +18,20 @@ import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 import { persistCampus, getStoredCampus } from '@/hooks/useViewScope';
 
-const ACADEMIC_LEVELS = ['100L', '200L', '300L', '400L', '500L', '600L', 'Postgraduate'];
+const UNDERGRADUATE_LEVELS = [
+  { id: '100L', label: '100 Level' },
+  { id: '200L', label: '200 Level' },
+  { id: '300L', label: '300 Level' },
+  { id: '400L', label: '400 Level' },
+  { id: '500L', label: '500 Level' },
+  { id: '600L', label: '600 Level' },
+] as const;
+
+const POSTGRADUATE_PROGRAMMES = [
+  { id: 'PGD', label: 'PGD (Postgraduate Diploma)' },
+  { id: 'Masters', label: 'Masters (MSc / MA / MBA)' },
+  { id: 'PhD', label: 'Doctorate (PhD / MPhil)' },
+] as const;
 
 export default function BuildProfileScreen() {
   const { colors, spacing, radius } = useTheme();
@@ -30,6 +43,7 @@ export default function BuildProfileScreen() {
   const [campusCode, setCampusCode] = useState<string>(detectedCampus || '');
   const [department, setDepartment] = useState<string | null>(null);
   const [faculty, setFaculty] = useState<string | null>(null);
+  const [programmeType, setProgrammeType] = useState<'undergraduate' | 'postgraduate'>('undergraduate');
   const [level, setLevel] = useState<string>('100L');
   const [bio, setBio] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -68,7 +82,14 @@ export default function BuildProfileScreen() {
           }
           if (data?.department) setDepartment(data.department);
           if (data?.faculty) setFaculty(data.faculty);
-          if (data?.level) setLevel(data.level);
+          if (data?.level) {
+            setLevel(data.level);
+            if (POSTGRADUATE_PROGRAMMES.some((p) => p.id === data.level) || data.level === 'Postgraduate') {
+              setProgrammeType('postgraduate');
+            } else {
+              setProgrammeType('undergraduate');
+            }
+          }
           if (data?.bio) setBio(data.bio);
           if (data?.avatar_url) setPhotoUri(data.avatar_url);
         }
@@ -278,25 +299,86 @@ export default function BuildProfileScreen() {
         </View>
       ) : null}
 
-      {/* Academic Level Selector (Student only) */}
+      {/* Degree Programme & Academic Level Selector (Student only) */}
       {user?.role !== 'alumni' ? (
         <View style={{ marginBottom: spacing.md }}>
           <AppText variant="bodySmall" weight="medium" tone="secondary" style={{ marginBottom: spacing.xs }}>
-            Current Academic Level
+            Programme & Academic Standing
           </AppText>
+
+          {/* Programme Category Switcher */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.sm }}>
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setProgrammeType('undergraduate');
+                if (!UNDERGRADUATE_LEVELS.some((u) => u.id === level)) {
+                  setLevel('100L');
+                }
+              }}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: radius.md,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: programmeType === 'undergraduate' ? colors.brandPrimary : colors.surface,
+                borderWidth: 1,
+                borderColor: programmeType === 'undergraduate' ? colors.brandPrimary : colors.border,
+              }}
+            >
+              <AppText
+                variant="caption"
+                weight={programmeType === 'undergraduate' ? 'bold' : 'medium'}
+                style={{ color: programmeType === 'undergraduate' ? '#FFFFFF' : colors.textPrimary }}
+              >
+                Undergraduate
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setProgrammeType('postgraduate');
+                if (!POSTGRADUATE_PROGRAMMES.some((p) => p.id === level)) {
+                  setLevel('Masters');
+                }
+              }}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: radius.md,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: programmeType === 'postgraduate' ? colors.brandPrimary : colors.surface,
+                borderWidth: 1,
+                borderColor: programmeType === 'postgraduate' ? colors.brandPrimary : colors.border,
+              }}
+            >
+              <AppText
+                variant="caption"
+                weight={programmeType === 'postgraduate' ? 'bold' : 'medium'}
+                style={{ color: programmeType === 'postgraduate' ? '#FFFFFF' : colors.textPrimary }}
+              >
+                Postgraduate (PGD / MSc / PhD)
+              </AppText>
+            </Pressable>
+          </View>
+
+          {/* Level Options */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
-            {ACADEMIC_LEVELS.map((lvl) => {
-              const isSelected = level === lvl;
+            {(programmeType === 'undergraduate' ? UNDERGRADUATE_LEVELS : POSTGRADUATE_PROGRAMMES).map((item) => {
+              const isSelected = level === item.id;
               return (
                 <Pressable
-                  key={lvl}
+                  key={item.id}
                   onPress={() => {
                     haptics.light();
-                    setLevel(lvl);
+                    setLevel(item.id);
                   }}
                   style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
                     borderRadius: radius.pill,
                     borderWidth: 1,
                     borderColor: isSelected ? colors.brandPrimary : colors.border,
@@ -308,7 +390,7 @@ export default function BuildProfileScreen() {
                     weight={isSelected ? 'bold' : 'regular'}
                     tone={isSelected ? 'brand' : 'secondary'}
                   >
-                    {lvl}
+                    {item.label}
                   </AppText>
                 </Pressable>
               );

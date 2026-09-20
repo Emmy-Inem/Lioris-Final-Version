@@ -14,6 +14,20 @@
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
+-- 0. SCHEMA PREREQUISITES & COLUMN SAFEGUARDS
+-- ---------------------------------------------------------------------------
+-- Ensure columns referenced by policies exist regardless of prior migrations
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'published';
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS scheduled_at timestamptz;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS audience_scope text NOT NULL DEFAULT 'global';
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS visibility_scope text DEFAULT 'campus';
+
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS status text DEFAULT 'upcoming';
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS visibility_scope text DEFAULT 'campus';
+
+ALTER TABLE public.announcements ADD COLUMN IF NOT EXISTS audience_scope text DEFAULT 'global';
+
+-- ---------------------------------------------------------------------------
 -- 1. KILL SWITCH & SETTINGS SEED
 -- ---------------------------------------------------------------------------
 INSERT INTO public.platform_settings (key, value, description)

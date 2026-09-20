@@ -46,6 +46,18 @@ function scheduledLabel(iso?: string): string {
   return date.getTime() > Date.now() ? `Goes live ${when}` : `Was due ${when}`;
 }
 
+const PROFILE_ACADEMIC_LEVELS = [
+  '100L',
+  '200L',
+  '300L',
+  '400L',
+  '500L',
+  '600L',
+  'PGD',
+  'Masters',
+  'PhD',
+] as const;
+
 export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
@@ -67,6 +79,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const [editGradYear, setEditGradYear] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editInterests, setEditInterests] = useState('');
+  const [editLevel, setEditLevel] = useState<string>('100L');
   const [savingProfile, setSavingProfile] = useState(false);
 
   const { data: profile } = useQuery({
@@ -140,6 +153,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     setEditGradYear(profile.graduationYear ? String(profile.graduationYear) : '2026');
     setEditBio(profile.bio ?? '');
     setEditInterests((profile.interests ?? []).join(', '));
+    setEditLevel(profile.academicLevel || '100L');
     setEditModalOpen(true);
   }
 
@@ -161,6 +175,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         fullName: editName.trim(),
         username: cleanUsername,
         department: editDepartment.trim(),
+        academicLevel: editLevel,
         graduationYear: parseInt(editGradYear, 10) || null,
         bio: editBio.trim(),
         interests: interestsArray,
@@ -513,6 +528,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           </View>
           <AppText tone="brand" weight="semiBold" variant="bodySmall">
             @{profile.username}
+            {profile.academicLevel ? ` • ${profile.academicLevel}` : ''}
             {profile.department ? ` • ${profile.department}` : ''}
           </AppText>
         </View>
@@ -988,6 +1004,40 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
               helperText="Only lowercase letters, numbers, dots, and underscores."
             />
             <DepartmentPicker value={editDepartment || null} onChange={setEditDepartment} />
+            {user?.role !== 'alumni' && user?.role !== 'staff' ? (
+              <View style={{ marginBottom: spacing.md }}>
+                <AppText variant="caption" weight="medium" tone="secondary" style={{ marginBottom: 6 }}>
+                  Programme & Academic Standing
+                </AppText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+                  {PROFILE_ACADEMIC_LEVELS.map((lvl) => {
+                    const isSelected = editLevel === lvl;
+                    return (
+                      <Pressable
+                        key={lvl}
+                        onPress={() => setEditLevel(lvl)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: radius.pill,
+                          borderWidth: 1,
+                          borderColor: isSelected ? colors.brandPrimary : colors.border,
+                          backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface,
+                        }}
+                      >
+                        <AppText
+                          variant="caption"
+                          weight={isSelected ? 'bold' : 'regular'}
+                          tone={isSelected ? 'brand' : 'secondary'}
+                        >
+                          {lvl}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ) : null}
             <AppTextField label="Graduation Year" value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />
             <AppTextField label="Skills & Interests (comma-separated)" value={editInterests} onChangeText={setEditInterests} />
             <AppTextField label="Academic Bio" value={editBio} onChangeText={setEditBio} multiline numberOfLines={3} />
