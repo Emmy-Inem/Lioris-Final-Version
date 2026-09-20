@@ -510,10 +510,6 @@ export function SettingsScreen() {
   }
 
   async function handleUpdatePassword() {
-    if (!newPassword || newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long.');
-      return;
-    }
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwords do not match.');
       return;
@@ -521,7 +517,10 @@ export function SettingsScreen() {
     setIsUpdatingPassword(true);
     setPasswordError(null);
     try {
-      await supabase.auth.updateUser({ password: newPassword });
+      // Goes through the shared helper: it enforces the same password policy as sign-up and
+      // throws on failure. The raw supabase.auth.updateUser call returns `{ error }` instead of
+      // throwing, so this screen used to report success even when the update was rejected.
+      await authApi.updateUserPassword(newPassword);
       setPasswordModalOpen(false);
       setNewPassword('');
       setConfirmPassword('');

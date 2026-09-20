@@ -291,7 +291,7 @@ export default function LoginScreen() {
   />
   <AppTextField
     label=""
-    placeholder="Password (Min 6 Characters)"
+    placeholder="Password"
     autoComplete="current-password"
     textContentType="password"
     secureTextEntry
