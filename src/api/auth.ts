@@ -6,7 +6,7 @@ import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
 import { recordAuditLogEntry } from './auditLog';
 import { unregisterDevicePushToken } from './notifications';
-import { checkPassword, isPasswordValid } from '../utils/validation';
+import { checkPassword, isPasswordValid, isValidEmailFormat } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errors';
 
 export function getAuthRedirectUrl(path: string = 'reset-password'): string {
@@ -107,7 +107,7 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
 
 /**
  * Resolves a username handle to its registered email address.
- * Allows users to log in using either their campus email or their @handle.
+ * Allows users to log in using either their email or their @handle.
  */
 export async function getEmailForUsername(username: string): Promise<string | null> {
   const clean = username.trim().replace(/^@/, '').toLowerCase();
@@ -237,7 +237,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
       cleanEmail = resolved.toLowerCase();
     } else {
       const handle = cleanInput.replace(/^@/, '');
-      throw new Error(`No account found with username @${handle}. Please check the username or sign in with your campus email.`);
+      throw new Error(`No account found with username @${handle}. Please check the username or sign in with your email.`);
     }
   }
 
@@ -383,7 +383,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
 
 export async function sendPasswordResetEmail(email: string, captchaToken?: string): Promise<{ success: boolean }> {
   const cleanEmail = email.trim();
-  if (!cleanEmail) throw new Error('Please enter your registered campus email address.');
+  if (!cleanEmail) throw new Error('Please enter your registered email address.');
   const redirectTo = getAuthRedirectUrl('reset-password');
   const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
     captchaToken,
@@ -393,6 +393,80 @@ export async function sendPasswordResetEmail(email: string, captchaToken?: strin
     throw new Error(getFriendlyErrorMessage(error, 'Could not send recovery email. Please check your email address.'));
   }
   return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Change the account email. School addresses get deactivated, so the login email
+// must be replaceable without losing the account. Supabase emails a 6-digit code
+// to the NEW address and only switches auth.users.email once it is confirmed; the
+// database then carries the change into `profiles` (supabase_account_email_change_2026.sql).
+//
+// There is deliberately no "current password" prompt: the caller already holds a live
+// session, and the existing Change Password flow is equally session-gated, so a prompt
+// here would add friction without closing a path that is not already open. The code sent
+// to the new inbox is what proves the person owns the address they are moving to.
+// Requires "Secure email change" to be OFF in the Supabase dashboard, otherwise a code
+// from the old inbox is demanded too - the very inbox someone has lost.
+// ---------------------------------------------------------------------------
+
+function friendlyEmailChangeError(error: { message?: string; code?: string } | null | undefined, fallback: string): string {
+  const msg = (error?.message ?? '').toLowerCase();
+  const code = (error?.code ?? '').toLowerCase();
+  if (code === 'email_exists' || msg.includes('already been registered') || msg.includes('already registered')) {
+    return 'That email is already used by another Lioris account. Please use a different one.';
+  }
+  if (code === 'over_email_send_rate_limit' || msg.includes('rate limit') || msg.includes('seconds')) {
+    return 'Please wait a minute before requesting another code.';
+  }
+  if (code === 'email_address_invalid' || msg.includes('invalid format') || msg.includes('is invalid')) {
+    return 'That email address does not look right. Please check it and try again.';
+  }
+  return getFriendlyErrorMessage(error, fallback);
+}
+
+/** Sends a confirmation code to `newEmail`. The account email does not change until it is confirmed. */
+export async function requestEmailChange(newEmail: string): Promise<{ email: string }> {
+  const clean = newEmail.trim().toLowerCase();
+  if (!isValidEmailFormat(clean)) {
+    throw new Error('Please enter a valid email address.');
+  }
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData?.user) {
+    throw new Error('Your session has expired. Please sign in again to change your email.');
+  }
+  if (authData.user.email?.toLowerCase() === clean) {
+    throw new Error('That is already the email on your account.');
+  }
+
+  const { error } = await supabase.auth.updateUser({ email: clean });
+  if (error) {
+    throw new Error(friendlyEmailChangeError(error, 'We could not send a code to that address. Please try again.'));
+  }
+  return { email: clean };
+}
+
+/** Sends the code again (same 60 s cooldown rules as sign-up). */
+export async function resendEmailChangeCode(newEmail: string): Promise<{ success: boolean }> {
+  const clean = newEmail.trim().toLowerCase();
+  const { error } = await supabase.auth.resend({ type: 'email_change', email: clean });
+  if (error) {
+    throw new Error(friendlyEmailChangeError(error, 'We could not send the code right now. Please try again shortly.'));
+  }
+  return { success: true };
+}
+
+/** Confirms the code sent to `newEmail`; on success the account's login email is now `newEmail`. */
+export async function confirmEmailChange(newEmail: string, code: string): Promise<{ email: string }> {
+  const clean = newEmail.trim().toLowerCase();
+  const cleanCode = code.trim();
+  if (!/^\d{6}$/.test(cleanCode)) {
+    throw new Error('Please enter the 6-digit code we emailed you.');
+  }
+  const { data, error } = await supabase.auth.verifyOtp({ email: clean, token: cleanCode, type: 'email_change' });
+  if (error || !data?.user) {
+    throw new Error(friendlyEmailChangeError(error, 'That code did not work. Please check it and try again.'));
+  }
+  return { email: data.user.email ?? clean };
 }
 
 export async function updateUserPassword(newPassword: string): Promise<{ success: boolean }> {

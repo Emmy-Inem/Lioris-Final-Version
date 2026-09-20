@@ -234,7 +234,7 @@ export default function RegisterScreen() {
  {portal === 'student' ? 'Create Student Workspace' : 'Create Alumni Workspace'}
  </AppText>
  <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
- Select your university below. Official campus emails are verified automatically, while personal emails can be verified afterward.
+ Select your university below. You can verify that you're a student right after sign-up, or later.
  </AppText>
 
  {/* Supported University Selector & Waitlist Action */}
@@ -290,14 +290,14 @@ export default function RegisterScreen() {
  </View>
 
  <AppTextField
- label="School or Personal Email"
+ label="Email"
  autoCapitalize="none"
  autoComplete="email"
  textContentType="emailAddress"
  keyboardType="email-address"
  value={email}
  onChangeText={setEmail}
- placeholder="you@campus.edu.ng or personal email"
+ placeholder="you@example.com"
  error={emailTouched && !emailFormatValid ? 'Enter a valid email address' : undefined}
  />
  {emailTouched && emailFormatValid && matchedInstitution ? (
@@ -307,7 +307,11 @@ export default function RegisterScreen() {
  Registering at {matchedInstitution.name} - you'll be verified automatically.
  </AppText>
  </View>
- ) : null}
+ ) : (
+ <AppText variant="caption" tone="secondary" style={{ marginTop: -spacing.sm, marginBottom: spacing.lg }}>
+ Use an email you'll keep after graduation. You can change it anytime in Settings.
+ </AppText>
+ )}
 
  <View>
       <AppTextField

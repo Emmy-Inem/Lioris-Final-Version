@@ -113,7 +113,7 @@ export default function ResetPasswordScreen() {
     setSuccessMessage(null);
     const cleanEmail = email.trim();
     if (!cleanEmail) {
-      setErrorMessage('Please enter your registered campus email address.');
+      setErrorMessage('Please enter your registered email address.');
       haptics.error();
       return;
     }
@@ -190,7 +190,7 @@ export default function ResetPasswordScreen() {
     const cleanCode = code.trim().replace(/\s+/g, '');
 
     if (!cleanEmail) {
-      setErrorMessage('Please enter your campus email address.');
+      setErrorMessage('Please enter your email address.');
       haptics.error();
       return;
     }
@@ -440,8 +440,8 @@ export default function ResetPasswordScreen() {
                   </AppText>
 
                   <AppTextField
-                    label="Campus Email"
-                    placeholder="student@university.edu.ng"
+                    label="Email"
+                    placeholder="you@example.com"
                     value={email}
                     onChangeText={(text) => {
                       setEmail(text);
@@ -475,8 +475,8 @@ export default function ResetPasswordScreen() {
                   </AppText>
 
                   <AppTextField
-                    label="Campus Email"
-                    placeholder="student@university.edu.ng"
+                    label="Email"
+                    placeholder="you@example.com"
                     value={email}
                     onChangeText={(text) => {
                       setEmail(text);

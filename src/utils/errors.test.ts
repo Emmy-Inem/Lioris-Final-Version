@@ -16,7 +16,7 @@ test('translates email confirmation required', () => {
   const result = getFriendlyErrorMessage({ message: 'Email not confirmed' });
   assert.equal(
     result,
-    'Please confirm your campus email address before signing in. Check your inbox or request a new code.',
+    'Please confirm your email address before signing in. Check your inbox or request a new code.',
   );
 });
 

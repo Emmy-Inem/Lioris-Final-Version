@@ -119,7 +119,7 @@ export default function LoginScreen() {
  async function handleSendRecoveryCode() {
  setForgotError(null);
  if (!forgotEmail.trim()) {
- setForgotError('Please enter your registered campus email address.');
+ setForgotError('Please enter your registered email address.');
  haptics.error();
  return;
  }
@@ -184,7 +184,7 @@ export default function LoginScreen() {
  async function handleLogin() {
  setErrorMessage(null);
  if (!email.trim()) {
- setErrorMessage('Please enter your campus email or username.');
+ setErrorMessage('Please enter your email or username.');
  haptics.error();
  return;
  }
@@ -279,7 +279,7 @@ export default function LoginScreen() {
 
   <AppTextField
     label=""
-    placeholder="School Email or Username (@handle)"
+    placeholder="Email or Username (@handle)"
     autoCapitalize="none"
     autoComplete="email"
     textContentType="emailAddress"
@@ -387,7 +387,7 @@ export default function LoginScreen() {
             style={{ alignSelf: 'flex-start' }}
           >
             <AppText variant="caption" tone="brand" weight="semiBold" style={{ opacity: 0.9 }}>
-              Unconfirmed campus email? Enter your 6-digit code →
+              Unconfirmed email? Enter your 6-digit code →
             </AppText>
           </Pressable>
         </View>
@@ -705,11 +705,11 @@ export default function LoginScreen() {
       {forgotStep === 'request' ? (
         <>
           <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
-            Enter your registered campus email address and we'll send you a password recovery link and code.
+            Enter your registered email address and we'll send you a password recovery link and code.
           </AppText>
           <AppTextField
-            label="Campus Email"
-            placeholder="name@student.unilag.edu.ng"
+            label="Email"
+            placeholder="you@example.com"
             value={forgotEmail}
             onChangeText={(text) => {
               setForgotEmail(text);

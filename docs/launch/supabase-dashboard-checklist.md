@@ -30,7 +30,7 @@ Path: **Authentication > Sign In / Providers > Email**
 | --- | --- | --- |
 | Enable Email provider | ON | Only sign-in method the app uses |
 | **Confirm email** | **ON** | The app's `handle_new_user` flow and the "verified campus email" story assume unconfirmed accounts cannot sign in. If OFF, anyone can register with someone else's school address. |
-| **Secure email change** | ON | Requires confirmation from both old and new address, stops a hijacked session silently swapping the email |
+| **Secure email change** | **OFF** | Settings > Security > "Change Email" (`ChangeEmailModal`) sends one 6-digit code to the NEW address. With this ON, Supabase also demands a code from the OLD address, and the old address is exactly what a graduate no longer has (school emails get deactivated), so they could never move off it. The new-inbox code proves ownership of the new address, and the change already needs a live signed-in session, as Change Password does. Apply `supabase_account_email_change_2026.sql` so `profiles.email` and verification follow the change. |
 | **Secure password change** | ON (if shown) | Requires a recent login before a password change |
 | **Minimum password length** | **12** | Must equal the client rule; the client is advisory only, the server setting is the enforcement |
 | **Password requirements** | "Lowercase, uppercase letters, digits and symbols" | Matches the register-screen checklist (`PasswordChecklist`) |
@@ -123,7 +123,7 @@ Path: **Authentication > Emails > SMTP Settings** and **Authentication > Emails 
 | --- | --- |
 | **Confirm sign up** | **Must show the 6-digit code with `{{ .Token }}`.** The app asks the user to type a code (`verify-email.tsx`); a template that only contains `{{ .ConfirmationURL }}` gives users a link the app does not handle, and the flow dead-ends. You may include both. |
 | **Reset password** | Either `{{ .Token }}` or `{{ .ConfirmationURL }}` depending on the reset flow currently shipped (`resetPasswordForEmail` with `redirectTo`); test end to end and keep whichever works. |
-| **Change email address** | Include `{{ .Token }}` or link, per the flow used in Settings |
+| **Change email address** | **Must show the 6-digit code with `{{ .Token }}`.** Settings > Security > Change Email asks the user to type the code (`ChangeEmailModal`); a link-only template dead-ends the flow. |
 | **Magic link / Invite / Reauthentication** | Not used by the app today; keep the defaults but brand them |
 | All templates | Lioris name and support contact (`support@lioris.app`), plain language, "If you did not request this, ignore this email", no third-party tracking pixels |
 

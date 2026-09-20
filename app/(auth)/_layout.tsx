@@ -28,8 +28,6 @@ export default function AuthLayout() {
       <Stack.Screen name="register" />
       <Stack.Screen name="reset-password" />
       <Stack.Screen name="verify-email" />
-      <Stack.Screen name="verify-school" />
-      <Stack.Screen name="verify-alumni" />
       <Stack.Screen name="verify-mfa" />
       <Stack.Screen name="onboarding" />
     </Stack>

@@ -16,6 +16,7 @@ import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { ChangeWorkspaceScopeModal } from './ChangeWorkspaceScopeModal';
 import { AppTutorialModal } from './AppTutorialModal';
+import { ChangeEmailModal } from './ChangeEmailModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -120,6 +121,9 @@ export function SettingsScreen() {
   const [announcementAlerts, setAnnouncementAlerts] = useState(true);
   const [eventAlerts, setEventAlerts] = useState(true);
   const [biometricShield, setBiometricShield] = useState(true);
+
+  // Change email modal
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   // Password Modal
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -1440,6 +1444,25 @@ export function SettingsScreen() {
                   )}
                 </View>
 
+                {/* Sign-in email. School addresses get deactivated, so it must stay changeable. */}
+                <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">Sign-in email</AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                      {user?.email || 'No email on file'}
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                      School emails can stop working after graduation. Switch to one you will always have.
+                    </AppText>
+                  </View>
+                  <AppButton
+                    label="Change Email"
+                    variant="secondary"
+                    icon="mail-outline"
+                    onPress={() => setEmailModalOpen(true)}
+                  />
+                </View>
+
                 <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
                   <AppButton
                     label="Change Password"
@@ -1650,6 +1673,8 @@ export function SettingsScreen() {
         scope={scope}
         onSelectScope={setScope}
       />
+
+      <ChangeEmailModal visible={emailModalOpen} onClose={() => setEmailModalOpen(false)} currentEmail={user?.email} />
 
       {/* Password Update Modal */}
       <Modal

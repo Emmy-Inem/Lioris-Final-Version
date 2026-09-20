@@ -4,21 +4,21 @@ import { UserRole } from '@/api/types';
  * Streamlined onboarding flow for new users:
  * 1. build-profile: University, College/Faculty, Department, Level, optional photo & bio.
  * 2. select-interests: Quick topic tags to personalize student feeds and events.
- * 3. get-started: Campus welcome and seamless launch to dashboard.
- *
- * Document verification (uploading student ID / admission letter) is optional and
- * accessible anytime in Settings / Profile ("Apply for Verification") for the verified badge,
- * rather than blocking first-time onboarding.
+ * 3. verify: Prove campus membership with one photo. Always skippable - it is also reachable
+ *    later from the profile and the home-screen notice, so it never blocks first-time onboarding.
+ * 4. get-started: Campus welcome and seamless launch to dashboard.
  */
 export const ONBOARDING_STEPS: Record<Extract<UserRole, 'student' | 'alumni'>, string[]> = {
   student: [
     '/(auth)/onboarding/build-profile',
     '/(auth)/onboarding/select-interests',
+    '/(auth)/onboarding/verify',
     '/(auth)/onboarding/get-started',
   ],
   alumni: [
     '/(auth)/onboarding/build-profile',
     '/(auth)/onboarding/select-interests',
+    '/(auth)/onboarding/verify',
     '/(auth)/onboarding/get-started',
   ],
 };

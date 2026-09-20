@@ -1018,6 +1018,119 @@ await check('migration still applies when optional objects are absent (jobs, sup
 });
 
 // ---------------------------------------------------------------------------
+// supabase_account_email_change_2026.sql  (login email is changeable; school emails expire)
+// ---------------------------------------------------------------------------
+console.log('\n== Applying supabase_account_email_change_2026.sql ==');
+await check('email-change migration applies cleanly on top of both hardening files', async () => {
+  await db.exec(await readRepo('supabase_account_email_change_2026.sql'));
+});
+await check('email-change migration is idempotent (second run)', async () => {
+  await db.exec(await readRepo('supabase_account_email_change_2026.sql'));
+});
+
+const E = { personal: id(60), moved: id(61), pending: id(62), rejected: id(63), away: id(64), other: id(65), staff: id(66) };
+const insertUser = (uid, email, meta = {}) =>
+  admin(`INSERT INTO auth.users (id, email, raw_user_meta_data, email_confirmed_at) VALUES ($1, $2, $3::jsonb, now())`,
+    [uid, email, JSON.stringify({ full_name: email.split('@')[0], ...meta })]);
+const profileOf = async (uid) => (await admin(`SELECT email, verification_status::text v, campus_code FROM public.profiles WHERE id = $1`, [uid])).rows[0];
+const changeEmail = (uid, email) => admin(`UPDATE auth.users SET email = $2 WHERE id = $1`, [uid, email]);
+
+await insertUser(E.personal, 'grad.personal@example.test', { campus_code: 'UNILAG' });
+await insertUser(E.moved, 'grad.moved@example.test', { campus_code: 'UNILAG' });
+await insertUser(E.pending, 'grad.pending@example.test', { campus_code: 'UNILAG' });
+await insertUser(E.rejected, 'grad.rejected@example.test', { campus_code: 'UNILAG' });
+await insertUser(E.other, 'grad.other@example.test', { campus_code: 'UNILAG' });
+await insertUser(E.staff, 'stf@example.test', { campus_code: 'UNILAG' });
+// A student whose school address was confirmed at sign-up -> auto-verified by the existing trigger.
+await admin(`INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES ($1, 'grad.away@unilag.edu.ng', '{"campus_code":"UNILAG","full_name":"away"}')`, [E.away]);
+await admin(`UPDATE auth.users SET email_confirmed_at = now() WHERE id = $1`, [E.away]);
+
+console.log('\n== profiles.email follows the login email ==');
+await check('changing auth.users.email updates profiles.email (so @handle sign-in resolves the new address)', async () => {
+  eq((await profileOf(E.personal)).email, 'grad.personal@example.test', 'fixture');
+  await changeEmail(E.personal, 'grad.personal2@example.test');
+  eq((await profileOf(E.personal)).email, 'grad.personal2@example.test', 'profiles.email did not follow');
+});
+await check('an update that does not touch the address leaves profiles.email alone', async () => {
+  await admin(`UPDATE auth.users SET last_sign_in_at = now() WHERE id = $1`, [E.personal]);
+  eq((await profileOf(E.personal)).email, 'grad.personal2@example.test');
+});
+await check('a personal-to-personal change does not verify the account', async () => {
+  eq((await profileOf(E.personal)).v, 'unverified');
+});
+
+console.log('\n== proving a school inbox later verifies the account ==');
+await check('moving to a confirmed institutional address verifies the account and sets the campus', async () => {
+  eq((await profileOf(E.moved)).v, 'unverified', 'fixture');
+  await changeEmail(E.moved, 'grad.moved@unilag.edu.ng');
+  const p = await profileOf(E.moved);
+  eq({ v: p.v, campus: p.campus_code, email: p.email }, { v: 'verified', campus: 'UNILAG', email: 'grad.moved@unilag.edu.ng' });
+  const audit = await admin(`SELECT metadata->>'method' m FROM public.audit_logs WHERE action = 'verification_auto_approved' AND entity_id = $1`, [E.moved]);
+  eq(audit.rows.map((r) => r.m), ['institutional_email_change'], 'audit trail');
+});
+await check('a look-alike domain is not treated as institutional', async () => {
+  await insertUser(id(67), 'imposter@example.test', { campus_code: 'UNILAG' });
+  await changeEmail(id(67), 'imposter@notunilag.edu.ng');
+  eq((await profileOf(id(67))).v, 'unverified');
+});
+await check('a pending document request is closed as approved when the school inbox is proven', async () => {
+  await admin(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+  await admin(`UPDATE public.profiles SET verification_status = 'pending' WHERE id = $1`, [E.pending]);
+  await admin(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+  await admin(`INSERT INTO public.verifications (user_id, campus_code, requested_role, id_card_front_url, status) VALUES ($1, 'UNILAG', 'student', 'x/y.jpg', 'pending')`, [E.pending]);
+  await changeEmail(E.pending, 'grad.pending@unilag.edu.ng');
+  eq((await profileOf(E.pending)).v, 'verified');
+  const v = await admin(`SELECT status::text s, reviewed_at IS NOT NULL AS done FROM public.verifications WHERE user_id = $1`, [E.pending]);
+  eq(v.rows, [{ s: 'approved', done: true }], 'stale request left in the queue');
+});
+await check("a moderator's 'rejected' decision is not overridden by an email change", async () => {
+  await admin(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+  await admin(`UPDATE public.profiles SET verification_status = 'rejected' WHERE id = $1`, [E.rejected]);
+  await admin(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+  await changeEmail(E.rejected, 'grad.rejected@unilag.edu.ng');
+  eq((await profileOf(E.rejected)).v, 'rejected');
+});
+await check('staff accounts are not promoted by an email change', async () => {
+  await admin(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+  await admin(`UPDATE public.profiles SET role = 'staff' WHERE id = $1`, [E.staff]);
+  await admin(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+  await changeEmail(E.staff, 'stf@unilag.edu.ng');
+  eq((await profileOf(E.staff)).v, 'unverified');
+});
+await check('an unconfirmed new address never verifies (guards against a half-finished change)', async () => {
+  await insertUser(id(68), 'half@example.test', { campus_code: 'UNILAG' });
+  await admin(`UPDATE auth.users SET email_confirmed_at = NULL, email = 'half@unilag.edu.ng' WHERE id = $1`, [id(68)]);
+  eq((await profileOf(id(68))).v, 'unverified');
+});
+
+console.log('\n== leaving a school email keeps the standing ==');
+await check('a verified school-email account that switches to a personal address stays verified on the same campus', async () => {
+  eq((await profileOf(E.away)).v, 'verified', 'fixture: signup auto-verify');
+  await changeEmail(E.away, 'grad.away@example.test');
+  const p = await profileOf(E.away);
+  eq({ v: p.v, campus: p.campus_code, email: p.email }, { v: 'verified', campus: 'UNILAG', email: 'grad.away@example.test' });
+});
+
+console.log('\n== hygiene ==');
+await check('the new trigger functions are locked down: pinned search_path, not callable by anon or authenticated', async () => {
+  const r = await admin(`SELECT p.proname, p.prosecdef,
+      EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig, '{}')) c WHERE c LIKE 'search_path=%pg_temp%') AS pinned,
+      has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_x,
+      has_function_privilege('authenticated', p.oid, 'EXECUTE') AS auth_x
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname IN ('sync_profile_email_from_auth', 'auto_verify_on_email_change') ORDER BY 1`);
+  eq(r.rows.map((x) => [x.proname, x.prosecdef, x.pinned, x.anon_x, x.auth_x]),
+    [['auto_verify_on_email_change', true, true, false, false], ['sync_profile_email_from_auth', true, true, false, false]]);
+});
+await check('a signed-in user still cannot change their own verification status or campus directly', async () => {
+  await as(E.other, async (c) => {
+    await c.q(`UPDATE public.profiles SET verification_status = 'verified', campus_code = 'UI' WHERE id = $1`, [E.other]);
+    const r = (await c.q(`SELECT verification_status::text v FROM public.profiles WHERE id = $1`, [E.other])).rows[0];
+    eq(r.v, 'unverified', 'self-grant of verification worked');
+  });
+});
+
+// ---------------------------------------------------------------------------
 const failed = results.filter((r) => !r.ok);
 console.log(`\n== Summary: ${results.length - failed.length}/${results.length} checks passed ==`);
 if (failed.length) { for (const f of failed) console.log(` FAILED: ${f.name}\n    ${f.err}`); process.exit(1); }

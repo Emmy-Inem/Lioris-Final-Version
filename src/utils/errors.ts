@@ -56,7 +56,7 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
     code === 'email_not_confirmed' ||
     code === 'email_unconfirmed'
   ) {
-    return 'Please confirm your campus email address before signing in. Check your inbox or request a new code.';
+    return 'Please confirm your email address before signing in. Check your inbox or request a new code.';
   }
 
   // 3. User Already Exists / Duplicate Account
