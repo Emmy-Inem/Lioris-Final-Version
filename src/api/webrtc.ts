@@ -2,6 +2,7 @@
  * Pure WebRTC Calling Engine powered by Supabase Realtime signaling, public STUN
  * and (when configured) a Cloudflare TURN relay. Zero iframes, native Lioris UI.
  */
+import { Platform } from 'react-native';
 import { supabase } from '@/api/supabase';
 
 export interface WebRTCConfig {
@@ -129,7 +130,7 @@ export class WebRTCCallSession {
   }
 
   public async start(): Promise<void> {
-    if (typeof window === 'undefined') return;
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
     try {
       this.config.onConnectionStateChange?.('connecting');

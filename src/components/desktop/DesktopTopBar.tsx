@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Pressable, TextInput, StyleSheet, Modal, ScrollView } from 'react-native';
+import { View, Pressable, TextInput, StyleSheet, Modal, ScrollView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -90,23 +90,24 @@ export function DesktopTopBar() {
  const isSuperAdmin = user?.actualRole === 'admin';
 
  // Listen for global Cmd+K / Ctrl+K keyboard shortcut on web
- useEffect(() => {
- const handleKeyDown = (e: KeyboardEvent) => {
- if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
- e.preventDefault();
- setCommandPaletteOpen((prev) => !prev);
- }
- if (e.key === 'Escape') {
- setCommandPaletteOpen(false);
- setNotifDropdownOpen(false);
- setRoleSwitcherOpen(false);
- }
- };
- if (typeof window !== 'undefined') {
- window.addEventListener('keydown', handleKeyDown);
- return () => window.removeEventListener('keydown', handleKeyDown);
- }
- }, []);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+      if (e.key === 'Escape') {
+        setCommandPaletteOpen(false);
+        setNotifDropdownOpen(false);
+        setRoleSwitcherOpen(false);
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, []);
 
  const handleSearchSubmit = () => {
  if (searchQuery.trim()) {

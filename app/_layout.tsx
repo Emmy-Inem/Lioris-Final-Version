@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -62,9 +63,11 @@ export default function RootLayout() {
  }, [fontsLoaded, fontError]);
 
  useEffect(() => {
- loadBlockedUserIds().catch(() => {
- // background load
- });
+    loadBlockedUserIds().catch(() => {
+      // background load
+    });
+
+    if (Platform.OS !== 'web') return;
 
     if (typeof document !== 'undefined') {
       document.title = 'Lioris';

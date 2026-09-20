@@ -52,7 +52,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   handleGoLogin = () => {
     this.handleReset();
-    if (typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.location.href = '/login';
     } else {
       router.replace('/(auth)/login' as any);
@@ -99,7 +99,7 @@ export function RouteErrorBoundary(props: { error: Error; retry: () => void }) {
       onToggleDetails={() => setShowDetails((prev) => !prev)}
       onRetry={props.retry}
       onGoLogin={() => {
-        if (typeof window !== 'undefined') {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
           window.location.href = '/login';
         } else {
           router.replace('/(auth)/login' as any);

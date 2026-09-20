@@ -4,6 +4,8 @@
  * 100% Free, Zero Auth, Global Radio Index with 40,000+ Stations.
  */
 
+import { Platform } from 'react-native';
+
 export interface RadioStation {
   id: string;
   name: string;
@@ -229,7 +231,7 @@ class CampusRadioManager {
   };
 
   private constructor() {
-    if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof Audio !== 'undefined') {
       this.audioElement = new Audio();
       this.audioElement.volume = this.state.volume;
       this.audioElement.preload = 'none';

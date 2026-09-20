@@ -248,7 +248,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   async function handlePickCustomAvatar() {
     if (!user) return;
 
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof document !== 'undefined') {
       // Web: use hidden file input
       const input = document.createElement('input');
       input.type = 'file';
@@ -311,7 +311,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   async function handlePickCustomCover() {
     if (!user) return;
 
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof document !== 'undefined') {
       // Web: use hidden file input
       const input = document.createElement('input');
       input.type = 'file';

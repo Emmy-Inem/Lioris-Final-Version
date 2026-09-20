@@ -26,6 +26,7 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "credentialsSource": "local",
       "env": {
         "APP_ENV": "production",
         "API_BASE_URL": "https://api.lioris.app",

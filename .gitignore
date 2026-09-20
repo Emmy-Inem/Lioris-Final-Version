@@ -9,13 +9,15 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native & Signing Credentials
 .kotlin/
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
+*.keystore
+credentials.json
 *.mobileprovision
 
 # Metro
@@ -39,7 +41,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
-scratch/
 scratch/
 
 .vercel
