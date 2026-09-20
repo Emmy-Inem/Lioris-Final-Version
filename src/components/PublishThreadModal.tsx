@@ -15,15 +15,61 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 import { listCommunities } from '@/api/communities';
 
-const STUDENT_GIFS = [
-  { label: 'Mind Blown 🤯', url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
-  { label: 'Aced It 🎉', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
-  { label: 'Exam Mood 📚', url: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif' },
-  { label: 'Need Coffee ☕', url: 'https://media.giphy.com/media/oZEBLugoTNRxS/giphy.gif' },
-  { label: 'Coding Grind 💻', url: 'https://media.giphy.com/media/ule4akeXnY9A50XDUS/giphy.gif' },
-  { label: 'Eureka! 💡', url: 'https://media.giphy.com/media/3ohzdQ1IynzclJldUQ/giphy.gif' },
-  { label: 'Study Squad 🤝', url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif' },
+const POLL_DURATIONS = [
+  { label: '1 hour', hours: 1 },
+  { label: '6 hours', hours: 6 },
+  { label: '24 hours', hours: 24 },
+  { label: '3 days', hours: 72 },
+  { label: '7 days', hours: 168 },
 ];
+
+const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
+const MAX_SCHEDULE_AHEAD_MS = 90 * 24 * 60 * 60 * 1000;
+
+function pad2(n: number) {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+function toDateInput(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function toTimeInput(d: Date) {
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/** Parses "YYYY-MM-DD" + "HH:MM" as a LOCAL date. Returns null when either part is not a real date/time. */
+function parseLocalDateTime(dateStr: string, timeStr: string): Date | null {
+  const dm = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(dateStr.trim());
+  const tm = /^(\d{1,2}):(\d{2})$/.exec(timeStr.trim());
+  if (!dm || !tm) return null;
+  const year = Number(dm[1]);
+  const month = Number(dm[2]);
+  const day = Number(dm[3]);
+  const hour = Number(tm[1]);
+  const minute = Number(tm[2]);
+  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) return null;
+  const d = new Date(year, month - 1, day, hour, minute, 0, 0);
+  if (Number.isNaN(d.getTime())) return null;
+  if (d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+  return d;
+}
+
+/** Spells the chosen moment out in the viewer's own timezone so there is no am/pm ambiguity. */
+function describeDateTime(d: Date) {
+  try {
+    return d.toLocaleString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return d.toString();
+  }
+}
 
 interface PublishThreadModalProps {
   visible: boolean;
@@ -42,6 +88,9 @@ interface PublishThreadModalProps {
     videoUrl?: string;
     pollQuestion?: string;
     pollOptions?: string[];
+    pollDurationHours?: number;
+    status?: 'published' | 'draft' | 'scheduled';
+    scheduledAt?: string;
   }) => Promise<void>;
 }
 
@@ -65,25 +114,46 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const [attachPoll, setAttachPoll] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['Option A', 'Option B']);
+  const [pollDurationHours, setPollDurationHours] = useState(24);
 
-  const [generatingAi, setGeneratingAi] = useState(false);
-  const [showGifPicker, setShowGifPicker] = useState(false);
+  // Scheduling state. @react-native-community/datetimepicker is not installed, so this is a
+  // hand-rolled picker (preset chips + two plain text fields) that behaves the same on web and native.
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
 
-  function handleGenerateAiArt() {
-    const seed = topic.trim() || content.trim() || channel;
-    if (!seed) {
-      Alert.alert('Topic Needed', 'Type a headline or what is on your mind first so the AI knows what to illustrate.');
-      return;
-    }
-    haptics.medium();
-    setGeneratingAi(true);
-    const cleanPrompt = encodeURIComponent(`${seed} university campus modern vibrant digital art`);
-    const aiUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=800&height=450&nologo=true&seed=${Date.now()}`;
-    setCustomMediaUri(aiUrl);
-    setTimeout(() => {
-      setGeneratingAi(false);
-      haptics.light();
-    }, 400);
+  const scheduledDateObj = parseLocalDateTime(scheduleDate, scheduleTime);
+  const scheduleWithinRange =
+    !!scheduledDateObj &&
+    scheduledDateObj.getTime() >= Date.now() + MIN_SCHEDULE_LEAD_MS &&
+    scheduledDateObj.getTime() <= Date.now() + MAX_SCHEDULE_AHEAD_MS;
+
+  function applySchedulePreset(d: Date) {
+    haptics.light();
+    setScheduleDate(toDateInput(d));
+    setScheduleTime(toTimeInput(d));
+    setErrorMessage(null);
+  }
+
+  function presetTonight() {
+    const d = new Date();
+    d.setSeconds(0, 0);
+    d.setHours(18, 0, 0, 0);
+    if (d.getTime() < Date.now() + MIN_SCHEDULE_LEAD_MS) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  function presetTomorrowMorning() {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+
+  function presetInAnHour() {
+    const d = new Date(Date.now() + 60 * 60 * 1000);
+    d.setSeconds(0, 0);
+    return d;
   }
 
   // Web file input ref
@@ -96,8 +166,10 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setAttachPoll(false);
     setPollQuestion('');
     setPollOptions(['Option A', 'Option B']);
-    setGeneratingAi(false);
-    setShowGifPicker(false);
+    setPollDurationHours(24);
+    setShowSchedule(false);
+    setScheduleDate('');
+    setScheduleTime('');
     setPinToTop(false);
     setErrorMessage(null);
   }
@@ -172,22 +244,57 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setPollOptions(pollOptions.filter((_, i) => i !== index));
   }
 
-  async function handlePublish() {
+  /**
+   * One submit path for all three actions. A draft only needs a headline OR a body;
+   * everything else keeps the original "content is required" gate.
+   */
+  async function handleSubmit(status: 'published' | 'draft' | 'scheduled') {
     setErrorMessage(null);
-    if (!content.trim()) {
+
+    if (status === 'draft') {
+      if (!topic.trim() && !content.trim()) {
+        setErrorMessage('Add a headline or some text before saving a draft.');
+        haptics.error();
+        return;
+      }
+    } else if (!content.trim()) {
       setErrorMessage('Please write something before posting.');
       haptics.error();
       return;
     }
+
     if (attachPoll && !pollQuestion.trim()) {
       setErrorMessage('Please enter your poll question or remove the poll.');
       haptics.error();
       return;
     }
+
+    let scheduledAt: string | undefined;
+    if (status === 'scheduled') {
+      if (!scheduledDateObj) {
+        setErrorMessage('Enter a date as YYYY-MM-DD and a time as HH:MM (24-hour), or tap one of the quick options.');
+        haptics.error();
+        return;
+      }
+      const when = scheduledDateObj.getTime();
+      if (when < Date.now() + MIN_SCHEDULE_LEAD_MS) {
+        setErrorMessage('Pick a time at least 5 minutes from now.');
+        haptics.error();
+        return;
+      }
+      if (when > Date.now() + MAX_SCHEDULE_AHEAD_MS) {
+        setErrorMessage('You can only schedule up to 90 days ahead.');
+        haptics.error();
+        return;
+      }
+      scheduledAt = scheduledDateObj.toISOString();
+    }
+
     haptics.medium();
 
     setSubmitting(true);
     try {
+      const hasPoll = attachPoll && !!pollQuestion.trim();
       await onPublish({
         title: topic.trim() || content.trim().slice(0, 80),
         content: content.trim(),
@@ -198,14 +305,29 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
         isPinned: isAdmin && pinToTop,
         postFormat: 'Thread',
         imageUrl: customMediaUri ?? undefined,
-        pollQuestion: attachPoll && pollQuestion.trim() ? pollQuestion.trim() : undefined,
-        pollOptions: attachPoll && pollQuestion.trim() ? pollOptions.filter((o) => o.trim().length > 0) : undefined,
+        pollQuestion: hasPoll ? pollQuestion.trim() : undefined,
+        pollOptions: hasPoll ? pollOptions.filter((o) => o.trim().length > 0) : undefined,
+        pollDurationHours: hasPoll ? pollDurationHours : undefined,
+        status,
+        scheduledAt,
       });
       onClose();
       reset();
+      if (status === 'draft') {
+        Alert.alert('Draft saved', 'You can finish and publish it later from your profile.');
+      } else if (status === 'scheduled' && scheduledDateObj) {
+        Alert.alert('Post scheduled', `This will go live on ${describeDateTime(scheduledDateObj)}.`);
+      }
     } catch (err: any) {
       haptics.error();
-      setErrorMessage(err?.message || 'Could not publish this post. Please try again.');
+      setErrorMessage(
+        err?.message ||
+          (status === 'draft'
+            ? 'Could not save this draft. Please try again.'
+            : status === 'scheduled'
+            ? 'Could not schedule this post. Please try again.'
+            : 'Could not publish this post. Please try again.'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -346,134 +468,59 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               </View>
             ) : null}
 
-            {/* Action Row: Photo + AI Art + GIFs + Poll */}
-            <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.sm, flexWrap: 'wrap' }}>
+            {/* Action Row: Photo + Poll */}
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
               <Pressable
                 onPress={handlePickImage}
+                accessibilityRole="button"
+                accessibilityLabel="Attach a photo"
                 style={{
                   flex: 1,
-                  minWidth: '22%',
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 4,
-                  paddingVertical: 9,
-                  paddingHorizontal: 8,
+                  gap: 6,
+                  minHeight: 44,
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
                   borderRadius: radius.md,
                   borderWidth: 1,
-                  borderColor: customMediaUri && !customMediaUri.includes('pollinations') && !customMediaUri.includes('giphy') ? colors.brandPrimary : colors.border,
-                  backgroundColor: customMediaUri && !customMediaUri.includes('pollinations') && !customMediaUri.includes('giphy') ? colors.pastelPrimaryBg : colors.surface,
+                  borderColor: customMediaUri ? colors.brandPrimary : colors.border,
+                  backgroundColor: customMediaUri ? colors.pastelPrimaryBg : colors.surface,
                 }}
               >
-                <Ionicons name="image-outline" size={16} color={colors.brandPrimary} />
-                <AppText variant="caption" weight="bold" numberOfLines={1}>
+                <Ionicons name="image-outline" size={17} color={colors.brandPrimary} />
+                <AppText variant="bodySmall" weight="bold" style={{ flexShrink: 1 }}>
                   Photo
                 </AppText>
               </Pressable>
 
               <Pressable
-                onPress={handleGenerateAiArt}
-                disabled={generatingAi}
-                style={{
-                  flex: 1,
-                  minWidth: '22%',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 4,
-                  paddingVertical: 9,
-                  paddingHorizontal: 8,
-                  borderRadius: radius.md,
-                  borderWidth: 1,
-                  borderColor: customMediaUri?.includes('pollinations') ? '#8B5CF6' : colors.border,
-                  backgroundColor: customMediaUri?.includes('pollinations') ? 'rgba(139,92,246,0.12)' : colors.surface,
-                }}
-              >
-                <Ionicons name="sparkles" size={15} color="#8B5CF6" />
-                <AppText variant="caption" weight="bold" style={{ color: '#8B5CF6' }} numberOfLines={1}>
-                  {generatingAi ? 'Generating...' : 'AI Art'}
-                </AppText>
-              </Pressable>
-
-              <Pressable
-                onPress={() => { haptics.light(); setShowGifPicker((v) => !v); }}
-                style={{
-                  flex: 1,
-                  minWidth: '22%',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 4,
-                  paddingVertical: 9,
-                  paddingHorizontal: 8,
-                  borderRadius: radius.md,
-                  borderWidth: 1,
-                  borderColor: showGifPicker || customMediaUri?.includes('giphy') ? '#EC4899' : colors.border,
-                  backgroundColor: showGifPicker || customMediaUri?.includes('giphy') ? 'rgba(236,72,153,0.12)' : colors.surface,
-                }}
-              >
-                <Ionicons name="happy-outline" size={16} color="#EC4899" />
-                <AppText variant="caption" weight="bold" style={{ color: '#EC4899' }} numberOfLines={1}>
-                  GIFs
-                </AppText>
-              </Pressable>
-
-              <Pressable
                 onPress={() => { haptics.light(); setAttachPoll((v) => !v); }}
+                accessibilityRole="button"
+                accessibilityLabel={attachPoll ? 'Remove poll' : 'Attach a poll'}
+                accessibilityState={{ selected: attachPoll }}
                 style={{
                   flex: 1,
-                  minWidth: '22%',
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 4,
-                  paddingVertical: 9,
-                  paddingHorizontal: 8,
+                  gap: 6,
+                  minHeight: 44,
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
                   borderRadius: radius.md,
                   borderWidth: 1,
                   borderColor: attachPoll ? '#10B981' : colors.border,
                   backgroundColor: attachPoll ? 'rgba(16,185,129,0.08)' : colors.surface,
                 }}
               >
-                <Ionicons name="bar-chart-outline" size={16} color={attachPoll ? '#10B981' : colors.textSecondary} />
-                <AppText variant="caption" weight="bold" style={{ color: attachPoll ? '#10B981' : colors.textSecondary }} numberOfLines={1}>
+                <Ionicons name="bar-chart-outline" size={17} color={attachPoll ? '#10B981' : colors.textSecondary} />
+                <AppText variant="bodySmall" weight="bold" style={{ color: attachPoll ? '#10B981' : colors.textSecondary, flexShrink: 1 }}>
                   Poll
                 </AppText>
               </Pressable>
             </View>
-
-            {/* Reaction GIFs Picker */}
-            {showGifPicker && (
-              <View style={{ marginBottom: spacing.md, backgroundColor: colors.surface, padding: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border }}>
-                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
-                  TAP A REACTION GIF TO ATTACH:
-                </AppText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                  {STUDENT_GIFS.map((gif) => (
-                    <Pressable
-                      key={gif.label}
-                      onPress={() => {
-                        haptics.medium();
-                        setCustomMediaUri(gif.url);
-                        setShowGifPicker(false);
-                      }}
-                      style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: radius.pill,
-                        backgroundColor: customMediaUri === gif.url ? colors.pastelPrimaryBg : colors.background,
-                        borderWidth: 1,
-                        borderColor: customMediaUri === gif.url ? colors.brandPrimary : colors.border,
-                      }}
-                    >
-                      <AppText variant="caption" weight="semiBold">
-                        {gif.label}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
 
             {/* Poll Fields */}
             {attachPoll && (
@@ -509,11 +556,48 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                   </View>
                 ))}
                 {pollOptions.length < 4 && (
-                  <Pressable onPress={handleAddPollOption} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <Pressable onPress={handleAddPollOption} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, minHeight: 44 }}>
                     <Ionicons name="add-circle-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="caption" weight="bold" tone="brand">+ Add Option</AppText>
                   </Pressable>
                 )}
+
+                {/* Poll duration */}
+                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginTop: spacing.xs, marginBottom: 6, textTransform: 'uppercase' }}>
+                  Poll closes after
+                </AppText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {POLL_DURATIONS.map((d) => {
+                    const selected = pollDurationHours === d.hours;
+                    return (
+                      <Pressable
+                        key={d.hours}
+                        onPress={() => { haptics.light(); setPollDurationHours(d.hours); }}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: radius.pill,
+                          borderWidth: 1,
+                          borderColor: selected ? '#10B981' : colors.border,
+                          backgroundColor: selected ? 'rgba(16,185,129,0.12)' : colors.surface,
+                        }}
+                      >
+                        <AppText
+                          variant="caption"
+                          weight={selected ? 'bold' : 'medium'}
+                          style={{ color: selected ? '#10B981' : colors.textSecondary, flexShrink: 1 }}
+                        >
+                          {d.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <AppText variant="caption" tone="secondary" style={{ marginTop: 6, flexShrink: 1 }}>
+                  Voting stops {POLL_DURATIONS.find((d) => d.hours === pollDurationHours)?.label ?? '24 hours'} after this post goes live.
+                </AppText>
               </SolidCard>
             )}
 
@@ -587,6 +671,126 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 );
               })}
             </View>
+
+            {/* Schedule for later */}
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setShowSchedule((v) => {
+                  const next = !v;
+                  if (next && !scheduleDate && !scheduleTime) {
+                    const d = presetTomorrowMorning();
+                    setScheduleDate(toDateInput(d));
+                    setScheduleTime(toTimeInput(d));
+                  }
+                  return next;
+                });
+                setErrorMessage(null);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: showSchedule }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                minHeight: 44,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderColor: showSchedule ? colors.brandPrimary : colors.border,
+                backgroundColor: showSchedule ? colors.pastelPrimaryBg : colors.surface,
+                marginTop: spacing.xs,
+              }}
+            >
+              <Ionicons name="time-outline" size={17} color={showSchedule ? colors.brandPrimary : colors.textSecondary} />
+              <AppText variant="bodySmall" weight="bold" tone={showSchedule ? 'brand' : 'secondary'} style={{ flexShrink: 1 }}>
+                Schedule for later
+              </AppText>
+            </Pressable>
+
+            {showSchedule && (
+              <SolidCard radius={14} style={{ marginTop: spacing.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.md }}>
+                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6, textTransform: 'uppercase' }}>
+                  Quick options
+                </AppText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.sm }}>
+                  {[
+                    { label: 'In 1 hour', make: presetInAnHour },
+                    { label: 'Tonight 6pm', make: presetTonight },
+                    { label: 'Tomorrow 9am', make: presetTomorrowMorning },
+                  ].map((p) => (
+                    <Pressable
+                      key={p.label}
+                      onPress={() => applySchedulePreset(p.make())}
+                      accessibilityRole="button"
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: radius.pill,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      }}
+                    >
+                      <AppText variant="caption" weight="semiBold" style={{ flexShrink: 1 }}>
+                        {p.label}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+                  <View style={{ flexGrow: 1, flexBasis: 150, minWidth: 130 }}>
+                    <AppTextField
+                      label="Date"
+                      value={scheduleDate}
+                      onChangeText={(v) => { setScheduleDate(v); setErrorMessage(null); }}
+                      placeholder="YYYY-MM-DD"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      inputMode="numeric"
+                    />
+                  </View>
+                  <View style={{ flexGrow: 1, flexBasis: 110, minWidth: 100 }}>
+                    <AppTextField
+                      label="Time (24h)"
+                      value={scheduleTime}
+                      onChangeText={(v) => { setScheduleTime(v); setErrorMessage(null); }}
+                      placeholder="HH:MM"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      inputMode="numeric"
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+                  <Ionicons
+                    name={scheduledDateObj && scheduleWithinRange ? 'calendar-outline' : 'alert-circle-outline'}
+                    size={15}
+                    color={scheduledDateObj && scheduleWithinRange ? colors.brandPrimary : colors.critical}
+                    style={{ marginTop: 2 }}
+                  />
+                  <AppText
+                    variant="caption"
+                    weight="semiBold"
+                    style={{ flex: 1, flexShrink: 1, color: scheduledDateObj && scheduleWithinRange ? colors.brandPrimary : colors.critical }}
+                  >
+                    {!scheduledDateObj
+                      ? 'Enter a date as YYYY-MM-DD and a time as HH:MM, or tap a quick option above.'
+                      : scheduleWithinRange
+                      ? `Goes live ${describeDateTime(scheduledDateObj)} (your local time).`
+                      : scheduledDateObj.getTime() < Date.now() + MIN_SCHEDULE_LEAD_MS
+                      ? `${describeDateTime(scheduledDateObj)} is not at least 5 minutes from now.`
+                      : `${describeDateTime(scheduledDateObj)} is more than 90 days away.`}
+                  </AppText>
+                </View>
+                <AppText variant="caption" tone="secondary" style={{ marginTop: 4, flexShrink: 1 }}>
+                  Must be at least 5 minutes from now and no more than 90 days ahead.
+                </AppText>
+              </SolidCard>
+            )}
           </ScrollView>
 
           {/* Error message */}
@@ -613,24 +817,59 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
             </View>
           ) : null}
 
-          {/* Footer Buttons */}
+          {/* Footer Buttons - Post is the primary action; draft/schedule are secondary.
+              Stacked on phones so nothing clips at 375px. */}
           <View
             style={{
-              flexDirection: 'row',
               gap: spacing.sm,
-              justifyContent: 'flex-end',
               paddingVertical: spacing.md,
               paddingHorizontal: spacing.lg,
               borderTopWidth: 1,
               borderTopColor: colors.divider,
             }}
           >
-            <AppButton label="Cancel" variant="ghost" onPress={onClose} disabled={submitting} />
             <AppButton
-              label={submitting ? 'Posting...' : 'Post'}
-              onPress={handlePublish}
+              label={submitting ? 'Posting...' : 'Post now'}
+              icon="send"
+              fullWidth
+              onPress={() => handleSubmit('published')}
               disabled={submitting}
             />
+            <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+              <View style={{ flexGrow: 1, flexBasis: 130, minWidth: 120 }}>
+                <AppButton
+                  label="Save draft"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onPress={() => handleSubmit('draft')}
+                  disabled={submitting}
+                />
+              </View>
+              <View style={{ flexGrow: 1, flexBasis: 130, minWidth: 120 }}>
+                <AppButton
+                  label={showSchedule ? 'Schedule' : 'Schedule...'}
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onPress={() => {
+                    if (!showSchedule) {
+                      setShowSchedule(true);
+                      if (!scheduleDate && !scheduleTime) {
+                        const d = presetTomorrowMorning();
+                        setScheduleDate(toDateInput(d));
+                        setScheduleTime(toTimeInput(d));
+                      }
+                      setErrorMessage('Pick when this should go live, then tap Schedule again.');
+                      return;
+                    }
+                    handleSubmit('scheduled');
+                  }}
+                  disabled={submitting}
+                />
+              </View>
+            </View>
+            <AppButton label="Cancel" variant="ghost" fullWidth onPress={onClose} disabled={submitting} />
           </View>
         </View>
       </KeyboardAvoidingView>

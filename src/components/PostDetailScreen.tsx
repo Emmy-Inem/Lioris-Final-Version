@@ -21,6 +21,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, togglePostRepost, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
+import { toggleSavedItem, SAVED_ITEMS_KEY } from '@/api/bookmarks';
 import { submitReport } from '@/api/moderation';
 import { haptics } from '@/utils/haptics';
 
@@ -46,6 +47,27 @@ function timeAgo(iso: string) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+/** "Closes in 3h" / "Poll closed" for a poll's closesAt timestamp. */
+function pollClosingLabel(closesAt?: string, isClosed?: boolean) {
+  if (!closesAt) return isClosed ? 'Poll closed' : 'Active poll';
+  const ms = new Date(closesAt).getTime() - Date.now();
+  if (Number.isNaN(ms)) return isClosed ? 'Poll closed' : 'Active poll';
+  if (ms <= 0) return 'Poll closed';
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 60) return `Closes in ${Math.max(1, minutes)}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Closes in ${hours}h`;
+  return `Closes in ${Math.floor(hours / 24)}d`;
+}
+
+function isPollClosed(poll?: { closesAt?: string; isClosed?: boolean } | null) {
+  if (!poll) return false;
+  if (poll.isClosed) return true;
+  if (!poll.closesAt) return false;
+  const t = new Date(poll.closesAt).getTime();
+  return !Number.isNaN(t) && t <= Date.now();
+}
+
 export function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, spacing, radius, isDark } = useTheme();
@@ -61,10 +83,12 @@ export function PostDetailScreen() {
 
   const [liked, setLiked] = useState(!!post?.isLikedByMe);
   const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
-  const [reposted, setReposted] = useState(false);
+  const [reposted, setReposted] = useState(!!post?.isRepostedByMe);
   const [repostsCount, setRepostsCount] = useState(post?.repostsCount ?? 0);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(!!post?.isBookmarkedByMe);
+  const [savingBookmark, setSavingBookmark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isAuthor = Boolean(
     user?.id &&
@@ -97,11 +121,15 @@ export function PostDetailScreen() {
  // Poll state
  const [poll, setPoll] = useState(post?.poll ?? null);
 
+ const pollClosed = isPollClosed(poll);
+
  React.useEffect(() => {
    if (post) {
      setLiked(!!post.isLikedByMe);
      setLikesCount(post.likesCount);
      setRepostsCount(post.repostsCount);
+     setReposted(!!post.isRepostedByMe);
+     setBookmarked(!!post.isBookmarkedByMe);
      setPoll(post.poll ?? null);
    }
  }, [post]);
@@ -144,9 +172,13 @@ export function PostDetailScreen() {
    setReposted(next);
    setRepostsCount((prev) => Math.max(0, prev + (next ? 1 : -1)));
    try {
-     const serverCount = await togglePostRepost(post.id, next);
-     if (typeof serverCount === 'number') setRepostsCount(serverCount);
+     const result = await togglePostRepost(post.id, next);
+     if (result && typeof result === 'object') {
+       setReposted(result.reposted);
+       setRepostsCount(result.count);
+     }
      queryClient.invalidateQueries({ queryKey: ['feed'] });
+     queryClient.invalidateQueries({ queryKey: ['my-posts'] });
      queryClient.invalidateQueries({ queryKey: ['post', post.id] });
    } catch (err: any) {
      setReposted(!next);
@@ -155,24 +187,110 @@ export function PostDetailScreen() {
    }
  }
 
+ /**
+  * Tapping a different option moves the vote, tapping your own clears it, and the
+  * error voteOnPoll throws (closed poll, etc.) is shown instead of being swallowed.
+  */
  async function handleVote(optionId: string) {
-   if (!poll || !post) return;
+   if (!poll || !post || pollClosed) return;
    haptics.medium();
-   const hasVoted = poll.options.some((o) => o.isVotedByMe);
-   if (hasVoted) return;
 
-   const nextOptions = poll.options.map((opt) =>
-     opt.id === optionId ? { ...opt, votes: opt.votes + 1, isVotedByMe: true } : opt,
+   const previous = poll;
+   const current = poll.options.find((o) => o.isVotedByMe);
+   const clearing = current?.id === optionId;
+
+   const nextOptions = poll.options.map((opt) => {
+     const wasMine = !!opt.isVotedByMe;
+     const willBeMine = !clearing && opt.id === optionId;
+     const delta = (willBeMine ? 1 : 0) - (wasMine ? 1 : 0);
+     return { ...opt, votes: Math.max(0, opt.votes + delta), isVotedByMe: willBeMine };
+   });
+   const totalDelta = clearing ? -1 : current ? 0 : 1;
+   setPoll({ ...poll, options: nextOptions, totalVotes: Math.max(0, poll.totalVotes + totalDelta) });
+
+   try {
+     const serverPoll = await voteOnPoll(post.id, optionId);
+     if (serverPoll && typeof serverPoll === 'object' && 'options' in serverPoll) {
+       setPoll(serverPoll as typeof poll);
+     }
+     queryClient.invalidateQueries({ queryKey: ['feed'] });
+     queryClient.invalidateQueries({ queryKey: ['post', post.id] });
+   } catch (err: any) {
+     setPoll(previous);
+     haptics.error();
+     Alert.alert('Vote not counted', err?.message || 'Could not record your vote. Please try again.');
+   }
+ }
+
+ /** Saves/unsaves this post into the one shared saved_items store. */
+ async function handleToggleBookmark() {
+   if (!post || savingBookmark) return;
+   haptics.light();
+   const next = !bookmarked;
+   setBookmarked(next);
+   setSavingBookmark(true);
+   try {
+     await toggleSavedItem('post', post.id, next, {
+       title: post.title,
+       subtitle: `${post.authorName} • c/${post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}`,
+     });
+     await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
+     await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('post') });
+   } catch (err: any) {
+     setBookmarked(!next);
+     haptics.error();
+     Alert.alert(next ? 'Could not save' : 'Could not remove', err?.message || 'Please try again.');
+   } finally {
+     setSavingBookmark(false);
+   }
+ }
+
+ /**
+  * deletePost throws when the database refused, so the screen only navigates away
+  * once the row is really gone - and it invalidates the feed AND profile caches.
+  */
+ async function handleDelete(moderation: boolean) {
+   if (!post || deleting) return;
+   setDeleting(true);
+   try {
+     await deletePost(post.id);
+     await Promise.all([
+       queryClient.invalidateQueries({ queryKey: ['feed'] }),
+       queryClient.invalidateQueries({ queryKey: ['my-posts'] }),
+       queryClient.invalidateQueries({ queryKey: ['my-drafts'] }),
+       queryClient.invalidateQueries({ queryKey: ['my-scheduled'] }),
+       queryClient.invalidateQueries({ queryKey: ['profile'] }),
+       queryClient.invalidateQueries({ queryKey: ['post', post.id] }),
+     ]);
+     haptics.medium();
+     Alert.alert(
+       moderation ? 'Post Removed' : 'Post Deleted',
+       moderation ? 'The thread was removed by moderator action.' : 'Your thread has been deleted.',
+     );
+     router.back();
+   } catch (err: any) {
+     haptics.error();
+     Alert.alert('Delete failed', err?.message || 'The post could not be deleted. Please try again.');
+   } finally {
+     setDeleting(false);
+   }
+ }
+
+ function confirmDelete(moderation: boolean) {
+   Alert.alert(
+     moderation ? 'Takedown Post' : 'Delete Your Post',
+     moderation
+       ? 'Are you sure you want to remove this thread from the community feed? This action is logged.'
+       : 'Are you sure you want to permanently delete this thread? This cannot be undone.',
+     [
+       { text: 'Cancel', style: 'cancel' },
+       {
+         text: moderation ? 'Takedown & Delete' : 'Delete Post',
+         style: 'destructive',
+         onPress: () => { handleDelete(moderation); },
+       },
+     ],
    );
-   const nextPoll = {
-     ...poll,
-     options: nextOptions,
-     totalVotes: poll.totalVotes + 1,
-   };
-   setPoll(nextPoll);
-   await voteOnPoll(post.id, optionId);
-   queryClient.invalidateQueries({ queryKey: ['feed'] });
-   queryClient.invalidateQueries({ queryKey: ['post', post.id] });
  }
 
  async function handleAddReply() {
@@ -338,9 +456,9 @@ export function PostDetailScreen() {
  borderColor: colors.border,
  }}
  >
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
- <Ionicons name="bar-chart"size={18} color={colors.textSecondary} />
- <AppText weight="bold"variant="bodySmall">
+ <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: spacing.sm }}>
+ <Ionicons name="bar-chart"size={18} color={colors.textSecondary} style={{ marginTop: 2 }} />
+ <AppText weight="bold"variant="bodySmall"style={{ flex: 1, flexShrink: 1 }}>
  {poll.question}
  </AppText>
  </View>
@@ -352,7 +470,10 @@ export function PostDetailScreen() {
  <Pressable
  key={opt.id}
  onPress={() => handleVote(opt.id)}
- disabled={hasVotedAny}
+ disabled={pollClosed}
+ accessibilityRole="button"
+ accessibilityState={{ selected: !!opt.isVotedByMe, disabled: pollClosed }}
+ accessibilityLabel={opt.isVotedByMe ? `${opt.label}, your vote. Tap to remove it.` : `Vote for ${opt.label}`}
  style={{
  position: 'relative',
  backgroundColor: colors.surface,
@@ -365,7 +486,7 @@ export function PostDetailScreen() {
  overflow: 'hidden',
  }}
  >
- {hasVotedAny ? (
+ {hasVotedAny || pollClosed ? (
  <View
  style={{
  position: 'absolute',
@@ -385,11 +506,11 @@ export function PostDetailScreen() {
  size={18}
  color={opt.isVotedByMe ? colors.brandPrimary : colors.textSecondary}
  />
- <AppText weight={opt.isVotedByMe ? 'bold' : 'medium'} variant="bodySmall"tone={opt.isVotedByMe ? 'brand' : 'primary'}>
+ <AppText weight={opt.isVotedByMe ? 'bold' : 'medium'} variant="bodySmall"tone={opt.isVotedByMe ? 'brand' : 'primary'} style={{ flex: 1, flexShrink: 1 }}>
  {opt.label}
  </AppText>
  </View>
- {hasVotedAny ? (
+ {hasVotedAny || pollClosed ? (
  <AppText weight="bold"variant="caption"tone={opt.isVotedByMe ? 'brand' : 'secondary'}>
  {percentage}% ({opt.votes})
  </AppText>
@@ -398,6 +519,21 @@ export function PostDetailScreen() {
  </Pressable>
  );
  })}
+
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+ <AppText tone="secondary"variant="caption"style={{ flexShrink: 1 }}>
+ {poll.totalVotes} {poll.totalVotes === 1 ? 'vote' : 'votes'} • {pollClosingLabel(poll.closesAt, poll.isClosed)}
+ </AppText>
+ {poll.options.some((o) => o.isVotedByMe) ? (
+ <AppText tone="brand"variant="caption"weight="bold"style={{ flexShrink: 1 }}>
+ {pollClosed ? 'You voted' : 'Tap another option to change your vote, or tap yours to undo'}
+ </AppText>
+ ) : pollClosed ? (
+ <AppText tone="secondary"variant="caption"weight="bold"style={{ flexShrink: 1 }}>
+ Voting has ended
+ </AppText>
+ ) : null}
+ </View>
  </View>
  ) : null}
 
@@ -449,25 +585,22 @@ export function PostDetailScreen() {
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
  <Ionicons name="repeat"size={20} color={reposted ? colors.brandPrimary : colors.textSecondary} />
- <AppText variant="caption"weight="bold"tone={reposted ? 'brand' : 'secondary'}>
- Repost
+ <AppText variant="caption"weight="bold"tone={reposted ? 'brand' : 'secondary'} style={{ flexShrink: 1 }}>
+ {reposted ? 'Reposted' : 'Repost'}
  </AppText>
  </Pressable>
 
  <Pressable
- onPress={() => {
- haptics.light();
- setBookmarked((b) => !b);
- Alert.alert(bookmarked ? 'Bookmark Removed' : 'Saved', 'Added to your bookmarks.');
- }}
+ onPress={handleToggleBookmark}
+ disabled={savingBookmark}
  accessibilityRole="button"
- accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark thread'}
+ accessibilityLabel={bookmarked ? 'Remove from saved items' : 'Save this post'}
  accessibilityState={{ selected: bookmarked }}
- style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6, minHeight: 44 }}
  >
  <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
- <AppText variant="caption"weight="bold"tone={bookmarked ? 'brand' : 'secondary'}>
- Save
+ <AppText variant="caption"weight="bold"tone={bookmarked ? 'brand' : 'secondary'} style={{ flexShrink: 1 }}>
+ {bookmarked ? 'Saved' : 'Save'}
  </AppText>
  </Pressable>
 
@@ -716,33 +849,12 @@ export function PostDetailScreen() {
  <Pressable
  onPress={() => {
  setMenuOpen(false);
- Alert.alert(
- 'Delete Your Post',
- 'Are you sure you want to permanently delete this thread? This cannot be undone.',
- [
- { text: 'Cancel', style: 'cancel' },
- {
- text: 'Delete Post',
- style: 'destructive',
- onPress: async () => {
- try {
- await deletePost(post.id);
- await queryClient.invalidateQueries({ queryKey: ['feed'] });
- haptics.medium();
- Alert.alert('Post Deleted', 'Your thread has been deleted.');
- router.back();
- } catch (err: any) {
- Alert.alert('Error', err?.message || 'Could not delete post.');
- }
- },
- },
- ],
- );
+ confirmDelete(false);
  }}
- style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 }}
  >
  <Ionicons name="trash-outline" size={18} color={colors.critical} />
- <AppText style={{ color: colors.critical }} weight="bold">Delete My Post</AppText>
+ <AppText style={{ color: colors.critical, flexShrink: 1 }} weight="bold">Delete My Post</AppText>
  </Pressable>
  </>
  )}
@@ -772,28 +884,12 @@ export function PostDetailScreen() {
  <Pressable
  onPress={() => {
  setMenuOpen(false);
- Alert.alert(
- 'Takedown Post',
- 'Are you sure you want to remove this thread from the community feed? This action is logged.',
- [
- { text: 'Cancel', style: 'cancel' },
- {
- text: 'Takedown & Delete',
- style: 'destructive',
- onPress: async () => {
- await deletePost(post.id);
- await queryClient.invalidateQueries({ queryKey: ['feed'] });
- Alert.alert('Post Removed', 'The thread was removed by moderator action.');
- router.back();
- },
- },
- ]
- );
+ confirmDelete(true);
  }}
- style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 }}
  >
  <Ionicons name="trash-outline"size={18} color={colors.critical} />
- <AppText style={{ color: colors.critical }} weight="bold">Takedown & Delete Thread</AppText>
+ <AppText style={{ color: colors.critical, flexShrink: 1 }} weight="bold">Takedown & Delete Thread</AppText>
  </Pressable>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
  </>

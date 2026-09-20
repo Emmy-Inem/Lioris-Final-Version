@@ -238,26 +238,32 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  videoUrl?: string;
  pollQuestion?: string;
  pollOptions?: string[];
+ pollDurationHours?: number;
+ status?: 'published' | 'draft' | 'scheduled';
+ scheduledAt?: string;
  }) {
- const { pollQuestion, pollOptions, ...rest } = payload;
- const poll =
- pollQuestion && pollOptions && pollOptions.length > 0
- ? {
- question: pollQuestion,
- options: pollOptions.map((opt, i) => ({ id: `opt-${i + 1}`, label: opt, votes: 0, isVotedByMe: false })),
- totalVotes: 0,
- expiresIn: '7 days left',
- }
- : undefined;
+ const { pollQuestion, pollOptions, pollDurationHours, status, scheduledAt, ...rest } = payload;
 
  await createPost({
  ...rest,
- poll: poll || undefined,
  pollQuestion: pollQuestion || undefined,
+ pollOptions: pollOptions && pollOptions.length > 0 ? pollOptions : undefined,
+ pollDurationHours: pollQuestion ? pollDurationHours ?? 24 : undefined,
+ status: status ?? 'published',
+ scheduledAt,
  authorInstitutionCode: viewerInstitutionCode,
  });
  queryClient.invalidateQueries({ queryKey: ['feed'] });
+ queryClient.invalidateQueries({ queryKey: ['my-posts'] });
+ if (status === 'draft') {
+ queryClient.invalidateQueries({ queryKey: ['my-drafts'] });
+ toast.success('Draft saved.');
+ } else if (status === 'scheduled') {
+ queryClient.invalidateQueries({ queryKey: ['my-scheduled'] });
+ toast.success('Post scheduled.');
+ } else {
  toast.success('Thread published.');
+ }
  }
 
   const renderHeader = () => (
@@ -267,7 +273,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       {/* Screen Title & Scope Switcher in 1 Unified Clean Row */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: spacing.xs, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 }}>
-          <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22 }}>
+          <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 22, flexShrink: 1 }}>
             Forum
           </AppText>
         </View>
@@ -294,13 +300,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   accessibilityState={{ selected }}
                   style={{
                     paddingHorizontal: 12,
-                    paddingVertical: 5,
+                    paddingVertical: 8,
                     borderRadius: radius.pill,
                     backgroundColor: selected ? colors.brandPrimary : 'transparent',
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
-                    {s === 'campus' ? 'My Campus' : 'Global'}
+                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11, flexShrink: 1 }}>
+                    {s === 'campus' ? 'My Campus only' : 'Campus + Global'}
                   </AppText>
                 </Pressable>
               );
@@ -308,6 +314,15 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </View>
         )}
       </View>
+
+      {/* Scope help text - says exactly what each tab shows */}
+      {!isDesktop && (
+        <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm, flexShrink: 1, flexWrap: 'wrap' }}>
+          {viewScope === 'campus'
+            ? 'My Campus only: posts from your campus. Global posts from other universities are hidden.'
+            : 'Campus + Global: posts from your campus plus global posts shared across every university.'}
+        </AppText>
+      )}
 
       {/* 24h Campus Stories & Fleets */}
 
@@ -406,11 +421,11 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
                     <Ionicons name="flame" size={12} color="#EF4444" />
-                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }} numberOfLines={1}>
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
                       {tp.category}
                     </AppText>
                   </View>
-                  <AppText weight="bold" variant="bodySmall" numberOfLines={1} style={{ fontSize: 12 }}>
+                  <AppText weight="bold" variant="bodySmall" style={{ fontSize: 12 }}>
                     {tp.title}
                   </AppText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
@@ -543,7 +558,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     </AppText>
                   </View>
                 </View>
-                <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
+                <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5, marginTop: 1 }}>
                   💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads • {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
                 </AppText>
               </View>
@@ -587,7 +602,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
               <Ionicons name="shield-checkmark" size={13} color={colors.textSecondary} />
-              <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 10.5 }}>
+              <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5 }}>
                 <AppText weight="bold" tone="primary" style={{ fontSize: 10.5 }}>
                   Moderated by:
                 </AppText>{' '}
@@ -687,13 +702,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         onPress={() => setViewScope(s)}
                         style={{
                           paddingHorizontal: 12,
-                          paddingVertical: 5,
+                          paddingVertical: 8,
                           borderRadius: radius.pill,
                           backgroundColor: selected ? colors.brandPrimary : 'transparent',
                         }}
                       >
-                        <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
-                          {s === 'campus' ? 'My Campus' : 'Global Network'}
+                        <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11, flexShrink: 1 }}>
+                          {s === 'campus' ? 'My Campus only' : 'Campus + Global'}
                         </AppText>
                       </Pressable>
                     );
@@ -702,6 +717,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
               </View>
             </View>
+
+            {/* Scope help text - says exactly what each tab shows */}
+            <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm, flexShrink: 1, flexWrap: 'wrap' }}>
+              {viewScope === 'campus'
+                ? 'My Campus only: posts from your campus. Global posts from other universities are hidden.'
+                : 'Campus + Global: posts from your campus plus global posts shared across every university.'}
+            </AppText>
 
             {/* Desktop Channel Pills & Sort Bar */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md }}>
@@ -903,7 +925,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
                     <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
-                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11.5 }}>
+                    <AppText variant="caption" tone="secondary" style={{ fontSize: 11.5 }}>
                       <AppText weight="bold" tone="primary" style={{ fontSize: 11.5 }}>
                         Moderated by:
                       </AppText>{' '}
@@ -1135,10 +1157,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                         <Ionicons name={sf.icon} size={15} color={sf.accentColor} />
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <AppText weight="bold" variant="caption" numberOfLines={1}>
+                          <AppText weight="bold" variant="caption">
                             {sf.label}
                           </AppText>
-                          <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }} numberOfLines={1}>
+                          <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
                             {sf.moderatorBadge}
                           </AppText>
                         </View>
@@ -1169,7 +1191,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 ]).map((rule, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Ionicons name="checkmark-circle-outline" size={14} color="#10B981" />
-                    <AppText variant="caption" tone="secondary" numberOfLines={2}>
+                    <AppText variant="caption" tone="secondary">
                       {rule}
                     </AppText>
                   </View>
@@ -1409,7 +1431,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     </AppText>
                   </View>
 
-                  <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ lineHeight: 16 }}>
+                  <AppText variant="caption" tone="secondary" style={{ lineHeight: 16 }}>
                     {sf.description}
                   </AppText>
 
