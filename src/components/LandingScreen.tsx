@@ -22,6 +22,8 @@ import { AppTextField } from '@/components/AppTextField';
 import { joinWaitlist, LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { DATA_CONTROLLER, DPO_EMAIL } from '@/constants/legal';
 import { haptics } from '@/utils/haptics';
+import { AndroidBlurBackdrop, AndroidBlurFill, AndroidBlurScope } from '@/components/AndroidBlur';
+import { AndroidSoftGlow } from '@/components/AndroidSoftGlow';
 
 export function LandingScreen() {
   const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
@@ -64,6 +66,10 @@ export function LandingScreen() {
     }
   };
 
+  // Android has no CSS filter (and the native one is ignored inside the blur target), so the plain
+  // glow blobs below would be hard-edged there. Hide them on Android and draw AndroidSoftGlow instead.
+  const androidGlowBlur: any = Platform.OS === 'android' ? { display: 'none' } : null;
+
   // Liquid glass container style generator
   const glassStyle = (customRadius = 24, customAlpha?: number) => {
     const alpha = customAlpha ?? (isDark ? 0.45 : 0.65);
@@ -90,7 +96,14 @@ export function LandingScreen() {
   };
 
   return (
+    <AndroidBlurScope>
     <View style={{ flex: 1, backgroundColor: isDark ? '#080E1A' : '#F6F8FB' }}>
+      <AndroidBlurBackdrop style={StyleSheet.absoluteFill}>
+      {/* Android: the blurred layer needs a real opaque page background to sample, otherwise the
+          window colour bleeds through and tints the top bar grey. */}
+      {Platform.OS === 'android' && (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? '#080E1A' : '#F6F8FB' }]} />
+      )}
       {/* Background Refraction Glow Blobs */}
       <View
         pointerEvents="none"
@@ -103,6 +116,7 @@ export function LandingScreen() {
           borderRadius: 300,
           backgroundColor: isDark ? 'rgba(26, 61, 255, 0.18)' : 'rgba(26, 61, 255, 0.12)',
           ...(Platform.OS === 'web' ? { filter: 'blur(110px)' } : {}),
+          ...androidGlowBlur,
         }}
       />
       <View
@@ -116,141 +130,28 @@ export function LandingScreen() {
           borderRadius: 250,
           backgroundColor: isDark ? 'rgba(240, 138, 46, 0.14)' : 'rgba(240, 138, 46, 0.10)',
           ...(Platform.OS === 'web' ? { filter: 'blur(100px)' } : {}),
+          ...androidGlowBlur,
         }}
       />
 
-      {/* Floating Liquid Glass Top Navigation Bar */}
-      <View
-        style={{
-          position: (Platform.OS === 'web' ? 'fixed' : 'absolute') as any,
-          top: Platform.OS === 'web' ? 16 : 40,
-          left: 0,
-          right: 0,
-          zIndex: 999,
-          alignItems: 'center',
-          paddingHorizontal: 16,
-        }}
-      >
-        <View
-          style={[
-            glassStyle(radius.pill, isDark ? 0.72 : 0.82),
-            {
-              width: '100%',
-              maxWidth: 1160,
-              paddingVertical: 10,
-              paddingHorizontal: isDesktop ? 22 : 14,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            },
-          ]}
-        >
-          {!isDark && Platform.OS !== 'android' && (
-            <LinearGradient
-              colors={['rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0.05)', 'transparent']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={[StyleSheet.absoluteFill, { borderRadius: radius.pill }]}
-              pointerEvents="none"
-            />
-          )}
-
-          {/* Logo */}
-          <Pressable accessibilityRole="button" accessibilityLabel="Lioris home"
-            onPress={() => scrollToSection('hero')}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-          >
-            <LiorisLogo size={32} variant="symbol" />
-            {width >= 480 && (
-              <LiorisLogo size={20} variant="wordmark" />
-            )}
-          </Pressable>
-
-          {/* Desktop Nav Links */}
-          {isDesktop && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 28 }}>
-              {[
-                { label: 'Overview', id: 'hero' },
-                { label: 'Device Simulator', id: 'preview' },
-                { label: 'Core Pillars', id: 'pillars' },
-                { label: 'Campuses', id: 'campuses' },
-              ].map((link) => (
-                <Pressable
-                  key={link.id}
-                  onPress={() => scrollToSection(link.id)}
-                  style={({ hovered }: any) => [
-                    { paddingVertical: 4 },
-                    hovered && { opacity: 0.75 },
-                  ]}
-                >
-                  <AppText
-                    variant="bodySmall"
-                    weight="medium"
-                    style={{ color: isDark ? '#E2E8F0' : '#334155' }}
-                  >
-                    {link.label}
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          )}
-
-          {/* Action CTAs & Theme Toggle */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: width < 380 ? 6 : 10 }}>
-            <Pressable
-              onPress={toggleTheme}
-              accessibilityLabel="Toggle Theme"
-              style={{
-                width: width < 380 ? 32 : 36,
-                height: width < 380 ? 32 : 36,
-                borderRadius: 18,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={width < 380 ? 15 : 17} color={isDark ? '#F8FAFC' : '#1E293B'} />
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/(auth)/login')}
-              style={{
-                paddingHorizontal: width < 380 ? 10 : 14,
-                paddingVertical: 8,
-                borderRadius: radius.pill,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-              }}
-            >
-              <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFFFFF' : colors.textPrimary, fontSize: width < 380 ? 12 : 13 }}>
-                Log In
-              </AppText>
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/(auth)/register')}
-              style={{
-                backgroundColor: colors.brandPrimary,
-                paddingHorizontal: width < 380 ? 12 : 16,
-                paddingVertical: 8,
-                borderRadius: radius.pill,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 5,
-                ...(Platform.OS === 'web'
-                  ? {
-                      boxShadow: '0 4px 14px rgba(26, 61, 255, 0.40)',
-                    }
-                  : {}),
-              }}
-            >
-              <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: width < 380 ? 12 : 13 }}>
-                Get Started
-              </AppText>
-              <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      {Platform.OS === 'android' && (
+        <>
+          <AndroidSoftGlow
+            style={{ position: 'absolute', top: -120, left: '15%' }}
+            width={Math.min(width * 0.7, 650)}
+            height={480}
+            rgb="26, 61, 255"
+            alpha={isDark ? 0.18 : 0.12}
+          />
+          <AndroidSoftGlow
+            style={{ position: 'absolute', top: 300, right: '5%' }}
+            width={Math.min(width * 0.6, 500)}
+            height={420}
+            rgb="240, 138, 46"
+            alpha={isDark ? 0.14 : 0.1}
+          />
+        </>
+      )}
 
       {/* Main Page Scroll Container */}
       <ScrollView
@@ -1396,6 +1297,144 @@ export function LandingScreen() {
 
         </View>
       </ScrollView>
+      </AndroidBlurBackdrop>
+
+      {/* Floating Liquid Glass Top Navigation Bar */}
+      <View
+        style={{
+          position: (Platform.OS === 'web' ? 'fixed' : 'absolute') as any,
+          top: Platform.OS === 'web' ? 16 : 40,
+          left: 0,
+          right: 0,
+          zIndex: 999,
+          alignItems: 'center',
+          paddingHorizontal: 16,
+        }}
+      >
+        <View
+          style={[
+            glassStyle(radius.pill, isDark ? 0.72 : 0.82),
+            {
+              width: '100%',
+              maxWidth: 1160,
+              paddingVertical: 10,
+              paddingHorizontal: isDesktop ? 22 : 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            },
+          ]}
+        >
+          {/* Android: real blur of the page scrolling under the floating bar */}
+          <AndroidBlurFill intensity={80} tint={isDark ? 'dark' : 'light'} borderRadius={radius.pill} />
+          {!isDark && (
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0.05)', 'transparent']}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={[StyleSheet.absoluteFill, { borderRadius: radius.pill }]}
+              pointerEvents="none"
+            />
+          )}
+
+          {/* Logo */}
+          <Pressable accessibilityRole="button" accessibilityLabel="Lioris home"
+            onPress={() => scrollToSection('hero')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+          >
+            <LiorisLogo size={32} variant="symbol" />
+            {width >= 480 && (
+              <LiorisLogo size={20} variant="wordmark" />
+            )}
+          </Pressable>
+
+          {/* Desktop Nav Links */}
+          {isDesktop && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 28 }}>
+              {[
+                { label: 'Overview', id: 'hero' },
+                { label: 'Device Simulator', id: 'preview' },
+                { label: 'Core Pillars', id: 'pillars' },
+                { label: 'Campuses', id: 'campuses' },
+              ].map((link) => (
+                <Pressable
+                  key={link.id}
+                  onPress={() => scrollToSection(link.id)}
+                  style={({ hovered }: any) => [
+                    { paddingVertical: 4 },
+                    hovered && { opacity: 0.75 },
+                  ]}
+                >
+                  <AppText
+                    variant="bodySmall"
+                    weight="medium"
+                    style={{ color: isDark ? '#E2E8F0' : '#334155' }}
+                  >
+                    {link.label}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {/* Action CTAs & Theme Toggle */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: width < 380 ? 6 : 10 }}>
+            <Pressable
+              onPress={toggleTheme}
+              accessibilityLabel="Toggle Theme"
+              style={{
+                width: width < 380 ? 32 : 36,
+                height: width < 380 ? 32 : 36,
+                borderRadius: 18,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={width < 380 ? 15 : 17} color={isDark ? '#F8FAFC' : '#1E293B'} />
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(auth)/login')}
+              style={{
+                paddingHorizontal: width < 380 ? 10 : 14,
+                paddingVertical: 8,
+                borderRadius: radius.pill,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+              }}
+            >
+              <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFFFFF' : colors.textPrimary, fontSize: width < 380 ? 12 : 13 }}>
+                Log In
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(auth)/register')}
+              style={{
+                backgroundColor: colors.brandPrimary,
+                paddingHorizontal: width < 380 ? 12 : 16,
+                paddingVertical: 8,
+                borderRadius: radius.pill,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                ...(Platform.OS === 'web'
+                  ? {
+                      boxShadow: '0 4px 14px rgba(26, 61, 255, 0.40)',
+                    }
+                  : {}),
+              }}
+            >
+              <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: width < 380 ? 12 : 13 }}>
+                Get Started
+              </AppText>
+              <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
     </View>
+    </AndroidBlurScope>
   );
 }

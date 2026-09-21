@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, ScrollView, View } from 'react-native';
+import { FlatList, Platform, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -382,11 +382,27 @@ export function NotificationsScreen() {
 
       {/* Screen Title & Actions */}
       <View style={{ marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: spacing.sm,
+            // Android: the title plus both buttons don't fit one row on a phone, so let the actions wrap under the title.
+            ...(Platform.OS === 'android' ? { flexWrap: 'wrap' as const } : null),
+          }}
+        >
           <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Notifications & Network
           </AppText>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              ...(Platform.OS === 'android' ? { marginLeft: 'auto' as const } : null),
+            }}
+          >
             {unreadCount > 0 && (
               <AppButton
                 label="Mark all read"

@@ -145,8 +145,8 @@ export function AppLoadingScreen({
         { backgroundColor: isDark ? '#0A1326' : '#F8FAF9' },
       ]}
     >
-      {/* Subtle atmospheric ambient glow (Web/iOS only; Android lacks CSS filter: blur) */}
-      {Platform.OS !== 'android' && (
+      {/* Subtle atmospheric ambient glow. On Android it needs the native blur filter (API 31+); older versions would show a hard disc. */}
+      {(Platform.OS !== 'android' || Number(Platform.Version) >= 31) && (
         <Animated.View
           pointerEvents="none"
           style={[
@@ -165,12 +165,8 @@ export function AppLoadingScreen({
           style={[
             styles.emblemContainer,
             {
-              backgroundColor: Platform.OS === 'android'
-                ? isDark ? '#131E32' : '#FFFFFF'
-                : isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.92)',
-              borderColor: Platform.OS === 'android'
-                ? isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'
-                : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(26, 61, 255, 0.15)',
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.92)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(26, 61, 255, 0.15)',
               transform: [{ scale: pulseAnim }],
               shadowColor: colors.brandPrimary,
             },
@@ -220,12 +216,8 @@ export function AppLoadingScreen({
           style={[
             styles.statusPill,
             {
-              backgroundColor: Platform.OS === 'android'
-                ? isDark ? '#131E32' : '#FFFFFF'
-                : isDark ? 'rgba(15, 23, 42, 0.70)' : 'rgba(255, 255, 255, 0.85)',
-              borderColor: Platform.OS === 'android'
-                ? isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'
-                : isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)',
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.70)' : 'rgba(255, 255, 255, 0.85)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)',
             },
           ]}
           accessibilityRole="progressbar"
@@ -296,6 +288,9 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         filter: 'blur(70px)',
+      } as any,
+      android: {
+        filter: [{ blur: 70 }],
       } as any,
       default: {},
     }),

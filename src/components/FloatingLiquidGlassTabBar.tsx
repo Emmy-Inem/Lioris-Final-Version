@@ -16,6 +16,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { haptics } from '@/utils/haptics';
+import { useBlurredTabsHost } from '@/components/BlurredTabsHost';
 
 export interface FloatingLiquidGlassTabBarProps {
   state: any;
@@ -29,6 +30,13 @@ const SPRING_CONFIG = {
   stiffness: 200,
   mass: 0.7,
 };
+
+// Android re-lays out the pill every frame while its width animates, and a spring's overshoot
+// makes that visibly wobble. A short eased timing curve settles cleanly, so Android uses it and
+// web/iOS keep the spring.
+const ANDROID_TIMING = { duration: 230, easing: Easing.out(Easing.cubic) };
+const animateTo = (value: number) =>
+  Platform.OS === 'android' ? withTiming(value, ANDROID_TIMING) : withSpring(value, SPRING_CONFIG);
 
 const PILL_PADDING_H = 6;
 const PILL_HEIGHT = 54;
@@ -126,22 +134,22 @@ function TabItem({
   const labelScale = useSharedValue(isFocused ? 1 : 0.85);
 
   useEffect(() => {
-    itemX.value = withSpring(targetX, SPRING_CONFIG);
-    itemWidth.value = withSpring(targetWidth, SPRING_CONFIG);
+    itemX.value = animateTo(targetX);
+    itemWidth.value = animateTo(targetWidth);
 
     if (isFocused) {
       labelOpacity.value = withTiming(1, {
         duration: 200,
         easing: Easing.out(Easing.quad),
       });
-      labelWidth.value = withSpring(labelWidthEstimate, SPRING_CONFIG);
-      labelScale.value = withSpring(1, SPRING_CONFIG);
+      labelWidth.value = animateTo(labelWidthEstimate);
+      labelScale.value = animateTo(1);
     } else {
       labelOpacity.value = withTiming(0, {
         duration: 130,
         easing: Easing.in(Easing.quad),
       });
-      labelWidth.value = withSpring(0, SPRING_CONFIG);
+      labelWidth.value = animateTo(0);
       labelScale.value = withTiming(0.85, { duration: 130 });
     }
   }, [targetX, targetWidth, isFocused, labelWidthEstimate]);
@@ -191,107 +199,12 @@ function TabItem({
   );
 }
 
-function AndroidBottomTabBar({
-  visibleRoutes,
-  activeIndex,
+function FloatingLiquidGlassTabBarView({
+  state,
   descriptors,
   navigation,
-  safeAreaInsets,
-  isDark,
-  colors,
-}: {
-  visibleRoutes: any[];
-  activeIndex: number;
-  descriptors: any;
-  navigation: any;
-  safeAreaInsets: any;
-  isDark: boolean;
-  colors: any;
-}) {
-  const bottomPadding = Math.max(8, safeAreaInsets?.bottom ?? 0);
-
-  return (
-    <View
-      style={[
-        styles.androidBarContainer,
-        {
-          backgroundColor: isDark ? '#0B1120' : '#FFFFFF',
-          borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-          paddingBottom: bottomPadding,
-        },
-      ]}
-      accessibilityRole="tablist"
-      accessibilityLabel="Main navigation"
-    >
-      {visibleRoutes.map((route: any, index: number) => {
-        const descriptor = descriptors[route.key];
-        const label = getRouteLabel(route, descriptor);
-        const isFocused = index === activeIndex;
-        const iconName = getRouteIcon(route.name, label, isFocused);
-
-        const onPress = () => {
-          haptics.light();
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
-
-        const activePillBg = isDark ? 'rgba(106, 137, 255, 0.18)' : '#EDF2FF';
-        const activeColor = colors.brandPrimary;
-        const inactiveColor = isDark ? '#94A3B8' : '#64748B';
-
-        return (
-          <Pressable
-            key={route.key}
-            onPress={onPress}
-            style={styles.androidTabItem}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isFocused }}
-            accessibilityLabel={label}
-            android_ripple={{
-              color: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-              borderless: true,
-              radius: 28,
-            }}
-          >
-            <View
-              style={[
-                styles.androidIconPill,
-                isFocused && { backgroundColor: activePillBg },
-              ]}
-            >
-              <Ionicons
-                name={iconName}
-                size={20}
-                color={isFocused ? activeColor : inactiveColor}
-              />
-            </View>
-            <AppText
-              variant="caption"
-              weight={isFocused ? 'bold' : 'medium'}
-              style={{
-                fontSize: 11,
-                color: isFocused ? activeColor : inactiveColor,
-                marginTop: 2,
-              }}
-              numberOfLines={1}
-            >
-              {label}
-            </AppText>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: FloatingLiquidGlassTabBarProps) {
+  blurTarget,
+}: FloatingLiquidGlassTabBarProps & { blurTarget?: React.RefObject<View | null> }) {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { width: windowWidth } = useWindowDimensions();
@@ -323,7 +236,10 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
   const bottomInset = Platform.OS === 'web' ? 18 : Math.max(18, (safeAreaInsets?.bottom ?? 0) + 6);
 
   const activeRoute = state.routes[state.index];
-  const activeIndex = visibleRoutes.findIndex((r: any) => r.key === activeRoute?.key);
+  const activeIndex = Math.max(
+    0,
+    visibleRoutes.findIndex((r: any) => r.key === activeRoute?.key)
+  );
 
   const layoutInfo = useMemo(() => {
     const N = visibleRoutes.length;
@@ -401,10 +317,10 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
   const trackWidth = useSharedValue(layoutInfo.totalContentWidth);
 
   useEffect(() => {
-    pillWidth.value = withSpring(layoutInfo.targetPillWidth, SPRING_CONFIG);
-    selectorX.value = withSpring(layoutInfo.selectorX, SPRING_CONFIG);
-    selectorWidth.value = withSpring(layoutInfo.activeWidth, SPRING_CONFIG);
-    trackWidth.value = withSpring(layoutInfo.totalContentWidth, SPRING_CONFIG);
+    pillWidth.value = animateTo(layoutInfo.targetPillWidth);
+    selectorX.value = animateTo(layoutInfo.selectorX);
+    selectorWidth.value = animateTo(layoutInfo.activeWidth);
+    trackWidth.value = animateTo(layoutInfo.totalContentWidth);
   }, [layoutInfo.targetPillWidth, layoutInfo.selectorX, layoutInfo.activeWidth, layoutInfo.totalContentWidth]);
 
   const animatedPillStyle = useAnimatedStyle(() => ({
@@ -420,22 +336,8 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
     width: trackWidth.value,
   }));
 
-  if (isDesktop || isHiddenRoute || visibleRoutes.length === 0 || activeIndex === -1) {
+  if (isDesktop || isHiddenRoute || visibleRoutes.length === 0) {
     return null;
-  }
-
-  if (Platform.OS === 'android') {
-    return (
-      <AndroidBottomTabBar
-        visibleRoutes={visibleRoutes}
-        activeIndex={activeIndex}
-        descriptors={descriptors}
-        navigation={navigation}
-        safeAreaInsets={safeAreaInsets}
-        isDark={isDark}
-        colors={colors}
-      />
-    );
   }
 
   return (
@@ -465,10 +367,11 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
         ]}
       >
         {/* Native Liquid Blur Engine */}
-        {Platform.OS !== 'web' && (
+        {Platform.OS !== 'web' && (Platform.OS !== 'android' || blurTarget) && (
           <BlurView
             intensity={Math.round(settings.blurIntensity * 3.2)}
             tint={isDark ? 'dark' : 'light'}
+            blurTarget={blurTarget}
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[StyleSheet.absoluteFill, { borderRadius: PILL_HEIGHT / 2, overflow: 'hidden' }]}
           />
@@ -607,31 +510,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  androidBarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    paddingTop: 6,
-    elevation: 8,
-    zIndex: 99999,
-  },
-  androidTabItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 3,
-  },
-  androidIconPill: {
-    width: 52,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
 
+
+/**
+ * Entry point used by the navigators. On Android the bar is handed to
+ * BlurredTabsHost, which renders it outside the blur target; everywhere else it
+ * renders in place exactly as before.
+ */
+export function FloatingLiquidGlassTabBar(props: FloatingLiquidGlassTabBarProps) {
+  const host = useBlurredTabsHost();
+  const setBarProps = host?.setBarProps;
+
+  useEffect(() => {
+    setBarProps?.(props);
+  });
+
+  useEffect(() => () => setBarProps?.(null), [setBarProps]);
+
+  if (host) return null;
+  return <FloatingLiquidGlassTabBarView {...props} />;
+}
+
+export { FloatingLiquidGlassTabBarView };

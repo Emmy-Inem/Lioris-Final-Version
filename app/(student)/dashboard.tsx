@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Alert, RefreshControl, Platform } from 'react-native';
+import { ScrollView, View, Pressable, Alert, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -156,14 +156,6 @@ export default function StudentDashboard() {
           <View style={{ height: isDesktop ? 175 : 148, position: 'relative', width: '100%', overflow: 'hidden' }}>
             {activeCover ? (
               <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-            ) : Platform.OS === 'android' ? (
-              <View
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: isDark ? '#0B1220' : '#1E293B',
-                }}
-              />
             ) : (
               <LinearGradient
                 colors={isDark ? ['#0d1b2a', '#1e293b', '#0f172a'] : ['#dbeafe', '#bfdbfe', '#93c5fd']}
@@ -174,35 +166,22 @@ export default function StudentDashboard() {
             )}
 
             {/* Ambient Multi-Stop Gradient Overlay for Rich Glass Depth and High Contrast */}
-            {Platform.OS === 'android' ? (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: activeCover ? 'rgba(10, 16, 30, 0.65)' : 'rgba(0, 0, 0, 0.25)',
-                }}
-              />
-            ) : (
-              <LinearGradient
-                colors={[
-                  'rgba(10, 16, 30, 0.2)',
-                  'rgba(10, 16, 30, 0.55)',
-                  isDark ? 'rgba(8, 14, 28, 0.94)' : 'rgba(15, 23, 42, 0.86)',
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                }}
-              />
-            )}
+            <LinearGradient
+              colors={[
+                'rgba(10, 16, 30, 0.2)',
+                'rgba(10, 16, 30, 0.55)',
+                isDark ? 'rgba(8, 14, 28, 0.94)' : 'rgba(15, 23, 42, 0.86)',
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            />
 
             {/* Hero Content Overlay */}
             <View

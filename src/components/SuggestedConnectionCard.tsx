@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppText } from './AppText';
@@ -79,7 +79,17 @@ export function SuggestedConnectionCard({ person, index }: { person: SuggestedPe
               {person.roleLabel} • {person.department}
             </AppText>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 2,
+                // Android draws overflowing text under the Connect button instead of clipping it, so let long
+                // labels (e.g. "Level Class of 2015 • Verified Student") wrap onto a second line.
+                ...(Platform.OS === 'android' ? { flexWrap: 'wrap' as const } : null),
+              }}
+            >
               <AppText variant="caption" tone="brand" weight="bold" style={{ fontSize: 11 }}>
                 Level {person.level}
               </AppText>

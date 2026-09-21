@@ -7,9 +7,13 @@ const API_BASE_URL = process.env.API_BASE_URL ?? 'https://api.lioris.app';
 const WS_BASE_URL = process.env.WS_BASE_URL ?? 'wss://api.lioris.app/realtime';
 const APP_ENV = process.env.APP_ENV ?? 'production';
 
+// Development builds install next to the store app (different application id),
+// so a locally signed debug build never has to replace the release install.
+const IS_DEV = APP_ENV === 'development';
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Lioris',
+  name: IS_DEV ? 'Lioris Dev' : 'Lioris',
   slug: 'lioris',
   scheme: 'lioris',
   version: '1.0.0',
@@ -56,7 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
-    package: 'lioris.app',
+    package: IS_DEV ? 'lioris.app.dev' : 'lioris.app',
     versionCode: 1,
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',

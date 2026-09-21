@@ -13,6 +13,7 @@ import { AppTextField } from './AppTextField';
 import { DepartmentPicker } from './DepartmentPicker';
 import { Avatar } from './Avatar';
 import { SolidCard } from './SolidCard';
+import { AndroidBlurBackdrop, AndroidBlurScope } from './AndroidBlur';
 import { AppButton } from './AppButton';
 import { PostCard } from './PostCard';
 import { Badge } from './Badge';
@@ -419,6 +420,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           <AppHeader />
         </View>
       )}
+      <AndroidBlurScope>
       <ScrollView
         style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={false}
@@ -426,7 +428,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}
       >
-        {/* Cover Photo Header */}
+        {/* Cover Photo Header (the backdrop the identity card blurs on Android) */}
+        <AndroidBlurBackdrop>
         <View style={{ height: isDesktop ? 220 : 150, position: 'relative', width: '100%', overflow: 'hidden' }}>
           {activeCover ? (
             <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
@@ -482,6 +485,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </AppText>
  </Pressable>
  </View>
+        </AndroidBlurBackdrop>
 
         {/* Responsive Content Container */}
         <View
@@ -866,6 +870,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </View>
  </View>
  </ScrollView>
+      </AndroidBlurScope>
 
     {/* Photo & Cover Customizer Modal */}
     <Modal visible={photoPickerOpen} transparent animationType="slide" onRequestClose={() => setPhotoPickerOpen(false)}>

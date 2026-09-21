@@ -6,14 +6,16 @@ import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
-import { FloatingLiquidGlassTabBar } from '@/components/FloatingLiquidGlassTabBar';
+import { FloatingLiquidGlassTabBar, FloatingLiquidGlassTabBarView } from '@/components/FloatingLiquidGlassTabBar';
+import { BlurredTabsHost } from '@/components/BlurredTabsHost';
 
 export default function AdminLayout() {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
 
   const tabsContent = (
-    <Tabs
+    <BlurredTabsHost renderTabBar={(p, t) => <FloatingLiquidGlassTabBarView {...p} blurTarget={t} />}>
+<Tabs
       tabBar={(props) => <FloatingLiquidGlassTabBar {...props} />}
       screenOptions={{
         headerShown: false,
@@ -97,6 +99,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="events/[id]" options={{ href: null }} />
       <Tabs.Screen name="post/[id]" options={{ href: null }} />
     </Tabs>
+</BlurredTabsHost>
   );
 
   return (

@@ -242,10 +242,33 @@ export function AppHeader() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   paddingHorizontal: 3,
+                  // Android: smaller badge pushed off the bell with a ring, so it neither covers the icon nor clips.
+                  ...(Platform.OS === 'android'
+                    ? {
+                        top: -6,
+                        right: -8,
+                        minWidth: 15,
+                        height: 15,
+                        borderRadius: 7.5,
+                        paddingHorizontal: 2,
+                        borderWidth: 1.5,
+                        borderColor: isDark ? '#0F172A' : '#FFFFFF',
+                      }
+                    : null),
                 }}
               >
-                <AppText style={{ fontSize: 9, color: '#FFFFFF' }} weight="bold">
-                  {unreadCount}
+                <AppText
+                  style={{
+                    fontSize: 9,
+                    color: '#FFFFFF',
+                    // Android adds font padding that pushes the digit off-centre inside the badge.
+                    ...(Platform.OS === 'android'
+                      ? ({ lineHeight: 11, includeFontPadding: false, textAlignVertical: 'center' } as any)
+                      : null),
+                  }}
+                  weight="bold"
+                >
+                  {Platform.OS === 'android' && unreadCount > 9 ? '9+' : unreadCount}
                 </AppText>
               </View>
             ) : null}

@@ -17,6 +17,7 @@ import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
+import { AndroidCampusMap } from '@/components/AndroidCampusMap';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -166,6 +167,9 @@ export function CampusMapModal({
               borderColor: colors.border,
               width: isDesktop ? 760 : '100%',
               maxHeight: isDesktop ? '92%' : '98%',
+              // Android: the landmarks list below is flex:1, which collapses to zero height inside a
+              // container that only has a max height, so give the container a real height.
+              ...(Platform.OS === 'android' ? { height: '98%' as const } : null),
             },
           ]}
         >
@@ -241,8 +245,10 @@ export function CampusMapModal({
           )}
 
           {/* Interactive Map View */}
-          <View style={[styles.mapFrame, { height: isDesktop ? 220 : 160, borderColor: colors.border, backgroundColor: colors.background }]}>
-            {isWeb ? (
+          <View style={[styles.mapFrame, { height: isDesktop ? 220 : Platform.OS === 'android' ? 230 : 160, borderColor: colors.border, backgroundColor: colors.background }]}>
+            {Platform.OS === 'android' ? (
+              <AndroidCampusMap embedUrl={embedUrl} />
+            ) : isWeb ? (
               <iframe
                 src={embedUrl}
                 style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}

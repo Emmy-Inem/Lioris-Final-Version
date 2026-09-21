@@ -6,7 +6,8 @@ import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
-import { FloatingLiquidGlassTabBar } from '@/components/FloatingLiquidGlassTabBar';
+import { FloatingLiquidGlassTabBar, FloatingLiquidGlassTabBarView } from '@/components/FloatingLiquidGlassTabBar';
+import { BlurredTabsHost } from '@/components/BlurredTabsHost';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 export default function AlumniLayout() {
@@ -15,7 +16,8 @@ export default function AlumniLayout() {
   const { isFeatureEnabled } = useFeatureFlags();
 
  const tabsContent = (
- <Tabs
+ <BlurredTabsHost renderTabBar={(p, t) => <FloatingLiquidGlassTabBarView {...p} blurTarget={t} />}>
+<Tabs
  tabBar={(props) => <FloatingLiquidGlassTabBar {...props} />}
  screenOptions={{
  headerShown: false,
@@ -91,6 +93,7 @@ export default function AlumniLayout() {
  <Tabs.Screen name="messages" options={{ href: null }} />
  <Tabs.Screen name="post/[id]" options={{ href: null }} />
  </Tabs>
+</BlurredTabsHost>
  );
 
  return (

@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, StyleSheet, View, ViewProps } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/theme/ThemeProvider';
+import { AndroidBlurFill } from '@/components/AndroidBlur';
 
 interface SolidCardProps extends ViewProps {
   padded?: boolean;
@@ -30,7 +31,7 @@ export function SolidCard({
 
   const defaultBg = backgroundColor
     ? backgroundColor
-    : frosted && Platform.OS !== 'android'
+    : frosted
     ? isDark
       ? 'rgba(15, 23, 42, 0.70)'
       : 'rgba(255, 255, 255, 0.85)'
@@ -61,13 +62,14 @@ export function SolidCard({
       ]}
       {...rest}
     >
-      {frosted && Platform.OS !== 'web' && Platform.OS !== 'android' ? (
+      {frosted && Platform.OS === 'ios' ? (
         <BlurView
           intensity={intensity}
           tint={isDark ? 'dark' : 'light'}
           style={StyleSheet.absoluteFill}
         />
       ) : null}
+      {frosted ? <AndroidBlurFill intensity={intensity} tint={isDark ? 'dark' : 'light'} borderRadius={cornerRadius} /> : null}
       {children}
     </View>
   );

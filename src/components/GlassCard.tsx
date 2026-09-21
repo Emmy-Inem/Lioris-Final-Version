@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
+import { AndroidBlurFill } from '@/components/AndroidBlur';
 
 export interface GlassCardProps extends ViewProps {
   padded?: boolean;
@@ -30,29 +31,6 @@ export function GlassCard({
   const { colors, spacing, radius: radiusTokens, isDark } = useTheme();
   const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
   const cornerRadius = radius ?? radiusTokens.glass ?? 20;
-
-  if (Platform.OS === 'android') {
-    return (
-      <View
-        style={[
-          styles.shadowWrapper,
-          {
-            borderRadius: cornerRadius,
-            backgroundColor: isDark ? '#131E32' : '#FFFFFF',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-            borderWidth: 1,
-            elevation: 1.5,
-          },
-          style,
-        ]}
-        {...rest}
-      >
-        <View style={[{ position: 'relative' }, padded && { padding: spacing.lg }, contentStyle]}>
-          {children}
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View
@@ -91,8 +69,8 @@ export function GlassCard({
             } as any),
         ]}
       >
-        {/* Native Liquid Blur Engine */}
-        {Platform.OS !== 'web' && (
+        {/* Native Liquid Blur Engine. Android cards sit inside the tab navigator's BlurTargetView and a BlurView can't blur its own target, so they use the translucent tint above. */}
+        {Platform.OS !== 'web' && Platform.OS !== 'android' && (
           <BlurView
             intensity={intensity}
             tint={isDark ? 'dark' : 'light'}
@@ -100,6 +78,9 @@ export function GlassCard({
             style={[StyleSheet.absoluteFill, { borderRadius: cornerRadius, overflow: 'hidden' }]}
           />
         )}
+
+        {/* Android: real blur when the screen provides a backdrop scope (cover image, hero); otherwise nothing. */}
+        <AndroidBlurFill intensity={intensity} tint={isDark ? 'dark' : 'light'} borderRadius={cornerRadius} />
 
         {/* Liquid Surface Meniscus Reflection Overlay - only in light mode for crisp physical glass depth without dark mode white glow */}
         {highlight && !isDark && (
