@@ -31,6 +31,29 @@ export function GlassCard({
   const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
   const cornerRadius = radius ?? radiusTokens.glass ?? 20;
 
+  if (Platform.OS === 'android') {
+    return (
+      <View
+        style={[
+          styles.shadowWrapper,
+          {
+            borderRadius: cornerRadius,
+            backgroundColor: isDark ? '#131E32' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            borderWidth: 1,
+            elevation: 1.5,
+          },
+          style,
+        ]}
+        {...rest}
+      >
+        <View style={[{ position: 'relative' }, padded && { padding: spacing.lg }, contentStyle]}>
+          {children}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View
       style={[

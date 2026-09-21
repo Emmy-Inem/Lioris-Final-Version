@@ -30,7 +30,7 @@ export function SolidCard({
 
   const defaultBg = backgroundColor
     ? backgroundColor
-    : frosted
+    : frosted && Platform.OS !== 'android'
     ? isDark
       ? 'rgba(15, 23, 42, 0.70)'
       : 'rgba(255, 255, 255, 0.85)'
@@ -61,7 +61,7 @@ export function SolidCard({
       ]}
       {...rest}
     >
-      {frosted && Platform.OS !== 'web' ? (
+      {frosted && Platform.OS !== 'web' && Platform.OS !== 'android' ? (
         <BlurView
           intensity={intensity}
           tint={isDark ? 'dark' : 'light'}

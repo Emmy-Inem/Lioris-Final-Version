@@ -114,6 +114,9 @@ export function LiquidGlassProvider({ children }: { children: React.ReactNode })
   };
 
   const getGlassBackground = (isDark: boolean, customAlpha?: number): string => {
+    if (Platform.OS === 'android') {
+      return isDark ? '#0F172A' : '#FFFFFF';
+    }
     const alpha = customAlpha ?? settings.translucency;
     if (isDark) {
       // Sleek deep navy/slate translucent liquid base
@@ -124,6 +127,9 @@ export function LiquidGlassProvider({ children }: { children: React.ReactNode })
   };
 
   const getGlassBorderColor = (isDark: boolean): string => {
+    if (Platform.OS === 'android') {
+      return isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+    }
     const bAlpha = settings.borderOpacity;
     return isDark ? `rgba(255, 255, 255, ${bAlpha.toFixed(2)})` : `rgba(255, 255, 255, ${(bAlpha * 2.5).toFixed(2)})`;
   };
@@ -157,8 +163,22 @@ export function useLiquidGlass() {
       updateSetting: () => {},
       applyPreset: () => {},
       resetDefaults: () => {},
-      getGlassBackground: (isDark: boolean) => (isDark ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.55)'),
-      getGlassBorderColor: (isDark: boolean) => (isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.35)'),
+      getGlassBackground: (isDark: boolean) =>
+        Platform.OS === 'android'
+          ? isDark
+            ? '#0F172A'
+            : '#FFFFFF'
+          : isDark
+          ? 'rgba(15, 23, 42, 0.45)'
+          : 'rgba(255, 255, 255, 0.55)',
+      getGlassBorderColor: (isDark: boolean) =>
+        Platform.OS === 'android'
+          ? isDark
+            ? 'rgba(255, 255, 255, 0.08)'
+            : 'rgba(0, 0, 0, 0.06)'
+          : isDark
+          ? 'rgba(255, 255, 255, 0.07)'
+          : 'rgba(255, 255, 255, 0.35)',
       getBackdropFilterString: () => 'blur(24px) saturate(195%) brightness(105%)',
     };
   }

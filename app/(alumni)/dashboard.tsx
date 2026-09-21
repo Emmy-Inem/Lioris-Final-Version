@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable, RefreshControl } from 'react-native';
+import { ScrollView, View, Pressable, RefreshControl, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
@@ -161,22 +161,35 @@ export default function AlumniDashboard() {
               contentFit="cover"
             />
             {/* Ambient Multi-Stop Gradient Overlay */}
-            <LinearGradient
-              colors={[
-                'rgba(10, 16, 30, 0.2)',
-                'rgba(10, 16, 30, 0.55)',
-                isDark ? 'rgba(8, 14, 28, 0.94)' : 'rgba(15, 23, 42, 0.86)',
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              }}
-            />
+            {Platform.OS === 'android' ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(10, 16, 30, 0.65)',
+                }}
+              />
+            ) : (
+              <LinearGradient
+                colors={[
+                  'rgba(10, 16, 30, 0.2)',
+                  'rgba(10, 16, 30, 0.55)',
+                  isDark ? 'rgba(8, 14, 28, 0.94)' : 'rgba(15, 23, 42, 0.86)',
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}
+              />
+            )}
 
             {/* Hero Content Overlay */}
             <View

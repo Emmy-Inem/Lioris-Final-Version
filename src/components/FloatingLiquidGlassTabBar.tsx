@@ -191,6 +191,106 @@ function TabItem({
   );
 }
 
+function AndroidBottomTabBar({
+  visibleRoutes,
+  activeIndex,
+  descriptors,
+  navigation,
+  safeAreaInsets,
+  isDark,
+  colors,
+}: {
+  visibleRoutes: any[];
+  activeIndex: number;
+  descriptors: any;
+  navigation: any;
+  safeAreaInsets: any;
+  isDark: boolean;
+  colors: any;
+}) {
+  const bottomPadding = Math.max(8, safeAreaInsets?.bottom ?? 0);
+
+  return (
+    <View
+      style={[
+        styles.androidBarContainer,
+        {
+          backgroundColor: isDark ? '#0B1120' : '#FFFFFF',
+          borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+          paddingBottom: bottomPadding,
+        },
+      ]}
+      accessibilityRole="tablist"
+      accessibilityLabel="Main navigation"
+    >
+      {visibleRoutes.map((route: any, index: number) => {
+        const descriptor = descriptors[route.key];
+        const label = getRouteLabel(route, descriptor);
+        const isFocused = index === activeIndex;
+        const iconName = getRouteIcon(route.name, label, isFocused);
+
+        const onPress = () => {
+          haptics.light();
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        const activePillBg = isDark ? 'rgba(106, 137, 255, 0.18)' : '#EDF2FF';
+        const activeColor = colors.brandPrimary;
+        const inactiveColor = isDark ? '#94A3B8' : '#64748B';
+
+        return (
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            style={styles.androidTabItem}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isFocused }}
+            accessibilityLabel={label}
+            android_ripple={{
+              color: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+              borderless: true,
+              radius: 28,
+            }}
+          >
+            <View
+              style={[
+                styles.androidIconPill,
+                isFocused && { backgroundColor: activePillBg },
+              ]}
+            >
+              <Ionicons
+                name={iconName}
+                size={20}
+                color={isFocused ? activeColor : inactiveColor}
+              />
+            </View>
+            <AppText
+              variant="caption"
+              weight={isFocused ? 'bold' : 'medium'}
+              style={{
+                fontSize: 11,
+                color: isFocused ? activeColor : inactiveColor,
+                marginTop: 2,
+              }}
+              numberOfLines={1}
+            >
+              {label}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: FloatingLiquidGlassTabBarProps) {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
@@ -223,10 +323,7 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
   const bottomInset = Platform.OS === 'web' ? 18 : Math.max(18, (safeAreaInsets?.bottom ?? 0) + 6);
 
   const activeRoute = state.routes[state.index];
-  const activeIndex = Math.max(
-    0,
-    visibleRoutes.findIndex((r: any) => r.key === activeRoute?.key)
-  );
+  const activeIndex = visibleRoutes.findIndex((r: any) => r.key === activeRoute?.key);
 
   const layoutInfo = useMemo(() => {
     const N = visibleRoutes.length;
@@ -323,8 +420,22 @@ export function FloatingLiquidGlassTabBar({ state, descriptors, navigation }: Fl
     width: trackWidth.value,
   }));
 
-  if (isDesktop || isHiddenRoute || visibleRoutes.length === 0) {
+  if (isDesktop || isHiddenRoute || visibleRoutes.length === 0 || activeIndex === -1) {
     return null;
+  }
+
+  if (Platform.OS === 'android') {
+    return (
+      <AndroidBottomTabBar
+        visibleRoutes={visibleRoutes}
+        activeIndex={activeIndex}
+        descriptors={descriptors}
+        navigation={navigation}
+        safeAreaInsets={safeAreaInsets}
+        isDark={isDark}
+        colors={colors}
+      />
+    );
   }
 
   return (
@@ -495,6 +606,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
+  },
+  androidBarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    paddingTop: 6,
+    elevation: 8,
+    zIndex: 99999,
+  },
+  androidTabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 3,
+  },
+  androidIconPill: {
+    width: 52,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

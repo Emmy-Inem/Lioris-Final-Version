@@ -145,7 +145,7 @@ export function LandingScreen() {
             },
           ]}
         >
-          {!isDark && (
+          {!isDark && Platform.OS !== 'android' && (
             <LinearGradient
               colors={['rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0.05)', 'transparent']}
               start={{ x: 0.5, y: 0 }}

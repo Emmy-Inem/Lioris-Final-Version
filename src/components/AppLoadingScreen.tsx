@@ -145,17 +145,19 @@ export function AppLoadingScreen({
         { backgroundColor: isDark ? '#0A1326' : '#F8FAF9' },
       ]}
     >
-      {/* Subtle atmospheric ambient glow */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.ambientGlow,
-          {
-            opacity: glowAnim,
-            backgroundColor: isDark ? 'rgba(26, 61, 255, 0.22)' : 'rgba(26, 61, 255, 0.12)',
-          },
-        ]}
-      />
+      {/* Subtle atmospheric ambient glow (Web/iOS only; Android lacks CSS filter: blur) */}
+      {Platform.OS !== 'android' && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.ambientGlow,
+            {
+              opacity: glowAnim,
+              backgroundColor: isDark ? 'rgba(26, 61, 255, 0.22)' : 'rgba(26, 61, 255, 0.12)',
+            },
+          ]}
+        />
+      )}
 
       <View style={styles.content}>
         {/* Emblem with liquid glass styling */}
@@ -163,8 +165,12 @@ export function AppLoadingScreen({
           style={[
             styles.emblemContainer,
             {
-              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.92)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(26, 61, 255, 0.15)',
+              backgroundColor: Platform.OS === 'android'
+                ? isDark ? '#131E32' : '#FFFFFF'
+                : isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.92)',
+              borderColor: Platform.OS === 'android'
+                ? isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'
+                : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(26, 61, 255, 0.15)',
               transform: [{ scale: pulseAnim }],
               shadowColor: colors.brandPrimary,
             },
@@ -214,8 +220,12 @@ export function AppLoadingScreen({
           style={[
             styles.statusPill,
             {
-              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.70)' : 'rgba(255, 255, 255, 0.85)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)',
+              backgroundColor: Platform.OS === 'android'
+                ? isDark ? '#131E32' : '#FFFFFF'
+                : isDark ? 'rgba(15, 23, 42, 0.70)' : 'rgba(255, 255, 255, 0.85)',
+              borderColor: Platform.OS === 'android'
+                ? isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'
+                : isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)',
             },
           ]}
           accessibilityRole="progressbar"
