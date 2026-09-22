@@ -76,7 +76,13 @@ function timeAgo(iso: string) {
  return `${Math.floor(hours / 24)}d ago`;
 }
 
-export function PostCard({ post }: { post: Post }) {
+interface PostCardProps {
+  post: Post;
+  /** True when this session's user created, or was appointed to moderate, this post's community - see CommunityFeedScreen's myManagedCategories. Grants the same pin/remove controls as admin/staff, scoped to this one community. */
+  canModerateCommunity?: boolean;
+}
+
+export function PostCard({ post, canModerateCommunity = false }: PostCardProps) {
  const { colors, spacing, radius, isDark } = useTheme();
  const insets = useSafeAreaInsets();
  const { user } = useAuth();
@@ -124,6 +130,8 @@ export function PostCard({ post }: { post: Post }) {
        (user.fullName && post.authorName.toLowerCase() === user.fullName.toLowerCase()) ||
        post.authorName === 'You'),
  );
+ const isPlatformModerator = user?.role === 'admin' || user?.role === 'staff';
+ const canModerate = isPlatformModerator || canModerateCommunity;
 
  async function handleToggleLike() {
  haptics.light();
@@ -574,7 +582,7 @@ export function PostCard({ post }: { post: Post }) {
  </Pressable>
 
  {/* Author Delete Thread Control */}
- {isAuthor && !(user?.role === 'admin' || user?.role === 'staff') && (
+ {isAuthor && !canModerate && (
  <>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
  <Pressable
@@ -590,12 +598,12 @@ export function PostCard({ post }: { post: Post }) {
  </>
  )}
 
- {/* Direct Admin Moderation Controls */}
- {(user?.role === 'admin' || user?.role === 'staff') && (
+ {/* Moderation controls: platform admin/staff everywhere, or a community's own creator/moderator scoped to just that community's posts */}
+ {canModerate && (
  <>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
  <AppText variant="caption"weight="bold"tone="secondary"style={{ letterSpacing: 0.5, marginVertical: 2 }}>
- MODERATOR CONTROLS
+ {isPlatformModerator ? 'MODERATOR CONTROLS' : 'COMMUNITY MANAGER CONTROLS'}
  </AppText>
 
  <Pressable

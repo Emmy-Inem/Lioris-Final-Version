@@ -20,7 +20,8 @@ import { ActionSheetModal } from'./ActionSheetModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, togglePostRepost, toggleCommentLike, voteOnPoll, deletePost, updatePost } from '@/api/posts';
+import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, togglePostRepost, toggleCommentLike, voteOnPoll, deletePost, updatePost, deletePostComment } from '@/api/posts';
+import { canManageCommunityCategory } from '@/api/communities';
 import { getMyProfile } from '@/api/profile';
 import { submitReport } from '@/api/moderation';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
@@ -87,6 +88,13 @@ export function PostDetailScreen() {
         (user.fullName && post.authorName.toLowerCase() === user.fullName.toLowerCase()) ||
         post.authorName === 'You'),
   );
+  const isPlatformModerator = user?.role === 'admin' || user?.role === 'staff';
+  const { data: canModerateCommunity } = useQuery({
+    queryKey: ['can-manage-community', post?.category],
+    queryFn: () => canManageCommunityCategory(post!.category!),
+    enabled: !!post?.category && !isPlatformModerator,
+  });
+  const canModerate = isPlatformModerator || !!canModerateCommunity;
 
  // Discussion reply state
  const [newReply, setNewReply] = useState('');
@@ -227,6 +235,33 @@ export function PostDetailScreen() {
    }));
    await toggleCommentLike(post.id, commentId, nextLiked);
  }
+
+  function confirmDeleteComment(commentId: string) {
+    Alert.alert(
+      'Delete Comment',
+      'Are you sure you want to remove this comment? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!post) return;
+            haptics.medium();
+            try {
+              await deletePostComment(post.id, commentId);
+              await refetchComments();
+              await queryClient.invalidateQueries({ queryKey: ['post', post.id] });
+              await queryClient.invalidateQueries({ queryKey: ['feed'] });
+            } catch (err: any) {
+              haptics.error();
+              Alert.alert('Error', getFriendlyErrorMessage(err, 'Could not delete comment.'));
+            }
+          },
+        },
+      ],
+    );
+  }
 
   const postImageSource = post?.imageUrl
  ? STOCK_IMAGES[post.imageUrl] ?? (post.imageUrl.startsWith('http') ? { uri: post.imageUrl } : null)
@@ -563,6 +598,17 @@ export function PostDetailScreen() {
  <AppText tone="secondary" variant="caption" style={{ fontSize: 10, flexShrink: 0 }}>
  {timeAgo(c.createdAt)}
  </AppText>
+ {(c.authorId === user?.id || canModerate) && (
+ <Pressable
+ accessibilityRole="button"
+ accessibilityLabel="Delete comment"
+ onPress={() => confirmDeleteComment(c.id)}
+ hitSlop={8}
+ style={{ marginLeft: 6 }}
+ >
+ <Ionicons name="trash-outline" size={13} color={colors.critical} />
+ </Pressable>
+ )}
  </View>
 
  <AppText variant="bodySmall" tone="primary" style={{ marginTop: 4, lineHeight: 20 }}>
@@ -730,7 +776,7 @@ export function PostDetailScreen() {
  </Pressable>
 
  {/* Author Delete Thread Control */}
- {isAuthor && !(user?.role === 'admin' || user?.role === 'staff') && (
+ {isAuthor && !canModerate && (
  <>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
  <Pressable
@@ -767,12 +813,12 @@ export function PostDetailScreen() {
  </>
  )}
 
- {/* Direct Admin Moderation Controls */}
- {(user?.role === 'admin' || user?.role === 'staff') && (
+ {/* Moderation controls: platform admin/staff everywhere, or this post's own community's creator/moderator */}
+ {canModerate && (
  <>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.5, marginVertical: 2 }}>
- MODERATOR CONTROLS
+ {isPlatformModerator ? 'MODERATOR CONTROLS' : 'COMMUNITY MANAGER CONTROLS'}
  </AppText>
 
  <Pressable

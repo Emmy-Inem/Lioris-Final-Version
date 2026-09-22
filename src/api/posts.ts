@@ -896,6 +896,7 @@ export async function togglePostRepost(
 export interface PostComment {
  id: string;
  postId: string;
+ authorId?: string;
  authorName: string;
  authorRole: 'student' | 'staff' | 'alumni' | 'admin';
  authorAvatarUrl?: string | null;
@@ -923,6 +924,7 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  const dbComments: PostComment[] = (data ?? []).map((row: any) => ({
  id: row.id,
  postId: row.post_id,
+ authorId: row.author_id,
  authorName: row.author?.full_name || 'Campus Member',
  authorRole: (row.author?.role || 'student') as any,
  authorDepartment: row.author?.department || 'Verified Member',
@@ -988,6 +990,7 @@ export async function createPostComment(
  const created: PostComment = {
  id: commentId,
  postId,
+ authorId,
  authorName,
  authorRole,
  authorDepartment: 'UI Verified',
@@ -1001,6 +1004,38 @@ export async function createPostComment(
  locallyCreatedPosts = locallyCreatedPosts.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
 
  return created;
+}
+
+/**
+ * Callable by the comment's author, an admin, or the post's own community
+ * creator/moderator (see the community-moderation migration's post_comments
+ * RLS policies) - never gated further client-side than that, since RLS is
+ * the real boundary. posts.comments_count follows automatically via
+ * trigger_sync_post_comments, the same trigger createPostComment relies on.
+ */
+export async function deletePostComment(postId: string, commentId: string): Promise<void> {
+  const previousComments = locallyCreatedComments[postId];
+  locallyCreatedComments[postId] = (previousComments ?? []).filter((c) => c.id !== commentId);
+
+  try {
+    // Returning the deleted row is how we know RLS actually let it through:
+    // a refused DELETE reports success with zero rows affected.
+    const { data, error } = await supabase.from('post_comments').delete().eq('id', commentId).select('id');
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      const { data: still } = await supabase.from('post_comments').select('id').eq('id', commentId).maybeSingle();
+      if (still) {
+        if (previousComments) locallyCreatedComments[postId] = previousComments;
+        throw new Error('This comment could not be deleted. You may not have permission to remove it.');
+      }
+    }
+  } catch (err) {
+    if (err instanceof Error && /could not be deleted/.test(err.message)) throw err;
+    console.warn('[Posts] deletePostComment error:', err);
+    if (previousComments) locallyCreatedComments[postId] = previousComments;
+    throw new Error('Could not delete this comment. Please check your connection and try again.');
+  }
 }
 
 export async function toggleCommentLike(postId: string, commentId: string, liked: boolean): Promise<void> {

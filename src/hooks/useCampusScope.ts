@@ -38,14 +38,18 @@ export function useCampusScope() {
   // @ui.edu.ng, so plain domain matching already covers them.
   const deducedFromEmail = getInstitutionForEmail(user?.email ?? '')?.code;
 
-  const rawHome = (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
+  // Deliberately does NOT fall back to activeCampusCode: this is meant to
+  // answer "what's this person's own campus," independent of whatever an
+  // admin currently has picked to explore - falling back to it here used to
+  // make homeInstitutionCode equal activeCampusCode whenever the viewer's
+  // own profile has no institutionCode (e.g. a root admin signed up with a
+  // personal email), which made every "am I exploring a different campus"
+  // check below always false for exactly the account most likely to explore.
+  const homeInstitutionCode = (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
     ? profile.institutionCode
-    : (activeCampusCode && activeCampusCode !== 'GLOBAL')
-    ? activeCampusCode
     : (deducedFromEmail && deducedFromEmail !== 'GLOBAL')
     ? deducedFromEmail
     : undefined;
-  const homeInstitutionCode = rawHome;
   const campusCode = scope === 'global' ? 'GLOBAL' : (activeCampusCode && activeCampusCode !== 'GLOBAL' ? activeCampusCode : homeInstitutionCode);
 
   return { scope, setScope, activeCampusCode, setActiveCampusCode, campusCode, homeInstitutionCode };

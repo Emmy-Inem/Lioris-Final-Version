@@ -175,6 +175,148 @@ export async function rejectCommunity(id: string, reason?: string): Promise<void
 }
 
 /**
+ * Community details a creator (or admin) can edit. `category`/`slug` aren't
+ * here on purpose - `enforce_community_admin_authority` silently reverts a
+ * non-admin's attempt to change them (posts join a community by `category`,
+ * so letting it move would orphan them), and `approval_status` stays behind
+ * the separate admin review queue in ForumsModerationTab.
+ */
+export interface UpdateCommunityDetailsPayload {
+  label?: string;
+  description?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  bannerColor?: string;
+  accentColor?: string;
+  moderatorBadge?: string;
+  moderatorTitle?: string;
+  rules?: string[];
+}
+
+/** Creator or admin only - enforced by the forum_communities UPDATE RLS policy. */
+export async function updateCommunityDetails(id: string, patch: UpdateCommunityDetailsPayload): Promise<void> {
+  const row: Record<string, unknown> = {};
+  if (patch.label !== undefined) row.label = patch.label.trim();
+  if (patch.description !== undefined) row.description = patch.description.trim();
+  if (patch.icon !== undefined) row.icon = patch.icon;
+  if (patch.bannerColor !== undefined) row.banner_color = patch.bannerColor;
+  if (patch.accentColor !== undefined) row.accent_color = patch.accentColor;
+  if (patch.moderatorBadge !== undefined) row.moderator_badge = patch.moderatorBadge;
+  if (patch.moderatorTitle !== undefined) row.moderator_title = patch.moderatorTitle;
+  if (patch.rules !== undefined) row.rules = patch.rules;
+
+  const { error } = await supabase.from('forum_communities').update(row).eq('id', id);
+  if (error) {
+    console.warn('[Communities] updateCommunityDetails error:', error.message);
+    throw new Error('Could not update this community. Please try again.');
+  }
+}
+
+/**
+ * Single-post callers (PostDetailScreen) that don't already have the whole
+ * feed's "categories I manage" set loaded - see listMyModeratedCommunityIds
+ * for the bulk version the feed uses instead of calling this once per post.
+ */
+export async function canManageCommunityCategory(category: string): Promise<boolean> {
+  if (!category) return false;
+  try {
+    const { data, error } = await supabase.rpc('is_community_manager', { p_category: category });
+    if (error) throw error;
+    return !!data;
+  } catch (err) {
+    console.warn('[Communities] canManageCommunityCategory failed:', err);
+    return false;
+  }
+}
+
+export interface CommunityModerator {
+  userId: string;
+  fullName: string;
+  avatarUrl?: string | null;
+  addedAt: string;
+}
+
+/** Visible to the community's creator, an admin, or the moderator themself (RLS-enforced). */
+export async function listCommunityModerators(communityId: string): Promise<CommunityModerator[]> {
+  try {
+    const { data, error } = await supabase
+      .from('forum_community_moderators')
+      .select('user_id, created_at, profiles(full_name, avatar_url)')
+      .eq('community_id', communityId);
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({
+      userId: row.user_id,
+      fullName: row.profiles?.full_name || 'Campus Member',
+      avatarUrl: row.profiles?.avatar_url ?? null,
+      addedAt: row.created_at,
+    }));
+  } catch (err) {
+    console.warn('[Communities] listCommunityModerators failed:', err);
+    return [];
+  }
+}
+
+/**
+ * Every community this session's user manages, as post `category` strings -
+ * one cheap query the feed uses to decide, per post, whether to show
+ * PostCard's MODERATOR CONTROLS (pin/remove) without an admin or staff role.
+ * Communities the user personally created are folded in from `allCommunities`
+ * (already fetched by the feed) rather than queried again here.
+ */
+export async function listMyModeratedCommunityIds(): Promise<string[]> {
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let userId = authData?.user?.id;
+    if (!userId) {
+      const stored = await getSessionUser();
+      if (stored?.id) userId = stored.id;
+    }
+    if (!userId) return [];
+
+    const { data, error } = await supabase
+      .from('forum_community_moderators')
+      .select('community_id')
+      .eq('user_id', userId);
+    if (error) throw error;
+    return (data ?? []).map((row: any) => row.community_id);
+  } catch (err) {
+    console.warn('[Communities] listMyModeratedCommunityIds failed:', err);
+    return [];
+  }
+}
+
+/** Creator or admin only - enforced by the forum_community_moderators INSERT RLS policy. */
+export async function addCommunityModerator(communityId: string, userId: string): Promise<void> {
+  const { data: authData } = await supabase.auth.getUser();
+  let addedBy = authData?.user?.id;
+  if (!addedBy) {
+    const stored = await getSessionUser();
+    addedBy = stored?.id;
+  }
+  if (!addedBy) throw new Error('You need to be signed in to add a moderator.');
+
+  const { error } = await supabase
+    .from('forum_community_moderators')
+    .insert({ community_id: communityId, user_id: userId, added_by: addedBy });
+  if (error) {
+    console.warn('[Communities] addCommunityModerator error:', error.message);
+    throw new Error('Could not add this moderator. Please try again.');
+  }
+}
+
+/** Creator or admin only - enforced by the forum_community_moderators DELETE RLS policy. */
+export async function removeCommunityModerator(communityId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('forum_community_moderators')
+    .delete()
+    .eq('community_id', communityId)
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('[Communities] removeCommunityModerator error:', error.message);
+    throw new Error('Could not remove this moderator. Please try again.');
+  }
+}
+
+/**
  * Root-admin-only (enforced by the forum_communities DELETE RLS policy, not
  * just this check) - permanently removes a community, live or pending.
  * Posts already published into it keep their `category` text as-is (posts

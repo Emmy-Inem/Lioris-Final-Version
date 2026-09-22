@@ -13,6 +13,8 @@ import { listConversations } from '@/api/messaging';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { getMyProfile } from '@/api/profile';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useCampusScope } from '@/hooks/useCampusScope';
+import { getInstitutionByCode } from '@/api/institutions';
 import { haptics } from '@/utils/haptics';
 
 export function AppHeader() {
@@ -47,9 +49,54 @@ export function AppHeader() {
  enabled: !!user,
  });
 
+  // Only an admin can pick a non-home campus via "Explore Other Campus
+  // Workspaces" (ChangeWorkspaceScopeModal), and it's persisted across app
+  // restarts with no indicator anywhere else - every screen that filters by
+  // campus (feed, events, resources, marketplace, ...) silently narrows to
+  // that campus's own content, which can look like the whole app is broken
+  // if you forget you switched. This banner is the one place it's always
+  // visible, since AppHeader renders on every mobile screen.
+  const { activeCampusCode, homeInstitutionCode, setActiveCampusCode } = useCampusScope();
+  const isExploringOtherCampus = user?.role === 'admin' && !!activeCampusCode && activeCampusCode !== homeInstitutionCode;
+  const exploringInstitutionName = isExploringOtherCampus
+    ? getInstitutionByCode(activeCampusCode!)?.name ?? activeCampusCode
+    : null;
+
   if (isDesktop) return null;
 
   return (
+    <>
+    {isExploringOtherCampus && (
+      <Pressable
+        onPress={() => {
+          haptics.light();
+          setActiveCampusCode(undefined);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`Exploring ${exploringInstitutionName}'s workspace. Tap to return to your own campus.`}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing.sm,
+          backgroundColor: isDark ? 'rgba(240, 138, 46, 0.18)' : 'rgba(240, 138, 46, 0.12)',
+          borderRadius: 10,
+          paddingVertical: 6,
+          paddingHorizontal: spacing.sm,
+          marginBottom: spacing.xs,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+          <Ionicons name="school-outline" size={13} color={colors.brandAccent} />
+          <AppText variant="caption" weight="bold" style={{ color: colors.brandAccent, flexShrink: 1 }} numberOfLines={1}>
+            Exploring {exploringInstitutionName} - not your campus
+          </AppText>
+        </View>
+        <AppText variant="caption" weight="bold" style={{ color: colors.brandAccent, flexShrink: 0 }}>
+          Return
+        </AppText>
+      </Pressable>
+    )}
     <View
       style={[
         {
@@ -289,5 +336,6 @@ export function AppHeader() {
         </Pressable>
       </View>
  </View>
+ </>
  );
 }

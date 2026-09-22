@@ -290,7 +290,6 @@ export default function MarketplaceScreen() {
  initialNumToRender={10}
  maxToRenderPerBatch={10}
  windowSize={7}
- removeClippedSubviews
  ListEmptyComponent={!isLoading ? <EmptyState title="No listings found" description="Try a different search or filter." /> : null}
  />
  </View>

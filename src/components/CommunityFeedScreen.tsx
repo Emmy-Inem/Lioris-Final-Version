@@ -21,7 +21,9 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts, createPost } from '@/api/posts';
-import { listCommunities, proposeCommunity, ForumCommunityRecord } from '@/api/communities';
+import { listCommunities, proposeCommunity, listMyModeratedCommunityIds, ForumCommunityRecord } from '@/api/communities';
+import { getInstitutionByCode } from '@/api/institutions';
+import { CommunityManageModal } from './CommunityManageModal';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { submitVerificationRequest } from '@/api/verification';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
@@ -32,7 +34,6 @@ import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
-import { UserProfileQuickViewModal, QuickViewUser } from './UserProfileQuickViewModal';
 import { AppTextField } from './AppTextField';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
@@ -77,7 +78,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
   const params = useLocalSearchParams<{ category?: string }>();
   const toast = useToast();
-  const [quickViewUser, setQuickViewUser] = useState<QuickViewUser | null>(null);
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -99,6 +99,31 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   );
 
   const activeSubForum = findActiveChannel(CHANNELS, selectedChannel);
+  const [manageCommunityOpen, setManageCommunityOpen] = useState(false);
+
+  // Who this session's user can moderate a post in, without being an admin
+  // or staff - the community they created, or one they were appointed to
+  // moderate. Kept as post `category` strings so PostCard.canModerateCommunity
+  // can be a plain set lookup per post, including in the mixed-category "All
+  // Threads" feed. One cheap query for "communities I moderate" (not "own"),
+  // combined with `createdBy` already present on every fetched community.
+  const { data: myModeratedCommunityIds } = useQuery({
+    queryKey: ['my-moderated-community-ids', user?.id],
+    queryFn: listMyModeratedCommunityIds,
+    enabled: !!user?.id,
+  });
+  const myManagedCategories = React.useMemo(() => {
+    const categories = new Set<string>();
+    if (!user?.id) return categories;
+    const moderatedIds = new Set(myModeratedCommunityIds ?? []);
+    for (const c of fetchedCommunities ?? []) {
+      if (isAdmin || c.createdBy === user.id || moderatedIds.has(c.id)) categories.add(c.category);
+    }
+    return categories;
+  }, [fetchedCommunities, myModeratedCommunityIds, isAdmin, user?.id]);
+  const canManageActiveCommunity =
+    activeSubForum.id !== 'all' &&
+    (isAdmin || activeSubForum.createdBy === user?.id || myManagedCategories.has(activeSubForum.category));
 
   async function handleProposeCommunity() {
     if (!newCommunityName.trim()) return;
@@ -158,7 +183,56 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // activeCampusCode lets an admin's "Explore Other Campus Workspaces" pick
   // (Settings/Workdesk -> Change Workspace Scope) actually change which
   // campus's threads show here too, not just their own home campus.
-  const { activeCampusCode, homeInstitutionCode } = useCampusScope();
+  const { activeCampusCode, homeInstitutionCode, setActiveCampusCode } = useCampusScope();
+
+  // An admin who picked a campus under "Explore Other Campus Workspaces"
+  // (ChangeWorkspaceScopeModal) stays scoped to it - persisted across app
+  // restarts - with no indicator anywhere on this screen. That silently
+  // narrows "My Campus" to a workspace that may have zero real content,
+  // which used to just look like a broken/empty forum with no way to tell
+  // why. This makes the empty state explain it and offers a way out.
+  const isExploringOtherCampus = !!activeCampusCode && activeCampusCode !== homeInstitutionCode;
+  const exploringInstitutionName = isExploringOtherCampus
+    ? getInstitutionByCode(activeCampusCode!)?.name ?? activeCampusCode
+    : null;
+
+  function renderEmptyForumState() {
+    if (isExploringOtherCampus) {
+      return (
+        <View style={{ alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.xl }}>
+          <Ionicons name="school-outline" size={40} color={colors.textSecondary} style={{ marginBottom: spacing.md }} />
+          <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs, textAlign: 'center' }}>
+            No Threads at {exploringInstitutionName} Yet
+          </AppText>
+          <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md }}>
+            You're exploring {exploringInstitutionName}'s workspace as an admin - this isn't your home campus, so it has its own, separate thread history.
+          </AppText>
+          <AppButton
+            label="Return to My Campus"
+            variant="secondary"
+            size="sm"
+            onPress={() => {
+              haptics.light();
+              setActiveCampusCode(undefined);
+            }}
+          />
+        </View>
+      );
+    }
+    return (
+      <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+        <View style={{ marginBottom: spacing.md }}>
+          <Ionicons name="chatbubbles-outline" size={40} color={colors.textSecondary} />
+        </View>
+        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+          No Threads in this Channel Yet
+        </AppText>
+        <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+          Be the first to share an academic question or start a discussion for your cohort.
+        </AppText>
+      </View>
+    );
+  }
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -638,16 +712,30 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 {activeSubForum.moderatorTitle}
               </AppText>
             </View>
-            <Pressable
-              onPress={() => setRulesModalOpen(true)}
-              hitSlop={8}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 }}
-            >
-              <Ionicons name="document-text-outline" size={12} color={colors.brandPrimary} />
-              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10.5 }}>
-                Rules ({activeSubForum.rules.length})
-              </AppText>
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              {canManageActiveCommunity && (
+                <Pressable
+                  onPress={() => setManageCommunityOpen(true)}
+                  hitSlop={8}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                >
+                  <Ionicons name="settings-outline" size={12} color={colors.textSecondary} />
+                  <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10.5 }}>
+                    Manage
+                  </AppText>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => setRulesModalOpen(true)}
+                hitSlop={8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+              >
+                <Ionicons name="document-text-outline" size={12} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10.5 }}>
+                  Rules ({activeSubForum.rules.length})
+                </AppText>
+              </Pressable>
+            </View>
           </View>
         </GlassCard>
       )}
@@ -1066,35 +1154,16 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               initialNumToRender={8}
               maxToRenderPerBatch={8}
               windowSize={7}
-              removeClippedSubviews
               contentContainerStyle={{ paddingBottom: 40 }}
               renderItem={({ item, index }) => (
                 <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
-                  <PostCard post={item} />
+                  <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} />
                 </Animated.View>
               )}
               showsVerticalScrollIndicator={true}
               onRefresh={refetch}
               refreshing={isRefetching}
-              ListEmptyComponent={
-                !isLoading ? (
-                  <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
-                    <View
-                      style={{
-                        marginBottom: spacing.md,
-                      }}
-                    >
-                      <Ionicons name="chatbubbles-outline" size={40} color={colors.textSecondary} />
-                    </View>
-                    <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
-                      No Threads in this Channel Yet
-                    </AppText>
-                    <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
-                      Be the first to share an academic question or start a discussion for your cohort.
-                    </AppText>
-                  </View>
-                ) : null
-              }
+              ListEmptyComponent={!isLoading ? renderEmptyForumState() : null}
             />
           </View>
 
@@ -1154,6 +1223,25 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     View Space Rules ({activeSubForum.rules.length}) →
                   </AppText>
                 </Pressable>
+                {canManageActiveCommunity && (
+                  <Pressable
+                    onPress={() => setManageCommunityOpen(true)}
+                    style={{
+                      flexDirection: 'row',
+                      gap: 6,
+                      paddingVertical: 8,
+                      borderRadius: radius.pill,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    }}
+                  >
+                    <Ionicons name="settings-outline" size={14} color={colors.textSecondary} />
+                    <AppText variant="caption" weight="bold" tone="secondary">
+                      Manage Community
+                    </AppText>
+                  </Pressable>
+                )}
               </SolidCard>
             ) : (
               <SolidCard radius={18} style={{ padding: spacing.md }}>
@@ -1234,35 +1322,16 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         initialNumToRender={8}
         maxToRenderPerBatch={8}
         windowSize={7}
-        removeClippedSubviews
         contentContainerStyle={{ paddingBottom: 120 }}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
-            <PostCard post={item} />
+            <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} />
           </Animated.View>
         )}
         showsVerticalScrollIndicator={false}
         onRefresh={refetch}
         refreshing={isRefetching}
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
-              <View
-                style={{
-                  marginBottom: spacing.md,
-                }}
-              >
-                <Ionicons name="chatbubbles-outline" size={40} color={colors.textSecondary} />
-              </View>
-              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
-                No Threads in this Channel Yet
-              </AppText>
-              <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
-                Be the first to share an academic question or start a discussion for your cohort.
-              </AppText>
-            </View>
-          ) : null
-        }
+        ListEmptyComponent={!isLoading ? renderEmptyForumState() : null}
       />
     )}
 
@@ -1304,7 +1373,14 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       onSubmit={handleSubmitVerification}
       defaultInstitution={profile?.institutionCode}
     />
-    <UserProfileQuickViewModal user={quickViewUser} visible={!!quickViewUser} onClose={() => setQuickViewUser(null)} />
+    {activeSubForum.id !== 'all' && (
+      <CommunityManageModal
+        visible={manageCommunityOpen}
+        onClose={() => setManageCommunityOpen(false)}
+        community={activeSubForum}
+        isAdmin={isAdmin}
+      />
+    )}
 
     {/* Sub-Forum Rules & Guidelines Modal */}
     <Modal visible={rulesModalOpen} transparent animationType="fade" onRequestClose={() => setRulesModalOpen(false)}>
