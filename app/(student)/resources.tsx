@@ -699,8 +699,52 @@ export default function ResourcesScreen() {
                 </Pressable>
               )}
 
+              {isFeatureEnabled('global_library') && (
+                <Pressable
+                  onPress={() => setLibraryModalOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Search Global Academic Library"
+                  style={{
+                    backgroundColor: colors.brandPrimary,
+                    borderRadius: radius.pill,
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 7,
+                  }}
+                >
+                  <Ionicons name="library" size={16} color="#FFFFFF" />
+                  <AppText variant="bodySmall" weight="bold" tone="inverse">
+                    Global Library
+                  </AppText>
+                </Pressable>
+              )}
+
+              <Pressable
+                onPress={() => setResearchModalOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Search Research Papers & Thesis"
+                style={{
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 7,
+                }}
+              >
+                <Ionicons name="school" size={16} color="#FFFFFF" />
+                <AppText variant="bodySmall" weight="bold" tone="inverse">
+                  Research Hub
+                </AppText>
+              </Pressable>
+
               <Pressable
                 onPress={() => setUploadModalOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Upload resource"
                 style={{
                   backgroundColor: colors.brandPrimary,
                   borderRadius: radius.pill,

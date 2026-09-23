@@ -82,6 +82,23 @@ export const BENCHMARK_RESEARCH_PAPERS: ResearchPaper[] = [
   },
 ];
 
+const RESEARCH_REQUEST_TIMEOUT_MS = 8_000;
+
+async function fetchResearchJson(url: string): Promise<any | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), RESEARCH_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * Searches Semantic Scholar Academic Graph API with fallback to OpenAlex API.
  * Free, public REST endpoints.
@@ -101,9 +118,8 @@ export async function searchResearchPapers(
     const fields = 'paperId,title,authors,year,venue,citationCount,abstract,openAccessPdf,url,externalIds,fieldsOfStudy';
     const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encoded}&limit=${limit}&fields=${fields}`;
 
-    const res = await fetch(s2Url, { headers: { 'User-Agent': 'LiorisCampusSuperApp/1.0' } });
-    if (res.ok) {
-      const data = await res.json();
+    const data = await fetchResearchJson(s2Url);
+    if (data) {
       const s2Papers = data.data || [];
 
       if (s2Papers.length > 0) {
@@ -131,9 +147,8 @@ export async function searchResearchPapers(
     const encoded = encodeURIComponent(cleanQuery);
     const alexUrl = `https://api.openalex.org/works?search=${encoded}&per-page=${limit}`;
 
-    const res = await fetch(alexUrl);
-    if (res.ok) {
-      const data = await res.json();
+    const data = await fetchResearchJson(alexUrl);
+    if (data) {
       const results = data.results || [];
 
       if (results.length > 0) {

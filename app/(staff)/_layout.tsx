@@ -1,6 +1,6 @@
 import React from 'react';
-import { Platform, View } from 'react-native';
-import { Tabs, Redirect } from 'expo-router';
+import { View } from 'react-native';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -9,14 +9,27 @@ import { DesktopShell } from '@/components/desktop/DesktopShell';
 import { FloatingLiquidGlassTabBar, FloatingLiquidGlassTabBarView } from '@/components/FloatingLiquidGlassTabBar';
 import { BlurredTabsHost } from '@/components/BlurredTabsHost';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { AppText } from '@/components/AppText';
 
 export default function StaffLayout() {
- const { colors, isDark } = useTheme();
+ const { colors } = useTheme();
  const { isDesktop } = useResponsive();
  const { isFeatureEnabled } = useFeatureFlags();
 
  if (!isFeatureEnabled('staff_role')) {
-   return <Redirect href="/(student)/dashboard" />;
+   return (
+     <RoleGate allow="staff">
+       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: colors.background }}>
+         <Ionicons name="construct-outline" size={40} color={colors.textSecondary} />
+         <AppText variant="h2" weight="bold" style={{ marginTop: 16, textAlign: 'center' }}>
+           Staff portal temporarily unavailable
+         </AppText>
+         <AppText tone="secondary" style={{ marginTop: 8, maxWidth: 520, textAlign: 'center' }}>
+           Faculty tools are paused by a platform administrator. Your account and data remain safe; please try again later.
+         </AppText>
+       </View>
+     </RoleGate>
+   );
  }
 
  const tabsContent = (

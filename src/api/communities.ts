@@ -240,13 +240,13 @@ export async function listCommunityModerators(communityId: string): Promise<Comm
   try {
     const { data, error } = await supabase
       .from('forum_community_moderators')
-      .select('user_id, created_at, profiles(full_name, avatar_url)')
+      .select('user_id, created_at, profile:profiles!forum_community_moderators_user_id_fkey(full_name, avatar_url)')
       .eq('community_id', communityId);
     if (error) throw error;
     return (data ?? []).map((row: any) => ({
       userId: row.user_id,
-      fullName: row.profiles?.full_name || 'Campus Member',
-      avatarUrl: row.profiles?.avatar_url ?? null,
+      fullName: row.profile?.full_name || 'Campus Member',
+      avatarUrl: row.profile?.avatar_url ?? null,
       addedAt: row.created_at,
     }));
   } catch (err) {
@@ -294,10 +294,23 @@ export async function addCommunityModerator(communityId: string, userId: string)
   }
   if (!addedBy) throw new Error('You need to be signed in to add a moderator.');
 
+  const { error: rpcError } = await supabase.rpc('assign_forum_community_moderator', {
+    p_community_id: communityId,
+    p_user_id: userId,
+  });
+  if (!rpcError) return;
+  // Keep older installations working until the reliability migration reaches them.
+  if (rpcError.code !== '42883' && !rpcError.message?.includes('Could not find the function')) {
+    console.warn('[Communities] assign moderator RPC error:', rpcError.message);
+    throw new Error(rpcError.message || 'Could not add this moderator. Please try again.');
+  }
+
   const { error } = await supabase
     .from('forum_community_moderators')
     .insert({ community_id: communityId, user_id: userId, added_by: addedBy });
   if (error) {
+    // Assigning the same person twice is already the desired end state.
+    if (error.code === '23505') return;
     console.warn('[Communities] addCommunityModerator error:', error.message);
     throw new Error('Could not add this moderator. Please try again.');
   }
@@ -305,6 +318,16 @@ export async function addCommunityModerator(communityId: string, userId: string)
 
 /** Creator or admin only - enforced by the forum_community_moderators DELETE RLS policy. */
 export async function removeCommunityModerator(communityId: string, userId: string): Promise<void> {
+  const { error: rpcError } = await supabase.rpc('unassign_forum_community_moderator', {
+    p_community_id: communityId,
+    p_user_id: userId,
+  });
+  if (!rpcError) return;
+  if (rpcError.code !== '42883' && !rpcError.message?.includes('Could not find the function')) {
+    console.warn('[Communities] unassign moderator RPC error:', rpcError.message);
+    throw new Error(rpcError.message || 'Could not remove this moderator. Please try again.');
+  }
+
   const { error } = await supabase
     .from('forum_community_moderators')
     .delete()

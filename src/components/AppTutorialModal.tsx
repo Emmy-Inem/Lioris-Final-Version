@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Modal, Pressable, Platform } from 'react-native';
+import { usePathname } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
@@ -148,13 +149,16 @@ const ALUMNI_STEPS: NavStep[] = [
 export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTutorialModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const openedPathRef = useRef(pathname);
 
   const steps = user?.role === 'alumni' ? ALUMNI_STEPS : STUDENT_STEPS;
 
   useEffect(() => {
     if (forceOpen) {
+      openedPathRef.current = pathname;
       setCurrentStep(0);
       setVisible(true);
       return;
@@ -165,11 +169,22 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
     const storageKey = `${STORAGE_KEY_PREFIX}${userId}`;
     getStorageItem(storageKey).then((val) => {
       if (val !== 'true') {
+        openedPathRef.current = pathname;
         setCurrentStep(0);
         setVisible(true);
       }
     });
   }, [userId, forceOpen]);
+
+  // Tab screens stay mounted while another route is active. Without this,
+  // the dashboard walkthrough remains as a full-screen invisible blocker over
+  // Resources, Forum, and every other destination reached from the dashboard.
+  useEffect(() => {
+    if (!visible || pathname === openedPathRef.current) return;
+    setVisible(false);
+    if (userId) void setStorageItem(`${STORAGE_KEY_PREFIX}${userId}`, 'true');
+    onClose?.();
+  }, [pathname, visible, userId, onClose]);
 
   async function handleDismiss() {
     haptics.light();

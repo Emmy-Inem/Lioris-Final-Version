@@ -33,8 +33,8 @@ export function SolidCard({
     ? backgroundColor
     : frosted
     ? isDark
-      ? 'rgba(15, 23, 42, 0.70)'
-      : 'rgba(255, 255, 255, 0.85)'
+      ? Platform.OS === 'ios' ? 'rgba(15, 23, 42, 0.20)' : 'rgba(15, 23, 42, 0.70)'
+      : Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.20)' : 'rgba(255, 255, 255, 0.85)'
     : colors.surface;
 
   return (
@@ -65,7 +65,7 @@ export function SolidCard({
       {frosted && Platform.OS === 'ios' ? (
         <BlurView
           intensity={intensity}
-          tint={isDark ? 'dark' : 'light'}
+          tint={isDark ? 'systemThinMaterialDark' : 'systemUltraThinMaterialLight'}
           style={StyleSheet.absoluteFill}
         />
       ) : null}

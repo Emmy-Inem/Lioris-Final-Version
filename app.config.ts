@@ -3,8 +3,6 @@ import type { ExpoConfig, ConfigContext } from'expo/config';
 // Values are pulled from the shell / EAS build profile environment.
 // See eas.json for the per-environment variable sets and .env.example
 // for local development.
-const API_BASE_URL = process.env.API_BASE_URL ?? 'https://api.lioris.app';
-const WS_BASE_URL = process.env.WS_BASE_URL ?? 'wss://api.lioris.app/realtime';
 const APP_ENV = process.env.APP_ENV ?? 'production';
 
 // Development builds install next to the store app (different application id),
@@ -24,7 +22,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'app.lioris.mobile',
-    buildNumber: '1',
     infoPlist: {
       NSCameraUsageDescription:
         'Lioris uses your camera to take a profile photo and scan event check-in passes.',
@@ -61,7 +58,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: IS_DEV ? 'lioris.app.dev' : 'lioris.app',
-    versionCode: 1,
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
       // Android 13+ themed icons: single-colour silhouette of the emblem, tinted by the system.
@@ -117,8 +113,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   ],
   extra: {
-    apiBaseUrl: API_BASE_URL,
-    wsBaseUrl: WS_BASE_URL,
     appEnv: APP_ENV,
     eas: {
       projectId: process.env.EAS_PROJECT_ID ?? 'a30e59bc-4050-4706-8844-e4cb9d879c37',

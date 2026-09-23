@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
-import { api } from './client';
 import { supabase } from './supabase';
 import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
@@ -688,11 +687,14 @@ export async function unenrollMfaFactor(factorId: string): Promise<{ success: bo
 
 // POST /auth/refresh - PRD Section 15.1.
 export async function refresh(refreshToken: string) {
- const { data } = await api.post<{ accessToken: string; refreshToken: string }>(
- '/auth/refresh',
- { refreshToken },
- );
- return data;
+ const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+ if (error || !data.session) {
+ throw new Error(getFriendlyErrorMessage(error, 'Your session could not be refreshed. Please sign in again.'));
+ }
+ return {
+ accessToken: data.session.access_token,
+ refreshToken: data.session.refresh_token,
+ };
 }
 
 export async function logout() {
@@ -700,7 +702,6 @@ export async function logout() {
  // still authenticated. Otherwise the next person on a shared phone would receive this user's pushes.
  await unregisterDevicePushToken().catch(() => {});
  await supabase.auth.signOut().catch(() => {});
- await api.post('/auth/logout').catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -796,7 +797,7 @@ export async function endImpersonationAudit(targetUserId: string): Promise<void>
 export async function adminTriggerPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: 'https://lioris.app/(auth)/login',
+      redirectTo: getAuthRedirectUrl('reset-password'),
     });
     if (error) throw error;
 

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
-import { Badge } from './Badge';
 import { UserTypeBadge } from './UserTypeBadge';
 import { VerifiedBadge } from './VerifiedBadge';
 import { SolidCard } from './SolidCard';
@@ -19,6 +18,7 @@ import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { getPublicProfile } from '@/api/profile';
 import { UserProfile, UserRole } from '@/api/types';
 import { haptics } from '@/utils/haptics';
+import { useAuth } from '@/auth/AuthContext';
 
 const STOCK_IMAGES: Record<string, any> = {
  campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
@@ -53,16 +53,21 @@ export function UserProfileModal({
  institution = 'Campus',
  isVerified = false,
 }: UserProfileModalProps) {
- const { colors, spacing, radius, isDark } = useTheme();
+ const { colors, spacing, radius } = useTheme();
+ const { user: currentUser } = useAuth();
  const segments = useSegments();
  const roleGroup = segments[0] ?? '(student)';
 
  const [connected, setConnected] = useState(false);
  const [connecting, setConnecting] = useState(false);
  const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
+ const [profileLoading, setProfileLoading] = useState(false);
 
  useEffect(() => {
  if (visible && userId) {
+ setFetchedProfile(null);
+ setConnected(false);
+ setProfileLoading(true);
  checkConnectionStatus(userId).then((status) => {
  setConnected(status === 'accepted' || status === 'pending');
  }).catch(() => {});
@@ -71,7 +76,8 @@ export function UserProfileModal({
  .then((p) => {
  if (p) setFetchedProfile(p);
  })
- .catch(() => {});
+ .catch(() => {})
+ .finally(() => setProfileLoading(false));
  }
  }, [visible, userId]);
 
@@ -97,6 +103,7 @@ export function UserProfileModal({
  : effectiveRole === 'staff'
  ? ['Curriculum Advisory', 'Academic Research']
  : ['Course Studies', 'Campus Life', 'Projects'];
+ const isOwnProfile = !!currentUser?.id && currentUser.id === userId;
 
  const coverSource = effectiveCover
  ? (STOCK_IMAGES[effectiveCover] ?? ((effectiveCover.startsWith('http') || effectiveCover.startsWith('file') || effectiveCover.startsWith('data:')) ? { uri: effectiveCover } : null))
@@ -140,7 +147,16 @@ export function UserProfileModal({
  const insets = useSafeAreaInsets();
 
  return (
- <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+ <Modal
+ visible={visible}
+ transparent
+ animationType="fade"
+ presentationStyle="overFullScreen"
+ statusBarTranslucent
+ navigationBarTranslucent
+ hardwareAccelerated
+ onRequestClose={onClose}
+ >
  <View accessibilityViewIsModal
  style={{
  flex: 1,
@@ -150,7 +166,7 @@ export function UserProfileModal({
  padding: isDesktop ? spacing.lg : 0,
  }}
  >
- <Pressable accessible={false} importantForAccessibility="no" style={{ position: 'absolute', inset: 0 }} onPress={onClose} />
+ <Pressable accessible={false} importantForAccessibility="no" style={StyleSheet.absoluteFill} onPress={onClose} />
  <View
  style={{
  backgroundColor: colors.surface,
@@ -160,7 +176,8 @@ export function UserProfileModal({
  borderTopWidth: 1,
  borderColor: colors.border,
  overflow: 'hidden',
- maxHeight: '90%',
+ height: isDesktop ? undefined : '92%',
+ maxHeight: isDesktop ? '90%' : undefined,
  maxWidth: 540,
  width: '100%',
  alignSelf: 'center',
@@ -193,6 +210,7 @@ export function UserProfileModal({
  style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={false}
  nestedScrollEnabled
+ keyboardShouldPersistTaps="handled"
  contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) }}
  >
  {/* Scrollable Cover Photo Banner (Scrolls naturally with content) */}
@@ -200,10 +218,12 @@ export function UserProfileModal({
  {coverSource ? (
  <Image
  source={coverSource}
+ alt={`${effectiveName}'s profile cover`}
+ accessibilityLabel={`${effectiveName}'s profile cover`}
  style={{ width: '100%', height: '100%' }}
  contentFit="cover"
  cachePolicy="memory-disk"
- transition={200}
+ transition={Platform.OS === 'web' ? 0 : 200}
  />
  ) : (
  <View
@@ -261,6 +281,18 @@ export function UserProfileModal({
  </View>
 
  <View style={{ flexDirection: 'row', gap: spacing.xs, flexShrink: 0 }}>
+ {isOwnProfile ? (
+ <AppButton
+ label="Open My Profile"
+ variant="secondary"
+ onPress={() => {
+ onClose();
+ router.push(`/${roleGroup}/profile` as any);
+ }}
+ size="sm"
+ />
+ ) : (
+ <>
  <AppButton
  label={connected ? 'Connected' : 'Connect'}
  variant={connected ? 'secondary' : 'primary'}
@@ -275,6 +307,8 @@ export function UserProfileModal({
  onPress={handleStartChat}
  size="sm"
  />
+ )}
+ </>
  )}
  </View>
  </View>
@@ -293,6 +327,13 @@ export function UserProfileModal({
  ) : null}
  <UserTypeBadge role={effectiveRole} />
  </View>
+
+ {profileLoading ? (
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm }}>
+ <ActivityIndicator size="small" color={colors.brandPrimary} />
+ <AppText variant="caption" tone="secondary">Loading current profile details…</AppText>
+ </View>
+ ) : null}
 
  {effectiveInstitution || effectiveDepartment ? (
  <AppText tone="secondary" weight="semiBold" variant="bodySmall" style={{ marginTop: 3, fontSize: 12, lineHeight: 16 }}>

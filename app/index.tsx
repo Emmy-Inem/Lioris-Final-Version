@@ -1,7 +1,6 @@
 import React from 'react';
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/auth/AuthContext';
-import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { firstOnboardingStep } from '@/auth/onboardingSteps';
 import { roleRequiresMfa } from '@/auth/mfaPolicy';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';
@@ -26,7 +25,6 @@ const DASHBOARD_BY_ROLE = {
 
 export default function Index() {
   const { user, isLoading, isPasswordRecovery } = useAuth();
-  const { isFeatureEnabled } = useFeatureFlags();
 
   if (isLoading) {
     return <AppLoadingScreen message="Verifying session and security tokens..." />;
@@ -53,6 +51,5 @@ export default function Index() {
  return <Redirect href="/(auth)/verify-mfa" />;
  }
 
-  const targetRole = user.role === 'staff' && !isFeatureEnabled('staff_role') ? 'student' : user.role;
-  return <Redirect href={DASHBOARD_BY_ROLE[targetRole] as any} />;
+  return <Redirect href={DASHBOARD_BY_ROLE[user.role] as any} />;
 }

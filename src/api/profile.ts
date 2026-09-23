@@ -1,4 +1,3 @@
-import { api } from './client';
 import { UserProfile, UserRole } from './types';
 
 import { supabase } from './supabase';
@@ -249,16 +248,16 @@ export function markVerificationRejected(userId: string) {
 }
 
 export async function verifyProfileEmail(userId: string): Promise<UserProfile> {
- try {
- const { data } = await api.post<UserProfile>('/profile/me/verify-email');
- return data;
- } catch {
- const current = profileState.get(userId);
- if (!current) throw new Error('Profile not found');
- const updated: UserProfile = { ...current, isVerified: true };
- profileState.set(userId, updated);
- return updated;
+ const { data, error } = await supabase.auth.getUser();
+ if (error || !data.user || data.user.id !== userId) {
+ throw new Error('Could not verify the signed-in account. Please sign in again.');
  }
+ if (!data.user.email_confirmed_at) {
+ throw new Error('Your email address has not been confirmed yet.');
+ }
+ const profile = await getPublicProfile(userId);
+ if (!profile) throw new Error('Profile not found');
+ return profile;
 }
 
 export async function uploadAvatarImage(
@@ -518,4 +517,3 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   }
   return null;
 }
-

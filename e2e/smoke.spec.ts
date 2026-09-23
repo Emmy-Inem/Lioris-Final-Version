@@ -6,7 +6,7 @@ test.describe('landing and auth pages', () => {
   test('login page loads with no console errors and no CSP violations', async ({ page, problems }) => {
     await page.goto('/login');
     await waitForApp(page);
-    await expect(page.getByPlaceholder('Password (Min 6 Characters)')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
     // Let late resources (fonts, images, the Turnstile stub) settle.
     await page.waitForLoadState('networkidle');
 
@@ -36,7 +36,7 @@ test.describe('landing and auth pages', () => {
 
     await page.goBack();
     await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByPlaceholder('Password (Min 6 Characters)')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
     await expect(page.getByText(CRASH_TEXT)).toHaveCount(0);
   });
 
@@ -91,7 +91,7 @@ test.describe('registration guard rails', () => {
     await waitForApp(page);
 
     await page.getByPlaceholder('Inem Light').fill('E2E Tester');
-    await page.getByPlaceholder('you@campus.edu.ng or personal email').fill('e2e.tester@example.com');
+    await page.getByPlaceholder('you@example.com').fill('e2e.tester@example.com');
     await page.getByPlaceholder('••••••••').first().fill('Str0ng!Passw0rd#1');
     await page.getByPlaceholder('e.g. starboy').fill('e2e.tester');
 

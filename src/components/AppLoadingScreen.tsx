@@ -176,9 +176,10 @@ export function AppLoadingScreen({
             source={EMBLEM_ASSET}
             style={styles.emblem}
             contentFit="contain"
-            transition={200}
+            transition={Platform.OS === 'web' ? 0 : 200}
             priority="high"
             alt="Lioris emblem"
+            accessibilityLabel="Lioris emblem"
           />
         </Animated.View>
 
@@ -186,7 +187,7 @@ export function AppLoadingScreen({
         <Text style={[styles.brandTitle, { color: isDark ? '#FFFFFF' : '#0A1326' }]}>
           Lioris
         </Text>
-        <Text style={[styles.brandSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+        <Text style={[styles.brandSubtitle, { color: isDark ? '#94A3B8' : '#52637A' }]}>
           Campus Operating System
         </Text>
 
@@ -224,7 +225,11 @@ export function AppLoadingScreen({
           accessibilityLabel={currentMessage}
           accessibilityLiveRegion="polite"
         >
-          <ActivityIndicator size="small" color={colors.brandPrimary} />
+          <ActivityIndicator
+            size="small"
+            color={colors.brandPrimary}
+            accessibilityLabel={currentMessage}
+          />
           <Text
             style={[
               styles.messageText,

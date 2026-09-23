@@ -7,8 +7,7 @@
   "cleanUrls": true,
   "env": {
     "APP_ENV": "production",
-    "API_BASE_URL": "https://api.lioris.app",
-    "WS_BASE_URL": "wss://api.lioris.app/realtime",
+    "EXPO_PUBLIC_SITE_URL": "https://lioris-campus.vercel.app",
     "EXPO_PUBLIC_SUPABASE_URL": "https://fdtnbluslkabwsmspbem.supabase.co",
     "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF",
     "EXPO_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE8rvj6r5JOLLpDJ"
@@ -16,8 +15,7 @@
   "build": {
     "env": {
       "APP_ENV": "production",
-      "API_BASE_URL": "https://api.lioris.app",
-      "WS_BASE_URL": "wss://api.lioris.app/realtime",
+      "EXPO_PUBLIC_SITE_URL": "https://lioris-campus.vercel.app",
       "EXPO_PUBLIC_SUPABASE_URL": "https://fdtnbluslkabwsmspbem.supabase.co",
       "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF",
       "EXPO_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAE8rvj6r5JOLLpDJ"
@@ -59,7 +57,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https: http:; connect-src 'self' blob: data: https://fdtnbluslkabwsmspbem.supabase.co wss://fdtnbluslkabwsmspbem.supabase.co https://api.lioris.app wss://api.lioris.app https://openlibrary.org https://api.semanticscholar.org https://api.openalex.org https://api.open-meteo.com https://open.er-api.com https://*.api.radio-browser.info https://meet.jit.si wss://meet.jit.si https://*.jit.si wss://*.jit.si https://nominatim.openstreetmap.org https://overpass-api.de https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com https://meet.jit.si https://*.jit.si https://8x8.vc https://*.8x8.vc https://www.openstreetmap.org https://*.openstreetmap.org https://maps.google.com https://www.google.com https://docs.google.com; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https: http:; connect-src 'self' blob: data: https://fdtnbluslkabwsmspbem.supabase.co wss://fdtnbluslkabwsmspbem.supabase.co https://openlibrary.org https://api.semanticscholar.org https://api.openalex.org https://api.open-meteo.com https://open.er-api.com https://*.api.radio-browser.info https://meet.jit.si wss://meet.jit.si https://*.jit.si wss://*.jit.si https://nominatim.openstreetmap.org https://overpass-api.de https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com https://meet.jit.si https://*.jit.si https://8x8.vc https://*.8x8.vc https://www.openstreetmap.org https://*.openstreetmap.org https://maps.google.com https://www.google.com https://docs.google.com; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
         }
       ]
     },

@@ -281,6 +281,8 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  {/* Header Row: Author Avatar (Tap to View Profile) & Menu */}
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
  <Pressable
+ accessibilityRole="button"
+ accessibilityLabel={`View ${post.authorName}'s profile`}
  onPress={() => {
  haptics.light();
  setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl, isVerified: post.authorVerified });

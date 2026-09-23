@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
-import { AppButton } from '@/components/AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
@@ -25,7 +24,6 @@ import {
   ResearchPaper,
   searchResearchPapers,
   formatApaCitation,
-  formatBibtexCitation,
 } from '@/api/academicResearch';
 
 interface ResearchPapersModalProps {
@@ -49,7 +47,7 @@ export function ResearchPapersModal({
   onClose,
   initialTopic = '',
 }: ResearchPapersModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -59,6 +57,7 @@ export function ResearchPapersModal({
   const [papers, setPapers] = useState<ResearchPaper[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const searchSequence = useRef(0);
 
   useEffect(() => {
     if (visible) {
@@ -68,14 +67,20 @@ export function ResearchPapersModal({
 
   async function handleSearch(term: string) {
     const q = term.trim();
+    const sequence = ++searchSequence.current;
     setLoading(true);
     try {
       const results = await searchResearchPapers(q || 'computer science', 12);
-      setPapers(results);
+      if (sequence === searchSequence.current) {
+        setPapers(results);
+        setExpandedId(null);
+      }
     } catch {
-      toast.warning('Unable to fetch live papers; using benchmark catalog');
+      if (sequence === searchSequence.current) {
+        toast.warning('Unable to fetch research papers. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      if (sequence === searchSequence.current) setLoading(false);
     }
   }
 
@@ -113,7 +118,16 @@ export function ResearchPapersModal({
 
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+      navigationBarTranslucent
+      hardwareAccelerated
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[
@@ -133,7 +147,8 @@ export function ResearchPapersModal({
               borderColor: colors.border,
               width: isDesktop ? 760 : '100%',
               maxWidth: 760,
-              maxHeight: isDesktop ? '90%' : '96%',
+              height: isDesktop ? '90%' : '100%',
+              borderRadius: isDesktop ? 18 : 0,
             },
           ]}
         >
@@ -172,6 +187,7 @@ export function ResearchPapersModal({
                 placeholder="Search topics, author, DOI, or thesis keywords..."
                 placeholderTextColor={colors.textSecondary}
                 returnKeyType="search"
+                blurOnSubmit={false}
                 style={[styles.searchInput, { color: colors.textPrimary }]}
               />
               {query.length > 0 && (
@@ -231,7 +247,12 @@ export function ResearchPapersModal({
           </View>
 
           {/* Papers ScrollView */}
-          <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} contentContainerStyle={{ gap: 10, paddingBottom: 16 }}>
+          <ScrollView
+            style={{ flex: 1, paddingHorizontal: 16 }}
+            contentContainerStyle={{ gap: 10, paddingBottom: Math.max(insets.bottom, 16) }}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
             {loading && papers.length === 0 ? (
               <View style={{ alignItems: 'center', paddingVertical: 32 }}>
                 <ActivityIndicator size="large" color={colors.brandPrimary} />
@@ -370,7 +391,6 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   modalContainer: {
-    borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
     display: 'flex',

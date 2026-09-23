@@ -2,7 +2,6 @@ import React, { useState } from'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from'@expo/vector-icons';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { SolidCard } from'@/components/SolidCard';
 import { AppText } from'@/components/AppText';
 import { AppTextField } from'@/components/AppTextField';
@@ -16,6 +15,7 @@ import { UserProfile, UserRole } from'@/api/types';
 import { getInstitutionByCode } from'@/api/institutions';
 import { recordAuditLogEntry } from'@/api/auditLog';
 import { haptics } from'@/utils/haptics';
+import { adminUpdateUserProfile } from '@/api/auth';
 
 export function UserProfilesTab() {
  const { colors, spacing, radius } = useTheme();
@@ -81,6 +81,7 @@ export function UserProfilesTab() {
  const [editDept, setEditDept] = useState('');
  const [editVerified, setEditVerified] = useState(false);
  const [editBio, setEditBio] = useState('');
+ const [savingUser, setSavingUser] = useState(false);
 
  const filteredUsers = users.filter((u) => {
  const matchesRole = roleFilter === 'all' || u.userType === roleFilter;
@@ -108,37 +109,18 @@ export function UserProfilesTab() {
  async function handleSaveUser() {
  if (!selectedUser) return;
  haptics.medium();
- const updated = users.map((u) => {
- if (u.id === selectedUser.id) {
- return {
- ...u,
- fullName: editName.trim() || u.fullName,
- userType: editRole,
- department: editDept.trim() || u.department,
- isVerified: editVerified,
- verificationStatus: editVerified ? ('verified' as const) : ('none' as const),
- bio: editBio.trim() || u.bio,
- };
- }
- return u;
- });
-
- setUsers(updated);
-
+ setSavingUser(true);
  try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('profiles').update({
+ const result = await adminUpdateUserProfile(selectedUser.id, {
  full_name: editName.trim() || selectedUser.fullName,
  role: editRole.toLowerCase(),
  department: editDept.trim() || selectedUser.department,
  verification_status: editVerified ? 'verified' : 'none',
  bio: editBio.trim() || selectedUser.bio,
- }).eq('id', selectedUser.id);
- } catch (err) {
- console.warn('[UserProfilesTab] Supabase profile update error:', err);
- }
+ });
+ if (!result.success) throw new Error(result.error || 'The profile change was not saved.');
 
- recordAuditLogEntry({
+ await recordAuditLogEntry({
  action: 'user_role_changed',
  summary: `Updated profile governance & role credentials for ${editName} (${editRole.toUpperCase()})`,
  targetType: 'user',
@@ -164,7 +146,14 @@ export function UserProfilesTab() {
 
  setEditModalOpen(false);
  setSelectedUser(null);
+ haptics.success();
  Alert.alert('Profile Updated', `Credentials and role permissions saved for ${editName}.`);
+ } catch (err: any) {
+ haptics.error();
+ Alert.alert('Could Not Update Profile', err?.message || 'The profile change was not saved. Please try again.');
+ } finally {
+ setSavingUser(false);
+ }
  }
 
  async function handleToggleSuspend(user: UserProfile) {
@@ -446,7 +435,7 @@ export function UserProfilesTab() {
 
         <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
           <AppButton label="Cancel" variant="ghost" onPress={() => setEditModalOpen(false)} />
-          <AppButton label="Save Changes" onPress={handleSaveUser} />
+          <AppButton label="Save Changes" onPress={handleSaveUser} loading={savingUser} disabled={savingUser} />
         </View>
       </View>
     </KeyboardAvoidingView>

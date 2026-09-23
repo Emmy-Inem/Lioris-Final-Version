@@ -7,11 +7,11 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
-import { LegalSection, LegalParagraph, LegalBullets, LegalStrong, LegalPlaceholder } from '@/components/LegalSection';
+import { LegalSection, LegalParagraph, LegalBullets, LegalStrong } from '@/components/LegalSection';
 import { DATA_CONTROLLER, DPO_EMAIL, MIN_AGE, MIN_AGE_WITH_CONSENT, RETENTION, TERMS_VERSION } from '@/constants/legal';
 
 export default function TermsOfServiceScreen() {
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const { isDesktop } = useResponsive();
   const { getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
 
@@ -67,7 +67,7 @@ export default function TermsOfServiceScreen() {
             },
           ]}
         >
-          <Pressable onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Lioris home" onPress={() => router.push('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 }}>
             <LiorisLogo size={30} variant="symbol" />
             <LiorisLogo size={20} variant="wordmark" />
           </Pressable>
@@ -75,11 +75,12 @@ export default function TermsOfServiceScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Pressable
               onPress={toggleTheme}
+              accessibilityRole="button"
               accessibilityLabel="Toggle Theme"
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
                 backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -90,12 +91,14 @@ export default function TermsOfServiceScreen() {
 
             <Pressable
               onPress={() => router.push('/')}
+              accessibilityRole="button"
+              accessibilityLabel="Back to home"
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
                 paddingHorizontal: 14,
-                paddingVertical: 8,
+                minHeight: 44,
                 borderRadius: 999,
                 backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
               }}
@@ -110,6 +113,8 @@ export default function TermsOfServiceScreen() {
       </View>
 
       <ScrollView
+        accessibilityLabel="Terms and conditions content"
+        focusable={Platform.OS === 'web'}
         contentContainerStyle={{
           paddingTop: Platform.OS === 'web' ? 100 : 110,
           paddingBottom: 60,

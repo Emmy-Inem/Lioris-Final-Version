@@ -28,7 +28,7 @@ export function GlassCard({
   children,
   ...rest
 }: GlassCardProps) {
-  const { colors, spacing, radius: radiusTokens, isDark } = useTheme();
+  const { spacing, radius: radiusTokens, isDark } = useTheme();
   const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
   const cornerRadius = radius ?? radiusTokens.glass ?? 20;
 
@@ -55,9 +55,14 @@ export function GlassCard({
             borderRadius: cornerRadius,
             borderColor: getGlassBorderColor(isDark),
             borderWidth: 1,
-            backgroundColor: isDark
-              ? `rgba(19, 30, 49, ${Math.min(0.88, settings.translucency * 1.5).toFixed(2)})`
-              : `rgba(255, 255, 255, ${Math.min(0.92, settings.translucency * 1.6).toFixed(2)})`,
+            backgroundColor:
+              Platform.OS === 'ios'
+                ? isDark
+                  ? 'rgba(12, 20, 36, 0.20)'
+                  : 'rgba(255, 255, 255, 0.18)'
+                : isDark
+                  ? `rgba(19, 30, 49, ${Math.min(0.88, settings.translucency * 1.5).toFixed(2)})`
+                  : `rgba(255, 255, 255, ${Math.min(0.92, settings.translucency * 1.6).toFixed(2)})`,
           },
           Platform.OS === 'web' &&
             ({
@@ -73,7 +78,7 @@ export function GlassCard({
         {Platform.OS !== 'web' && Platform.OS !== 'android' && (
           <BlurView
             intensity={intensity}
-            tint={isDark ? 'dark' : 'light'}
+            tint={isDark ? 'systemThinMaterialDark' : 'systemUltraThinMaterialLight'}
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[StyleSheet.absoluteFill, { borderRadius: cornerRadius, overflow: 'hidden' }]}
           />

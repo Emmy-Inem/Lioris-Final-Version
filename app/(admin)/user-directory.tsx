@@ -610,16 +610,13 @@ export default function UserDirectoryScreen() {
 
  async function performRoleMutation(target: DirectoryUser, targetRole: DirectoryUser['role']) {
  haptics.medium();
+ try {
+ const result = await adminUpdateUserProfile(target.id, { role: targetRole.toLowerCase() });
+ if (!result.success) throw new Error(result.error || 'The role change was not saved.');
+
  setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, role: targetRole } : u)));
 
- try {
- const { supabase } = await import('@/api/supabase');
- await supabase.from('profiles').update({ role: targetRole.toLowerCase() }).eq('id', target.id);
- } catch (err) {
- console.warn('[UserDirectory] Supabase role update error:', err);
- }
-
- recordAuditLogEntry({
+ await recordAuditLogEntry({
  action: 'user_role_changed',
  summary: `Mutated role of ${target.fullName} from ${target.role} to ${targetRole}`,
  targetType: 'user',
@@ -629,7 +626,12 @@ export default function UserDirectoryScreen() {
  });
 
  setSelectedUser(null);
+ haptics.success();
  Alert.alert('Role Mutated', `${target.fullName} is now assigned the ${targetRole} role.`);
+ } catch (err: any) {
+ haptics.error();
+ toast.error(err?.message || 'The role change was not saved. Please try again.');
+ }
  }
 
  function handleImpersonate(target: DirectoryUser) {

@@ -187,7 +187,7 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Campus Life',
     tier: 'P1',
     description: 'Enables faculty & staff portal, moderation console, and staff view in role switcher.',
-    defaultOn: false,
+    defaultOn: true,
   },
 ];
 

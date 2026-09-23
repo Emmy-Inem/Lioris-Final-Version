@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useTheme } from '@/theme/ThemeProvider';
 import { BRAND_PALETTE, type BrandToneId } from '@/constants/brandPalette';
@@ -58,9 +58,10 @@ function Wordmark({ height, tone }: { height: number; tone: BrandToneId }) {
     <Image
       source={WORDMARK_ASSETS[tone]}
       alt="Lioris"
+      accessibilityLabel="Lioris"
       style={{ width: Math.round(height * WORDMARK_ASPECT), height }}
       contentFit="contain"
-      transition={200}
+      transition={Platform.OS === 'web' ? 0 : 200}
     />
   );
 }
@@ -83,9 +84,10 @@ export function LiorisLogo({ size = 48, tintColor, variant = 'symbol', tone = 'a
         <Image
           source={emblemSource}
           alt="Lioris logo"
+          accessibilityLabel="Lioris logo"
           style={{ width: size, height: size }}
           contentFit="contain"
-          transition={200}
+          transition={Platform.OS === 'web' ? 0 : 200}
         />
       </View>
     );
@@ -107,9 +109,10 @@ export function LiorisLogo({ size = 48, tintColor, variant = 'symbol', tone = 'a
       <Image
         source={emblemSource}
         alt=""
+        accessible={false}
         style={{ width: size, height: size }}
         contentFit="contain"
-        transition={200}
+        transition={Platform.OS === 'web' ? 0 : 200}
       />
       <Wordmark height={Math.round(size * FULL_WORDMARK_HEIGHT_RATIO)} tone={resolvedTone} />
     </View>

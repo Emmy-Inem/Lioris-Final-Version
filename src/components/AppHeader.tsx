@@ -1,5 +1,6 @@
 import React from'react';
-import { Platform, Pressable, View } from'react-native';
+import { Platform, Pressable, StyleSheet, View } from'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from'@expo/vector-icons';
 import { router, useSegments } from'expo-router';
 import { useQuery } from'@tanstack/react-query';
@@ -16,6 +17,18 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { getInstitutionByCode } from '@/api/institutions';
 import { haptics } from '@/utils/haptics';
+
+function IOSHeaderGlass({ isDark }: { isDark: boolean }) {
+  if (Platform.OS !== 'ios') return null;
+  return (
+    <BlurView
+      pointerEvents="none"
+      intensity={72}
+      tint={isDark ? 'systemThinMaterialDark' : 'systemUltraThinMaterialLight'}
+      style={[StyleSheet.absoluteFill, { borderRadius: 16 }]}
+    />
+  );
+}
 
 export function AppHeader() {
   const { colors, spacing, isDark } = useTheme();
@@ -132,7 +145,9 @@ export function AppHeader() {
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
+                backgroundColor: Platform.OS === 'ios'
+                  ? isDark ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.16)'
+                  : isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
                 borderWidth: 1,
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
                 alignItems: 'center',
@@ -149,6 +164,7 @@ export function AppHeader() {
                 } as any),
             ]}
           >
+            <IOSHeaderGlass isDark={isDark} />
             <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.textPrimary} />
             {unreadMessagesCount > 0 && (
               <View
@@ -194,7 +210,9 @@ export function AppHeader() {
               width: 32,
               height: 32,
               borderRadius: 16,
-              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
+              backgroundColor: Platform.OS === 'ios'
+                ? isDark ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.16)'
+                : isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
               borderWidth: 1,
               borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
               alignItems: 'center',
@@ -208,6 +226,7 @@ export function AppHeader() {
               } as any),
           ]}
         >
+          <IOSHeaderGlass isDark={isDark} />
           <Ionicons name="bookmark-outline" size={17} color={colors.textPrimary} />
         </Pressable>
 
@@ -225,7 +244,9 @@ export function AppHeader() {
               width: 32,
               height: 32,
               borderRadius: 16,
-              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
+              backgroundColor: Platform.OS === 'ios'
+                ? isDark ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.16)'
+                : isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
               borderWidth: 1,
               borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
               alignItems: 'center',
@@ -241,6 +262,7 @@ export function AppHeader() {
               } as any),
           ]}
         >
+          <IOSHeaderGlass isDark={isDark} />
           <Ionicons name="search" size={17} color={colors.textPrimary} />
         </Pressable>
 
@@ -258,7 +280,9 @@ export function AppHeader() {
               width: 32,
               height: 32,
               borderRadius: 16,
-              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
+              backgroundColor: Platform.OS === 'ios'
+                ? isDark ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.16)'
+                : isDark ? 'rgba(30, 41, 59, 0.70)' : 'rgba(255, 255, 255, 0.75)',
               borderWidth: 1,
               borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)',
               alignItems: 'center',
@@ -274,6 +298,7 @@ export function AppHeader() {
               } as any),
           ]}
         >
+          <IOSHeaderGlass isDark={isDark} />
           <View>
             <Ionicons name="notifications-outline" size={17} color={colors.textPrimary} />
             {unreadCount > 0 ? (

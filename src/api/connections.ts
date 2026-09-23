@@ -1,4 +1,3 @@
-import { api } from'./client';
 import { AlumniDirectoryEntry, Connection, IncomingConnectionRequest } from'./types';
 import { createNotification } from'./notifications';
 import { supabase } from './supabase';

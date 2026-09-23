@@ -39,7 +39,7 @@ interface CommunityManageModalProps {
  * CommunityFeedScreen), so that never comes up in practice.
  */
 export function CommunityManageModal({ visible, onClose, community, isAdmin }: CommunityManageModalProps) {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
 
@@ -131,8 +131,10 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
     try {
       await addCommunityModerator(community.id, candidate.id);
       await refreshModerators();
+      await queryClient.invalidateQueries({ queryKey: ['my-moderated-community-ids'] });
       setCandidates((prev) => prev.filter((c) => c.id !== candidate.id));
       haptics.success();
+      Alert.alert('Moderator Added', `${candidate.fullName} can now moderate ${community.label}.`);
     } catch (err: any) {
       haptics.error();
       Alert.alert('Could not add moderator', getFriendlyErrorMessage(err, 'Please try again.'));
@@ -147,6 +149,8 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
     try {
       await removeCommunityModerator(community.id, moderator.userId);
       setModerators((prev) => prev.filter((m) => m.userId !== moderator.userId));
+      await queryClient.invalidateQueries({ queryKey: ['my-moderated-community-ids'] });
+      haptics.success();
     } catch (err: any) {
       haptics.error();
       Alert.alert('Could not remove moderator', getFriendlyErrorMessage(err, 'Please try again.'));

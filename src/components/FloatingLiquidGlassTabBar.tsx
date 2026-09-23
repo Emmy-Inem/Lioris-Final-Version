@@ -26,9 +26,9 @@ export interface FloatingLiquidGlassTabBarProps {
 }
 
 const SPRING_CONFIG = {
-  damping: 22,
-  stiffness: 200,
-  mass: 0.7,
+  damping: 24,
+  stiffness: 230,
+  mass: 0.72,
 };
 
 // Android re-lays out the pill every frame while its width animates, and a spring's overshoot
@@ -161,7 +161,7 @@ function TabItem({
 
   const animatedLabelStyle = useAnimatedStyle(() => ({
     opacity: labelOpacity.value,
-    maxWidth: labelWidth.value,
+    width: labelWidth.value,
     transform: [{ scale: labelScale.value }],
   }));
 
@@ -183,11 +183,15 @@ function TabItem({
           <AppText
             variant="caption"
             weight="bold"
+            numberOfLines={1}
+            ellipsizeMode="clip"
             style={{
               color: '#FFFFFF',
               fontSize: 12,
+              lineHeight: 15,
               letterSpacing: 0.2,
               paddingLeft: 6,
+              flexShrink: 0,
               ...(Platform.OS === 'web' ? ({ whiteSpace: 'nowrap' } as any) : {}),
             }}
           >
@@ -353,7 +357,15 @@ function FloatingLiquidGlassTabBarView({
           styles.glassPill,
           animatedPillStyle,
           {
-            backgroundColor: getGlassBackground(isDark),
+            // iOS supplies the translucent colour through its native material. A dense
+            // colour here sits in front of the sampled backdrop and makes the blur look
+            // like an opaque white bar, especially over light dashboard content.
+            backgroundColor:
+              Platform.OS === 'ios'
+                ? isDark
+                  ? 'rgba(8, 15, 30, 0.20)'
+                  : 'rgba(255, 255, 255, 0.16)'
+                : getGlassBackground(isDark),
             borderColor: getGlassBorderColor(isDark),
           },
           Platform.OS === 'web' &&
@@ -369,8 +381,16 @@ function FloatingLiquidGlassTabBarView({
         {/* Native Liquid Blur Engine */}
         {Platform.OS !== 'web' && (Platform.OS !== 'android' || blurTarget) && (
           <BlurView
-            intensity={Math.round(settings.blurIntensity * 3.2)}
-            tint={isDark ? 'dark' : 'light'}
+            intensity={Math.min(100, Math.round(settings.blurIntensity * 3.2))}
+            tint={
+              Platform.OS === 'ios'
+                ? isDark
+                  ? 'systemThinMaterialDark'
+                  : 'systemUltraThinMaterialLight'
+                : isDark
+                  ? 'dark'
+                  : 'light'
+            }
             blurTarget={blurTarget}
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[StyleSheet.absoluteFill, { borderRadius: PILL_HEIGHT / 2, overflow: 'hidden' }]}
@@ -463,8 +483,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: PILL_PADDING_H,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: Platform.OS === 'ios' ? 0.16 : 0.08,
+    shadowRadius: Platform.OS === 'ios' ? 14 : 8,
     elevation: 0,
   },
   trackContainer: {
@@ -509,6 +529,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
+    flexShrink: 0,
   },
 });
 

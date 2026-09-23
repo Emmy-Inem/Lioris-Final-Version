@@ -50,7 +50,6 @@ export default function RegisterScreen() {
  const [email, setEmail] = useState('');
  const [password, setPassword] = useState('');
  const [botField, setBotField] = useState('');
- const [showPassword, setShowPassword] = useState(false);
  const [acceptedTerms, setAcceptedTerms] = useState(false);
  const [confirmedAge, setConfirmedAge] = useState(false);
  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -200,7 +199,7 @@ export default function RegisterScreen() {
 
  const formContent = (
  <>
- <View style={{ flexDirection: 'row', backgroundColor: colors.divider, borderRadius: radius.pill, padding: 4, marginBottom: spacing.lg }}>
+ <View accessibilityRole="tablist" style={{ flexDirection: 'row', backgroundColor: colors.divider, borderRadius: radius.pill, padding: 4, marginBottom: spacing.lg }}>
  {PORTALS.map((p) => {
  const selected = portal === p.value;
  return (
@@ -221,8 +220,13 @@ export default function RegisterScreen() {
  backgroundColor: selected ? colors.brandPrimary : 'transparent',
  }}
  >
- <Ionicons name={p.icon} size={14} color={selected ? '#FFFFFF' : colors.textSecondary} />
- <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+ <Ionicons name={p.icon} size={14} color={selected ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475467'} />
+ <AppText
+ variant="bodySmall"
+ weight="bold"
+ tone={selected ? 'inverse' : 'secondary'}
+ style={!selected ? { color: isDark ? '#CBD5E1' : '#475467' } : undefined}
+ >
  {p.label}
  </AppText>
  </Pressable>
@@ -313,26 +317,16 @@ export default function RegisterScreen() {
  </AppText>
  )}
 
- <View>
-      <AppTextField
-        label="Password (Min 8 characters)"
-        secureTextEntry={!showPassword}
-        autoComplete="new-password"
-        textContentType="newPassword"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-      />
- <Pressable
- onPress={() => setShowPassword((v) => !v)}
- accessibilityRole="button"
- accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
- style={{ position: 'absolute', right: spacing.md, top: 40 }}
- hitSlop={14}
- >
- <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={18} color={colors.textSecondary} />
- </Pressable>
- </View>
+ <AppTextField
+   label="Password (Min 8 characters)"
+   secureTextEntry
+   showPasswordToggle
+   autoComplete="new-password"
+   textContentType="newPassword"
+   value={password}
+   onChangeText={setPassword}
+   placeholder="••••••••"
+ />
 
  {password.length > 0 ? (
  <View style={{ marginTop: -spacing.sm, marginBottom: spacing.sm }}>
@@ -424,25 +418,25 @@ export default function RegisterScreen() {
  />
  </View>
 
-  <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md, marginTop: spacing.sm }}>
   <Pressable
   onPress={() => setConfirmedAge((v) => !v)}
   accessibilityRole="checkbox"
   accessibilityState={{ checked: confirmedAge }}
   aria-checked={confirmedAge}
   accessibilityLabel="I confirm that I am 18 years old or older, or a university student aged 16–17 registering with parent or guardian consent"
-  hitSlop={12}
+  style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, minHeight: 44, marginBottom: spacing.md, marginTop: spacing.sm }}
   >
-  <Ionicons
-  name={confirmedAge ? 'checkbox' : 'square-outline'}
-  size={20}
-  color={confirmedAge ? colors.brandPrimary : colors.textSecondary}
-  />
+    <View style={{ width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'flex-start' }}>
+      <Ionicons
+        name={confirmedAge ? 'checkbox' : 'square-outline'}
+        size={20}
+        color={confirmedAge ? colors.brandPrimary : colors.textSecondary}
+      />
+    </View>
+    <AppText variant="bodySmall" style={{ flex: 1 }}>
+      I confirm that I am {MIN_AGE} years old or older, OR a university student aged {MIN_AGE_WITH_CONSENT}–17 registering with parent/guardian consent.
+    </AppText>
   </Pressable>
-  <AppText variant="bodySmall" style={{ flex: 1 }} onPress={() => setConfirmedAge((v) => !v)}>
-  I confirm that I am {MIN_AGE} years old or older, OR a university student aged {MIN_AGE_WITH_CONSENT}–17 registering with parent/guardian consent.
-  </AppText>
-  </View>
 
  <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
  <Pressable
@@ -451,7 +445,7 @@ export default function RegisterScreen() {
  accessibilityState={{ checked: acceptedTerms }}
  aria-checked={acceptedTerms}
  accessibilityLabel="I accept the Terms of Service, Privacy Policy, and Community Rules"
- hitSlop={12}
+ style={{ width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'flex-start' }}
  >
  <Ionicons
  name={acceptedTerms ? 'checkbox' : 'square-outline'}
@@ -521,10 +515,10 @@ export default function RegisterScreen() {
   <AppButton label="Configure & Join" onPress={handleRegister} loading={submitting} fullWidth />
 
  <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
- <Link href="/(auth)/login">
- <AppText tone="brand" weight="semiBold">
- Already have an account? Log In
- </AppText>
+ <Link href="/(auth)/login" asChild>
+   <Pressable style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
+     <AppText tone="brand" weight="semiBold">Already have an account? Log In</AppText>
+   </Pressable>
  </Link>
  </View>
  </>
@@ -538,8 +532,7 @@ export default function RegisterScreen() {
  <View style={{ flex: 1.1, position: 'relative', overflow: 'hidden', backgroundColor: '#0F172A', padding: spacing.xxl, justifyContent: 'space-between' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
- alt=""
- accessible={false}
+ alt="University students studying together"
  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 }}
  contentFit="cover"
  />
@@ -553,12 +546,14 @@ export default function RegisterScreen() {
  </Pressable>
  <Pressable
  onPress={() => router.push('/')}
+ accessibilityRole="button"
+ accessibilityLabel="Back to overview"
  style={{
  flexDirection: 'row',
  alignItems: 'center',
  gap: 6,
  paddingHorizontal: 12,
- paddingVertical: 6,
+ minHeight: 44,
  borderRadius: radius.pill,
  backgroundColor: 'rgba(255,255,255,0.15)',
  }}
@@ -591,9 +586,9 @@ export default function RegisterScreen() {
  <Pressable accessibilityRole="button" accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
  onPress={toggleTheme}
  style={{
- width: 36,
- height: 36,
- borderRadius: 18,
+ width: 44,
+ height: 44,
+ borderRadius: 22,
  backgroundColor: 'rgba(255,255,255,0.15)',
  alignItems: 'center',
  justifyContent: 'center',
@@ -618,11 +613,12 @@ export default function RegisterScreen() {
  <View style={{ position: 'absolute', top: 20, left: 16, zIndex: 10 }}>
  <Pressable
  onPress={() => router.push('/')}
- hitSlop={8}
+ accessibilityRole="button"
+ accessibilityLabel="Back to overview"
  style={{
- height: 36,
+ height: 44,
  paddingHorizontal: 12,
- borderRadius: 18,
+ borderRadius: 22,
  backgroundColor: 'rgba(0,0,0,0.3)',
  flexDirection: 'row',
  alignItems: 'center',

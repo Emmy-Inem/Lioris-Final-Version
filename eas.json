@@ -8,29 +8,27 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "APP_ENV": "development",
-        "API_BASE_URL": "https://api.dev.lioris.app",
-        "WS_BASE_URL": "wss://api.dev.lioris.app/realtime"
+        "APP_ENV": "development"
       },
       "ios": { "simulator": true }
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview",
       "env": {
-        "APP_ENV": "staging",
-        "API_BASE_URL": "https://api.staging.lioris.app",
-        "WS_BASE_URL": "wss://api.staging.lioris.app/realtime"
+        "APP_ENV": "staging"
+      }
+    },
+    "preview-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
       }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production",
       "credentialsSource": "local",
       "env": {
-        "APP_ENV": "production",
-        "API_BASE_URL": "https://api.lioris.app",
-        "WS_BASE_URL": "wss://api.lioris.app/realtime"
+        "APP_ENV": "production"
       }
     }
   },

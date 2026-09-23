@@ -578,7 +578,7 @@ export function PostDetailScreen() {
  <Pressable accessibilityRole="button" accessibilityLabel={`View ${c.authorName}'s profile`}
  onPress={() => {
  haptics.light();
- setInspectUser({ id: `author-${c.id}`, name: c.authorName, role: c.authorRole, avatarUrl: c.authorAvatarUrl });
+ setInspectUser({ id: c.authorId || `author-${c.id}`, name: c.authorName, role: c.authorRole, avatarUrl: c.authorAvatarUrl });
  }}
  style={{ zIndex: 2, marginRight: spacing.sm }}
  >

@@ -3,7 +3,7 @@ import { type PropsWithChildren } from 'react';
 
 // Absolute site URL used for canonical/social-preview tags (crawlers require absolute URLs).
 // Set EXPO_PUBLIC_SITE_URL when the production domain changes; no trailing slash.
-const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL || 'https://lioris-final-version.vercel.app').replace(/\/+$/, '');
+const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL || 'https://lioris-campus.vercel.app').replace(/\/+$/, '');
 const OG_IMAGE_URL = `${SITE_URL}/og-image.jpg`;
 
 /**

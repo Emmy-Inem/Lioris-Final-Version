@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,6 @@ import { AppTextField } from '@/components/AppTextField';
 import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { LiorisLogo } from '@/components/LiorisLogo';
-import { AuthHeroBackground } from '@/components/AuthHeroBackground';
 import { WaveCard } from '@/components/WaveCard';
 import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -41,53 +40,6 @@ const SLIDES = [
  description: 'Your academic identity stays verified and private - visible only within your campus community.',
  },
 ];
-
-// Development-only shortcut that pre-fills seeded demo credentials. It renders nothing in
-// production builds (`__DEV__` is false there), so neither the buttons nor the shared demo
-// password ship in the public bundle. Real accounts must never rely on this password.
-function DemoAccountPicker({
- onPick,
- style,
-}: {
- onPick: (email: string, password: string) => void;
- style?: { marginTop?: number };
-}) {
- const { colors, spacing, radius } = useTheme();
- if (!__DEV__) return null;
- const demos = [
- { label: 'Student', email: 'diana.prince@ui.edu.ng' },
- { label: 'Staff', email: 'dr.adeyemi@ui.edu.ng' },
- { label: 'Admin', email: 'admin@ui.edu.ng' },
- { label: 'Alumni', email: 'alumni.adeola@ui.edu.ng' },
- ];
- return (
- <SolidCard style={{ padding: spacing.md, ...style }}>
- <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, letterSpacing: 1 }}>
- DEV ONLY: DEMO ACCOUNTS
- </AppText>
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
- {demos.map((demo) => (
- <Pressable
- key={demo.label}
- accessibilityRole="button"
- accessibilityLabel={`Fill in the ${demo.label} demo account`}
- onPress={() => onPick(demo.email, 'password123')}
- style={{
- backgroundColor: colors.pastelPrimaryBg,
- paddingHorizontal: 10,
- paddingVertical: 5,
- borderRadius: radius.pill,
- }}
- >
- <AppText variant="caption" weight="bold" tone="brand">
- {demo.label}
- </AppText>
- </Pressable>
- ))}
- </View>
- </SolidCard>
- );
-}
 
 export default function LoginScreen() {
  const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
@@ -228,6 +180,7 @@ export default function LoginScreen() {
  const formContent = (
  <>
  <View
+ accessibilityRole="tablist"
  style={{
  flexDirection: 'row',
  backgroundColor: colors.divider,
@@ -258,9 +211,14 @@ export default function LoginScreen() {
  <Ionicons
  name={p === 'student' ? 'school' : 'star'}
  size={14}
- color={selected ? '#FFFFFF' : colors.textSecondary}
+ color={selected ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475467'}
  />
- <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+ <AppText
+ variant="bodySmall"
+ weight="bold"
+ tone={selected ? 'inverse' : 'secondary'}
+ style={!selected ? { color: isDark ? '#CBD5E1' : '#475467' } : undefined}
+ >
  {p === 'student' ? 'Student Portal' : 'Alumni Circle'}
  </AppText>
  </Pressable>
@@ -421,10 +379,10 @@ export default function LoginScreen() {
  <AppButton label="Secure Login" onPress={handleLogin} loading={submitting} disabled={!email || !password} fullWidth />
 
  <View style={{ alignItems: 'center', marginTop: spacing.lg }}>
- <Link href="/(auth)/register">
- <AppText tone="brand" weight="semiBold">
- Don't have an account? Sign Up
- </AppText>
+ <Link href="/(auth)/register" asChild>
+   <Pressable style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
+     <AppText tone="brand" weight="semiBold">Don't have an account? Sign Up</AppText>
+   </Pressable>
  </Link>
  </View>
  </>
@@ -438,8 +396,7 @@ export default function LoginScreen() {
  <View style={{ flex: 1.1, position: 'relative', overflow: 'hidden', backgroundColor: '#0F172A', padding: spacing.xxl, justifyContent: 'space-between' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
- alt=""
- accessible={false}
+ alt="University students studying together"
  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 }}
  contentFit="cover"
  />
@@ -453,12 +410,14 @@ export default function LoginScreen() {
           </Pressable>
           <Pressable
             onPress={() => router.push('/')}
+            accessibilityRole="button"
+            accessibilityLabel="Back to overview"
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
               paddingHorizontal: 12,
-              paddingVertical: 6,
+              minHeight: 44,
               borderRadius: radius.pill,
               backgroundColor: 'rgba(255,255,255,0.15)',
             }}
@@ -505,9 +464,9 @@ export default function LoginScreen() {
  <Pressable accessibilityRole="button" accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
  onPress={toggleTheme}
  style={{
- width: 36,
- height: 36,
- borderRadius: 18,
+ width: 44,
+ height: 44,
+ borderRadius: 22,
  backgroundColor: 'rgba(255,255,255,0.15)',
  alignItems: 'center',
  justifyContent: 'center',
@@ -523,8 +482,6 @@ export default function LoginScreen() {
  <View style={{ maxWidth: 440, width: '100%', alignSelf: 'center' }}>
  {formContent}
 
- {/* Dev-only demo accounts: never rendered (nor bundled with a password) in production builds. */}
- <DemoAccountPicker style={{ marginTop: spacing.xl }} onPick={(demoEmail, demoPassword) => { setEmail(demoEmail); setPassword(demoPassword); }} />
  </View>
  </View>
  </View>
@@ -534,8 +491,7 @@ export default function LoginScreen() {
  <View style={{ height: 230, position: 'relative', overflow: 'hidden' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
- alt=""
- accessible={false}
+ alt="University students studying together"
  style={{ width: '100%', height: '100%' }}
  contentFit="cover"
  />
@@ -543,9 +499,10 @@ export default function LoginScreen() {
  <View style={{ position: 'absolute', top: 20, left: 16, zIndex: 10 }}>
  <Pressable
  onPress={() => router.push('/')}
- hitSlop={8}
+ accessibilityRole="button"
+ accessibilityLabel="Back to overview"
  style={{
- height: 38,
+ height: 44,
  paddingHorizontal: 12,
  borderRadius: 19,
  backgroundColor: 'rgba(0,0,0,0.4)',
@@ -565,9 +522,9 @@ export default function LoginScreen() {
  onPress={toggleTheme}
  hitSlop={8}
  style={{
- width: 38,
- height: 38,
- borderRadius: 19,
+ width: 44,
+ height: 44,
+ borderRadius: 22,
  backgroundColor: 'rgba(0,0,0,0.4)',
  alignItems: 'center',
  justifyContent: 'center',
@@ -589,8 +546,6 @@ export default function LoginScreen() {
  </WaveCard>
 
  <View style={{ paddingHorizontal: spacing.lg }}>
- <DemoAccountPicker onPick={(demoEmail, demoPassword) => { setEmail(demoEmail); setPassword(demoPassword); }} />
-
  <SolidCard style={{ alignItems: 'center', marginTop: spacing.lg }}>
  <View
  style={{

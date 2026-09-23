@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
@@ -26,10 +27,10 @@ import { AndroidBlurBackdrop, AndroidBlurFill, AndroidBlurScope } from '@/compon
 import { AndroidSoftGlow } from '@/components/AndroidSoftGlow';
 
 export function LandingScreen() {
-  const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
+  const { colors, radius, isDark, toggleTheme } = useTheme();
   const { width } = useWindowDimensions();
   const { isDesktop, isTablet } = useResponsive();
-  const { getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
+  const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
 
   // Interactive phone preview: Student and Alumni only
   const [previewRole, setPreviewRole] = useState<'student' | 'alumni'>('student');
@@ -1327,6 +1328,13 @@ export function LandingScreen() {
         >
           {/* Android: real blur of the page scrolling under the floating bar */}
           <AndroidBlurFill intensity={80} tint={isDark ? 'dark' : 'light'} borderRadius={radius.pill} />
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={Math.min(100, Math.round(settings.blurIntensity * 3.2))}
+              tint={isDark ? 'systemThinMaterialDark' : 'systemUltraThinMaterialLight'}
+              style={[StyleSheet.absoluteFill, { borderRadius: radius.pill, overflow: 'hidden' }]}
+            />
+          )}
           {!isDark && (
             <LinearGradient
               colors={['rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0.05)', 'transparent']}
@@ -1340,6 +1348,7 @@ export function LandingScreen() {
           {/* Logo */}
           <Pressable accessibilityRole="button" accessibilityLabel="Lioris home"
             onPress={() => scrollToSection('hero')}
+            hitSlop={width < 480 ? 6 : undefined}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
           >
             <LiorisLogo size={32} variant="symbol" />
@@ -1381,7 +1390,9 @@ export function LandingScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: width < 380 ? 6 : 10 }}>
             <Pressable
               onPress={toggleTheme}
+              accessibilityRole="button"
               accessibilityLabel="Toggle Theme"
+              hitSlop={width < 380 ? 6 : 4}
               style={{
                 width: width < 380 ? 32 : 36,
                 height: width < 380 ? 32 : 36,
