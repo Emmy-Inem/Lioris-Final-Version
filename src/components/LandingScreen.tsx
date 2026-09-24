@@ -343,8 +343,8 @@ export function LandingScreen() {
             // @ts-ignore
             id="preview"
             style={{
-              marginTop: 36,
-              marginBottom: 48,
+              marginTop: 28,
+              marginBottom: 32,
               alignItems: 'center',
             }}
           >
@@ -357,7 +357,7 @@ export function LandingScreen() {
                 Explore the Lioris Campus Workspace
               </AppText>
               <AppText tone="secondary" style={{ textAlign: 'center', marginTop: 4, maxWidth: 520 }}>
-                A live demo of the Lioris app - switch between the student and alumni views and use the tabs. The people, courses and companies shown are made up.
+                A small live demo of the app. Switch between student and alumni, and tap the tabs.
               </AppText>
             </View>
 

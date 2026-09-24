@@ -23,23 +23,23 @@ interface MockTab {
   iconActive: IconName;
 }
 
+// A deliberately short list: the real app has more tabs, the demo only needs to show the idea.
 const TABS: Record<MockRole, MockTab[]> = {
   student: [
     { key: 'home', label: 'Home', icon: 'home-outline', iconActive: 'home' },
     { key: 'forum', label: 'Forum', icon: 'chatbubbles-outline', iconActive: 'chatbubbles' },
     { key: 'events', label: 'Events', icon: 'calendar-outline', iconActive: 'calendar' },
-    { key: 'resources', label: 'Resources', icon: 'folder-outline', iconActive: 'folder' },
+    { key: 'resources', label: 'Library', icon: 'folder-outline', iconActive: 'folder' },
   ],
   alumni: [
     { key: 'home', label: 'Home', icon: 'home-outline', iconActive: 'home' },
     { key: 'careers', label: 'Careers', icon: 'briefcase-outline', iconActive: 'briefcase' },
     { key: 'forum', label: 'Forum', icon: 'chatbubbles-outline', iconActive: 'chatbubbles' },
-    { key: 'events', label: 'Events', icon: 'calendar-outline', iconActive: 'calendar' },
     { key: 'mentorship', label: 'Mentors', icon: 'ribbon-outline', iconActive: 'ribbon' },
   ],
 };
 
-const INACTIVE_TAB_WIDTH = 38;
+const INACTIVE_TAB_WIDTH = 34;
 
 export function PhoneMockup({ role }: { role: MockRole }) {
   const { colors, isDark } = useTheme();
@@ -49,10 +49,11 @@ export function PhoneMockup({ role }: { role: MockRole }) {
   const fade = useRef(new Animated.Value(1)).current;
 
   const tabs = TABS[role];
-  const phoneWidth = Math.min(windowWidth - 32, 316);
-  const phoneHeight = Math.round(phoneWidth * 2.02);
-  const bezel = 9;
-  const screenRadius = 38;
+  // Small on purpose: a phone that fits in one glance, especially on a phone screen.
+  const phoneWidth = windowWidth < 520 ? Math.min(windowWidth - 96, 232) : 252;
+  const phoneHeight = Math.round(phoneWidth * 1.78);
+  const bezel = 8;
+  const screenRadius = 32;
 
   // Reset when the visitor flips between Student and Alumni.
   useEffect(() => {
@@ -68,23 +69,16 @@ export function PhoneMockup({ role }: { role: MockRole }) {
     Animated.timing(fade, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web' }).start();
   }
 
-  const screenBg = colors.background;
-
   return (
     <View
       accessibilityLabel="Interactive preview of the Lioris app. Tap the bottom tabs to explore."
-      style={{
-        width: phoneWidth + 6,
-        height: phoneHeight + 6,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
+      style={{ width: phoneWidth + 6, height: phoneHeight + 6, alignItems: 'center', justifyContent: 'center' }}
     >
       {/* side buttons */}
-      <View style={{ position: 'absolute', left: 0, top: phoneHeight * 0.17, width: 3, height: 26, borderRadius: 2, backgroundColor: '#2B3140' }} />
-      <View style={{ position: 'absolute', left: 0, top: phoneHeight * 0.25, width: 3, height: 44, borderRadius: 2, backgroundColor: '#2B3140' }} />
-      <View style={{ position: 'absolute', left: 0, top: phoneHeight * 0.34, width: 3, height: 44, borderRadius: 2, backgroundColor: '#2B3140' }} />
-      <View style={{ position: 'absolute', right: 0, top: phoneHeight * 0.28, width: 3, height: 70, borderRadius: 2, backgroundColor: '#2B3140' }} />
+      <View style={{ position: 'absolute', left: 0, top: phoneHeight * 0.17, width: 3, height: 22, borderRadius: 2, backgroundColor: '#2B3140' }} />
+      <View style={{ position: 'absolute', left: 0, top: phoneHeight * 0.26, width: 3, height: 38, borderRadius: 2, backgroundColor: '#2B3140' }} />
+      <View style={{ position: 'absolute', left: 0, top: phoneHeight * 0.36, width: 3, height: 38, borderRadius: 2, backgroundColor: '#2B3140' }} />
+      <View style={{ position: 'absolute', right: 0, top: phoneHeight * 0.28, width: 3, height: 58, borderRadius: 2, backgroundColor: '#2B3140' }} />
 
       {/* titanium body */}
       <View
@@ -99,35 +93,33 @@ export function PhoneMockup({ role }: { role: MockRole }) {
           ...(Platform.OS === 'web'
             ? ({
                 boxShadow: isDark
-                  ? '0 30px 70px -16px rgba(0,0,0,0.85), inset 0 0 0 1px rgba(255,255,255,0.06)'
-                  : '0 30px 70px -16px rgba(15,23,42,0.45), inset 0 0 0 1px rgba(255,255,255,0.08)',
+                  ? '0 24px 54px -16px rgba(0,0,0,0.85), inset 0 0 0 1px rgba(255,255,255,0.06)'
+                  : '0 24px 54px -16px rgba(15,23,42,0.4), inset 0 0 0 1px rgba(255,255,255,0.08)',
               } as any)
-            : { elevation: 12 }),
+            : { elevation: 10 }),
         }}
       >
-        {/* screen */}
-        <View style={{ flex: 1, borderRadius: screenRadius, overflow: 'hidden', backgroundColor: screenBg }}>
+        <View style={{ flex: 1, borderRadius: screenRadius, overflow: 'hidden', backgroundColor: colors.background }}>
           <StatusBar />
-          <AppHeaderMock onGo={go} tabs={tabs} />
+          <AppHeaderMock />
 
           <Animated.View
             style={{
               flex: 1,
               opacity: fade,
-              transform: [{ translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+              transform: [{ translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
             }}
           >
             <ScrollView
               ref={scrollRef}
               nestedScrollEnabled
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 6, paddingBottom: 92, gap: 10 }}
+              contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 4, paddingBottom: 74, gap: 8 }}
             >
-              {role === 'student' && active === 'home' ? <StudentHome onGo={go} /> : null}
-              {role === 'alumni' && active === 'home' ? <AlumniHome onGo={go} /> : null}
-              {active === 'forum' ? <ForumScreen role={role} /> : null}
-              {active === 'events' ? <EventsScreen role={role} /> : null}
-              {active === 'resources' ? <ResourcesScreen /> : null}
+              {active === 'home' ? <HomeScreen role={role} onGo={go} /> : null}
+              {active === 'forum' ? <ForumScreen /> : null}
+              {active === 'events' ? <EventsScreen /> : null}
+              {active === 'resources' ? <LibraryScreen /> : null}
               {active === 'careers' ? <CareersScreen /> : null}
               {active === 'mentorship' ? <MentorshipScreen /> : null}
             </ScrollView>
@@ -135,14 +127,13 @@ export function PhoneMockup({ role }: { role: MockRole }) {
 
           <FloatingTabBar tabs={tabs} active={active} onSelect={go} />
 
-          {/* home indicator */}
-          <View style={{ position: 'absolute', bottom: 5, alignSelf: 'center', width: 96, height: 4, borderRadius: 2, backgroundColor: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.55)' }} />
+          <View style={{ position: 'absolute', bottom: 4, alignSelf: 'center', width: 80, height: 4, borderRadius: 2, backgroundColor: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.55)' }} />
         </View>
 
         {/* dynamic island */}
         <View
           pointerEvents="none"
-          style={{ position: 'absolute', top: bezel + 9, alignSelf: 'center', width: 92, height: 26, borderRadius: 13, backgroundColor: '#000000' }}
+          style={{ position: 'absolute', top: bezel + 7, alignSelf: 'center', width: 78, height: 22, borderRadius: 11, backgroundColor: '#000000' }}
         />
       </View>
     </View>
@@ -156,7 +147,7 @@ export function PhoneMockup({ role }: { role: MockRole }) {
 function StatusBar() {
   const { colors } = useTheme();
   return (
-    <View style={{ height: 44, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 24, paddingBottom: 4 }}>
+    <View style={{ height: 36, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 3 }}>
       <AppText weight="bold" style={{ fontSize: 12, color: colors.textPrimary }}>
         9:41
       </AppText>
@@ -169,43 +160,20 @@ function StatusBar() {
   );
 }
 
-function AppHeaderMock({ onGo, tabs }: { onGo: (key: string) => void; tabs: MockTab[] }) {
+function AppHeaderMock() {
   const { colors } = useTheme();
-  const roundButton = (icon: IconName, label: string, onPress?: () => void) => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={{
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Ionicons name={icon} size={14} color={colors.textPrimary} />
-    </Pressable>
-  );
-  const goForum = tabs.find((t) => t.key === 'forum');
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 6 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, paddingVertical: 4 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-        <LiorisLogo size={22} variant="symbol" />
-        <LiorisLogo size={14} variant="wordmark" />
+        <LiorisLogo size={20} variant="symbol" />
+        <LiorisLogo size={12} variant="wordmark" />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-        {roundButton('chatbubble-ellipses-outline', 'Messages', goForum ? () => onGo('forum') : undefined)}
-        {roundButton('bookmark-outline', 'Saved')}
-        {roundButton('search-outline', 'Search')}
-        {roundButton('notifications-outline', 'Alerts')}
-        <View
-          style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <AppText weight="bold" style={{ fontSize: 11, color: colors.brandPrimary }}>
+        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="notifications-outline" size={12} color={colors.textPrimary} />
+        </View>
+        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+          <AppText weight="bold" style={{ fontSize: 10, color: colors.brandPrimary }}>
             Y
           </AppText>
         </View>
@@ -234,15 +202,15 @@ function FloatingTabBar({ tabs, active, onSelect }: { tabs: MockTab[]; active: s
   }, [active, tabs, progress]);
 
   return (
-    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 16, alignItems: 'center' }}>
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 14, alignItems: 'center' }}>
       <View
         accessibilityRole="tablist"
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 4,
-          padding: 4,
-          borderRadius: 26,
+          gap: 2,
+          padding: 3,
+          borderRadius: 24,
           borderWidth: 1,
           borderColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.85)',
           backgroundColor: isDark ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.72)',
@@ -257,7 +225,7 @@ function FloatingTabBar({ tabs, active, onSelect }: { tabs: MockTab[]; active: s
       >
         {tabs.map((tab) => {
           const isActive = tab.key === active;
-          const activeWidth = INACTIVE_TAB_WIDTH + 12 + tab.label.length * 6.6;
+          const activeWidth = INACTIVE_TAB_WIDTH + 10 + tab.label.length * 6;
           const p = progress[tab.key];
           return (
             <Pressable
@@ -270,9 +238,9 @@ function FloatingTabBar({ tabs, active, onSelect }: { tabs: MockTab[]; active: s
             >
               <Animated.View
                 style={{
-                  height: 38,
+                  height: 34,
                   width: p.interpolate({ inputRange: [0, 1], outputRange: [INACTIVE_TAB_WIDTH, activeWidth] }),
-                  borderRadius: 19,
+                  borderRadius: 17,
                   backgroundColor: p.interpolate({ inputRange: [0, 1], outputRange: ['rgba(26,61,255,0)', colors.brandPrimary] }),
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -321,40 +289,6 @@ function Card({ children, onPress, style }: { children: React.ReactNode; onPress
     </Pressable>
   ) : (
     body
-  );
-}
-
-function Chips({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
-  const { colors } = useTheme();
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingRight: 8 }} style={{ flexGrow: 0 }}>
-      {options.map((option) => {
-        const selected = option === value;
-        return (
-          <Pressable
-            key={option}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            onPress={() => {
-              haptics.light();
-              onChange(option);
-            }}
-            style={{
-              paddingHorizontal: 11,
-              paddingVertical: 6,
-              borderRadius: 999,
-              backgroundColor: selected ? colors.brandPrimary : colors.surface,
-              borderWidth: 1,
-              borderColor: selected ? colors.brandPrimary : colors.border,
-            }}
-          >
-            <AppText weight="bold" style={{ fontSize: 10.5, color: selected ? '#FFFFFF' : colors.textSecondary }}>
-              {option}
-            </AppText>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
   );
 }
 
@@ -418,265 +352,123 @@ function Heading({ children }: { children: React.ReactNode }) {
 }
 
 /* ------------------------------------------------------------------------------------------------
- * Screens
+ * Screens - short and plain: what the tab is for, a couple of examples, one thing to tap.
  * ---------------------------------------------------------------------------------------------- */
 
-function StudentHome({ onGo }: { onGo: (key: string) => void }) {
+function HomeScreen({ role, onGo }: { role: MockRole; onGo: (key: string) => void }) {
   const { colors } = useTheme();
-  const tiles: { label: string; icon: IconName; go: string }[] = [
-    { label: 'Forum', icon: 'chatbubbles-outline', go: 'forum' },
-    { label: 'Events', icon: 'calendar-outline', go: 'events' },
-    { label: 'Resources', icon: 'folder-open-outline', go: 'resources' },
-  ];
+  const student = role === 'student';
+  const tiles: { label: string; icon: IconName; go: string }[] = student
+    ? [
+        { label: 'Forum', icon: 'chatbubbles-outline', go: 'forum' },
+        { label: 'Events', icon: 'calendar-outline', go: 'events' },
+        { label: 'Library', icon: 'folder-open-outline', go: 'resources' },
+      ]
+    : [
+        { label: 'Careers', icon: 'briefcase-outline', go: 'careers' },
+        { label: 'Mentors', icon: 'ribbon-outline', go: 'mentorship' },
+        { label: 'Forum', icon: 'chatbubbles-outline', go: 'forum' },
+      ];
   return (
     <>
-      <LinearGradient colors={['#1A3DFF', '#5B7CFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 18, padding: 14, gap: 3 }}>
-        <AppText weight="bold" style={{ fontSize: 10, letterSpacing: 0.8, color: 'rgba(255,255,255,0.8)' }}>
-          YOUR UNIVERSITY
+      <LinearGradient
+        colors={student ? ['#1A3DFF', '#5B7CFF'] : ['#0F766E', '#14B8A6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ borderRadius: 16, padding: 12, gap: 2 }}
+      >
+        <AppText weight="bold" style={{ fontSize: 9.5, letterSpacing: 0.8, color: 'rgba(255,255,255,0.8)' }}>
+          {student ? 'YOUR UNIVERSITY' : 'ALUMNI CIRCLE'}
         </AppText>
-        <AppText weight="bold" style={{ fontSize: 17, color: '#FFFFFF' }}>
-          Welcome back, Student
+        <AppText weight="bold" style={{ fontSize: 15, color: '#FFFFFF' }}>
+          {student ? 'Welcome back' : 'Welcome back, alum'}
         </AppText>
-        <AppText style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Your department • 300 Level</AppText>
       </LinearGradient>
 
-      <Heading>Student services</Heading>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
         {tiles.map((tile) => (
           <Pressable key={tile.label} accessibilityRole="button" onPress={() => onGo(tile.go)} style={{ flex: 1 }}>
-            <View style={{ backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 10, gap: 8, minHeight: 74, justifyContent: 'space-between' }}>
-              <Ionicons name={tile.icon} size={18} color={colors.brandPrimary} />
-              <AppText weight="bold" style={{ fontSize: 11 }}>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 10, alignItems: 'center', gap: 6 }}>
+              <Ionicons name={tile.icon} size={17} color={colors.brandPrimary} />
+              <AppText weight="bold" style={{ fontSize: 10.5 }}>
                 {tile.label}
               </AppText>
             </View>
           </Pressable>
         ))}
       </View>
-
-      <Card>
-        <Tag label="ANNOUNCEMENT" />
-        <Title>Course registration closes Friday</Title>
-        <Meta>Confirm your courses before the portal locks at 5:00 PM.</Meta>
-      </Card>
-
-      <Heading>Coming up</Heading>
-      <Card onPress={() => onGo('events')}>
-        <Tag label="CAMPUS CALENDAR" />
-        <Title>Innovation & Technology Symposium</Title>
-        <Meta>Main Auditorium • Tomorrow, 10:00 AM</Meta>
-      </Card>
     </>
   );
 }
 
-function AlumniHome({ onGo }: { onGo: (key: string) => void }) {
-  const { colors } = useTheme();
-  const stats = [
-    { label: 'Mentees', value: '3' },
-    { label: 'Open roles', value: '12' },
-    { label: 'Events', value: '2' },
-  ];
-  return (
-    <>
-      <LinearGradient colors={['#0F766E', '#14B8A6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 18, padding: 14, gap: 3 }}>
-        <AppText weight="bold" style={{ fontSize: 10, letterSpacing: 0.8, color: 'rgba(255,255,255,0.8)' }}>
-          ALUMNI CIRCLE
-        </AppText>
-        <AppText weight="bold" style={{ fontSize: 17, color: '#FFFFFF' }}>
-          Welcome back, Alumnus
-        </AppText>
-        <AppText style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Class of 2020 • Your industry</AppText>
-      </LinearGradient>
-
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {stats.map((stat) => (
-          <View key={stat.label} style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 10, alignItems: 'center' }}>
-            <AppText weight="bold" style={{ fontSize: 18, color: colors.brandPrimary }}>
-              {stat.value}
-            </AppText>
-            <AppText tone="secondary" style={{ fontSize: 10 }}>
-              {stat.label}
-            </AppText>
-          </View>
-        ))}
-      </View>
-
-      <Heading>For you</Heading>
-      <Card onPress={() => onGo('careers')}>
-        <Tag label="CAREER PIPELINE" />
-        <Title>Graduate Trainee • Sample Tech Ltd</Title>
-        <Meta>Refer a graduating student directly to the hiring team.</Meta>
-      </Card>
-      <Card onPress={() => onGo('mentorship')}>
-        <Tag label="MENTORSHIP" />
-        <Title>2 students asked for your guidance</Title>
-        <Meta>Review the requests and pick a time that suits you.</Meta>
-      </Card>
-    </>
-  );
-}
-
-const FORUM_POSTS = [
-  { id: 'p1', channel: 'Academic', title: 'Best way to prepare for the practical exam?', body: 'Our lab session is on Friday and the past questions look very different this year. How are you revising?', likes: 24, comments: 9, time: '12m' },
-  { id: 'p2', channel: 'Campus Life', title: 'Where is the best quiet study spot on campus?', body: 'The main library is packed during exams. Looking for somewhere with sockets and Wi-Fi.', likes: 41, comments: 17, time: '1h' },
-  { id: 'p3', channel: 'Career', title: 'Internship applications open next month', body: 'Sharing a checklist for CVs and cover letters that worked for our cohort last year.', likes: 66, comments: 12, time: '3h' },
+// Academic Q&A, not a social feed: a question, its course, how many answers, and whether it is solved.
+const THREADS = [
+  { id: 't1', course: 'MTH 201', title: 'How do I find the eigenvalues of a 3x3 matrix?', replies: 8, solved: true },
+  { id: 't2', course: 'CSC 305', title: 'Which chapters are covered in the OS test?', replies: 5, solved: false },
+  { id: 't3', course: 'GST 101', title: 'Is the group assignment due Friday?', replies: 3, solved: true },
 ];
 
-function ForumScreen({ role }: { role: MockRole }) {
+function ForumScreen() {
   const { colors } = useTheme();
-  const [channel, setChannel] = useState('All Threads');
-  const [liked, setLiked] = useState<Record<string, boolean>>({});
-  const [vote, setVote] = useState<number | null>(null);
-  const posts = FORUM_POSTS.filter((post) => channel === 'All Threads' || channel === 'Polls' || post.channel === channel);
-  const pollOptions = ['Morning sessions', 'Evening sessions', 'Weekend only'];
-  const pollBase = [42, 31, 12];
-  const total = pollBase.reduce((a, b) => a + b, 0) + (vote !== null ? 1 : 0);
-
+  const [following, setFollowing] = useState<Record<string, boolean>>({});
   return (
     <>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 12, height: 32 }}>
-        <Ionicons name="search" size={13} color={colors.textSecondary} />
-        <AppText tone="secondary" style={{ fontSize: 11 }}>
-          Search discussions, topics, codes...
-        </AppText>
-      </View>
-      <Chips options={['All Threads', 'Academic', 'Campus Life', 'Career', 'Polls']} value={channel} onChange={setChannel} />
-
-      {channel === 'Polls' ? (
-        <Card>
-          <Tag label="C/POLLS" />
-          <Title>{role === 'student' ? 'When should the revision classes hold?' : 'Which mentorship format works best?'}</Title>
-          {pollOptions.map((option, index) => {
-            const votes = pollBase[index] + (vote === index ? 1 : 0);
-            const percent = Math.round((votes / total) * 100);
-            const chosen = vote === index;
-            return (
-              <Pressable
-                key={option}
-                accessibilityRole="button"
-                onPress={() => {
-                  haptics.light();
-                  setVote(index);
-                }}
-                style={{ borderRadius: 10, borderWidth: 1, borderColor: chosen ? colors.brandPrimary : colors.border, overflow: 'hidden' }}
-              >
-                {vote !== null ? (
-                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${percent}%`, backgroundColor: colors.pastelPrimaryBg }} />
-                ) : null}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 8 }}>
-                  <AppText weight={chosen ? 'bold' : 'medium'} style={{ fontSize: 11 }}>
-                    {option}
-                  </AppText>
-                  {vote !== null ? (
-                    <AppText weight="bold" style={{ fontSize: 11 }}>
-                      {percent}%
-                    </AppText>
-                  ) : null}
-                </View>
-              </Pressable>
-            );
-          })}
-          <Meta>{vote === null ? 'Tap an option to vote' : `${total} votes • thanks for voting`}</Meta>
-        </Card>
-      ) : (
-        posts.map((post) => {
-          const isLiked = !!liked[post.id];
-          return (
-            <Card key={post.id}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="person" size={13} color={colors.brandPrimary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppText weight="bold" style={{ fontSize: 11.5 }}>
-                    Campus Member <AppText tone="secondary" style={{ fontSize: 10.5 }}>• {role === 'student' ? 'Student' : 'Alumni'}</AppText>
-                  </AppText>
-                  <AppText tone="secondary" style={{ fontSize: 10 }}>
-                    c/{post.channel.toLowerCase().replace(/\s/g, '')} • {post.time}
-                  </AppText>
-                </View>
-              </View>
-              <Title>{post.title}</Title>
-              <AppText numberOfLines={3} style={{ fontSize: 11.5, lineHeight: 16 }}>
-                {post.body}
-              </AppText>
-              <View style={{ flexDirection: 'row', gap: 16, marginTop: 2 }}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={isLiked ? 'Unlike' : 'Like'}
-                  onPress={() => {
-                    haptics.light();
-                    setLiked((prev) => ({ ...prev, [post.id]: !prev[post.id] }));
-                  }}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                >
-                  <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={15} color={isLiked ? colors.critical : colors.textSecondary} />
-                  <AppText weight="bold" style={{ fontSize: 11, color: isLiked ? colors.critical : colors.textSecondary }}>
-                    {post.likes + (isLiked ? 1 : 0)}
-                  </AppText>
-                </Pressable>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Ionicons name="chatbubble-outline" size={14} color={colors.textSecondary} />
-                  <AppText tone="secondary" style={{ fontSize: 11 }}>
-                    {post.comments}
-                  </AppText>
-                </View>
-              </View>
-            </Card>
-          );
-        })
-      )}
+      <Heading>Course discussions</Heading>
+      {THREADS.map((thread) => {
+        const on = !!following[thread.id];
+        return (
+          <Card key={thread.id}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Tag label={thread.course} />
+              {thread.solved ? (
+                <AppText weight="bold" style={{ fontSize: 9.5, color: colors.success }}>
+                  Solved ✓
+                </AppText>
+              ) : null}
+            </View>
+            <Title>{thread.title}</Title>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+              <Meta>{thread.replies} answers</Meta>
+              <Pill label="Follow" done={on} doneLabel="Following ✓" secondary={on} onPress={() => setFollowing((prev) => ({ ...prev, [thread.id]: !prev[thread.id] }))} />
+            </View>
+          </Card>
+        );
+      })}
     </>
   );
 }
 
 const EVENTS = [
-  { id: 'e1', month: 'OCT', day: '04', title: 'Innovation & Technology Symposium', where: 'Main Auditorium', time: '10:00 AM', going: 182, virtual: false },
-  { id: 'e2', month: 'OCT', day: '09', title: 'Career Fair & CV Clinic', where: 'Student Centre', time: '9:00 AM', going: 264, virtual: false },
-  { id: 'e3', month: 'OCT', day: '15', title: 'Research Writing Workshop', where: 'Online (video call)', time: '4:00 PM', going: 97, virtual: true },
-];
-const ALUMNI_EVENTS = [
-  { id: 'a1', month: 'DEC', day: '12', title: 'Annual Alumni Dinner & Gala', where: 'City Convention Hall', time: '6:00 PM', going: 140, virtual: false },
-  { id: 'a2', month: 'NOV', day: '21', title: 'Homecoming Networking Mixer', where: 'Alumni House', time: '3:00 PM', going: 88, virtual: false },
-  { id: 'a3', month: 'NOV', day: '02', title: 'Careers in Tech: Alumni Panel', where: 'Online (video call)', time: '5:00 PM', going: 120, virtual: true },
+  { id: 'e1', month: 'OCT', day: '04', title: 'Technology Symposium', where: 'Main Auditorium • 10:00 AM', going: 182 },
+  { id: 'e2', month: 'OCT', day: '09', title: 'Career Fair & CV Clinic', where: 'Student Centre • 9:00 AM', going: 264 },
 ];
 
-function EventsScreen({ role }: { role: MockRole }) {
+function EventsScreen() {
   const { colors } = useTheme();
-  const [filter, setFilter] = useState('All');
   const [rsvp, setRsvp] = useState<Record<string, boolean>>({});
-  const list = (role === 'student' ? EVENTS : ALUMNI_EVENTS).filter((e) => filter === 'All' || (filter === 'Online' ? e.virtual : !e.virtual));
   return (
     <>
-      <Chips options={['All', 'On campus', 'Online']} value={filter} onChange={setFilter} />
-      {list.map((event) => {
+      <Heading>Upcoming events</Heading>
+      {EVENTS.map((event) => {
         const going = !!rsvp[event.id];
         return (
           <Card key={event.id}>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ width: 42, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', paddingVertical: 6 }}>
-                <AppText weight="bold" style={{ fontSize: 9.5, color: colors.brandPrimary }}>
+            <View style={{ flexDirection: 'row', gap: 9 }}>
+              <View style={{ width: 38, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', paddingVertical: 5 }}>
+                <AppText weight="bold" style={{ fontSize: 9, color: colors.brandPrimary }}>
                   {event.month}
                 </AppText>
-                <AppText weight="bold" style={{ fontSize: 17, lineHeight: 20, color: colors.brandPrimary }}>
+                <AppText weight="bold" style={{ fontSize: 15, lineHeight: 18, color: colors.brandPrimary }}>
                   {event.day}
                 </AppText>
               </View>
-              <View style={{ flex: 1, gap: 2 }}>
+              <View style={{ flex: 1, gap: 1 }}>
                 <Title>{event.title}</Title>
-                <Meta>
-                  {event.time} • {event.where}
-                </Meta>
+                <Meta>{event.where}</Meta>
               </View>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Ionicons name="people" size={14} color={colors.textSecondary} />
-                <AppText weight="bold" tone="secondary" style={{ fontSize: 11 }}>
-                  {event.going + (going ? 1 : 0)} attending
-                </AppText>
-              </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+              <Meta>{event.going + (going ? 1 : 0)} going</Meta>
               <Pill label="RSVP" done={going} doneLabel="Going ✓" secondary={going} onPress={() => setRsvp((prev) => ({ ...prev, [event.id]: !prev[event.id] }))} />
             </View>
           </Card>
@@ -686,135 +478,47 @@ function EventsScreen({ role }: { role: MockRole }) {
   );
 }
 
-const RESOURCES = [
-  { id: 'r1', kind: 'Notes', code: 'MTH 201', title: 'Linear Algebra - Complete Lecture Notes', meta: 'Mathematics • 4.2 MB', downloads: 812 },
-  { id: 'r2', kind: 'Past Questions', code: 'CSC 305', title: 'Operating Systems Past Questions (5 sessions)', meta: 'Computer Science • 1.8 MB', downloads: 1204 },
-  { id: 'r3', kind: 'Projects', code: 'ENG 402', title: 'Final Year Project Report Template', meta: 'Engineering • 620 KB', downloads: 356 },
+const LIBRARY = [
+  { id: 'r1', code: 'MTH 201', title: 'Linear Algebra lecture notes', meta: 'Notes • 4.2 MB' },
+  { id: 'r2', code: 'CSC 305', title: 'Operating Systems past questions', meta: 'Past questions • 1.8 MB' },
 ];
 
-function ResourcesScreen() {
-  const { colors } = useTheme();
-  const [kind, setKind] = useState('All');
+function LibraryScreen() {
   const [saved, setSaved] = useState<Record<string, boolean>>({});
-  const [got, setGot] = useState<Record<string, boolean>>({});
-  const list = RESOURCES.filter((r) => kind === 'All' || r.kind === kind);
   return (
     <>
-      <Chips options={['All', 'Notes', 'Past Questions', 'Projects']} value={kind} onChange={setKind} />
-      {list.map((resource) => {
-        const bookmarked = !!saved[resource.id];
-        const downloaded = !!got[resource.id];
-        return (
-          <Card key={resource.id}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <AppText weight="bold" style={{ fontSize: 10, color: colors.textSecondary }}>
-                {resource.code} • {resource.kind.toUpperCase()}
-              </AppText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark'}
-                onPress={() => {
-                  haptics.light();
-                  setSaved((prev) => ({ ...prev, [resource.id]: !prev[resource.id] }));
-                }}
-              >
-                <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={16} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
-              </Pressable>
-            </View>
-            <Title>{resource.title}</Title>
-            <Meta>{resource.meta}</Meta>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="download-outline" size={13} color={colors.textSecondary} />
-              <AppText tone="secondary" style={{ fontSize: 10.5 }}>
-                {resource.downloads + (downloaded ? 1 : 0)}
-              </AppText>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 2 }}>
-              <View style={{ flex: 1 }}>
-                <PillBlock label="Read Online" secondary onPress={() => undefined} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <PillBlock label="Download" done={downloaded} doneLabel="Saved" onPress={() => setGot((prev) => ({ ...prev, [resource.id]: !prev[resource.id] }))} />
-              </View>
-            </View>
-          </Card>
-        );
-      })}
+      <Heading>Study library</Heading>
+      {LIBRARY.map((item) => (
+        <Card key={item.id}>
+          <Tag label={item.code} />
+          <Title>{item.title}</Title>
+          <Meta>{item.meta}</Meta>
+          <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
+            <Pill label="Download" done={!!saved[item.id]} doneLabel="Saved ✓" secondary={!!saved[item.id]} onPress={() => setSaved((prev) => ({ ...prev, [item.id]: !prev[item.id] }))} />
+          </View>
+        </Card>
+      ))}
     </>
   );
 }
 
-/** A full-width version of Pill for two-button rows. */
-function PillBlock(props: { label: string; onPress: () => void; done?: boolean; doneLabel?: string; secondary?: boolean }) {
-  return (
-    <View style={{ alignItems: 'stretch' }}>
-      <View style={{ alignSelf: 'stretch' }}>
-        <PillFill {...props} />
-      </View>
-    </View>
-  );
-}
-
-function PillFill({ label, onPress, done, doneLabel, secondary }: { label: string; onPress: () => void; done?: boolean; doneLabel?: string; secondary?: boolean }) {
-  const { colors } = useTheme();
-  const outlined = secondary || done;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => {
-        haptics.light();
-        onPress();
-      }}
-      style={{
-        paddingVertical: 7,
-        borderRadius: 999,
-        alignItems: 'center',
-        backgroundColor: outlined ? 'transparent' : colors.brandPrimary,
-        borderWidth: outlined ? 1.5 : 0,
-        borderColor: colors.brandPrimary,
-      }}
-    >
-      <AppText weight="bold" style={{ fontSize: 10.5, color: outlined ? colors.brandPrimary : '#FFFFFF' }}>
-        {done ? doneLabel ?? label : label}
-      </AppText>
-    </Pressable>
-  );
-}
-
 const JOBS = [
-  { id: 'j1', type: 'Graduate Trainee', title: 'Junior Software Engineer', company: 'Sample Tech Ltd', where: 'Lagos • Hybrid', remote: true },
-  { id: 'j2', type: 'Internship', title: 'Data Analyst Intern', company: 'Example Analytics', where: 'Abuja • On site', remote: false },
-  { id: 'j3', type: 'Full-time', title: 'Product Designer', company: 'Demo Studio', where: 'Remote', remote: true },
+  { id: 'j1', type: 'GRADUATE TRAINEE', title: 'Junior Software Engineer', company: 'Sample Tech Ltd • Lagos' },
+  { id: 'j2', type: 'INTERNSHIP', title: 'Data Analyst Intern', company: 'Example Analytics • Abuja' },
 ];
 
 function CareersScreen() {
-  const { colors } = useTheme();
-  const [applied, setApplied] = useState<Record<string, boolean>>({});
-  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [sent, setSent] = useState<Record<string, boolean>>({});
   return (
     <>
       <Heading>Open roles</Heading>
       {JOBS.map((job) => (
         <Card key={job.id}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Tag label={job.type.toUpperCase()} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Save job"
-              onPress={() => {
-                haptics.light();
-                setSaved((prev) => ({ ...prev, [job.id]: !prev[job.id] }));
-              }}
-            >
-              <Ionicons name={saved[job.id] ? 'bookmark' : 'bookmark-outline'} size={16} color={saved[job.id] ? colors.brandPrimary : colors.textSecondary} />
-            </Pressable>
-          </View>
+          <Tag label={job.type} />
           <Title>{job.title}</Title>
-          <Meta>
-            {job.company} • {job.where}
-          </Meta>
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 2 }}>
-            <Pill label="Refer a student" done={!!applied[job.id]} doneLabel="Referral sent ✓" secondary={!!applied[job.id]} onPress={() => setApplied((prev) => ({ ...prev, [job.id]: !prev[job.id] }))} />
+          <Meta>{job.company}</Meta>
+          <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
+            <Pill label="Refer a student" done={!!sent[job.id]} doneLabel="Sent ✓" secondary={!!sent[job.id]} onPress={() => setSent((prev) => ({ ...prev, [job.id]: !prev[job.id] }))} />
           </View>
         </Card>
       ))}
@@ -823,51 +527,31 @@ function CareersScreen() {
 }
 
 const REQUESTS = [
-  { id: 'm1', name: 'Student A', topic: 'Breaking into cloud engineering', level: '300 Level' },
-  { id: 'm2', name: 'Student B', topic: 'Preparing for graduate school applications', level: '400 Level' },
+  { id: 'm1', topic: 'Breaking into cloud engineering', level: '300 Level student' },
+  { id: 'm2', topic: 'Preparing for graduate school', level: '400 Level student' },
 ];
 
 function MentorshipScreen() {
   const { colors } = useTheme();
-  const [answer, setAnswer] = useState<Record<string, 'accepted' | 'declined'>>({});
+  const [answer, setAnswer] = useState<Record<string, boolean>>({});
   return (
     <>
       <Heading>Mentorship requests</Heading>
-      {REQUESTS.map((request) => {
-        const state = answer[request.id];
-        return (
-          <Card key={request.id}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="school" size={14} color={colors.brandPrimary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppText weight="bold" style={{ fontSize: 12 }}>
-                  {request.name}
-                </AppText>
-                <AppText tone="secondary" style={{ fontSize: 10.5 }}>
-                  {request.level}
-                </AppText>
-              </View>
-            </View>
-            <Title>{request.topic}</Title>
-            {state ? (
-              <AppText weight="bold" style={{ fontSize: 11.5, color: state === 'accepted' ? colors.success : colors.textSecondary }}>
-                {state === 'accepted' ? 'Accepted - a chat with the student opens next' : 'Declined - the student is notified politely'}
+      {REQUESTS.map((request) => (
+        <Card key={request.id}>
+          <Tag label={request.level.toUpperCase()} />
+          <Title>{request.topic}</Title>
+          <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
+            {answer[request.id] ? (
+              <AppText weight="bold" style={{ fontSize: 10.5, color: colors.success }}>
+                Accepted ✓
               </AppText>
             ) : (
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 2 }}>
-                <View style={{ flex: 1 }}>
-                  <PillFill label="Accept" onPress={() => setAnswer((prev) => ({ ...prev, [request.id]: 'accepted' }))} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <PillFill label="Decline" secondary onPress={() => setAnswer((prev) => ({ ...prev, [request.id]: 'declined' }))} />
-                </View>
-              </View>
+              <Pill label="Accept" onPress={() => setAnswer((prev) => ({ ...prev, [request.id]: true }))} />
             )}
-          </Card>
-        );
-      })}
+          </View>
+        </Card>
+      ))}
     </>
   );
 }
