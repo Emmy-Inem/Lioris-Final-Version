@@ -116,7 +116,7 @@ export function PhoneMockup({ role }: { role: MockRole }) {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 4, paddingBottom: 74, gap: 8 }}
             >
-              {active === 'home' ? <HomeScreen role={role} onGo={go} /> : null}
+              {active === 'home' ? <HomeScreen role={role} /> : null}
               {active === 'forum' ? <ForumScreen /> : null}
               {active === 'events' ? <EventsScreen /> : null}
               {active === 'resources' ? <LibraryScreen /> : null}
@@ -271,37 +271,21 @@ function FloatingTabBar({ tabs, active, onSelect }: { tabs: MockTab[]; active: s
  * Shared bits
  * ---------------------------------------------------------------------------------------------- */
 
-function Card({ children, onPress, style }: { children: React.ReactNode; onPress?: () => void; style?: any }) {
+function Card({ children, style }: { children: React.ReactNode; style?: any }) {
   const { colors } = useTheme();
-  const body = (
-    <View
-      style={[
-        { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 11, gap: 5 },
-        style,
-      ]}
-    >
+  return (
+    <View style={[{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 11, gap: 5 }, style]}>
       {children}
     </View>
   );
-  return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      {body}
-    </Pressable>
-  ) : (
-    body
-  );
 }
 
-function Pill({ label, onPress, done, doneLabel, secondary }: { label: string; onPress: () => void; done?: boolean; doneLabel?: string; secondary?: boolean }) {
+/** Looks like the app's small action button; deliberately not tappable - only the tab bar is live. */
+function Pill({ label, secondary }: { label: string; secondary?: boolean }) {
   const { colors } = useTheme();
-  const filled = !secondary && !done;
+  const filled = !secondary;
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => {
-        haptics.light();
-        onPress();
-      }}
+    <View
       style={{
         paddingHorizontal: 12,
         paddingVertical: 6,
@@ -312,9 +296,9 @@ function Pill({ label, onPress, done, doneLabel, secondary }: { label: string; o
       }}
     >
       <AppText weight="bold" style={{ fontSize: 10.5, color: filled ? '#FFFFFF' : colors.brandPrimary }}>
-        {done ? doneLabel ?? label : label}
+        {label}
       </AppText>
-    </Pressable>
+    </View>
   );
 }
 
@@ -355,22 +339,22 @@ function Heading({ children }: { children: React.ReactNode }) {
  * Screens - short and plain: what the tab is for, a couple of examples, one thing to tap.
  * ---------------------------------------------------------------------------------------------- */
 
-function HomeScreen({ role, onGo }: { role: MockRole; onGo: (key: string) => void }) {
+function HomeScreen({ role }: { role: MockRole }) {
   const { colors, isDark } = useTheme();
   const student = role === 'student';
 
   // Same order, icons and wording as the real Home: identity card, then the services grid.
-  const tiles: { title: string; subtitle: string; icon: IconName; tint: string; go?: string }[] = student
+  const tiles: { title: string; subtitle: string; icon: IconName; tint: string }[] = student
     ? [
-        { title: 'Resources', subtitle: 'Past Qs & notes', icon: 'folder-open', tint: colors.textSecondary, go: 'resources' },
-        { title: 'Forum', subtitle: 'Ask questions', icon: 'chatbubbles', tint: '#EC4899', go: 'forum' },
-        { title: 'Events & RSVPs', subtitle: 'Talks & summits', icon: 'calendar', tint: '#3B82F6', go: 'events' },
+        { title: 'Resources', subtitle: 'Past Qs & notes', icon: 'folder-open', tint: colors.textSecondary },
+        { title: 'Forum', subtitle: 'Ask questions', icon: 'chatbubbles', tint: '#EC4899' },
+        { title: 'Events & RSVPs', subtitle: 'Talks & summits', icon: 'calendar', tint: '#3B82F6' },
       ]
     : [
-        { title: 'Career Board', subtitle: 'Jobs & referrals', icon: 'briefcase', tint: '#F59E0B', go: 'careers' },
-        { title: 'Mentoring', subtitle: 'Guide the next class', icon: 'ribbon', tint: '#10B981', go: 'mentorship' },
+        { title: 'Career Board', subtitle: 'Jobs & referrals', icon: 'briefcase', tint: '#F59E0B' },
+        { title: 'Mentoring', subtitle: 'Guide the next class', icon: 'ribbon', tint: '#10B981' },
         { title: 'Alumni Network', subtitle: 'Find classmates', icon: 'people', tint: '#3B82F6' },
-        { title: 'Global Forum', subtitle: 'Join discussions', icon: 'chatbubbles', tint: '#EC4899', go: 'forum' },
+        { title: 'Global Forum', subtitle: 'Join discussions', icon: 'chatbubbles', tint: '#EC4899' },
       ];
 
   return (
@@ -447,15 +431,7 @@ function HomeScreen({ role, onGo }: { role: MockRole; onGo: (key: string) => voi
       </AppText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
         {tiles.map((tile) => (
-          <Pressable
-            key={tile.title}
-            accessibilityRole="button"
-            accessibilityLabel={tile.title}
-            onPress={() => {
-              if (tile.go) onGo(tile.go);
-            }}
-            style={{ flexBasis: '47.5%', flexGrow: 1 }}
-          >
+          <View key={tile.title} style={{ flexBasis: '47.5%', flexGrow: 1 }}>
             <View
               style={{
                 backgroundColor: colors.surface,
@@ -478,46 +454,171 @@ function HomeScreen({ role, onGo }: { role: MockRole; onGo: (key: string) => voi
                 </AppText>
               </View>
             </View>
-          </Pressable>
+          </View>
         ))}
       </View>
     </>
   );
 }
 
-// Academic Q&A, not a social feed: a question, its course, how many answers, and whether it is solved.
-const THREADS = [
-  { id: 't1', course: 'MTH 201', title: 'How do I find the eigenvalues of a 3x3 matrix?', replies: 8, solved: true },
-  { id: 't2', course: 'CSC 305', title: 'Which chapters are covered in the OS test?', replies: 5, solved: false },
-  { id: 't3', course: 'GST 101', title: 'Is the group assignment due Friday?', replies: 3, solved: true },
-];
-
+/** Static copy of the app's Forum: same header, filters and thread card. Nothing here reacts to taps. */
 function ForumScreen() {
   const { colors } = useTheme();
-  const [following, setFollowing] = useState<Record<string, boolean>>({});
+  const chip = (label: string, selected: boolean) => (
+    <View
+      key={label}
+      style={{
+        paddingHorizontal: 9,
+        paddingVertical: 4,
+        borderRadius: 999,
+        backgroundColor: selected ? colors.brandPrimary : colors.surface,
+        borderWidth: 1,
+        borderColor: selected ? colors.brandPrimary : colors.border,
+      }}
+    >
+      <AppText weight="bold" style={{ fontSize: 9.5, color: selected ? '#FFFFFF' : colors.textSecondary }}>
+        {label}
+      </AppText>
+    </View>
+  );
+
+  const threads = [
+    {
+      id: 't1',
+      channel: 'academic',
+      time: '12m',
+      pinned: true,
+      title: 'Best way to prepare for the practical exam?',
+      body: 'Our lab session is on Friday and the past questions look very different this year. How are you revising?',
+      helpful: 24,
+      comments: 9,
+    },
+    {
+      id: 't2',
+      channel: 'campuslife',
+      time: '1h',
+      pinned: false,
+      title: 'Where is a good quiet place to study?',
+      body: 'The main library gets packed during exams. Looking for somewhere with sockets and Wi-Fi.',
+      helpful: 41,
+      comments: 17,
+    },
+  ];
+
   return (
     <>
-      <Heading>Course discussions</Heading>
-      {THREADS.map((thread) => {
-        const on = !!following[thread.id];
-        return (
-          <Card key={thread.id}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Tag label={thread.course} />
-              {thread.solved ? (
-                <AppText weight="bold" style={{ fontSize: 9.5, color: colors.success }}>
-                  Solved ✓
+      {/* Title + campus/global switch */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <AppText weight="bold" style={{ fontSize: 15 }}>
+          Forum
+        </AppText>
+        <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 999, padding: 2, borderWidth: 1, borderColor: colors.border }}>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.brandPrimary }}>
+            <AppText weight="bold" style={{ fontSize: 9, color: '#FFFFFF' }}>
+              My Campus
+            </AppText>
+          </View>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 3 }}>
+            <AppText weight="bold" style={{ fontSize: 9, color: colors.textSecondary }}>
+              Global
+            </AppText>
+          </View>
+        </View>
+      </View>
+
+      {/* Search + sort */}
+      <View style={{ flexDirection: 'row', gap: 5 }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 9, height: 28 }}>
+          <Ionicons name="search" size={12} color={colors.textSecondary} />
+          <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 10, flex: 1 }}>
+            Search discussions...
+          </AppText>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 8, height: 28 }}>
+          <Ionicons name="swap-vertical" size={11} color={colors.textSecondary} />
+          <AppText weight="semiBold" tone="secondary" style={{ fontSize: 9.5 }}>
+            Latest
+          </AppText>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 5 }}>
+        {chip('All Threads', true)}
+        {chip('Academic', false)}
+        {chip('Polls', false)}
+      </View>
+
+      {threads.map((thread) => (
+        <View key={thread.id} style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 10 }}>
+          {/* author row */}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', gap: 7, flex: 1, minWidth: 0 }}>
+              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                <AppText weight="bold" style={{ fontSize: 10, color: colors.brandPrimary }}>
+                  CM
                 </AppText>
-              ) : null}
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: 10.5, flexShrink: 1 }}>
+                    Campus Member
+                  </AppText>
+                  <Ionicons name="checkmark-circle" size={11} color={colors.brandPrimary} />
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+                  <AppText weight="bold" style={{ fontSize: 9, color: colors.brandPrimary }}>
+                    c/{thread.channel}
+                  </AppText>
+                  {thread.pinned ? <Ionicons name="pin" size={9} color={colors.textSecondary} /> : null}
+                  <AppText tone="secondary" style={{ fontSize: 9 }}>
+                    • {thread.time}
+                  </AppText>
+                </View>
+              </View>
             </View>
-            <Title>{thread.title}</Title>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-              <Meta>{thread.replies} answers</Meta>
-              <Pill label="Follow" done={on} doneLabel="Following ✓" secondary={on} onPress={() => setFollowing((prev) => ({ ...prev, [thread.id]: !prev[thread.id] }))} />
+            <Ionicons name="ellipsis-horizontal" size={15} color={colors.textSecondary} />
+          </View>
+
+          <AppText weight="bold" style={{ fontSize: 12, lineHeight: 16, marginTop: 7 }}>
+            {thread.title}
+          </AppText>
+          <AppText numberOfLines={3} style={{ fontSize: 10.5, lineHeight: 15, marginTop: 3 }}>
+            {thread.body}
+          </AppText>
+
+          {/* Helpful / comments / share - drawn like the app, not tappable */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: 8,
+              paddingTop: 7,
+              borderTopWidth: 1,
+              borderTopColor: colors.divider,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="bulb-outline" size={14} color={colors.textSecondary} />
+              <AppText weight="medium" style={{ fontSize: 10, color: colors.textSecondary }}>
+                {thread.helpful} helpful
+              </AppText>
             </View>
-          </Card>
-        );
-      })}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="chatbubble-outline" size={13} color={colors.textSecondary} />
+              <AppText weight="medium" style={{ fontSize: 10, color: colors.textSecondary }}>
+                {thread.comments}
+              </AppText>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="share-social-outline" size={13} color={colors.textSecondary} />
+              <AppText weight="medium" style={{ fontSize: 10, color: colors.textSecondary }}>
+                Share
+              </AppText>
+            </View>
+          </View>
+        </View>
+      ))}
     </>
   );
 }
@@ -529,35 +630,31 @@ const EVENTS = [
 
 function EventsScreen() {
   const { colors } = useTheme();
-  const [rsvp, setRsvp] = useState<Record<string, boolean>>({});
   return (
     <>
       <Heading>Upcoming events</Heading>
-      {EVENTS.map((event) => {
-        const going = !!rsvp[event.id];
-        return (
-          <Card key={event.id}>
-            <View style={{ flexDirection: 'row', gap: 9 }}>
-              <View style={{ width: 38, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', paddingVertical: 5 }}>
-                <AppText weight="bold" style={{ fontSize: 9, color: colors.brandPrimary }}>
-                  {event.month}
-                </AppText>
-                <AppText weight="bold" style={{ fontSize: 15, lineHeight: 18, color: colors.brandPrimary }}>
-                  {event.day}
-                </AppText>
-              </View>
-              <View style={{ flex: 1, gap: 1 }}>
-                <Title>{event.title}</Title>
-                <Meta>{event.where}</Meta>
-              </View>
+      {EVENTS.map((event) => (
+        <Card key={event.id}>
+          <View style={{ flexDirection: 'row', gap: 9 }}>
+            <View style={{ width: 38, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', paddingVertical: 5 }}>
+              <AppText weight="bold" style={{ fontSize: 9, color: colors.brandPrimary }}>
+                {event.month}
+              </AppText>
+              <AppText weight="bold" style={{ fontSize: 15, lineHeight: 18, color: colors.brandPrimary }}>
+                {event.day}
+              </AppText>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-              <Meta>{event.going + (going ? 1 : 0)} going</Meta>
-              <Pill label="RSVP" done={going} doneLabel="Going ✓" secondary={going} onPress={() => setRsvp((prev) => ({ ...prev, [event.id]: !prev[event.id] }))} />
+            <View style={{ flex: 1, gap: 1 }}>
+              <Title>{event.title}</Title>
+              <Meta>{event.where}</Meta>
             </View>
-          </Card>
-        );
-      })}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+            <Meta>{event.going} going</Meta>
+            <Pill label="RSVP" />
+          </View>
+        </Card>
+      ))}
     </>
   );
 }
@@ -568,7 +665,6 @@ const LIBRARY = [
 ];
 
 function LibraryScreen() {
-  const [saved, setSaved] = useState<Record<string, boolean>>({});
   return (
     <>
       <Heading>Study library</Heading>
@@ -578,7 +674,7 @@ function LibraryScreen() {
           <Title>{item.title}</Title>
           <Meta>{item.meta}</Meta>
           <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
-            <Pill label="Download" done={!!saved[item.id]} doneLabel="Saved ✓" secondary={!!saved[item.id]} onPress={() => setSaved((prev) => ({ ...prev, [item.id]: !prev[item.id] }))} />
+            <Pill label="Download" />
           </View>
         </Card>
       ))}
@@ -592,7 +688,6 @@ const JOBS = [
 ];
 
 function CareersScreen() {
-  const [sent, setSent] = useState<Record<string, boolean>>({});
   return (
     <>
       <Heading>Open roles</Heading>
@@ -602,7 +697,7 @@ function CareersScreen() {
           <Title>{job.title}</Title>
           <Meta>{job.company}</Meta>
           <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
-            <Pill label="Refer a student" done={!!sent[job.id]} doneLabel="Sent ✓" secondary={!!sent[job.id]} onPress={() => setSent((prev) => ({ ...prev, [job.id]: !prev[job.id] }))} />
+            <Pill label="Refer a student" />
           </View>
         </Card>
       ))}
@@ -616,8 +711,6 @@ const REQUESTS = [
 ];
 
 function MentorshipScreen() {
-  const { colors } = useTheme();
-  const [answer, setAnswer] = useState<Record<string, boolean>>({});
   return (
     <>
       <Heading>Mentorship requests</Heading>
@@ -626,13 +719,7 @@ function MentorshipScreen() {
           <Tag label={request.level.toUpperCase()} />
           <Title>{request.topic}</Title>
           <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
-            {answer[request.id] ? (
-              <AppText weight="bold" style={{ fontSize: 10.5, color: colors.success }}>
-                Accepted ✓
-              </AppText>
-            ) : (
-              <Pill label="Accept" onPress={() => setAnswer((prev) => ({ ...prev, [request.id]: true }))} />
-            )}
+            <Pill label="Accept" />
           </View>
         </Card>
       ))}

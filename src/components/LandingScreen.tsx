@@ -456,7 +456,7 @@ export function LandingScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="hand-left-outline" size={14} color={isDark ? '#94A3B8' : '#64748B'} />
                   <AppText variant="caption" tone="secondary">
-                    Tap the tabs and cards - it works like the real app
+                    Tap the tabs below to explore
                   </AppText>
                 </View>
               </View>
