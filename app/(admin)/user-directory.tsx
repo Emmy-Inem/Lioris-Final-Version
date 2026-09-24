@@ -25,7 +25,12 @@ import {
  adminTriggerPasswordReset,
  adminUpdateUserProfile,
  IMPERSONATION_REASON_MIN_LENGTH,
+ MFA_REQUIRED_CODE,
+ readEdgeFunctionError,
+ verifyMfaCode,
 } from '@/api/auth';
+import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import { usePullRefreshHandler } from '@/components/PullToRefresh';
 import { adminDirectVerifyUser } from '@/api/verification';
 import { useToast } from '@/context/ToastContext';
 import { AuditLogEntry } from '@/api/types';
@@ -88,25 +93,28 @@ function generateSecureTempPassword(): string {
 }
 
 const ROLE_FILTERS = ['All Roles', 'Student', 'Alumni', 'Staff', 'Admin'];
-const CAMPUS_FILTERS = ['All Campuses', 'UI', 'UNILAG', 'OAU', 'FUNAAB'];
+const ALL_CAMPUSES = 'All Campuses';
 
 export default function UserDirectoryScreen() {
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
- const { beginImpersonation } = useAuth();
+ const { user: currentUser, beginImpersonation } = useAuth();
  const [isImpersonating, setIsImpersonating] = useState(false);
  const [query, setQuery] = useState('');
  const [role, setRole] = useState('All Roles');
- const [campus, setCampus] = useState('All Campuses');
+ const [campus, setCampus] = useState(ALL_CAMPUSES);
  const [users, setUsers] = useState<DirectoryUser[]>([]);
  const [loading, setLoading] = useState(true);
+ const [loadError, setLoadError] = useState<string | null>(null);
 
  const loadProfiles = React.useCallback(async () => {
  setLoading(true);
+ setLoadError(null);
  try {
  const { supabase } = await import('@/api/supabase');
  const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
- if (!error && data) {
+ if (error) throw error;
+ if (data) {
  const mapped: DirectoryUser[] = data.map((p: any) => ({
  id: p.id,
  fullName: p.full_name || 'Campus Member',
@@ -123,8 +131,9 @@ export default function UserDirectoryScreen() {
  }));
  setUsers(mapped);
  }
- } catch (err) {
+ } catch (err: any) {
  console.warn('[UserDirectory] Supabase profiles load error:', err);
+ setLoadError(err?.message || 'Could not load the user directory.');
  } finally {
  setLoading(false);
  }
@@ -133,6 +142,16 @@ export default function UserDirectoryScreen() {
  React.useEffect(() => {
  loadProfiles();
  }, [loadProfiles]);
+
+ // Drag-down-to-refresh on the installed web app reloads this list instead of the whole page.
+ usePullRefreshHandler(loadProfiles);
+
+ // Every campus that exists (launch list) plus any code a profile actually carries.
+ const campusFilters = React.useMemo(() => {
+ const codes = new Set<string>(LAUNCH_INSTITUTIONS.map((i) => i.code));
+ users.forEach((u) => codes.add(u.campus));
+ return [ALL_CAMPUSES, ...Array.from(codes)];
+ }, [users]);
 
  // Selected User Actions & Details Drawer
  const [selectedUser, setSelectedUser] = useState<DirectoryUser | null>(null);
@@ -176,6 +195,13 @@ export default function UserDirectoryScreen() {
  // Impersonation reason prompt (Alert.prompt is iOS-only, so use an inline modal)
  const [impersonateTarget, setImpersonateTarget] = useState<DirectoryUser | null>(null);
  const [impersonateReason, setImpersonateReason] = useState('');
+
+ // Admin actions that the server gates behind two-factor (an admin who enrolled an authenticator
+ // is asked for the 6-digit code, then the action is retried automatically).
+ const [mfaPrompt, setMfaPrompt] = useState<{ title: string; retry: () => Promise<void> } | null>(null);
+ const [mfaCode, setMfaCode] = useState('');
+ const [mfaError, setMfaError] = useState<string | null>(null);
+ const [mfaChecking, setMfaChecking] = useState(false);
 
  // Account-deletion reason prompt: admin-delete-user requires a recorded reason (>= 10 chars).
  const [deleteTarget, setDeleteTarget] = useState<DirectoryUser | null>(null);
@@ -272,7 +298,7 @@ export default function UserDirectoryScreen() {
 
  const filtered = users.filter((u) => {
  const matchesRole = role === 'All Roles' || u.role === role;
- const matchesCampus = campus === 'All Campuses' || u.campus === campus;
+ const matchesCampus = campus === ALL_CAMPUSES || u.campus === campus;
  const matchesQuery =
  u.fullName.toLowerCase().includes(query.toLowerCase()) ||
  u.username.toLowerCase().includes(query.toLowerCase()) ||
@@ -437,8 +463,13 @@ export default function UserDirectoryScreen() {
 
  try {
  await setSuspendedCore(target, nextSuspended);
- } catch (err) {
+ } catch (err: any) {
  console.warn('[UserDirectory] Supabase suspend error:', err);
+ // The change did not save - put the card back and say so instead of claiming success.
+ setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, suspended: target.suspended } : u)));
+ haptics.error();
+ toast.error(err?.message || `Could not ${nextSuspended ? 'suspend' : 'restore'} ${target.fullName}. Please try again.`);
+ return;
  }
 
  recordAuditLogEntry({
@@ -463,8 +494,12 @@ export default function UserDirectoryScreen() {
 
  try {
  await verifyUserCore(target);
- } catch (err) {
+ } catch (err: any) {
  console.warn('[UserDirectory] Supabase verify error:', err);
+ setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, isVerified: target.isVerified } : u)));
+ haptics.error();
+ toast.error(err?.message || `Could not verify ${target.fullName}. Please try again.`);
+ return;
  }
 
  recordAuditLogEntry({
@@ -669,10 +704,45 @@ export default function UserDirectoryScreen() {
  await beginImpersonation(target.id, reason.trim());
  } catch (err: any) {
  console.warn('[UserDirectory] beginImpersonation error:', err);
+ if (err?.code === MFA_REQUIRED_CODE) {
+ promptForMfa('Verify to Start Support Mode', () => confirmImpersonate(target, reason));
+ } else {
+ haptics.error();
  Alert.alert('Could Not Start Support Mode', err?.message || 'Unable to start impersonation. Please try again.');
+ }
  } finally {
  setIsImpersonating(false);
  }
+ }
+
+ function promptForMfa(title: string, retry: () => Promise<void>) {
+ setMfaCode('');
+ setMfaError(null);
+ setMfaPrompt({ title, retry });
+ }
+
+ async function submitMfaCode() {
+ if (!mfaPrompt || mfaChecking) return;
+ setMfaChecking(true);
+ setMfaError(null);
+ try {
+ await verifyMfaCode(mfaCode);
+ } catch (err: any) {
+ haptics.error();
+ const message: string = err?.message || 'That code was not accepted. Please try again.';
+ setMfaError(
+ /not set up/i.test(message)
+ ? 'This action needs two-factor authentication, but it is not turned on for your account. Turn it on in Settings → Security, then try again.'
+ : message,
+ );
+ setMfaChecking(false);
+ return;
+ }
+ const retry = mfaPrompt.retry;
+ setMfaPrompt(null);
+ setMfaCode('');
+ setMfaChecking(false);
+ await retry();
  }
 
  async function handleWipeAccount(target: DirectoryUser) {
@@ -710,9 +780,16 @@ export default function UserDirectoryScreen() {
  });
 
  if (error || (data && data.error)) {
- const message = (data && data.error) || error?.message || 'Unknown error';
- console.warn('[UserDirectory] admin-delete-user error:', message);
- Alert.alert('Deletion Failed', `Could not fully delete ${target.fullName}'s account: ${message}`);
+ const failure = error
+ ? await readEdgeFunctionError(error, 'Unknown error')
+ : { code: undefined, message: (data && data.error) || 'Unknown error' };
+ console.warn('[UserDirectory] admin-delete-user error:', failure.message);
+ if (failure.code === MFA_REQUIRED_CODE) {
+ setIsDeleting(false);
+ promptForMfa('Verify to Delete Account', () => confirmWipeAccount(target, reason));
+ return;
+ }
+ Alert.alert('Deletion Failed', `Could not fully delete ${target.fullName}'s account: ${failure.message}`);
  return;
  }
 
@@ -772,6 +849,19 @@ export default function UserDirectoryScreen() {
         </SolidCard>
       )}
 
+      {loadError && !loading ? (
+        <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}55` }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <Ionicons name="alert-circle-outline" size={20} color={colors.critical} />
+            <View style={{ flex: 1, minWidth: 160 }}>
+              <AppText weight="bold" variant="bodySmall">Could not load the directory</AppText>
+              <AppText tone="secondary" variant="caption">{loadError}</AppText>
+            </View>
+            <AppButton label="Retry" size="sm" variant="secondary" onPress={loadProfiles} />
+          </View>
+        </SolidCard>
+      ) : null}
+
       {loading && users.length === 0 ? (
         <ShimmerCardList count={isDesktop ? 6 : 4} />
       ) : isDesktop ? (
@@ -820,7 +910,7 @@ export default function UserDirectoryScreen() {
                 Campus Node
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {CAMPUS_FILTERS.map((c) => {
+                {campusFilters.map((c) => {
                   const selected = campus === c;
                   return (
                     <Pressable
@@ -942,7 +1032,7 @@ export default function UserDirectoryScreen() {
             <ChipSelect options={ROLE_FILTERS} selected={[role]} onToggle={setRole} />
           </View>
           <View style={{ marginBottom: spacing.md }}>
-            <ChipSelect options={CAMPUS_FILTERS} selected={[campus]} onToggle={setCampus} />
+            <ChipSelect options={campusFilters} selected={[campus]} onToggle={setCampus} />
           </View>
 
           <FlatList
@@ -1056,7 +1146,7 @@ export default function UserDirectoryScreen() {
               <AppText weight="bold">View Full Profile & Identity Record</AppText>
             </Pressable>
 
-            {selectedUser.role !== 'Alumni' && (
+            {selectedUser.id !== currentUser?.id && selectedUser.role !== 'Alumni' && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleMutateRole(selectedUser, 'Alumni')}
@@ -1066,7 +1156,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {selectedUser.role !== 'Staff' && (
+            {selectedUser.id !== currentUser?.id && selectedUser.role !== 'Staff' && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleMutateRole(selectedUser, 'Staff')}
@@ -1076,6 +1166,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
+            {selectedUser.id !== currentUser?.id && (
             <Pressable
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
               onPress={() => handleToggleSuspend(selectedUser)}
@@ -1085,6 +1176,7 @@ export default function UserDirectoryScreen() {
                 {selectedUser.suspended ? 'Revoke Suspension & Reactivate' : 'Shadow-Ban / Suspend User'}
               </AppText>
             </Pressable>
+            )}
 
             {!selectedUser.isVerified && (
               <Pressable
@@ -1096,7 +1188,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {selectedUser.role !== 'Admin' && (
+            {selectedUser.role !== 'Admin' && selectedUser.id !== currentUser?.id && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleImpersonate(selectedUser)}
@@ -1106,13 +1198,15 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
-              onPress={() => handleWipeAccount(selectedUser)}
-            >
-              <Ionicons name="trash-outline" size={18} color={colors.critical} />
-              <AppText tone="critical">Wipe Profile Data (login account not deleted)</AppText>
-            </Pressable>
+            {selectedUser.id !== currentUser?.id && (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+                onPress={() => handleWipeAccount(selectedUser)}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.critical} />
+                <AppText tone="critical">Permanently Delete Account & Data</AppText>
+              </Pressable>
+            )}
           </View>
         )}
       </ActionSheetModal>
@@ -1155,7 +1249,7 @@ export default function UserDirectoryScreen() {
  </View>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
  <AppText tone="secondary"variant="caption">Campus Node</AppText>
- <AppText weight="bold"variant="caption">{detailModalUser.campus} University</AppText>
+ <AppText weight="bold"variant="caption">{LAUNCH_INSTITUTIONS.find((i) => i.code === detailModalUser.campus)?.name ?? detailModalUser.campus}</AppText>
  </View>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
  <AppText tone="secondary"variant="caption">Faculty & Department</AppText>
@@ -1253,6 +1347,40 @@ export default function UserDirectoryScreen() {
  disabled={isImpersonating || impersonateReason.trim().length < IMPERSONATION_REASON_MIN_LENGTH}
  fullWidth
  />
+ </View>
+ </View>
+ </View>
+ </View>
+ </Modal>
+
+ {/* Two-factor step-up: shown when the server asks an enrolled admin to prove their authenticator code */}
+ <Modal visible={!!mfaPrompt} transparent animationType="fade" onRequestClose={() => setMfaPrompt(null)}>
+ <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: spacing.lg }}>
+ <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: spacing.lg, maxWidth: 420, width: '100%', alignSelf: 'center' }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs }}>
+ <Ionicons name="shield-checkmark-outline" size={20} color={colors.brandPrimary} />
+ <AppText variant="h3" weight="bold">{mfaPrompt?.title ?? 'Two-Factor Verification'}</AppText>
+ </View>
+ <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+ Enter the 6-digit code from your authenticator app to confirm it is really you. The action continues as soon as the code is accepted.
+ </AppText>
+ <AppTextField
+ label="6-digit code"
+ value={mfaCode}
+ onChangeText={(v) => setMfaCode(v.replace(/D/g, '').slice(0, 6))}
+ placeholder="123456"
+ keyboardType="number-pad"
+ maxLength={6}
+ autoFocus
+ onSubmitEditing={submitMfaCode}
+ error={mfaError ?? undefined}
+ />
+ <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+ <View style={{ flex: 1 }}>
+ <AppButton label="Cancel" variant="secondary" onPress={() => setMfaPrompt(null)} fullWidth />
+ </View>
+ <View style={{ flex: 1 }}>
+ <AppButton label="Verify" onPress={submitMfaCode} loading={mfaChecking} disabled={mfaCode.length !== 6} fullWidth />
  </View>
  </View>
  </View>

@@ -19,6 +19,7 @@ import { listEvents } from '@/api/events';
 import { listResources } from '@/api/resources';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
+import { useForumScope } from '@/hooks/useForumScope';
 
 type SearchTab = 'posts' | 'events' | 'resources';
 
@@ -26,6 +27,7 @@ export function SearchScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { campusCode } = useCampusScope();
+  const { scope: forumScope } = useForumScope();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<SearchTab>('posts');
   const [readingResource, setReadingResource] = useState<Resource | null>(null);
@@ -33,8 +35,15 @@ export function SearchScreen() {
   const debouncedTrimmed = useDebouncedValue(trimmed);
 
   const { data: posts, isLoading: postsLoading } = useQuery({
-    queryKey: ['search', 'posts', debouncedTrimmed, campusCode],
-    queryFn: () => listFeedPosts({ q: debouncedTrimmed }),
+    queryKey: ['search', 'posts', debouncedTrimmed, campusCode, forumScope],
+    // Same rules as the Forum: own campus only, plus global posts only while the Global toggle is on -
+    // a bare search used to return every post the database would let this account read.
+    queryFn: () =>
+      listFeedPosts({
+        q: debouncedTrimmed,
+        viewScope: forumScope,
+        viewerInstitutionCode: campusCode && campusCode !== 'GLOBAL' ? campusCode : undefined,
+      }),
     enabled: tab === 'posts' && debouncedTrimmed.length > 0,
   });
 

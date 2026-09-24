@@ -261,6 +261,9 @@ export default function PlatformConfigScreen() {
  onPress={() => router.push('/(admin)/moderation-queue')}
  />
  <EcosystemTile
+ icon="document-lock-outline"label="Takedown Requests"description="Copyright & content reports"onPress={() => router.push('/(admin)/takedown-requests' as any)}
+ />
+ <EcosystemTile
  icon="color-wand-outline"
  label="Liquid Glass Studio"
  description="iOS 26 glass refraction"

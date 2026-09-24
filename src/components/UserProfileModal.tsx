@@ -294,6 +294,11 @@ export function UserProfileModal({
  />
  ) : (
  <>
+ {/* A connection only ever produces a "wants to connect" notification and, once accepted, a
+     nudge to open a chat. With messaging switched off there is nothing left for it to lead to,
+     so the button is not offered at all. */}
+ {isFeatureEnabled('e2ee_messaging') && (
+ <>
  <AppButton
  label={connected ? 'Connected' : 'Connect'}
  variant={connected ? 'secondary' : 'primary'}
@@ -301,13 +306,13 @@ export function UserProfileModal({
  loading={connecting}
  size="sm"
  />
- {isFeatureEnabled('e2ee_messaging') && (
  <AppButton
  label="Message"
  variant="secondary"
  onPress={handleStartChat}
  size="sm"
  />
+ </>
  )}
  </>
  )}

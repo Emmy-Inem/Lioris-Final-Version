@@ -16,6 +16,18 @@ export const TERMS_VERSION = '2026-09-24';
 /** Bump when the Privacy Policy changes materially. */
 export const PRIVACY_VERSION = '2026-09-24';
 export const COMMUNITY_RULES_VERSION = '2026-09-24';
+export const COPYRIGHT_POLICY_VERSION = '2026-09-24';
+
+/**
+ * Copyright notice-and-takedown (app/copyright.tsx, the in-app "Report" on resources).
+ * `email` is deliberately empty: add the operator's real copyright/legal address here once it
+ * exists and it appears on the policy page. Lecturers without an account can already reach the
+ * team through the Support Desk. Never put a placeholder address here.
+ */
+export const COPYRIGHT_TAKEDOWN = {
+  email: null as string | null,
+  reviewTargetDays: 5,
+} as const;
 
 /** Minimum eligible age. Users aged 16–17 must have a parent/guardian's authorisation. */
 export const MIN_AGE = 16;
@@ -61,4 +73,5 @@ export const LEGAL_ROUTES = {
   privacy: '/privacy',
   terms: '/terms',
   communityRules: '/community-rules',
+  copyright: '/copyright',
 } as const;

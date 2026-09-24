@@ -29,7 +29,7 @@ import { submitVerificationRequest } from '@/api/verification';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { GuestTeaserBanner } from './GuestTeaserBanner';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
-import { useViewScope } from '@/hooks/useViewScope';
+import { useForumScope } from '@/hooks/useForumScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
@@ -70,18 +70,14 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { isFeatureEnabled } = useFeatureFlags();
-  const globalWorkspaceEnabled =
-    isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope');
   const { isDesktop, isWideDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const segments = useSegments();
   const roleGroup = segments[0] ?? '(student)';
-  const { scope: viewScope, setScope: setViewScope } = useViewScope();
-
-  useEffect(() => {
-    if (!globalWorkspaceEnabled && viewScope === 'global') setViewScope('campus');
-  }, [globalWorkspaceEnabled, viewScope, setViewScope]);
+  // The Forum's own campus/global toggle. With the admin's Global toggle off it is always
+  // 'campus' (never even a stale 'global' on first render) and the Global controls are hidden.
+  const { scope: viewScope, setScope: setViewScope, globalEnabled: globalWorkspaceEnabled } = useForumScope();
 
   const params = useLocalSearchParams<{ category?: string }>();
   const toast = useToast();

@@ -45,7 +45,7 @@ supabase secrets set EXPO_ACCESS_TOKEN=<Expo access token>
 | `SUPABASE_SERVICE_ROLE_KEY` | all functions | Server-only. Never in a client `.env`. |
 | `GEMINI_API_KEY` | gemini-proxy | Rotate the key that was previously exposed in the web bundle. |
 | `ALLOWED_ORIGINS` | all browser-facing functions | Comma separated, exact origins, no trailing slash. Unset = built-in defaults (vercel.app, lioris.app, www.lioris.app, localhost:8081/19006). Drop the localhost entries in production. |
-| `REQUIRE_ADMIN_MFA` | admin-delete-user, admin-impersonate-user | Enforced unless exactly `false`. Admins must enrol MFA (TOTP) first, otherwise they get `403 mfa_required`. |
+| `REQUIRE_ADMIN_MFA` | admin-delete-user, admin-impersonate-user | `true`: always require an AAL2 (TOTP-verified) session. `false`: never. Unset (default): only for admins who have enrolled a TOTP factor - matching the app policy that 2FA is voluntary. An admin who is asked for it gets `403 mfa_required`; the User Directory then prompts for the 6-digit code and retries. With `true`, an admin who never enrolled cannot use these functions until they enrol (Settings > Security). |
 | `CRON_SECRET` | purge-expired-verification-documents | At least 16 characters; compared in constant time. |
 | `PUSH_WEBHOOK_SECRET` | send-push | At least 16 characters; sent by the Database Webhook as header `x-webhook-secret`; compared in constant time. Missing = the function refuses everything (500). |
 | `TURN_KEY_ID`, `TURN_KEY_API_TOKEN` | turn-credentials | Cloudflare Realtime TURN key (below). Missing = `503 not_configured` and calls fall back to STUN only. |

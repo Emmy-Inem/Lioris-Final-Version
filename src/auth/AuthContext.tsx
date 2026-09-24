@@ -236,6 +236,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userRef = React.useRef<SessionUser | null>(null);
   userRef.current = user;
   const isExplicitLogout = React.useRef(false);
+  // True while beginImpersonation/endImpersonation swap the live Supabase session. The auth
+  // listener must ignore the SIGNED_IN those swaps emit - it would otherwise write the previous
+  // account's role onto the account that was just switched to.
+  const isSwappingSession = React.useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -332,7 +336,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     // 3. Supabase Auth State Change Listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // supabase-js runs its listener while it holds its internal auth lock, and it
+    // emits SIGNED_IN every time a minimized tab/PWA returns to the foreground.
+    // Awaiting another supabase call inside the listener (the profiles fetch) waits
+    // for that same lock and deadlocks: every later request hangs and the app comes
+    // back frozen/blank. So the listener stays synchronous and the real work runs
+    // once it has returned.
+    const handleAuthChange = async (
+      event: string,
+      session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'],
+    ) => {
       // Handle password recovery flow (e.g. magic link clicked or OTP recovery session initiated)
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordRecovery(true);
@@ -342,6 +355,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.replace('/(auth)/reset-password' as any);
         return;
       }
+
+      if (isSwappingSession.current) return;
 
       // Crucial: on screen unlock or background token refresh, DO NOT overwrite active role or profile!
       if (event === 'TOKEN_REFRESHED' && session) {
@@ -366,11 +381,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .select('*')
           .eq('id', session.user.id)
           .maybeSingle();
+        if (!mounted) return;
 
         // Authorization role must come from `profiles.role` only
         const role = (profile?.role || 'student') as UserRole;
         const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
-        
+
         const storedUser = await getSessionUser();
         const activeRole =
           (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
@@ -383,6 +399,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role === 'admin' ||
           role === 'staff';
 
+        // Returning to the app re-emits SIGNED_IN for the account that is already
+        // open. Keep that account's in-memory MFA/onboarding progress and skip the
+        // state update when nothing changed, so a resume doesn't re-render (or
+        // re-lock) the whole tree.
+        const current = userRef.current;
+        const sameAccount = current?.id === session.user.id;
         const nextUser: SessionUser = {
           id: session.user.id,
           fullName,
@@ -390,14 +412,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: activeRole,
           actualRole: role,
           onboardingComplete: isOnboarded,
-          mfaVerified: !roleRequiresMfa(activeRole),
+          onboardingStep: sameAccount && !isOnboarded ? current?.onboardingStep : undefined,
+          mfaVerified:
+            sameAccount && current?.role === activeRole ? current.mfaVerified : !roleRequiresMfa(activeRole),
         };
+        if (
+          sameAccount &&
+          current &&
+          current.fullName === nextUser.fullName &&
+          current.email === nextUser.email &&
+          current.role === nextUser.role &&
+          current.actualRole === nextUser.actualRole &&
+          current.onboardingComplete === nextUser.onboardingComplete &&
+          current.mfaVerified === nextUser.mfaVerified
+        ) {
+          await setTokens(session.access_token, session.refresh_token ?? session.access_token);
+          return;
+        }
         await persist(nextUser);
         await setTokens(session.access_token, session.refresh_token ?? session.access_token);
         userRef.current = nextUser;
         setUser(nextUser);
         loadBlockedUserIds().catch(() => {});
       }
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setTimeout(() => {
+        handleAuthChange(event, session).catch(() => {
+          // A failed refresh of the cached profile must never take the session down.
+        });
+      }, 0);
     });
 
     return () => {
@@ -482,6 +527,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setImpersonation(DEFAULT_IMPERSONATION);
         userRef.current = null;
         setUser(null);
+        persistCampus(undefined);
+        resetToDefaultCampusScope();
         try {
           queryClient.clear();
         } catch {
@@ -561,6 +608,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       impersonation,
       async beginImpersonation(targetUserId: string, reason: string) {
+        isSwappingSession.current = true;
+        try {
+          await runBeginImpersonation(targetUserId, reason);
+        } finally {
+          setTimeout(() => {
+            isSwappingSession.current = false;
+          }, 800);
+        }
+      },
+      async endImpersonation() {
+        isSwappingSession.current = true;
+        try {
+          await runEndImpersonation();
+        } finally {
+          setTimeout(() => {
+            isSwappingSession.current = false;
+          }, 800);
+        }
+      },
+      isPasswordRecovery,
+      clearPasswordRecovery() {
+        setIsPasswordRecovery(false);
+      },
+    }),
+    [user, isLoading, impersonation, isPasswordRecovery],
+  );
+
+  // The actual session swaps. Kept out of the memoised value (see the wrappers above) so the
+  // isSwappingSession flag brackets the whole operation.
+  async function runBeginImpersonation(targetUserId: string, reason: string) {
         // Gated on actualRole, same rationale as switchRole above - never
         // trust the currently-*displayed* role for a privileged action.
         if (!user || user.actualRole !== 'admin') {
@@ -622,8 +699,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         router.replace(dashboardPathForRole(nextUser.role) as any);
-      },
-      async endImpersonation() {
+  }
+
+  async function runEndImpersonation() {
         const backup = await getImpersonationAdminBackup();
 
         if (!backup?.accessToken || !backup?.refreshToken) {
@@ -695,14 +773,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           router.replace('/(auth)/login');
         }
-      },
-      isPasswordRecovery,
-      clearPasswordRecovery() {
-        setIsPasswordRecovery(false);
-      },
-    }),
-    [user, isLoading, impersonation, isPasswordRecovery],
-  );
+  }
 
   // Auto-expiry: while impersonating, end the session automatically once
   // expiresAt is reached, so a forgotten "View As" session can't run

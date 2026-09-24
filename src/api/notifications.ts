@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { AppNotification } from './types';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
+import { isViewedNotificationExpired, VIEWED_NOTIFICATION_RETENTION_MS } from '../utils/notificationExpiry';
 
 // Real notifications only (db-fetched or locally created) - never seeded
 // with mockData.ts fixtures. Fixtures only ever come from getMockPool()
@@ -129,6 +130,21 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  return notification;
 }
 
+/** Best-effort cleanup of the caller's own expired rows (RLS only lets a user delete their own). */
+async function purgeExpiredViewedNotifications(userId: string): Promise<void> {
+ try {
+ const cutoff = new Date(Date.now() - VIEWED_NOTIFICATION_RETENTION_MS).toISOString();
+ await supabase
+ .from('notifications')
+ .delete()
+ .eq('recipient_id', userId)
+ .eq('is_read', true)
+ .lt('read_at', cutoff);
+ } catch {
+ // The list is already filtered, so a failed cleanup changes nothing the user sees.
+ }
+}
+
 export interface NotificationsQuery {
  status?: 'unread' | 'read';
  type?: AppNotification['type'];
@@ -151,7 +167,7 @@ export async function listNotifications(
 
  if (error) throw error;
 
- const dbNotifs: AppNotification[] = (data ?? []).map((row: any) => ({
+ const allDbNotifs: AppNotification[] = (data ?? []).map((row: any) => ({
  id: row.id,
  channel: 'in_app',
  type: row.type || 'system_announcement',
@@ -159,9 +175,19 @@ export async function listNotifications(
  body: row.body,
  deepLinkPath: row.action_url,
  deliveryStatus: 'delivered',
- openedAt: row.is_read ? row.created_at : null,
+ // read_at is stamped by the database when is_read flips to true (see the
+ // notification_read_expiry migration); rows from before it fall back to created_at.
+ openedAt: row.is_read ? row.read_at || row.created_at : null,
  createdAt: row.created_at,
  }));
+
+ // A notification that has been viewed disappears 30 days after it was viewed.
+ // Filtering here makes that immediate for the person looking at the list; the
+ // owner-scoped delete below also removes the rows so they don't pile up.
+ const dbNotifs = allDbNotifs.filter((n) => !isViewedNotificationExpired(n.openedAt));
+ if (dbNotifs.length !== allDbNotifs.length) {
+ void purgeExpiredViewedNotifications(uid);
+ }
 
  // Merge unique - local cache only ever contributes this session's own
  // just-created notifications (always) plus seed fixtures (only when the

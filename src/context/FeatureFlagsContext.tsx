@@ -323,7 +323,7 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
     // from onAuthStateChange instead means the fetch only ever fires once
     // Supabase itself has resolved auth state (it always emits an initial
     // event, signed-in or signed-out, right after that resolves).
-    const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
+    const fetchRemoteFlags = async () => {
       try {
         const { data, error } = await supabase
           .from('platform_settings')
@@ -345,6 +345,14 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
         clearTimeout(failsafe);
         if (mounted) setIsLoading(false);
       }
+    };
+
+    // supabase-js calls this listener while holding its auth lock (and re-emits
+    // SIGNED_IN whenever a minimized tab/PWA returns to the foreground), so the
+    // fetch must run after the listener returns - awaiting supabase in here
+    // deadlocks every later request.
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      setTimeout(fetchRemoteFlags, 0);
     });
 
     if (isWeb && typeof window !== 'undefined') {

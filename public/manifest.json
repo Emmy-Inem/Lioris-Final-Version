@@ -1,12 +1,18 @@
 {
+  "id": "/",
   "name": "Lioris | The Unified Campus Network",
   "short_name": "Lioris",
   "description": "Connect with verified university students and alumni. Access course past questions, academic forums, campus events, and career mentorship.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#080E1A",
   "theme_color": "#080E1A",
+  "categories": [
+    "education",
+    "social"
+  ],
   "icons": [
     {
       "src": "/favicon-32x32.png",

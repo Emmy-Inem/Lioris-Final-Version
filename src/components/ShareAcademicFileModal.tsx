@@ -8,6 +8,7 @@ import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { router } from 'expo-router';
 
 const CATEGORIES = ['Notes', 'Past Questions', 'Projects'] as const;
 
@@ -43,6 +44,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  } | null>(null);
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [isUploading, setIsUploading] = useState(false);
+ const [rightsConfirmed, setRightsConfirmed] = useState(false);
 
  const translateY = useSharedValue(80);
  const backdropOpacity = useSharedValue(0);
@@ -140,6 +142,10 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  setErrorMessage('Please attach a document or file to share.');
  return;
  }
+ if (!rightsConfirmed) {
+ setErrorMessage('Please confirm you are allowed to share this file.');
+ return;
+ }
 
  setIsUploading(true);
 
@@ -173,6 +179,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  setCourseCode('');
  setDescription('');
  setSelectedFile(null);
+ setRightsConfirmed(false);
  setErrorMessage(null);
  onClose();
  } catch (err: any) {
@@ -309,6 +316,41 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
                 );
               })}
             </View>
+
+            {/* Rights warranty: what makes the upload lawful, and what the takedown route is. */}
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: rightsConfirmed }}
+              onPress={() => {
+                setRightsConfirmed((v) => !v);
+                if (errorMessage) setErrorMessage(null);
+              }}
+              style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', marginBottom: spacing.md }}
+            >
+              <Ionicons
+                name={rightsConfirmed ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={rightsConfirmed ? colors.brandPrimary : colors.textSecondary}
+              />
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" style={{ lineHeight: 17 }}>
+                  I created this material, or I have permission to share it (for example, the lecturer allows it or it is
+                  openly licensed). I understand it will be removed if the rights holder asks.
+                </AppText>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => {
+                    onClose();
+                    router.push('/copyright' as any);
+                  }}
+                  hitSlop={6}
+                >
+                  <AppText variant="caption" tone="brand" weight="semiBold" style={{ marginTop: 2 }}>
+                    Copyright & Takedown Policy
+                  </AppText>
+                </Pressable>
+              </View>
+            </Pressable>
 
             {errorMessage ? (
               <View

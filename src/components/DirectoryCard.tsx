@@ -94,7 +94,7 @@ export function DirectoryCard({ entry }: { entry: AlumniDirectoryEntry }) {
  ) : null}
 
  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
- {status === 'none' && (
+ {status === 'none' && isFeatureEnabled('e2ee_messaging') && (
  <AppButton label="Connect "onPress={handleConnect} loading={submitting} />
  )}
  {isFeatureEnabled('e2ee_messaging') && (

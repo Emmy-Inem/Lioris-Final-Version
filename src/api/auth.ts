@@ -731,6 +731,68 @@ export interface StartImpersonationResult {
 
 export const IMPERSONATION_REASON_MIN_LENGTH = 10;
 
+/** An error returned by one of the admin edge functions, with the server's own code kept. */
+export class EdgeFunctionError extends Error {
+  /** Machine code from the function's { error } body, e.g. 'mfa_required'. */
+  code?: string;
+  status?: number;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = 'EdgeFunctionError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+/** Set on an EdgeFunctionError when the admin has to enter their authenticator code and retry. */
+export const MFA_REQUIRED_CODE = 'mfa_required';
+
+/**
+ * supabase.functions.invoke() reports every non-2xx answer as the generic
+ * "Edge Function returned a non-2xx status code", hiding the real reason inside
+ * error.context (the raw Response). This digs it out so the admin sees what actually
+ * went wrong - and so 'mfa_required' can trigger the step-up prompt.
+ */
+export async function readEdgeFunctionError(error: any, fallback: string): Promise<EdgeFunctionError> {
+  const name = String(error?.name ?? '');
+  const context = error?.context;
+
+  if (name === 'FunctionsFetchError') {
+    return new EdgeFunctionError(
+      "Could not reach the service. Check your connection; if you are online, this site's address may not be on the function's ALLOWED_ORIGINS list.",
+      'network',
+    );
+  }
+
+  if (context && typeof context.json === 'function') {
+    const status: number | undefined = typeof context.status === 'number' ? context.status : undefined;
+    let body: any = null;
+    try {
+      body = await context.json();
+    } catch {
+      body = null;
+    }
+    const code = typeof body?.error === 'string' ? body.error : undefined;
+    if (code === MFA_REQUIRED_CODE) {
+      return new EdgeFunctionError(
+        'Two-factor verification is required for this action. Enter the 6-digit code from your authenticator app.',
+        MFA_REQUIRED_CODE,
+        status,
+      );
+    }
+    if (status === 401) {
+      return new EdgeFunctionError('Your session has expired. Please sign in again and retry.', 'unauthorized', status);
+    }
+    if (status === 429) {
+      return new EdgeFunctionError(code || 'Too many attempts. Please try again later.', 'rate_limited', status);
+    }
+    if (code) return new EdgeFunctionError(code, 'server_error', status);
+  }
+
+  return new EdgeFunctionError(error?.message || fallback);
+}
+
 export async function startImpersonation(targetUserId: string, reason: string): Promise<StartImpersonationResult> {
  const cleanTargetUserId = targetUserId?.trim();
  if (!cleanTargetUserId) {
@@ -746,7 +808,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
  });
 
  if (error) {
- throw new Error(error.message || 'Could not start impersonation. Please try again.');
+ throw await readEdgeFunctionError(error, 'Could not start impersonation. Please try again.');
  }
  const payload = data as
  | { email: string; tokenHash: string; targetUserId: string; targetName?: string; expiresAt: string }

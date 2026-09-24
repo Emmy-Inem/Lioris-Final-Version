@@ -1155,6 +1155,7 @@ export function LandingScreen() {
                     { label: 'Privacy Policy', href: '/privacy' },
                     { label: 'Terms of Service', href: '/terms' },
                     { label: 'Community Guidelines', href: '/community-rules' },
+                    { label: 'Copyright & Takedown', href: '/copyright' },
                   ].map((legal) => (
                     <Pressable key={legal.label} onPress={() => router.push(legal.href as any)} style={{ paddingVertical: 4 }}>
                       <AppText variant="bodySmall" weight="medium" style={{ color: colors.brandPrimary }}>
@@ -1204,6 +1205,11 @@ export function LandingScreen() {
                 <Pressable onPress={() => router.push('/community-rules' as any)} style={{ paddingVertical: 4 }}>
                   <AppText variant="caption" tone="secondary">
                     Guidelines
+                  </AppText>
+                </Pressable>
+                <Pressable onPress={() => router.push('/copyright' as any)} style={{ paddingVertical: 4 }}>
+                  <AppText variant="caption" tone="secondary">
+                    Copyright
                   </AppText>
                 </Pressable>
                 <Pressable onPress={() => scrollToSection('hero')} style={{ paddingVertical: 4 }}>

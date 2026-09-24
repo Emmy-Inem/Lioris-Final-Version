@@ -44,10 +44,22 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
 
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Lioris" />
+    <meta name="color-scheme" content="light dark" />
+
     <style id="expo-reset">
       html,
       body {
         height: 100%;
+        /* Never let the browser's default white show while the app (re)loads, e.g. when a
+           minimized PWA is brought back and has to boot again. */
+        background-color: #f8faf9;
+        /* The app implements its own pull-to-refresh; stop the browser's native one from
+           fighting it or reloading the page under the user. */
+        overscroll-behavior-y: none;
       }
       body {
         overflow: hidden;
@@ -57,7 +69,20 @@
         height: 100%;
         flex: 1;
       }
+      /* Splash shown only while React has not mounted yet (#root is empty until then). */
+      #root:empty::after {
+        content: '';
+        flex: 1;
+        background: url('/icon-192.png') center / 96px 96px no-repeat;
+      }
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background-color: #0b1120;
+        }
+      }
     </style>
+    <script src="/pwa-boot.js"></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run Lioris.</noscript>

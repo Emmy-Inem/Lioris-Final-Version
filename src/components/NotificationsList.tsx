@@ -21,6 +21,7 @@ import {
  clearAllNotifications,
 } from '@/api/notifications';
 import { listIncomingConnectionRequests, listSuggestedConnections } from '@/api/connections';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { AppNotification } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
 import { resolveNotificationRoute } from '@/utils/notificationRouter';
@@ -48,6 +49,10 @@ export function NotificationsScreen() {
   const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isFeatureEnabled } = useFeatureFlags();
+  // Connecting with someone only leads to a notification and, once accepted, a nudge to open a
+  // chat. With messaging switched off that goes nowhere, so the whole Connections side is hidden.
+  const connectionsEnabled = isFeatureEnabled('e2ee_messaging');
   const [tab, setTab] = useState<'Alerts' | 'Connections'>('Alerts');
   const [filter, setFilter] = useState<'all' | 'unread' | 'announcements' | 'academic'>('all');
 
@@ -69,7 +74,7 @@ export function NotificationsScreen() {
       await markNotificationRead(notification.id);
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-    if (notification.type === 'system' && notification.title?.toLowerCase().includes('connection')) {
+    if (connectionsEnabled && notification.type === 'system' && notification.title?.toLowerCase().includes('connection')) {
       setTab('Connections');
       return;
     }
@@ -393,7 +398,7 @@ export function NotificationsScreen() {
           }}
         >
           <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
-            Notifications & Network
+            {connectionsEnabled ? 'Notifications & Network' : 'Notifications'}
           </AppText>
           <View
             style={{
@@ -412,7 +417,7 @@ export function NotificationsScreen() {
               />
             )}
             <Pressable
-              onPress={() => router.push('/(student)/settings' as any)}
+              onPress={() => router.push(`/(${user?.role ?? 'student'})/settings` as any)}
               accessibilityLabel="Notification settings"
               style={({ pressed }) => ({
                 paddingHorizontal: 12,
@@ -438,7 +443,7 @@ export function NotificationsScreen() {
       </View>
 
       {/* Mobile Tab Switcher */}
-      {!isDesktop && (
+      {!isDesktop && connectionsEnabled && (
         <View
           style={{
             flexDirection: 'row',
@@ -491,14 +496,16 @@ export function NotificationsScreen() {
             </View>
 
             {/* Right Column: Connections & Network */}
-            <View style={{ flex: 1 }}>
-              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs, textTransform: 'uppercase' }}>
-                Suggested Connections
-              </AppText>
-              {renderConnectionsSection()}
-            </View>
+            {connectionsEnabled ? (
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, marginBottom: spacing.xs, textTransform: 'uppercase' }}>
+                  Suggested Connections
+                </AppText>
+                {renderConnectionsSection()}
+              </View>
+            ) : null}
           </View>
-        ) : tab === 'Alerts' ? (
+        ) : tab === 'Alerts' || !connectionsEnabled ? (
           renderAlertsSection()
         ) : (
           renderConnectionsSection()

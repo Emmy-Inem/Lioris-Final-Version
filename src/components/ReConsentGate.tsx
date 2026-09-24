@@ -11,7 +11,7 @@ import { AppText } from './AppText';
 import { AppButton } from './AppButton';
 
 /** Routes where the gate never shows: sign-in flow and the legal pages the user needs to read. */
-const EXEMPT_ROOT_SEGMENTS = new Set(['(auth)', 'terms', 'privacy', 'community-rules']);
+const EXEMPT_ROOT_SEGMENTS = new Set(['(auth)', 'terms', 'privacy', 'community-rules', 'copyright']);
 
 const CONSENT_TYPE = 'terms_and_privacy';
 

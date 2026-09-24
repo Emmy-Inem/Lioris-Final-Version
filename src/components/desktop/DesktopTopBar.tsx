@@ -84,7 +84,7 @@ export function DesktopTopBar() {
     enabled: !!user?.id,
   });
 
- const unreadNotifications = (notifications ?? []).filter((n: any) => !n.isRead && !n.read);
+ const unreadNotifications = (notifications ?? []).filter((n: any) => !n.openedAt);
  const unreadCount = unreadNotifications.length;
  const role = user?.role || 'student';
  const isSuperAdmin = user?.actualRole === 'admin';

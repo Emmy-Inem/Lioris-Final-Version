@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
-import { useViewScope } from '@/hooks/useViewScope';
 import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
@@ -28,7 +27,6 @@ interface NavItem {
 export function DesktopSidebar() {
  const { colors, isDark, toggleTheme, radius } = useTheme();
  const { user, logout } = useAuth();
- const { scope: viewScope, setScope: setViewScope } = useViewScope();
  const { isFeatureEnabled } = useFeatureFlags();
  const pathname = usePathname();
  const [collapsed, setCollapsed] = useState(false);
@@ -52,18 +50,14 @@ export function DesktopSidebar() {
  queryFn: () => listNotifications(),
  enabled: !!user?.id,
  });
- const globalWorkspaceEnabled = isFeatureEnabled('global_workspace');
 
- React.useEffect(() => {
-   if (!globalWorkspaceEnabled && viewScope === 'global') setViewScope('campus');
- }, [globalWorkspaceEnabled, viewScope, setViewScope]);
 
  const unreadMessagesCount = (conversations ?? []).reduce(
  (acc: number, c: any) => acc + (c.unreadCount || 0),
  0,
  );
  const unreadNotificationsCount = (notifications ?? []).filter(
- (n: any) => !n.isRead && !n.read,
+ (n: any) => !n.openedAt,
  ).length;
 
  const role = user?.role || 'student';
@@ -126,6 +120,7 @@ export function DesktopSidebar() {
     { id: 'system-health', label: 'Database Health', href: '/(admin)/system-health', icon: 'pulse' },
     { id: 'verification-requests', label: 'Student Verifications', href: '/(admin)/verification-requests', icon: 'checkmark-done-circle' },
     { id: 'moderation-queue', label: 'Moderation Queue', href: '/(admin)/moderation-queue', icon: 'flag' },
+    { id: 'takedown-requests', label: 'Takedown Requests', href: '/(admin)/takedown-requests', icon: 'document-lock' },
     { id: 'feature-controls', label: 'Feature Switches', href: '/(admin)/feature-controls', icon: 'toggle' },
     { id: 'user-directory', label: 'User Directory', href: '/(admin)/user-directory', icon: 'people', flagKey: 'alumni_network' },
     { id: 'platform-config', label: 'Admin Command Desk', href: '/(admin)/platform-config', icon: 'shield' },
@@ -191,7 +186,7 @@ export function DesktopSidebar() {
  )}
  </Pressable>
 
- {globalWorkspaceEnabled ? <Pressable
+ <Pressable
  onPress={() => setCollapsed(!collapsed)}
  accessibilityRole="button"
  accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -210,7 +205,7 @@ export function DesktopSidebar() {
  size={18}
  color={isDark ? '#94A3B8' : '#64748B'}
  />
- </Pressable> : null}
+ </Pressable>
  </View>
 
  {/* Active Campus Scope Pill & Scope Switcher */}
@@ -234,67 +229,6 @@ export function DesktopSidebar() {
  </AppText>
  {user?.actualRole === 'admin' && <Ionicons name="swap-horizontal" size={13} color={colors.textSecondary} />}
  </Pressable>
-
- {/* Scope Segment */}
- <View
- style={{
- flexDirection: 'row',
- backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F1F5F9',
- borderRadius: 6,
- padding: 2,
- borderWidth: 1,
- borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#E2E8F0',
- }}
- >
- <Pressable
- onPress={() => setViewScope('campus')}
- accessibilityRole="button"
- accessibilityLabel="Show my campus feed"
- accessibilityState={{ selected: viewScope === 'campus' }}
- style={{
- flex: 1,
- paddingVertical: 3,
- alignItems: 'center',
- borderRadius: 4,
- backgroundColor: viewScope === 'campus' ? colors.brandPrimary : 'transparent',
- }}
- >
- <AppText
- variant="caption"
- weight={viewScope === 'campus' ? 'bold' : 'medium'}
- style={{
- fontSize: 10,
- color: viewScope === 'campus' ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
- }}
- >
- My Campus
- </AppText>
- </Pressable>
- <Pressable
- onPress={() => setViewScope('global')}
- accessibilityRole="button"
- accessibilityLabel="Show global feed"
- accessibilityState={{ selected: viewScope === 'global' }}
- style={{
- flex: 1,
- paddingVertical: 3,
- alignItems: 'center',
- borderRadius: 4,
- backgroundColor: viewScope === 'global' ? colors.brandPrimary : 'transparent',
- }}
- >
- <AppText
- variant="caption"
- weight={viewScope === 'global' ? 'bold' : 'medium'}
- style={{
- fontSize: 10,
- color: viewScope === 'global' ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
- }}
- >
- Global Feed
- </AppText>
- </Pressable>
- </View>
  </View>
  )}
  </View>

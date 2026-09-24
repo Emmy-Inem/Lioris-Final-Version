@@ -65,6 +65,7 @@ test.describe('legal pages', () => {
     ['/privacy', /privacy/i],
     ['/terms', /terms/i],
     ['/community-rules', /community/i],
+    ['/copyright', /copyright/i],
   ] as const) {
     test(`${route} renders`, async ({ page }) => {
       await page.goto(route);

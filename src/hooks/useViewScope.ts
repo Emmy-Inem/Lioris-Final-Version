@@ -42,6 +42,23 @@ function webDelete(key: string) {
   }
 }
 
+/** Small persisted key/value helpers shared with other view-state hooks (useForumScope). */
+export async function getStoredValue(key: string): Promise<string | null> {
+  try {
+    return isWeb ? webGet(key) : await SecureStore.getItemAsync(key);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredValue(key: string, value: string) {
+  if (isWeb) {
+    webSet(key, value);
+    return;
+  }
+  SecureStore.setItemAsync(key, value).catch(() => {});
+}
+
 export function persistScope(scope: ViewScope) {
   if (isWeb) {
     webSet(STORAGE_SCOPE_KEY, scope);
@@ -76,6 +93,11 @@ export function resetToDefaultCampusScope(qc = globalQueryClient) {
   persistScope('campus');
 }
 
+// "No campus picked" is stored as null, never undefined: TanStack Query's setQueryData(key, undefined)
+// is a documented no-op, so clearing with undefined left the old campus in place and the
+// "Return to my campus" buttons did nothing.
+type ActiveCampus = string | null;
+
 let hydrated = false;
 
 export function useViewScope() {
@@ -89,6 +111,12 @@ export function useViewScope() {
   }
 
   const isStudent = userRole === 'student';
+  let canExploreWorkspaces = false;
+  try {
+    canExploreWorkspaces = useAuth()?.user?.actualRole === 'admin';
+  } catch {
+    // outside AuthProvider (e.g. isolated tests)
+  }
 
   const { data: scope } = useQuery({
     queryKey: VIEW_SCOPE_KEY,
@@ -97,13 +125,14 @@ export function useViewScope() {
     staleTime: Infinity,
   });
 
-  const { data: activeCampusCode } = useQuery({
+  const { data: storedActiveCampus } = useQuery({
     queryKey: ACTIVE_CAMPUS_KEY,
-    queryFn: () => undefined as string | undefined,
-    initialData: undefined as string | undefined,
+    queryFn: () => null as ActiveCampus,
+    initialData: null as ActiveCampus,
     staleTime: Infinity,
     enabled: false,
   });
+  const activeCampusCode = storedActiveCampus ?? undefined;
 
   // Restore the persisted choice once per app session (any component using
   // this hook can be the one that triggers it - the `hydrated` guard makes
@@ -152,16 +181,17 @@ export function useViewScope() {
   }
 
   function setActiveCampusCode(campusCode?: string) {
-    queryClient.setQueryData(ACTIVE_CAMPUS_KEY, campusCode);
+    queryClient.setQueryData(ACTIVE_CAMPUS_KEY, (campusCode ?? null) as ActiveCampus);
     queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
     persistCampus(campusCode);
     persistScope('campus');
   }
 
   return {
-    scope: scope ?? 'campus',
+    scope: canExploreWorkspaces ? scope ?? 'campus' : ('campus' as ViewScope),
     setScope,
-    activeCampusCode,
+    activeCampusCode: canExploreWorkspaces ? activeCampusCode : undefined,
     setActiveCampusCode,
+    canExploreWorkspaces,
   };
 }

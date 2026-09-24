@@ -17,6 +17,8 @@ import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 import { OfflineBanner, setupNetworkAwareQueries } from '@/components/OfflineBanner';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { ReConsentGate } from '@/components/ReConsentGate';
+import { PullToRefresh } from '@/components/PullToRefresh';
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { addNotificationResponseListener } from '@/notifications/push';
 import { resolveNotificationRoute } from '@/utils/notificationRouter';
 
@@ -201,6 +203,10 @@ export default function RootLayout() {
         }
       };
 
+      // Finding the main scroll area means style-checking every element on the page; doing that on
+      // each wheel tick made desktop scrolling stutter on busy screens, so the result is reused
+      // while it is still attached and scrollable.
+      let cachedMainScrollable: HTMLElement | null = null;
       const handleGlobalWheel = (e: WheelEvent) => {
         const target = e.target as HTMLElement;
         if (!target) return;
@@ -215,17 +221,23 @@ export default function RootLayout() {
           el = el.parentElement;
         }
         if (!canScroll) {
-          const mainScrollable = Array.from(document.querySelectorAll('*')).find((el) => {
-            const htmlEl = el as HTMLElement;
-            const style = window.getComputedStyle(htmlEl);
-            return (
-              (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
-              htmlEl.scrollHeight > htmlEl.clientHeight &&
-              htmlEl.clientHeight > 250
-            );
-          }) as HTMLElement;
-          if (mainScrollable) {
-            mainScrollable.scrollTop += e.deltaY;
+          const stillValid =
+            cachedMainScrollable &&
+            cachedMainScrollable.isConnected &&
+            cachedMainScrollable.scrollHeight > cachedMainScrollable.clientHeight;
+          if (!stillValid) {
+            cachedMainScrollable = (Array.from(document.querySelectorAll('*')).find((el) => {
+              const htmlEl = el as HTMLElement;
+              const style = window.getComputedStyle(htmlEl);
+              return (
+                (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+                htmlEl.scrollHeight > htmlEl.clientHeight &&
+                htmlEl.clientHeight > 250
+              );
+            }) as HTMLElement | undefined) ?? null;
+          }
+          if (cachedMainScrollable) {
+            cachedMainScrollable.scrollTop += e.deltaY;
           }
         }
       };
@@ -315,6 +327,8 @@ function AppShell() {
  <ReConsentGate />
  <AlertHost />
  <AppLockOverlay />
+ <PullToRefresh />
+ <PwaInstallPrompt />
  </>
  );
 }

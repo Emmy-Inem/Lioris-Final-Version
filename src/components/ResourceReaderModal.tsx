@@ -21,6 +21,7 @@ import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { ReportResourceForm } from './ReportResourceModal';
 
 interface ResourceReaderModalProps {
   visible: boolean;
@@ -42,6 +43,7 @@ export function ResourceReaderModal({
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'notes'>('preview');
+  const [reportOpen, setReportOpen] = useState(false);
 
   if (!resource) return null;
 
@@ -138,6 +140,25 @@ export function ResourceReaderModal({
                 {activeTab === 'preview' ? 'Document reader' : 'Study notes & info'}
               </AppText>
             </View>
+
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setReportOpen(true);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Report this resource or request its removal"
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: radius.pill,
+              }}
+            >
+              <Ionicons name="flag-outline" size={20} color={colors.textPrimary} />
+            </Pressable>
 
             <Pressable
               onPress={handleToggleBookmark}
@@ -412,6 +433,54 @@ export function ResourceReaderModal({
             </View>
           </ScrollView>
         )}
+
+        {/* Report / takedown form. An in-place overlay: a second native Modal on top of this one
+            misbehaves on phones. */}
+        {reportOpen ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              zIndex: 50,
+            }}
+          >
+            <Pressable
+              accessible={false}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              onPress={() => setReportOpen(false)}
+            />
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 560,
+                maxHeight: '92%',
+                backgroundColor: colors.surface,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+              }}
+            >
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ padding: spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.lg) }}
+              >
+                <ReportResourceForm
+                  resource={resource}
+                  onClose={() => setReportOpen(false)}
+                  onSubmitted={({ autoHidden }) => {
+                    if (autoHidden) onClose();
+                  }}
+                />
+              </ScrollView>
+            </View>
+          </View>
+        ) : null}
       </View>
     </Modal>
   );

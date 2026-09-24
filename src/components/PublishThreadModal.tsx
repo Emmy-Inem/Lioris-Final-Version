@@ -316,12 +316,14 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setSubmitting(true);
     try {
       const hasPoll = attachPoll && !!pollQuestion.trim();
+      // Never global while the Forum Global toggle is off, whatever was picked earlier.
+      const reachesGlobal = globalWorkspaceEnabled && visibility === 'Global Reach';
       await onPublish({
         title: topic.trim() || content.trim().slice(0, 80),
         content: content.trim(),
         category: channel,
-        visibilityScope: visibility === 'Campus Only' ? 'student' : 'global',
-        scopeVisibility: visibility === 'Campus Only' ? 'campus' : 'global',
+        visibilityScope: reachesGlobal ? 'global' : 'student',
+        scopeVisibility: reachesGlobal ? 'global' : 'campus',
         sponsored: false,
         isPinned: isAdmin && pinToTop,
         postFormat: 'Thread',
@@ -663,34 +665,38 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               })}
             </ScrollView>
 
-            {/* Audience */}
-            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-              Audience
-            </AppText>
-            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
-              {(globalWorkspaceEnabled ? (['Campus Only', 'Global Reach'] as const) : (['Campus Only'] as const)).map((v) => {
-                const selected = visibility === v;
-                return (
-                  <Pressable
-                    key={v}
-                    onPress={() => { haptics.light(); setVisibility(v); }}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 9,
-                      borderRadius: radius.pill,
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: selected ? colors.brandPrimary : colors.border,
-                      backgroundColor: selected ? colors.pastelPrimaryBg : colors.surface,
-                    }}
-                  >
-                    <AppText variant="caption" weight={selected ? 'bold' : 'medium'} tone={selected ? 'brand' : 'secondary'}>
-                      {v === 'Campus Only' ? '🏫 My Campus' : '🌍 All Universities'}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {/* Audience - only offered while the Forum Global toggle is on; otherwise every thread is campus-only */}
+            {globalWorkspaceEnabled ? (
+              <>
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                Audience
+              </AppText>
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
+                {(['Campus Only', 'Global Reach'] as const).map((v) => {
+                  const selected = visibility === v;
+                  return (
+                    <Pressable
+                      key={v}
+                      onPress={() => { haptics.light(); setVisibility(v); }}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 9,
+                        borderRadius: radius.pill,
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: selected ? colors.brandPrimary : colors.border,
+                        backgroundColor: selected ? colors.pastelPrimaryBg : colors.surface,
+                      }}
+                    >
+                      <AppText variant="caption" weight={selected ? 'bold' : 'medium'} tone={selected ? 'brand' : 'secondary'}>
+                        {v === 'Campus Only' ? '🏫 My Campus' : '🌍 All Universities'}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              </>
+            ) : null}
 
             {/* Schedule for later */}
             <Pressable

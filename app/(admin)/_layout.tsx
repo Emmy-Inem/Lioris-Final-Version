@@ -82,6 +82,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="forum" options={{ href: null }} />
       <Tabs.Screen name="super-admin-config" options={{ href: null }} />
       <Tabs.Screen name="reports" options={{ href: null }} />
+      <Tabs.Screen name="takedown-requests" options={{ href: null }} />
       <Tabs.Screen name="user-directory" options={{ href: null }} />
       <Tabs.Screen name="audit-logs" options={{ href: null }} />
       <Tabs.Screen name="moderation-audit-log" options={{ href: null }} />

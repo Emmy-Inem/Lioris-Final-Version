@@ -71,7 +71,40 @@ export async function requireUser(req: Request): Promise<AuthResult> {
   return { ok: true, caller: { user, token, callerClient, aal } };
 }
 
-/** Admin-only. Also enforces AAL2 (MFA) unless REQUIRE_ADMIN_MFA === 'false'. */
+/**
+ * True when the user has a verified MFA factor. Fails CLOSED (returns true) when that
+ * cannot be determined, so an outage never turns into "no MFA needed".
+ */
+async function hasVerifiedMfaFactor(user: User): Promise<boolean> {
+  if (Array.isArray(user.factors)) {
+    return user.factors.some((f) => f.status === 'verified');
+  }
+  const url = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !serviceKey) return true;
+  try {
+    const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+    const { data, error } = await admin.auth.admin.mfa.listFactors({ userId: user.id });
+    if (error) return true;
+    return (data?.factors ?? []).some((f) => f.status === 'verified');
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Admin-only, with an MFA (AAL2) check controlled by the REQUIRE_ADMIN_MFA secret:
+ *   'true'   - always require AAL2.
+ *   'false'  - never require it.
+ *   unset    - require AAL2 only for admins who have enrolled a TOTP factor.
+ *
+ * The unset default matches the app's own policy (src/auth/mfaPolicy.ts: two-factor is
+ * voluntary and not forced on any role). The old default was "always", which made every
+ * admin action fail with `mfa_required` for admins who never enrolled - and the login
+ * flow never steps a session up to AAL2, so those admins had no way to satisfy it.
+ * An admin who has enrolled a factor is still required to prove it (the app prompts for
+ * the 6-digit code and retries).
+ */
 export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } = {}): Promise<AuthResult> {
   const result = await requireUser(req);
   if (!result.ok) return result;
@@ -91,8 +124,12 @@ export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } 
   }
 
   const requireMfa = opts.requireMfa ?? true;
-  if (requireMfa && Deno.env.get('REQUIRE_ADMIN_MFA') !== 'false' && caller.aal !== 'aal2') {
-    return { ok: false, response: jsonResponse(req, { error: 'mfa_required' }, 403) };
+  const mfaMode = Deno.env.get('REQUIRE_ADMIN_MFA');
+  if (requireMfa && mfaMode !== 'false' && caller.aal !== 'aal2') {
+    const mustStepUp = mfaMode === 'true' || (await hasVerifiedMfaFactor(caller.user));
+    if (mustStepUp) {
+      return { ok: false, response: jsonResponse(req, { error: 'mfa_required' }, 403) };
+    }
   }
   return result;
 }

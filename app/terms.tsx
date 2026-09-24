@@ -226,8 +226,11 @@ export default function TermsOfServiceScreen() {
 
             <LegalSection title="8. Copyright & Takedown Requests">
               <LegalParagraph>
-                Only upload material you created, are licensed to share, or may lawfully use. A copyright owner or
-                authorised agent may submit a takedown request through {DATA_CONTROLLER.supportChannel}. The request
+                Only upload material you created, are licensed to share, or may lawfully use. A copyright owner (including a
+                lecturer whose notes or slides were shared) or authorised agent may submit a takedown request with the
+                Report (flag) button on any shared resource or through {DATA_CONTROLLER.supportChannel}; a request from a
+                rights holder takes the material offline while it is reviewed. Our Copyright & Takedown Policy (available
+                from Settings and the site footer) sets out the full process. The request
                 should identify the protected work, the specific material and its location, provide the complainant's
                 contact details and signature, and include good-faith and accuracy statements. We may remove or disable
                 access to material, notify the uploader and terminate repeat infringers where appropriate. An uploader

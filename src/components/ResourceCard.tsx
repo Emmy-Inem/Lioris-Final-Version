@@ -13,6 +13,7 @@ import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { ReportResourceModal } from './ReportResourceModal';
 
 export function ResourceCard({
   resource,
@@ -30,6 +31,7 @@ export function ResourceCard({
   const [downloaded, setDownloaded] = useState(false);
   const [upvoted, setUpvoted] = useState(false);
   const [upvotes, setUpvotes] = useState(resource.likesCount);
+  const [reportOpen, setReportOpen] = useState(false);
 
   async function handleToggleBookmark() {
     haptics.medium();
@@ -159,6 +161,21 @@ export function ResourceCard({
               {upvotes}
             </AppText>
           </Pressable>
+          <Pressable
+            onPress={() => {
+              haptics.light();
+              setReportOpen(true);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Report this resource or request its removal"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+          >
+            <Ionicons name="flag-outline" size={14} color={colors.textSecondary} />
+            <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
+              Report
+            </AppText>
+          </Pressable>
         </View>
 
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
@@ -177,6 +194,7 @@ export function ResourceCard({
           />
         </View>
       </View>
+      <ReportResourceModal visible={reportOpen} resource={resource} onClose={() => setReportOpen(false)} />
     </SolidCard>
   );
 }

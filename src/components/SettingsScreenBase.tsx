@@ -81,10 +81,30 @@ const ALL_SETTINGS_SECTIONS = [
   { key: 'legal', label: 'Policies', fullLabel: 'Terms & Policies', icon: 'document-text-outline' as const },
 ] as const;
 
+/** Category heading shown above each group of settings in the single scrolling list. */
+function SettingsSectionLabel({ sectionKey }: { sectionKey: (typeof ALL_SETTINGS_SECTIONS)[number]['key'] }) {
+  const { colors, spacing } = useTheme();
+  const section = ALL_SETTINGS_SECTIONS.find((sec) => sec.key === sectionKey);
+  if (!section) return null;
+  return (
+    <View
+      accessibilityRole="header"
+      style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, marginBottom: -spacing.xs, paddingHorizontal: spacing.xs }}
+    >
+      <Ionicons name={section.icon} size={15} color={colors.brandPrimary} />
+      <AppText variant="caption" weight="bold" tone="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+        {section.fullLabel}
+      </AppText>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
+    </View>
+  );
+}
+
 const LEGAL_LINKS = [
   { title: 'Privacy Policy', desc: 'How we collect, use and protect your data (NDPA 2023).', href: '/privacy' as const },
   { title: 'Terms of Service', desc: 'Rules for using Lioris, including AI and marketplace terms.', href: '/terms' as const },
   { title: 'Community Rules', desc: 'Standards of conduct, reporting and moderation.', href: '/community-rules' as const },
+  { title: 'Copyright & Takedown', desc: 'What you may share, and how lecturers can ask for material to be removed.', href: '/copyright' as const },
 ];
 
 export function SettingsScreen() {
@@ -110,11 +130,13 @@ export function SettingsScreen() {
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
   const isSuperAdmin = user?.actualRole === 'admin';
+  // Everything is one vertical scroll, split into labelled categories. The workspace scope and the
+  // role switcher are admin tools, so members never see those two categories.
   const SETTINGS_SECTIONS = isSuperAdmin
     ? ALL_SETTINGS_SECTIONS
-    : ALL_SETTINGS_SECTIONS.filter((sec) => sec.key !== 'preview');
-
-  const [activeSection, setActiveSection] = useState<(typeof ALL_SETTINGS_SECTIONS)[number]['key']>('account');
+    : ALL_SETTINGS_SECTIONS.filter((sec) => sec.key !== 'preview' && sec.key !== 'workspace');
+  const showSection = (key: (typeof ALL_SETTINGS_SECTIONS)[number]['key']) =>
+    SETTINGS_SECTIONS.some((sec) => sec.key === key);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -635,99 +657,11 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        {/* 2-Column Responsive Layout on Desktop, Vertical Stack on Mobile */}
-        <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: spacing.md, alignItems: 'flex-start' }}>
-          {/* Sub Navigation Tabs */}
-          {isDesktop ? (
-            <View style={{ width: 240, flexShrink: 0 }}>
-              <SolidCard radius={20} style={{ padding: spacing.xs }}>
-                {SETTINGS_SECTIONS.map((sec) => {
-                  const active = activeSection === sec.key;
-                  return (
-                    <Pressable
-                      key={sec.key}
-                      onPress={() => {
-                        haptics.light();
-                        setActiveSection(sec.key);
-                      }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: spacing.sm,
-                        paddingHorizontal: spacing.md,
-                        paddingVertical: 11,
-                        borderRadius: radius.md,
-                        backgroundColor: active ? colors.pastelPrimaryBg : 'transparent',
-                      }}
-                    >
-                      <Ionicons
-                        name={sec.icon}
-                        size={18}
-                        color={active ? colors.brandPrimary : colors.textSecondary}
-                      />
-                      <AppText
-                        variant="bodySmall"
-                        weight={active ? 'bold' : 'medium'}
-                        tone={active ? 'brand' : 'primary'}
-                      >
-                        {sec.fullLabel}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </SolidCard>
-            </View>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{ width: '100%', flexGrow: 0, marginBottom: spacing.xs }}
-              contentContainerStyle={{ gap: 8, paddingRight: 16 }}
-              {...({ 'data-horizontal-scroll': 'true' } as any)}
-            >
-              {SETTINGS_SECTIONS.map((sec) => {
-                const active = activeSection === sec.key;
-                return (
-                  <Pressable
-                    key={sec.key}
-                    onPress={() => {
-                      haptics.light();
-                      setActiveSection(sec.key);
-                    }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 13,
-                      paddingVertical: 8,
-                      borderRadius: radius.pill,
-                      backgroundColor: active ? colors.brandPrimary : colors.surface,
-                      borderWidth: 1,
-                      borderColor: active ? colors.brandPrimary : colors.border,
-                    }}
-                  >
-                    <Ionicons
-                      name={sec.icon}
-                      size={15}
-                      color={active ? '#FFFFFF' : colors.textSecondary}
-                    />
-                    <AppText
-                      variant="caption"
-                      weight={active ? 'bold' : 'medium'}
-                      tone={active ? 'inverse' : 'secondary'}
-                    >
-                      {sec.fullLabel}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
-
-          {/* Main Active Settings Content */}
-          <View style={{ flex: 1, width: '100%', minWidth: 0, gap: spacing.md }}>
+        {/* One vertical list, grouped by category (no tabs to switch between) */}
+        <View style={{ width: '100%', maxWidth: isDesktop ? 820 : undefined, alignSelf: 'center', gap: spacing.md }}>
             {/* 1. Account & Profile */}
-            {activeSection === 'account' && (
+            {showSection('account') ? <SettingsSectionLabel sectionKey="account" /> : null}
+            {showSection('account') && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View
                   style={{
@@ -823,14 +757,15 @@ export function SettingsScreen() {
             {/* Workspace Scope - moved here from the small pill that used to sit in
                 the app header on every screen, since it's a persistent account
                 preference rather than a per-screen control. */}
-            {activeSection === 'workspace' && (
+            {showSection('workspace') ? <SettingsSectionLabel sectionKey="workspace" /> : null}
+            {showSection('workspace') && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
                     Workspace Scope
                   </AppText>
                   <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    Controls which university's Forum threads, marketplace listings, events, and resources you see
+                    Admin tool: choose which campus workspace (or the global network) you are viewing while administering the platform
                   </AppText>
                 </View>
 
@@ -876,7 +811,8 @@ export function SettingsScreen() {
             )}
 
             {/* 2. Appearance & Theme */}
-            {activeSection === 'appearance' && (
+            {showSection('appearance') ? <SettingsSectionLabel sectionKey="appearance" /> : null}
+            {showSection('appearance') && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.lg }}>
                 {/* Section Header */}
                 <View>
@@ -1291,7 +1227,8 @@ export function SettingsScreen() {
             )}
 
             {/* 3. Notifications */}
-            {activeSection === 'notifications' && (
+            {showSection('notifications') ? <SettingsSectionLabel sectionKey="notifications" /> : null}
+            {showSection('notifications') && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
@@ -1353,7 +1290,8 @@ export function SettingsScreen() {
             )}
 
             {/* 4. Security & Credentials */}
-            {activeSection === 'security' && (
+            {showSection('security') ? <SettingsSectionLabel sectionKey="security" /> : null}
+            {showSection('security') && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
@@ -1529,7 +1467,8 @@ export function SettingsScreen() {
             )}
 
             {/* 5. Role Switcher Preview (Root Admins only) */}
-            {isSuperAdmin && activeSection === 'preview' && (
+            {showSection('preview') ? <SettingsSectionLabel sectionKey="preview" /> : null}
+            {showSection('preview') && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
@@ -1579,7 +1518,8 @@ export function SettingsScreen() {
             )}
 
             {/* 6. Privacy & Data */}
-            {activeSection === 'privacy' && (
+            {showSection('privacy') ? <SettingsSectionLabel sectionKey="privacy" /> : null}
+            {showSection('privacy') && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
@@ -1647,7 +1587,7 @@ export function SettingsScreen() {
                       accessibilityRole="link"
                       onPress={() => {
                         haptics.light();
-                        router.push(doc.href);
+                        router.push(doc.href as any);
                       }}
                       style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}
                     >
@@ -1662,7 +1602,8 @@ export function SettingsScreen() {
             )}
 
             {/* 7. Terms & Policies */}
-            {activeSection === 'legal' && (
+            {showSection('legal') ? <SettingsSectionLabel sectionKey="legal" /> : null}
+            {showSection('legal') && (
               <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
@@ -1679,7 +1620,7 @@ export function SettingsScreen() {
                     accessibilityRole="link"
                     onPress={() => {
                       haptics.light();
-                      router.push(doc.href);
+                      router.push(doc.href as any);
                     }}
                     style={{
                       flexDirection: 'row',
@@ -1704,7 +1645,6 @@ export function SettingsScreen() {
                 ))}
               </SolidCard>
             )}
-          </View>
         </View>
       </ScrollView>
 

@@ -13,6 +13,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { listAnnouncements } from '@/api/announcements';
 import { Announcement } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { useCampusScope } from '@/hooks/useCampusScope';
 
 const PRIORITY_TONE = {
  normal: 'neutral',
@@ -46,6 +47,7 @@ export function AnnouncementsWidget({
  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
 
  const announcementsEnabled = isFeatureEnabled('campus_announcements');
+ const { campusCode: viewerCampus } = useCampusScope();
  const { data: announcements, isLoading } = useQuery({
  queryKey: ['announcements'],
  queryFn: listAnnouncements,
@@ -57,6 +59,13 @@ export function AnnouncementsWidget({
  // Filter announcements for current audience scope and active expiration
  const activeAnnouncements = (announcements ?? [])
  .filter((a) => !dismissedIds.includes(a.id))
+ // Staff and admins can READ every campus's bulletins (database policy), so the home widget has to
+ // narrow to the campus being viewed itself, or another university's notices show up on home.
+ .filter((a) => {
+ const target = (a.campusCode || 'GLOBAL').toUpperCase();
+ if (target === 'GLOBAL' || viewerCampus === 'GLOBAL') return true;
+ return !!viewerCampus && target === viewerCampus.toUpperCase();
+ })
  .filter((a) => {
  if (!scope || scope === 'global') return true;
  return a.audienceScope === 'global' || a.audienceScope === scope;

@@ -19,6 +19,7 @@ import { UserProfileModal } from'./UserProfileModal';
 import { VisibilityBadge } from'./VisibilityBadge';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Post } from'@/api/types';
 import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY } from'@/api/bookmarks';
@@ -89,6 +90,10 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  const segments = useSegments();
  const roleGroup = segments[0] ?? '(student)';
  const queryClient = useQueryClient();
+ const { isFeatureEnabled } = useFeatureFlags();
+ // The University / Global tag only means something while the forum can show more than one
+ // audience; with the Global toggle off every thread is campus-only, so the tag is just noise.
+ const showScopeBadge = isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope');
 
  const [liked, setLiked] = useState(!!post.isLikedByMe);
  const [likesCount, setLikesCount] = useState(post.likesCount);
@@ -307,11 +312,13 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  </Pressable>
 
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+ {showScopeBadge ? (
  <VisibilityBadge
  visibility={isGlobalPost ? 'global' : 'campus'}
  campusCode={post.institutionCode}
  subtle
  />
+ ) : null}
 
  <Pressable
  onPress={() => setMenuOpen(true)}
