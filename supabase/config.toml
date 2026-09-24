@@ -17,6 +17,9 @@ verify_jwt = true
 [functions.admin-impersonate-user]
 verify_jwt = true
 
+[functions.admin-manage-institution]
+verify_jwt = true
+
 [functions.delete-my-account]
 verify_jwt = true
 
