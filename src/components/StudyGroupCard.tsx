@@ -72,29 +72,8 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
  {group.description}
  </AppText>
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: spacing.xs }}>
-        {/* Member count only. This used to render an avatar stack from the
-            hardcoded initials ['Ad', 'Ch', 'Em'], so a pod with one member
-            showed a face for two people who don't exist. StudyGroup carries
-            no member list, so the honest thing to show is the number. */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-          <View
-            style={{
-              width: 26,
-              height: 26,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Ionicons name="people" size={16} color={colors.textSecondary} />
-          </View>
-          <AppText variant="caption" tone="secondary" style={{ fontSize: 11, flex: 1 }}>
-            {group.memberCount === 1 ? '1 member' : `${group.memberCount} members`}
-          </AppText>
-        </View>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center', flexShrink: 1 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', rowGap: spacing.sm, marginTop: spacing.xs }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center', justifyContent: 'flex-end', flexShrink: 1 }}>
           {joined && (
             <AppButton
               label="Discussion"

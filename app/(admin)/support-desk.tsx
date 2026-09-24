@@ -255,7 +255,7 @@ export default function SupportDeskScreen() {
       {/* Screen Header */}
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <View>
+          <View style={{ flexShrink: 1, minWidth: 0 }}>
             <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold">
               Support & Resolution Desk
             </AppText>

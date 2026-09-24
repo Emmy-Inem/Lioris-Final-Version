@@ -1,5 +1,5 @@
 import React from'react';
-import { Pressable, View } from'react-native';
+import { Pressable, ScrollView, View } from'react-native';
 import { AppText } from'./AppText';
 import { useTheme } from'@/theme/ThemeProvider';
 
@@ -7,12 +7,24 @@ interface ChipSelectProps<T extends string> {
  options: T[];
  selected: T[];
  onToggle: (value: T) => void;
+ /** One swipeable row instead of wrapping onto several lines - for long lists on a phone. */
+ scroll?: boolean;
 }
 
-export function ChipSelect<T extends string>({ options, selected, onToggle }: ChipSelectProps<T>) {
+export function ChipSelect<T extends string>({ options, selected, onToggle, scroll }: ChipSelectProps<T>) {
  const { colors, radius, spacing } = useTheme();
+ const Wrapper: React.ComponentType<any> = scroll ? ScrollView : View;
+ const wrapperProps = scroll
+ ? {
+ horizontal: true,
+ showsHorizontalScrollIndicator: false,
+ contentContainerStyle: { gap: spacing.sm, paddingRight: spacing.md },
+ style: { flexGrow: 0 },
+ 'data-horizontal-scroll': 'true',
+ }
+ : { style: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm } };
  return (
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+ <Wrapper {...wrapperProps}>
  {options.map((option) => {
  const isSelected = selected.includes(option);
  return (
@@ -36,6 +48,6 @@ export function ChipSelect<T extends string>({ options, selected, onToggle }: Ch
  </Pressable>
  );
  })}
- </View>
+ </Wrapper>
  );
 }

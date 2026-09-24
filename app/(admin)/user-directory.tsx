@@ -1035,10 +1035,10 @@ export default function UserDirectoryScreen() {
           />
 
           <View style={{ marginBottom: spacing.xs }}>
-            <ChipSelect options={ROLE_FILTERS} selected={[role]} onToggle={setRole} />
+            <ChipSelect options={ROLE_FILTERS} selected={[role]} onToggle={setRole} scroll />
           </View>
           <View style={{ marginBottom: spacing.md }}>
-            <ChipSelect options={campusFilters} selected={[campus]} onToggle={setCampus} />
+            <ChipSelect options={campusFilters} selected={[campus]} onToggle={setCampus} scroll />
           </View>
 
           <FlatList

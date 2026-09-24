@@ -58,6 +58,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: IS_DEV ? 'lioris.app.dev' : 'lioris.app',
+    // Local Play Store builds pass ANDROID_VERSION_CODE (it must be higher than every code already uploaded);
+    // EAS builds ignore this and use the remote counter (eas.json appVersionSource).
+    ...(process.env.ANDROID_VERSION_CODE ? { versionCode: Number(process.env.ANDROID_VERSION_CODE) } : {}),
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
       // Android 13+ themed icons: single-colour silhouette of the emblem, tinted by the system.
