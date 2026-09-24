@@ -8,7 +8,7 @@ import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
 import { LegalSection, LegalParagraph, LegalBullets, LegalStrong } from '@/components/LegalSection';
-import { DATA_CONTROLLER, DPO_EMAIL, MIN_AGE, MIN_AGE_WITH_CONSENT, RETENTION, TERMS_VERSION } from '@/constants/legal';
+import { DATA_CONTROLLER, INDEPENDENT_AGE, MIN_AGE, RETENTION, TERMS_VERSION } from '@/constants/legal';
 
 export default function TermsOfServiceScreen() {
   const { isDark, toggleTheme } = useTheme();
@@ -144,8 +144,9 @@ export default function TermsOfServiceScreen() {
             <LegalSection title="1. Acceptance of Terms & Eligibility">
               <LegalParagraph>
                 By creating an account or using Lioris you agree to these Terms of Service, the Privacy Policy and the
-                Community Rules. You must be at least {MIN_AGE} years old, or an admitted university student aged {MIN_AGE_WITH_CONSENT}–17
-                registering with parental or guardian consent. Access to institutional spaces requires active affiliation
+                Community Rules. You must be at least {INDEPENDENT_AGE} years old, or an admitted university student
+                aged {MIN_AGE}–17 whose parent or legal guardian has authorised the account. Users under {MIN_AGE} may
+                not register. Access to institutional spaces requires active affiliation
                 (as an enrolled student, staff member, or verified alumnus) verified via institutional domain email or accredited
                 registrar documents. Other users may join the general network and apply for verification afterwards.
               </LegalParagraph>
@@ -198,18 +199,45 @@ export default function TermsOfServiceScreen() {
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="6. Marketplace & Escrow">
+            <LegalSection title="6. Peer-to-Peer Marketplace">
               <LegalParagraph>
-                The campus marketplace lets users list and buy items and services. Lioris is a platform only and is not
-                a party to sales between users, does not own or inspect listed goods, and does not guarantee quality,
-                legality or delivery. Any escrow or hold feature is a convenience mechanism whose release is governed by
-                the rules shown in the app. Buyers and sellers must comply with applicable law (including consumer
-                protection and tax rules) and may not list prohibited or stolen items. Meet in safe public campus
-                locations and report suspicious listings.
+                Marketplace listings and transactions are created directly by users. Lioris is not the seller, buyer,
+                payment provider, escrow agent, delivery service or guarantor. Lioris does not collect, hold or release
+                marketplace funds and does not inspect or certify listings, goods or sellers. Never treat a verified
+                campus identity as a guarantee of a transaction. Inspect items before paying, avoid advance transfers,
+                meet in a safe public place and report suspicious listings. Users must not list unlawful, stolen,
+                counterfeit, unsafe or regulated goods. Nothing here limits rights or remedies that applicable consumer
+                law gives you.
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="7. Moderation & Suspension">
+            <LegalSection title="7. Jobs, Events, Maps, Research & Mentorship">
+              <LegalParagraph>
+                Unless clearly labelled as an official Lioris notice, jobs, events, research links, map points and
+                mentorship information are supplied by users or third parties. Lioris is not an employer, recruiter,
+                event organiser, academic publisher, counsellor or professional adviser and does not guarantee that
+                this information is accurate, current or safe. Verify important details with the named institution or
+                organiser. Never pay an application fee or share passwords, one-time codes or banking credentials.
+                Mentorship and AI features provide general peer or study support, not medical, mental-health, legal,
+                financial or other professional advice. Third-party sites and services have their own terms and privacy
+                practices.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="8. Copyright & Takedown Requests">
+              <LegalParagraph>
+                Only upload material you created, are licensed to share, or may lawfully use. A copyright owner or
+                authorised agent may submit a takedown request through {DATA_CONTROLLER.supportChannel}. The request
+                should identify the protected work, the specific material and its location, provide the complainant's
+                contact details and signature, and include good-faith and accuracy statements. We may remove or disable
+                access to material, notify the uploader and terminate repeat infringers where appropriate. An uploader
+                may submit a counter-notice identifying the removed material, explaining in good faith why removal was
+                mistaken, and providing contact details and consent to the competent court process. We may restore the
+                material where the law permits and the complainant does not begin proceedings in time.
+              </LegalParagraph>
+            </LegalSection>
+
+            <LegalSection title="9. Moderation & Suspension">
               <LegalParagraph>
                 We and campus moderators may remove content, restrict features, or suspend or terminate accounts that
                 breach these Terms or the Community Rules, or where required by law. Where practicable we will tell you
@@ -217,43 +245,44 @@ export default function TermsOfServiceScreen() {
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="8. Termination & Deletion">
+            <LegalSection title="10. Termination & Deletion">
               <LegalParagraph>
                 You may stop using Lioris and delete your account at any time from Settings, then Privacy & Data.
-                Deletion permanently erases your account, content, messages, uploads and verification documents and
-                cannot be undone; backups roll off within {RETENTION.backupRollOffDays} days. We may suspend or
-                terminate your access for serious or repeated breaches.
+                Account deletion removes your account from the active service and cannot be undone. Limited information
+                may remain temporarily in provider backups for up to {RETENTION.backupRollOffDays} days or longer where
+                reasonably required for security, legal compliance, disputes or the rights of other users. We may
+                suspend or terminate access for serious or repeated breaches.
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="9. Disclaimers & Limitation of Liability">
+            <LegalSection title="11. Disclaimers & Limitation of Liability">
               <LegalParagraph>
-                Lioris is provided "as is" and "as available". To the fullest extent permitted by applicable law, Lioris and
-                its affiliates, officers, employees, and agents shall not be liable for any indirect, incidental, special,
-                consequential, or punitive damages, or any loss of profits, revenue, data, use, goodwill, or other intangible
-                losses. In no event shall our aggregate liability exceed the greater of fifty thousand Nigerian Naira (NGN 50,000)
-                or the total amount paid by you to Lioris in the twelve (12) months preceding the claim. Nothing in these Terms
-                excludes or limits any liability that cannot be excluded under the laws of the Federal Republic of Nigeria.
+                Lioris is provided “as is” and “as available”, but only to the extent the law permits. We do not promise
+                uninterrupted availability or that user and third-party content is accurate. To the extent permitted by
+                law, Lioris is not liable for indirect or consequential loss caused by use of the service. Nothing in
+                these Terms excludes or restricts liability for fraud, gross negligence, death or personal injury,
+                defective performance, or any statutory consumer right or other liability that cannot lawfully be
+                excluded or restricted. Any limitation is subject to the Federal Competition and Consumer Protection
+                Act and other applicable law.
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="10. Governing Law & Dispute Resolution">
+            <LegalSection title="12. Governing Law & Dispute Resolution">
               <LegalParagraph>
                 These Terms and any dispute arising from or related to them or your use of the platform shall be governed by
                 and construed in accordance with the laws of the Federal Republic of Nigeria. Any dispute, controversy, or claim
-                that cannot be resolved amicably shall be submitted to the exclusive jurisdiction of the state and federal courts
-                situated in Nigeria, without affecting any mandatory statutory consumer protections that cannot be waived.
+                that cannot be resolved amicably may be submitted to a court of competent jurisdiction in Nigeria. This
+                does not remove any mandatory consumer remedy, complaint route or forum available under applicable law.
                 Terms version: <LegalStrong>{TERMS_VERSION}</LegalStrong>.
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="11. Direct Administration & Inquiries">
+            <LegalSection title="13. Changes, Severability & Inquiries">
               <LegalParagraph>
-                For questions regarding governance, moderation appeals, or institutional partnerships:
-                {'\n\n'}
-                <LegalStrong>Campus Platform Administration</LegalStrong>
-                {'\n'}Support Email: {DATA_CONTROLLER.contactEmail}
-                {'\n'}Privacy & Legal Inquiries: {DPO_EMAIL}
+                We may update these Terms and will present material changes for notice or renewed acceptance where
+                appropriate. If a provision is unenforceable, the remaining provisions continue to apply. For support,
+                copyright notices, governance questions, moderation appeals, privacy requests or legal inquiries, use
+                <LegalStrong> {DATA_CONTROLLER.supportChannel}</LegalStrong> while signed in.
               </LegalParagraph>
             </LegalSection>
           </View>

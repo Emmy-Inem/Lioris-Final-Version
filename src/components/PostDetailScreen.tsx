@@ -20,7 +20,7 @@ import { ActionSheetModal } from'./ActionSheetModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, togglePostRepost, toggleCommentLike, voteOnPoll, deletePost, updatePost, deletePostComment } from '@/api/posts';
+import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, deletePostComment } from '@/api/posts';
 import { canManageCommunityCategory } from '@/api/communities';
 import { getMyProfile } from '@/api/profile';
 import { submitReport } from '@/api/moderation';
@@ -74,8 +74,6 @@ export function PostDetailScreen() {
 
   const [liked, setLiked] = useState(!!post?.isLikedByMe);
   const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
-  const [reposted, setReposted] = useState(false);
-  const [repostsCount, setRepostsCount] = useState(post?.repostsCount ?? 0);
   const [bookmarked, setBookmarked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -121,7 +119,6 @@ export function PostDetailScreen() {
    if (post) {
      setLiked(!!post.isLikedByMe);
      setLikesCount(post.likesCount);
-     setRepostsCount(post.repostsCount);
      setPoll(post.poll ?? null);
    }
  }, [post]);
@@ -151,29 +148,6 @@ export function PostDetailScreen() {
      setLikesCount((prev) => prev + (next ? -1 : 1));
    }
  }
-
- /**
-  * Persists the repost instead of only toggling local state and claiming
-  * "Amplified to campus cohort" in an alert. Rolls back on failure so the
-  * count on screen always matches what was actually stored.
-  */
- async function handleToggleRepost() {
-   if (!post) return;
-   haptics.light();
-   const next = !reposted;
-   setReposted(next);
-   setRepostsCount((prev) => Math.max(0, prev + (next ? 1 : -1)));
-   try {
-     const serverCount = await togglePostRepost(post.id, next);
-     if (typeof serverCount === 'number') setRepostsCount(serverCount);
-     queryClient.invalidateQueries({ queryKey: ['feed'] });
-     queryClient.invalidateQueries({ queryKey: ['post', post.id] });
-    } catch (err: any) {
-      setReposted(!next);
-      setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
-      Alert.alert('Repost failed', getFriendlyErrorMessage(err, 'Could not repost at this time. Please try again.'));
-    }
-  }
 
  async function handleVote(optionId: string) {
    if (!poll || !post) return;
@@ -461,16 +435,10 @@ export function PostDetailScreen() {
  {/* Engagement Metrics Stats Row */}
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.divider }}>
  <AppText variant="bodySmall"weight="bold">
- {likesCount} <AppText tone="secondary"variant="caption">Likes</AppText>
+ {likesCount} <AppText tone="secondary"variant="caption">Helpful marks</AppText>
  </AppText>
  <AppText variant="bodySmall"weight="bold">
  {comments?.length ?? 0} <AppText tone="secondary"variant="caption">Replies</AppText>
- </AppText>
- {/* Real reposts_count. This was the literal "18 Reposts" on every post,
- next to a hardcoded "340 Views" - there is no view-tracking column, so
- that stat is gone rather than invented. */}
- <AppText variant="bodySmall"weight="bold">
- {repostsCount} <AppText tone="secondary"variant="caption">{repostsCount === 1 ? 'Repost' : 'Reposts'}</AppText>
  </AppText>
  </View>
 
@@ -479,26 +447,13 @@ export function PostDetailScreen() {
  <Pressable
  onPress={handleToggleLike}
  accessibilityRole="button"
- accessibilityLabel={liked ? 'Remove like' : 'Like thread'}
+ accessibilityLabel={liked ? 'Remove helpful mark' : 'Mark discussion as helpful'}
  accessibilityState={{ selected: liked }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
- <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={liked ? '#E53E3E' : colors.textSecondary} />
- <AppText variant="caption"weight="bold"style={{ color: liked ? '#E53E3E' : colors.textSecondary }}>
- {liked ? 'Liked' : 'Like'}
- </AppText>
- </Pressable>
-
- <Pressable
- onPress={handleToggleRepost}
- accessibilityRole="button"
- accessibilityLabel="Repost to cohort"
- accessibilityState={{ selected: reposted }}
- style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
- >
- <Ionicons name="repeat"size={20} color={reposted ? colors.brandPrimary : colors.textSecondary} />
- <AppText variant="caption"weight="bold"tone={reposted ? 'brand' : 'secondary'}>
- Repost
+ <Ionicons name={liked ? 'bulb' : 'bulb-outline'} size={20} color={liked ? colors.brandPrimary : colors.textSecondary} />
+ <AppText variant="caption"weight="bold"style={{ color: liked ? colors.brandPrimary : colors.textSecondary }}>
+ {liked ? 'Helpful' : 'Mark helpful'}
  </AppText>
  </Pressable>
 
@@ -522,19 +477,19 @@ export function PostDetailScreen() {
  <Pressable
  onPress={() => {
  haptics.light();
- Alert.alert('Share Link', 'Thread link copied to clipboard.');
+ Alert.alert('Link Copied', 'Discussion link copied to clipboard.');
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
- <Ionicons name="share-social-outline"size={20} color={colors.textSecondary} />
+ <Ionicons name="link-outline"size={20} color={colors.textSecondary} />
  <AppText variant="caption"weight="bold"tone="secondary">
- Share
+ Copy link
  </AppText>
  </Pressable>
  </View>
  </SolidCard>
 
-        {/* Comments Count & Header */}
+        {/* Replies count and header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, marginTop: spacing.xs }}>
           <AppText variant="h3" weight="bold">
             Discussion ({comments?.length ?? post.commentsCount})
@@ -629,15 +584,15 @@ export function PostDetailScreen() {
  </Pressable>
  ) : null}
 
- {/* Like & Reply action footer */}
+ {/* Helpful & Reply action footer */}
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm }}>
  <Pressable
  onPress={() => handleToggleCommentLikeAction(c.id, c.likesCount)}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
  >
- <Ionicons name={isCommentLiked ? 'heart' : 'heart-outline'} size={14} color={isCommentLiked ? '#E53E3E' : colors.textSecondary} />
- <AppText variant="caption" weight={isCommentLiked ? 'bold' : 'regular'} style={{ color: isCommentLiked ? '#E53E3E' : colors.textSecondary }}>
- {cLikes > 0 ? cLikes : 'Like'}
+ <Ionicons name={isCommentLiked ? 'bulb' : 'bulb-outline'} size={14} color={isCommentLiked ? colors.brandPrimary : colors.textSecondary} />
+ <AppText variant="caption" weight={isCommentLiked ? 'bold' : 'regular'} style={{ color: isCommentLiked ? colors.brandPrimary : colors.textSecondary }}>
+ {cLikes > 0 ? `${cLikes} helpful` : 'Helpful'}
  </AppText>
  </Pressable>
 
@@ -771,8 +726,8 @@ export function PostDetailScreen() {
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
- <Ionicons name="share-social-outline"size={18} color={colors.textPrimary} />
- <AppText weight="medium">Share Thread Link</AppText>
+ <Ionicons name="link-outline"size={18} color={colors.textPrimary} />
+ <AppText weight="medium">Copy Discussion Link</AppText>
  </Pressable>
 
  {/* Author Delete Thread Control */}

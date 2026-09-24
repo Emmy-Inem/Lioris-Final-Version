@@ -79,7 +79,7 @@ test.describe('legal pages', () => {
 });
 
 test.describe('registration guard rails', () => {
-  test('submit is blocked until the 18+ and terms checkboxes are ticked', async ({ page }) => {
+  test('submit is blocked until the age-eligibility and terms checkboxes are ticked', async ({ page }) => {
     const signupRequests: string[] = [];
     page.on('request', (req) => {
       if (/\/auth\/v1\/signup/.test(req.url()) || /functions\/v1\/.*(register|signup)/.test(req.url())) {
@@ -99,10 +99,10 @@ test.describe('registration guard rails', () => {
 
     // Neither box ticked: the age gate is checked first.
     await submit.click();
-    await expect(page.getByText(/Please confirm that you are at least/)).toBeVisible();
+    await expect(page.getByText(/Confirm that you are 18\+/)).toBeVisible();
 
     // Age ticked, terms not: the terms message appears.
-    await page.getByRole('checkbox', { name: /I confirm that I am 18/ }).click();
+    await page.getByRole('checkbox', { name: /I am 18 or older/ }).click();
     await submit.click();
     await expect(page.getByText(/Please accept the Terms of Service/)).toBeVisible();
 

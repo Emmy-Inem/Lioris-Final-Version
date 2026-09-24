@@ -24,8 +24,8 @@ Current production surfaces:
 | Engineer on call (Vercel, Supabase, functions) | TODO(owner) | TODO(owner) | |
 | Trust & Safety lead (moderation queue, Critical reports) | TODO(owner) | TODO(owner) | |
 | Communications (announcements, social, campus reps) | TODO(owner) | TODO(owner) | |
-| DPO / privacy (`privacy@lioris.app`) | TODO(owner) | TODO(owner) | |
-| Support desk (`support@lioris.app`, in-app support tickets) | TODO(owner) | TODO(owner) | |
+| DPO / privacy (verified monitored route; currently in-app Privacy & Data tickets) | TODO(owner) | TODO(owner) | |
+| Support desk (in-app support tickets; add email only after mailbox verification) | TODO(owner) | TODO(owner) | |
 | Campus reps (per campus, first point of feedback) | TODO(owner) | | |
 
 Rules: one commander at a time; the commander decides rollback. Write every production change and incident into one shared log with a UTC time.
@@ -42,7 +42,7 @@ Rules: one commander at a time; the commander decides rollback. Write every prod
 - [ ] Demo/quick-login buttons on the login page ("QUICK 1-CLICK DEMO ACCOUNTS": Student/Staff/Admin/Alumni) are removed or hidden in production builds; an Admin one-click login on a public page must not exist at launch.
 - [ ] CI green on the release commit (typecheck, lint, tests, CodeQL, e2e).
 - [ ] `scripts/verify-production.sh` passes against the Vercel URL (`SITE_URL=<url> scripts/verify-production.sh`).
-- [ ] Legal pages live and correct: `/privacy`, `/terms`, `/community-rules`; owner placeholders in `src/constants/legal.ts` (registered address, NDPC reference) filled or consciously accepted; NDPC registration status confirmed.
+- [ ] Legal pages live and correct: `/privacy`, `/terms`, `/community-rules`; verified operator identity and service address supplied; DCPMI/NDPC registration status assessed; no invented registration reference published.
 - [ ] Moderation: `docs/operations/moderation-runbook.md` contact sheet filled in and reviewed by legal counsel; staff moderators named per campus and trained; tabletop exercise done.
 - [ ] Uptime monitor and alerts configured (`docs/operations/monitoring.md` section 2), tested by pausing a check.
 - [ ] Admin/staff accounts created, MFA enrolled, and a break-glass admin documented (two admins minimum: the app blocks removal of the last active admin).
@@ -168,7 +168,7 @@ There is no automatic down-migration. Prepare before applying anything:
 | Security or data incident | Follow `incident-response.md` (NDPC within 72 hours; users without undue delay when high risk); legal review before wording | DPO + counsel | DPO |
 | Moderation or child-safety incident | No public statement unless counsel or the police advise; brief the owner privately | Trust & Safety lead | |
 
-Standing rules: no speculation about causes, no blaming vendors publicly, one spokesperson, keep a copy of every message sent. Support replies come from `support@lioris.app`; privacy requests from `privacy@lioris.app` are answered within 30 days (`DSR_RESPONSE_DAYS`).
+Standing rules: no speculation about causes, no blaming vendors publicly, one spokesperson, keep a copy of every message sent. Support and privacy replies use a verified monitored route; data requests are answered within the applicable period (`DSR_RESPONSE_DAYS`).
 
 ## 7. After 72 hours
 

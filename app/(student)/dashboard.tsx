@@ -758,7 +758,7 @@ export default function StudentDashboard() {
           </View>
         )}
 
-        {/* 7. Trending Campus Discussions */}
+        {/* 7. Active Campus Discussions */}
         <View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
@@ -780,7 +780,7 @@ export default function StudentDashboard() {
                 <EmptyState
                   icon="chatbubbles-outline"
                   title="No discussions yet"
-                  description="Be the first to start a conversation on the campus feed."
+                  description="Be the first to ask a question or start an academic discussion."
                   actionLabel="Open Feed"
                   onAction={() => router.push('/(student)/feed')}
                 />
@@ -815,7 +815,7 @@ export default function StudentDashboard() {
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="heart-outline" size={14} color={colors.textSecondary} />
+                      <Ionicons name="bulb-outline" size={14} color={colors.textSecondary} />
                       <AppText variant="caption" tone="secondary">
                         {post.likesCount ?? 0}
                       </AppText>

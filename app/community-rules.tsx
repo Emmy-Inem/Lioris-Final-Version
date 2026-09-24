@@ -7,8 +7,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
-import { LegalSection, LegalParagraph, LegalStrong } from '@/components/LegalSection';
-import { DATA_CONTROLLER, TERMS_VERSION } from '@/constants/legal';
+import { LegalSection, LegalParagraph, LegalBullets, LegalStrong } from '@/components/LegalSection';
+import { COMMUNITY_RULES_VERSION, DATA_CONTROLLER } from '@/constants/legal';
 
 export default function CommunityRulesScreen() {
   const { isDark, toggleTheme } = useTheme();
@@ -135,7 +135,7 @@ export default function CommunityRulesScreen() {
                 Community Guidelines
               </AppText>
               <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
-                Version {TERMS_VERSION} • {DATA_CONTROLLER.legalName}
+                Version {COMMUNITY_RULES_VERSION} • {DATA_CONTROLLER.legalName}
               </AppText>
             </View>
 
@@ -158,22 +158,43 @@ export default function CommunityRulesScreen() {
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="3. Academic Honor Code">
+            <LegalSection title="3. Privacy, Sexual Safety & Personal Information">
+              <LegalBullets
+                items={[
+                  'Do not publish another person’s private contact, identity, location, financial or academic information without permission.',
+                  'Non-consensual intimate images, sexual coercion, stalking and threats are prohibited and may be referred to authorities.',
+                  'Never solicit sexual content from a minor. Child sexual abuse material is removed and reported as required by law.',
+                ]}
+              />
+            </LegalSection>
+
+            <LegalSection title="4. Academic Honor Code & Copyright">
               <LegalParagraph>
                 Sharing past examination papers, syllabus summaries, and tutorial explanations is encouraged.
                 However, publishing active examination questions, circulating stolen marking schemes, or soliciting
-                impersonation in university assessments constitutes a severe violation resulting in immediate account termination.
+                impersonation in university assessments constitutes a severe violation. Only share material you own,
+                are licensed to distribute, or may lawfully use. Repeat copyright infringement may result in account termination.
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="4. Mentorship & Professional Etiquette">
+            <LegalSection title="5. Marketplace Safety">
+              <LegalBullets
+                items={[
+                  'Do not list weapons, controlled substances, stolen or counterfeit goods, unsafe products, fraudulent services or anything prohibited by law or campus rules.',
+                  'Do not request advance-payment fees, one-time passwords, account credentials or deceptive off-platform payments.',
+                  'Lioris does not hold marketplace funds or provide escrow. Inspect goods before paying and meet in a safe public place.',
+                ]}
+              />
+            </LegalSection>
+
+            <LegalSection title="6. Mentorship & Professional Etiquette">
               <LegalParagraph>
                 Alumni volunteer their time to guide current undergraduates. Students are expected to maintain
                 punctuality, professionalism, and courteous communication during 1-on-1 mentorship sessions.
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="5. Report and Block">
+            <LegalSection title="7. Report and Block">
               <LegalParagraph>
                 You are in control of your experience. Use the report option on any post, comment, message, listing or
                 profile to flag a violation, and use block to stop a person from contacting you or appearing in your
@@ -182,16 +203,16 @@ export default function CommunityRulesScreen() {
               </LegalParagraph>
             </LegalSection>
 
-            <LegalSection title="6. Reaching Moderators & Appeals">
+            <LegalSection title="8. Reaching Moderators, Emergencies & Appeals">
               <LegalParagraph>
                 To report a community violation, escalate an urgent safety concern, or appeal a moderation decision,
-                use the in-app report or Support Desk (Settings) or contact us directly:
-                {'\n\n'}
-                <LegalStrong>Community Moderation Desk</LegalStrong>
-                {'\n'}Email: {DATA_CONTROLLER.contactEmail}
-                {'\n'}Telephone: {DATA_CONTROLLER.contactPhone}
+                use the in-app report or <LegalStrong>{DATA_CONTROLLER.supportChannel}</LegalStrong>. Explain what
+                happened and include the relevant content or account. Lioris reports are not monitored as an emergency
+                service. If anyone faces immediate danger, contact campus security, local emergency services or law
+                enforcement first.
                 {'\n\n'}
                 Consequences range from content removal and warnings to suspension and permanent account termination.
+                We consider context, severity, history and applicable law. Appeals receive a fresh review where practicable.
               </LegalParagraph>
             </LegalSection>
           </View>

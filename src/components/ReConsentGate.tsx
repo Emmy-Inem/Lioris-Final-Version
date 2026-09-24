@@ -6,7 +6,7 @@ import { router, useSegments } from 'expo-router';
 import { supabase } from '@/api/supabase';
 import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
-import { MIN_AGE, MIN_AGE_WITH_CONSENT, TERMS_VERSION } from '@/constants/legal';
+import { INDEPENDENT_AGE, MIN_AGE, TERMS_VERSION } from '@/constants/legal';
 import { AppText } from './AppText';
 import { AppButton } from './AppButton';
 
@@ -178,8 +178,8 @@ export function ReConsentGate() {
             {checkbox(
               ageConfirmed,
               () => setAgeConfirmed((v) => !v),
-              `I confirm that I am ${MIN_AGE} years old or older, or an admitted student aged ${MIN_AGE_WITH_CONSENT} to 17 using Lioris with parent or guardian consent`,
-              `I confirm that I am ${MIN_AGE} years old or older, OR an admitted university student aged ${MIN_AGE_WITH_CONSENT}–17 using Lioris with parent/guardian consent.`,
+              `I confirm that I meet Lioris's age requirement`,
+              `I am ${INDEPENDENT_AGE}+ or an admitted university student aged ${MIN_AGE}–17 with parent or guardian authorisation.`,
             )}
 
             {error ? (

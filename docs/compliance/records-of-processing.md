@@ -1,11 +1,11 @@
 # Records of processing activities (NDPA 2023 / GDPR Art. 30)
 
-Controller: Lioris (`DATA_CONTROLLER` in `src/constants/legal.ts`). DPO: `DPO_EMAIL` (TODO(owner): confirm). Retention values reference `RETENTION` in the same file. Review whenever a feature is added.
+Controller currently presented to users as Lioris (`DATA_CONTROLLER` in `src/constants/legal.ts`). OWNER ACTION: insert the verified legal entity name and service address once established, complete any required NDPC registration, and appoint a competent DPO/privacy lead with a monitored contact route. Retention values reference `RETENTION` in the same file. Review whenever a feature is added.
 
 | # | Activity | Data categories | Purpose | Lawful basis | Retention | Processors / recipients | Transfers |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Account registration and authentication | Email, username, full name, password hash, role, MFA factor metadata, IP | Create and secure accounts | Contract; legal obligation (security) | Until account deletion | Supabase (Auth, DB), Vercel | Outside Nigeria - TODO(owner): regions |
-| 2 | Consent and age confirmation | Terms version, 18+ confirmation, timestamp | Evidence of acceptance and eligibility | Legal obligation; legitimate interest | Until account deletion | Supabase | as above |
+| 2 | Consent and age confirmation | Terms version, age eligibility / guardian-authorisation confirmation, timestamp | Evidence of acceptance and eligibility | Legal obligation; legitimate interest | Until account deletion | Supabase | as above |
 | 3 | Profile and directory | Institution, department, level, bio, interests, avatar/banner | Provide the social/academic profile | Contract | Until account deletion | Supabase (DB, Storage) | as above |
 | 4 | Institutional verification | University email domain; uploaded ID/admission document; decision and reviewer | Confirm affiliation, verified badge | Contract; legitimate interest; consent for voluntary document upload | Document: 30 days after decision (`verificationDocumentsDaysAfterDecision`); decision record until account deletion | Supabase (Storage, DB); authorised admins | as above |
 | 5 | Forums, resources, events, marketplace, mentorship, jobs | User-generated content, files, listings, registrations | Provide community features | Contract | Until deleted by user or account deletion | Supabase; other users (per chosen audience) | as above |

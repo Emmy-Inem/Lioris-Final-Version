@@ -17,11 +17,11 @@ Policy values (versions, retention periods, contacts) live in one place in code:
 | Right / duty | Where implemented |
 | --- | --- |
 | Notice / transparency | `/privacy`, `/terms`, `/community-rules` |
-| Age gate (18+) and consent evidence | Register screen checkboxes; `TERMS_VERSION` + `confirmedAge18` sent with sign-up (stored as auth metadata; `consent_records` table) |
+| Age gate and consent evidence | Register screen checkboxes; `TERMS_VERSION` + `confirmedAgeEligible` sent with sign-up (stored as auth metadata; `consent_records` table) |
 | Access and portability | Settings > Privacy & Data > Export my data (`exportMyData()` -> RPC `export_my_data`) |
 | Erasure | Settings > Privacy & Data > Delete my account (`deleteMyAccount()` -> edge function `delete-my-account`) |
 | Security (mandatory MFA for admin/staff) | `src/auth/mfaPolicy.ts`, `app/(auth)/verify-mfa.tsx` |
 
 ## Owner TODO summary
 
-Everything marked `TODO(owner)` in these documents and in `src/constants/legal.ts` must be resolved before public launch. The most important: NDPC registration status, DPO appointment and mailbox, registered address, signed DPAs with Supabase/Vercel/Google, hosting regions, and counsel review of Terms (liability cap, governing law).
+Everything marked `TODO(owner)` or `OWNER ACTION` must be resolved before commercial launch. The most important: verified legal operator identity and service address, DCPMI/NDPC registration assessment, DPO/privacy contact, processor agreements, hosting and retention verification, and Nigerian counsel review of the Terms and Privacy Policy.

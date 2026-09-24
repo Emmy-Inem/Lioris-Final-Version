@@ -26,6 +26,7 @@ export function DesktopSidebar() {
  const { colors, isDark, toggleTheme, radius } = useTheme();
  const { user, logout } = useAuth();
  const { scope: viewScope, setScope: setViewScope } = useViewScope();
+ const { isFeatureEnabled } = useFeatureFlags();
  const pathname = usePathname();
  const [collapsed, setCollapsed] = useState(false);
 
@@ -46,6 +47,11 @@ export function DesktopSidebar() {
  queryFn: () => listNotifications(),
  enabled: !!user?.id,
  });
+ const globalWorkspaceEnabled = isFeatureEnabled('global_workspace');
+
+ React.useEffect(() => {
+   if (!globalWorkspaceEnabled && viewScope === 'global') setViewScope('campus');
+ }, [globalWorkspaceEnabled, viewScope, setViewScope]);
 
  const unreadMessagesCount = (conversations ?? []).reduce(
  (acc: number, c: any) => acc + (c.unreadCount || 0),
@@ -56,8 +62,6 @@ export function DesktopSidebar() {
  ).length;
 
  const role = user?.role || 'student';
-
-  const { isFeatureEnabled } = useFeatureFlags();
 
   const rawStudentNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Dashboard', href: '/(student)/dashboard', icon: 'home' },
@@ -181,7 +185,7 @@ export function DesktopSidebar() {
  )}
  </Pressable>
 
- <Pressable
+ {globalWorkspaceEnabled ? <Pressable
  onPress={() => setCollapsed(!collapsed)}
  accessibilityRole="button"
  accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -200,7 +204,7 @@ export function DesktopSidebar() {
  size={18}
  color={isDark ? '#94A3B8' : '#64748B'}
  />
- </Pressable>
+ </Pressable> : null}
  </View>
 
  {/* Active Campus Scope Pill & Scope Switcher */}

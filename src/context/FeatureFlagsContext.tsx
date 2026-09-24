@@ -25,12 +25,13 @@ export type FeatureKey =
   | 'forum_trends'
   | 'alumni_network'
   | 'campus_announcements'
+  | 'global_workspace'
   | 'staff_role';
 
 export interface FeatureFlagMeta {
   key: FeatureKey;
   label: string;
-  category: 'Engagement & XP' | 'Commerce & Career' | 'Campus Life' | 'AI & Tools';
+  category: 'Academic Community' | 'Commerce & Career' | 'Campus Life' | 'AI & Tools';
   tier: 'P0' | 'P1' | 'P2';
   description: string;
   defaultOn: boolean;
@@ -96,17 +97,17 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
   {
     key: 'discussion_workspaces',
     label: 'Topic Discussions & Polls',
-    category: 'Engagement & XP',
+    category: 'Academic Community',
     tier: 'P0',
     description: 'Allows community forum threads, student voting polls, and departmental discussions.',
     defaultOn: true,
   },
   {
     key: 'forum_trends',
-    label: 'Currently Threading & Forum Trends',
-    category: 'Engagement & XP',
+    label: 'Active Academic Discussions',
+    category: 'Academic Community',
     tier: 'P1',
-    description: 'Displays live trending campus discussions, hot hashtags, and popular thread topics in the forum feed.',
+    description: 'Highlights current campus questions and useful discussion topics in the forum.',
     defaultOn: true,
   },
   {
@@ -179,6 +180,14 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Campus Life',
     tier: 'P1',
     description: 'Displays university administration broadcasts, faculty bulletins, and emergency announcements.',
+    defaultOn: true,
+  },
+  {
+    key: 'global_workspace',
+    label: 'Cross-University Workspace',
+    category: 'Academic Community',
+    tier: 'P1',
+    description: 'Shows Global workspace selectors and cross-university publishing. Disable to remove those controls and keep members in their campus workspace.',
     defaultOn: true,
   },
   {

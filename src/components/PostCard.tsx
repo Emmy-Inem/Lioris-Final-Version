@@ -20,7 +20,7 @@ import { VisibilityBadge } from'./VisibilityBadge';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { Post } from'@/api/types';
-import { togglePostLike, togglePostRepost, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
+import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY } from'@/api/bookmarks';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
@@ -92,18 +92,14 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
 
  const [liked, setLiked] = useState(!!post.isLikedByMe);
  const [likesCount, setLikesCount] = useState(post.likesCount);
- const [reposted, setReposted] = useState(!!post.isRepostedByMe);
- const [repostsCount, setRepostsCount] = useState(post.repostsCount);
  const [bookmarked, setBookmarked] = useState(!!post.isBookmarkedByMe);
  const [savingBookmark, setSavingBookmark] = useState(false);
  const [menuOpen, setMenuOpen] = useState(false);
  const [deleting, setDeleting] = useState(false);
 
  React.useEffect(() => {
- setReposted(!!post.isRepostedByMe);
  setBookmarked(!!post.isBookmarkedByMe);
- setRepostsCount(post.repostsCount);
- }, [post.isRepostedByMe, post.isBookmarkedByMe, post.repostsCount]);
+ }, [post.isBookmarkedByMe]);
 
  // Full screen image lightbox
  const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -202,26 +198,6 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  Alert.alert(next ? 'Could not save' : 'Could not remove', getFriendlyErrorMessage(err, 'Please try again.'));
  } finally {
  setSavingBookmark(false);
- }
- }
-
- async function handleToggleRepost() {
- haptics.light();
- const next = !reposted;
- setReposted(next);
- setRepostsCount((prev) => Math.max(0, prev + (next ? 1 : -1)));
- try {
- const result = await togglePostRepost(post.id, next);
- if (result && typeof result === 'object') {
- setReposted(result.reposted);
- setRepostsCount(result.count);
- }
- queryClient.invalidateQueries({ queryKey: ['feed'] });
- queryClient.invalidateQueries({ queryKey: ['my-posts'] });
- } catch (err: any) {
- setReposted(!next);
- setRepostsCount((prev) => Math.max(0, prev + (next ? -1 : 1)));
- Alert.alert('Repost failed', getFriendlyErrorMessage(err, 'Could not repost at this time. Please try again.'));
  }
  }
 
@@ -496,7 +472,7 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  </View>
  ) : null}
 
- {/* Engagement Actions Bar (Twitter X / Threads Style) */}
+ {/* Academic discussion actions */}
  <View
  style={{
  flexDirection: 'row',
@@ -508,10 +484,10 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  borderTopColor: colors.divider,
  }}
  >
- {/* Upvote / Like Action */}
+ {/* Mark as helpful */}
  <Pressable
  onPress={handleToggleLike}
- accessibilityRole="button"accessibilityLabel={liked ? 'Remove like' : 'Like thread'}
+ accessibilityRole="button"accessibilityLabel={liked ? 'Remove helpful mark' : 'Mark thread as helpful'}
  accessibilityState={{ selected: liked }}
  style={{
  flexDirection: 'row',
@@ -521,9 +497,9 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  paddingVertical: 6,
  }}
  >
- <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? '#E53E3E' : colors.textSecondary} />
- <AppText variant="bodySmall"weight={liked ? 'bold' : 'medium'} style={{ color: liked ? '#E53E3E' : colors.textSecondary }}>
- {likesCount}
+ <Ionicons name={liked ? 'bulb' : 'bulb-outline'} size={18} color={liked ? colors.brandPrimary : colors.textSecondary} />
+ <AppText variant="bodySmall"weight={liked ? 'bold' : 'medium'} style={{ color: liked ? colors.brandPrimary : colors.textSecondary }}>
+ {likesCount > 0 ? `${likesCount} helpful` : 'Helpful'}
  </AppText>
  </Pressable>
 
@@ -541,18 +517,6 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  <Ionicons name="chatbubble-outline"size={17} color={colors.textSecondary} />
  <AppText variant="bodySmall"tone="secondary"weight="medium">
  {post.commentsCount ?? 0}
- </AppText>
- </Pressable>
-
- {/* Repost / Share to Cohort */}
- <Pressable
- onPress={handleToggleRepost}
- accessibilityRole="button"accessibilityLabel={reposted ? 'Undo repost' : 'Repost to cohort'}
- accessibilityState={{ selected: reposted }}style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
- >
- <Ionicons name="repeat"size={18} color={reposted ? colors.brandPrimary : colors.textSecondary} />
- <AppText variant="bodySmall"tone={reposted ? 'brand' : 'secondary'} weight={reposted ? 'bold' : 'regular'}>
- {reposted ? 'Reposted' : repostsCount > 0 ? `${repostsCount}` : 'Repost'}
  </AppText>
  </Pressable>
 
@@ -579,8 +543,8 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
- <Ionicons name="share-social-outline"size={18} color={colors.textPrimary} />
- <AppText weight="medium">Share Thread Link</AppText>
+ <Ionicons name="link-outline"size={18} color={colors.textPrimary} />
+ <AppText weight="medium">Copy Discussion Link</AppText>
  </Pressable>
 
  {/* Author Delete Thread Control */}

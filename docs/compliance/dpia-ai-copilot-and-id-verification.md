@@ -56,7 +56,7 @@ Proceed subject to: DPA with Google signed; in-UI privacy hint; retention decisi
 | Over-broad admin access | Medium | High | Limit reviewer role, audit log of views (TODO(owner): verify), training | Low-Medium |
 | Retention beyond purpose | Medium | Medium | 30-day purge; deletion on account erasure | Low |
 | Wrong rejection (automated decision) | Low | Medium | Decisions are made by human reviewers; appeal via support | Low |
-| Minors submitting ID | Low | High | 18+ gate; reject and delete under-18 documents | Low |
+| Students aged 16–17 submitting ID | Low | High | Guardian-authorisation attestation; limited reviewer access; reject and delete ineligible submissions | Low-Medium |
 | Storage of special-category data (photo) | Medium | Medium | Same controls; do not use for any other purpose (no biometric matching) | Low |
 
 ### 4. Outcome

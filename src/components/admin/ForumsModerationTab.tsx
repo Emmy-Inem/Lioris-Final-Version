@@ -457,7 +457,7 @@ export function ForumsModerationTab() {
                     </AppText>
                   </View>
                   <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    Author: {post.authorName} ({post.authorRole.toUpperCase()}) • {post.category} • {post.likesCount} Likes • {post.commentsCount} Comments
+                    Author: {post.authorName} ({post.authorRole.toUpperCase()}) • {post.category} • {post.likesCount} Helpful • {post.commentsCount} Replies
                   </AppText>
                 </View>
                 {post.isPinned ? <Badge label="Pinned" tone="neutral" /> : null}

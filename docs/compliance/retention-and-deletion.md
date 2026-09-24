@@ -7,11 +7,11 @@ Authoritative values: `RETENTION` in `src/constants/legal.ts` (also shown in the
 | Data | Retention | Mechanism | Status |
 | --- | --- | --- | --- |
 | Account, profile, user content | Until account deletion | User-initiated delete | Implemented via `delete-my-account` |
-| Chat messages | Until account (or conversation) deletion | Cascade on account deletion | Implemented via `delete-my-account` (TODO(owner): verify all message tables are covered) |
-| Verification documents | 30 days after decision; immediately on account deletion | Scheduled purge of storage objects and rows | TODO(owner): confirm a scheduled job (e.g. pg_cron + storage cleanup edge function) exists; not implemented by the client |
-| Audit logs | 24 months | Scheduled delete of older rows | TODO(owner): confirm a scheduled job exists |
-| AI Copilot prompts/images | Not stored by Lioris beyond the request; Google-side per its terms | - | TODO(owner): verify no logging in `gemini-proxy` |
-| Deleted-account data | Purged immediately; backups roll off within 30 days | Edge function + Supabase backup rotation | TODO(owner): confirm the backup window on the Supabase plan |
+| Chat messages | While account/conversation remains active, subject to safety, legal and backup exceptions | Cascade on account deletion | Implemented via `delete-my-account` (TODO(owner): verify all message tables are covered) |
+| Verification documents | Target: within 30 days after decision, unless required for fraud, disputes or law | Scheduled purge of storage objects and rows | TODO(owner): implement and verify the scheduled purge; the client alone does not enforce this |
+| Audit logs | Target: normally up to 24 months | Scheduled delete of older rows | TODO(owner): implement and verify a scheduled job |
+| AI Copilot prompts/images | Request handling plus provider retention/safety practices | Provider and edge-function controls | TODO(owner): verify edge-function logging and current Google terms |
+| Deleted-account data | Removed from active service after the request completes; target backup roll-off within 30 days | Edge function + provider backup rotation | TODO(owner): confirm the actual backup window on the Supabase plan |
 | Support tickets / reports | Until account deletion | - | TODO(owner): decide whether moderation records must outlive the account (legal claims) |
 | Data subject request log | TODO(owner) | - | - |
 

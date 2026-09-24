@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -15,6 +15,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 import { listCommunities } from '@/api/communities';
 import { getFriendlyErrorMessage } from '@/utils/errors';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 const POLL_DURATIONS = [
   { label: '1 hour', hours: 1 },
@@ -100,12 +101,18 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { isFeatureEnabled } = useFeatureFlags();
+  const globalWorkspaceEnabled = isFeatureEnabled('global_workspace');
   const isAdmin = user?.role === 'admin';
   const { data: communities = [] } = useQuery({ queryKey: ['communities'], queryFn: listCommunities });
   const [topic, setTopic] = useState('');
   const [content, setContent] = useState('');
   const [channel, setChannel] = useState('Academic');
   const [visibility, setVisibility] = useState<'Campus Only' | 'Global Reach'>('Campus Only');
+
+  useEffect(() => {
+    if (!globalWorkspaceEnabled && visibility === 'Global Reach') setVisibility('Campus Only');
+  }, [globalWorkspaceEnabled, visibility]);
   const [customMediaUri, setCustomMediaUri] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -660,7 +667,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               Audience
             </AppText>
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
-              {(['Campus Only', 'Global Reach'] as const).map((v) => {
+              {(globalWorkspaceEnabled ? (['Campus Only', 'Global Reach'] as const) : (['Campus Only'] as const)).map((v) => {
                 const selected = visibility === v;
                 return (
                   <Pressable

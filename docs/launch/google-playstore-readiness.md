@@ -78,7 +78,7 @@ Google Play mandates that any app that allows account creation must allow users 
   - Requires explicit confirmation (`DELETE`) and triggers `deleteMyAccount()` (`/functions/v1/delete-my-account`), purging personal profile, tokens, and credentials.
 - **Web Deletion URL**:
   - Provide: `https://lioris-final-version.vercel.app/privacy` (or final domain `https://lioris.app/privacy`).
-  - Contains instructions and contact link (`privacy@lioris.app` / Data Protection Officer).
+  - Contains instructions and a verified, monitored privacy contact route (do not publish an unprovisioned mailbox).
 
 ---
 
@@ -164,7 +164,7 @@ EAS will generate a cryptographically signed `.aab` file ready for the Play Cons
    - Privacy Policy URL: `https://lioris-final-version.vercel.app/privacy`
    - App Access: Provide demo login credentials (e.g. test student account) for Google Play reviewers.
    - Content Rating: Complete IARC questionnaire (Social/Communication, moderate user interactions, moderation in place).
-   - Target Audience: 18+ (University/Tertiary students & alumni).
+   - Target Audience: university/tertiary students and alumni; minimum age 16, with parent/guardian authorisation required for ages 16–17.
    - Data Safety: Fill using the guide in Section 3 above.
 3. **Internal / Closed Testing**:
    - Upload the `.aab` file to **Internal testing** first.

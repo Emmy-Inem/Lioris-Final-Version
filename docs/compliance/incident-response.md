@@ -7,7 +7,7 @@ Applies to any suspected loss, unauthorised access, alteration or disclosure of 
 | Role | Responsibility | Holder |
 | --- | --- | --- |
 | Incident Lead | Owns the incident, decides severity, coordinates everything below | TODO(owner) |
-| DPO | Assesses risk to individuals, decides on NDPC / user notification, keeps the breach register | TODO(owner) (see `DPO_EMAIL`) |
+| Privacy lead / DPO | Assesses risk to individuals, decides on NDPC / user notification, keeps the breach register | OWNER ACTION: appoint and document the responsible person and verified contact route |
 | Technical Lead | Containment, forensics, recovery | TODO(owner) |
 | Communications | Drafts user/NDPC/institution messages | TODO(owner) |
 

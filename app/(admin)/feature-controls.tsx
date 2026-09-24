@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, ScrollView, Switch, View } from 'react-native';
+import { ScrollView, Switch, View } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
@@ -16,7 +16,7 @@ export default function AdminFeatureControlsScreen() {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const toast = useToast();
-  const { flags, isFeatureEnabled, setFeature, resetDefaults } = useFeatureFlags();
+  const { isFeatureEnabled, setFeature, resetDefaults } = useFeatureFlags();
 
   async function handleToggleFlag(key: FeatureKey, next: boolean, label: string) {
     haptics.medium();
@@ -55,7 +55,7 @@ export default function AdminFeatureControlsScreen() {
               Feature Controls
             </AppText>
             <AppText tone="secondary" variant="caption">
-              Temporarily enable or disable any non-major feature across campus
+              Enable or remove optional modules across the entire platform
             </AppText>
           </View>
           <AppButton label="Reset All" variant="ghost" size={isDesktop ? 'md' : 'sm'} onPress={handleResetDefaults} />

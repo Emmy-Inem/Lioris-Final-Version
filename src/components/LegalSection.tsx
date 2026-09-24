@@ -55,13 +55,3 @@ export function LegalStrong({ children }: { children: React.ReactNode }) {
     </AppText>
   );
 }
-
-/** Highlighted placeholder that the owner must fill in before launch. */
-export function LegalPlaceholder({ children }: { children: React.ReactNode }) {
-  const { colors } = useTheme();
-  return (
-    <AppText weight="bold" style={{ color: colors.warning }}>
-      {children}
-    </AppText>
-  );
-}

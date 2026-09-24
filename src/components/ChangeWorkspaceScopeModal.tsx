@@ -11,6 +11,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useViewScope } from '@/hooks/useViewScope';
 import { LAUNCH_INSTITUTIONS, createInstitution } from '@/api/institutions';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 interface ChangeWorkspaceScopeModalProps {
   visible: boolean;
@@ -34,6 +35,8 @@ export function ChangeWorkspaceScopeModal({
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { activeCampusCode, setActiveCampusCode } = useViewScope();
+  const { isFeatureEnabled } = useFeatureFlags();
+  const globalWorkspaceEnabled = isFeatureEnabled('global_workspace');
   const isAdmin = user?.role === 'admin';
 
   // Guest explored workspaces list (exclude home institution and global)
@@ -137,14 +140,14 @@ export function ChangeWorkspaceScopeModal({
  onClose();
  }}
  />
- <ScopeOption
+ {globalWorkspaceEnabled ? <ScopeOption
  icon="globe-outline"title="All Lioris Global Feed"subtitle="See posts and announcements cross-country"selected={scope === 'global'}
  onPress={() => {
  setCustomAccent(null);
  onSelectScope('global');
  onClose();
  }}
- />
+ /> : null}
 
  {/* Admin-Only: Explore and Switch to Other Campus Workspaces */}
  {isAdmin ? (

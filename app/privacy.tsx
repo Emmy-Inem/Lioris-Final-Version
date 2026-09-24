@@ -7,8 +7,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
-import { LegalSection, LegalParagraph, LegalBullets, LegalStrong, LegalPlaceholder } from '@/components/LegalSection';
-import { BREACH_NOTIFICATION_HOURS, DATA_CONTROLLER, DPO_EMAIL, DSR_RESPONSE_DAYS, HOSTING_REGIONS, MIN_AGE, MIN_AGE_WITH_CONSENT, NDPC, PRIVACY_VERSION, RETENTION } from '@/constants/legal';
+import { LegalSection, LegalParagraph, LegalBullets, LegalStrong } from '@/components/LegalSection';
+import { BREACH_NOTIFICATION_HOURS, DATA_CONTROLLER, DSR_RESPONSE_DAYS, HOSTING_REGIONS, INDEPENDENT_AGE, MIN_AGE, NDPC, PRIVACY_VERSION, RETENTION } from '@/constants/legal';
 
 export default function PrivacyPolicyScreen() {
   const { isDark, toggleTheme } = useTheme();
@@ -149,11 +149,9 @@ export default function PrivacyPolicyScreen() {
               </LegalParagraph>
               <LegalBullets
                 items={[
-                  <><LegalStrong>Data controller:</LegalStrong> {DATA_CONTROLLER.legalName} ({DATA_CONTROLLER.name}, "we", "us")</>,
-                  <><LegalStrong>Registered address:</LegalStrong> <LegalPlaceholder>{DATA_CONTROLLER.address}</LegalPlaceholder></>,
-                  <><LegalStrong>NDPC registration reference:</LegalStrong> <LegalPlaceholder>{DATA_CONTROLLER.ndpcRegistration}</LegalPlaceholder></>,
-                  <><LegalStrong>Data Protection Officer (DPO) / privacy mailbox:</LegalStrong> {DPO_EMAIL}</>,
-                  <><LegalStrong>Support & institutional inquiries:</LegalStrong> {DATA_CONTROLLER.contactEmail}</>,
+                  <><LegalStrong>Service and data controller:</LegalStrong> {DATA_CONTROLLER.legalName} ({DATA_CONTROLLER.name}, “we”, “us”)</>,
+                  <><LegalStrong>Privacy and data requests:</LegalStrong> {DATA_CONTROLLER.privacyChannel}</>,
+                  <><LegalStrong>Support and institutional inquiries:</LegalStrong> {DATA_CONTROLLER.supportChannel}</>,
                 ]}
               />
             </LegalSection>
@@ -161,7 +159,7 @@ export default function PrivacyPolicyScreen() {
             <LegalSection title="2. Personal Data We Collect">
               <LegalBullets
                 items={[
-                  <><LegalStrong>Account data:</LegalStrong> email address, username, full name, password (stored only as a salted hash by our authentication provider), role (student, alumni, staff, admin), and security settings such as two-factor authentication status.</>,
+                  <><LegalStrong>Account data:</LegalStrong> email address, username, full name, authentication credentials handled by our authentication provider, role (student, alumni, staff, admin), and security settings such as two-factor authentication status.</>,
                   <><LegalStrong>Profile data:</LegalStrong> institution, faculty/department, level, bio, interests, avatar and banner images, and preferences you choose to add.</>,
                   <><LegalStrong>University email and verification data:</LegalStrong> your institutional email domain and, if you apply for the verified tick, verification documents such as a student ID card or admission letter that you upload, together with the review decision.</>,
                   <><LegalStrong>User content:</LegalStrong> forum posts, comments, study resources, marketplace listings, event registrations, mentorship requests, support tickets and reports you file.</>,
@@ -188,7 +186,7 @@ export default function PrivacyPolicyScreen() {
                   <><LegalStrong>Safety, moderation and abuse prevention</LegalStrong> (reports, blocking, spam and bot detection, audit logs). Lawful basis: legitimate interest, and legal obligation where we must act on unlawful content.</>,
                   <><LegalStrong>Security and integrity of the platform</LegalStrong> (rate limiting, fraud prevention, incident investigation). Lawful basis: legitimate interest and legal obligation to keep personal data secure.</>,
                   <><LegalStrong>Complying with the law</LegalStrong> (responding to lawful requests, breach notification). Lawful basis: legal obligation.</>,
-                  <><LegalStrong>Recording your acceptance of these documents</LegalStrong> (Terms version, 18+ confirmation). Lawful basis: legitimate interest in evidencing consent and legal obligation.</>,
+                  <><LegalStrong>Recording your acceptance of these documents</LegalStrong> (Terms version and age-eligibility confirmation). Lawful basis: legitimate interest in evidencing consent and legal obligation.</>,
                 ]}
               />
               <LegalParagraph>
@@ -211,8 +209,9 @@ export default function PrivacyPolicyScreen() {
                 ]}
               />
               <LegalParagraph>
-                We share only what each provider needs, under written data-processing terms, and we do not permit them
-                to use your data for their own advertising.
+                We aim to disclose only what each recipient needs for the stated purpose. Each third-party provider
+                processes data under its own contractual terms and privacy notice; provider practices can change, so
+                review those notices before using an optional integration.
               </LegalParagraph>
             </LegalSection>
 
@@ -231,15 +230,11 @@ export default function PrivacyPolicyScreen() {
                 ]}
               />
               <LegalParagraph>
-                Where personal data leaves Nigeria we rely on the cross-border transfer rules of the NDPA 2023
-                (sections 41 to 43) and the safeguards they permit: (a) Sweden and the EU are covered by the GDPR, a
-                data-protection regime that provides a level of protection at least comparable to the NDPA; (b) for
-                Vercel and Google, and for any onward transfer to the United States or other countries, we rely on
-                binding data-processing agreements that include standard contractual clauses and confidentiality and
-                security obligations; and (c) where neither applies, on your informed consent or another lawful basis
-                the NDPA allows. We only send providers the data they need to perform their service. Contact
-                {DPO_EMAIL} if you would like more detail on the safeguards for a particular provider.
-                For EU/UK users, transfers rely on adequacy decisions or standard contractual clauses.
+                Where personal data leaves Nigeria, we assess the transfer under sections 41 to 43 of the NDPA and use
+                an available lawful transfer mechanism, such as an adequate level of protection, contractual safeguards,
+                consent where legally valid, or another statutory exception. For EU/UK data, applicable transfer rules
+                also apply. Safeguards vary by provider and destination; request current details through
+                {` ${DATA_CONTROLLER.privacyChannel}`}.
               </LegalParagraph>
             </LegalSection>
 
@@ -248,10 +243,10 @@ export default function PrivacyPolicyScreen() {
                 items={[
                   <><LegalStrong>Account, profile and content:</LegalStrong> {RETENTION.accountData}.</>,
                   <><LegalStrong>Chat messages:</LegalStrong> {RETENTION.chatMessages}.</>,
-                  <><LegalStrong>Verification documents:</LegalStrong> deleted {RETENTION.verificationDocumentsDaysAfterDecision} days after the verification decision (or sooner when you delete your account).</>,
-                  <><LegalStrong>Audit and security logs:</LegalStrong> {RETENTION.auditLogsMonths} months.</>,
+                  <><LegalStrong>Verification documents:</LegalStrong> targeted for deletion within {RETENTION.verificationDocumentsDaysAfterDecision} days after the verification decision, unless required for a dispute, fraud prevention or law.</>,
+                  <><LegalStrong>Audit and security logs:</LegalStrong> normally up to {RETENTION.auditLogsMonths} months, with longer retention where a security incident or legal duty requires it.</>,
                   <><LegalStrong>AI Copilot prompts and images:</LegalStrong> {RETENTION.aiPrompts}.</>,
-                  <><LegalStrong>Deleted accounts:</LegalStrong> your data is purged {RETENTION.deletedAccountPurge}; backups roll off within {RETENTION.backupRollOffDays} days.</>,
+                  <><LegalStrong>Deleted accounts:</LegalStrong> data is removed {RETENTION.deletedAccountPurge}; residual provider backups normally roll off within {RETENTION.backupRollOffDays} days and are not used for ordinary service activity.</>,
                 ]}
               />
               <LegalParagraph>
@@ -279,19 +274,20 @@ export default function PrivacyPolicyScreen() {
               <LegalParagraph>
                 <LegalStrong>How to exercise them in the app:</LegalStrong> open Settings, then Privacy & Data. Use
                 "Export my data" to download a copy of your data, and "Delete my account" to permanently erase your
-                account and associated data. You can edit your profile directly in Settings. For any other request,
-                email {DPO_EMAIL}. We respond within {DSR_RESPONSE_DAYS} days and may need to verify your identity first.
+                account and associated data, subject to the exceptions above. You can edit your profile directly in
+                Settings. For any other request, use {DATA_CONTROLLER.privacyChannel}. We aim to respond within
+                {` ${DSR_RESPONSE_DAYS}`} days and may need to verify your identity first.
               </LegalParagraph>
             </LegalSection>
 
             <LegalSection title="8. Children and Age Limit">
               <LegalParagraph>
-                Lioris is intended for university students, faculty, and alumni. Under the NDPA 2023, individuals under 18
-                are treated as minors. However, recognizing Nigerian tertiary education admissions (JAMB minimum entry age of {MIN_AGE_WITH_CONSENT}),
-                students aged {MIN_AGE_WITH_CONSENT}–17 admitted to accredited institutions may register with parental or guardian consent.
-                Users must confirm they are at least {MIN_AGE}, or {MIN_AGE_WITH_CONSENT}–17 with parental/guardian authorization, upon registration.
-                Accounts created by children under {MIN_AGE_WITH_CONSENT} will be promptly closed and deleted. If you believe a child under {MIN_AGE_WITH_CONSENT}
-                is using Lioris without authorization, please contact {DPO_EMAIL}.
+                Lioris is for university communities. People aged {INDEPENDENT_AGE} or older may register themselves.
+                An admitted university student aged {MIN_AGE}–17 may register only with authorisation from a parent or
+                legal guardian and must confirm that authorisation during sign-up. People under {MIN_AGE} may not use
+                Lioris. If we learn that an ineligible account was created, we may suspend it and delete the child's
+                personal data, subject to safety and legal retention duties. Report a suspected ineligible account
+                through {DATA_CONTROLLER.supportChannel}.
               </LegalParagraph>
             </LegalSection>
 
@@ -320,7 +316,8 @@ export default function PrivacyPolicyScreen() {
                 Lioris uses only strictly necessary storage: session tokens (secure storage on mobile, browser storage on
                 the web) to keep you signed in, and preference settings such as theme and notification choices. We do not
                 use advertising or cross-site tracking cookies or third-party analytics trackers. Clearing your browser
-                storage or signing out removes this data from your device.
+                storage or signing out removes the local copy from that device; server-side account data remains until
+                it is deleted under the process described above.
               </LegalParagraph>
             </LegalSection>
 
@@ -341,11 +338,9 @@ export default function PrivacyPolicyScreen() {
 
             <LegalSection title="14. Contact">
               <LegalParagraph>
-                <LegalStrong>Data Protection Officer / Privacy Mailbox:</LegalStrong> {DPO_EMAIL}
+                <LegalStrong>Privacy and data requests:</LegalStrong> {DATA_CONTROLLER.privacyChannel}
                 {'\n'}
-                <LegalStrong>Campus Support & Platform Administration:</LegalStrong> {DATA_CONTROLLER.contactEmail}
-                {'\n'}
-                <LegalStrong>Registered Office:</LegalStrong> {DATA_CONTROLLER.address}
+                <LegalStrong>Campus support and platform administration:</LegalStrong> {DATA_CONTROLLER.supportChannel}
               </LegalParagraph>
             </LegalSection>
           </View>

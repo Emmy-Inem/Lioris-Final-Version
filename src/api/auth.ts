@@ -32,8 +32,8 @@ export interface RegisterPayload {
  botField?: string;
  /** Version of the Terms/Privacy the user accepted at sign-up (stored as auth metadata). */
  acceptedTermsVersion?: string;
- /** User confirmed they are 18 or older. */
- confirmedAge18?: boolean;
+ /** User confirmed they are 18+, or an admitted student aged 16–17 with guardian authorisation. */
+ confirmedAgeEligible?: boolean;
  captchaToken?: string;
 }
 
@@ -340,7 +340,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
         campus_code: detectedCampus,
         terms_version: payload.acceptedTermsVersion ?? null,
         terms_accepted_at: payload.acceptedTermsVersion ? new Date().toISOString() : null,
-        age_confirmed_18: payload.confirmedAge18 === true,
+        age_eligibility_confirmed: payload.confirmedAgeEligible === true,
       },
       captchaToken: payload.captchaToken,
     },

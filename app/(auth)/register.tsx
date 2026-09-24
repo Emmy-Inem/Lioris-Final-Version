@@ -20,7 +20,7 @@ import { getInstitutionForEmail, LAUNCH_INSTITUTIONS, getInstitutionByCode, join
 import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
-import { MIN_AGE, MIN_AGE_WITH_CONSENT, TERMS_VERSION } from '@/constants/legal';
+import { INDEPENDENT_AGE, MIN_AGE, TERMS_VERSION } from '@/constants/legal';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
 import { persistCampus } from '@/hooks/useViewScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
@@ -120,7 +120,7 @@ export default function RegisterScreen() {
     return;
   }
   if (!confirmedAge) {
-    setErrorMessage(`Lioris is for university students and staff. Please confirm that you are at least ${MIN_AGE}, or an admitted student aged ${MIN_AGE_WITH_CONSENT}–17 with parent/guardian consent.`);
+    setErrorMessage(`Confirm that you are ${INDEPENDENT_AGE}+ or an admitted university student aged ${MIN_AGE}–17 with parent or guardian authorisation.`);
     return;
   }
  if (!acceptedTerms) {
@@ -151,7 +151,7 @@ export default function RegisterScreen() {
       campusCode: effectiveCampusCode,
       botField,
       acceptedTermsVersion: TERMS_VERSION,
-      confirmedAge18: true,
+      confirmedAgeEligible: true,
       captchaToken: captchaToken || undefined,
     });
     seedProfileUsername(
@@ -423,7 +423,7 @@ export default function RegisterScreen() {
   accessibilityRole="checkbox"
   accessibilityState={{ checked: confirmedAge }}
   aria-checked={confirmedAge}
-  accessibilityLabel="I confirm that I am 18 years old or older, or a university student aged 16–17 registering with parent or guardian consent"
+  accessibilityLabel="I am 18 or older, or an admitted university student aged 16 to 17 with parent or guardian authorisation"
   style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, minHeight: 44, marginBottom: spacing.md, marginTop: spacing.sm }}
   >
     <View style={{ width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'flex-start' }}>
@@ -434,7 +434,7 @@ export default function RegisterScreen() {
       />
     </View>
     <AppText variant="bodySmall" style={{ flex: 1 }}>
-      I confirm that I am {MIN_AGE} years old or older, OR a university student aged {MIN_AGE_WITH_CONSENT}–17 registering with parent/guardian consent.
+      I am {INDEPENDENT_AGE}+ or an admitted university student aged {MIN_AGE}–17 with parent or guardian authorisation.
     </AppText>
   </Pressable>
 

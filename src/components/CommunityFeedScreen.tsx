@@ -70,11 +70,17 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { isFeatureEnabled } = useFeatureFlags();
+  const globalWorkspaceEnabled = isFeatureEnabled('global_workspace');
   const { isDesktop, isWideDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const segments = useSegments();
   const roleGroup = segments[0] ?? '(student)';
+  const { scope: viewScope, setScope: setViewScope } = useViewScope();
+
+  useEffect(() => {
+    if (!globalWorkspaceEnabled && viewScope === 'global') setViewScope('campus');
+  }, [globalWorkspaceEnabled, viewScope, setViewScope]);
 
   const params = useLocalSearchParams<{ category?: string }>();
   const toast = useToast();
@@ -154,7 +160,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
   const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
   const [sortModalOpen, setSortModalOpen] = useState(false);
-  const { scope: viewScope, setScope: setViewScope } = useViewScope();
 
   // Desktop horizontal channels scrolling ref & wheel listener
   const desktopChannelsScrollRef = useRef<ScrollView>(null);
@@ -390,7 +395,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </AppText>
         </View>
 
-        {!isDesktop && (
+        {!isDesktop && globalWorkspaceEnabled && (
           <View
             style={{
               flexDirection: 'row',
@@ -464,7 +469,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         <Pressable
           onPress={() => setSortModalOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel={`Sort: ${sortBy === 'latest' ? 'Latest' : 'Most Popular'}`}
+          accessibilityLabel={`Sort: ${sortBy === 'latest' ? 'Latest' : 'Most Helpful'}`}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -479,23 +484,23 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         >
           <Ionicons name="swap-vertical" size={14} color={colors.textSecondary} />
           <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 11 }}>
-            {sortBy === 'latest' ? 'Latest' : 'Top'}
+            {sortBy === 'latest' ? 'Latest' : 'Helpful'}
           </AppText>
         </Pressable>
       </View>
 
-      {/* 🔥 Currently Threading Section */}
+      {/* Active academic discussions */}
       {isFeatureEnabled('forum_trends') && (
         <View style={{ marginBottom: spacing.sm }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Ionicons name="flame" size={15} color="#EF4444" />
-              <AppText weight="bold" variant="caption" style={{ letterSpacing: 0.5, textTransform: 'uppercase', color: '#EF4444' }}>
-                Currently Threading
+              <Ionicons name="school-outline" size={15} color={colors.brandPrimary} />
+              <AppText weight="bold" variant="caption" style={{ letterSpacing: 0.5, textTransform: 'uppercase', color: colors.brandPrimary }}>
+                Active Discussions
               </AppText>
             </View>
             <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
-              Live Discussions
+              Academic forum
             </AppText>
           </View>
 
@@ -523,7 +528,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                    <Ionicons name="flame" size={12} color="#EF4444" />
+                    <Ionicons name="school-outline" size={12} color={colors.brandPrimary} />
                     <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }} numberOfLines={1}>
                       {tp.category}
                     </AppText>
@@ -533,7 +538,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </AppText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
-                      ❤️ {tp.likesCount}
+                      💡 {tp.likesCount} helpful
                     </AppText>
                     <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
                       💬 {tp.commentsCount ?? 0}
@@ -543,7 +548,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               ))
             ) : (
               <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                No trending threads yet - be the first to start one.
+                No active discussions yet — be the first to ask a useful question.
               </AppText>
             )}
           </ScrollView>
@@ -555,7 +560,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Ionicons name="planet-outline" size={15} color={colors.textSecondary} />
           <AppText weight="bold" variant="caption" tone="secondary" style={{ letterSpacing: 0.5, textTransform: 'uppercase', fontSize: 11 }}>
-            Communities
+            Discussion Spaces
           </AppText>
         </View>
         <Pressable onPress={() => setSubForumsDirectoryOpen(true)} hitSlop={8}>
@@ -814,7 +819,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     borderColor: colors.border,
                   }}
                 >
-                  {(['campus', 'global'] as const).map((s) => {
+                  {(globalWorkspaceEnabled ? (['campus', 'global'] as const) : (['campus'] as const)).map((s) => {
                     const selected = viewScope === s;
                     return (
                       <Pressable
@@ -1098,8 +1103,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     {isAdmin
                       ? 'Publish an official campus announcement or thread...'
                       : selectedChannel
-                      ? `What's on your mind for ${activeSubForum.slug}? Share with cohort...`
-                      : "What's on your mind? Share an update or start a thread..."}
+                      ? `Ask a question or start a discussion in ${activeSubForum.slug}...`
+                      : 'Ask an academic question or start a discussion...'}
                   </AppText>
                 </Pressable>
               </View>

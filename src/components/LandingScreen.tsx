@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Alert,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -21,7 +20,6 @@ import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { AppTextField } from '@/components/AppTextField';
 import { joinWaitlist, LAUNCH_INSTITUTIONS } from '@/api/institutions';
-import { DATA_CONTROLLER, DPO_EMAIL } from '@/constants/legal';
 import { haptics } from '@/utils/haptics';
 import { AndroidBlurBackdrop, AndroidBlurFill, AndroidBlurScope } from '@/components/AndroidBlur';
 import { AndroidSoftGlow } from '@/components/AndroidSoftGlow';
@@ -1160,22 +1158,26 @@ export function LandingScreen() {
                 {/* Direct Contact Details */}
                 <View style={{ gap: 10 }}>
                   <Pressable
-                    onPress={() => Linking.openURL(`mailto:${DATA_CONTROLLER.contactEmail}`)}
+                    onPress={() => router.push('/(auth)/login')}
+                    accessibilityRole="link"
+                    accessibilityLabel="Sign in to contact support"
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
                   >
-                    <Ionicons name="mail-outline" size={16} color={colors.brandPrimary} />
+                    <Ionicons name="help-buoy-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="bodySmall" weight="semiBold" style={{ color: isDark ? '#E2E8F0' : '#1E293B' }}>
-                      {DATA_CONTROLLER.contactEmail}
+                      Support: sign in and open Settings → Support
                     </AppText>
                   </Pressable>
 
                   <Pressable
-                    onPress={() => Linking.openURL(`mailto:${DPO_EMAIL}`)}
+                    onPress={() => router.push('/privacy')}
+                    accessibilityRole="link"
+                    accessibilityLabel="Read privacy and data request information"
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
                   >
                     <Ionicons name="shield-checkmark-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="bodySmall" weight="semiBold" style={{ color: isDark ? '#E2E8F0' : '#1E293B' }}>
-                      {DPO_EMAIL}
+                      Privacy & data requests
                     </AppText>
                   </Pressable>
                 </View>

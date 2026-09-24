@@ -24,7 +24,7 @@ import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from '@/api/profile';
 import { roleRequiresMfa } from '@/auth/mfaPolicy';
-import { DPO_EMAIL, DSR_RESPONSE_DAYS, PRIVACY_VERSION, TERMS_VERSION } from '@/constants/legal';
+import { DATA_CONTROLLER, DSR_RESPONSE_DAYS, PRIVACY_VERSION, TERMS_VERSION } from '@/constants/legal';
 import { LAUNCH_INSTITUTIONS, getInstitutionByCode } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
 import { submitReport } from '@/api/moderation';
@@ -1639,7 +1639,7 @@ export function SettingsScreen() {
 
                 <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
                   <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.xs }}>
-                    We respond to other data requests within {DSR_RESPONSE_DAYS} days. Contact {DPO_EMAIL}.
+                    We aim to respond to other data requests within {DSR_RESPONSE_DAYS} days. Use {DATA_CONTROLLER.privacyChannel}.
                   </AppText>
                   {LEGAL_LINKS.map((doc) => (
                     <Pressable

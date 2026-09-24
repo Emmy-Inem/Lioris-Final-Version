@@ -114,7 +114,7 @@ Path: **Authentication > Emails > SMTP Settings** and **Authentication > Emails 
 | Enable custom SMTP | ON |
 | Provider | Resend, Postmark, Brevo or AWS SES (pick one with good delivery to Nigerian providers and Gmail/Outlook). Use the provider's SMTP host, port 465/587, and an API-key-based password stored in a password manager. |
 | Sender email / name | `no-reply@lioris.app` (**DOMAIN**), name "Lioris". Until the domain exists, use a sender on a domain you own and can verify. The provider will not send from a domain without SPF/DKIM verification. |
-| DNS (**DOMAIN**) | Add the provider's SPF, DKIM and a DMARC record (`v=DMARC1; p=none; rua=mailto:privacy@lioris.app` to start, then tighten) on `lioris.app`. Without them, mail lands in spam. |
+| DNS (**DOMAIN**) | After a real monitored mailbox is provisioned, add the provider's SPF, DKIM and a DMARC record using that verified address. Do not publish or configure an unmonitored `lioris.app` mailbox. |
 | Minimum interval between emails to the same user | 60 seconds (matches the app's 60 s resend cooldown) |
 
 **Templates** (Authentication > Emails > Templates):
@@ -125,7 +125,7 @@ Path: **Authentication > Emails > SMTP Settings** and **Authentication > Emails 
 | **Reset password** | Either `{{ .Token }}` or `{{ .ConfirmationURL }}` depending on the reset flow currently shipped (`resetPasswordForEmail` with `redirectTo`); test end to end and keep whichever works. |
 | **Change email address** | **Must show the 6-digit code with `{{ .Token }}`.** Settings > Security > Change Email asks the user to type the code (`ChangeEmailModal`); a link-only template dead-ends the flow. |
 | **Magic link / Invite / Reauthentication** | Not used by the app today; keep the defaults but brand them |
-| All templates | Lioris name and support contact (`support@lioris.app`), plain language, "If you did not request this, ignore this email", no third-party tracking pixels |
+| All templates | Lioris name and a verified monitored support route, plain language, "If you did not request this, ignore this email", no third-party tracking pixels |
 
 After changing SMTP or templates, send yourself a real sign-up and a password reset and check spam placement in Gmail and one Nigerian provider.
 

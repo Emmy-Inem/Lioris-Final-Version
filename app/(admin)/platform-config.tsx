@@ -361,7 +361,7 @@ export default function PlatformConfigScreen() {
         <View style={{ flex: 1 }}>
           <AppText weight="bold" variant="bodySmall">Super Admin Configuration</AppText>
           <AppText tone="secondary" variant="caption">
-            Multi-tenant federation, escrow payouts, biometrics & root settings
+            Multi-tenant federation, security controls, biometrics & root settings
           </AppText>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />

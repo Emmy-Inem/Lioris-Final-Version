@@ -171,6 +171,9 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit, defaultI
           </AppText>
 
           <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md, lineHeight: 16 }}>
+              Cover unrelated financial details, home addresses and identification numbers before uploading.
+            </AppText>
             <AppTextField label="Your school" value={institutionClaimed} onChangeText={setInstitutionClaimed} placeholder="e.g. Obafemi Awolowo University" />
 
             <AppText weight="semiBold" variant="bodySmall" style={{ marginBottom: spacing.sm }}>

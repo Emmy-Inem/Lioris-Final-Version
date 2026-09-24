@@ -10,7 +10,6 @@ import { JobCard } from '@/components/JobCard';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { useTheme } from '@/theme/ThemeProvider';
-import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listJobs } from '@/api/jobs';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -25,9 +24,8 @@ const JOB_FILTERS = [
 ];
 
 export default function JobsScreen() {
- const { colors, spacing, radius, isDark } = useTheme();
+ const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
- const { user } = useAuth();
  const queryClient = useQueryClient();
  const [query, setQuery] = useState('');
  const [selectedFilter, setSelectedFilter] = useState('all');
@@ -61,14 +59,14 @@ export default function JobsScreen() {
                 Career & Internships
               </AppText>
               <AppText tone="secondary" variant="bodySmall">
-                Verified student internships, alumni referrals, and graduate associate roles
+                Community-posted internships, alumni referrals, and graduate roles
               </AppText>
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
-                <AppText variant="caption" tone="secondary" weight="semiBold">Alumni Verified Roles</AppText>
+                <AppText variant="caption" tone="secondary" weight="semiBold">Campus Network Listings</AppText>
               </View>
 
               <Pressable
@@ -221,7 +219,7 @@ export default function JobsScreen() {
             </Pressable>
           </View>
           <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
-            Verified student roles, alumni referrals & industry gigs
+            Community-posted roles, alumni referrals & industry gigs
           </AppText>
         </View>
 

@@ -440,7 +440,7 @@ export default function LoginScreen() {
  Connect, study, and thrive within your verified campus community.
  </AppText>
  <AppText tone="inverse" variant="body" style={{ opacity: 0.85, fontSize: 16 }}>
- Real-time lecture schedules, verified past questions library, student escrow marketplace, and faculty mentorship in one unified hub.
+ Real-time lecture schedules, verified past questions library, peer-to-peer campus marketplace, and faculty mentorship in one unified hub.
  </AppText>
 
  {/* Badges */}

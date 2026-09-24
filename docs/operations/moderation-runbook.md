@@ -13,7 +13,7 @@ Every item below must be completed by the owner before launch. Nothing in this r
 | Trust & Safety lead (final decision maker) | TODO(owner): name, phone, email |
 | Trust & Safety backup | TODO(owner) |
 | Legal counsel (Nigeria) | TODO(owner): firm, named contact, out-of-hours number |
-| DPO | `DPO_EMAIL` in `src/constants/legal.ts` (privacy@lioris.app) - TODO(owner): named person |
+| Privacy lead / DPO | OWNER ACTION: appoint a competent person where required, record their verified contact route, and monitor Privacy & Data tickets |
 | Nigeria Police Force - National Cybercrime Centre (NPF-NCCC) | TODO(owner): current report channel (email/portal/phone) - verify on the NPF website |
 | NAPTIP (National Agency for the Prohibition of Trafficking in Persons) | TODO(owner): current hotline/email |
 | NCMEC CyberTipline (US) | https://report.cybertip.org - TODO(owner): create the Electronic Service Provider (ESP) registration and record the account contact |
@@ -93,7 +93,7 @@ Known limitations to be aware of (verify before launch, owner/engineering):
 ## 6. Appeals
 
 - Who can appeal: any user whose content was removed or whose account was warned, suspended or terminated.
-- How: reply through the in-app support desk (or email support@lioris.app) within **14 days** of the notice, stating why the decision was wrong. TODO(owner): confirm the window.
+- How: reply through the in-app Support Desk within **14 days** of the notice, stating why the decision was wrong. TODO(owner): confirm the window.
 - Who decides: a moderator or admin who was **not** involved in the original decision. Terminations and suspensions of more than 7 days are decided by an admin or the Trust & Safety lead.
 - Timing: acknowledge within 3 working days, decide within **7 days**.
 - Outcomes: upheld, reduced (for example suspension converted to a warning), or overturned (content restored, strike removed, account restored via User Directory). Record the outcome in the audit note and tell the user in plain language.
@@ -182,7 +182,7 @@ Reports involving a minor as a victim of non-sexual content (bullying, self-harm
 ### 9.4 Prevention notes for engineering (not part of this doc's operational steps)
 
 - Consider hash-matching (for example the NCMEC/IWF hash lists via a vendor or Cloudflare's CSAM scanning tool if the CDN is placed in front) and image moderation on upload once the owner has decided on cost and privacy trade-offs. TODO(owner/engineering).
-- Age gate and freshmen-with-consent rules are in `src/constants/legal.ts` (18+, or 16-17 with parent/guardian consent).
+- Age gate and student-with-consent rules are in `src/constants/legal.ts` (18+, or admitted students aged 16–17 with parent/guardian authorisation).
 
 ## 10. Moderator wellbeing
 

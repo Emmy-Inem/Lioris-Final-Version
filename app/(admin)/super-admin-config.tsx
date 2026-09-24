@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from'react';
-import { Alert, Pressable, ScrollView, Switch, View } from'react-native';
+import { Alert, ScrollView, Switch, View } from'react-native';
 import { router } from'expo-router';
 import { ScreenContainer } from'@/components/ScreenContainer';
 import { AppHeader } from'@/components/AppHeader';
@@ -15,16 +15,12 @@ import { createNotification } from '@/api/notifications';
 import { AppTextField } from '@/components/AppTextField';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 type ModalKey =
   | 'addUniversity'
   | 'domainAuthority'
   | 'tenantToggles'
   | 'seasonalLeaderboards'
-  | 'paymentGateway'
-  | 'escrowConfig'
-  | 'legacyVault'
   | 'serverSecrets'
   | 'toxicityThresholds'
   | 'cloudStorage'
@@ -32,9 +28,8 @@ type ModalKey =
   | null;
 
 export default function SuperAdminConfigScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { spacing } = useTheme();
   const { isDesktop } = useResponsive();
-  const { isFeatureEnabled, setFeature } = useFeatureFlags();
   const [activeModal, setActiveModal] = useState<ModalKey>(null);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
@@ -43,16 +38,9 @@ export default function SuperAdminConfigScreen() {
   const [newUniCode, setNewUniCode] = useState('');
   const [newUniLocation, setNewUniLocation] = useState('');
   const [newUniDomain, setNewUniDomain] = useState('');
-  const [paystackKey, setPaystackKey] = useState('');
-  const [flutterwaveKey, setFlutterwaveKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const [domainAuthorityInput, setDomainAuthorityInput] = useState('@ui.edu.ng, @student.ui.edu.ng, @unilag.edu.ng, @oau.edu.ng, @funaab.edu.ng');
-  const [seasonNameVal, setSeasonNameVal] = useState('Semester 1 2025/2026');
-  const [seasonAutoReset, setSeasonAutoReset] = useState(true);
-  const [escrowHoldHours, setEscrowHoldHours] = useState('48');
-  const [escrowFeePercent, setEscrowFeePercent] = useState('1.5');
-  const [escrowAutoRefund, setEscrowAutoRefund] = useState(true);
   const [toxicityScoreLimit, setToxicityScoreLimit] = useState(80);
   const [cloudStorageImgMb, setCloudStorageImgMb] = useState('5');
   const [cloudStoragePdfMb, setCloudStoragePdfMb] = useState('25');
@@ -74,21 +62,6 @@ export default function SuperAdminConfigScreen() {
           const parsed = JSON.parse(cachedQuotas);
           if (parsed.maxImageMb) setCloudStorageImgMb(String(parsed.maxImageMb));
           if (parsed.maxPdfMb) setCloudStoragePdfMb(String(parsed.maxPdfMb));
-        }
-
-        const cachedEscrow = localStorage.getItem('lioris_setting_escrow_config');
-        if (cachedEscrow) {
-          const parsed = JSON.parse(cachedEscrow);
-          if (parsed.holdHours) setEscrowHoldHours(String(parsed.holdHours));
-          if (parsed.feePercent) setEscrowFeePercent(String(parsed.feePercent));
-          if (typeof parsed.autoRefund === 'boolean') setEscrowAutoRefund(parsed.autoRefund);
-        }
-
-        const cachedKeys = localStorage.getItem('lioris_setting_payment_gateway_config');
-        if (cachedKeys) {
-          const parsed = JSON.parse(cachedKeys);
-          if (parsed.paystackPublicKey) setPaystackKey(parsed.paystackPublicKey);
-          if (parsed.flutterwavePublicKey) setFlutterwaveKey(parsed.flutterwavePublicKey);
         }
 
         const cachedMaintenance = localStorage.getItem('lioris_setting_maintenance_mode');
@@ -228,31 +201,6 @@ export default function SuperAdminConfigScreen() {
     }
   }
 
-  async function handleSaveEscrow() {
-    setIsSaving(true);
-    try {
-      const config = {
-        holdHours: Number(escrowHoldHours) || 48,
-        feePercent: Number(escrowFeePercent) || 1.5,
-        autoRefund: escrowAutoRefund,
-      };
-      await persistSetting('escrow_config', config, 'Marketplace escrow parameters and holding periods');
-      await recordAuditLogEntry({
-        action: 'escrow_config_updated',
-        summary: `Updated Marketplace Escrow rules: Hold ${config.holdHours}h, Fee ${config.feePercent}%`,
-        targetType: 'platform_config',
-        targetId: 'escrow_config',
-        reason: 'Super admin escrow parameter update',
-      });
-      Alert.alert('Escrow Saved', 'Marketplace escrow configuration updated in database.');
-      setActiveModal(null);
-    } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not save escrow config.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   async function handleSendGlobalPush() {
     if (!pushTitle.trim() || !pushBody.trim()) {
       Alert.alert('Validation Error', 'Title and Alert message are required.');
@@ -279,30 +227,6 @@ export default function SuperAdminConfigScreen() {
       setActiveModal(null);
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to dispatch broadcast.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function handleSavePaymentKeys() {
-    setIsSaving(true);
-    try {
-      const keys = {
-        paystackPublicKey: paystackKey.trim(),
-        flutterwavePublicKey: flutterwaveKey.trim(),
-      };
-      await persistSetting('payment_gateway_config', keys, 'Campus payments and alumni endowment gateway keys');
-      await recordAuditLogEntry({
-        action: 'platform_config_updated',
-        summary: 'Updated payment gateway public API credentials',
-        targetType: 'platform_config',
-        targetId: 'payment_gateway_config',
-        reason: 'Payment provider configuration update',
-      });
-      Alert.alert('API Keys Saved', 'Payment gateway credentials updated in the database.');
-      setActiveModal(null);
-    } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not save payment credentials.');
     } finally {
       setIsSaving(false);
     }
@@ -420,19 +344,6 @@ export default function SuperAdminConfigScreen() {
             Its two rows opened 'xpMultiplier' and 'levelBadges' modals that
             were never implemented, so they were dead buttons on top of a
             feature with no backing tables. */}
-
- <Section number={3} title="Financial Infrastructure & Escrow"emoji="">
- <Row
- title="Payment Gateway API Manager"description="Secure Live/Test keys for Paystack/Flutterwave."actionLabel="Keys"onPress={() => setActiveModal('paymentGateway')}
- />
- <Row
- title="Marketplace Escrow Configurations"description="Holding periods and refund processors."actionLabel="Escrow"onPress={() => setActiveModal('escrowConfig')}
- />
- <Row
- title="Legacy Giving Vault"description="Monitor alumni donations & authorize disbursements."actionLabel="Vault"tone="critical"onPress={() => setActiveModal('legacyVault')}
- last
- />
- </Section>
 
  <Section number={4} title="Third-Party API & Integration"emoji="">
  <Row
@@ -556,36 +467,6 @@ export default function SuperAdminConfigScreen() {
         <AppTextField label="Message Body" value={pushBody} onChangeText={setPushBody} placeholder="Full details to display to all students and faculty..." multiline numberOfLines={3} />
       </AdminConfigModal>
 
-      {/* 5. Escrow Configurations */}
-      <AdminConfigModal
-        visible={activeModal === 'escrowConfig'}
-        onClose={() => setActiveModal(null)}
-        title="Marketplace Escrow Configurations"
-        description="Configure buyer protection holding periods and dispute rules."
-        onConfirm={handleSaveEscrow}
-        confirmLabel={isSaving ? 'Saving...' : 'Save Escrow Rules'}
-      >
-        <AppTextField label="Escrow Hold Period (Hours)" value={escrowHoldHours} onChangeText={setEscrowHoldHours} keyboardType="numeric" />
-        <AppTextField label="Platform Escrow Fee (%)" value={escrowFeePercent} onChangeText={setEscrowFeePercent} keyboardType="numeric" />
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md }}>
-          <AppText variant="bodySmall" weight="medium">Auto-Refund on Cancellation</AppText>
-          <Switch value={escrowAutoRefund} onValueChange={setEscrowAutoRefund} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
-        </View>
-      </AdminConfigModal>
-
-      {/* 6. Payment Gateway Keys */}
-      <AdminConfigModal
-        visible={activeModal === 'paymentGateway'}
-        onClose={() => setActiveModal(null)}
-        title="Payment Gateway API Keys"
-        description="Configure public API keys for Paystack and Flutterwave."
-        onConfirm={handleSavePaymentKeys}
-        confirmLabel={isSaving ? 'Saving...' : 'Save Gateway Keys'}
-      >
-        <AppTextField label="Paystack Public Key" value={paystackKey} onChangeText={setPaystackKey} placeholder="pk_live_..." autoCapitalize="none" />
-        <AppTextField label="Flutterwave Public Key" value={flutterwaveKey} onChangeText={setFlutterwaveKey} placeholder="FLWPUBK_..." autoCapitalize="none" />
-      </AdminConfigModal>
-
       {/* 7. Tenant Toggles Redirect Modal */}
       <AdminConfigModal
         visible={activeModal === 'tenantToggles'}
@@ -600,20 +481,6 @@ export default function SuperAdminConfigScreen() {
       >
         <AppText tone="secondary" variant="bodySmall">
           Navigate to the Feature Controls desk to adjust module toggles across your campus network.
-        </AppText>
-      </AdminConfigModal>
-
-      {/* 8. Legacy Giving Vault */}
-      <AdminConfigModal
-        visible={activeModal === 'legacyVault'}
-        onClose={() => setActiveModal(null)}
-        title="Legacy Giving & Endowment Vault"
-        description="Track alumni donations and student emergency grant funds."
-        onConfirm={() => setActiveModal(null)}
-        confirmLabel="Close"
-      >
-        <AppText variant="bodySmall" style={{ marginBottom: spacing.sm }}>
-          Endowment balance and disbursement approvals are securely managed in accordance with university senate guidelines.
         </AppText>
       </AdminConfigModal>
 

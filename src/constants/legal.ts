@@ -6,31 +6,26 @@
  * and docs/compliance/** all reference these values so that the policy text,
  * the UI and the documentation cannot drift apart.
  *
- * Fields marked TODO(owner) are placeholders that the business owner must
- * confirm/fill before public launch. They are deliberately visible in the
- * rendered policy so they cannot be missed.
+ * Do not add registration numbers, addresses or legal-entity names here until
+ * the operator has verified them. The product must never publish placeholders
+ * or imply that a regulatory registration has been issued when it has not.
  */
 
 /** Bump when the Terms of Service change materially (re-consent may be required). */
-export const TERMS_VERSION = '2026-09-19';
+export const TERMS_VERSION = '2026-09-24';
 /** Bump when the Privacy Policy changes materially. */
-export const PRIVACY_VERSION = '2026-09-19';
+export const PRIVACY_VERSION = '2026-09-24';
+export const COMMUNITY_RULES_VERSION = '2026-09-24';
 
-/** Minimum age to use Lioris independently (18+). Admitted university freshmen aged 16–17 are eligible with parental/guardian consent under NDPA 2023 s.31. */
-export const MIN_AGE = 18;
-export const MIN_AGE_WITH_CONSENT = 16;
+/** Minimum eligible age. Users aged 16–17 must have a parent/guardian's authorisation. */
+export const MIN_AGE = 16;
+export const INDEPENDENT_AGE = 18;
 
 export const DATA_CONTROLLER = {
   name: 'Lioris',
-  /** Legal entity name as displayed in the app footer today. */
-  legalName: 'Lioris Campus Technologies',
-  /** Official company support contact. */
-  contactEmail: 'support@lioris.app',
-  contactPhone: '+234 (0) 700-LIORIS-APP',
-  /** Registered physical office address. */
-  address: '[Registered Physical Office: Victoria Island / Yaba, Lagos, Nigeria]',
-  /** NDPC registration reference. */
-  ndpcRegistration: '[NDPC / DPCO Registration Reference: NDPC/DPCO/2026/04882 (In Process)]',
+  legalName: 'Lioris',
+  supportChannel: 'the in-app Support Desk (Settings → Support)',
+  privacyChannel: 'the in-app Support Desk (select Privacy & Data)',
 } as const;
 
 export const HOSTING_REGIONS = {
@@ -39,9 +34,6 @@ export const HOSTING_REGIONS = {
     'Supabase, hosted on Amazon Web Services in the eu-north-1 region (Stockholm, Sweden) - database, authentication and file storage',
   ai: "Google's infrastructure (Gemini API) - the processing location is determined by Google and may be outside Nigeria and the EU",
 } as const;
-
-/** Monitored mailbox for privacy and data protection inquiries. */
-export const DPO_EMAIL = 'privacy@lioris.app';
 
 /** Statutory response window for data-subject requests (NDPA 2023 / GDPR). */
 export const DSR_RESPONSE_DAYS = 30;
@@ -57,12 +49,12 @@ export const NDPC = {
 /** Retention schedule. Keep in sync with docs/compliance/retention-and-deletion.md. */
 export const RETENTION = {
   verificationDocumentsDaysAfterDecision: 30,
-  chatMessages: 'until you delete your account (or the conversation)',
+  chatMessages: 'while your account or the conversation remains active, subject to safety, legal and backup exceptions',
   auditLogsMonths: 24,
   accountData: 'until you delete your account',
-  deletedAccountPurge: 'immediately upon account deletion',
+  deletedAccountPurge: 'from the active service after a valid deletion request is completed',
   backupRollOffDays: 30,
-  aiPrompts: 'not stored by Lioris beyond the request; see Google Gemini terms for provider-side handling',
+  aiPrompts: 'handled for the request and subject to the AI provider’s applicable retention and safety practices',
 } as const;
 
 export const LEGAL_ROUTES = {

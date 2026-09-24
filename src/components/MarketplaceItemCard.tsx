@@ -36,7 +36,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   const [saved, setSaved] = useState(isWishlisted(item.id));
   const [messaging, setMessaging] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card' | 'transfer'>('wallet');
+  const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'cash'>('cash');
   const [processingOrder, setProcessingOrder] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
 
@@ -65,7 +65,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  }
  }
 
- async function handleConfirmEscrowOrder() {
+ async function handleSendMeetupRequest() {
  setProcessingOrder(true);
  try {
  const conversation = await getOrCreateConversationWithUser(item.sellerId, item.sellerName, item.sellerAvatarUrl);
@@ -92,10 +92,9 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  }, 600);
  } catch {
  setProcessingOrder(false);
- setCheckoutModalOpen(false);
  Alert.alert(
- 'Purchase Request Placed',
- `Your reservation request for "${item.title}" was sent to ${item.sellerName}. Meet safely on campus to inspect the item and complete the exchange.`,
+ 'Request Not Sent',
+ 'We could not message the seller. Check your connection and try again. No payment has been taken.',
  );
  }
  }
@@ -184,7 +183,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  <View style={{ flexDirection: 'row', gap: 4, marginTop: spacing.xs }}>
  <Pressable
  onPress={() => setCheckoutModalOpen(true)}
- accessibilityRole="button"accessibilityLabel={`Buy ${item.title} with Escrow`}
+ accessibilityRole="button"accessibilityLabel={`Request a meetup for ${item.title}`}
  style={{
  flex: 1,
  flexDirection: 'row',
@@ -196,9 +195,9 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  paddingVertical: 5,
  }}
  >
- <Ionicons name="shield-checkmark"size={10} color="#FFFFFF" />
+ <Ionicons name="people"size={10} color="#FFFFFF" />
  <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 9 }}>
- Buy 
+ Meetup
  </AppText>
  </Pressable>
 
@@ -231,7 +230,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   ) : null}
  </View>
 
-      {/* Escrow Checkout Modal */}
+      {/* Peer-to-peer meetup request modal. Lioris does not process payment. */}
       <Modal visible={checkoutModalOpen} transparent animationType="fade" onRequestClose={() => setCheckoutModalOpen(false)}>
         <View accessibilityViewIsModal
           style={{
@@ -248,7 +247,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
             <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                  <Ionicons name="shield-checkmark" size={20} color={colors.textSecondary} />
+                  <Ionicons name="people" size={20} color={colors.textSecondary} />
                   <AppText variant="h3" weight="bold">
                     Campus Pickup & Handover
                   </AppText>
@@ -261,6 +260,15 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
               <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
                 Arrange a safe in-person campus meetup with the seller. Inspect your item thoroughly before completing payment.
               </AppText>
+
+              <View style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.warning, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
+                <AppText weight="bold" variant="bodySmall" style={{ color: colors.warning, marginBottom: 4 }}>
+                  Peer-to-peer sale — no Lioris payment protection
+                </AppText>
+                <AppText variant="caption" tone="secondary">
+                  Lioris does not process or hold payment, provide escrow, inspect this item, or guarantee the seller. Avoid advance transfers, verify the item and seller, and pay only after a safe handover.
+                </AppText>
+              </View>
 
               <View style={{ backgroundColor: colors.divider, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -283,8 +291,8 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
                 Preferred Payment on Pickup
               </AppText>
               {[
-                { id: 'wallet' as const, name: 'Campus Bank / Mobile Transfer', icon: 'wallet-outline', desc: 'Instant bank or mobile peer transfer on handover' },
-                { id: 'card' as const, name: 'Cash on Handover', icon: 'cash-outline', desc: 'Direct cash payment after in-person inspection' },
+                { id: 'transfer' as const, name: 'Bank / Mobile Transfer on Handover', icon: 'phone-portrait-outline', desc: 'Transfer directly to the seller only after inspection' },
+                { id: 'cash' as const, name: 'Cash on Handover', icon: 'cash-outline', desc: 'Pay the seller directly after in-person inspection' },
               ].map((method) => {
                 const isSelected = paymentMethod === method.id;
                 return (
@@ -322,7 +330,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
                 <AppButton
                   label={orderComplete ? 'Request Sent' : processingOrder ? 'Sending Request...' : 'Reserve & Request Meetup'}
                   loading={processingOrder}
-                  onPress={handleConfirmEscrowOrder}
+                  onPress={handleSendMeetupRequest}
                 />
               </View>
             </ScrollView>

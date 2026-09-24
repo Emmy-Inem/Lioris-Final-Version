@@ -235,6 +235,9 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
           </AppText>
 
           <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.md, lineHeight: 16 }}>
+              Upload only material you may lawfully share—never active exams, leaked marking schemes or personal data.
+            </AppText>
             <AppTextField label="" placeholder="Resource Title / Subject" value={title} onChangeText={setTitle} />
             <AppTextField label="" placeholder="Course Code (e.g. CSC 301)" value={courseCode} onChangeText={setCourseCode} />
             <AppTextField label="" placeholder="Short Description" value={description} onChangeText={setDescription} multiline />
