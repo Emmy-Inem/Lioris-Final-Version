@@ -356,43 +356,132 @@ function Heading({ children }: { children: React.ReactNode }) {
  * ---------------------------------------------------------------------------------------------- */
 
 function HomeScreen({ role, onGo }: { role: MockRole; onGo: (key: string) => void }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const student = role === 'student';
-  const tiles: { label: string; icon: IconName; go: string }[] = student
+
+  // Same order, icons and wording as the real Home: identity card, then the services grid.
+  const tiles: { title: string; subtitle: string; icon: IconName; tint: string; go?: string }[] = student
     ? [
-        { label: 'Forum', icon: 'chatbubbles-outline', go: 'forum' },
-        { label: 'Events', icon: 'calendar-outline', go: 'events' },
-        { label: 'Library', icon: 'folder-open-outline', go: 'resources' },
+        { title: 'Messages', subtitle: 'Chats & calls', icon: 'chatbubble-ellipses', tint: colors.textSecondary },
+        { title: 'FX Converter', subtitle: 'Live rates & NGN', icon: 'cash-outline', tint: '#10B981' },
+        { title: 'Resources', subtitle: 'Past Qs & notes', icon: 'folder-open', tint: colors.textSecondary, go: 'resources' },
+        { title: 'Study Pods', subtitle: 'Course revision', icon: 'people', tint: '#10B981' },
+        { title: 'Forum', subtitle: 'Ask questions', icon: 'chatbubbles', tint: '#EC4899', go: 'forum' },
+        { title: 'Events & RSVPs', subtitle: 'Talks & summits', icon: 'calendar', tint: '#3B82F6', go: 'events' },
       ]
     : [
-        { label: 'Careers', icon: 'briefcase-outline', go: 'careers' },
-        { label: 'Mentors', icon: 'ribbon-outline', go: 'mentorship' },
-        { label: 'Forum', icon: 'chatbubbles-outline', go: 'forum' },
+        { title: 'Messages', subtitle: 'Chats & calls', icon: 'chatbubble-ellipses', tint: colors.textSecondary },
+        { title: 'Career Board', subtitle: 'Jobs & referrals', icon: 'briefcase', tint: '#F59E0B', go: 'careers' },
+        { title: 'Mentoring', subtitle: 'Guide the next class', icon: 'ribbon', tint: '#10B981', go: 'mentorship' },
+        { title: 'Alumni Network', subtitle: 'Find classmates', icon: 'people', tint: '#3B82F6' },
+        { title: 'Global Forum', subtitle: 'Join discussions', icon: 'chatbubbles', tint: '#EC4899', go: 'forum' },
+        { title: 'Campus Trade', subtitle: 'Buy & sell', icon: 'cart', tint: colors.textSecondary },
       ];
+
   return (
     <>
-      <LinearGradient
-        colors={student ? ['#1A3DFF', '#5B7CFF'] : ['#0F766E', '#14B8A6']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ borderRadius: 16, padding: 12, gap: 2 }}
-      >
-        <AppText weight="bold" style={{ fontSize: 9.5, letterSpacing: 0.8, color: 'rgba(255,255,255,0.8)' }}>
-          {student ? 'YOUR UNIVERSITY' : 'ALUMNI CIRCLE'}
-        </AppText>
-        <AppText weight="bold" style={{ fontSize: 15, color: '#FFFFFF' }}>
-          {student ? 'Welcome back' : 'Welcome back, alum'}
-        </AppText>
-      </LinearGradient>
+      {/* Identity card: cover, institution pill, avatar and welcome line - as on the real Home */}
+      <View style={{ borderRadius: 20, overflow: 'hidden', height: 118, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
+        <LinearGradient
+          colors={isDark ? ['#0d1b2a', '#1e293b', '#0f172a'] : ['#dbeafe', '#bfdbfe', '#93c5fd']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+        <LinearGradient
+          colors={['rgba(10,16,30,0.2)', 'rgba(10,16,30,0.55)', isDark ? 'rgba(8,14,28,0.94)' : 'rgba(15,23,42,0.86)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+        <View style={{ flex: 1, padding: 10, justifyContent: 'space-between' }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+              alignSelf: 'flex-start',
+              backgroundColor: 'rgba(15,23,42,0.65)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.16)',
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 999,
+            }}
+          >
+            <Ionicons name="school" size={10} color="#68D391" />
+            <AppText weight="bold" style={{ fontSize: 9.5, color: '#FFFFFF' }}>
+              {student ? 'Your University' : 'Alumni Chapter'}
+            </AppText>
+          </View>
 
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        {tiles.map((tile) => (
-          <Pressable key={tile.label} accessibilityRole="button" onPress={() => onGo(tile.go)} style={{ flex: 1 }}>
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 10, alignItems: 'center', gap: 6 }}>
-              <Ionicons name={tile.icon} size={17} color={colors.brandPrimary} />
-              <AppText weight="bold" style={{ fontSize: 10.5 }}>
-                {tile.label}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                borderWidth: 2,
+                borderColor: '#FFFFFF',
+                backgroundColor: colors.pastelPrimaryBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AppText weight="bold" style={{ fontSize: 14, color: colors.brandPrimary }}>
+                {student ? 'S' : 'A'}
               </AppText>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <AppText weight="bold" numberOfLines={1} style={{ fontSize: 12.5, color: '#FFFFFF', flexShrink: 1 }}>
+                  Welcome, {student ? 'Student' : 'Alumni'}
+                </AppText>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
+              </View>
+              <AppText numberOfLines={1} style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.85)' }}>
+                {student ? 'Your Department • UNI' : 'Class of 2020 • UNI'}
+              </AppText>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <AppText weight="bold" style={{ fontSize: 13, marginTop: 2 }}>
+        {student ? 'Student Services' : 'Alumni Services'}
+      </AppText>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+        {tiles.map((tile) => (
+          <Pressable
+            key={tile.title}
+            accessibilityRole="button"
+            accessibilityLabel={tile.title}
+            onPress={() => {
+              if (tile.go) onGo(tile.go);
+            }}
+            style={{ flexBasis: '47.5%', flexGrow: 1 }}
+          >
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: colors.border,
+                padding: 9,
+                minHeight: 66,
+                justifyContent: 'space-between',
+                gap: 6,
+              }}
+            >
+              <Ionicons name={tile.icon} size={17} color={tile.tint} />
+              <View>
+                <AppText weight="bold" numberOfLines={1} style={{ fontSize: 10.5, lineHeight: 14 }}>
+                  {tile.title}
+                </AppText>
+                <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 9, marginTop: 1 }}>
+                  {tile.subtitle}
+                </AppText>
+              </View>
             </View>
           </Pressable>
         ))}
