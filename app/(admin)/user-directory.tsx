@@ -1,4 +1,6 @@
 import React, { useState } from'react';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
+import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
@@ -96,6 +98,7 @@ const ROLE_FILTERS = ['All Roles', 'Student', 'Alumni', 'Staff', 'Admin'];
 const ALL_CAMPUSES = 'All Campuses';
 
 export default function UserDirectoryScreen() {
+  const adminBadges = useAdminBadges();
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
  const { user: currentUser, beginImpersonation } = useAuth();
@@ -811,6 +814,9 @@ export default function UserDirectoryScreen() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
+      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+        <AdminSectionTabs group="people" badges={{ verification: adminBadges.verification, support: adminBadges.support }} />
+      </View>
 
       {/* Header & Quick Action Row */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: spacing.sm }}>

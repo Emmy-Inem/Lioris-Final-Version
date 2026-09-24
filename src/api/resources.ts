@@ -2,6 +2,7 @@ import { Resource } from './types';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { isUserBlocked } from './connections';
+import { assertWithinStorageQuota } from './platformSettings';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
@@ -293,6 +294,8 @@ export async function createResource(
  // If binary file blob is provided, upload directly to Supabase Storage.
  // supabase-js resolves with `{ error }` rather than throwing, so it must be checked.
  if (fileBlob) {
+ const uploadBytes = fileBlob instanceof ArrayBuffer ? fileBlob.byteLength : (fileBlob as Blob).size;
+ await assertWithinStorageQuota(uploadBytes, ft === 'IMG' ? 'image' : 'document');
  const { error: uploadError } = await supabase.storage.from('resources').upload(storagePath, fileBlob, {
  contentType: storedMimeType,
  upsert: false,

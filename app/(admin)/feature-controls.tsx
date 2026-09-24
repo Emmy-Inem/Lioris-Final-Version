@@ -1,4 +1,5 @@
 import React from 'react';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { ScrollView, Switch, View } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
@@ -43,6 +44,9 @@ export default function AdminFeatureControlsScreen() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
+      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+        <AdminSectionTabs group="platform" />
+      </View>
       <ScrollView style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

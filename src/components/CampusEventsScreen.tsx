@@ -455,7 +455,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               <View
                 key={event.id}
                 style={{
-                  width: 320,
+                  width: isDesktop ? 320 : '100%',
                   maxWidth: '100%',
                 }}
               >

@@ -483,7 +483,7 @@ export function RequestMentorshipModal({
                           {selectedFile.name}
                         </AppText>
                         {selectedFile.size ? (
-                          <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+                          <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                             {formatFileSize(selectedFile.size)}
                           </AppText>
                         ) : null}

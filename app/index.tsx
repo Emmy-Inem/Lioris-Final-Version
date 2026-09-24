@@ -20,7 +20,7 @@ const DASHBOARD_BY_ROLE = {
   student: '/(student)/dashboard',
   alumni: '/(alumni)/dashboard',
   staff: '/(staff)/dashboard',
-  admin: '/(admin)/platform-config',
+  admin: '/(admin)/dashboard',
 } as const;
 
 export default function Index() {

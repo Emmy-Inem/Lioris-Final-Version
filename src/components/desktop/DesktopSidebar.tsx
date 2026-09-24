@@ -22,6 +22,8 @@ interface NavItem {
  href: string;
  icon: keyof typeof Ionicons.glyphMap;
  badgeCount?: number;
+ /** Other pathnames (without group segments) that belong to this item, e.g. the sub-pages of an admin group. */
+ match?: string[];
 }
 
 export function DesktopSidebar() {
@@ -113,25 +115,18 @@ export function DesktopSidebar() {
 
   const staffNavItems = rawStaffNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
 
+  // Same five groups as the mobile bottom bar (src/components/admin/adminNav.ts); the pages inside a group
+  // are reached from the pills at the top of each page.
   const rawAdminNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
-    { id: 'home', label: 'Executive Dashboard', href: '/(admin)/dashboard', icon: 'pie-chart' },
-    { id: 'support-desk', label: 'Support & Tickets', href: '/(admin)/support-desk', icon: 'help-buoy' },
-    { id: 'content-desk', label: 'Content Desk', href: '/(admin)/content-desk', icon: 'layers' },
-    { id: 'system-health', label: 'Database Health', href: '/(admin)/system-health', icon: 'pulse' },
-    { id: 'verification-requests', label: 'Student Verifications', href: '/(admin)/verification-requests', icon: 'checkmark-done-circle' },
-    { id: 'moderation-queue', label: 'Moderation Queue', href: '/(admin)/moderation-queue', icon: 'flag' },
-    { id: 'takedown-requests', label: 'Takedown Requests', href: '/(admin)/takedown-requests', icon: 'document-lock' },
-    { id: 'feature-controls', label: 'Feature Switches', href: '/(admin)/feature-controls', icon: 'toggle' },
-    { id: 'user-directory', label: 'User Directory', href: '/(admin)/user-directory', icon: 'people', flagKey: 'alumni_network' },
-    { id: 'platform-config', label: 'Admin Command Desk', href: '/(admin)/platform-config', icon: 'shield' },
-    { id: 'audit-logs', label: 'Security Audit Logs', href: '/(admin)/audit-logs', icon: 'key' },
-    { id: 'super-admin-config', label: 'System Configuration', href: '/(admin)/super-admin-config', icon: 'construct' },
-    { id: 'events', label: 'Events Hub', href: '/(admin)/events-list', icon: 'calendar', flagKey: 'campus_events' },
-    { id: 'forum', label: 'Forum', href: '/(admin)/forum', icon: 'chatbubbles', flagKey: 'discussion_workspaces' },
+    { id: 'home', label: 'Overview', href: '/(admin)/dashboard', icon: 'grid', match: ['/dashboard'] },
+    { id: 'people', label: 'People', href: '/(admin)/user-directory', icon: 'people', match: ['/user-directory', '/verification-requests', '/support-desk'] },
+    { id: 'content', label: 'Content', href: '/(admin)/content-desk', icon: 'layers', match: ['/content-desk', '/forum', '/events-list', '/events'] },
+    { id: 'safety', label: 'Safety', href: '/(admin)/moderation-queue', icon: 'shield-checkmark', match: ['/moderation-queue', '/takedown-requests', '/audit-logs'] },
+    { id: 'platform', label: 'Platform', href: '/(admin)/platform-config', icon: 'settings', match: ['/platform-config', '/feature-controls', '/super-admin-config', '/system-health'] },
     { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Alerts', href: '/(admin)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
     { id: 'saved', label: 'Saved Items', href: '/(admin)/saved', icon: 'bookmark' },
-    { id: 'settings', label: 'Settings', href: '/(admin)/settings', icon: 'settings' },
+    { id: 'settings', label: 'Settings', href: '/(admin)/settings', icon: 'settings-outline', match: ['/settings', '/profile'] },
   ];
 
   const adminNavItems = rawAdminNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
@@ -170,7 +165,7 @@ export function DesktopSidebar() {
       <View style={[styles.brandHeader, { paddingHorizontal: collapsed ? 10 : 14 }]}>
  <View style={[styles.logoRow, { justifyContent: collapsed ? 'center' : 'space-between' }]}>
         <Pressable
-          onPress={() => router.push(role === 'admin' ? ('/(admin)/platform-config' as any) : (`/(${role})/dashboard` as any))}
+          onPress={() => router.push(role === 'admin' ? ('/(admin)/dashboard' as any) : (`/(${role})/dashboard` as any))}
           accessibilityRole="link"
           accessibilityLabel="Lioris home"
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
@@ -270,7 +265,9 @@ export function DesktopSidebar() {
         )}
 
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== `/(${role})/dashboard` && item.href !== '/(admin)/platform-config' && pathname.startsWith(item.href));
+          const stripGroups = (p: string) => p.replace(/\/\([^)]+\)/g, '') || '/';
+          const target = stripGroups(item.href);
+          const isActive = [target, ...(item.match ?? [])].some((path) => pathname === path || pathname.startsWith(`${path}/`));
           return (
             <Pressable
               key={item.id}

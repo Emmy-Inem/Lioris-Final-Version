@@ -146,7 +146,7 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
 
             <View style={[styles.liveBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.10)', borderColor: isDark ? 'rgba(34, 197, 94, 0.35)' : 'rgba(34, 197, 94, 0.25)', flexShrink: 0 }]}>
               <View style={styles.liveDot} />
-              <AppText variant="caption" weight="bold" style={{ color: colors.success, fontSize: 10, letterSpacing: 0.5 }}>
+              <AppText variant="caption" weight="bold" style={{ color: colors.success, fontSize: 11, letterSpacing: 0.5 }}>
                 LIVE METEO
               </AppText>
             </View>
@@ -211,7 +211,7 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
                 <AppText variant="caption" weight="bold" style={{ fontSize: 12 }}>
                   {weather.humidity}%
                 </AppText>
-                <AppText variant="caption" tone="secondary" style={{ fontSize: 9.5 }}>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                   Humidity
                 </AppText>
               </View>
@@ -231,7 +231,7 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
                 <AppText variant="caption" weight="bold" style={{ fontSize: 12 }}>
                   {weather.precipitationProbability}%
                 </AppText>
-                <AppText variant="caption" tone="secondary" style={{ fontSize: 9.5 }}>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                   Rain Chance
                 </AppText>
               </View>
@@ -251,7 +251,7 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
                 <AppText variant="caption" weight="bold" style={{ fontSize: 12 }}>
                   {weather.tempMax}° / {weather.tempMin}°
                 </AppText>
-                <AppText variant="caption" tone="secondary" style={{ fontSize: 9.5 }}>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                   High / Low
                 </AppText>
               </View>

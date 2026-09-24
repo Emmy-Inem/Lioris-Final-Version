@@ -363,7 +363,7 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  </View>
  <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
  <Ionicons name="videocam"size={12} color="#FFFFFF" />
- <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>Video</AppText>
+ <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 11 }}>Video</AppText>
  </View>
  </View>
  ) : null}

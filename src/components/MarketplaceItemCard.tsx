@@ -116,13 +116,13 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
         )}
         <View style={{ position: 'absolute', top: 6, left: 6, zIndex: 2 }}>
           {item.imageUrl ? (
-            <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 9 }, heroTextShadowStyle]}>
+            <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11 }, heroTextShadowStyle]}>
               {item.condition}
             </AppText>
           ) : (
             // No photo backdrop - falls back to the neutral placeholder
             // background, where white shadow-text is illegible.
-            <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 9 }}>
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 11 }}>
               {item.condition}
             </AppText>
           )}
@@ -156,7 +156,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
       {item.price}
     </AppText>
     {showConverter && numericPrice > 0 ? (
-      <AppText variant="caption" tone="secondary" style={{ fontSize: 10, marginTop: 1 }}>
+      <AppText variant="caption" tone="secondary" style={{ fontSize: 11, marginTop: 1 }}>
         ≈ {formatConvertedPrice(numericPrice, 'USD')} • {formatConvertedPrice(numericPrice, 'EUR')}
       </AppText>
     ) : null}
@@ -172,7 +172,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  {item.sellerVerified ? (
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
  {trust ? <Ionicons name={trust.icon} size={10} color={trust.color} /> : null}
- <AppText variant="caption"weight="bold"tone="secondary"style={{ fontSize: 9, letterSpacing: 0.2 }}>
+ <AppText variant="caption"weight="bold"tone="secondary"style={{ fontSize: 11, letterSpacing: 0.2 }}>
  Verified
  </AppText>
  </View>
@@ -196,7 +196,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  }}
  >
  <Ionicons name="people"size={10} color="#FFFFFF" />
- <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 9 }}>
+ <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 11 }}>
  Meetup
  </AppText>
  </Pressable>
@@ -221,7 +221,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
       }}
     >
       <Ionicons name="chatbubble-outline" size={10} color={colors.textPrimary} />
-      <AppText variant="caption" weight="bold" style={{ fontSize: 9 }}>
+      <AppText variant="caption" weight="bold" style={{ fontSize: 11 }}>
         Chat
       </AppText>
     </Pressable>
@@ -316,7 +316,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
                       <AppText weight="bold" variant="caption">
                         {method.name}
                       </AppText>
-                      <AppText tone="secondary" variant="caption" style={{ fontSize: 9 }}>
+                      <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                         {method.desc}
                       </AppText>
                     </View>

@@ -87,7 +87,7 @@ async function clearImpersonationAdminBackup(): Promise<void> {
 
 /** Mirrors platform-config's own `/(role)/dashboard` convention (see the Preview Workspace switcher in SettingsScreenBase.tsx) - admin has a dedicated landing screen instead of a generic dashboard route. */
 function dashboardPathForRole(role: UserRole): string {
- return role === 'admin' ? '/(admin)/platform-config' : `/(${role})/dashboard`;
+ return role === 'admin' ? '/(admin)/dashboard' : `/(${role})/dashboard`;
 }
 
 interface SessionUser {

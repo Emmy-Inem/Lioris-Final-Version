@@ -194,7 +194,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
             <>
               <View style={[styles.liveBadge, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', borderColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.35)' : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)', flexShrink: 0 }]}>
                 <View style={[styles.liveDot, { backgroundColor: radioState.isPlaying ? '#22c55e' : colors.textSecondary }]} />
-                <AppText variant="caption" weight="bold" style={{ color: radioState.isPlaying ? colors.success : colors.textSecondary, fontSize: 10, letterSpacing: 0.5 }}>
+                <AppText variant="caption" weight="bold" style={{ color: radioState.isPlaying ? colors.success : colors.textSecondary, fontSize: 11, letterSpacing: 0.5 }}>
                   {radioState.isPlaying ? 'ON AIR' : radioState.isLoading ? 'CONNECTING' : 'PAUSED'}
                 </AppText>
               </View>
@@ -249,12 +249,12 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
         <View style={styles.mobileMetaRow}>
           <View style={[styles.liveBadge, { backgroundColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.15)' : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', borderColor: radioState.isPlaying ? 'rgba(34, 197, 94, 0.35)' : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)', flexShrink: 0 }]}>
             <View style={[styles.liveDot, { backgroundColor: radioState.isPlaying ? '#22c55e' : colors.textSecondary }]} />
-            <AppText variant="caption" weight="bold" style={{ color: radioState.isPlaying ? colors.success : colors.textSecondary, fontSize: 9.5, letterSpacing: 0.5 }}>
+            <AppText variant="caption" weight="bold" style={{ color: radioState.isPlaying ? colors.success : colors.textSecondary, fontSize: 11, letterSpacing: 0.5 }}>
               {radioState.isPlaying ? 'ON AIR' : radioState.isLoading ? 'CONNECTING' : 'PAUSED'}
             </AppText>
           </View>
           <View style={[styles.freqPill, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)' }]}>
-            <AppText variant="caption" tone="secondary" style={{ fontSize: 10, fontWeight: '700' }}>
+            <AppText variant="caption" tone="secondary" style={{ fontSize: 11, fontWeight: '700' }}>
               {current.frequency}
             </AppText>
           </View>
@@ -425,7 +425,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
                 {current.bitrate || 128} kbps • High-Fidelity
               </AppText>
               <View style={[styles.hqPill, { backgroundColor: colors.brandPrimary + '15', borderColor: colors.brandPrimary + '30', flexShrink: 0 }]}>
-                <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 9 }}>
+                <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
                   HQ STEREO
                 </AppText>
               </View>

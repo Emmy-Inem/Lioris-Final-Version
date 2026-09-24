@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
+import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import {
   FlatList,
   Modal,
@@ -53,6 +55,7 @@ const STATUS_TONES: Record<SupportTicketStatus, 'warning' | 'brand' | 'success' 
 };
 
 export default function SupportDeskScreen() {
+  const adminBadges = useAdminBadges();
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const toast = useToast();
@@ -245,6 +248,9 @@ export default function SupportDeskScreen() {
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
+      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+        <AdminSectionTabs group="people" badges={{ verification: adminBadges.verification, support: adminBadges.support }} />
+      </View>
 
       {/* Screen Header */}
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>

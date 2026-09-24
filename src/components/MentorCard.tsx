@@ -43,8 +43,8 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
         ))}
       </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md }}>
-        <AppText tone="secondary" variant="caption" numberOfLines={1}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md }}>
+        <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ flexShrink: 1, minWidth: 120 }}>
           {typeof mentor.availableSlots === 'number'
             ? `${mentor.availableSlots} slot${mentor.availableSlots === 1 ? '' : 's'} available`
             : 'Open to mentorship requests'}

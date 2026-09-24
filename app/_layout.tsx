@@ -17,6 +17,7 @@ import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 import { OfflineBanner, setupNetworkAwareQueries } from '@/components/OfflineBanner';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { ReConsentGate } from '@/components/ReConsentGate';
+import { MaintenanceGate } from '@/components/MaintenanceGate';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { addNotificationResponseListener } from '@/notifications/push';
@@ -322,7 +323,9 @@ function AppShell() {
  <ImpersonationBanner />
  <OfflineBanner />
  <ErrorBoundary>
+ <MaintenanceGate>
  <Slot />
+ </MaintenanceGate>
  </ErrorBoundary>
  <ReConsentGate />
  <AlertHost />

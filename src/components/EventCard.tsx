@@ -162,7 +162,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
           }}
         >
           {event.ticketPrice && event.ticketPrice > 0 ? (
-            <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 10, color: '#6EE7B7' }, heroTextShadowStyle]}>
+            <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, color: '#6EE7B7' }, heroTextShadowStyle]}>
               NGN {event.ticketPrice.toLocaleString()}
             </AppText>
           ) : null}
@@ -189,7 +189,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
  borderColor: colors.border,
  }}
  >
- <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10, letterSpacing: 0.5 }}>
+ <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 11, letterSpacing: 0.5 }}>
  {month}
  </AppText>
  <AppText weight="bold" style={{ fontSize: 18, lineHeight: 22 }}>

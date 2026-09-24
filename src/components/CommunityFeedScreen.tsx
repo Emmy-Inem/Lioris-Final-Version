@@ -512,7 +512,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 Active Discussions
               </AppText>
             </View>
-            <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+            <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
               Academic forum
             </AppText>
           </View>
@@ -542,7 +542,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
                     <Ionicons name="school-outline" size={12} color={colors.brandPrimary} />
-                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }} numberOfLines={1}>
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }} numberOfLines={1}>
                       {tp.category}
                     </AppText>
                   </View>
@@ -550,10 +550,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     {tp.title}
                   </AppText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                       💡 {tp.likesCount} helpful
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }}>
+                    <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                       💬 {tp.commentsCount ?? 0}
                     </AppText>
                   </View>
@@ -674,7 +674,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     {activeSubForum.label}
                   </AppText>
                   <View style={{ backgroundColor: `${activeSubForum.accentColor}20`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                    <AppText weight="bold" style={{ color: activeSubForum.accentColor, fontSize: 10 }}>
+                    <AppText weight="bold" style={{ color: activeSubForum.accentColor, fontSize: 11 }}>
                       {activeSubForum.slug}
                     </AppText>
                   </View>
@@ -809,7 +809,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </AppText>
                   {user?.role === 'admin' && (
                     <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
-                      <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 10 }}>ADMIN HUB</AppText>
+                      <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 11 }}>ADMIN HUB</AppText>
                     </View>
                   )}
                 </View>
@@ -1293,12 +1293,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                           <AppText weight="bold" variant="caption" numberOfLines={1}>
                             {sf.label}
                           </AppText>
-                          <AppText tone="secondary" variant="caption" style={{ fontSize: 10 }} numberOfLines={1}>
+                          <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }} numberOfLines={1}>
                             {sf.moderatorBadge}
                           </AppText>
                         </View>
                       </View>
-                      <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                         {(communityStats.get(sf.id)?.threads ?? 0).toLocaleString()}
                       </AppText>
                     </Pressable>
@@ -1549,7 +1549,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         {sf.label}
                       </AppText>
                       <View style={{ backgroundColor: `${sf.accentColor}20`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                        <AppText weight="bold" style={{ color: sf.accentColor, fontSize: 10 }}>
+                        <AppText weight="bold" style={{ color: sf.accentColor, fontSize: 11 }}>
                           {sf.slug}
                         </AppText>
                       </View>

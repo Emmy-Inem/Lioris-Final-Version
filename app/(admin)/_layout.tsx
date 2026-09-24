@@ -32,6 +32,8 @@ export default function AdminLayout() {
             },
       }}
     >
+      {/* The five groups (see src/components/admin/adminNav.ts). Each is one bottom tab; the pages
+          inside a group are reached from the section pills at the top of the page. */}
       <Tabs.Screen
         name="dashboard"
         options={{
@@ -42,11 +44,20 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="verification-requests"
+        name="user-directory"
         options={{
-          title: 'Verify',
+          title: 'People',
           tabBarIcon: ({ focused, size }) => (
-            <TabIcon name={focused ? 'checkmark-circle' : 'checkmark-circle-outline'} focused={focused} size={size} />
+            <TabIcon name={focused ? 'people' : 'people-outline'} focused={focused} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="content-desk"
+        options={{
+          title: 'Content',
+          tabBarIcon: ({ focused, size }) => (
+            <TabIcon name={focused ? 'layers' : 'layers-outline'} focused={focused} size={size} />
           ),
         }}
       />
@@ -60,44 +71,35 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="feature-controls"
-        options={{
-          title: 'Features',
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name={focused ? 'options' : 'options-outline'} focused={focused} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="platform-config"
         options={{
-          title: 'Console',
+          title: 'Platform',
           tabBarIcon: ({ focused, size }) => (
             <TabIcon name={focused ? 'settings' : 'settings-outline'} focused={focused} size={size} />
           ),
         }}
       />
 
-      {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
-      <Tabs.Screen name="forum" options={{ href: null }} />
-      <Tabs.Screen name="super-admin-config" options={{ href: null }} />
-      <Tabs.Screen name="reports" options={{ href: null }} />
-      <Tabs.Screen name="takedown-requests" options={{ href: null }} />
-      <Tabs.Screen name="user-directory" options={{ href: null }} />
-      <Tabs.Screen name="audit-logs" options={{ href: null }} />
-      <Tabs.Screen name="moderation-audit-log" options={{ href: null }} />
+      {/* Pages inside a group: not tabs themselves, but they keep their group's tab lit. */}
+      <Tabs.Screen name="verification-requests" options={{ href: null, tabGroup: 'user-directory' } as any} />
+      <Tabs.Screen name="support-desk" options={{ href: null, tabGroup: 'user-directory' } as any} />
+      <Tabs.Screen name="takedown-requests" options={{ href: null, tabGroup: 'moderation-queue' } as any} />
+      <Tabs.Screen name="audit-logs" options={{ href: null, tabGroup: 'moderation-queue' } as any} />
+      <Tabs.Screen name="feature-controls" options={{ href: null, tabGroup: 'platform-config' } as any} />
+      <Tabs.Screen name="super-admin-config" options={{ href: null, tabGroup: 'platform-config' } as any} />
+      <Tabs.Screen name="system-health" options={{ href: null, tabGroup: 'platform-config' } as any} />
+      <Tabs.Screen name="forum" options={{ href: null, tabGroup: 'content-desk' } as any} />
+      <Tabs.Screen name="events-list" options={{ href: null, tabGroup: 'content-desk' } as any} />
+      <Tabs.Screen name="events/[id]" options={{ href: null, tabGroup: 'content-desk' } as any} />
+      <Tabs.Screen name="events" options={{ href: null, tabGroup: 'content-desk' } as any} />
+
+      {/* Reached from the header (avatar, bell, messages) rather than the bottom bar. */}
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="saved" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="search" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
-      <Tabs.Screen name="support-desk" options={{ href: null }} />
-      <Tabs.Screen name="content-desk" options={{ href: null }} />
-      <Tabs.Screen name="system-health" options={{ href: null }} />
       <Tabs.Screen name="messages" options={{ href: null }} />
-      <Tabs.Screen name="events" options={{ href: null }} />
-      <Tabs.Screen name="events-list" options={{ href: null }} />
-      <Tabs.Screen name="events/[id]" options={{ href: null }} />
       <Tabs.Screen name="post/[id]" options={{ href: null }} />
     </Tabs>
 </BlurredTabsHost>

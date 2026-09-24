@@ -214,7 +214,7 @@ export default function AlumniMentorshipScreen() {
                           <AppText variant="caption" weight="bold">
                             {m.documentName || 'Student Proposal / CV'}
                           </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                             Click to view attached document ↗
                           </AppText>
                         </View>
@@ -303,7 +303,7 @@ function StatBox({ label, value, icon }: { label: string; value: number; icon: k
       <AppText variant="h3" weight="bold">
         {value}
       </AppText>
-      <AppText tone="secondary" variant="caption" style={{ fontSize: 9.5, textAlign: 'center' }}>
+      <AppText tone="secondary" variant="caption" style={{ fontSize: 11, textAlign: 'center' }}>
         {label}
       </AppText>
     </View>

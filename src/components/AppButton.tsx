@@ -85,7 +85,7 @@ export function AppButton({
         ) : (
           <>
             {icon && <Ionicons name={icon} size={isSmall ? 15 : 18} color={palette.fg} />}
-            <AppText weight="semiBold" variant={isSmall ? 'caption' : 'body'} style={{ color: palette.fg, fontSize: isSmall ? 12 : undefined }}>
+            <AppText weight="semiBold" variant={isSmall ? 'caption' : 'body'} style={{ color: palette.fg, fontSize: isSmall ? 12 : undefined, flexShrink: 1, textAlign: 'center' }}>
               {label}
             </AppText>
           </>
@@ -104,5 +104,6 @@ const styles = StyleSheet.create({
  flexDirection: 'row',
  alignItems: 'center',
  justifyContent: 'center',
+ maxWidth: '100%',
  },
 });

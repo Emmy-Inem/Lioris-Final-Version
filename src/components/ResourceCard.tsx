@@ -127,15 +127,14 @@ export function ResourceCard({
         ) : null}
       </Pressable>
 
+      {/* Two rows so nothing collides on a phone: stats + report on top, the two actions below at equal width. */}
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           marginTop: spacing.sm,
-          paddingTop: spacing.xs,
+          paddingTop: spacing.sm,
           borderTopWidth: 1,
           borderTopColor: colors.divider,
+          gap: spacing.sm,
         }}
       >
         <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
@@ -169,7 +168,7 @@ export function ResourceCard({
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Report this resource or request its removal"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto', paddingVertical: 4 }}
           >
             <Ionicons name="flag-outline" size={14} color={colors.textSecondary} />
             <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
@@ -178,20 +177,20 @@ export function ResourceCard({
           </Pressable>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-          <AppButton
-            label="Read Online"
-            variant="secondary"
-            size="sm"
-            onPress={() => onPreview?.(resource)}
-          />
-          <AppButton
-            label={downloaded ? 'Saved' : 'Download'}
-            variant={downloaded ? 'secondary' : 'primary'}
-            onPress={handleDownload}
-            loading={downloading}
-            size="sm"
-          />
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppButton label="Read Online" variant="secondary" size="sm" onPress={() => onPreview?.(resource)} fullWidth />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppButton
+              label={downloaded ? 'Saved' : 'Download'}
+              variant={downloaded ? 'secondary' : 'primary'}
+              onPress={handleDownload}
+              loading={downloading}
+              size="sm"
+              fullWidth
+            />
+          </View>
         </View>
       </View>
       <ReportResourceModal visible={reportOpen} resource={resource} onClose={() => setReportOpen(false)} />

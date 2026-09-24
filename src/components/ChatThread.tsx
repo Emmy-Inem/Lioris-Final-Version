@@ -368,7 +368,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                   <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 3, marginTop: spacing.xs }}>
                     <AppText
                       variant="caption"
-                      style={{ fontSize: 9, color: colors.textSecondary }}
+                      style={{ fontSize: 11, color: colors.textSecondary }}
                     >
                       {new Date(item.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </AppText>
@@ -441,7 +441,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 3, marginTop: 3 }}>
                   <AppText
                     variant="caption"
-                    style={{ fontSize: 9, color: isMe ? 'rgba(255,255,255,0.75)' : colors.textSecondary }}
+                    style={{ fontSize: 11, color: isMe ? 'rgba(255,255,255,0.75)' : colors.textSecondary }}
                   >
                     {new Date(item.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </AppText>

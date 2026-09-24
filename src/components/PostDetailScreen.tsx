@@ -547,10 +547,10 @@ export function PostDetailScreen() {
  <AppText weight="bold" variant="bodySmall">{c.authorName}</AppText>
  <UserTypeBadge role={c.authorRole} />
  {c.authorDepartment ? (
- <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>{c.authorDepartment}</AppText>
+ <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>{c.authorDepartment}</AppText>
  ) : null}
  </View>
- <AppText tone="secondary" variant="caption" style={{ fontSize: 10, flexShrink: 0 }}>
+ <AppText tone="secondary" variant="caption" style={{ fontSize: 11, flexShrink: 0 }}>
  {timeAgo(c.createdAt)}
  </AppText>
  {(c.authorId === user?.id || canModerate) && (

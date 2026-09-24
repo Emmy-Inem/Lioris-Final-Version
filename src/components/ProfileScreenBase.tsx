@@ -3,7 +3,6 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressa
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router, useSegments } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from './ScreenContainer';
@@ -26,6 +25,10 @@ import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useSignedUrl } from '@/api/signedUrls';
+import { pickImageFromLibrary } from '@/utils/pickImage';
+import { CropKind, ImageCropperModal } from './ImageCropperModal';
+import { ImageViewerModal } from './ImageViewerModal';
+import type { CroppedImage } from '@/utils/cropImage';
 
 /* Short labels so the segmented control fits a 375px phone on one line with no
    ragged wrapping and no ellipsis. The control also scrolls horizontally so it
@@ -110,6 +113,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     queryFn: () => listMyScheduled(),
     enabled: !!user,
   });
+
+  const { url: resolvedCoverUrl } = useSignedUrl('campus-media', profile?.coverUrl);
+  const activeCover = resolvedCoverUrl ? { uri: resolvedCoverUrl } : null;
 
   const [unpublishedSubFilter, setUnpublishedSubFilter] = useState<'all' | 'drafts' | 'scheduled'>('all');
 
@@ -245,128 +251,60 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [cropTarget, setCropTarget] = useState<{ kind: CropKind; uri: string } | null>(null);
+  const [viewer, setViewer] = useState<{ uri: string; caption: string } | null>(null);
 
-  async function handlePickCustomAvatar() {
-    if (!user) return;
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof document !== 'undefined') {
-      // Web: use hidden file input
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.style.display = 'none';
-      document.body.appendChild(input);
-      input.onchange = async (e: Event) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        document.body.removeChild(input);
-        if (!file) return;
-        setUploadingAvatar(true);
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const ext = file.type || file.name.split('.').pop() || 'jpg';
-          await uploadAvatarImage(user.id, arrayBuffer, ext);
-          await queryClient.invalidateQueries({ queryKey: ['profile'] });
-          setPhotoPickerOpen(false);
-          Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
-        } catch (err: any) {
-          Alert.alert('Upload Failed', getFriendlyErrorMessage(err, 'Could not upload photo.'));
-        } finally {
-          setUploadingAvatar(false);
-        }
-      };
-      input.click();
-      return;
-    }
-
-    // Native
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission Required', 'Please grant photo library access to upload a profile picture.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]?.uri) {
-      setUploadingAvatar(true);
-      try {
-        const asset = result.assets[0];
-        const res = await fetch(asset.uri);
-        const bytes = await res.arrayBuffer();
-        await uploadAvatarImage(user.id, bytes, asset.mimeType || asset.fileName?.split('.').pop() || 'jpg');
-        await queryClient.invalidateQueries({ queryKey: ['profile'] });
-        setPhotoPickerOpen(false);
-        Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
-      } catch (err: any) {
-        Alert.alert('Upload Failed', getFriendlyErrorMessage(err, 'Could not upload photo.'));
-      } finally {
-        setUploadingAvatar(false);
-      }
-    }
+  /** The photo sheet is a Modal; wait for it to leave before showing another (iOS drops overlapping modals). */
+  function afterSheetCloses(action: () => void) {
+    setPhotoPickerOpen(false);
+    setTimeout(action, Platform.OS === 'ios' ? 400 : 60);
   }
 
-  async function handlePickCustomCover() {
+  /** Choose a picture from the device, then crop it. */
+  async function handleChoosePhoto(kind: CropKind) {
     if (!user) return;
+    const uri = await pickImageFromLibrary().catch(() => null);
+    if (!uri) return;
+    afterSheetCloses(() => setCropTarget({ kind, uri }));
+  }
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof document !== 'undefined') {
-      // Web: use hidden file input
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.style.display = 'none';
-      document.body.appendChild(input);
-      input.onchange = async (e: Event) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        document.body.removeChild(input);
-        if (!file) return;
-        setUploadingCover(true);
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const ext = file.type || file.name.split('.').pop() || 'jpg';
-          await uploadCoverImage(user.id, arrayBuffer, ext);
-          await queryClient.invalidateQueries({ queryKey: ['profile'] });
-          setPhotoPickerOpen(false);
-          Alert.alert('Cover Updated', 'Your custom campus banner is now live.');
-        } catch (err: any) {
-          Alert.alert('Upload Failed', getFriendlyErrorMessage(err, 'Could not upload cover image.'));
-        } finally {
-          setUploadingCover(false);
-        }
-      };
-      input.click();
+  /** Re-crop the picture that is already on the profile. */
+  function handleAdjustPhoto(kind: CropKind) {
+    const current = kind === 'avatar' ? profile?.avatarUrl : resolvedCoverUrl;
+    if (!current || !/^(https?:|data:|blob:|file:)/.test(current)) {
+      Alert.alert('Nothing to adjust', 'Choose a picture first, then you can adjust how it is cropped.');
       return;
     }
+    afterSheetCloses(() => setCropTarget({ kind, uri: current }));
+  }
 
-    // Native
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission Required', 'Please grant photo library access to upload a cover image.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.85,
-    });
-    if (!result.canceled && result.assets[0]?.uri) {
-      setUploadingCover(true);
-      try {
-        const asset = result.assets[0];
-        const res = await fetch(asset.uri);
-        const bytes = await res.arrayBuffer();
-        await uploadCoverImage(user.id, bytes, asset.mimeType || asset.fileName?.split('.').pop() || 'jpg');
-        await queryClient.invalidateQueries({ queryKey: ['profile'] });
-        setPhotoPickerOpen(false);
-        Alert.alert('Cover Updated', 'Your custom campus banner is now live.');
-      } catch (err: any) {
-        Alert.alert('Upload Failed', getFriendlyErrorMessage(err, 'Could not upload cover image.'));
-      } finally {
-        setUploadingCover(false);
+  function handleViewPhoto(kind: CropKind) {
+    const current = kind === 'avatar' ? profile?.avatarUrl : resolvedCoverUrl;
+    if (!current) return;
+    afterSheetCloses(() =>
+      setViewer({ uri: current, caption: kind === 'avatar' ? 'Profile photo' : 'Cover photo' }),
+    );
+  }
+
+  /** Saves the cropped picture and updates the profile. Throws so the cropper can show the reason. */
+  async function handleCropDone(result: CroppedImage) {
+    if (!user || !cropTarget) return;
+    const kind = cropTarget.kind;
+    const setBusy = kind === 'avatar' ? setUploadingAvatar : setUploadingCover;
+    setBusy(true);
+    try {
+      if (kind === 'avatar') {
+        await uploadAvatarImage(user.id, result.bytes, 'jpg');
+      } else {
+        await uploadCoverImage(user.id, result.bytes, 'jpg');
       }
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setCropTarget(null);
+      Alert.alert(kind === 'avatar' ? 'Photo updated' : 'Cover updated', kind === 'avatar' ? 'Your new profile photo is live.' : 'Your new cover photo is live.');
+    } catch (err: any) {
+      throw new Error(getFriendlyErrorMessage(err, kind === 'avatar' ? 'Could not upload the photo.' : 'Could not upload the cover photo.'));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -406,11 +344,6 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
       </ScreenContainer>
     );
   }
-
-  const { url: resolvedCoverUrl } = useSignedUrl('campus-media', profile.coverUrl);
-  const activeCover = resolvedCoverUrl
-    ? { uri: resolvedCoverUrl }
-    : null;
 
   return (
     <ScreenContainer noPadding glow={true}>
@@ -867,6 +800,20 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </View>
  </ScrollView>
 
+    <ImageCropperModal
+      visible={!!cropTarget}
+      uri={cropTarget?.uri ?? null}
+      kind={cropTarget?.kind ?? 'avatar'}
+      onCancel={() => setCropTarget(null)}
+      onDone={handleCropDone}
+    />
+    <ImageViewerModal
+      visible={!!viewer}
+      onClose={() => setViewer(null)}
+      imageSource={viewer?.uri ?? null}
+      caption={viewer?.caption}
+    />
+
     {/* Photo & Cover Customizer Modal */}
     <Modal visible={photoPickerOpen} transparent animationType="slide" onRequestClose={() => setPhotoPickerOpen(false)}>
       <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
@@ -930,27 +877,30 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                   </AppText>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                <View style={{ flexGrow: 1, flexBasis: '46%' }}>
                   <AppButton
-                    label={uploadingAvatar ? 'Uploading…' : 'Upload Photo'}
+                    label={uploadingAvatar ? 'Saving…' : profile.avatarUrl ? 'Replace' : 'Upload photo'}
                     variant="primary"
                     size="sm"
-                    onPress={handlePickCustomAvatar}
+                    icon="image-outline"
+                    onPress={() => handleChoosePhoto('avatar')}
                     loading={uploadingAvatar}
                     fullWidth
                   />
                 </View>
                 {profile.avatarUrl ? (
-                  <View style={{ flex: 1 }}>
-                    <AppButton
-                      label="Remove Photo"
-                      variant="ghost"
-                      size="sm"
-                      onPress={handleRemoveAvatar}
-                      fullWidth
-                    />
-                  </View>
+                  <>
+                    <View style={{ flexGrow: 1, flexBasis: '46%' }}>
+                      <AppButton label="Adjust crop" variant="secondary" size="sm" icon="crop-outline" onPress={() => handleAdjustPhoto('avatar')} fullWidth />
+                    </View>
+                    <View style={{ flexGrow: 1, flexBasis: '46%' }}>
+                      <AppButton label="View" variant="secondary" size="sm" icon="eye-outline" onPress={() => handleViewPhoto('avatar')} fullWidth />
+                    </View>
+                    <View style={{ flexGrow: 1, flexBasis: '46%' }}>
+                      <AppButton label="Remove" variant="ghost" size="sm" icon="trash-outline" onPress={handleRemoveAvatar} fullWidth />
+                    </View>
+                  </>
                 ) : null}
               </View>
             </View>
@@ -989,27 +939,30 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                   </AppText>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                <View style={{ flexGrow: 1, flexBasis: '46%' }}>
                   <AppButton
-                    label={uploadingCover ? 'Uploading…' : 'Upload Banner'}
+                    label={uploadingCover ? 'Saving…' : profile.coverUrl ? 'Replace' : 'Upload banner'}
                     variant="primary"
                     size="sm"
-                    onPress={handlePickCustomCover}
+                    icon="image-outline"
+                    onPress={() => handleChoosePhoto('cover')}
                     loading={uploadingCover}
                     fullWidth
                   />
                 </View>
                 {profile.coverUrl ? (
-                  <View style={{ flex: 1 }}>
-                    <AppButton
-                      label="Remove Banner"
-                      variant="ghost"
-                      size="sm"
-                      onPress={handleRemoveCover}
-                      fullWidth
-                    />
-                  </View>
+                  <>
+                    <View style={{ flexGrow: 1, flexBasis: '46%' }}>
+                      <AppButton label="Adjust crop" variant="secondary" size="sm" icon="crop-outline" onPress={() => handleAdjustPhoto('cover')} fullWidth />
+                    </View>
+                    <View style={{ flexGrow: 1, flexBasis: '46%' }}>
+                      <AppButton label="View" variant="secondary" size="sm" icon="eye-outline" onPress={() => handleViewPhoto('cover')} fullWidth />
+                    </View>
+                    <View style={{ flexGrow: 1, flexBasis: '46%' }}>
+                      <AppButton label="Remove" variant="ghost" size="sm" icon="trash-outline" onPress={handleRemoveCover} fullWidth />
+                    </View>
+                  </>
                 ) : null}
               </View>
             </View>

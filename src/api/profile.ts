@@ -1,5 +1,6 @@
 import { UserProfile, UserRole } from './types';
 
+import { assertWithinStorageQuota } from './platformSettings';
 import { supabase } from './supabase';
 import { getInstitutionByCode, getInstitutionForEmail } from './institutions';
 import { clearTokens, getSessionUser } from '../auth/tokenStorage';
@@ -268,7 +269,7 @@ export async function uploadAvatarImage(
  const normalizedExt = fileExt.toLowerCase().replace(/^image\//, '') === 'png' ? 'png' :
    fileExt.toLowerCase().replace(/^image\//, '') === 'webp' ? 'webp' : 'jpg';
  const byteLength = imageBlob instanceof ArrayBuffer ? imageBlob.byteLength : imageBlob.size;
- if (byteLength > 5 * 1024 * 1024) throw new Error('Profile photos must be smaller than 5MB.');
+ await assertWithinStorageQuota(byteLength, 'image');
  const filePath = `${userId}/avatar_${Date.now()}.${normalizedExt}`;
  const { error } = await supabase.storage.from('avatars').upload(filePath, imageBlob, {
  contentType: normalizedExt === 'png' ? 'image/png' : normalizedExt === 'webp' ? 'image/webp' : 'image/jpeg',
@@ -292,7 +293,7 @@ export async function uploadCoverImage(
  const rawExt = fileExt.toLowerCase().replace(/^image\//, '').replace(/^jpeg$/, 'jpg');
  const normalizedExt = ['jpg', 'png', 'webp'].includes(rawExt) ? rawExt : 'jpg';
  const byteLength = imageBlob instanceof ArrayBuffer ? imageBlob.byteLength : imageBlob.size;
- if (byteLength > 25 * 1024 * 1024) throw new Error('Cover images must be smaller than 25MB.');
+ await assertWithinStorageQuota(byteLength, 'image');
  const filePath = `${userId}/cover_${Date.now()}.${normalizedExt}`;
  const { error } = await supabase.storage.from('campus-media').upload(filePath, imageBlob, {
    contentType: normalizedExt === 'png' ? 'image/png' : normalizedExt === 'webp' ? 'image/webp' : 'image/jpeg',

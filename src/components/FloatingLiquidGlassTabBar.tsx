@@ -64,6 +64,9 @@ function getRouteIcon(routeName: string, label: string, isFocused: boolean): key
     }
     return isFocused ? 'home' : 'home-outline';
   }
+  if (name.includes('content-desk')) {
+    return isFocused ? 'layers' : 'layers-outline';
+  }
   if (name.includes('feed') || name.includes('forum')) {
     return isFocused ? 'chatbubbles' : 'chatbubbles-outline';
   }
@@ -240,10 +243,14 @@ function FloatingLiquidGlassTabBarView({
   const bottomInset = Platform.OS === 'web' ? 18 : Math.max(18, (safeAreaInsets?.bottom ?? 0) + 6);
 
   const activeRoute = state.routes[state.index];
-  const activeIndex = Math.max(
-    0,
-    visibleRoutes.findIndex((r: any) => r.key === activeRoute?.key)
+  // A page that lives inside a tab's group (e.g. Support inside People) names that tab with the
+  // `tabGroup` screen option, so the right tab stays lit instead of none - or the first one.
+  const groupTarget = (currentOptions as any).tabGroup as string | undefined;
+  const rawActiveIndex = visibleRoutes.findIndex((r: any) =>
+    groupTarget ? r.name === groupTarget : r.key === activeRoute?.key,
   );
+  const hasActiveTab = rawActiveIndex >= 0;
+  const activeIndex = Math.max(0, rawActiveIndex);
 
   const layoutInfo = useMemo(() => {
     const N = visibleRoutes.length;
@@ -272,7 +279,7 @@ function FloatingLiquidGlassTabBarView({
     visibleRoutes.forEach((route: any, i: number) => {
       const descriptor = descriptors[route.key];
       const label = getRouteLabel(route, descriptor);
-      const isFocused = i === activeIndex;
+      const isFocused = hasActiveTab && i === activeIndex;
       const icon = getRouteIcon(route.name, label, isFocused);
       const lWidth = Math.round(label.length * 7.5) + 12;
       // Active width: 18px icon + 6px text padding + 24px container padding (12 left + 12 right) + text width
@@ -289,7 +296,7 @@ function FloatingLiquidGlassTabBarView({
     let currentX = 0;
 
     for (let i = 0; i < N; i++) {
-      const isAct = i === activeIndex;
+      const isAct = hasActiveTab && i === activeIndex;
       const w = isAct ? activeWidths[i] : inactiveWidth;
       tabWidths.push(w);
       tabPositions.push(currentX);
@@ -305,14 +312,14 @@ function FloatingLiquidGlassTabBarView({
       tabWidths,
       tabPositions,
       labelWidths,
-      activeWidth: tabWidths[activeIndex] ?? inactiveWidth,
+      activeWidth: hasActiveTab ? tabWidths[activeIndex] ?? inactiveWidth : 0,
       selectorX: tabPositions[activeIndex] ?? 0,
       totalContentWidth,
       targetPillWidth,
       labels,
       icons,
     };
-  }, [visibleRoutes, activeIndex, descriptors, windowWidth]);
+  }, [visibleRoutes, activeIndex, hasActiveTab, descriptors, windowWidth]);
 
   // Animated shared values
   const pillWidth = useSharedValue(layoutInfo.targetPillWidth);
@@ -427,7 +434,7 @@ function FloatingLiquidGlassTabBarView({
 
           {/* Interactive Tab Buttons */}
           {visibleRoutes.map((route: any, index: number) => {
-            const isFocused = index === activeIndex;
+            const isFocused = hasActiveTab && index === activeIndex;
 
             const onPress = () => {
               haptics.light();

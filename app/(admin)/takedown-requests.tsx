@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
+import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import { FlatList, Linking, Modal, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,6 +29,7 @@ function claimLabel(type: TakedownRequest['claimType']) {
 }
 
 export default function TakedownRequestsScreen() {
+  const adminBadges = useAdminBadges();
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const toast = useToast();
@@ -65,6 +68,9 @@ export default function TakedownRequestsScreen() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
+      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+        <AdminSectionTabs group="safety" badges={{ reports: adminBadges.reports, takedowns: adminBadges.takedowns }} />
+      </View>
 
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.sm }}>
         <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">

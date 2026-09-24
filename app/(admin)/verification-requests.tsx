@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from'react';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
+import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, View } from'react-native';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
@@ -198,6 +200,7 @@ function VerificationDocumentPanel({
 }
 
 export default function VerificationRequestsScreen() {
+  const adminBadges = useAdminBadges();
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
@@ -405,6 +408,9 @@ export default function VerificationRequestsScreen() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
+      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+        <AdminSectionTabs group="people" badges={{ verification: adminBadges.verification, support: adminBadges.support }} />
+      </View>
       <ScrollView style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

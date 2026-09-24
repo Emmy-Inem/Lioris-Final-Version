@@ -219,7 +219,7 @@ export function DesktopTopBar() {
                   onPress={async () => {
                     setRoleSwitcherOpen(false);
                     await switchRole(r);
-                    const targetDashboard = r === 'admin' ? '/(admin)/platform-config' : `/(${r})/dashboard`;
+                    const targetDashboard = r === 'admin' ? '/(admin)/dashboard' : `/(${r})/dashboard`;
                     router.replace(targetDashboard as any);
                   }}
                   style={({ hovered }: any) => [

@@ -72,7 +72,7 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
  {group.description}
  </AppText>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xs }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', rowGap: spacing.sm, marginTop: spacing.xs }}>
         {/* Member count only. This used to render an avatar stack from the
             hardcoded initials ['Ad', 'Ch', 'Em'], so a pod with one member
             showed a face for two people who don't exist. StudyGroup carries
@@ -94,7 +94,7 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
           </AppText>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flexShrink: 0 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center', flexShrink: 1 }}>
           {joined && (
             <AppButton
               label="Discussion"

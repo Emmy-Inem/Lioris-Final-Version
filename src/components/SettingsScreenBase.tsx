@@ -1494,7 +1494,7 @@ export function SettingsScreen() {
                           haptics.success();
                           await switchRole(r.role as any);
                           toast.success(`Switched perspective to ${r.label}`);
-                          router.replace(r.role === 'admin' ? '/(admin)/platform-config' : `/(${r.role})/dashboard` as any);
+                          router.replace(r.role === 'admin' ? '/(admin)/dashboard' : `/(${r.role})/dashboard` as any);
                         }}
                         style={{
                           width: isDesktop ? 220 : '48%',

@@ -423,7 +423,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                     </AppText>
                   </View>
                   <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.pill }}>
-                    <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 9.5 }}>ROOT ADMIN</AppText>
+                    <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 11 }}>ROOT ADMIN</AppText>
                   </View>
                 </View>
                 <AppText variant="caption" tone="secondary" style={{ fontSize: 11, lineHeight: 15 }}>

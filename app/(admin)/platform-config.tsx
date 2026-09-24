@@ -1,565 +1,205 @@
-import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, View } from'react-native';
-import { router } from'expo-router';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'@/components/ScreenContainer';
-import { AppHeader } from'@/components/AppHeader';
-import { AppText } from'@/components/AppText';
-import { AppTextField } from'@/components/AppTextField';
-import { AppButton } from'@/components/AppButton';
-import { SolidCard } from'@/components/SolidCard';
-import { GlassCard } from'@/components/GlassCard';
-import { Badge } from'@/components/Badge';
-import { ModerationQueue } from'@/components/ModerationQueue';
-import { ForumsModerationTab } from'@/components/admin/ForumsModerationTab';
-import { EventsModerationTab } from'@/components/admin/EventsModerationTab';
-import { UserProfilesTab } from'@/components/admin/UserProfilesTab';
-import { ResourcesModerationTab } from'@/components/admin/ResourcesModerationTab';
-import { ApprovalsModerationTab } from'@/components/admin/ApprovalsModerationTab';
-import { FeatureFlagsTab } from '@/components/admin/FeatureFlagsTab';
-import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import React, { useState } from 'react';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '@/components/ScreenContainer';
+import { AppHeader } from '@/components/AppHeader';
+import { AppText } from '@/components/AppText';
+import { AppTextField } from '@/components/AppTextField';
+import { AppButton } from '@/components/AppButton';
+import { SolidCard } from '@/components/SolidCard';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { ManagePortalLinksModal } from '@/components/admin/ManagePortalLinksModal';
 import { LiquidGlassCustomizerModal } from '@/components/admin/LiquidGlassCustomizerModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useAuth } from '@/auth/AuthContext';
-import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
-import { listReports } from '@/api/moderation';
-import { listVerificationRequests } from '@/api/verification';
+import { listCampuses } from '@/api/institutions';
 import { createNotification } from '@/api/notifications';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 
-const WORKDESK_TABS = ['Feature Flags', 'User Profiles', 'Forums', 'Events', 'Resources', 'Approvals'] as const;
-const SCOPE_OPTIONS = ['All Campuses', ...LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== 'GLOBAL').map((inst) => inst.name)];
-
-export default function PlatformConfigScreen() {
-  const { colors, spacing, radius, isDark } = useTheme();
+/**
+ * Platform > Console: the things an admin does to the whole platform day to day.
+ * Broadcasts, the university portal shortcuts shown to members, and the look of the glass UI.
+ * (Feature switches, campuses and health each have their own tab; content, people and reports
+ * live in their own groups - none of it is repeated here.)
+ */
+export default function PlatformConsoleScreen() {
+  const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
-  const { user, switchRole } = useAuth();
-  const { isFeatureEnabled } = useFeatureFlags();
-  const isSuperAdmin = user?.actualRole === 'admin';
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<(typeof WORKDESK_TABS)[number]>('Feature Flags');
-  const [institution, setInstitution] = useState(SCOPE_OPTIONS[0]);
-  const [institutionPickerOpen, setInstitutionPickerOpen] = useState(false);
-  const [portalLinksModalOpen, setPortalLinksModalOpen] = useState(false);
-  const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
-  const [liquidGlassModalOpen, setLiquidGlassModalOpen] = useState(false);
 
-  // Broadcast Alert Form State
-  const [broadcastTitle, setBroadcastTitle] = useState('');
-  const [broadcastBody, setBroadcastBody] = useState('');
-  const [broadcastTarget, setBroadcastTarget] = useState<'all' | 'ui' | 'unilag' | 'cs_department'>('all');
-  const [broadcastPriority, setBroadcastPriority] = useState<'high' | 'critical' | 'normal'>('high');
+  const [portalLinksOpen, setPortalLinksOpen] = useState(false);
+  const [glassStudioOpen, setGlassStudioOpen] = useState(false);
 
-  const { data: openReports } = useQuery({ queryKey: ['reports', 'open', 'all'], queryFn: () => listReports({ status: 'open' }) });
-  const { data: pendingVerifications } = useQuery({ queryKey: ['verification-requests'], queryFn: listVerificationRequests });
+  const [audience, setAudience] = useState<string>('ALL');
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [sending, setSending] = useState(false);
 
-  function handleSendBroadcast() {
-    if (!broadcastTitle.trim() || !broadcastBody.trim()) return;
+  const { data: campuses = [] } = useQuery({ queryKey: ['campuses'], queryFn: listCampuses });
+  const audienceOptions = [
+    { key: 'ALL', label: 'Everyone' },
+    ...campuses.filter((c) => c.code !== 'GLOBAL' && c.isActive !== false).map((c) => ({ key: c.code, label: c.shortName || c.code })),
+  ];
+  const audienceLabel = audienceOptions.find((o) => o.key === audience)?.label ?? 'Everyone';
+
+  function confirmSend() {
+    if (!title.trim() || !body.trim()) {
+      Alert.alert('Missing details', 'Add a headline and a message before sending.');
+      return;
+    }
+    Alert.alert(
+      'Send this alert?',
+      `"${title.trim()}" goes to ${audience === 'ALL' ? 'every member' : `everyone at ${audienceLabel}`} straight away. It cannot be recalled.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Send', style: 'destructive', onPress: () => void send() },
+      ],
+    );
+  }
+
+  async function send() {
+    setSending(true);
     haptics.medium();
-
-    createNotification({
-      type: 'announcement',
-      title: broadcastTitle.trim(),
-      body: broadcastBody.trim(),
-      deepLinkPath: '/dashboard',
-    });
-
-    recordAuditLogEntry({
-      action: 'global_push_broadcast',
-      summary: `Broadcast Flash Alert sent: "${broadcastTitle}" to ${broadcastTarget.toUpperCase()}`,
-      targetType: 'user',
-      targetId: 'broadcast-flash',
-      reason: `Audience: ${broadcastTarget}, Priority: ${broadcastPriority}`,
-    });
-
-    queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    setBroadcastModalOpen(false);
-    setBroadcastTitle('');
-    setBroadcastBody('');
-    Alert.alert('Broadcast Dispatched', 'Push notification and in-app flash banner delivered to campus network.');
+    try {
+      await createNotification({
+        type: 'announcement',
+        title: title.trim(),
+        body: body.trim(),
+        deepLinkPath: '/dashboard',
+        campusCode: audience,
+      });
+      await recordAuditLogEntry({
+        action: 'global_push_broadcast',
+        summary: `Broadcast sent: "${title.trim()}" to ${audience === 'ALL' ? 'all campuses' : audienceLabel}`,
+        targetType: 'platform_config',
+        targetId: 'broadcast',
+        reason: `Audience: ${audienceLabel}`,
+      });
+      haptics.success();
+      setTitle('');
+      setBody('');
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      Alert.alert('Alert sent', `Delivered to ${audience === 'ALL' ? 'all members' : `members at ${audienceLabel}`}.`);
+    } catch (err: any) {
+      haptics.error();
+      Alert.alert('Could not send', err?.message || 'Please try again.');
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
-
-      {/* Unified Main ScrollView for entire Admin Desk */}
-      <ScrollView style={{ flex: 1, width: '100%' }}
+      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+        <AdminSectionTabs group="platform" />
+      </View>
+      <ScrollView
+        style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.lg }}
       >
-        {/* Page Title & Badges */}
-        <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'flex-start' : 'flex-start', marginTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.md, gap: 8 }}>
-          <View style={{ flex: 1, minWidth: 0, width: '100%' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, flexWrap: 'wrap' }}>
-              <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold" style={{ flexShrink: 1 }}>
-                Staff & Admin Workdesk
-              </AppText>
-              <Badge label="Lioris Root Admin" tone="critical" />
-            </View>
-            <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-              Centralized university moderation, live nodes & control tower
-            </AppText>
-          </View>
+        <View>
+          <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
+            Platform Console
+          </AppText>
+          <AppText tone="secondary" variant="caption">
+            Broadcasts, university portal links and the look of the app
+          </AppText>
         </View>
 
-        {/* Preview Workspace As Role Switcher - Root Admins only, see isSuperAdmin above */}
-        {isSuperAdmin && (
-        <GlassCard
-          radius={20}
-          padded={false}
-          contentStyle={{
-            padding: spacing.md,
-            marginBottom: spacing.md,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
-              <AppText weight="bold">
-                Preview Workspace As Role
-              </AppText>
-            </View>
-            <Badge label={`Current: ${user?.role?.toUpperCase() || 'ADMIN'}`} tone="neutral" />
+        {/* Broadcast */}
+        <SolidCard radius={20} style={{ gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Ionicons name="megaphone-outline" size={20} color={colors.critical} />
+            <AppText variant="h3" weight="bold">Broadcast an alert</AppText>
           </View>
-          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
-            Jump into any user perspective to inspect features, student workflows, and faculty desks.
+          <AppText tone="secondary" variant="bodySmall">
+            Sends a notification to every member of the audience you pick, and shows in their Alerts.
           </AppText>
 
-          <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-            {[
-              { role: 'student', label: 'Student Portal', path: '/(student)/dashboard' },
-              { role: 'staff', label: 'Faculty Staff', path: '/(staff)/dashboard', flagKey: 'staff_role' },
-              { role: 'alumni', label: 'Alumni Fellow', path: '/(alumni)/dashboard' },
-              { role: 'admin', label: 'Root Admin', path: '/(admin)/platform-config' },
-            ]
-              .filter((r) => !r.flagKey || isFeatureEnabled(r.flagKey as any))
-              .map((r) => {
-              const active = user?.role === r.role;
+          <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8 }}>
+            AUDIENCE
+          </AppText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+            {audienceOptions.map((option) => {
+              const selected = audience === option.key;
               return (
                 <Pressable
-                  key={r.role}
-                  onPress={async () => {
-                    haptics.medium();
-                    await switchRole(r.role as any);
-                    queryClient.clear();
-                    router.replace(r.path as any);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Switch to ${r.label}`}
+                  key={option.key}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => setAudience(option.key)}
                   style={{
-                    flex: 1,
-                    minWidth: '47%',
-                    backgroundColor: active ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.70)',
-                    borderRadius: radius.md,
-                    paddingVertical: spacing.sm,
-                    paddingHorizontal: spacing.sm,
-                    alignItems: 'center',
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: 7,
+                    borderRadius: radius.pill,
                     borderWidth: 1,
-                    borderColor: active ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                    marginBottom: 4,
+                    borderColor: selected ? colors.brandPrimary : colors.border,
+                    backgroundColor: selected ? colors.pastelPrimaryBg : colors.surface,
                   }}
                 >
-                  <AppText variant="bodySmall" weight="bold" tone={active ? 'inverse' : 'primary'}>
-                    {r.label}
+                  <AppText variant="caption" weight="bold" tone={selected ? 'brand' : 'secondary'}>
+                    {option.label}
                   </AppText>
                 </Pressable>
               );
             })}
           </View>
-        </GlassCard>
-        )}
 
-        {/* Active Workspace Scope Frosted Card */}
-        <GlassCard
-          radius={20}
-          padded={false}
-          contentStyle={{
-            padding: spacing.md,
-            marginBottom: spacing.lg,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
-            <Ionicons name="school-outline" size={16} color={colors.textSecondary} />
-            <AppText weight="bold">
-              Active Campus Workspace Scope
-            </AppText>
-          </View>
-          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
-            Configures which university network data you view, edit, and moderate globally.
-          </AppText>
-          <Pressable
-            onPress={() => setInstitutionPickerOpen((v) => !v)}
-            accessibilityRole="button"
-            accessibilityLabel={`Campus workspace scope: ${institution}`}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.70)',
-              borderRadius: radius.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.md,
-              borderWidth: 1,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.textSecondary }} />
-              <AppText weight="semiBold">{institution}</AppText>
+          <AppTextField label="Headline" value={title} onChangeText={setTitle} placeholder="e.g. Senate exam timetable revised" />
+          <AppTextField
+            label="Message"
+            value={body}
+            onChangeText={setBody}
+            placeholder="Details, what to do, where to go…"
+            multiline
+            numberOfLines={4}
+          />
+          <AppButton
+            label={sending ? 'Sending…' : 'Send alert'}
+            onPress={confirmSend}
+            loading={sending}
+            disabled={sending || !title.trim() || !body.trim()}
+            fullWidth
+          />
+        </SolidCard>
+
+        {/* Portal links */}
+        <SolidCard radius={20}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <Ionicons name="link-outline" size={22} color={colors.textSecondary} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <AppText weight="bold" variant="bodySmall">University portal links</AppText>
+              <AppText tone="secondary" variant="caption">
+                The shortcuts members see on their home screen (student portal, library, LMS…)
+              </AppText>
             </View>
-            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-          </Pressable>
-          {institutionPickerOpen ? (
-            <View style={{ marginTop: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
-              {SCOPE_OPTIONS.map((inst) => (
-                <Pressable
-                  key={inst}
-                  onPress={() => {
-                    setInstitution(inst);
-                    setInstitutionPickerOpen(false);
-                    haptics.light();
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: inst === institution }}
-                  accessibilityLabel={inst}
-                  style={{
-                    paddingVertical: spacing.sm,
-                    paddingHorizontal: spacing.sm,
-                    borderRadius: radius.sm,
-                    backgroundColor: inst === institution ? colors.pastelPrimaryBg : 'transparent',
-                  }}
-                >
-                  <AppText weight={inst === institution ? 'bold' : 'regular'} tone={inst === institution ? 'brand' : 'primary'}>
-                    {inst}
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-        </GlassCard>
-
- {/* Quick Ecosystem Action Tiles */}
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
- <EcosystemTile
- icon="megaphone-outline"label="Broadcast Flash Alert"description="Push alert to students"badge="Live Push"onPress={() => setBroadcastModalOpen(true)}
- />
- <EcosystemTile
- icon="link-outline"label="Manage Portal Links"description="Configure UI & bookmarks"onPress={() => setPortalLinksModalOpen(true)}
- />
- <EcosystemTile
- icon="people-outline"label="Ecosystem Nodes"description="Registered accounts"badge="7"onPress={() => router.push('/(admin)/user-directory')}
- />
- <EcosystemTile
- icon="shield-outline"label="Ecosystem Safety"description="Moderation & Reports"badge={`${openReports?.length ?? 0} Pending`}
- onPress={() => router.push('/(admin)/moderation-queue')}
- />
- <EcosystemTile
- icon="document-lock-outline"label="Takedown Requests"description="Copyright & content reports"onPress={() => router.push('/(admin)/takedown-requests' as any)}
- />
- <EcosystemTile
- icon="color-wand-outline"
- label="Liquid Glass Studio"
- description="iOS 26 glass refraction"
- badge="Live Tuning"
- onPress={() => setLiquidGlassModalOpen(true)}
- />
- <EcosystemTile
-   icon="chatbubbles-outline"
-   label="Forum Hub"
-   description="Official threads & discourse"
-   badge="Live Forum"
-   onPress={() => router.push('/(admin)/forum' as any)}
- />
- <EcosystemTile
- icon="checkmark-circle-outline"label="Verify Credentials"description="Review uploaded files"badge={String(pendingVerifications?.length ?? 0)}
- onPress={() => router.push('/(admin)/verification-requests')}
- />
- </View>
-
-  {/* Feature Controls & Kill Switches Banner */}
-  <Pressable
-    onPress={() => {
-      haptics.light();
-      router.push('/(admin)/feature-controls');
-    }}
-    accessibilityRole="button"
-    accessibilityLabel="Open Feature Controls and Kill Switches"
-  >
-    <GlassCard
-      radius={18}
-      padded={false}
-      contentStyle={{
-        padding: spacing.md,
-        marginBottom: spacing.md,
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: colors.divider,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}
-        >
-          <Ionicons name="options-outline" size={22} color={colors.textSecondary} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <AppText weight="bold" variant="bodySmall">Feature Controls & Kill Switches</AppText>
-            <Badge label="Runtime Modular" tone="neutral" />
+            <AppButton label="Manage" size="sm" variant="secondary" onPress={() => setPortalLinksOpen(true)} />
           </View>
-          <AppText tone="secondary" variant="caption">
-            Temporarily toggle XP gamification, career page, marketplace, utility cards & more
-          </AppText>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </View>
-    </GlassCard>
-  </Pressable>
+        </SolidCard>
 
-  {/* Super Admin Config Banner */}
-  <Pressable
-    onPress={() => {
-      haptics.light();
-      router.push('/(admin)/super-admin-config');
-    }}
-    accessibilityRole="button"
-    accessibilityLabel="Open Super Admin Configuration"
-  >
-    <GlassCard
-      radius={18}
-      padded={false}
-      contentStyle={{
-        padding: spacing.md,
-        marginBottom: spacing.lg,
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: colors.divider,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}
-        >
-          <Ionicons name="construct" size={22} color={colors.textSecondary} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <AppText weight="bold" variant="bodySmall">Super Admin Configuration</AppText>
-          <AppText tone="secondary" variant="caption">
-            Multi-tenant federation, security controls, biometrics & root settings
-          </AppText>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </View>
-    </GlassCard>
-  </Pressable>
+        {/* Look & feel */}
+        <SolidCard radius={20}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <Ionicons name="color-wand-outline" size={22} color={colors.textSecondary} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <AppText weight="bold" variant="bodySmall">Liquid Glass Studio</AppText>
+              <AppText tone="secondary" variant="caption">
+                Tune blur, shine and tint of the glass surfaces on this device
+              </AppText>
+            </View>
+            <AppButton label="Open" size="sm" variant="secondary" onPress={() => setGlassStudioOpen(true)} />
+          </View>
+        </SolidCard>
+      </ScrollView>
 
-  {/* Workdesk Tabs Horizontal Selector */}
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 2 }}
-    style={{ marginBottom: spacing.lg }}
-  >
-    {WORKDESK_TABS.map((t) => {
-      const selected = tab === t;
-      return (
-        <Pressable
-          key={t}
-          onPress={() => {
-            haptics.light();
-            setTab(t);
-          }}
-          accessibilityRole="tab"
-          accessibilityState={{ selected }}
-          accessibilityLabel={t}
-          style={{
-            paddingVertical: 8,
-            paddingHorizontal: spacing.md,
-            borderRadius: radius.pill,
-            backgroundColor: selected ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.70)',
-            borderWidth: 1,
-            borderColor: selected ? colors.brandPrimary : isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.85)',
-          }}
-        >
-          <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'primary'}>
-            {t}
-          </AppText>
-        </Pressable>
-      );
-    })}
-  </ScrollView>
-
-        <View style={{ minHeight: 200 }}>
-          {tab === 'Feature Flags' ? <FeatureFlagsTab /> : null}
-          {tab === 'User Profiles' ? <UserProfilesTab /> : null}
- {tab === 'Forums' ? <ForumsModerationTab /> : null}
- {tab === 'Events' ? <EventsModerationTab /> : null}
- {tab === 'Resources' ? <ResourcesModerationTab /> : null}
- {tab === 'Approvals' ? <ApprovalsModerationTab /> : null}
- </View>
- </ScrollView>
-
- {/* Portal Links Modal */}
- <ManagePortalLinksModal
- visible={portalLinksModalOpen}
- onClose={() => setPortalLinksModalOpen(false)}
- />
-
- {/* Broadcast Flash Alert Modal */}
- <Modal visible={broadcastModalOpen} transparent animationType="slide"onRequestClose={() => setBroadcastModalOpen(false)}>
- <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={() => setBroadcastModalOpen(false)} />
- <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '85%' }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
- <View style={{ flexShrink: 0 }}>
- <Ionicons name="megaphone-outline"size={20} color={colors.critical} />
- </View>
- <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
- Broadcast Flash Alert
- </AppText>
- </View>
- <Pressable onPress={() => setBroadcastModalOpen(false)} hitSlop={8} style={{ flexShrink: 0 }}>
- <Ionicons name="close"size={22} color={colors.textSecondary} />
- </Pressable>
- </View>
-
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
- Immediately delivers a high-priority push notification and sticky banner across the selected student network.
- </AppText>
-
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 1, marginBottom: spacing.xs }}>
- TARGET AUDIENCE
- </AppText>
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md }}>
- {[
- { key: 'all', label: 'All Campuses' },
- { key: 'ui', label: 'University of Ibadan (UI)' },
- { key: 'unilag', label: 'UNILAG Node' },
- { key: 'cs_department', label: 'Computer Science Dept' },
- ].map((item) => (
- <Pressable
- key={item.key}
- onPress={() => setBroadcastTarget(item.key as any)}
- style={{
- paddingHorizontal: spacing.md,
- paddingVertical: 7,
- borderRadius: radius.pill,
- borderWidth: 1,
- borderColor: broadcastTarget === item.key ? colors.brandPrimary : colors.border,
- backgroundColor: broadcastTarget === item.key ? colors.pastelPrimaryBg : colors.surface,
- }}
- >
- <AppText variant="caption"weight="bold"tone={broadcastTarget === item.key ? 'brand' : 'secondary'}>
- {item.label}
- </AppText>
- </Pressable>
- ))}
- </View>
-
- <AppTextField
- label="Alert Headline / Title"placeholder="e.g. Senate Exam Timetable Revision or Campus Clinic Advisory"value={broadcastTitle}
- onChangeText={setBroadcastTitle}
- />
-
- <AppTextField
- label="Message Body"placeholder="Provide details, action required, or venue updates..."value={broadcastBody}
- onChangeText={setBroadcastBody}
- multiline
- numberOfLines={4}
- />
- </ScrollView>
-
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
- <AppButton label="Cancel"variant="ghost"onPress={() => setBroadcastModalOpen(false)} />
- <AppButton
- label="Dispatch Flash Alert"onPress={handleSendBroadcast}
- disabled={!broadcastTitle.trim() || !broadcastBody.trim()}
- />
- </View>
- </View>
- </View>
- </Modal>
-
-      <LiquidGlassCustomizerModal
-        visible={liquidGlassModalOpen}
-        onClose={() => setLiquidGlassModalOpen(false)}
-      />
- </ScreenContainer>
- );
-}
-
-function EcosystemTile({
- icon,
- label,
- description,
- badge,
- onPress,
-}: {
- icon: keyof typeof Ionicons.glyphMap;
- label: string;
- description: string;
- badge?: string;
- onPress: () => void;
-}) {
- const { colors, spacing } = useTheme();
- const { isDesktop } = useResponsive();
- return (
- <Pressable
-      onPress={() => {
-        haptics.light();
-        onPress();
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}. ${description}${badge ? `. ${badge}` : ''}`}
-      style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 220 : '47%' }}
-    >
-      <GlassCard
-        radius={18}
-        padded={false}
-        contentStyle={{
-          minHeight: isDesktop ? 110 : 100,
-          justifyContent: 'space-between',
-          padding: isDesktop ? spacing.lg : 12,
-        }}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, gap: spacing.xs }}>
-          <Ionicons name={icon} size={22} color={colors.textSecondary} />
-          {badge ? (
-            <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 9.5, flexShrink: 0, maxWidth: 90 }}>
-              {badge}
-            </AppText>
-          ) : null}
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <AppText weight="bold" variant="bodySmall" style={{ fontSize: 13 }}>
-            {label}
-          </AppText>
-          <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 1 }}>
-            {description}
-          </AppText>
-        </View>
-      </GlassCard>
-    </Pressable>
+      <ManagePortalLinksModal visible={portalLinksOpen} onClose={() => setPortalLinksOpen(false)} />
+      <LiquidGlassCustomizerModal visible={glassStudioOpen} onClose={() => setGlassStudioOpen(false)} />
+    </ScreenContainer>
   );
 }

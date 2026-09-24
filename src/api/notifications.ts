@@ -19,6 +19,8 @@ export interface CreateNotificationPayload {
  deepLinkPath?: string;
  recipientId?: string;
  senderId?: string;
+ /** Broadcast only: limit the audience to one campus (profiles.campus_code). Omit for everyone. */
+ campusCode?: string;
 }
 
 export async function createNotification(payload: CreateNotificationPayload): Promise<AppNotification> {
@@ -77,10 +79,11 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  let offset = 0;
  const allProfileIds: string[] = [];
  for (;;) {
- const { data: page, error: pageError } = await supabase
- .from('profiles')
- .select('id')
- .range(offset, offset + pageSize - 1);
+ let pageQuery = supabase.from('profiles').select('id');
+ if (payload.campusCode && payload.campusCode !== 'ALL') {
+ pageQuery = pageQuery.eq('campus_code', payload.campusCode);
+ }
+ const { data: page, error: pageError } = await pageQuery.range(offset, offset + pageSize - 1);
  if (pageError) {
  console.warn('[Notifications] Broadcast profile page fetch error:', pageError.message);
  break;

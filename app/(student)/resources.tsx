@@ -331,7 +331,7 @@ export default function ResourcesScreen() {
                   borderRadius: radius.pill,
                 }}
               >
-                <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 9.5 }}>
+                <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 11 }}>
                   VERIFIED LINKS
                 </AppText>
               </View>
@@ -345,7 +345,7 @@ export default function ResourcesScreen() {
                   borderRadius: radius.pill,
                 }}
               >
-                <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 9.5 }}>
+                <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 11 }}>
                   {selectedPortalFilter}
                 </AppText>
               </View>
@@ -466,7 +466,7 @@ export default function ResourcesScreen() {
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.textSecondary} />
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, maxWidth: 110, textAlign: 'right' }}>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, maxWidth: 110, textAlign: 'right' }}>
                     {portal.campusCode && portal.campusCode !== 'GLOBAL' && isStaffOrAdmin && selectedPortalFilter === 'ALL' ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
                   </AppText>
                 </View>
@@ -475,13 +475,13 @@ export default function ResourcesScreen() {
                   <AppText weight="bold" variant="caption" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 15 }}>
                     {portal.title}
                   </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, marginTop: 2 }}>
+                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11, marginTop: 2 }}>
                     {portal.url.replace(/^https?:\/\//, '')}
                   </AppText>
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <AppText weight="bold" variant="caption" tone="brand" style={{ fontSize: 10 }}>
+                  <AppText weight="bold" variant="caption" tone="brand" style={{ fontSize: 11 }}>
                     Launch
                   </AppText>
                   <Ionicons name="open-outline" size={10} color={colors.brandPrimary} />
@@ -774,7 +774,7 @@ export default function ResourcesScreen() {
                 </AppText>
                 {!isStaffOrAdmin && (
                   <View style={{ backgroundColor: `${colors.brandPrimary}20`, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill }}>
-                    <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 9.5 }}>
+                    <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 11 }}>
                       VERIFIED DIRECT LINKS
                     </AppText>
                   </View>

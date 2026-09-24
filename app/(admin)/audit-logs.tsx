@@ -1,24 +1,55 @@
-import React, { useState } from'react';
-import { Alert, FlatList, Platform, Pressable, View } from'react-native';
-import { useQuery } from'@tanstack/react-query';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'@/components/ScreenContainer';
-import { AppHeader } from'@/components/AppHeader';
-import { AppText } from'@/components/AppText';
-import { SolidCard } from'@/components/SolidCard';
-import { Badge } from'@/components/Badge';
-import { AppButton } from'@/components/AppButton';
-import { ChipSelect } from'@/components/ChipSelect';
-import { EmptyState } from'@/components/EmptyState';
+import React, { useState } from 'react';
+import { Alert, FlatList, Platform, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '@/components/ScreenContainer';
+import { AppHeader } from '@/components/AppHeader';
+import { AppText } from '@/components/AppText';
+import { SolidCard } from '@/components/SolidCard';
+import { Badge } from '@/components/Badge';
+import { AppButton } from '@/components/AppButton';
+import { ChipSelect } from '@/components/ChipSelect';
+import { EmptyState } from '@/components/EmptyState';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listAuditLog } from '@/api/auditLog';
-import { AuditLogAction, AuditLogEntry } from '@/api/types';
+import { AuditLogAction } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 
-const CATEGORY_FILTERS = ['All Events', 'Moderation', 'Security & Keys', 'Verification', 'Escrow & Finance'];
+/**
+ * The one audit trail. (There used to be two screens over the same log - "System Audit Trail" and
+ * "Moderation & Admin Action Log" - with different filters; they are merged here.)
+ */
+const CATEGORIES: Array<{ label: string; match?: (action: AuditLogAction) => boolean }> = [
+  { label: 'All' },
+  {
+    label: 'Moderation',
+    match: (a) =>
+      a.startsWith('report_') || a.startsWith('community_') || a.startsWith('event_') || a === 'item_moderated',
+  },
+  { label: 'Verification', match: (a) => a.startsWith('verification_') },
+  {
+    label: 'Accounts',
+    match: (a) => a.startsWith('user_') || a.startsWith('impersonation_') || a === 'profile_updated',
+  },
+  { label: 'Support', match: (a) => a.startsWith('support_ticket_') },
+  {
+    label: 'Platform',
+    match: (a) =>
+      a === 'feature_flag_toggled' ||
+      a.startsWith('portal_link_') ||
+      a === 'institution_provisioned' ||
+      a === 'platform_config_updated' ||
+      a === 'global_push_broadcast' ||
+      a === 'maintenance_mode_toggled' ||
+      a === 'storage_quotas_enforced' ||
+      a === 'system_cleanup_executed' ||
+      a === 'policy_updated',
+  },
+];
 
-const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | 'brand' | 'neutral'> = {
+const ACTION_TONE: Partial<Record<AuditLogAction, 'success' | 'critical' | 'warning' | 'brand' | 'neutral'>> = {
   report_resolved: 'success',
   report_dismissed: 'neutral',
   event_approved: 'success',
@@ -43,13 +74,6 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
   portal_link_deleted: 'critical',
   institution_provisioned: 'success',
   platform_config_updated: 'brand',
-  domain_authority_updated: 'brand',
-  tenant_toggles_updated: 'brand',
-  xp_multiplier_updated: 'brand',
-  level_badges_updated: 'brand',
-  seasonal_leaderboard_deployed: 'success',
-  escrow_config_updated: 'brand',
-  toxicity_thresholds_deployed: 'warning',
   storage_quotas_enforced: 'warning',
   global_push_broadcast: 'critical',
   maintenance_mode_toggled: 'critical',
@@ -65,28 +89,21 @@ const ACTION_TONE: Record<AuditLogAction, 'success' | 'critical' | 'warning' | '
 };
 
 export default function AuditLogsScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
-  const [filter, setFilter] = useState('All Events');
-  // Same cache entry as app/(admin)/moderation-audit-log.tsx's ['audit-log']
-  // query - both screens show the same underlying log, just filtered
-  // differently, so they share one fetch/cache instead of duplicating it.
+  const [filter, setFilter] = useState('All');
   const { data: entries, isLoading } = useQuery({ queryKey: ['audit-log'], queryFn: () => listAuditLog() });
 
-  const filtered = (entries ?? []).filter((e) => {
-    if (filter === 'Moderation') return e.action.includes('report') || e.action.includes('event');
-    if (filter === 'Verification') return e.action.includes('verification');
-    if (filter === 'Escrow & Finance') return e.action.includes('escrow');
-    if (filter === 'Security & Keys') return e.action.includes('impersonation');
-    return true;
-  });
+  const category = CATEGORIES.find((c) => c.label === filter) ?? CATEGORIES[0];
+  const filtered = (entries ?? []).filter((e) => !category.match || category.match(e.action));
 
   async function handleExportCsv() {
     haptics.medium();
     const csvHeader = 'ID,Timestamp,Actor,Role,Action,Summary,TargetType,Institution,Reason\n';
-    const csvRows = (entries ?? [])
-      .map((e) =>
-        `"${e.id}","${e.createdAt}","${e.actorName}","${e.actorRole}","${e.action}","${e.summary.replace(/"/g, '""')}","${e.targetType}","${e.institutionCode ?? 'GLOBAL'}","${(e.reason ?? '').replace(/"/g, '""')}"`,
+    const csvRows = filtered
+      .map(
+        (e) =>
+          `"${e.id}","${e.createdAt}","${e.actorName}","${e.actorRole}","${e.action}","${e.summary.replace(/"/g, '""')}","${e.targetType}","${e.institutionCode ?? 'GLOBAL'}","${(e.reason ?? '').replace(/"/g, '""')}"`,
       )
       .join('\n');
     const csvContent = csvHeader + csvRows;
@@ -116,18 +133,12 @@ export default function AuditLogsScreen() {
           });
         } else {
           const { Share } = await import('react-native');
-          await Share.share({
-            title: 'Campus Audit Ledger CSV',
-            message: csvContent,
-          });
+          await Share.share({ title: 'Campus Audit Ledger CSV', message: csvContent });
         }
       } catch {
         try {
           const { Share } = await import('react-native');
-          await Share.share({
-            title: 'Campus Audit Ledger CSV',
-            message: csvContent,
-          });
+          await Share.share({ title: 'Campus Audit Ledger CSV', message: csvContent });
         } catch {
           Alert.alert('Export Error', 'Unable to initiate export share sheet.');
         }
@@ -138,20 +149,31 @@ export default function AuditLogsScreen() {
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs, gap: spacing.sm }}>
+      <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm }}>
+        <AdminSectionTabs group="safety" />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.sm, marginBottom: spacing.xs, gap: spacing.sm }}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
-            System Audit Trail
+            Audit Log
           </AppText>
-          <AppText tone="secondary">Immutable ledger of administrative and security events</AppText>
+          <AppText tone="secondary" variant="caption">
+            Who did what, when and why - moderation, accounts, verification and platform changes
+          </AppText>
         </View>
         <View style={{ flexShrink: 0 }}>
-          <AppButton label="Export CSV" variant="secondary" size={isDesktop ? 'md' : 'sm'} onPress={handleExportCsv} />
+          <AppButton
+            label="Export CSV"
+            variant="secondary"
+            size={isDesktop ? 'md' : 'sm'}
+            onPress={handleExportCsv}
+            disabled={filtered.length === 0}
+          />
         </View>
       </View>
 
       <View style={{ marginVertical: spacing.md }}>
-        <ChipSelect options={CATEGORY_FILTERS} selected={[filter]} onToggle={setFilter} />
+        <ChipSelect options={CATEGORIES.map((c) => c.label)} selected={[filter]} onToggle={setFilter} />
       </View>
 
       <FlatList
@@ -165,9 +187,11 @@ export default function AuditLogsScreen() {
         renderItem={({ item }) => (
           <View style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}>
             <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.border }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
-                <Badge label={item.action.replace(/_/g, ' ').toUpperCase()} tone={ACTION_TONE[item.action] ?? 'neutral'} />
-                <AppText tone="secondary" variant="caption">
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs, gap: spacing.xs }}>
+                <View style={{ flexShrink: 1 }}>
+                  <Badge label={item.action.replace(/_/g, ' ').toUpperCase()} tone={ACTION_TONE[item.action] ?? 'neutral'} />
+                </View>
+                <AppText tone="secondary" variant="caption" style={{ flexShrink: 0 }}>
                   {new Date(item.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </AppText>
               </View>
@@ -178,16 +202,16 @@ export default function AuditLogsScreen() {
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 2 }}>
                 <Ionicons name="shield-checkmark" size={14} color={colors.textSecondary} />
-                <AppText tone="secondary" variant="caption">
-                  Actor: {item.actorName} ({item.actorRole.toUpperCase()})
-                  {item.institutionCode ? ` \u2022 Campus: ${item.institutionCode}` : ''}
+                <AppText tone="secondary" variant="caption" style={{ flex: 1 }}>
+                  {item.actorName} ({item.actorRole.toUpperCase()})
+                  {item.institutionCode ? ` • Campus: ${item.institutionCode}` : ''}
                 </AppText>
               </View>
 
               {item.reason ? (
                 <View style={{ backgroundColor: colors.divider, padding: spacing.xs, borderRadius: 8, marginTop: 4 }}>
                   <AppText variant="caption" tone="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>
-                    Justification: {item.reason}
+                    Reason: {item.reason}
                   </AppText>
                 </View>
               ) : null}
@@ -195,7 +219,12 @@ export default function AuditLogsScreen() {
           </View>
         )}
         ListEmptyComponent={
-          !isLoading ? <EmptyState title="No audit entries" description="System actions will be recorded here automatically." /> : null
+          !isLoading ? (
+            <EmptyState
+              title="No audit entries"
+              description={filter === 'All' ? 'System actions will be recorded here automatically.' : `No ${filter.toLowerCase()} entries yet.`}
+            />
+          ) : null
         }
       />
     </ScreenContainer>

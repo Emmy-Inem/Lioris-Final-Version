@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import {
   ScrollView,
   View,
@@ -158,6 +159,9 @@ export default function SystemHealthScreen() {
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
+      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+        <AdminSectionTabs group="platform" />
+      </View>
 
       {/* Screen Header */}
       <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>
