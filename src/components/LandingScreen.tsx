@@ -23,6 +23,7 @@ import { joinWaitlist, LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { haptics } from '@/utils/haptics';
 import { AndroidBlurBackdrop, AndroidBlurFill, AndroidBlurScope } from '@/components/AndroidBlur';
 import { AndroidSoftGlow } from '@/components/AndroidSoftGlow';
+import { PhoneMockup } from '@/components/landing/PhoneMockup';
 
 export function LandingScreen() {
   const { colors, radius, isDark, toggleTheme } = useTheme();
@@ -356,7 +357,7 @@ export function LandingScreen() {
                 Explore the Lioris Campus Workspace
               </AppText>
               <AppText tone="secondary" style={{ textAlign: 'center', marginTop: 4, maxWidth: 520 }}>
-                Preview the student and alumni experience across academic resources, discussions, events, careers, and mentorship.
+                A live demo of the Lioris app - switch between the student and alumni views and use the tabs. The people, courses and companies shown are made up.
               </AppText>
             </View>
 
@@ -449,185 +450,14 @@ export function LandingScreen() {
                 </View>
               )}
 
-              {/* Clean product preview panel */}
-              <View
-                style={{
-                  width: Math.min(width - 32, 420),
-                  height: width < 480 ? 510 : 580,
-                  borderRadius: 28,
-                  backgroundColor: isDark ? '#020617' : '#FFFFFF',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.12)',
-                  borderWidth: 1,
-                  padding: 0,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  ...(Platform.OS === 'web'
-                    ? {
-                        boxShadow: isDark
-                          ? '0 25px 60px -12px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
-                          : '0 25px 60px -12px rgba(15, 23, 42, 0.22), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
-                      }
-                    : {}),
-                }}
-              >
-                {/* Dynamic Screen Interior */}
-                <View
-                  style={{
-                    flex: 1,
-                    borderRadius: 27,
-                    backgroundColor: isDark ? '#0B132B' : '#F1F5F9',
-                    overflow: 'hidden',
-                    position: 'relative',
-                  }}
-                >
-                  {/* Workspace content */}
-                  <ScrollView
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingVertical: 18, paddingHorizontal: 16 }}
-                  >
-                    {/* Mini App Header */}
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: 14,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <LiorisLogo size={22} variant="symbol" />
-                        <AppText variant="caption" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                          LIORIS
-                        </AppText>
-                      </View>
-                      <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-                        {previewRole === 'student' ? 'STUDENT' : 'ALUMNI'}
-                      </AppText>
-                    </View>
-
-                    {/* STUDENT PREVIEW CONTENT */}
-                    {previewRole === 'student' && (
-                      <View style={{ gap: 10 }}>
-                        {/* Student Greeting */}
-                        <View style={{ marginBottom: 4 }}>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Hello, Diana 👋
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            University of Ibadan • Computer Science (400L)
-                          </AppText>
-                        </View>
-
-                        {/* Forum Discussion Card */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                              CAMPUS FORUM
-                            </AppText>
-                            <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                              12m ago
-                            </AppText>
-                          </View>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            CSC 401: Best preparation tips for Friday's lab exam?
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            24 classmates responding in #computer-science
-                          </AppText>
-                        </View>
-
-                        {/* Academic Resources Vault */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
-                            ACADEMIC RESOURCES VAULT
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            CSC 401 Past Exam & Marking Scheme
-                          </AppText>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                            <Ionicons name="folder-outline" size={13} color={colors.brandPrimary} />
-                            <AppText variant="caption" tone="brand" weight="semiBold" style={{ fontSize: 10 }}>
-                              Verified Department Repository (312 Downloads)
-                            </AppText>
-                          </View>
-                        </View>
-
-                        {/* Campus Event Card */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                            CAMPUS CALENDAR
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Annual Technology & Innovation Symposium
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Faculty Large Lecture Theatre • Tomorrow at 10:00 AM
-                          </AppText>
-                        </View>
-                      </View>
-                    )}
-
-                    {/* ALUMNI PREVIEW CONTENT */}
-                    {previewRole === 'alumni' && (
-                      <View style={{ gap: 10 }}>
-                        {/* Alumni Greeting */}
-                        <View style={{ marginBottom: 4 }}>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Welcome back, Adeola 🎓
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            UI Alum '22 • Software Engineer at Paystack
-                          </AppText>
-                        </View>
-
-                        {/* Career & Hiring Board */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                              CAREER PIPELINE
-                            </AppText>
-                            <AppText variant="caption" style={{ color: '#10B981', fontSize: 10, fontWeight: 'bold' }}>
-                              Active Hiring
-                            </AppText>
-                          </View>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Software Engineering Intern • Paystack
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Direct alumni referral pipeline for graduating cohort
-                          </AppText>
-                        </View>
-
-                        {/* 1-on-1 Mentorship Session */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 10 }}>
-                            MENTORSHIP CIRCLE
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            1-on-1 Session: Breaking into Cloud Engineering
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Mentee: Chinedu E. (300L CS) • Thursday 4:00 PM
-                          </AppText>
-                        </View>
-
-                        {/* Alumni Gathering */}
-                        <View style={[glassStyle(16, isDark ? 0.6 : 0.8), { padding: 12, gap: 6 }]}>
-                          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10 }}>
-                            ALUMNI GATHERINGS
-                          </AppText>
-                          <AppText variant="bodySmall" weight="bold" style={{ color: isDark ? '#FFF' : '#0F172A' }}>
-                            Annual Alumni Dinner & Gala 2026
-                          </AppText>
-                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                            Victoria Island, Lagos • Dec 12
-                          </AppText>
-                        </View>
-                      </View>
-                    )}
-                  </ScrollView>
-
+              {/* iPhone mockup running a demo copy of the real app: tap the tabs to explore */}
+              <View style={{ alignItems: 'center', gap: 12 }}>
+                <PhoneMockup role={previewRole} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="hand-left-outline" size={14} color={isDark ? '#94A3B8' : '#64748B'} />
+                  <AppText variant="caption" tone="secondary">
+                    Tap the tabs and cards - it works like the real app
+                  </AppText>
                 </View>
               </View>
 
