@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node -e \"const fs=require('fs'),cp=require('child_process');const f=fs.readdirSync('src/utils').filter(n=>/.test.ts$/.test(n)).map(n=>'src/utils/'+n);if(!f.length){console.log('No unit tests found.');process.exit(0)}process.exit(cp.spawnSync(process.execPath,['--test',...f],{stdio:'inherit'}).status??1)\"",
+    "test:sql": "npm test --prefix tools/sql-harness",
     "e2e": "playwright test",
     "e2e:ci": "playwright test --reporter=list,github,html",
     "audit:prod": "npm audit --omit=dev --audit-level=high",

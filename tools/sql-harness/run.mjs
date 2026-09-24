@@ -1130,6 +1130,29 @@ await check('a signed-in user still cannot change their own verification status 
   });
 });
 
+// The product migrations under supabase/migrations are what the hosted CLI
+// actually applies. Keep the newest workflow migrations in the same real
+// Postgres parser/runtime gate as the legacy hardening files; otherwise a
+// green harness can miss a syntax or schema-order failure in the release that
+// introduces mentorship, study pods, or campus administration.
+console.log('\n== current product workflow migrations ==');
+const currentProductMigrations = [
+  'supabase/migrations/20260925100000_mentorship_v2.sql',
+  'supabase/migrations/20260925110000_study_pods_v2.sql',
+  'supabase/migrations/20260925120000_events_portals_campuses.sql',
+  'supabase/migrations/20260925130000_normalise_tags_keep_first.sql',
+];
+for (const file of currentProductMigrations) {
+  await check(`${file} applies cleanly`, async () => {
+    await applyFile(db, file, true, () => {});
+  });
+}
+for (const file of currentProductMigrations) {
+  await check(`${file} is idempotent`, async () => {
+    await applyFile(db, file, true, () => {});
+  });
+}
+
 // ---------------------------------------------------------------------------
 const failed = results.filter((r) => !r.ok);
 console.log(`\n== Summary: ${results.length - failed.length}/${results.length} checks passed ==`);

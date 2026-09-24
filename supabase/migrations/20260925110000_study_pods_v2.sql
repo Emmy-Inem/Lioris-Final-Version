@@ -10,6 +10,47 @@
 -- everything that changes state goes through a SECURITY DEFINER function.
 
 -- =====================================================================================================
+-- 0. campus-scope dependency
+-- =====================================================================================================
+-- Study-pod discovery is campus-scoped. Some production databases received
+-- these helpers through the earlier manual campus-access rollout, but that
+-- file is not part of the Supabase CLI migration chain. Define the dependency
+-- here as well so this migration works on a clean schema and on environments
+-- where the manual rollout was never applied.
+CREATE OR REPLACE FUNCTION public.campus_wall_enabled()
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT COALESCE(
+    (SELECT (value->>'enabled')::boolean
+     FROM public.platform_settings
+     WHERE key = 'campus_wall'),
+    true
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.auth_campus_access()
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT CASE
+    WHEN NOT public.campus_wall_enabled() THEN p.campus_code
+    WHEN p.role IN ('admin', 'staff') THEN p.campus_code
+    WHEN p.verification_status = 'verified' THEN p.campus_code
+    ELSE NULL
+  END
+  FROM public.profiles p
+  WHERE p.id = auth.uid();
+$$;
+
+REVOKE ALL ON FUNCTION public.campus_wall_enabled() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.auth_campus_access() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.campus_wall_enabled() TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.auth_campus_access() TO authenticated, anon, service_role;
+
+-- =====================================================================================================
 -- 1. columns
 -- =====================================================================================================
 ALTER TABLE public.study_groups

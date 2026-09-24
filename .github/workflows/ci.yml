@@ -45,6 +45,12 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Install SQL migration harness
+        run: npm ci --prefix tools/sql-harness
+
+      - name: Supabase migration and RLS regression tests
+        run: npm test --prefix tools/sql-harness
+
       # Fails on high/critical advisories in production dependencies. If a future
       # advisory is only fixable in dev-tool-only transitive packages, lower this to
       # --audit-level=critical with a comment explaining which advisory and why.
