@@ -902,9 +902,6 @@ function LibraryScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {label('UNI DIRECTORY')}
-          <AppText weight="bold" style={{ fontSize: 8, color: colors.brandPrimary }}>
-            VERIFIED
-          </AppText>
         </View>
         <AppText tone="secondary" style={{ fontSize: 8.5 }}>
           3 links
@@ -935,11 +932,11 @@ function LibraryScreen() {
           { cat: 'Services', title: 'E-Learning', url: 'lms.university.edu' },
           { cat: 'Library', title: 'Library Catalogue', url: 'library.university.edu' },
         ].map((portal) => (
-          <View key={portal.title} style={{ width: 82, flexShrink: 0, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 7, paddingVertical: 6, gap: 2 }}>
+          <View key={portal.title} style={{ width: 82, height: 62, flexShrink: 0, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 7, paddingVertical: 6, gap: 2 }}>
             <AppText weight="semiBold" tone="secondary" numberOfLines={1} style={{ fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 0.4 }}>
               {portal.cat}
             </AppText>
-            <AppText weight="bold" numberOfLines={2} style={{ fontSize: 9.5, lineHeight: 12 }}>
+            <AppText weight="bold" numberOfLines={2} style={{ fontSize: 9.5, lineHeight: 12, minHeight: 24 }}>
               {portal.title}
             </AppText>
             <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 8 }}>

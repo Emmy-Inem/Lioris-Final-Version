@@ -322,20 +322,6 @@ export default function ResourcesScreen() {
                 ? 'ALL PORTAL DIRECTORIES'
                 : `${campusDisplayName.toUpperCase()} DIRECTORY`}
             </AppText>
-            {!isStaffOrAdmin && (
-              <View
-                style={{
-                  backgroundColor: `${colors.brandPrimary}20`,
-                  paddingHorizontal: 6,
-                  paddingVertical: 1,
-                  borderRadius: radius.pill,
-                }}
-              >
-                <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 11 }}>
-                  VERIFIED LINKS
-                </AppText>
-              </View>
-            )}
             {isStaffOrAdmin && selectedPortalFilter !== 'CURRENT' && selectedPortalFilter !== 'ALL' && (
               <View
                 style={{
@@ -459,6 +445,7 @@ export default function ResourcesScreen() {
                 padded={false}
                 style={{
                   width: isDesktop ? 150 : 128,
+                  height: 82,
                   paddingHorizontal: 10,
                   paddingVertical: 8,
                   gap: 3,
@@ -467,7 +454,7 @@ export default function ResourcesScreen() {
                 <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                   {portal.campusCode && portal.campusCode !== 'GLOBAL' && isStaffOrAdmin && selectedPortalFilter === 'ALL' ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
                 </AppText>
-                <AppText weight="bold" variant="caption" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 15 }}>
+                <AppText weight="bold" variant="caption" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 15, minHeight: 30 }}>
                   {portal.title}
                 </AppText>
                 <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10 }}>
@@ -759,17 +746,10 @@ export default function ResourcesScreen() {
                     ? 'CAMPUS DIRECTORIES & OFFICIAL PORTALS'
                     : `${(institutionInfo?.name || campusDisplayName).toUpperCase()} OFFICIAL PORTALS`}
                 </AppText>
-                {!isStaffOrAdmin && (
-                  <View style={{ backgroundColor: `${colors.brandPrimary}20`, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill }}>
-                    <AppText weight="bold" tone="brand" variant="caption" style={{ fontSize: 11 }}>
-                      VERIFIED DIRECT LINKS
-                    </AppText>
-                  </View>
-                )}
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                 <AppText tone="secondary" variant="caption">
-                  {portalLinks.filter((p) => p.active).length} active verified portals
+                  {portalLinks.filter((p) => p.active).length} active portals
                 </AppText>
                 {/* Desktop Left / Right Scroll Chevrons */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -926,12 +906,13 @@ export default function ResourcesScreen() {
                     style={{
                       borderWidth: 1,
                       borderColor: colors.border,
+                      height: 74,
                       paddingHorizontal: 12,
                       paddingVertical: 9,
                       gap: 2,
                     }}
                   >
-                    <AppText weight="bold" variant="bodySmall" numberOfLines={2} style={{ lineHeight: 17 }}>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={2} style={{ lineHeight: 17, minHeight: 34 }}>
                       {portal.title}
                     </AppText>
                     <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>
