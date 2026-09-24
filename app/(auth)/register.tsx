@@ -16,7 +16,8 @@ import { UserRole } from '@/api/types';
 import { isPasswordValid, passwordStrength, isValidEmailFormat, isValidUsername } from '@/utils/validation';
 import { seedProfileUsername } from '@/api/profile';
 import { isEmailConfirmationRequired, checkUsernameAvailable } from '@/api/auth';
-import { getInstitutionForEmail, LAUNCH_INSTITUTIONS, getInstitutionByCode, joinWaitlist } from '@/api/institutions';
+import { getInstitutionForEmail, getInstitutionByCode, joinWaitlist } from '@/api/institutions';
+import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
@@ -25,7 +26,6 @@ import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidge
 import { persistCampus } from '@/hooks/useViewScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 
-const SUPPORTED_INSTITUTIONS = LAUNCH_INSTITUTIONS.filter((i) => i.code !== 'GLOBAL');
 
 const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
  { value: 'student', label: 'Student Portal', icon: 'school' },
@@ -33,6 +33,7 @@ const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: st
 ];
 
 export default function RegisterScreen() {
+ const { campuses: SUPPORTED_INSTITUTIONS } = useCampusRegistry();
  const { colors, radius, spacing, isDark, toggleTheme } = useTheme();
  const { isDesktop } = useResponsive();
  const { register } = useAuth();

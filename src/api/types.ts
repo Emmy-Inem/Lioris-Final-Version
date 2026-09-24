@@ -260,38 +260,137 @@ export interface AppNotification {
  deepLinkPath?: string | null;
 }
 
+export type MentorSessionMode = 'video' | 'chat' | 'in_person';
+
+/** What a mentor offers (mentor_profiles) joined with who they are (profiles) and how they are rated. */
 export interface MentorProfile {
- id: string;
- fullName: string;
- avatarUrl?: string | null;
- department?: string;
- campusCode?: string;
- expertiseTags: string[];
- bio: string;
- company?: string;
- /** Undefined when the mentor hasn't published a capacity - never guess a number. */
- availableSlots?: number;
+  id: string;
+  fullName: string;
+  avatarUrl?: string | null;
+  department?: string;
+  campusCode?: string;
+  headline?: string;
+  about?: string;
+  jobTitle?: string;
+  company?: string;
+  yearsExperience?: number | null;
+  expertiseTags: string[];
+  industries: string[];
+  sessionModes: MentorSessionMode[];
+  /** { days: ['mon','wed'], window: 'evenings', timezone: 'Africa/Lagos', notes: '...' } */
+  availability: MentorAvailability;
+  linkedinUrl?: string | null;
+  isAccepting: boolean;
+  maxMentees: number;
+  activeMentees: number;
+  openSlots: number;
+  completedCount: number;
+  avgRating: number | null;
+  ratingCount: number;
+  /** How well the mentor lines up with the signed-in student (interests, department, campus). */
+  matchScore: number;
+  /** The signed-in student's open request to this mentor, if any. */
+  myRequestStatus?: 'pending' | 'active' | null;
 }
 
-export type MentorshipStatus = 'pending' | 'active' | 'completed' | 'declined';
+export interface MentorAvailability {
+  days?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
+  window?: 'mornings' | 'afternoons' | 'evenings' | 'weekends' | 'flexible';
+  timezone?: string;
+  notes?: string;
+}
+
+/** The signed-in mentor's own editable profile. */
+export interface MyMentorProfile {
+  userId: string;
+  headline: string;
+  about: string;
+  jobTitle: string;
+  company: string;
+  yearsExperience: number | null;
+  expertise: string[];
+  industries: string[];
+  sessionModes: MentorSessionMode[];
+  availability: MentorAvailability;
+  linkedinUrl: string;
+  isAccepting: boolean;
+  maxMentees: number;
+}
+
+export type MentorshipStatus = 'pending' | 'active' | 'completed' | 'declined' | 'withdrawn' | 'ended';
 
 export interface Mentorship {
- id: string;
- studentId: string;
- studentName?: string | null;
- studentDepartment?: string | null;
- mentorId: string;
- mentorName: string;
- status: MentorshipStatus;
- focusArea?: string | null;
- academicLevel?: string | null;
- pitch?: string | null;
- goals?: string | null;
- cadence?: string | null;
- planOutline?: string | null;
- documentUrl?: string | null;
- documentName?: string | null;
- createdAt?: string | null;
+  id: string;
+  studentId: string;
+  studentName?: string | null;
+  studentDepartment?: string | null;
+  studentAvatarUrl?: string | null;
+  mentorId: string;
+  mentorName: string;
+  mentorAvatarUrl?: string | null;
+  mentorHeadline?: string | null;
+  status: MentorshipStatus;
+  focusArea?: string | null;
+  academicLevel?: string | null;
+  pitch?: string | null;
+  goals?: string | null;
+  cadence?: string | null;
+  planOutline?: string | null;
+  documentUrl?: string | null;
+  documentName?: string | null;
+  declineReason?: string | null;
+  endReason?: string | null;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  lastActivityAt?: string | null;
+  createdAt?: string | null;
+}
+
+export type MentorshipSessionStatus = 'proposed' | 'confirmed' | 'declined' | 'cancelled' | 'completed';
+
+export interface MentorshipSession {
+  id: string;
+  mentorshipId: string;
+  proposedBy: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  mode: MentorSessionMode;
+  location?: string | null;
+  agenda?: string | null;
+  status: MentorshipSessionStatus;
+  decisionNote?: string | null;
+  outcomeNotes?: string | null;
+}
+
+export interface MentorshipGoal {
+  id: string;
+  mentorshipId: string;
+  title: string;
+  dueDate?: string | null;
+  isDone: boolean;
+  doneAt?: string | null;
+  createdBy: string;
+}
+
+export interface MentorshipUpdate {
+  id: string;
+  mentorshipId: string;
+  authorId: string;
+  authorName?: string | null;
+  kind: 'note' | 'progress' | 'resource';
+  body: string;
+  linkUrl?: string | null;
+  createdAt: string;
+}
+
+export interface MentorshipFeedback {
+  mentorshipId: string;
+  fromUser: string;
+  toUser: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  fromName?: string | null;
 }
 
 export type ReportStatus = 'open' | 'under_review' | 'resolved' | 'dismissed';
@@ -299,7 +398,7 @@ export type ReportStatus = 'open' | 'under_review' | 'resolved' | 'dismissed';
 export interface Report {
  id: string;
  reporterId: string;
- targetType: 'post' | 'message' | 'user' | 'event';
+ targetType: 'post' | 'message' | 'user' | 'event' | 'pod_post';
  targetId: string;
  reason: string;
  status: ReportStatus;
@@ -316,6 +415,9 @@ export type AuditLogAction =
  | 'event_approval_revoked'
  | 'event_purged'
  | 'event_updated'
+ | 'institution_updated'
+ | 'institution_deactivated'
+ | 'institution_reactivated'
  | 'event_spotlight_enabled'
  | 'event_spotlight_disabled'
  | 'verification_approved'
@@ -413,16 +515,85 @@ export interface JobListing {
  campusCode?: string;
 }
 
+export type PodRole = 'owner' | 'moderator' | 'member';
+export type PodMembershipStatus = 'active' | 'pending' | 'banned';
+
 export interface StudyGroup {
- id: string;
- name: string;
- courseCode: string;
- description: string;
- memberCount: number;
- isPublic: boolean;
- isJoined: boolean;
- campusCode?: string;
- lastMessageAt?: string | null;
+  id: string;
+  name: string;
+  courseCode: string;
+  description: string;
+  memberCount: number;
+  isPublic: boolean;
+  /** True only for an active member (kept for the older card/onboarding code). */
+  isJoined: boolean;
+  campusCode?: string;
+  lastMessageAt?: string | null;
+  level?: string | null;
+  department?: string | null;
+  topics: string[];
+  scheduleNote?: string | null;
+  goal?: string | null;
+  /** Only present for members - hidden from everyone else. */
+  meetingLink?: string | null;
+  maxMembers?: number | null;
+  pendingCount: number;
+  creatorId?: string;
+  creatorName?: string | null;
+  myStatus?: PodMembershipStatus | null;
+  myRole?: PodRole | null;
+  unreadCount: number;
+  nextSessionAt?: string | null;
+  createdAt?: string | null;
+  isArchived?: boolean;
+}
+
+export interface PodMember {
+  userId: string;
+  fullName: string;
+  avatarUrl?: string | null;
+  department?: string | null;
+  role: PodRole;
+  status: PodMembershipStatus;
+  joinedAt: string;
+  requestedMessage?: string | null;
+}
+
+export type PodPostKind = 'discussion' | 'question' | 'announcement' | 'resource';
+
+export interface PodPost {
+  id: string;
+  groupId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string | null;
+  authorPodRole?: PodRole | null;
+  parentId?: string | null;
+  kind: PodPostKind;
+  title?: string | null;
+  body: string;
+  linkUrl?: string | null;
+  isPinned: boolean;
+  isResolved: boolean;
+  replyCount: number;
+  createdAt: string;
+  editedAt?: string | null;
+}
+
+export interface PodSession {
+  id: string;
+  groupId: string;
+  title: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  mode: 'online' | 'in_person';
+  location?: string | null;
+  agenda?: string | null;
+  status: 'scheduled' | 'cancelled' | 'done';
+  createdBy: string;
+  creatorName?: string | null;
+  goingCount: number;
+  iAmGoing: boolean;
 }
 
 export interface Resource {

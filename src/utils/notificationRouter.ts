@@ -18,6 +18,17 @@ export function resolveNotificationRoute(
   if (rawPath && typeof rawPath === 'string' && rawPath.trim().length > 0) {
     const trimmed = rawPath.trim();
 
+    // Notifications written by the database (mentorship + study pod functions) point at one item:
+    //   /mentorship/<id>     -> that mentorship's space
+    //   /study-groups/<id>   -> that pod
+    const item = /^\/(mentorship|study-groups)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(trimmed);
+    if (item) {
+      if (item[1] === 'mentorship') {
+        return role === 'student' || role === 'alumni' ? `/(${role})/mentorship-space/${item[2]}` : `/(${role})/dashboard`;
+      }
+      return role === 'student' ? `/(student)/pod/${item[2]}` : `/(${role})/dashboard`;
+    }
+
     // Check if the path starts with a role group e.g. /(student)/..., /(alumni)/...
     const roleMatch = trimmed.match(/^\/\((student|staff|alumni|admin)\)(.*)$/);
     if (roleMatch) {

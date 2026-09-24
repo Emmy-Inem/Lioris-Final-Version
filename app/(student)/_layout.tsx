@@ -79,6 +79,8 @@ export default function StudentLayout() {
  <Tabs.Screen name="profile"options={{ href: null }} />
  <Tabs.Screen name="saved" options={{ href: null }} />
  <Tabs.Screen name="mentorship"options={{ href: null }} />
+ <Tabs.Screen name="mentorship-space/[id]" options={{ href: null }} />
+ <Tabs.Screen name="pod/[id]" options={{ href: null }} />
  <Tabs.Screen name="notifications"options={{ href: null }} />
  <Tabs.Screen name="search"options={{ href: null }} />
  <Tabs.Screen name="marketplace"options={{ href: null }} />

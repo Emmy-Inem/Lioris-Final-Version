@@ -73,3 +73,14 @@ test('preserves exact role route when recipient role matches', () => {
     '/(alumni)/mentorship',
   );
 });
+
+test('routes database notifications to the exact mentorship or pod', () => {
+  const id = '3f2b8c1e-9a4d-4e7b-8c55-0d6e1f2a3b4c';
+  assert.equal(resolveNotificationRoute('/mentorship/' + id, 'system', 'student'), '/(student)/mentorship-space/' + id);
+  assert.equal(resolveNotificationRoute('/mentorship/' + id, 'system', 'alumni'), '/(alumni)/mentorship-space/' + id);
+  assert.equal(resolveNotificationRoute('/mentorship/' + id, 'system', 'staff'), '/(staff)/dashboard');
+  assert.equal(resolveNotificationRoute('/study-groups/' + id, 'system', 'student'), '/(student)/pod/' + id);
+  assert.equal(resolveNotificationRoute('/study-groups/' + id, 'system', 'alumni'), '/(alumni)/dashboard');
+  // the older list-level links still work
+  assert.equal(resolveNotificationRoute('/(student)/study-groups', 'system', 'student'), '/(student)/study-groups');
+});

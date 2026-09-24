@@ -13,7 +13,8 @@ import { useAuth } from '@/auth/AuthContext';
 import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
 import { useToast } from '@/context/ToastContext';
 import { updateMyProfile, uploadAvatarImage } from '@/api/profile';
-import { LAUNCH_INSTITUTIONS, getInstitutionForEmail } from '@/api/institutions';
+import { getInstitutionForEmail } from '@/api/institutions';
+import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 import { persistCampus, getStoredCampus } from '@/hooks/useViewScope';
@@ -34,6 +35,7 @@ const POSTGRADUATE_PROGRAMMES = [
 ] as const;
 
 export default function BuildProfileScreen() {
+  const { campuses: campusChoices } = useCampusRegistry();
   const { colors, spacing, radius } = useTheme();
   const { user } = useAuth();
   const advance = useAdvanceOnboarding('/(auth)/onboarding/build-profile');
@@ -243,7 +245,7 @@ export default function BuildProfileScreen() {
           University / Campus
         </AppText>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
-          {LAUNCH_INSTITUTIONS.filter((i) => i.code !== 'GLOBAL').map((inst) => {
+          {campusChoices.map((inst) => {
             const isSelected = campusCode === inst.code;
             return (
               <Pressable

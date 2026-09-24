@@ -149,8 +149,8 @@ export function RequestMentorshipModal({
   }
 
   async function handleSubmit() {
-    if (!pitch.trim()) {
-      toast.error('Please write a short note introducing yourself and your background.');
+    if (pitch.trim().length < 20) {
+      toast.error('Tell the mentor a little about yourself first (at least 20 characters).');
       return;
     }
 
@@ -290,8 +290,10 @@ export function RequestMentorshipModal({
                     </AppText>
                     <Badge label="Verified Mentor" tone="brand" />
                   </View>
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    {[mentor.company, mentor.department].filter(Boolean).join(' • ') || 'Alumni Fellow'}
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }} numberOfLines={2}>
+                    {mentor.headline ||
+                      [mentor.jobTitle, mentor.company, mentor.department].filter(Boolean).join(' • ') ||
+                      'Alumni mentor'}
                   </AppText>
                 </View>
               </View>
@@ -367,7 +369,7 @@ export function RequestMentorshipModal({
               {/* 3. Statement of Purpose / Pitch */}
               <View>
                 <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  3. Statement of Purpose & Introduction *
+                  3. Introduce yourself * (at least 20 characters)
                 </AppText>
                 <AppTextField
                   label=""
@@ -460,7 +462,7 @@ export function RequestMentorshipModal({
                   </AppText>
                 </View>
                 <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginBottom: 10 }}>
-                  Mentors are 85% more likely to accept requests with a verified resume or project proposal attached.
+                  A CV or short proposal helps the mentor understand where you are starting from. It is optional.
                 </AppText>
 
                 {selectedFile ? (

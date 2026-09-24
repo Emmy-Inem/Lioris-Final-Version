@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -11,6 +11,7 @@ import { Badge } from './Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { createEvent } from '@/api/events';
 import { EventCategory } from '@/api/types';
@@ -103,6 +104,9 @@ export function PublishEventModal({
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { campusCode: defaultCampus, homeInstitutionCode } = useCampusScope();
+  const { isFeatureEnabled } = useFeatureFlags();
+  // The admin's Global toggle: while it is off there is no "Global network" to publish to.
+  const globalAllowed = isFeatureEnabled('global_workspace');
 
   const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
   const isAlumniHost = defaultScope === 'alumni' || user?.role === 'alumni';
@@ -120,12 +124,16 @@ export function PublishEventModal({
   );
   const targetCampus = activeCampus;
   const [visibilityScope, setVisibilityScope] = useState<'campus' | 'global'>('campus');
-  const [sponsored, setSponsored] = useState(false);
   const [capacity, setCapacity] = useState('');
   const [ticketPrice, setTicketPrice] = useState('0');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bannerUri, setBannerUri] = useState<string | null>(null);
+
+  // A 'global' choice made while the toggle was on must not survive the toggle being switched off.
+  useEffect(() => {
+    if (!globalAllowed && visibilityScope === 'global') setVisibilityScope('campus');
+  }, [globalAllowed, visibilityScope]);
 
   // Date/Time
   const [eventDate, setEventDate] = useState('');
@@ -253,17 +261,17 @@ export function PublishEventModal({
     haptics.medium();
     setSubmitting(true);
     try {
-      const finalCampus = visibilityScope === 'global' ? 'GLOBAL' : (targetCampus ? targetCampus.toUpperCase() : 'GLOBAL');
+      const scope: 'campus' | 'global' = globalAllowed ? visibilityScope : 'campus';
+      const finalCampus = scope === 'global' ? 'GLOBAL' : (targetCampus ? targetCampus.toUpperCase() : 'GLOBAL');
       await createEvent({
         title: title.trim(),
         description: description.trim() || 'No description provided.',
         category: CATEGORY_LABELS[category] || 'academic',
         location: venueType === 'virtual' ? 'Lioris Live (In-App)' : location.trim(),
         campusCode: finalCampus,
-        visibilityScope,
+        visibilityScope: scope,
         startAt: startAtDate.toISOString(),
         endAt: endAtDate.toISOString(),
-        sponsored,
         imageUrl: bannerUri || null,
         venueType,
         virtualLink: venueType === 'virtual' ? virtualLink.trim() : null,
@@ -378,6 +386,8 @@ export function PublishEventModal({
             />
 
             {/* Visibility Scope & Campus Selector */}
+            {globalAllowed ? (
+              <>
             <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.xs, marginTop: spacing.xs }}>
               Audience Scope:
             </AppText>
@@ -405,6 +415,8 @@ export function PublishEventModal({
                 );
               })}
             </View>
+              </>
+            ) : null}
 
             {/* University Workspace Node (Locked to Current Campus) */}
             <View style={{ backgroundColor: colors.divider, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border }}>
@@ -415,7 +427,7 @@ export function PublishEventModal({
                 </AppText>
               </View>
               <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>
-                {visibilityScope === 'campus'
+                {(globalAllowed ? visibilityScope : 'campus') === 'campus'
                   ? `This event will be published exclusively to verified members of ${institutionName}.`
                   : 'This event will be published across the global university federation.'}
               </AppText>
@@ -625,25 +637,9 @@ export function PublishEventModal({
               )}
             </Pressable>
 
-            {/* Sponsored / Spotlight */}
-            <Pressable
-              onPress={() => setSponsored((v) => !v)}
-              style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center', marginBottom: spacing.lg }}
-            >
-              <Ionicons
-                name={sponsored ? 'checkbox' : 'square-outline'}
-                size={20}
-                color={sponsored ? colors.brandPrimary : colors.textSecondary}
-              />
-              <View style={{ flex: 1 }}>
-                <AppText weight="semiBold" tone="brand">
-                  Feature as Spotlight Event
-                </AppText>
-                <AppText tone="secondary" variant="caption">
-                  Pin this event to the top carousel for highest student visibility
-                </AppText>
-              </View>
-            </Pressable>
+            <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.lg }}>
+              Once approved, an administrator can feature this event in the top carousel.
+            </AppText>
           </ScrollView>
 
           {/* Error Banner */}

@@ -135,6 +135,8 @@ export function EventDetailScreen() {
   const isOwner = !!user?.id && !!event?.organizerId && user.id === event.organizerId;
   const isAdmin = user?.role === 'admin' || user?.role === 'staff';
   const canManage = isOwner || isAdmin;
+  // Featuring an event (top carousel / sponsored badge) is an administrator-only decision, made after posting.
+  const canFeature = user?.role === 'admin';
 
   // Management Action State
   const [cancellingEvent, setCancellingEvent] = useState(false);
@@ -332,13 +334,8 @@ export function EventDetailScreen() {
         capacity: editCapacity.trim() ? parseInt(editCapacity.trim(), 10) : null,
         ticketPrice: editTicketPrice.trim() ? parseFloat(editTicketPrice.trim()) : 0,
         targetCohort: editTargetCohort.trim() || undefined,
-        ...(isAdmin
-          ? {
-              approvalStatus: editApprovalStatus,
-              isSpotlight: editIsSpotlight,
-              sponsored: editSponsored,
-            }
-          : {}),
+        ...(isAdmin ? { approvalStatus: editApprovalStatus } : {}),
+        ...(canFeature ? { isSpotlight: editIsSpotlight, sponsored: editSponsored } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ['events'] });
       await queryClient.invalidateQueries({ queryKey: ['events', 'detail', event.id] });
@@ -692,6 +689,7 @@ export function EventDetailScreen() {
                   />
                 </View>
 
+                {canFeature ? (
                 <View style={{ flex: 1, minWidth: 130 }}>
                   <AppButton
                     label={event.isSpotlight ? 'Featured ★' : 'Feature Event ★'}
@@ -701,6 +699,7 @@ export function EventDetailScreen() {
                     onPress={handleToggleSpotlight}
                   />
                 </View>
+                ) : null}
 
                 <View style={{ flex: 1, minWidth: 110 }}>
                   <AppButton
@@ -1352,6 +1351,7 @@ export function EventDetailScreen() {
                       onPress={handleOpenEdit}
                     />
                   </View>
+                  {canFeature ? (
                   <View style={{ flex: 1, minWidth: 105 }}>
                     <AppButton
                       label={event.isSpotlight ? 'Featured ★' : 'Feature ★'}
@@ -1361,6 +1361,7 @@ export function EventDetailScreen() {
                       onPress={handleToggleSpotlight}
                     />
                   </View>
+                  ) : null}
                   <View style={{ flex: 1, minWidth: 95 }}>
                     <AppButton
                       label={event.approvalStatus === 'approved' ? 'Revoke' : 'Approve'}
@@ -2191,6 +2192,8 @@ export function EventDetailScreen() {
                     </View>
                   </View>
 
+                  {canFeature ? (
+                  <>
                   {/* Spotlight Carousel Toggle */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
                     <View style={{ flex: 1, paddingRight: 8 }}>
@@ -2244,6 +2247,8 @@ export function EventDetailScreen() {
                       </AppText>
                     </Pressable>
                   </View>
+                  </>
+                  ) : null}
                 </View>
               )}
             </ScrollView>

@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from './supabase';
-import { generateUUID } from '../utils/uuid';
 
 export interface PortalLink {
  id: string;
@@ -81,119 +80,130 @@ export const DEFAULT_CAMPUS_PORTAL_LINKS: Record<string, PortalLink[]> = {
 // Flatten all default links for multi-campus searches
 export const ALL_DEFAULT_PORTAL_LINKS: PortalLink[] = Object.values(DEFAULT_CAMPUS_PORTAL_LINKS).flat();
 
-let localPortalLinksState: PortalLink[] = [...ALL_DEFAULT_PORTAL_LINKS];
+function rowToLink(row: any): PortalLink {
+  return {
+    id: row.id,
+    campusCode: row.campus_code || 'GLOBAL',
+    title: row.title,
+    url: row.url,
+    category: row.category || 'Academic',
+    icon: (row.icon as keyof typeof Ionicons.glyphMap) || 'link-outline',
+    active: row.is_active !== false,
+    displayOrder: row.display_order ?? 0,
+  };
+}
+
+function friendlyPortalError(error: { message?: string; code?: string }, fallback: string): Error {
+  const message = error?.message ?? '';
+  if (error?.code === '23505' || /duplicate key|portal_links_campus_title_uniq/i.test(message)) {
+    return new Error('This university already has a link with that title. Choose a different title.');
+  }
+  if (error?.code === '23503' || /portal_links_campus_code_fkey/i.test(message)) {
+    return new Error('That university does not exist. Pick one from the list.');
+  }
+  if (error?.code === '23514' || /url_scheme/i.test(message)) {
+    return new Error('The link must start with http:// or https://.');
+  }
+  if (/row-level security|permission denied/i.test(message)) {
+    return new Error('You do not have permission to change portal links for this university.');
+  }
+  return new Error(fallback);
+}
+
+export interface ListPortalLinksOptions {
+  /** Admin screens: include hidden links, and never substitute built-in defaults for missing rows. */
+  includeInactive?: boolean;
+}
 
 /**
- * Lists portal links for a specific campus, or across all universities if campusCode is 'ALL' or omitted.
- * Prioritizes verified defaults while gracefully merging any dynamic admin-created links from Supabase.
+ * Portal links come from the database (seeded with the curated links, editable by admins). The built-in
+ * defaults are only a safety net for members: used when the database cannot be reached or a campus has no
+ * rows yet, never on admin screens (where a phantom, uneditable row would be misleading).
+ * Pass 'ALL' to get every campus's links.
  */
-export async function listPortalLinks(campusCode?: string): Promise<PortalLink[]> {
+export async function listPortalLinks(campusCode?: string, options: ListPortalLinksOptions = {}): Promise<PortalLink[]> {
   const normCode = campusCode?.trim().toUpperCase();
   const targetCode = normCode === 'ALL' ? 'ALL' : (normCode || 'GLOBAL');
-
-  // Retrieve curated defaults for target code.
-  // When a specific university is requested, return only its links.
-  // Defaults never fall back to ALL, preventing other universities' links from leaking.
-  const defaults = targetCode === 'ALL'
-    ? ALL_DEFAULT_PORTAL_LINKS
-    : (DEFAULT_CAMPUS_PORTAL_LINKS[targetCode] || DEFAULT_CAMPUS_PORTAL_LINKS.GLOBAL || []);
+  const defaults = targetCode === 'ALL' ? ALL_DEFAULT_PORTAL_LINKS : (DEFAULT_CAMPUS_PORTAL_LINKS[targetCode] ?? []);
 
   try {
-    let query = supabase.from('portal_links').select('*').order('display_order', { ascending: true });
-    if (targetCode !== 'ALL') {
-      query = query.eq('campus_code', targetCode);
-    }
-
+    let query = supabase.from('portal_links').select('*').order('display_order', { ascending: true }).order('title', { ascending: true });
+    if (targetCode !== 'ALL') query = query.eq('campus_code', targetCode);
     const { data, error } = await query;
-    if (!error && data && data.length > 0) {
-      const dbLinks: PortalLink[] = data.map((row: any) => ({
-        id: row.id,
-        campusCode: row.campus_code || 'GLOBAL',
-        title: row.title,
-        url: row.url,
-        category: row.category || 'Academic',
-        icon: (row.icon as keyof typeof Ionicons.glyphMap) || 'link-outline',
-        active: row.is_active !== false,
-        displayOrder: row.display_order ?? 0,
-      }));
-
-      // Merge DB links with curated defaults, avoiding duplicate URLs/titles
-      const merged = [...defaults];
-      for (const d of dbLinks) {
-        const idx = merged.findIndex(
-          (m) => m.url.toLowerCase() === d.url.toLowerCase() || m.title.toLowerCase() === d.title.toLowerCase()
-        );
-        if (idx >= 0) {
-          merged[idx] = { ...merged[idx], ...d };
-        } else {
-          merged.push(d);
-        }
-      }
-      return merged.filter((l) => l.active);
+    if (error) throw error;
+    const rows = (data ?? []).map(rowToLink);
+    if (rows.length > 0 || options.includeInactive) {
+      return options.includeInactive ? rows : rows.filter((l) => l.active);
     }
   } catch (err) {
+    if (options.includeInactive) throw friendlyPortalError(err as any, 'Could not load portal links. Check your connection and try again.');
     console.warn('[PortalLinks] Failed to fetch from Supabase, using defaults:', err);
   }
-
   return defaults.filter((l) => l.active);
 }
 
+/** Throws a readable error if the link could not be saved (it used to report success regardless). */
 export async function createPortalLink(payload: Omit<PortalLink, 'id'>): Promise<PortalLink> {
-  const newId = generateUUID();
-  const newLink: PortalLink = {
-    id: newId,
-    ...payload,
-  };
-
-  try {
-    const { error } = await supabase.from('portal_links').insert({
-      id: newId,
-      campus_code: payload.campusCode || 'GLOBAL',
+  const { data, error } = await supabase
+    .from('portal_links')
+    .insert({
+      campus_code: (payload.campusCode || 'GLOBAL').toUpperCase(),
       title: payload.title.trim(),
       url: payload.url.trim(),
       category: payload.category.trim() || 'Academic',
       icon: payload.icon || 'link-outline',
       is_active: payload.active,
       display_order: payload.displayOrder ?? 0,
-    });
-    if (error) {
-      console.warn('[PortalLinks] Insert Supabase error:', error.message);
-    }
-  } catch (err) {
-    console.warn('[PortalLinks] Insert exception:', err);
-  }
-
-  localPortalLinksState.push(newLink);
-  return newLink;
+    })
+    .select('*')
+    .single();
+  if (error) throw friendlyPortalError(error, 'Could not save this link. Please try again.');
+  return rowToLink(data);
 }
 
 export async function updatePortalLink(id: string, patch: Partial<PortalLink>): Promise<PortalLink> {
-  localPortalLinksState = localPortalLinksState.map((l) => (l.id === id ? { ...l, ...patch } : l));
+  const dbPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.title !== undefined) dbPatch.title = patch.title.trim();
+  if (patch.url !== undefined) dbPatch.url = patch.url.trim();
+  if (patch.category !== undefined) dbPatch.category = patch.category.trim();
+  if (patch.icon !== undefined) dbPatch.icon = patch.icon;
+  if (patch.active !== undefined) dbPatch.is_active = patch.active;
+  if (patch.displayOrder !== undefined) dbPatch.display_order = patch.displayOrder;
+  if (patch.campusCode !== undefined) dbPatch.campus_code = patch.campusCode.toUpperCase();
 
-  try {
-    const dbPatch: any = {};
-    if (patch.title !== undefined) dbPatch.title = patch.title.trim();
-    if (patch.url !== undefined) dbPatch.url = patch.url.trim();
-    if (patch.category !== undefined) dbPatch.category = patch.category.trim();
-    if (patch.icon !== undefined) dbPatch.icon = patch.icon;
-    if (patch.active !== undefined) dbPatch.is_active = patch.active;
-    if (patch.displayOrder !== undefined) dbPatch.display_order = patch.displayOrder;
-    if (patch.campusCode !== undefined) dbPatch.campus_code = patch.campusCode;
-
-    await supabase.from('portal_links').update(dbPatch).eq('id', id);
-  } catch (err) {
-    console.warn('[PortalLinks] Update error:', err);
-  }
-
-  const found = localPortalLinksState.find((l) => l.id === id);
-  return found || { id, title: 'Updated Link', url: 'https://lioris.edu', category: 'Academic', icon: 'link-outline', active: true };
+  const { data, error } = await supabase.from('portal_links').update(dbPatch).eq('id', id).select('*').maybeSingle();
+  if (error) throw friendlyPortalError(error, 'Could not save your changes. Please try again.');
+  if (!data) throw new Error('This link no longer exists. Reload the list.');
+  return rowToLink(data);
 }
 
 export async function deletePortalLink(id: string): Promise<void> {
-  localPortalLinksState = localPortalLinksState.filter((l) => l.id !== id);
-  try {
-    await supabase.from('portal_links').delete().eq('id', id);
-  } catch (err) {
-    console.warn('[PortalLinks] Delete error:', err);
-  }
+  const { error } = await supabase.from('portal_links').delete().eq('id', id);
+  if (error) throw friendlyPortalError(error, 'Could not delete this link. Please try again.');
+}
+
+/** Adds the curated links a launch campus ships with that the database does not have yet. Returns how many were added. */
+export async function importSuggestedPortalLinks(campusCode: string): Promise<number> {
+  const code = campusCode.trim().toUpperCase();
+  const suggestions = DEFAULT_CAMPUS_PORTAL_LINKS[code] ?? [];
+  if (suggestions.length === 0) return 0;
+  const existing = await listPortalLinks(code, { includeInactive: true });
+  const haveTitle = new Set(existing.map((l) => l.title.toLowerCase()));
+  const haveUrl = new Set(existing.map((l) => l.url.toLowerCase()));
+  const start = existing.reduce((max, l) => Math.max(max, l.displayOrder ?? 0), 0);
+  const missing = suggestions.filter((s) => !haveTitle.has(s.title.toLowerCase()) && !haveUrl.has(s.url.toLowerCase()));
+  if (missing.length === 0) return 0;
+  const { error } = await supabase.from('portal_links').insert(
+    missing.map((s, i) => ({
+      campus_code: code,
+      title: s.title,
+      url: s.url,
+      category: s.category,
+      icon: s.icon,
+      is_active: true,
+      display_order: start + i + 1,
+    })),
+  );
+  if (error) throw friendlyPortalError(error, 'Could not import the suggested links.');
+  return missing.length;
 }

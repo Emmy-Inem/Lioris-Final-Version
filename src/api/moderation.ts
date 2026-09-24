@@ -103,6 +103,7 @@ async function resolveActionedUserId(target: Report): Promise<string | null> {
 
 const TARGET_TYPE_LABEL: Record<Report['targetType'], string> = {
  post: 'post',
+ pod_post: 'study pod post',
  message: 'message',
  event: 'event',
  user: 'account',

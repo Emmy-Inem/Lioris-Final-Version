@@ -1,24 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, Switch, View } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { AppTextField } from '@/components/AppTextField';
 import { SolidCard } from '@/components/SolidCard';
-import { Badge } from '@/components/Badge';
-import { EmptyState } from '@/components/EmptyState';
 import { AdminConfigModal } from '@/components/AdminConfigModal';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { recordAuditLogEntry } from '@/api/auditLog';
-import {
-  createInstitution,
-  listCampuses,
-  listWaitlist,
-  respondToWaitlistEntry,
-  WaitlistEntry,
-} from '@/api/institutions';
+import { CampusManager } from '@/components/admin/CampusManager';
 import { supabase } from '@/api/supabase';
 import {
   clearPlatformSettingsCache,
@@ -28,7 +20,6 @@ import {
 } from '@/api/platformSettings';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { haptics } from '@/utils/haptics';
 
 /**
  * Platform > Campuses & Security. Only settings that actually do something live here:
@@ -42,17 +33,7 @@ export default function CampusesAndSecurityScreen() {
   const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
 
-  const { data: campuses = [], isLoading: loadingCampuses } = useQuery({ queryKey: ['campuses'], queryFn: listCampuses });
-  const { data: requests = [] } = useQuery({ queryKey: ['waitlist'], queryFn: listWaitlist });
-
-  const [addOpen, setAddOpen] = useState(false);
-  const [fromRequest, setFromRequest] = useState<WaitlistEntry | null>(null);
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
-  const [location, setLocation] = useState('');
-  const [domain, setDomain] = useState('');
   const [saving, setSaving] = useState(false);
-
   const [quotaOpen, setQuotaOpen] = useState(false);
   const [imageMb, setImageMb] = useState(String(DEFAULT_STORAGE_QUOTAS.maxImageMb));
   const [docMb, setDocMb] = useState(String(DEFAULT_STORAGE_QUOTAS.maxPdfMb));
@@ -82,62 +63,6 @@ export default function CampusesAndSecurityScreen() {
       throw new Error(`Could not save "${key}" to the platform database (${error.message}). Nothing was changed.`);
     }
     clearPlatformSettingsCache();
-  }
-
-  function openAdd(request?: WaitlistEntry) {
-    setFromRequest(request ?? null);
-    setName(request?.universityName ?? '');
-    setCode('');
-    setLocation('');
-    const emailDomain = request?.email?.split('@')[1];
-    setDomain(emailDomain ?? '');
-    setAddOpen(true);
-  }
-
-  async function handleAddCampus() {
-    if (!name.trim() || !code.trim()) {
-      Alert.alert('Missing details', 'Both the university name and its campus code are required.');
-      return;
-    }
-    setSaving(true);
-    try {
-      const cleanCode = code.trim().toUpperCase();
-      await createInstitution({
-        name: name.trim(),
-        code: cleanCode,
-        location: location.trim() || 'Nigeria',
-        domain: domain.trim().replace(/^@/, '') || `${cleanCode.toLowerCase()}.edu.ng`,
-      });
-      if (fromRequest) await respondToWaitlistEntry(fromRequest.id, 'approved');
-      await recordAuditLogEntry({
-        action: 'institution_provisioned',
-        summary: `Provisioned new campus: ${name.trim()} (${cleanCode})`,
-        targetType: 'institution',
-        targetId: cleanCode,
-        institutionCode: cleanCode,
-        reason: fromRequest ? 'Approved a university request' : 'Admin added a campus',
-      });
-      haptics.success();
-      setAddOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ['campuses'] });
-      await queryClient.invalidateQueries({ queryKey: ['waitlist'] });
-      Alert.alert('Campus added', `${name.trim()} is now on the platform.`);
-    } catch (err: any) {
-      haptics.error();
-      Alert.alert('Could not add the campus', err?.message || 'Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function declineRequest(request: WaitlistEntry) {
-    haptics.medium();
-    try {
-      await respondToWaitlistEntry(request.id, 'rejected');
-      await queryClient.invalidateQueries({ queryKey: ['waitlist'] });
-    } catch (err: any) {
-      Alert.alert('Could not decline', err?.message || 'Please try again.');
-    }
   }
 
   async function handleSaveQuotas() {
@@ -229,69 +154,7 @@ export default function CampusesAndSecurityScreen() {
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.lg }}
       >
         {/* Campuses */}
-        <View style={{ gap: spacing.sm }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
-            <AppText variant="h3" weight="bold">Campuses</AppText>
-            <AppButton label="+ Add campus" size="sm" onPress={() => openAdd()} />
-          </View>
-
-          {requests.length > 0 ? (
-            <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.brandPrimary, gap: spacing.sm }}>
-              <AppText weight="bold" variant="bodySmall">
-                {requests.length} university request{requests.length === 1 ? '' : 's'} waiting
-              </AppText>
-              {requests.map((request) => (
-                <View
-                  key={request.id}
-                  style={{ gap: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider }}
-                >
-                  <AppText weight="semiBold">{request.universityName}</AppText>
-                  <AppText tone="secondary" variant="caption">Contact: {request.email}</AppText>
-                  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                    <View style={{ flex: 1 }}>
-                      <AppButton label="Set up campus" size="sm" onPress={() => openAdd(request)} fullWidth />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <AppButton label="Decline" size="sm" variant="secondary" onPress={() => declineRequest(request)} fullWidth />
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </SolidCard>
-          ) : null}
-
-          <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.border }}>
-            {loadingCampuses ? (
-              <AppText tone="secondary" variant="caption">Loading campuses…</AppText>
-            ) : campuses.length === 0 ? (
-              <EmptyState title="No campuses yet" description="Add the first university to get started." />
-            ) : (
-              campuses.map((campus, index) => (
-                <View
-                  key={campus.code}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing.sm,
-                    paddingVertical: spacing.sm,
-                    borderTopWidth: index === 0 ? 0 : 1,
-                    borderTopColor: colors.divider,
-                  }}
-                >
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText weight="semiBold" numberOfLines={1}>{campus.name}</AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                      {campus.code}
-                      {campus.domain ? ` · @${campus.domain}` : ''}
-                      {campus.location ? ` · ${campus.location}` : ''}
-                    </AppText>
-                  </View>
-                  {campus.isActive === false ? <Badge label="Inactive" tone="neutral" /> : <Badge label="Live" tone="success" />}
-                </View>
-              ))
-            )}
-          </SolidCard>
-        </View>
+        <CampusManager />
 
         {/* Uploads */}
         <View style={{ gap: spacing.sm }}>
@@ -333,20 +196,6 @@ export default function CampusesAndSecurityScreen() {
           </SolidCard>
         </View>
       </ScrollView>
-
-      <AdminConfigModal
-        visible={addOpen}
-        onClose={() => setAddOpen(false)}
-        title={fromRequest ? 'Set up requested campus' : 'Add a campus'}
-        description="Registers the university so members can join it and its content stays separate."
-        onConfirm={handleAddCampus}
-        confirmLabel={saving ? 'Saving…' : 'Add campus'}
-      >
-        <AppTextField label="University name" value={name} onChangeText={setName} placeholder="e.g. Lagos State University" />
-        <AppTextField label="Campus code" value={code} onChangeText={setCode} placeholder="e.g. LASU" autoCapitalize="characters" />
-        <AppTextField label="Location" value={location} onChangeText={setLocation} placeholder="e.g. Ojo, Lagos" />
-        <AppTextField label="Email domain" value={domain} onChangeText={setDomain} placeholder="e.g. lasu.edu.ng" autoCapitalize="none" />
-      </AdminConfigModal>
 
       <AdminConfigModal
         visible={quotaOpen}

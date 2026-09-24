@@ -99,7 +99,10 @@ export default function AlumniDashboard() {
 
   const activeJobs = (jobs ?? []).slice(0, 2);
   const upcomingEvents = (events ?? []).slice(0, 2);
-  const pendingMentees = (mentorships ?? []).filter((m: any) => m.status === 'pending');
+  const pendingMentees = (mentorships ?? []).filter((m: any) => m.status === 'pending' && m.mentorId === user?.id);
+  const openMentorships = (mentorships ?? [])
+    .filter((m: any) => (m.status === 'pending' || m.status === 'active') && m.mentorId === user?.id)
+    .sort((a: any, b: any) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1));
 
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
@@ -612,19 +615,19 @@ export default function AlumniDashboard() {
               </Pressable>
             </View>
 
-            {(mentorships ?? []).length === 0 ? (
+            {openMentorships.length === 0 ? (
               <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
                 <Ionicons name="school-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
                 <AppText weight="bold" variant="bodySmall">Mentor undergraduate students</AppText>
                 <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.sm }}>
-                  Help undergraduates in your department with career advice and project guidance.
+                  Set up your mentor profile and students can ask you for career advice, interview practice and project guidance.
                 </AppText>
                 <AppButton label="Open Mentorship Desk" variant="secondary" size="sm" onPress={() => router.push('/(alumni)/mentorship')} />
               </SolidCard>
             ) : (
               <View style={{ gap: spacing.xs }}>
-                {(mentorships ?? []).slice(0, 2).map((item: any) => (
-                  <Pressable key={item.id} onPress={() => router.push('/(alumni)/mentorship')}>
+                {openMentorships.slice(0, 2).map((item: any) => (
+                  <Pressable key={item.id} onPress={() => router.push(`/(alumni)/mentorship-space/${item.id}` as any)}>
                     <SolidCard radius={16} style={{ padding: 12 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
@@ -640,8 +643,8 @@ export default function AlumniDashboard() {
                         </View>
                         <View style={{ flexShrink: 0 }}>
                           <Badge
-                            label={item.status === 'accepted' ? 'Active' : 'Pending'}
-                            tone={item.status === 'accepted' ? 'success' : 'brand'}
+                            label={item.status === 'active' ? 'Active' : 'Needs reply'}
+                            tone={item.status === 'active' ? 'success' : 'warning'}
                           />
                         </View>
                       </View>

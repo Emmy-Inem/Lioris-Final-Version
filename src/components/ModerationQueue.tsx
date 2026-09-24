@@ -15,6 +15,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { listReports, resolveReport } from '@/api/moderation';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { deletePost } from '@/api/posts';
+import { deletePodPost } from '@/api/studyGroups';
+import { ReportedContentPreview } from './ReportedContentPreview';
 import { purgeEvent } from '@/api/events';
 import { Report } from '@/api/types';
 import { haptics } from '@/utils/haptics';
@@ -26,7 +28,7 @@ const STATUS_TONE: Record<Report['status'], 'warning' | 'brand' | 'success' | 'n
  dismissed: 'neutral',
 };
 
-const TARGET_FILTERS = ['All Flags', 'Posts', 'Messages', 'Events', 'Users'];
+const TARGET_FILTERS = ['All Flags', 'Posts', 'Pod posts', 'Messages', 'Events', 'Users'];
 
 interface ModerationQueueProps {
  institutionCode?: string;
@@ -59,6 +61,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
 
  const filteredReports = (reports ?? []).filter((r) => {
  if (filterType === 'Posts') return r.targetType === 'post';
+ if (filterType === 'Pod posts') return r.targetType === 'pod_post';
  if (filterType === 'Messages') return r.targetType === 'message';
  if (filterType === 'Events') return r.targetType === 'event';
  if (filterType === 'Users') return r.targetType === 'user';
@@ -119,6 +122,23 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         if (punishmentType === 'takedown' || punishmentType === 'permaban') {
           await deletePost(report.targetId);
           actionLabel = 'Post purged from campus feed';
+        }
+      }
+
+      // A study pod post: the author is the violator; taking it down deletes the post (and its replies).
+      if (report.targetType === 'pod_post' && report.targetId) {
+        try {
+          const { data: podPostRow } = await supabase.from('study_group_posts').select('author_id').eq('id', report.targetId).maybeSingle();
+          if (podPostRow?.author_id) {
+            targetUserId = podPostRow.author_id;
+          }
+        } catch {
+          // ignore
+        }
+
+        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+          await deletePodPost(report.targetId);
+          actionLabel = 'Study pod post removed';
         }
       }
 
@@ -217,9 +237,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                       <AppText variant="caption" tone="secondary">Target ID: {item.targetId}</AppText>
                       <AppText variant="caption" tone="secondary">Filed: {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</AppText>
                     </View>
-                    <AppText variant="bodySmall" tone="secondary" style={{ fontStyle: 'italic' }}>
-                      Content: "Reported item flagged by community members for policy violation."
-                    </AppText>
+                    <ReportedContentPreview report={item} />
                   </View>
 
                   {/* Action Buttons */}
@@ -279,9 +297,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                   <AppText variant="caption" tone="secondary">Target ID: {item.targetId}</AppText>
                   <AppText variant="caption" tone="secondary">Filed: {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</AppText>
                 </View>
-                <AppText variant="bodySmall" tone="secondary" style={{ fontStyle: 'italic' }}>
-                  Content: "Reported item flagged by community members for policy violation."
-                </AppText>
+                <ReportedContentPreview report={item} />
               </View>
 
               {/* Action Buttons */}

@@ -1,178 +1,169 @@
-import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, View, Platform, KeyboardAvoidingView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { Pressable, Switch, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
+import { FormSheet } from './common/FormSheet';
+import { TagInput } from './common/TagInput';
 import { useTheme } from '@/theme/ThemeProvider';
-import { useResponsive } from '@/hooks/useResponsive';
+import { CreateStudyGroupPayload } from '@/api/studyGroups';
+import { parseRpcError } from '@/utils/rpcErrors';
 import { haptics } from '@/utils/haptics';
-import { getFriendlyErrorMessage } from '@/utils/errors';
 
-interface CreateStudyGroupModalProps {
+const LEVELS = ['100L', '200L', '300L', '400L', '500L', 'Postgrad'];
+const SIZE_PICKS = [5, 10, 20, 40, 100];
+
+export type PodFormValues = Omit<CreateStudyGroupPayload, 'campusCode'>;
+
+interface Props {
   visible: boolean;
   onClose: () => void;
-  onCreate: (payload: { name: string; courseCode: string; description: string; isPublic: boolean }) => Promise<void>;
+  /** Throw to keep the form open with the error shown. */
+  onSubmit: (payload: PodFormValues) => Promise<void>;
+  /** Present when editing an existing pod. */
+  initial?: PodFormValues;
+  /** Suggested department for a new pod (from the member's profile). */
+  defaultDepartment?: string;
 }
 
-export function CreateStudyGroupModal({ visible, onClose, onCreate }: CreateStudyGroupModalProps) {
-  const { colors, spacing, radius, isDark } = useTheme();
-  const { isDesktop } = useResponsive();
-  const insets = useSafeAreaInsets();
-  const [name, setName] = useState('');
-  const [courseCode, setCourseCode] = useState('');
-  const [description, setDescription] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+const EMPTY: PodFormValues = {
+  name: '',
+  courseCode: '',
+  description: '',
+  isPublic: true,
+  level: '',
+  department: '',
+  topics: [],
+  meetingLink: '',
+  scheduleNote: '',
+  goal: '',
+  maxMembers: 20,
+};
 
-  function reset() {
-    setName('');
-    setCourseCode('');
-    setDescription('');
-    setIsPublic(true);
-    setErrorMessage(null);
-  }
+/** Create a study pod, or edit one (pass `initial`). */
+export function CreateStudyGroupModal({ visible, onClose, onSubmit, initial, defaultDepartment }: Props) {
+  const { colors, spacing, radius } = useTheme();
+  const editing = !!initial;
+  const [form, setForm] = useState<PodFormValues>(initial ?? EMPTY);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  async function handleCreate() {
-    setErrorMessage(null);
-    if (!name.trim()) {
-      setErrorMessage('Please enter a name for the study group.');
-      haptics.error();
-      return;
+  useEffect(() => {
+    if (visible) {
+      setForm(initial ?? { ...EMPTY, department: defaultDepartment ?? '' });
+      setError(null);
     }
-    if (!courseCode.trim()) {
-      setErrorMessage('Please enter a course code (e.g. CSC 301).');
-      haptics.error();
-      return;
-    }
+  }, [visible, initial, defaultDepartment]);
+
+  const set = <K extends keyof PodFormValues>(key: K, value: PodFormValues[K]) => setForm((f) => ({ ...f, [key]: value }));
+
+  async function submit() {
+    setError(null);
+    if (form.name.trim().length < 3) return setError('Give the pod a name (at least 3 characters), e.g. "CSC 301 revision squad".');
+    if (!form.courseCode.trim()) return setError('Add the course code (e.g. CSC 301) so classmates can find it.');
+    const link = (form.meetingLink ?? '').trim();
+    if (link && !/^https?:\/\//i.test(link)) return setError('The meeting link must start with https://');
     haptics.medium();
-    setSubmitting(true);
+    setSaving(true);
     try {
-      await onCreate({ name: name.trim(), courseCode: courseCode.trim().toUpperCase(), description: description.trim() || 'No description provided.', isPublic });
+      await onSubmit({
+        ...form,
+        name: form.name.trim(),
+        courseCode: form.courseCode.trim().toUpperCase(),
+        description: form.description.trim(),
+        meetingLink: link,
+      });
       onClose();
-      reset();
-    } catch (err: any) {
+    } catch (err) {
       haptics.error();
-      setErrorMessage(getFriendlyErrorMessage(err, 'Could not create study group. Please try again.'));
+      setError(parseRpcError(err, 'Could not save this pod. Please try again.').message);
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   }
+
+  const chip = (label: string, selected: boolean, onPress: () => void) => (
+    <Pressable
+      key={label}
+      onPress={onPress}
+      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1.5, borderColor: selected ? colors.brandPrimary : colors.border, backgroundColor: selected ? `${colors.brandPrimary}18` : 'transparent' }}
+    >
+      <AppText variant="caption" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
 
   return (
-    <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={onClose}>
-      <KeyboardAvoidingView accessibilityViewIsModal
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{
-          flex: 1,
-          backgroundColor: isDesktop ? 'rgba(0, 0, 0, 0.65)' : colors.background,
-          justifyContent: isDesktop ? 'center' : 'flex-start',
-          alignItems: isDesktop ? 'center' : 'stretch',
-          paddingTop: isDesktop ? spacing.lg : Math.max(insets.top, 16),
-          paddingHorizontal: isDesktop ? spacing.lg : spacing.md,
-          paddingBottom: isDesktop ? spacing.lg : Math.max(insets.bottom, 16),
-        }}
-      >
-        <View
-          style={{
-            flex: isDesktop ? undefined : 1,
-            backgroundColor: colors.background,
-            width: isDesktop ? '100%' : '100%',
-            maxWidth: isDesktop ? 580 : undefined,
-            maxHeight: isDesktop ? '90%' : undefined,
-            borderRadius: isDesktop ? 24 : 0,
-            padding: isDesktop ? spacing.xl : 0,
-            borderWidth: isDesktop ? 1 : 0,
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-            overflow: 'hidden',
-          }}
-        >
-          <ScrollView
-            style={{ flex: 1, width: '100%' }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: isDesktop ? spacing.md : 40, paddingHorizontal: isDesktop ? 0 : spacing.xs }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
- <AppText variant="h1" weight="bold">
- New Study Group
- </AppText>
- <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
- <Ionicons name="close" size={24} color={colors.textPrimary} />
- </Pressable>
- </View>
+    <FormSheet
+      visible={visible}
+      onClose={onClose}
+      title={editing ? 'Edit study pod' : 'Create a study pod'}
+      subtitle="A small group with its own discussion, study sessions and members."
+      maxWidth={620}
+      footer={
+        <View style={{ gap: spacing.xs }}>
+          {error ? (
+            <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+              <Ionicons name="alert-circle" size={16} color={colors.critical} style={{ marginTop: 1 }} />
+              <AppText variant="caption" weight="semiBold" style={{ color: colors.critical, flex: 1 }}>
+                {error}
+              </AppText>
+            </View>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <AppButton label="Cancel" variant="ghost" onPress={onClose} disabled={saving} fullWidth />
+            </View>
+            <View style={{ flex: 2 }}>
+              <AppButton label={editing ? 'Save changes' : 'Create pod'} onPress={submit} loading={saving} fullWidth />
+            </View>
+          </View>
+        </View>
+      }
+    >
+      <AppTextField label="Pod name *" value={form.name} onChangeText={(v) => set('name', v.slice(0, 80))} placeholder="e.g. Algorithms revision squad" />
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <View style={{ flex: 1 }}>
+          <AppTextField label="Course code *" value={form.courseCode} onChangeText={(v) => set('courseCode', v.slice(0, 24))} placeholder="CSC 301" autoCapitalize="characters" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <AppTextField label="Department" value={form.department ?? ''} onChangeText={(v) => set('department', v.slice(0, 80))} placeholder="Computer Science" />
+        </View>
+      </View>
+      <AppTextField label="What is this pod for?" value={form.description} onChangeText={(v) => set('description', v.slice(0, 600))} placeholder="Weekly problem-solving, past-question drills, project help…" multiline numberOfLines={3} helperText={`${form.description.length}/600`} />
+      <AppTextField label="Goal (optional)" value={form.goal ?? ''} onChangeText={(v) => set('goal', v.slice(0, 300))} placeholder="e.g. Finish CLRS chapters 22-25 before exams" />
 
- <AppTextField
- label="Group name"
- placeholder="e.g. CSC 301 Study Squad"
- value={name}
- onChangeText={(t) => { setName(t); if (errorMessage) setErrorMessage(null); }}
- />
- <AppTextField
- label="Course code"
- placeholder="e.g. CSC 301"
- value={courseCode}
- onChangeText={(t) => { setCourseCode(t); if (errorMessage) setErrorMessage(null); }}
- autoCapitalize="characters"
- />
- <AppTextField
- label="Description"
- placeholder="What's this group for? When do you usually meet?"
- value={description}
- onChangeText={setDescription}
- multiline
- />
+      <View style={{ gap: 6 }}>
+        <AppText weight="semiBold" variant="bodySmall">
+          Level
+        </AppText>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{LEVELS.map((l) => chip(l, form.level === l, () => set('level', form.level === l ? '' : l)))}</View>
+      </View>
 
- <Pressable
- onPress={() => setIsPublic((v) => !v)}
- accessibilityRole="checkbox"
- accessibilityState={{ checked: isPublic }}
- accessibilityLabel="Make this group public"
- style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xl }}
- >
- <Ionicons name={isPublic ? 'checkbox' : 'square-outline'} size={22} color={isPublic ? colors.brandPrimary : colors.textSecondary} />
- <View style={{ flex: 1 }}>
- <AppText weight="semiBold" variant="bodySmall">
- Public group
- </AppText>
- <AppText tone="secondary" variant="caption">
- Anyone can find and join. Turn off to make it invite-only.
- </AppText>
- </View>
- </Pressable>
+      <TagInput label="Topics" value={form.topics ?? []} onChange={(v) => set('topics', v)} placeholder="e.g. graphs" max={8} maxLength={30} />
+      <AppTextField label="Meeting rhythm (optional)" value={form.scheduleNote ?? ''} onChangeText={(v) => set('scheduleNote', v.slice(0, 120))} placeholder="e.g. Tuesdays and Thursdays, 6 PM" />
+      <AppTextField label="Meeting link (optional, members only)" value={form.meetingLink ?? ''} onChangeText={(v) => set('meetingLink', v)} placeholder="https://meet.google.com/..." autoCapitalize="none" keyboardType="url" />
 
- {errorMessage ? (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 8,
- backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
- borderColor: colors.critical,
- borderWidth: 1,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="alert-circle" size={18} color={colors.critical} />
- <AppText
- variant="bodySmall"
- weight="semiBold"
- style={{ color: colors.critical, flex: 1 }}
- >
- {errorMessage}
- </AppText>
- </View>
- ) : null}
+      <View style={{ gap: 6 }}>
+        <AppText weight="semiBold" variant="bodySmall">
+          Maximum members
+        </AppText>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{SIZE_PICKS.map((n) => chip(String(n), form.maxMembers === n, () => set('maxMembers', n)))}</View>
+      </View>
 
- <AppButton label="Create Group" onPress={handleCreate} loading={submitting} fullWidth />
- </ScrollView>
- </View>
- </KeyboardAvoidingView>
- </Modal>
- );
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText weight="bold" variant="bodySmall">
+            {form.isPublic ? 'Public pod' : 'Private pod'}
+          </AppText>
+          <AppText tone="secondary" variant="caption">
+            {form.isPublic ? 'Anyone on your campus can join straight away.' : 'People ask to join and you approve each one. Only members see the discussion and members list.'}
+          </AppText>
+        </View>
+        <Switch value={!form.isPublic} onValueChange={(v) => set('isPublic', !v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} accessibilityLabel="Private pod" />
+      </View>
+    </FormSheet>
+  );
 }

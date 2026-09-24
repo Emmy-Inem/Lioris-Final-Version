@@ -83,7 +83,7 @@ export default function StudentDashboard() {
 
   const { data: studyGroups } = useQuery({
     queryKey: ['study-groups', 'dashboard', effectiveCampus],
-    queryFn: () => listStudyGroups(effectiveCampus || undefined),
+    queryFn: () => listStudyGroups(effectiveCampus || undefined, { mineOnly: true }),
     enabled: isFeatureEnabled('study_groups'),
   });
 
@@ -727,16 +727,16 @@ export default function StudentDashboard() {
             {activePods.length === 0 ? (
               <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
                 <Ionicons name="people-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />
-                <AppText weight="bold" variant="bodySmall">No active study pods yet</AppText>
+                <AppText weight="bold" variant="bodySmall">You are not in a study pod yet</AppText>
                 <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing.md }}>
-                  Start a study circle with classmates to collaborate on course revisions and projects.
+                  Join a pod for your course, or start one and invite classmates. Each pod has its own discussion and study sessions.
                 </AppText>
-                <AppButton label="Create Study Pod" variant="secondary" onPress={() => router.push('/(student)/study-groups')} />
+                <AppButton label="Find or create a pod" variant="secondary" onPress={() => router.push('/(student)/study-groups')} />
               </SolidCard>
             ) : (
               <View style={{ gap: spacing.sm }}>
                 {activePods.map((group: any) => (
-                  <Pressable key={group.id} onPress={() => router.push('/(student)/study-groups')}>
+                  <Pressable key={group.id} onPress={() => router.push(`/(student)/pod/${group.id}` as any)}>
                     <SolidCard radius={16} style={{ padding: 14 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
@@ -746,6 +746,11 @@ export default function StudentDashboard() {
                           </AppText>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, paddingLeft: 8 }}>
+                          {group.unreadCount > 0 ? (
+                            <AppText variant="caption" tone="brand" weight="bold">
+                              {group.unreadCount} new
+                            </AppText>
+                          ) : null}
                           <Ionicons name="person" size={12} color={colors.textSecondary} />
                           <AppText variant="caption" tone="secondary">
                             {group.memberCount ?? 1}

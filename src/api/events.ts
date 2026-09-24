@@ -160,6 +160,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
           venueType: row.venue_type || 'physical',
           virtualLink: row.virtual_link ?? null,
           isSpotlight: !!row.is_spotlight,
+          sponsored: !!row.sponsored,
           ticketPrice: row.ticket_price != null ? Number(row.ticket_price) : undefined,
           targetCohort: row.target_cohort ?? undefined,
         };
@@ -221,6 +222,7 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
         venueType: data.venue_type || 'physical',
         virtualLink: data.virtual_link ?? null,
         isSpotlight: !!data.is_spotlight,
+        sponsored: !!data.sponsored,
         ticketPrice: data.ticket_price != null ? Number(data.ticket_price) : undefined,
         targetCohort: data.target_cohort ?? undefined,
       };
@@ -342,7 +344,8 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
     venue_type: payload.venueType || 'physical',
     virtual_link: payload.virtualLink ?? null,
     capacity: payload.capacity ?? null,
-    is_spotlight: payload.isSpotlight ?? false,
+    is_spotlight: false,
+    sponsored: false,
     ticket_price: payload.ticketPrice ?? 0,
     target_cohort: payload.targetCohort ?? null,
   });
@@ -365,7 +368,8 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  coverImageUrl: permanentImageUrl,
  venueType: payload.venueType || 'physical',
  capacity: payload.capacity ?? null,
- isSpotlight: payload.isSpotlight ?? false,
+ isSpotlight: false,
+ sponsored: false,
  };
 
  locallyCreatedEvents = [created, ...locallyCreatedEvents];
@@ -478,13 +482,14 @@ export async function listEventAttendees(eventId: string): Promise<EventAttendee
   return [];
 }
 
+/** Administrators only: the database ignores this for anyone else, so a no-op is reported as an error. */
 export async function setEventSpotlight(id: string, isSpotlight: boolean) {
-  locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, isSpotlight } : e));
-  try {
-    await supabase.from('events').update({ is_spotlight: isSpotlight }).eq('id', id);
-  } catch (err) {
-    console.warn('[Events] setEventSpotlight error:', err);
+  const { data, error } = await supabase.from('events').update({ is_spotlight: isSpotlight }).eq('id', id).select('id, is_spotlight').maybeSingle();
+  if (error) throw new Error(error.message || 'Could not update the spotlight.');
+  if (!data || data.is_spotlight !== isSpotlight) {
+    throw new Error('Only an administrator can feature an event.');
   }
+  locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, isSpotlight } : e));
   await recordAuditLogEntry({
     action: isSpotlight ? 'event_spotlight_enabled' : 'event_spotlight_disabled',
     summary: `${isSpotlight ? 'Enabled' : 'Disabled'} spotlight featured status on event "${id}"`,

@@ -81,18 +81,14 @@ export function ChangeWorkspaceScopeModal({
     const name = newCampusName.trim();
     setIsSubmitting(true);
     try {
-      await createInstitution({
-        code,
-        name,
-        shortName: code,
-        location: 'Nigeria',
-        domain: `${code.toLowerCase()}.edu.ng`,
-      });
+      // No email domain is invented here (the old code guessed CODE.edu.ng, which could verify the wrong people).
+      // Set the real domains, colour and portal links under Admin > Platform > Campuses.
+      await createInstitution({ code, name, shortName: code, location: 'Nigeria' });
       setGuestWorkspaces((prev) => [...prev, { code, name, description: `${code} Campus Community` }]);
       setNewCampusName('');
       setNewCampusCode('');
       setCreateModalOpen(false);
-      Alert.alert('Campus Node Added', `Successfully added ${name} (${code}) to available workspaces.`);
+      Alert.alert('Campus added', `${name} (${code}) is now a workspace. Add its email domains under Admin > Platform > Campuses so its students are verified automatically.`);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to add institution node.');
     } finally {

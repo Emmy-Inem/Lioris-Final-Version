@@ -19,13 +19,15 @@ import { LiorisLogo } from '@/components/LiorisLogo';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { AppTextField } from '@/components/AppTextField';
-import { joinWaitlist, LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import { joinWaitlist } from '@/api/institutions';
+import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { haptics } from '@/utils/haptics';
 import { AndroidBlurBackdrop, AndroidBlurFill, AndroidBlurScope } from '@/components/AndroidBlur';
 import { AndroidSoftGlow } from '@/components/AndroidSoftGlow';
 import { PhoneMockup } from '@/components/landing/PhoneMockup';
 
 export function LandingScreen() {
+  const { campuses: liveCampuses } = useCampusRegistry();
   const { colors, radius, isDark, toggleTheme } = useTheme();
   const { width } = useWindowDimensions();
   const { isDesktop, isTablet } = useResponsive();
@@ -682,7 +684,7 @@ export function LandingScreen() {
 
                   {/* Campus Names */}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
-                    {LAUNCH_INSTITUTIONS.filter(i => i.code !== 'GLOBAL').map((inst) => (
+                    {liveCampuses.map((inst) => (
                       <View
                         key={inst.code}
                         style={[

@@ -736,6 +736,8 @@ export class EdgeFunctionError extends Error {
   /** Machine code from the function's { error } body, e.g. 'mfa_required'. */
   code?: string;
   status?: number;
+  /** The function's whole JSON error body (e.g. { memberCount } on confirm_required), when it sent one. */
+  details?: Record<string, any>;
 
   constructor(message: string, code?: string, status?: number) {
     super(message);
@@ -785,9 +787,19 @@ export async function readEdgeFunctionError(error: any, fallback: string): Promi
       return new EdgeFunctionError('Your session has expired. Please sign in again and retry.', 'unauthorized', status);
     }
     if (status === 429) {
-      return new EdgeFunctionError(code || 'Too many attempts. Please try again later.', 'rate_limited', status);
+      return new EdgeFunctionError(
+        (typeof body?.message === 'string' && body.message) || code || 'Too many attempts. Please try again later.',
+        'rate_limited',
+        status,
+      );
     }
-    if (code) return new EdgeFunctionError(code, 'server_error', status);
+    if (code) {
+      // Newer functions answer { error: '<machine code>', message: '<sentence for people>', ...details }.
+      const message = typeof body?.message === 'string' && body.message.trim() ? body.message : code;
+      const failure = new EdgeFunctionError(message, typeof body?.message === 'string' ? code : 'server_error', status);
+      failure.details = body;
+      return failure;
+    }
   }
 
   return new EdgeFunctionError(error?.message || fallback);

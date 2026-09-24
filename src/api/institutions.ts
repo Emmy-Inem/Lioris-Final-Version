@@ -4,11 +4,24 @@ import { generateUUID } from '../utils/uuid';
 export interface Institution {
  code: string;
  name: string;
+ /** The campus's main email domain ('' when none is set). */
  domain: string;
  shortName?: string;
  location?: string;
  primaryColor?: string;
  isActive?: boolean;
+ /** Every email domain that marks a signup as a member of this campus. */
+ emailDomains?: string[];
+ websiteUrl?: string | null;
+ createdAt?: string;
+}
+
+/** One row of the admin Campuses screen: the campus plus the numbers that matter. */
+export interface CampusOverview extends Institution {
+ memberCount: number;
+ verifiedCount: number;
+ portalLinkCount: number;
+ activePortalLinkCount: number;
 }
 
 export const LAUNCH_INSTITUTIONS: Institution[] = [
@@ -21,91 +34,139 @@ export const LAUNCH_INSTITUTIONS: Institution[] = [
  { code: 'CU', name: 'Covenant University', domain: 'covenantuniversity.edu.ng', shortName: 'CU', location: 'Ota, Ogun', primaryColor: '#DC2626' },
 ];
 
-export async function listCampuses(): Promise<Institution[]> {
- try {
- const { data, error } = await supabase
- .from('campuses')
- .select('*')
- .order('name', { ascending: true });
-
- if (!error && data && data.length > 0) {
- const dbCampuses: Institution[] = data.map((row: any) => ({
+function rowToInstitution(row: any): Institution {
+ const domains: string[] = Array.isArray(row.email_domains) ? row.email_domains : [];
+ return {
  code: row.code,
  name: row.name,
- shortName: row.short_name,
- location: row.location,
- domain: row.domain || `${row.code.toLowerCase()}.edu.ng`,
+ shortName: row.short_name || row.code,
+ location: row.location || undefined,
+ domain: domains[0] ?? '',
+ emailDomains: domains,
  primaryColor: row.primary_color || '#2563EB',
- isActive: row.is_active,
- }));
+ isActive: row.is_active !== false,
+ websiteUrl: row.website_url ?? null,
+ createdAt: row.created_at ?? undefined,
+ };
+}
 
- // Merge with in-memory launch institutions to ensure fallback integrity
- for (const inst of dbCampuses) {
- if (!LAUNCH_INSTITUTIONS.some((li) => li.code === inst.code)) {
+/** Folds database campuses into the in-memory registry the rest of the app reads (new ones are added). */
+function mergeIntoRegistry(fresh: Institution[]) {
+ for (const inst of fresh) {
+ const idx = LAUNCH_INSTITUTIONS.findIndex((li) => li.code === inst.code);
+ if (idx >= 0) {
+ // Keep the built-in domain as a fallback for a launch campus whose database row has none yet.
+ const domain = inst.domain || LAUNCH_INSTITUTIONS[idx].domain;
+ LAUNCH_INSTITUTIONS[idx] = { ...LAUNCH_INSTITUTIONS[idx], ...inst, domain };
+ } else {
  LAUNCH_INSTITUTIONS.push(inst);
  }
  }
- return LAUNCH_INSTITUTIONS;
+}
+
+/** Every campus the database knows (new ones included), also refreshing the shared registry. */
+export async function listCampuses(): Promise<Institution[]> {
+ try {
+ const { data, error } = await supabase.from('campuses').select('*').order('name', { ascending: true });
+ if (!error && data && data.length > 0) {
+ mergeIntoRegistry(data.map(rowToInstitution));
  }
  } catch (err) {
  console.warn('[Institutions] Error fetching campuses from database:', err);
  }
- return LAUNCH_INSTITUTIONS;
+ return [...LAUNCH_INSTITUTIONS];
 }
 
-export async function createInstitution(payload: {
+/** Campuses with member and portal-link counts. Admin only (the database refuses anyone else). */
+export async function listCampusOverview(): Promise<CampusOverview[]> {
+ const { data, error } = await supabase.rpc('admin_campus_overview');
+ if (error) throw new Error(error.message?.replace(/^not_allowed:\s*/, '') || 'Could not load campuses.');
+ const rows = (data ?? []).map((row: any) => ({
+ ...rowToInstitution(row),
+ memberCount: row.member_count ?? 0,
+ verifiedCount: row.verified_count ?? 0,
+ portalLinkCount: row.portal_link_count ?? 0,
+ activePortalLinkCount: row.active_portal_link_count ?? 0,
+ }));
+ mergeIntoRegistry(rows);
+ return rows;
+}
+
+export interface CampusInput {
  code: string;
- name: string;
+ name?: string;
  shortName?: string;
  location?: string;
- domain?: string;
+ emailDomains?: string[];
  primaryColor?: string;
-}): Promise<Institution> {
- const cleanCode = payload.code.trim().toUpperCase();
- const cleanName = payload.name.trim();
- const cleanDomain = payload.domain?.trim().toLowerCase() || `${cleanCode.toLowerCase()}.edu.ng`;
+ websiteUrl?: string;
+ /** Starter links to publish with a brand-new campus. */
+ seedPortalLinks?: Array<{ title: string; url: string; category?: string; icon?: string }>;
+ /** The waitlist request this campus answers; marked approved once the campus exists. */
+ waitlistEntryId?: string;
+ /** Add a domain even though DNS says it does not exist (after the admin confirmed). */
+ allowUnresolvedDomains?: boolean;
+}
 
- if (!cleanCode) throw new Error('Institutional campus code is required.');
- if (!cleanName) throw new Error('Institutional university name is required.');
+export interface CampusChangeResult {
+ institution: Institution;
+ warnings: string[];
+}
 
- const newInstitution: Institution = {
- code: cleanCode,
- name: cleanName,
- shortName: payload.shortName?.trim() || cleanCode,
- location: payload.location?.trim() || 'Nigeria',
- domain: cleanDomain,
- primaryColor: payload.primaryColor || '#2563EB',
- isActive: true,
- };
-
- const { error } = await supabase.from('campuses').upsert({
- code: newInstitution.code,
- name: newInstitution.name,
- short_name: newInstitution.shortName,
- location: newInstitution.location,
- primary_color: newInstitution.primaryColor,
- is_active: true,
- });
-
+async function callManageInstitution(body: Record<string, unknown>): Promise<any> {
+ const { data, error } = await supabase.functions.invoke('admin-manage-institution', { body });
  if (error) {
- throw new Error(`Failed to provision campus: ${error.message}`);
+ // Dynamic import: auth.ts already depends on this module.
+ const { readEdgeFunctionError } = await import('./auth');
+ throw await readEdgeFunctionError(error, 'Could not reach the campus service. Please try again.');
  }
-
- // Update in-memory registry
- const existingIdx = LAUNCH_INSTITUTIONS.findIndex((i) => i.code === cleanCode);
- if (existingIdx >= 0) {
- LAUNCH_INSTITUTIONS[existingIdx] = newInstitution;
- } else {
- LAUNCH_INSTITUTIONS.push(newInstitution);
+ if (!data || data.error) {
+ throw new Error(data?.message || 'The campus service did not answer as expected.');
  }
+ return data;
+}
 
- return newInstitution;
+/**
+ * Adds a university. Runs on the server (admin-manage-institution): it validates the email domains, checks DNS,
+ * writes the campus and audit trail, seeds portal links and answers the university request in one go.
+ * Throws an EdgeFunctionError whose `.code` can be `mfa_required`, `domain_unresolved`, `domain_taken` ...
+ */
+export async function createInstitution(input: CampusInput, options: { dryRun?: boolean } = {}): Promise<CampusChangeResult> {
+ const data = await callManageInstitution({ action: 'create', ...input, code: input.code.trim().toUpperCase(), dryRun: options.dryRun });
+ if (options.dryRun) return { institution: undefined as unknown as Institution, warnings: data.warnings ?? [] };
+ const institution = rowToInstitution(data.campus);
+ mergeIntoRegistry([institution]);
+ return { institution, warnings: data.warnings ?? [] };
+}
+
+export async function updateInstitution(input: CampusInput, options: { dryRun?: boolean } = {}): Promise<CampusChangeResult> {
+ const data = await callManageInstitution({ action: 'update', ...input, code: input.code.trim().toUpperCase(), dryRun: options.dryRun });
+ if (options.dryRun) return { institution: undefined as unknown as Institution, warnings: data.warnings ?? [] };
+ const institution = rowToInstitution(data.campus);
+ mergeIntoRegistry([institution]);
+ return { institution, warnings: data.warnings ?? [] };
+}
+
+/** Switch a campus on or off. Turning off a campus that has members needs `confirm: true` (the server asks first). */
+export async function setInstitutionActive(code: string, isActive: boolean, confirm = false): Promise<Institution> {
+ const data = await callManageInstitution({ action: 'set_active', code: code.trim().toUpperCase(), isActive, confirm });
+ const institution = rowToInstitution(data.campus ?? {});
+ if (institution.code) mergeIntoRegistry([institution]);
+ return institution;
 }
 
 export function getInstitutionForEmail(email: string): Institution | null {
  const domain = email.toLowerCase().trim().split('@')[1];
  if (!domain) return null;
- return LAUNCH_INSTITUTIONS.find((inst) => domain === inst.domain || domain.endsWith(`.${inst.domain}`)) ?? null;
+ let best: { inst: Institution; length: number } | null = null;
+ for (const inst of LAUNCH_INSTITUTIONS) {
+ if (inst.isActive === false || inst.code === 'GLOBAL') continue;
+ const domains = (inst.emailDomains && inst.emailDomains.length > 0 ? inst.emailDomains : [inst.domain]).filter(Boolean);
+ for (const d of domains) {
+ if ((domain === d || domain.endsWith(`.${d}`)) && (!best || d.length > best.length)) best = { inst, length: d.length };
+ }
+ }
+ return best?.inst ?? null;
 }
 
 export function getInstitutionByCode(code: string): Institution | undefined {

@@ -1,198 +1,261 @@
-import React, { useState } from'react';
-import { Alert, Linking, Modal, Pressable, ScrollView, View } from'react-native';
-import { Image } from'expo-image';
-import { router } from'expo-router';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
-import { Ionicons } from'@expo/vector-icons';
-import { ScreenContainer } from'@/components/ScreenContainer';
-import { AppHeader } from'@/components/AppHeader';
-import { AppText } from'@/components/AppText';
-import { AppTextField } from'@/components/AppTextField';
-import { AppButton } from'@/components/AppButton';
-import { ChipSelect } from'@/components/ChipSelect';
-import { SolidCard } from'@/components/SolidCard';
-import { Badge } from'@/components/Badge';
-import { MentorCard } from'@/components/MentorCard';
-import { EmptyState } from'@/components/EmptyState';
+import React, { useMemo, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { router } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '@/components/ScreenContainer';
+import { AppHeader } from '@/components/AppHeader';
+import { AppText } from '@/components/AppText';
+import { AppTextField } from '@/components/AppTextField';
+import { AppButton } from '@/components/AppButton';
+import { SolidCard } from '@/components/SolidCard';
+import { MentorCard } from '@/components/MentorCard';
+import { EmptyState } from '@/components/EmptyState';
+import { SegmentedTabs } from '@/components/common/SegmentedTabs';
+import { MentorshipListCard } from '@/components/mentorship/MentorshipListCard';
 import { useTheme } from '@/theme/ThemeProvider';
-import { useToast } from '@/context/ToastContext';
-import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useCampusScope } from '@/hooks/useCampusScope';
-import { listMentorships, searchMentors } from '@/api/mentorship';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { listMentorships, searchMentors } from '@/api/mentorship';
+import { EXPERTISE_FILTERS, isOpenMentorship, mentorshipSortRank } from '@/utils/mentorship';
+import { parseRpcError } from '@/utils/rpcErrors';
+import { haptics } from '@/utils/haptics';
 
-const EXPERTISE_CATEGORIES = ['All Fields', 'Software', 'Resume Prep', 'Finance', 'Research', 'Design'];
+type Tab = 'find' | 'mine';
 
 export default function StudentMentorshipScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
-  const toast = useToast();
-  const { user } = useAuth();
   const { isDesktop } = useResponsive();
   const { campusCode } = useCampusScope();
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<Tab>('find');
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
   const [expertise, setExpertise] = useState('All Fields');
   const [campusFilter, setCampusFilter] = useState<'campus' | 'all'>('campus');
+  const [showPaused, setShowPaused] = useState(false);
 
   const activeCampus = campusFilter === 'campus' && campusCode && campusCode !== 'GLOBAL' ? campusCode : undefined;
 
-  const { data: mentorships } = useQuery({ queryKey: ['mentorships'], queryFn: listMentorships });
-  const { data: mentors, isLoading } = useQuery({
-    queryKey: ['mentors', debouncedQuery, expertise, activeCampus],
-    queryFn: () => searchMentors({ q: debouncedQuery || undefined, focusArea: expertise, campusCode: activeCampus }),
+  const mentorships = useQuery({ queryKey: ['mentorships'], queryFn: listMentorships });
+  const mentors = useQuery({
+    queryKey: ['mentors', debouncedQuery, expertise, activeCampus, showPaused],
+    queryFn: () => searchMentors({ q: debouncedQuery || undefined, focusArea: expertise, campusCode: activeCampus, onlyAccepting: !showPaused }),
+    enabled: tab === 'find',
   });
 
-  const myApplications = mentorships?.filter((m) => !!user?.id && m.studentId === user.id) ?? [];
+  const mine = useMemo(
+    () => (mentorships.data ?? []).slice().sort((a, b) => mentorshipSortRank(a.status) - mentorshipSortRank(b.status) || (b.lastActivityAt ?? '').localeCompare(a.lastActivityAt ?? '')),
+    [mentorships.data],
+  );
+  const activeOnes = mine.filter((m) => m.status === 'active');
+  const waiting = mine.filter((m) => m.status === 'pending');
+  const past = mine.filter((m) => !isOpenMentorship(m.status));
+  const recommended = (mentors.data ?? []).filter((m) => m.matchScore >= 3 && m.isAccepting && m.openSlots > 0);
+  const others = (mentors.data ?? []).filter((m) => !recommended.includes(m));
+  const showRecommended = !debouncedQuery && expertise === 'All Fields' && recommended.length > 0;
+
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['mentorships'] });
+    queryClient.invalidateQueries({ queryKey: ['mentors'] });
+  }
+  const open = (id: string) => router.push(`/(student)/mentorship-space/${id}` as any);
+
+  const renderMentors = (list: typeof others) => (
+    <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+      {list.map((mentor) => (
+        <View key={mentor.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 } : undefined}>
+          <MentorCard mentor={mentor} onRequested={refresh} />
+        </View>
+      ))}
+    </View>
+  );
 
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
-      <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
-        {/* Top Header & Intro */}
-        <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.md }}>
+      <ScrollView
+        style={{ flex: 1, width: '100%' }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 130, gap: spacing.md }}
+        refreshControl={<RefreshControl refreshing={mentorships.isRefetching || mentors.isRefetching} onRefresh={refresh} />}
+      >
+        <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm }}>
           <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" numberOfLines={1}>
             Alumni Mentorship
           </AppText>
           <AppText tone="secondary" variant="bodySmall">
-            Connect with verified alumni and faculty mentors for career advice, technical coaching, and professional growth.
+            Get one-to-one guidance from verified alumni: career advice, interview practice, projects and grad school.
           </AppText>
         </View>
 
-        {myApplications.length > 0 && (
-          <SolidCard style={{ marginBottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <AppText weight="bold">
-                My Mentorship Applications
-              </AppText>
-              <Badge label={`${myApplications.length} submitted`} tone="neutral" />
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{ width: '100%', flexGrow: 0 }}
-              contentContainerStyle={{ gap: spacing.sm, paddingRight: 16 }}
-              {...({ 'data-horizontal-scroll': 'true' } as any)}
-            >
-              {myApplications.map((app) => (
-                <SolidCard key={app.id} radius={14} style={{ width: 250, padding: 12 }}>
-                  <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
-                    {app.mentorName}
-                  </AppText>
-                  {app.focusArea ? (
-                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
-                      Track: {app.focusArea}
-                    </AppText>
-                  ) : null}
-                  {app.documentName ? (
-                    <Pressable
-                      onPress={() => {
-                        if (app.documentUrl) Linking.openURL(app.documentUrl);
-                      }}
-                      hitSlop={6}
-                      accessibilityRole="button"
-                      accessibilityLabel="View attached proposal"
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 4,
-                        marginTop: 4,
-                        paddingVertical: 2,
-                      }}
-                    >
-                      <Ionicons name="document-attach" size={13} color={colors.brandPrimary} />
-                      <AppText variant="caption" tone="brand" numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>
-                        {app.documentName}
-                      </AppText>
-                    </Pressable>
-                  ) : null}
-                  <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Badge
-                      label={app.status.toUpperCase()}
-                      tone={app.status === 'active' ? 'success' : app.status === 'declined' ? 'critical' : 'warning'}
-                    />
-                    {app.cadence ? (
-                      <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                        {app.cadence}
-                      </AppText>
-                    ) : null}
-                  </View>
-                </SolidCard>
-              ))}
-            </ScrollView>
-          </SolidCard>
-        )}
-
-        <AppTextField
-          label=""
-          placeholder="Search mentors by name, company, or skills..."
-          value={query}
-          onChangeText={setQuery}
+        <SegmentedTabs
+          tabs={[
+            { key: 'find', label: 'Find a mentor' },
+            { key: 'mine', label: 'My mentorships', badge: activeOnes.length + waiting.length },
+          ]}
+          active={tab}
+          onChange={(k) => setTab(k as Tab)}
         />
 
-        {campusCode && campusCode !== 'GLOBAL' && (
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.sm }}>
-            {[
-              { id: 'campus', label: `${campusCode} Mentors` },
-              { id: 'all', label: 'All Campuses' },
-            ].map((f) => {
-              const isSelected = campusFilter === f.id;
-              return (
-                <Pressable
-                  key={f.id}
-                  onPress={() => setCampusFilter(f.id as any)}
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 5,
-                    borderRadius: radius.pill,
-                    backgroundColor: isSelected ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
-                    borderWidth: 1,
-                    borderColor: isSelected ? colors.brandPrimary : colors.border,
-                  }}
-                >
-                  <AppText
-                    weight={isSelected ? 'bold' : 'regular'}
-                    variant="caption"
-                    style={{
-                      fontSize: 11,
-                      color: isSelected ? colors.textInverse : colors.textSecondary,
-                    }}
-                  >
-                    {f.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
+        {tab === 'find' ? (
+          <>
+            <AppTextField label="" placeholder="Search by name, company or skill…" value={query} onChangeText={setQuery} leftIcon="search" />
 
-        <View style={{ marginBottom: spacing.lg }}>
-          <ChipSelect
-            options={EXPERTISE_CATEGORIES}
-            selected={[expertise]}
-            onToggle={(value) => setExpertise(value)}
-          />
-        </View>
-
-        <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.md }}>
-          Verified Alumni Mentors ({mentors?.length ?? 0})
-        </AppText>
-
-        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
-          {mentors?.map((mentor) => (
-            <View key={mentor.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 300 } : undefined}>
-              <MentorCard
-                mentor={mentor}
-                onRequested={() => queryClient.invalidateQueries({ queryKey: ['mentorships'] })}
-              />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              {campusCode && campusCode !== 'GLOBAL'
+                ? [
+                    { id: 'campus', label: `${campusCode} mentors` },
+                    { id: 'all', label: 'All campuses' },
+                  ].map((f) => {
+                    const selected = campusFilter === f.id;
+                    return (
+                      <Pressable
+                        key={f.id}
+                        onPress={() => setCampusFilter(f.id as 'campus' | 'all')}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 5,
+                          borderRadius: radius.pill,
+                          backgroundColor: selected ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                          borderWidth: 1,
+                          borderColor: selected ? colors.brandPrimary : colors.border,
+                        }}
+                      >
+                        <AppText variant="caption" weight={selected ? 'bold' : 'regular'} style={{ fontSize: 11, color: selected ? colors.textInverse : colors.textSecondary }}>
+                          {f.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })
+                : null}
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setShowPaused((v) => !v);
+                }}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: showPaused }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginLeft: 'auto' }}
+              >
+                <Ionicons name={showPaused ? 'checkbox' : 'square-outline'} size={16} color={showPaused ? colors.brandPrimary : colors.textSecondary} />
+                <AppText variant="caption" tone="secondary">
+                  Include full / paused
+                </AppText>
+              </Pressable>
             </View>
-          ))}
-        </View>
 
-        {!isLoading && (mentors?.length ?? 0) === 0 ? (
-          <EmptyState title="No mentors found" description="Try a different search term or category." />
-        ) : null}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingRight: 16 }} {...({ 'data-horizontal-scroll': 'true' } as any)}>
+              {EXPERTISE_FILTERS.map((f) => {
+                const selected = expertise === f;
+                return (
+                  <Pressable
+                    key={f}
+                    onPress={() => setExpertise(f)}
+                    style={{ paddingHorizontal: 13, paddingVertical: 7, borderRadius: radius.pill, borderWidth: 1.5, borderColor: selected ? colors.brandPrimary : colors.border, backgroundColor: selected ? `${colors.brandPrimary}18` : 'transparent' }}
+                  >
+                    <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
+                      {f}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {mentors.isError ? (
+              <EmptyState icon="cloud-offline-outline" title="Could not load mentors" description={parseRpcError(mentors.error).message} actionLabel="Try again" onAction={() => mentors.refetch()} />
+            ) : null}
+
+            {showRecommended ? (
+              <>
+                <AppText variant="h3" weight="bold">
+                  Recommended for you
+                </AppText>
+                <AppText tone="secondary" variant="caption" style={{ marginTop: -8 }}>
+                  Based on your interests, department and campus.
+                </AppText>
+                {renderMentors(recommended)}
+                <AppText variant="h3" weight="bold">
+                  More mentors ({others.length})
+                </AppText>
+                {renderMentors(others)}
+              </>
+            ) : (
+              <>
+                <AppText variant="h3" weight="bold">
+                  Verified alumni mentors ({mentors.data?.length ?? 0})
+                </AppText>
+                {renderMentors(mentors.data ?? [])}
+              </>
+            )}
+
+            {!mentors.isLoading && !mentors.isError && (mentors.data?.length ?? 0) === 0 ? (
+              <EmptyState
+                icon="people-outline"
+                title="No mentors match yet"
+                description={
+                  debouncedQuery || expertise !== 'All Fields'
+                    ? 'Try a different search or field.'
+                    : campusFilter === 'campus' && campusCode !== 'GLOBAL'
+                    ? 'No alumni from your campus have opened mentoring yet. Try "All campuses".'
+                    : 'Alumni are still setting up their mentor profiles. Check back soon.'
+                }
+                actionLabel={campusFilter === 'campus' && campusCode !== 'GLOBAL' ? 'Show all campuses' : undefined}
+                onAction={campusFilter === 'campus' && campusCode !== 'GLOBAL' ? () => setCampusFilter('all') : undefined}
+              />
+            ) : null}
+          </>
+        ) : (
+          <>
+            {mentorships.isError ? (
+              <EmptyState icon="cloud-offline-outline" title="Could not load your mentorships" description={parseRpcError(mentorships.error).message} actionLabel="Try again" onAction={() => mentorships.refetch()} />
+            ) : null}
+
+            {!mentorships.isLoading && mine.length === 0 && !mentorships.isError ? (
+              <SolidCard radius={20} style={{ gap: spacing.sm, alignItems: 'flex-start' }}>
+                <Ionicons name="school-outline" size={28} color={colors.textSecondary} />
+                <AppText weight="bold">You have not asked a mentor yet</AppText>
+                <AppText tone="secondary" variant="bodySmall">
+                  Browse verified alumni, read what they offer, and send a short request. They reply in the app, and if they accept you get a private space for sessions, goals and notes.
+                </AppText>
+                <AppButton label="Find a mentor" onPress={() => setTab('find')} />
+              </SolidCard>
+            ) : null}
+
+            {activeOnes.length > 0 ? (
+              <>
+                <AppText variant="h3" weight="bold">
+                  Active ({activeOnes.length})
+                </AppText>
+                {activeOnes.map((m) => (
+                  <MentorshipListCard key={m.id} mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
+                ))}
+              </>
+            ) : null}
+            {waiting.length > 0 ? (
+              <>
+                <AppText variant="h3" weight="bold">
+                  Waiting for a reply ({waiting.length})
+                </AppText>
+                {waiting.map((m) => (
+                  <MentorshipListCard key={m.id} mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
+                ))}
+              </>
+            ) : null}
+            {past.length > 0 ? (
+              <>
+                <AppText variant="h3" weight="bold">
+                  History ({past.length})
+                </AppText>
+                {past.map((m) => (
+                  <MentorshipListCard key={m.id} mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
+                ))}
+              </>
+            ) : null}
+          </>
+        )}
       </ScrollView>
     </ScreenContainer>
   );

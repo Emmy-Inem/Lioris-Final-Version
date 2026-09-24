@@ -20,6 +20,7 @@ import { ReConsentGate } from '@/components/ReConsentGate';
 import { MaintenanceGate } from '@/components/MaintenanceGate';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
+import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { addNotificationResponseListener } from '@/notifications/push';
 import { resolveNotificationRoute } from '@/utils/notificationRouter';
 
@@ -300,6 +301,8 @@ function StatusBarForTheme() {
  * there's nothing stale left for any consumer to get stuck on.
  */
 function AppShell() {
+  // Keeps the shared campus list (incl. campuses an admin added) fresh for email matching and pickers.
+  useCampusRegistry();
   const { isLoading } = useFeatureFlags();
   const { user } = useAuth();
 
