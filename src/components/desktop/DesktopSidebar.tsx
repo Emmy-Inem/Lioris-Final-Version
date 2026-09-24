@@ -13,6 +13,9 @@ import { LiorisLogo } from '@/components/LiorisLogo';
 import { getMyProfile } from '@/api/profile';
 import { listConversations } from '@/api/messaging';
 import { listNotifications } from '@/api/notifications';
+import { useCampusScope } from '@/hooks/useCampusScope';
+import { ChangeWorkspaceScopeModal } from '@/components/ChangeWorkspaceScopeModal';
+import { getInstitutionByCode } from '@/api/institutions';
 
 interface NavItem {
  id: string;
@@ -29,6 +32,8 @@ export function DesktopSidebar() {
  const { isFeatureEnabled } = useFeatureFlags();
  const pathname = usePathname();
  const [collapsed, setCollapsed] = useState(false);
+ const [workspaceModalOpen, setWorkspaceModalOpen] = useState(false);
+ const { scope, setScope, activeCampusCode, homeInstitutionCode } = useCampusScope();
 
  const { data: profile } = useQuery({
  queryKey: ['profile', 'me', user?.id],
@@ -145,8 +150,9 @@ export function DesktopSidebar() {
       ? alumniNavItems
       : studentNavItems;
 
-  const campusName =
-    profile?.institutionName && profile.institutionCode !== 'GLOBAL'
+  const campusName = activeCampusCode
+    ? getInstitutionByCode(activeCampusCode)?.name || activeCampusCode
+    : profile?.institutionName && profile.institutionCode !== 'GLOBAL'
       ? profile.institutionName
       : 'Campus';
 
@@ -210,7 +216,10 @@ export function DesktopSidebar() {
  {/* Active Campus Scope Pill & Scope Switcher */}
  {!collapsed && (
  <View style={{ gap: 6, marginTop: 4 }}>
- <View
+ <Pressable
+ onPress={user?.actualRole === 'admin' ? () => setWorkspaceModalOpen(true) : undefined}
+ accessibilityRole={user?.actualRole === 'admin' ? 'button' : undefined}
+ accessibilityLabel={user?.actualRole === 'admin' ? 'Switch campus workspace' : undefined}
  style={[
  styles.campusPill,
  {
@@ -223,7 +232,8 @@ export function DesktopSidebar() {
  <AppText variant="caption" weight="semiBold" style={{ flex: 1, fontSize: 11 }}>
  {campusName}
  </AppText>
- </View>
+ {user?.actualRole === 'admin' && <Ionicons name="swap-horizontal" size={13} color={colors.textSecondary} />}
+ </Pressable>
 
  {/* Scope Segment */}
  <View
@@ -504,8 +514,14 @@ export function DesktopSidebar() {
           </Pressable>
         </View>
       </View>
-
-
+      <ChangeWorkspaceScopeModal
+        visible={workspaceModalOpen}
+        onClose={() => setWorkspaceModalOpen(false)}
+        homeInstitution={profile?.institutionName || 'My Campus'}
+        homeInstitutionCode={homeInstitutionCode}
+        scope={scope}
+        onSelectScope={setScope}
+      />
     </View>
   );
 }

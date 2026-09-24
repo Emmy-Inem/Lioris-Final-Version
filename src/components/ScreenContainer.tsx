@@ -1,6 +1,7 @@
-import React from 'react';
-import { Platform, ScrollView, StyleSheet, View, ViewProps } from 'react-native';
+import React, { useState } from 'react';
+import { Platform, RefreshControl, ScrollView, StyleSheet, View, ViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ScreenGlowBackground } from './ScreenGlowBackground';
@@ -27,6 +28,21 @@ export function ScreenContainer({
 }: ScreenContainerProps) {
  const { colors, spacing } = useTheme();
  const { isDesktop, containerPadding, contentMaxWidth } = useResponsive();
+ const queryClient = useQueryClient();
+ const [refreshing, setRefreshing] = useState(false);
+
+ const refreshScreen = async () => {
+   if (refreshing) return;
+   setRefreshing(true);
+   try {
+     await Promise.all([
+       queryClient.refetchQueries({ type: 'active' }),
+       new Promise((resolve) => setTimeout(resolve, 450)),
+     ]);
+   } finally {
+     setRefreshing(false);
+   }
+ };
 
  const content = (
  <View
@@ -52,6 +68,16 @@ export function ScreenContainer({
  showsVerticalScrollIndicator={isDesktop ? true : false}
  keyboardShouldPersistTaps="handled"
  nestedScrollEnabled
+ alwaysBounceVertical
+ overScrollMode="always"
+ refreshControl={
+   <RefreshControl
+     refreshing={refreshing}
+     onRefresh={refreshScreen}
+     tintColor={colors.brandPrimary}
+     colors={[colors.brandPrimary, colors.brandAccent]}
+   />
+ }
  contentContainerStyle={[
  { flexGrow: 1, paddingBottom: isDesktop ? 40 : 130 },
  contentContainerStyle,

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sendConnectionRequest, checkConnectionStatus, deleteConnection } from '@/api/connections';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { getPublicProfile } from '@/api/profile';
+import { useSignedUrl } from '@/api/signedUrls';
 import { UserProfile, UserRole } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { useAuth } from '@/auth/AuthContext';
@@ -105,9 +106,9 @@ export function UserProfileModal({
  : ['Course Studies', 'Campus Life', 'Projects'];
  const isOwnProfile = !!currentUser?.id && currentUser.id === userId;
 
- const coverSource = effectiveCover
- ? (STOCK_IMAGES[effectiveCover] ?? ((effectiveCover.startsWith('http') || effectiveCover.startsWith('file') || effectiveCover.startsWith('data:')) ? { uri: effectiveCover } : null))
- : null;
+ const stockCover = effectiveCover ? STOCK_IMAGES[effectiveCover] : null;
+ const { url: resolvedCoverUrl } = useSignedUrl('campus-media', stockCover ? null : effectiveCover);
+ const coverSource = stockCover ?? (resolvedCoverUrl ? { uri: resolvedCoverUrl } : null);
 
  async function handleToggleConnect() {
  haptics.medium();

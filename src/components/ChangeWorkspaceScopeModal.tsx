@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, View, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useViewScope } from '@/hooks/useViewScope';
-import { LAUNCH_INSTITUTIONS, createInstitution } from '@/api/institutions';
+import { LAUNCH_INSTITUTIONS, createInstitution, listCampuses } from '@/api/institutions';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 interface ChangeWorkspaceScopeModalProps {
@@ -37,7 +37,10 @@ export function ChangeWorkspaceScopeModal({
   const { activeCampusCode, setActiveCampusCode } = useViewScope();
   const { isFeatureEnabled } = useFeatureFlags();
   const globalWorkspaceEnabled = isFeatureEnabled('global_workspace');
-  const isAdmin = user?.role === 'admin';
+  // Keep this available while a real admin is previewing the student or
+  // alumni workspace. `role` is the previewed role; `actualRole` is the
+  // database-verified account role and cannot be changed by the preview tool.
+  const isAdmin = user?.actualRole === 'admin';
 
   // Guest explored workspaces list (exclude home institution and global)
   const cleanHomeCode = (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL') ? homeInstitutionCode : '';
@@ -57,9 +60,20 @@ export function ChangeWorkspaceScopeModal({
   const [newCampusCode, setNewCampusCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function removeGuest(code: string) {
-    setGuestWorkspaces((prev) => prev.filter((w) => w.code !== code));
-  }
+  useEffect(() => {
+    if (!visible || !isAdmin) return;
+    listCampuses().then((campuses) => {
+      setGuestWorkspaces(
+        campuses
+          .filter((inst) => inst.isActive !== false && inst.code !== cleanHomeCode && inst.code !== 'GLOBAL')
+          .map((inst) => ({
+            code: inst.code,
+            name: inst.name,
+            description: `${inst.shortName || inst.code} Campus Community`,
+          })),
+      );
+    }).catch(() => {});
+  }, [visible, isAdmin, cleanHomeCode]);
 
   async function handleAddCustomWorkspace() {
     if (!newCampusName.trim() || !newCampusCode.trim()) return;
@@ -198,16 +212,7 @@ export function ChangeWorkspaceScopeModal({
  {w.description}
  </AppText>
  </View>
- <Pressable
- onPress={(e) => {
- e.stopPropagation?.();
- removeGuest(w.code);
- }}
- hitSlop={8}
- accessibilityRole="button"accessibilityLabel={`Remove ${w.name} guest workspace`}
- >
- <Ionicons name="trash-outline"size={18} color={colors.critical} />
- </Pressable>
+ <Ionicons name={isCurrentCampus ? 'checkmark-circle' : 'chevron-forward'} size={18} color={isCurrentCampus ? colors.brandPrimary : colors.textSecondary} />
  </Pressable>
  );
  })}

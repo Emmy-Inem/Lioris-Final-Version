@@ -336,7 +336,7 @@ export function LandingScreen() {
           </View>
 
           {/* =========================================================================
-              2. INTERACTIVE DEVICE SIMULATOR: Student & Alumni with Floating Nav Bar
+              2. PRODUCT WORKSPACE PREVIEW
              ========================================================================= */}
           <View
             // @ts-ignore
@@ -350,13 +350,13 @@ export function LandingScreen() {
             {/* Clean Section Header (No pill badge) */}
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
               <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1.2, marginBottom: 6 }}>
-                INTERACTIVE DEVICE SIMULATOR
+                PLATFORM WORKSPACE PREVIEW
               </AppText>
               <AppText variant="h2" weight="bold" style={{ textAlign: 'center', color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                Experience Lioris on iPhone
+                Explore the Lioris Campus Workspace
               </AppText>
               <AppText tone="secondary" style={{ textAlign: 'center', marginTop: 4, maxWidth: 520 }}>
-                Explore the actual interface and floating navigation used by verified students and alumni.
+                Preview the student and alumni experience across academic resources, discussions, events, careers, and mentorship.
               </AppText>
             </View>
 
@@ -415,7 +415,7 @@ export function LandingScreen() {
               })}
             </View>
 
-            {/* The iPhone Showcase Container */}
+            {/* Student and alumni workspace preview */}
             <View
               style={{
                 flexDirection: isDesktop ? 'row' : 'column',
@@ -449,16 +449,16 @@ export function LandingScreen() {
                 </View>
               )}
 
-              {/* iPhone Hardware Outer Frame */}
+              {/* Clean product preview panel */}
               <View
                 style={{
-                  width: Math.min(width - 32, 340),
-                  height: width < 480 ? 560 : 660,
-                  borderRadius: width < 480 ? 44 : 50,
+                  width: Math.min(width - 32, 420),
+                  height: width < 480 ? 510 : 580,
+                  borderRadius: 28,
                   backgroundColor: isDark ? '#020617' : '#FFFFFF',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.12)',
-                  borderWidth: 4,
-                  padding: 8,
+                  borderWidth: 1,
+                  padding: 0,
                   position: 'relative',
                   overflow: 'hidden',
                   ...(Platform.OS === 'web'
@@ -474,38 +474,17 @@ export function LandingScreen() {
                 <View
                   style={{
                     flex: 1,
-                    borderRadius: width < 480 ? 36 : 42,
+                    borderRadius: 27,
                     backgroundColor: isDark ? '#0B132B' : '#F1F5F9',
                     overflow: 'hidden',
                     position: 'relative',
                   }}
                 >
-                  {/* Dynamic Island */}
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: 10,
-                      alignSelf: 'center',
-                      width: 96,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: '#000000',
-                      zIndex: 99,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingHorizontal: 10,
-                    }}
-                  >
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#1A3DFF' }} />
-                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#1E293B' }} />
-                  </View>
-
-                  {/* Screen Content ScrollView */}
+                  {/* Workspace content */}
                   <ScrollView
                     nestedScrollEnabled
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingTop: 46, paddingBottom: 80, paddingHorizontal: 12 }}
+                    contentContainerStyle={{ paddingVertical: 18, paddingHorizontal: 16 }}
                   >
                     {/* Mini App Header */}
                     <View
@@ -649,68 +628,6 @@ export function LandingScreen() {
                     )}
                   </ScrollView>
 
-                  {/* FLOATING LIQUID GLASS TAB BAR INSIDE SIMULATOR */}
-                  <View
-                    style={{
-                      position: 'absolute',
-                      bottom: 12,
-                      left: 12,
-                      right: 12,
-                      height: 46,
-                      borderRadius: 23,
-                      backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.90)',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
-                      borderWidth: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-around',
-                      paddingHorizontal: 8,
-                      ...(Platform.OS === 'web'
-                        ? {
-                            backdropFilter: 'blur(16px)',
-                            WebkitBackdropFilter: 'blur(16px)',
-                            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.25)',
-                          }
-                        : {}),
-                    }}
-                  >
-                    {previewRole === 'student' ? (
-                      <>
-                        {/* Student Floating Nav: Home, Forum, Events, Resources */}
-                        <View style={{ alignItems: 'center', backgroundColor: colors.brandPrimary, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 14 }}>
-                          <Ionicons name="home" size={16} color="#FFFFFF" />
-                        </View>
-                        <View style={{ alignItems: 'center', padding: 4 }}>
-                          <Ionicons name="chatbubbles-outline" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
-                        </View>
-                        <View style={{ alignItems: 'center', padding: 4 }}>
-                          <Ionicons name="calendar-outline" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
-                        </View>
-                        <View style={{ alignItems: 'center', padding: 4 }}>
-                          <Ionicons name="folder-outline" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {/* Alumni Floating Nav: Home, Careers, Forum, Events, Mentorship */}
-                        <View style={{ alignItems: 'center', backgroundColor: colors.brandPrimary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 14 }}>
-                          <Ionicons name="home" size={15} color="#FFFFFF" />
-                        </View>
-                        <View style={{ alignItems: 'center', padding: 4 }}>
-                          <Ionicons name="briefcase-outline" size={15} color={isDark ? '#94A3B8' : '#64748B'} />
-                        </View>
-                        <View style={{ alignItems: 'center', padding: 4 }}>
-                          <Ionicons name="chatbubbles-outline" size={15} color={isDark ? '#94A3B8' : '#64748B'} />
-                        </View>
-                        <View style={{ alignItems: 'center', padding: 4 }}>
-                          <Ionicons name="calendar-outline" size={15} color={isDark ? '#94A3B8' : '#64748B'} />
-                        </View>
-                        <View style={{ alignItems: 'center', padding: 4 }}>
-                          <Ionicons name="ribbon-outline" size={15} color={isDark ? '#94A3B8' : '#64748B'} />
-                        </View>
-                      </>
-                    )}
-                  </View>
                 </View>
               </View>
 

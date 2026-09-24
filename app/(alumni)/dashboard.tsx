@@ -119,6 +119,7 @@ export default function AlumniDashboard() {
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['announcements'] }),
         queryClient.invalidateQueries({ queryKey: ['portal-links'] }),
+        new Promise((resolve) => setTimeout(resolve, 450)),
       ]);
     } finally {
       setRefreshing(false);
@@ -132,6 +133,8 @@ export default function AlumniDashboard() {
         style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={isDesktop ? true : false}
         keyboardShouldPersistTaps="handled"
+        alwaysBounceVertical
+        overScrollMode="always"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

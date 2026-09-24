@@ -25,6 +25,7 @@ export type FeatureKey =
   | 'forum_trends'
   | 'alumni_network'
   | 'campus_announcements'
+  | 'forum_global_scope'
   | 'global_workspace'
   | 'staff_role';
 
@@ -188,6 +189,14 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Academic Community',
     tier: 'P1',
     description: 'Shows Global workspace selectors and cross-university publishing. Disable to remove those controls and keep members in their campus workspace.',
+    defaultOn: true,
+  },
+  {
+    key: 'forum_global_scope',
+    label: 'Forum Global Scope',
+    category: 'Academic Community',
+    tier: 'P1',
+    description: 'Shows the Global button and cross-campus audience option in the Forum. Disable it to keep Forum discussions campus-only.',
     defaultOn: true,
   },
   {

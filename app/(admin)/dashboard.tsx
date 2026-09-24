@@ -173,7 +173,7 @@ export default function AdminDashboard() {
             {isFeatureEnabled('campus_radio') && <CampusRadioPlayer />}
 
             {/* Official Campus Announcements & Broadcasts */}
-            <AnnouncementsWidget scope="global" />
+            {isFeatureEnabled('campus_announcements') && <AnnouncementsWidget scope="global" />}
 
             {/* Administrative Operations & Control Desk */}
             <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>

@@ -298,7 +298,7 @@ export default function StaffDashboard() {
                 </GlassCard>
               </Pressable>
             )}
-            <Pressable
+            {isFeatureEnabled('campus_announcements') && <Pressable
               onPress={() => router.push('/(staff)/announcements')}
               style={{ width: isDesktop ? 180 : '48%', flexGrow: 1 }}
             >
@@ -324,7 +324,7 @@ export default function StaffDashboard() {
                   </AppText>
                 </View>
               </GlassCard>
-            </Pressable>
+            </Pressable>}
 
             <Pressable
               onPress={() => router.push('/(staff)/moderation')}

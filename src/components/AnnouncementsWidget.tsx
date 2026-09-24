@@ -12,6 +12,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listAnnouncements } from '@/api/announcements';
 import { Announcement } from '@/api/types';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 const PRIORITY_TONE = {
  normal: 'neutral',
@@ -39,14 +40,19 @@ export function AnnouncementsWidget({
 }) {
  const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
+ const { isFeatureEnabled } = useFeatureFlags();
  const insets = useSafeAreaInsets();
  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
 
+ const announcementsEnabled = isFeatureEnabled('campus_announcements');
  const { data: announcements, isLoading } = useQuery({
  queryKey: ['announcements'],
  queryFn: listAnnouncements,
+ enabled: announcementsEnabled,
  });
+
+ if (!announcementsEnabled) return null;
 
  // Filter announcements for current audience scope and active expiration
  const activeAnnouncements = (announcements ?? [])

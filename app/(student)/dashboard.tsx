@@ -30,6 +30,7 @@ import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { getMyProfile } from '@/api/profile';
+import { useSignedUrl } from '@/api/signedUrls';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
 import { listResources } from '@/api/resources';
@@ -92,8 +93,9 @@ export default function StudentDashboard() {
   });
 
   const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Student';
-  const activeCover = profile?.coverUrl && (profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:'))
-    ? { uri: profile.coverUrl }
+  const { url: resolvedCoverUrl } = useSignedUrl('campus-media', profile?.coverUrl);
+  const activeCover = resolvedCoverUrl
+    ? { uri: resolvedCoverUrl }
     : null;
 
   function handleOpenPortal(url: string) {
@@ -114,6 +116,7 @@ export default function StudentDashboard() {
         queryClient.invalidateQueries({ queryKey: ['study-groups'] }),
         queryClient.invalidateQueries({ queryKey: ['announcements'] }),
         queryClient.invalidateQueries({ queryKey: ['portal-links'] }),
+        new Promise((resolve) => setTimeout(resolve, 450)),
       ]);
     } finally {
       setRefreshing(false);
@@ -131,6 +134,8 @@ export default function StudentDashboard() {
         style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={isDesktop ? true : false}
         keyboardShouldPersistTaps="handled"
+        alwaysBounceVertical
+        overScrollMode="always"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

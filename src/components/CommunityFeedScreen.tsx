@@ -70,7 +70,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { isFeatureEnabled } = useFeatureFlags();
-  const globalWorkspaceEnabled = isFeatureEnabled('global_workspace');
+  const globalWorkspaceEnabled =
+    isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope');
   const { isDesktop, isWideDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -160,6 +161,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
   const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
   const [sortModalOpen, setSortModalOpen] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
 
   // Desktop horizontal channels scrolling ref & wheel listener
   const desktopChannelsScrollRef = useRef<ScrollView>(null);
@@ -303,6 +305,21 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  category: selectedChannel === 'Polls' ? undefined : selectedChannel ?? undefined,
  }),
  });
+
+ const handleRefresh = async () => {
+   if (manualRefreshing) return;
+   haptics.light();
+   setManualRefreshing(true);
+   try {
+     await Promise.all([
+       refetch(),
+       queryClient.invalidateQueries({ queryKey: ['communities'] }),
+       new Promise((resolve) => setTimeout(resolve, 450)),
+     ]);
+   } finally {
+     setManualRefreshing(false);
+   }
+ };
 
  let posts = rawPosts ?? [];
  if (selectedChannel === 'Polls') {
@@ -1166,8 +1183,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </Animated.View>
               )}
               showsVerticalScrollIndicator={true}
-              onRefresh={refetch}
-              refreshing={isRefetching}
+              onRefresh={handleRefresh}
+              refreshing={isRefetching || manualRefreshing}
+              alwaysBounceVertical
+              overScrollMode="always"
               ListEmptyComponent={!isLoading ? renderEmptyForumState() : null}
             />
           </View>
@@ -1334,8 +1353,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </Animated.View>
         )}
         showsVerticalScrollIndicator={false}
-        onRefresh={refetch}
-        refreshing={isRefetching}
+        onRefresh={handleRefresh}
+        refreshing={isRefetching || manualRefreshing}
+        alwaysBounceVertical
+        overScrollMode="always"
         ListEmptyComponent={!isLoading ? renderEmptyForumState() : null}
       />
     )}

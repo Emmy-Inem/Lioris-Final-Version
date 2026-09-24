@@ -1,4 +1,4 @@
-import React from'react';
+import React, { useState } from'react';
 import { Platform, Pressable, StyleSheet, View } from'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from'@expo/vector-icons';
@@ -17,6 +17,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { getInstitutionByCode } from '@/api/institutions';
 import { haptics } from '@/utils/haptics';
+import { ChangeWorkspaceScopeModal } from './ChangeWorkspaceScopeModal';
 
 function IOSHeaderGlass({ isDark }: { isDark: boolean }) {
   if (Platform.OS !== 'ios') return null;
@@ -35,6 +36,7 @@ export function AppHeader() {
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
+  const [workspaceModalOpen, setWorkspaceModalOpen] = useState(false);
 
  const segments = useSegments();
  const roleGroup = segments[0] || '(student)';
@@ -69,8 +71,9 @@ export function AppHeader() {
   // that campus's own content, which can look like the whole app is broken
   // if you forget you switched. This banner is the one place it's always
   // visible, since AppHeader renders on every mobile screen.
-  const { activeCampusCode, homeInstitutionCode, setActiveCampusCode } = useCampusScope();
-  const isExploringOtherCampus = user?.role === 'admin' && !!activeCampusCode && activeCampusCode !== homeInstitutionCode;
+  const { scope, setScope, activeCampusCode, homeInstitutionCode, setActiveCampusCode } = useCampusScope();
+  const canSwitchCampus = user?.actualRole === 'admin';
+  const isExploringOtherCampus = canSwitchCampus && !!activeCampusCode && activeCampusCode !== homeInstitutionCode;
   const exploringInstitutionName = isExploringOtherCampus
     ? getInstitutionByCode(activeCampusCode!)?.name ?? activeCampusCode
     : null;
@@ -130,6 +133,30 @@ export function AppHeader() {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+        {canSwitchCampus && (roleGroup === '(student)' || roleGroup === '(alumni)') && (
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Switch campus workspace"
+            onPress={() => {
+              haptics.light();
+              setWorkspaceModalOpen(true);
+            }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: isExploringOtherCampus ? colors.brandPrimary : colors.surface,
+              borderWidth: 1,
+              borderColor: isExploringOtherCampus ? colors.brandPrimary : colors.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <IOSHeaderGlass isDark={isDark} />
+            <Ionicons name="school-outline" size={17} color={isExploringOtherCampus ? '#FFFFFF' : colors.textPrimary} />
+          </Pressable>
+        )}
         {/* Direct Messages Button */}
         {messagingEnabled && (
           <Pressable
@@ -361,6 +388,14 @@ export function AppHeader() {
         </Pressable>
       </View>
  </View>
+    <ChangeWorkspaceScopeModal
+      visible={workspaceModalOpen}
+      onClose={() => setWorkspaceModalOpen(false)}
+      homeInstitution={profile?.institutionName || 'My Campus'}
+      homeInstitutionCode={homeInstitutionCode}
+      scope={scope}
+      onSelectScope={setScope}
+    />
  </>
  );
 }

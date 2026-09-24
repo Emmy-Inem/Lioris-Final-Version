@@ -25,6 +25,7 @@ import { deletePost, listMyDrafts, listMyPosts, listMyScheduled, publishDraft } 
 import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { getFriendlyErrorMessage } from '@/utils/errors';
+import { useSignedUrl } from '@/api/signedUrls';
 
 /* Short labels so the segmented control fits a 375px phone on one line with no
    ragged wrapping and no ellipsis. The control also scrolls horizontally so it
@@ -262,9 +263,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         setUploadingAvatar(true);
         try {
           const arrayBuffer = await file.arrayBuffer();
-          const ext = file.name.split('.').pop() || 'jpg';
-          const publicUrl = await uploadAvatarImage(user.id, arrayBuffer, ext);
-          await updateProfileImages(user.id, { avatarUrl: publicUrl });
+          const ext = file.type || file.name.split('.').pop() || 'jpg';
+          await uploadAvatarImage(user.id, arrayBuffer, ext);
           await queryClient.invalidateQueries({ queryKey: ['profile'] });
           setPhotoPickerOpen(false);
           Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
@@ -293,10 +293,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     if (!result.canceled && result.assets[0]?.uri) {
       setUploadingAvatar(true);
       try {
-        const res = await fetch(result.assets[0].uri);
-        const blob = await res.blob();
-        const publicUrl = await uploadAvatarImage(user.id, blob, 'jpg');
-        await updateProfileImages(user.id, { avatarUrl: publicUrl });
+        const asset = result.assets[0];
+        const res = await fetch(asset.uri);
+        const bytes = await res.arrayBuffer();
+        await uploadAvatarImage(user.id, bytes, asset.mimeType || asset.fileName?.split('.').pop() || 'jpg');
         await queryClient.invalidateQueries({ queryKey: ['profile'] });
         setPhotoPickerOpen(false);
         Alert.alert('Photo Uploaded', 'Your custom avatar is now live.');
@@ -325,9 +325,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         setUploadingCover(true);
         try {
           const arrayBuffer = await file.arrayBuffer();
-          const ext = file.name.split('.').pop() || 'jpg';
-          const publicUrl = await uploadCoverImage(user.id, arrayBuffer, ext);
-          await updateProfileImages(user.id, { coverUrl: publicUrl });
+          const ext = file.type || file.name.split('.').pop() || 'jpg';
+          await uploadCoverImage(user.id, arrayBuffer, ext);
           await queryClient.invalidateQueries({ queryKey: ['profile'] });
           setPhotoPickerOpen(false);
           Alert.alert('Cover Updated', 'Your custom campus banner is now live.');
@@ -356,10 +355,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     if (!result.canceled && result.assets[0]?.uri) {
       setUploadingCover(true);
       try {
-        const res = await fetch(result.assets[0].uri);
-        const blob = await res.blob();
-        const publicUrl = await uploadCoverImage(user.id, blob, 'jpg');
-        await updateProfileImages(user.id, { coverUrl: publicUrl });
+        const asset = result.assets[0];
+        const res = await fetch(asset.uri);
+        const bytes = await res.arrayBuffer();
+        await uploadCoverImage(user.id, bytes, asset.mimeType || asset.fileName?.split('.').pop() || 'jpg');
         await queryClient.invalidateQueries({ queryKey: ['profile'] });
         setPhotoPickerOpen(false);
         Alert.alert('Cover Updated', 'Your custom campus banner is now live.');
@@ -408,8 +407,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     );
   }
 
-  const activeCover = profile.coverUrl && (profile.coverUrl.startsWith('http') || profile.coverUrl.startsWith('file') || profile.coverUrl.startsWith('data:'))
-    ? { uri: profile.coverUrl }
+  const { url: resolvedCoverUrl } = useSignedUrl('campus-media', profile.coverUrl);
+  const activeCover = resolvedCoverUrl
+    ? { uri: resolvedCoverUrl }
     : null;
 
   return (

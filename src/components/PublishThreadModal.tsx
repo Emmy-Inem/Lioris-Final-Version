@@ -102,7 +102,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { isFeatureEnabled } = useFeatureFlags();
-  const globalWorkspaceEnabled = isFeatureEnabled('global_workspace');
+  const globalWorkspaceEnabled =
+    isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope');
   const isAdmin = user?.role === 'admin';
   const { data: communities = [] } = useQuery({ queryKey: ['communities'], queryFn: listCommunities });
   const [topic, setTopic] = useState('');
