@@ -319,14 +319,6 @@ function Title({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Meta({ children }: { children: React.ReactNode }) {
-  return (
-    <AppText tone="secondary" style={{ fontSize: 11, lineHeight: 15 }}>
-      {children}
-    </AppText>
-  );
-}
-
 function Heading({ children }: { children: React.ReactNode }) {
   return (
     <AppText weight="bold" style={{ fontSize: 15, lineHeight: 20, marginTop: 2 }}>
@@ -623,83 +615,468 @@ function ForumScreen() {
   );
 }
 
-const EVENTS = [
-  { id: 'e1', month: 'OCT', day: '04', title: 'Technology Symposium', where: 'Main Auditorium • 10:00 AM', going: 182 },
-  { id: 'e2', month: 'OCT', day: '09', title: 'Career Fair & CV Clinic', where: 'Student Centre • 9:00 AM', going: 264 },
+/* Building blocks shared by the Events, Library and Careers screens: the same title row, search pill and
+ * filter chips the real pages use. Everything is drawn only - none of it reacts to taps. */
+
+function ScreenTitle({ title, subtitle, action, actionIcon }: { title: string; subtitle: string; action?: string; actionIcon?: IconName }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ gap: 2 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+        <AppText weight="bold" numberOfLines={1} style={{ fontSize: 14, flexShrink: 1 }}>
+          {title}
+        </AppText>
+        {action ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: colors.brandPrimary, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
+            {actionIcon ? <Ionicons name={actionIcon} size={10} color="#FFFFFF" /> : null}
+            <AppText weight="bold" style={{ fontSize: 9, color: '#FFFFFF' }}>
+              {action}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+      <AppText tone="secondary" style={{ fontSize: 9.5, lineHeight: 13 }}>
+        {subtitle}
+      </AppText>
+    </View>
+  );
+}
+
+function SearchPill({ placeholder, withFilter }: { placeholder: string; withFilter?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', gap: 5 }}>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 9, height: 28 }}>
+        <Ionicons name="search" size={12} color={colors.textSecondary} />
+        <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 9.5, flex: 1 }}>
+          {placeholder}
+        </AppText>
+      </View>
+      {withFilter ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 8, height: 28 }}>
+          <Ionicons name="options-outline" size={11} color={colors.textPrimary} />
+          <AppText weight="bold" style={{ fontSize: 9.5 }}>
+            Filter
+          </AppText>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** A horizontally scrolling chip row, clipped like the real one (the last chip runs off the edge). */
+function ChipRow({ chips }: { chips: { label: string; icon: IconName }[] }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', gap: 5, overflow: 'hidden' }} pointerEvents="none">
+      {chips.map((chip, index) => {
+        const selected = index === 0;
+        return (
+          <View
+            key={chip.label}
+            style={{
+              flexShrink: 0,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: 9,
+              paddingVertical: 4,
+              borderRadius: 999,
+              backgroundColor: selected ? colors.brandPrimary : colors.surface,
+              borderWidth: 1,
+              borderColor: selected ? colors.brandPrimary : colors.border,
+            }}
+          >
+            <Ionicons name={chip.icon} size={10} color={selected ? '#FFFFFF' : colors.textSecondary} />
+            <AppText weight={selected ? 'bold' : 'medium'} style={{ fontSize: 9, color: selected ? '#FFFFFF' : colors.textSecondary }}>
+              {chip.label}
+            </AppText>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** The app's button, drawn small. Primary is filled, secondary is outlined, ghost is text only. */
+function Btn({ label, kind = 'primary', grow }: { label: string; kind?: 'primary' | 'secondary' | 'ghost'; grow?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        flexGrow: grow ? 1 : 0,
+        flexBasis: grow ? 0 : undefined,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 9,
+        paddingVertical: 5,
+        borderRadius: 999,
+        backgroundColor: kind === 'primary' ? colors.brandPrimary : 'transparent',
+        borderWidth: kind === 'secondary' ? 1.5 : 0,
+        borderColor: colors.brandPrimary,
+      }}
+    >
+      <AppText weight="bold" numberOfLines={1} style={{ fontSize: 9.5, color: kind === 'primary' ? '#FFFFFF' : colors.brandPrimary }}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+/** Plain coloured uppercase label, like the app's Badge. */
+function BadgeText({ label, color }: { label: string; color: string }) {
+  return (
+    <AppText weight="bold" style={{ fontSize: 8.5, letterSpacing: 0.3, color, textTransform: 'uppercase' }}>
+      {label}
+    </AppText>
+  );
+}
+
+const EVENT_LIST = [
+  {
+    id: 'e1',
+    month: 'OCT',
+    day: '04',
+    category: 'Tech',
+    title: 'Campus Tech Hackathon',
+    time: '10:00 AM',
+    where: 'Main Auditorium',
+    body: 'A day of building, mentoring and demos. Form a team and ship something real.',
+    going: 182,
+    max: 250,
+    colors: ['#1d4ed8', '#0ea5e9'] as [string, string],
+  },
+  {
+    id: 'e2',
+    month: 'OCT',
+    day: '09',
+    category: 'Academic',
+    title: 'Academic Symposium',
+    time: '9:00 AM',
+    where: 'Faculty Hall',
+    body: 'Talks and panels from lecturers and final-year researchers.',
+    going: 96,
+    max: 0,
+    colors: ['#4338ca', '#8b5cf6'] as [string, string],
+  },
 ];
 
 function EventsScreen() {
   const { colors } = useTheme();
   return (
     <>
-      <Heading>Upcoming events</Heading>
-      {EVENTS.map((event) => (
-        <Card key={event.id}>
-          <View style={{ flexDirection: 'row', gap: 9 }}>
-            <View style={{ width: 38, borderRadius: 10, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', paddingVertical: 5 }}>
-              <AppText weight="bold" style={{ fontSize: 9, color: colors.brandPrimary }}>
-                {event.month}
-              </AppText>
-              <AppText weight="bold" style={{ fontSize: 15, lineHeight: 18, color: colors.brandPrimary }}>
-                {event.day}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Ionicons name="school" size={11} color={colors.textSecondary} />
+        <AppText weight="bold" tone="secondary" numberOfLines={1} style={{ fontSize: 9 }}>
+          Your University • Campus Hub
+        </AppText>
+      </View>
+      <ScreenTitle title="Campus Events" subtitle="Workshops, career fairs, academic symposiums & student campus gatherings" action="Host Event" actionIcon="add" />
+      <SearchPill placeholder="Search campus events, hackathons..." />
+      <ChipRow
+        chips={[
+          { label: 'All Events', icon: 'calendar-outline' },
+          { label: 'On Campus', icon: 'business-outline' },
+          { label: 'Off Campus', icon: 'globe-outline' },
+          { label: 'Virtual Event', icon: 'videocam-outline' },
+        ]}
+      />
+
+      {EVENT_LIST.map((event) => (
+        <View key={event.id} style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+          {/* cover */}
+          <View style={{ height: 64 }}>
+            <LinearGradient colors={event.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+            <LinearGradient colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.45)']} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View style={{ position: 'absolute', top: 6, left: 7, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              <Ionicons name="school" size={9} color="#FFFFFF" />
+              <AppText weight="bold" style={{ fontSize: 8.5, color: '#FFFFFF' }}>
+                Campus
               </AppText>
             </View>
-            <View style={{ flex: 1, gap: 1 }}>
-              <Title>{event.title}</Title>
-              <Meta>{event.where}</Meta>
+            <AppText weight="semiBold" style={{ position: 'absolute', top: 6, right: 7, fontSize: 9, color: '#FFFFFF' }}>
+              {event.category}
+            </AppText>
+          </View>
+
+          <View style={{ padding: 9 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ width: 34, height: 38, borderRadius: 9, backgroundColor: colors.divider, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+                <AppText weight="bold" tone="secondary" style={{ fontSize: 8.5, letterSpacing: 0.4 }}>
+                  {event.month}
+                </AppText>
+                <AppText weight="bold" style={{ fontSize: 14, lineHeight: 17 }}>
+                  {event.day}
+                </AppText>
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
+                  <AppText weight="bold" style={{ fontSize: 12, lineHeight: 16, flex: 1 }}>
+                    {event.title}
+                  </AppText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                    <Ionicons name="notifications-outline" size={13} color={colors.textSecondary} />
+                    <Ionicons name="ellipsis-horizontal" size={13} color={colors.textSecondary} />
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 3, marginTop: 2 }}>
+                  <Ionicons name="time-outline" size={10} color={colors.textSecondary} style={{ marginTop: 1 }} />
+                  <AppText tone="secondary" style={{ fontSize: 9.5, lineHeight: 13, flex: 1 }}>
+                    {event.time} | {event.where}
+                  </AppText>
+                </View>
+              </View>
+            </View>
+
+            <AppText tone="secondary" style={{ fontSize: 10, lineHeight: 14, marginTop: 6 }}>
+              {event.body}
+            </AppText>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.divider }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
+                <Ionicons name="people" size={12} color={colors.textSecondary} />
+                <AppText weight="bold" tone="secondary" numberOfLines={1} style={{ fontSize: 9, flexShrink: 1 }}>
+                  {event.going} attending{event.max ? ` (${event.max} max)` : ''}
+                </AppText>
+              </View>
+              <Btn label="RSVP" />
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-            <Meta>{event.going} going</Meta>
-            <Pill label="RSVP" />
-          </View>
-        </Card>
+        </View>
       ))}
     </>
   );
 }
 
-const LIBRARY = [
-  { id: 'r1', code: 'MTH 201', title: 'Linear Algebra lecture notes', meta: 'Notes • 4.2 MB' },
-  { id: 'r2', code: 'CSC 305', title: 'Operating Systems past questions', meta: 'Past questions • 1.8 MB' },
+const RESOURCE_LIST = [
+  {
+    id: 'r1',
+    course: 'MTH 201',
+    category: 'Notes',
+    size: '4.2 MB',
+    title: 'Linear Algebra Lecture Notes',
+    by: 'Mathematics • By Campus Student',
+    body: 'Complete notes covering vector spaces, eigenvalues and diagonalisation.',
+    downloads: 214,
+    upvotes: 38,
+  },
+  {
+    id: 'r2',
+    course: 'CSC 305',
+    category: 'Past Questions',
+    size: '1.8 MB',
+    title: 'Operating Systems Past Questions',
+    by: 'Computer Science • By Campus Student',
+    body: '',
+    downloads: 167,
+    upvotes: 25,
+  },
 ];
 
 function LibraryScreen() {
+  const { colors } = useTheme();
+  const label = (text: string) => (
+    <AppText weight="bold" tone="secondary" style={{ fontSize: 8.5, letterSpacing: 0.8 }}>
+      {text}
+    </AppText>
+  );
   return (
     <>
-      <Heading>Study library</Heading>
-      {LIBRARY.map((item) => (
-        <Card key={item.id}>
-          <Tag label={item.code} />
-          <Title>{item.title}</Title>
-          <Meta>{item.meta}</Meta>
-          <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
-            <Pill label="Download" />
+      <ScreenTitle title="Campus Resources" subtitle="Past questions, lecture notes & portal directories" />
+      <View style={{ flexDirection: 'row', gap: 5 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.brandPrimary, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
+          <Ionicons name="school" size={10} color="#FFFFFF" />
+          <AppText weight="bold" style={{ fontSize: 9, color: '#FFFFFF' }}>
+            Research Hub
+          </AppText>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.brandPrimary, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
+          <Ionicons name="cloud-upload-outline" size={10} color="#FFFFFF" />
+          <AppText weight="bold" style={{ fontSize: 9, color: '#FFFFFF' }}>
+            Upload
+          </AppText>
+        </View>
+      </View>
+
+      {/* portal directory */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {label('UNI DIRECTORY')}
+          <AppText weight="bold" style={{ fontSize: 8, color: colors.brandPrimary }}>
+            VERIFIED
+          </AppText>
+        </View>
+        <AppText tone="secondary" style={{ fontSize: 8.5 }}>
+          2 links
+        </AppText>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 5 }} pointerEvents="none">
+        {['Your Uni Portals', 'National Portals'].map((text, index) => (
+          <View
+            key={text}
+            style={{
+              paddingHorizontal: 9,
+              paddingVertical: 3,
+              borderRadius: 999,
+              backgroundColor: index === 0 ? colors.brandPrimary : colors.surface,
+              borderWidth: 1,
+              borderColor: index === 0 ? colors.brandPrimary : colors.border,
+            }}
+          >
+            <AppText weight={index === 0 ? 'bold' : 'regular'} style={{ fontSize: 8.5, color: index === 0 ? '#FFFFFF' : colors.textSecondary }}>
+              {text}
+            </AppText>
           </View>
-        </Card>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 6, overflow: 'hidden' }} pointerEvents="none">
+        {[
+          { icon: 'school-outline' as IconName, cat: 'Portal', title: 'Student Portal', url: 'portal.university.edu' },
+          { icon: 'wifi-outline' as IconName, cat: 'Services', title: 'E-Learning', url: 'lms.university.edu' },
+        ].map((portal) => (
+          <View key={portal.title} style={{ width: 104, flexShrink: 0, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 8, minHeight: 74, justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Ionicons name={portal.icon} size={14} color={colors.textSecondary} />
+              <AppText weight="semiBold" tone="secondary" style={{ fontSize: 8, textTransform: 'uppercase' }}>
+                {portal.cat}
+              </AppText>
+            </View>
+            <View>
+              <AppText weight="bold" numberOfLines={1} style={{ fontSize: 10 }}>
+                {portal.title}
+              </AppText>
+              <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 8.5 }}>
+                {portal.url}
+              </AppText>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <AppText weight="bold" style={{ fontSize: 9, color: colors.brandPrimary }}>
+                Launch
+              </AppText>
+              <Ionicons name="open-outline" size={9} color={colors.brandPrimary} />
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {/* academic repository */}
+      {label('ACADEMIC REPOSITORY & STUDY FILES')}
+      <SearchPill placeholder="Search by course code, title..." withFilter />
+      <ChipRow
+        chips={[
+          { label: 'All Files', icon: 'document-text-outline' },
+          { label: 'Past Questions', icon: 'help-circle-outline' },
+          { label: 'Course Notes', icon: 'book-outline' },
+          { label: 'Bookmarked', icon: 'bookmark' },
+        ]}
+      />
+
+      {RESOURCE_LIST.map((item) => (
+        <View key={item.id} style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+              <BadgeText label={item.course} color={colors.textSecondary} />
+              <BadgeText label={item.category} color={colors.textSecondary} />
+              <AppText tone="secondary" style={{ fontSize: 8.5 }}>
+                {item.size}
+              </AppText>
+            </View>
+            <Ionicons name="bookmark-outline" size={15} color={colors.textSecondary} />
+          </View>
+          <AppText weight="bold" style={{ fontSize: 12, lineHeight: 16, marginTop: 4 }}>
+            {item.title}
+          </AppText>
+          <AppText tone="secondary" style={{ fontSize: 9.5, lineHeight: 13, marginTop: 3 }}>
+            {item.by}
+          </AppText>
+          {item.body ? (
+            <AppText tone="secondary" style={{ fontSize: 10, lineHeight: 14, marginTop: 4 }}>
+              {item.body}
+            </AppText>
+          ) : null}
+
+          <View style={{ marginTop: 7, paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.divider, gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Ionicons name="download-outline" size={12} color={colors.textSecondary} />
+                <AppText tone="secondary" style={{ fontSize: 9.5 }}>
+                  {item.downloads}
+                </AppText>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Ionicons name="thumbs-up-outline" size={12} color={colors.textSecondary} />
+                <AppText tone="secondary" style={{ fontSize: 9.5 }}>
+                  {item.upvotes}
+                </AppText>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
+                <Ionicons name="flag-outline" size={12} color={colors.textSecondary} />
+                <AppText tone="secondary" style={{ fontSize: 9.5 }}>
+                  Report
+                </AppText>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <Btn label="Read Online" kind="secondary" grow />
+              <Btn label="Download" grow />
+            </View>
+          </View>
+        </View>
       ))}
     </>
   );
 }
 
-const JOBS = [
-  { id: 'j1', type: 'GRADUATE TRAINEE', title: 'Junior Software Engineer', company: 'Sample Tech Ltd • Lagos' },
-  { id: 'j2', type: 'INTERNSHIP', title: 'Data Analyst Intern', company: 'Example Analytics • Abuja' },
+const JOB_LIST = [
+  { id: 'j1', type: 'Full-time', remote: false, title: 'Junior Software Engineer', company: 'Sample Tech Ltd', location: 'Lagos', poster: 'Alumni Member' },
+  { id: 'j2', type: 'Internship', remote: true, title: 'Data Analyst Intern', company: 'Example Analytics', location: 'Remote', poster: 'Career Desk' },
 ];
 
 function CareersScreen() {
+  const { colors } = useTheme();
   return (
     <>
-      <Heading>Open roles</Heading>
-      {JOBS.map((job) => (
-        <Card key={job.id}>
-          <Tag label={job.type} />
-          <Title>{job.title}</Title>
-          <Meta>{job.company}</Meta>
-          <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
-            <Pill label="Refer a student" />
+      <ScreenTitle title="Career & Jobs" subtitle="Community-posted roles, alumni referrals & industry gigs" action="Post Job" actionIcon="add" />
+      <SearchPill placeholder="Search jobs" />
+      <ChipRow
+        chips={[
+          { label: 'All Openings', icon: 'briefcase-outline' },
+          { label: 'Internships', icon: 'school-outline' },
+          { label: 'Remote Only', icon: 'globe-outline' },
+          { label: 'Graduate Roles', icon: 'ribbon-outline' },
+        ]}
+      />
+
+      {JOB_LIST.map((job) => (
+        <View key={job.id} style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+            <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.divider, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="briefcase-outline" size={16} color={colors.textSecondary} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <BadgeText label={job.type} color={job.type === 'Internship' ? colors.brandAccent : colors.brandPrimary} />
+                {job.remote ? <BadgeText label="Remote" color={colors.success} /> : null}
+              </View>
+              <AppText weight="bold" style={{ fontSize: 12, lineHeight: 16, marginTop: 2 }}>
+                {job.title}
+              </AppText>
+              <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 9.5, lineHeight: 13 }}>
+                {job.company} | {job.location}
+              </AppText>
+            </View>
           </View>
-        </Card>
+
+          <View style={{ marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.divider, gap: 5 }}>
+            <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 9 }}>
+              Posted by {job.poster}
+            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 4 }}>
+              <Btn label="Job Site ↗" kind="ghost" />
+              <Btn label="Notify Poster of Interest" />
+            </View>
+          </View>
+        </View>
       ))}
     </>
   );
