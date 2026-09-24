@@ -91,11 +91,6 @@ export default function AlumniDashboard() {
   });
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Alumni Fellow';
-  const subtitleParts = [
-    profile?.graduationYear ? `Class of '${String(profile.graduationYear).slice(-2)}` : null,
-    profile?.department || 'Alumni Network',
-    profile?.institutionName || 'University Chapter',
-  ].filter(Boolean);
 
   function handleOpenPortal(url: string) {
     haptics.light();
@@ -794,19 +789,13 @@ export default function AlumniDashboard() {
                 onPress={() => handleOpenPortal(portal.url)}
                 style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: isDesktop ? 14 : 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name={portal.icon || 'globe-outline'} size={22} color={colors.textSecondary} />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
-                      {portal.title}
-                    </AppText>
-                    <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
-                      {portal.category} • Official Alumni Service
-                    </AppText>
-                  </View>
-                  <Ionicons name="open-outline" size={15} color={colors.textSecondary} style={{ flexShrink: 0 }} />
+                <SolidCard radius={14} style={{ paddingHorizontal: 12, paddingVertical: 9 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    {portal.title}
+                  </AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 1, fontSize: isDesktop ? 11 : 10 }}>
+                    {portal.category} • Official Alumni Service
+                  </AppText>
                 </SolidCard>
               </Pressable>
             ))}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Pressable, Alert, RefreshControl } from 'react-native';
+import { ScrollView, View, Pressable, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -854,19 +854,13 @@ export default function StudentDashboard() {
                   onPress={() => handleOpenPortal(portal.url)}
                   style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
                 >
-                  <GlassCard radius={16} padded={false} contentStyle={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={{ width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name={portal.icon || 'globe-outline'} size={24} color={colors.textSecondary} />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText variant="bodySmall" weight="bold">
-                        {portal.title}
-                      </AppText>
-                      <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-                        {portal.category} • Official University Portal
-                      </AppText>
-                    </View>
-                    <Ionicons name="open-outline" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
+                  <GlassCard radius={14} padded={false} contentStyle={{ paddingHorizontal: 12, paddingVertical: 9 }}>
+                    <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
+                      {portal.title}
+                    </AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 1 }}>
+                      {portal.category} • Official University Portal
+                    </AppText>
                   </GlassCard>
                 </Pressable>
               ))}

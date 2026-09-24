@@ -178,7 +178,7 @@ export default function ResourcesScreen() {
 
  function handleLaunchPortal(portal: PortalLink) {
  Alert.alert(
- 'Launch Campus Portal',
+ 'Open Campus Portal',
  `Opening ${portal.title} (${portal.url}). Continue in browser?`,
  [
  { text: 'Cancel', style: 'cancel' },
@@ -452,40 +452,27 @@ export default function ResourcesScreen() {
               key={portal.id}
               onPress={() => handleLaunchPortal(portal)}
               accessibilityRole="button"
-              accessibilityLabel={`Launch ${portal.title}`}
+              accessibilityLabel={`Open ${portal.title}`}
             >
               <SolidCard
-                radius={16}
+                radius={14}
                 padded={false}
                 style={{
-                  width: isDesktop ? 185 : 165,
-                  padding: 10,
-                  minHeight: 108,
-                  justifyContent: 'space-between',
+                  width: isDesktop ? 150 : 128,
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  gap: 3,
                 }}
               >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Ionicons name={portal.icon || 'link-outline'} size={18} color={colors.textSecondary} />
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, maxWidth: 110, textAlign: 'right' }}>
-                    {portal.campusCode && portal.campusCode !== 'GLOBAL' && isStaffOrAdmin && selectedPortalFilter === 'ALL' ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
-                  </AppText>
-                </View>
-
-                <View style={{ marginVertical: 4 }}>
-                  <AppText weight="bold" variant="caption" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 15 }}>
-                    {portal.title}
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11, marginTop: 2 }}>
-                    {portal.url.replace(/^https?:\/\//, '')}
-                  </AppText>
-                </View>
-
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <AppText weight="bold" variant="caption" tone="brand" style={{ fontSize: 11 }}>
-                    Launch
-                  </AppText>
-                  <Ionicons name="open-outline" size={10} color={colors.brandPrimary} />
-                </View>
+                <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {portal.campusCode && portal.campusCode !== 'GLOBAL' && isStaffOrAdmin && selectedPortalFilter === 'ALL' ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
+                </AppText>
+                <AppText weight="bold" variant="caption" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 15 }}>
+                  {portal.title}
+                </AppText>
+                <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10 }}>
+                  {portal.url.replace(/^https?:\/\//, '')}
+                </AppText>
               </SolidCard>
             </Pressable>
           ))}
@@ -930,47 +917,26 @@ export default function ResourcesScreen() {
                   key={portal.id}
                   onPress={() => handleLaunchPortal(portal)}
                   style={({ hovered }: any) => [
-                    { width: 280, flexShrink: 0, opacity: hovered ? 0.92 : 1 },
+                    { width: 200, flexShrink: 0, opacity: hovered ? 0.92 : 1 },
                     Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
                   ]}
                 >
                   <SolidCard
-                    radius={16}
+                    radius={14}
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 12,
                       borderWidth: 1,
                       borderColor: colors.border,
-                      padding: 12,
-                      minHeight: 68,
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      gap: 2,
                     }}
                   >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: colors.divider,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Ionicons name={portal.icon || 'link-outline'} size={20} color={colors.textSecondary} />
-                    </View>
-
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
-                        <AppText weight="bold" variant="bodySmall" numberOfLines={2} style={{ flex: 1, lineHeight: 17 }}>
-                          {portal.title}
-                        </AppText>
-                        <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} style={{ marginTop: 2 }} />
-                      </View>
-                      <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2, fontSize: 11 }}>
-                        {(portal as any).description || portal.category || 'Portal Link'}
-                      </AppText>
-                    </View>
+                    <AppText weight="bold" variant="bodySmall" numberOfLines={2} style={{ lineHeight: 17 }}>
+                      {portal.title}
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>
+                      {(portal as any).description || portal.category || 'Portal Link'}
+                    </AppText>
                   </SolidCard>
                 </Pressable>
               ))}

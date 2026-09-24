@@ -907,7 +907,7 @@ function LibraryScreen() {
           </AppText>
         </View>
         <AppText tone="secondary" style={{ fontSize: 8.5 }}>
-          2 links
+          3 links
         </AppText>
       </View>
       <View style={{ flexDirection: 'row', gap: 5 }} pointerEvents="none">
@@ -931,30 +931,20 @@ function LibraryScreen() {
       </View>
       <View style={{ flexDirection: 'row', gap: 6, overflow: 'hidden' }} pointerEvents="none">
         {[
-          { icon: 'school-outline' as IconName, cat: 'Portal', title: 'Student Portal', url: 'portal.university.edu' },
-          { icon: 'wifi-outline' as IconName, cat: 'Services', title: 'E-Learning', url: 'lms.university.edu' },
+          { cat: 'Portal', title: 'Student Portal', url: 'portal.university.edu' },
+          { cat: 'Services', title: 'E-Learning', url: 'lms.university.edu' },
+          { cat: 'Library', title: 'Library Catalogue', url: 'library.university.edu' },
         ].map((portal) => (
-          <View key={portal.title} style={{ width: 104, flexShrink: 0, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 8, minHeight: 74, justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Ionicons name={portal.icon} size={14} color={colors.textSecondary} />
-              <AppText weight="semiBold" tone="secondary" style={{ fontSize: 8, textTransform: 'uppercase' }}>
-                {portal.cat}
-              </AppText>
-            </View>
-            <View>
-              <AppText weight="bold" numberOfLines={1} style={{ fontSize: 10 }}>
-                {portal.title}
-              </AppText>
-              <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 8.5 }}>
-                {portal.url}
-              </AppText>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <AppText weight="bold" style={{ fontSize: 9, color: colors.brandPrimary }}>
-                Launch
-              </AppText>
-              <Ionicons name="open-outline" size={9} color={colors.brandPrimary} />
-            </View>
+          <View key={portal.title} style={{ width: 82, flexShrink: 0, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 7, paddingVertical: 6, gap: 2 }}>
+            <AppText weight="semiBold" tone="secondary" numberOfLines={1} style={{ fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              {portal.cat}
+            </AppText>
+            <AppText weight="bold" numberOfLines={2} style={{ fontSize: 9.5, lineHeight: 12 }}>
+              {portal.title}
+            </AppText>
+            <AppText tone="secondary" numberOfLines={1} style={{ fontSize: 8 }}>
+              {portal.url}
+            </AppText>
           </View>
         ))}
       </View>

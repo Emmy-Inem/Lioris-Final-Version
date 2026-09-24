@@ -16,7 +16,6 @@ import { Badge } from '@/components/Badge';
 import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EventCard } from '@/components/EventCard';
-import { EmptyState } from '@/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
@@ -24,7 +23,6 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
-import { listAnnouncements } from '@/api/announcements';
 import { listReports } from '@/api/moderation';
 import { listEvents } from '@/api/events';
 import { listFeedPosts } from '@/api/posts';
@@ -36,7 +34,7 @@ import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
 export default function StaffDashboard() {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
@@ -539,19 +537,13 @@ export default function StaffDashboard() {
                 onPress={() => handleOpenPortal(portal.url)}
                 style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
               >
-                <SolidCard radius={16} style={{ padding: isDesktop ? 14 : 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Ionicons name={portal.icon || 'globe-outline'} size={22} color={colors.textSecondary} />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
-                      {portal.title}
-                    </AppText>
-                    <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: isDesktop ? 11 : 10 }}>
-                      {portal.category} • Official Faculty Portal
-                    </AppText>
-                  </View>
-                  <Ionicons name="open-outline" size={15} color={colors.textSecondary} style={{ flexShrink: 0 }} />
+                <SolidCard radius={14} style={{ paddingHorizontal: 12, paddingVertical: 9 }}>
+                  <AppText weight="bold" numberOfLines={1} style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                    {portal.title}
+                  </AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 1, fontSize: isDesktop ? 11 : 10 }}>
+                    {portal.category} • Official Faculty Portal
+                  </AppText>
                 </SolidCard>
               </Pressable>
             ))}
