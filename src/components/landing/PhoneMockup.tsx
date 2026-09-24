@@ -362,20 +362,15 @@ function HomeScreen({ role, onGo }: { role: MockRole; onGo: (key: string) => voi
   // Same order, icons and wording as the real Home: identity card, then the services grid.
   const tiles: { title: string; subtitle: string; icon: IconName; tint: string; go?: string }[] = student
     ? [
-        { title: 'Messages', subtitle: 'Chats & calls', icon: 'chatbubble-ellipses', tint: colors.textSecondary },
-        { title: 'FX Converter', subtitle: 'Live rates & NGN', icon: 'cash-outline', tint: '#10B981' },
         { title: 'Resources', subtitle: 'Past Qs & notes', icon: 'folder-open', tint: colors.textSecondary, go: 'resources' },
-        { title: 'Study Pods', subtitle: 'Course revision', icon: 'people', tint: '#10B981' },
         { title: 'Forum', subtitle: 'Ask questions', icon: 'chatbubbles', tint: '#EC4899', go: 'forum' },
         { title: 'Events & RSVPs', subtitle: 'Talks & summits', icon: 'calendar', tint: '#3B82F6', go: 'events' },
       ]
     : [
-        { title: 'Messages', subtitle: 'Chats & calls', icon: 'chatbubble-ellipses', tint: colors.textSecondary },
         { title: 'Career Board', subtitle: 'Jobs & referrals', icon: 'briefcase', tint: '#F59E0B', go: 'careers' },
         { title: 'Mentoring', subtitle: 'Guide the next class', icon: 'ribbon', tint: '#10B981', go: 'mentorship' },
         { title: 'Alumni Network', subtitle: 'Find classmates', icon: 'people', tint: '#3B82F6' },
         { title: 'Global Forum', subtitle: 'Join discussions', icon: 'chatbubbles', tint: '#EC4899', go: 'forum' },
-        { title: 'Campus Trade', subtitle: 'Buy & sell', icon: 'cart', tint: colors.textSecondary },
       ];
 
   return (
