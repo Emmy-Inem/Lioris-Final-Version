@@ -396,7 +396,7 @@ export default function LoginScreen() {
  <View style={{ flex: 1.1, position: 'relative', overflow: 'hidden', backgroundColor: '#0F172A', padding: spacing.xxl, justifyContent: 'space-between' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
- alt="University students studying together"
+ accessibilityLabel="University students studying together"
  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 }}
  contentFit="cover"
  />
@@ -491,7 +491,7 @@ export default function LoginScreen() {
  <View style={{ height: 230, position: 'relative', overflow: 'hidden' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
- alt="University students studying together"
+ accessibilityLabel="University students studying together"
  style={{ width: '100%', height: '100%' }}
  contentFit="cover"
  />
