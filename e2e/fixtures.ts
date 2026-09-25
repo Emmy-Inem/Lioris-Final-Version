@@ -94,3 +94,28 @@ export async function waitForApp(page: Page) {
     return !!root && root.innerText.trim().length > 0;
   });
 }
+
+export type TestUserRole = 'student' | 'alumni' | 'staff' | 'admin';
+
+/**
+ * Seeds the same small, encrypted-at-rest session projection that the app
+ * restores before asking Supabase to refresh the live session. Network calls
+ * remain stubbed, so authenticated portal smoke tests never touch production.
+ */
+export async function seedAuthenticatedSession(page: Page, role: TestUserRole) {
+  await page.addInitScript((seedRole) => {
+    const user = {
+      id: `e2e-${seedRole}-user`,
+      fullName: `E2E ${seedRole[0].toUpperCase()}${seedRole.slice(1)}`,
+      email: `${seedRole}.e2e@example.com`,
+      role: seedRole,
+      actualRole: seedRole,
+      onboardingComplete: true,
+      mfaVerified: true,
+    };
+
+    localStorage.setItem('lioris.accessToken', `e2e-${seedRole}-access-token`);
+    localStorage.setItem('lioris.refreshToken', `e2e-${seedRole}-refresh-token`);
+    localStorage.setItem('lioris.sessionUser', JSON.stringify(user));
+  }, role);
+}

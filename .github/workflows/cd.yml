@@ -2,9 +2,19 @@
 
 on:
   push:
-    branches: [main]          # Web deploy + OTA update on every merge to main
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'  # Native EAS production build on version tags (e.g. v1.2.0)
+    branches: [main]          # Web deploy on every merge to main
+  workflow_dispatch:
+    inputs:
+      mobile_release:
+        description: 'Optional mobile action (must be explicitly selected)'
+        required: true
+        default: none
+        type: choice
+        options:
+          - none
+          - ota
+          - build
+          - build-and-submit
 
 permissions:
   contents: read
@@ -68,16 +78,15 @@ jobs:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 2 — Mobile OTA: Expo Updates publish to the production channel
-# Pushes an over-the-air update so existing app installs get the new JS bundle
-# instantly without requiring a new App Store / Play Store build.
-# Runs only on main (not on tags — the native build job handles tags).
+# Pushes an over-the-air update only after an explicit manual selection.
+# Normal pushes to main never publish mobile code.
 # Requires repository secret: EXPO_TOKEN
 # ─────────────────────────────────────────────────────────────────────────────
   publish-ota:
     name: Publish OTA Update → Expo (production channel)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.mobile_release == 'ota'
 
     steps:
       - name: Checkout repository
@@ -114,9 +123,8 @@ jobs:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 3 — Mobile Native: EAS production build + store submission
-# Triggered only when a version tag is pushed (e.g. git tag v1.2.0 && git push --tags).
-# Builds both iOS and Android natively on EAS cloud, then submits to
-# App Store Connect and Google Play automatically.
+# Triggered only by an explicit manual build or build-and-submit selection.
+# A build does not upload to either store unless build-and-submit was selected.
 # Requires repository secrets: EXPO_TOKEN, APPLE_APP_SPECIFIC_PASSWORD (for ASC),
 #   and Google Play JSON key configured in EAS submit settings.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -124,7 +132,9 @@ jobs:
     name: EAS Production Build + Submit (${{ matrix.platform }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.mobile_release == 'build' || inputs.mobile_release == 'build-and-submit')
     strategy:
       fail-fast: false
       matrix:
@@ -156,12 +166,13 @@ jobs:
           echo "### Native Build — ${{ matrix.platform }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Platform:** ${{ matrix.platform }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Tag:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Ref:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "**Status:** Build submitted to EAS — check https://expo.dev for progress" >> "$GITHUB_STEP_SUMMARY"
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Submit ${{ matrix.platform }} to store
+        if: inputs.mobile_release == 'build-and-submit'
         run: |
           eas submit \
             --platform ${{ matrix.platform }} \

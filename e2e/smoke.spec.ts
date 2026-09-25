@@ -1,4 +1,11 @@
-import { test, expect, collectCspViolations, waitForApp } from './fixtures';
+import {
+  test,
+  expect,
+  collectCspViolations,
+  seedAuthenticatedSession,
+  waitForApp,
+  type TestUserRole,
+} from './fixtures';
 
 const CRASH_TEXT = 'Something went wrong';
 
@@ -123,6 +130,47 @@ test.describe('route protection', () => {
       expect(url.pathname).not.toMatch(/dashboard|platform-config/);
     });
   }
+});
+
+test.describe('authenticated role portals', () => {
+  const portals: ReadonlyArray<{ role: TestUserRole; route: string; marker: RegExp }> = [
+    { role: 'student', route: '/(student)/dashboard', marker: /Student Services/i },
+    { role: 'alumni', route: '/(alumni)/dashboard', marker: /Alumni Action Hub/i },
+    { role: 'staff', route: '/(staff)/dashboard', marker: /Faculty Staff/i },
+    { role: 'admin', route: '/(admin)/dashboard', marker: /Needs attention/i },
+  ];
+
+  for (const portal of portals) {
+    test(`${portal.role} dashboard restores a session and renders`, async ({ page, problems }) => {
+      await seedAuthenticatedSession(page, portal.role);
+      await page.goto(portal.route);
+      await waitForApp(page);
+
+      await expect(page.getByText(portal.marker).first()).toBeVisible();
+      await expect(page.getByText(CRASH_TEXT)).toHaveCount(0);
+      expect(problems.consoleErrors, 'console errors').toEqual([]);
+    });
+  }
+
+  test('a student cannot open the admin portal by URL', async ({ page }) => {
+    await seedAuthenticatedSession(page, 'student');
+    await page.goto('/(admin)/dashboard');
+    await waitForApp(page);
+
+    await expect(page).toHaveURL(/dashboard/, { timeout: 20_000 });
+    await expect(page.getByText(/Student Services/i)).toBeVisible();
+    await expect(page.getByText(/Needs attention/i)).toHaveCount(0);
+  });
+
+  test('an admin can inspect a student portal without losing admin identity', async ({ page }) => {
+    await seedAuthenticatedSession(page, 'admin');
+    await page.goto('/(student)/dashboard');
+    await waitForApp(page);
+
+    await expect(page.getByText(/Student Services/i)).toBeVisible();
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('lioris.sessionUser') || '{}'));
+    expect(stored.actualRole).toBe('admin');
+  });
 });
 
 test.describe('security headers', () => {
