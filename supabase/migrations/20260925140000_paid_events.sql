@@ -164,7 +164,8 @@ REVOKE ALL ON public.event_payment_clicks FROM anon, authenticated;
 -- =====================================================================================================
 -- 4. event_attendees = the referral record
 -- =====================================================================================================
-UPDATE public.event_attendees SET ticket_code = encode(gen_random_bytes(6), 'hex') WHERE ticket_code IS NULL;
+-- (md5 rather than gen_random_bytes: the migration runner's search_path does not include the extensions schema)
+UPDATE public.event_attendees SET ticket_code = substr(md5(random()::text || clock_timestamp()::text || user_id::text), 1, 12) WHERE ticket_code IS NULL;
 ALTER TABLE public.event_attendees
   ALTER COLUMN ticket_code SET NOT NULL,
   ADD COLUMN IF NOT EXISTS shared_details boolean NOT NULL DEFAULT false,
