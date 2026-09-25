@@ -28,6 +28,13 @@ Database migrations and edge functions are separate (`docs/security/deploy.md`);
 keep running the JavaScript they were built with until a new store build is installed. The first build made from this
 code is therefore a one-off step that has to happen before any phone can get an OTA update.
 
+## One-time setup
+
+- GitHub repository secret **`EXPO_TOKEN`**: create an access token at https://expo.dev/settings/access-tokens (account `inem`)
+  and add it under Settings -> Secrets and variables -> Actions. Without it the Publish OTA job stops at its first step with
+  a message saying so. (`EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` are the same secrets the web deploy uses.)
+- The Expo channel/branch `production` already exists; the job creates it if it is ever deleted.
+
 ## The native runtime guard
 
 `native-runtime.json` records the native side of the current runtime version: every installed package that contains

@@ -123,6 +123,11 @@ jobs:
       - name: Publish Expo update (production channel)
         run: |
           set -euo pipefail
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo "::error title=EXPO_TOKEN is not set::Create an access token at https://expo.dev/settings/access-tokens and add it as the repository secret EXPO_TOKEN (Settings > Secrets and variables > Actions), then re-run this job."
+            exit 1
+          fi
+          eas whoami
           # Installed apps ask the "production" channel (eas.json + app.config.ts). Create it, and the branch it
           # follows, the first time; afterwards this is a no-op.
           eas channel:view production --non-interactive > /dev/null 2>&1 || eas channel:create production --non-interactive
