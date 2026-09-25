@@ -23,6 +23,16 @@ const KNOWN_MESSAGES: Record<string, string> = {
   too_many_goals: 'A mentorship can have at most 12 goals.',
   not_verified: 'Verify your account first to do that.',
   already_reported: 'You already reported this. A moderator will review it.',
+  event_full: 'This event is full.',
+  booking_closed: 'Registration for this event has closed.',
+  event_not_open: 'This event is not open for registration.',
+  ack_required: 'Please confirm you understand how paid events work on Lioris.',
+  payment_not_ready: 'The payment details for this event are still being checked.',
+  paid_events_disabled: 'Paid events are paused right now.',
+  checkin_closed: 'Check-in is not open for this event right now.',
+  ticket_not_found: 'Nobody registered for this event with that code.',
+  not_checked_in: 'Check the person in first.',
+  already_checked_in: 'You were already checked in, so this registration cannot be cancelled.',
 };
 
 export interface ParsedRpcError {

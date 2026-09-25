@@ -1141,6 +1141,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260925110000_study_pods_v2.sql',
   'supabase/migrations/20260925120000_events_portals_campuses.sql',
   'supabase/migrations/20260925130000_normalise_tags_keep_first.sql',
+  'supabase/migrations/20260925140000_paid_events.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1150,6 +1151,338 @@ for (const file of currentProductMigrations) {
 for (const file of currentProductMigrations) {
   await check(`${file} is idempotent`, async () => {
     await applyFile(db, file, true, () => {});
+  });
+}
+
+// ---------------------------------------------------------------------------
+// paid events (20260925140000_paid_events.sql): behaviour, not just "it applies"
+// ---------------------------------------------------------------------------
+console.log('\n== paid events ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+  const flag = (on) => db.query(
+    `INSERT INTO public.platform_settings (key, value) VALUES ('feature_flags', $1::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [JSON.stringify({ paid_events: on })]);
+  const STARTS = "now() + interval '2 hours'";
+  const ENDS = "now() + interval '4 hours'";
+
+  /** organiser (s1) submits an event; returns its id. Runs as s1 and leaves the session as s1. */
+  async function submit(c, over = {}) {
+    await imp(U.s1);
+    const o = { type: 'paid', price: 2000, method: 'online', held: false, capacity: null, campus: 'GLOBAL', ...over };
+    const r = await c.q(
+      `INSERT INTO public.events (creator_id, campus_code, title, description, venue, start_time, end_time, category, status, ticket_type, ticket_price, payment_method, reservation_held, capacity, payment_review_status)
+       VALUES ($1, $2, 'Paid test event', 'desc', 'Hall', ${STARTS}, ${ENDS}, 'Academic', 'pending_approval', $3, $4, $5, $6, $7, 'approved') RETURNING id`,
+      [U.s1, o.campus, o.type, o.type === 'paid' ? o.price : 0, o.type === 'paid' ? o.method : null, o.held, o.capacity]);
+    return r.rows[0].id;
+  }
+  /** link details + admin approval + publish, through the same functions the edge function calls */
+  async function goLive(c, ev, { url = 'https://paystack.com/pay/lioris-test', instr = 'Pay at the door, cash or transfer.' } = {}) {
+    await imp(U.s1);
+    await c.q(`SELECT public.save_event_payment_details($1, $2, $3)`, [ev, url, instr]);
+    await svc();
+    await c.q(`SELECT public.admin_store_link_check($1, $2, $3::jsonb)`, [ev, U.adminA, JSON.stringify({ status: 'ok', url, final_host: 'paystack.com' })]);
+    await c.q(`SELECT public.admin_apply_payment_review($1, $2, 'approve', NULL, false, true)`, [ev, U.adminA]);
+  }
+  const code = (r) => (r.err?.message ?? '').split(':')[0];
+
+  await check('paid events: a student cannot start paid events while the admin switch is off; the row is forced into review when it is on', async () => {
+    await as('postgres', async (c) => {
+      await flag(false);
+      await imp(U.s1);
+      const off = await c.t(
+        `INSERT INTO public.events (creator_id, campus_code, title, description, venue, start_time, end_time, status, ticket_type, ticket_price, payment_method)
+         VALUES ($1, 'GLOBAL', 't', 'd', 'v', ${STARTS}, ${ENDS}, 'pending_approval', 'paid', 500, 'online')`, [U.s1]);
+      denied(off, /paid_events_disabled/, 'paid insert with the switch off');
+      await svc(); await flag(true);
+      const ev = await submit(c);
+      await svc();
+      const row = (await c.q(`SELECT payment_review_status s, payment_reviewed_by b FROM public.events WHERE id = $1`, [ev])).rows[0];
+      eq(row, { s: 'pending', b: null }, 'client-supplied review status must be ignored');
+    });
+  });
+
+  await check('paid events: a free event cannot carry a price; free events store no method', async () => {
+    await as('postgres', async (c) => {
+      await flag(true); await imp(U.s1);
+      const r = await c.t(
+        `INSERT INTO public.events (creator_id, campus_code, title, description, venue, start_time, end_time, status, ticket_type, ticket_price)
+         VALUES ($1, 'GLOBAL', 't', 'd', 'v', ${STARTS}, ${ENDS}, 'pending_approval', 'free', 500)`, [U.s1]);
+      denied(r, /paid_settings_required/, 'free event with price');
+      const ok = await submit(c, { type: 'free' });
+      await svc();
+      const row = (await c.q(`SELECT ticket_type t, ticket_price::float p, payment_method m, payment_review_status s FROM public.events WHERE id = $1`, [ok])).rows[0];
+      eq(row, { t: 'free', p: 0, m: null, s: 'not_required' });
+    });
+  });
+
+  await check('paid events: payment link rules (https only, no IPs, no logins, no localhost) and students never read the details', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c);
+      for (const bad of ['http://pay.example.com/x', 'https://192.168.1.5/pay', 'https://user:pw@pay.example.com/x', 'https://localhost/pay', 'https://pay.example.com:8443/x', 'https://has space.com', 'javascript:alert(1)']) {
+        denied(await c.t(`SELECT public.save_event_payment_details($1, $2, 'Pay online')`, [ev, bad]), /invalid_payment_link/, bad);
+      }
+      denied(await c.t(`SELECT public.save_event_payment_details($1, NULL, NULL)`, [ev]), /payment_link_required/, 'missing link for an online event');
+      await c.q(`SELECT public.save_event_payment_details($1, 'https://paystack.com/pay/abc', NULL)`, [ev]);
+      eq((await c.q(`SELECT count(*)::int n FROM public.event_payment_details`)).rows[0].n, 1, 'organiser reads own details');
+      await imp(U.s2);
+      eq((await c.q(`SELECT count(*)::int n FROM public.event_payment_details`)).rows[0].n, 0, 'other student saw the payment link');
+      denied(await c.t(`SELECT public.save_event_payment_details($1, 'https://evil.example.com/pay', NULL)`, [ev]), /not_allowed/, 'other student editing details');
+      denied(await c.t(`UPDATE public.event_payment_details SET payment_url = 'https://evil.example.com/pay'`), /permission denied/, 'direct table write');
+    });
+  });
+
+  await check('paid events: cannot go live before review; approval needs a passing link check for the CURRENT link; edits send it back to review', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c);
+      await imp(U.s1);
+      await c.q(`SELECT public.save_event_payment_details($1, 'https://paystack.com/pay/abc', NULL)`, [ev]);
+      await imp(U.adminA);
+      denied(await c.t(`UPDATE public.events SET status = 'upcoming' WHERE id = $1`, [ev]), /payment_review_required/, 'publish while review pending');
+      await svc();
+      denied(await c.t(`SELECT public.admin_apply_payment_review($1, $2, 'approve')`, [ev, U.adminA]), /link_not_checked/, 'approve without link check');
+      await c.q(`SELECT public.admin_store_link_check($1, $2, $3::jsonb)`, [ev, U.adminA, JSON.stringify({ status: 'failed', url: 'https://paystack.com/pay/abc' })]);
+      denied(await c.t(`SELECT public.admin_apply_payment_review($1, $2, 'approve')`, [ev, U.adminA]), /link_check_failed/, 'approve with failed check');
+      denied(await c.t(`SELECT public.admin_apply_payment_review($1, $2, 'approve', NULL, true)`, [ev, U.adminA]), /note_required/, 'override without a note');
+      denied(await c.t(`SELECT public.admin_apply_payment_review($1, $2, 'reject', 'no')`, [ev, U.adminA]), /note_required/, 'reject without a real reason');
+      await c.q(`SELECT public.admin_store_link_check($1, $2, $3::jsonb)`, [ev, U.adminA, JSON.stringify({ status: 'ok', url: 'https://paystack.com/pay/abc' })]);
+      const res = (await c.q(`SELECT public.admin_apply_payment_review($1, $2, 'approve', NULL, false, true) r`, [ev, U.adminA])).rows[0].r;
+      eq([res.payment_review_status, res.status], ['approved', 'upcoming']);
+      // the organiser changes the price: back to review, event stays live
+      await imp(U.s1);
+      await c.q(`UPDATE public.events SET ticket_price = 2500 WHERE id = $1`, [ev]);
+      await c.q(`UPDATE public.events SET description = 'new words' WHERE id = $1`, [ev]);
+      await svc();
+      let row = (await c.q(`SELECT payment_review_status s, status::text st FROM public.events WHERE id = $1`, [ev])).rows[0];
+      eq(row, { s: 'pending', st: 'upcoming' });
+      // a different link invalidates the old check
+      await c.q(`SELECT public.admin_apply_payment_review($1, $2, 'reject', 'Link goes to a personal page')`, [ev, U.adminA]);
+      await imp(U.s1);
+      await c.q(`SELECT public.save_event_payment_details($1, 'https://paystack.com/pay/def', NULL)`, [ev]);
+      await svc();
+      row = (await c.q(`SELECT d.link_check IS NULL AS cleared, e.payment_review_status s FROM public.event_payment_details d JOIN public.events e ON e.id = d.event_id WHERE d.event_id = $1`, [ev])).rows[0];
+      eq(row, { cleared: true, s: 'pending' });
+      // the organiser cannot approve their own payment details
+      await imp(U.s1);
+      await c.q(`UPDATE public.events SET payment_review_status = 'approved' WHERE id = $1`, [ev]);
+      await svc();
+      eq((await c.q(`SELECT payment_review_status s FROM public.events WHERE id = $1`, [ev])).rows[0].s, 'pending', 'self-approval');
+    });
+  });
+
+  await check('paid events: the review and door functions are not callable by signed-in users', async () => {
+    await as(U.adminA, async (c) => {
+      for (const sql of [
+        `SELECT public.admin_apply_payment_review('${id(99)}', '${U.adminA}', 'approve')`,
+        `SELECT public.admin_store_link_check('${id(99)}', '${U.adminA}', '{}')`,
+        `SELECT public.admin_save_partnership('${id(99)}', '${U.adminA}', 'none', NULL, NULL, NULL, 7, NULL)`,
+        `SELECT public.send_event_reminders()`,
+      ]) denied(await c.t(sql), /permission denied/, sql.slice(0, 50));
+    });
+    await as(U.s1, async (c) => denied(await c.t(`SELECT public.admin_paid_events_overview()`), /not_allowed/, 'overview for a student'));
+  });
+
+  await check('paid events: RSVP rules (acknowledgement, review, deadline, capacity only when places are held)', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { method: 'both' });
+      await imp(U.s2);
+      denied(await c.t(`SELECT public.rsvp_event($1, false, true)`, [ev]), /event_not_open/, 'before the event is published');
+      await goLive(c, ev);
+      await imp(U.s2);
+      denied(await c.t(`SELECT public.rsvp_event($1, false, false)`, [ev]), /ack_required/, 'no acknowledgement');
+      const first = (await c.q(`SELECT public.rsvp_event($1, false, true) r`, [ev])).rows[0].r;
+      assert(/^[0-9a-f]{12}$/.test(first.ticket_code), 'reference code');
+      eq((await c.q(`SELECT public.rsvp_event($1, true, true) r`, [ev])).rows[0].r.already, true, 'second call is idempotent');
+      await svc();
+      eq((await c.q(`SELECT registered_count n FROM public.events WHERE id = $1`, [ev])).rows[0].n, 1);
+      // not held + capacity 1: interest is not capped
+      await c.q(`UPDATE public.events SET capacity = 1 WHERE id = $1`, [ev]);
+      await imp(U.s4);
+      await c.q(`SELECT public.rsvp_event($1, false, true)`, [ev]);
+      // held + capacity 1: full
+      await svc();
+      await c.q(`UPDATE public.events SET reservation_held = true WHERE id = $1`, [ev]);
+      await c.q(`UPDATE public.events SET payment_review_status = 'approved' WHERE id = $1`, [ev]); // service context: admin decision
+      await imp(U.s5);
+      denied(await c.t(`SELECT public.rsvp_event($1, false, true)`, [ev]), /event_full/, 'held places');
+      // deadline
+      await svc();
+      await c.q(`UPDATE public.events SET booking_deadline = now() - interval '1 minute', capacity = NULL WHERE id = $1`, [ev]);
+      await imp(U.s5);
+      denied(await c.t(`SELECT public.rsvp_event($1, false, true)`, [ev]), /booking_closed/, 'after the booking deadline');
+      // switch off: paid RSVP refused
+      await svc(); await flag(false);
+      await c.q(`UPDATE public.events SET booking_deadline = NULL WHERE id = $1`, [ev]);
+      await imp(U.s5);
+      denied(await c.t(`SELECT public.rsvp_event($1, false, true)`, [ev]), /paid_events_disabled/, 'switch off');
+    });
+  });
+
+  await check('paid events: the RSVP table is closed (own rows only, no direct writes, no forged check-in)', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { method: 'at_venue' });
+      await goLive(c, ev, { url: null });
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1, false, true)`, [ev]);
+      await imp(U.s4); await c.q(`SELECT public.rsvp_event($1, false, true)`, [ev]);
+      eq((await c.q(`SELECT count(*)::int n FROM public.event_attendees`)).rows[0].n, 1, 's4 sees only their own row');
+      denied(await c.t(`INSERT INTO public.event_attendees (event_id, user_id) VALUES ($1, $2)`, [ev, U.s5]), /permission denied/, 'direct insert');
+      denied(await c.t(`UPDATE public.event_attendees SET checked_in_at = now() WHERE user_id = $1`, [U.s4]), /permission denied/, 'forged check-in');
+      denied(await c.t(`DELETE FROM public.event_attendees WHERE user_id = $1`, [U.s4]), /permission denied/, 'direct delete');
+      await imp(U.s1);
+      eq((await c.q(`SELECT count(*)::int n FROM public.event_attendees`)).rows[0].n, 2, 'organiser sees the registrations');
+      await imp(U.s5);
+      eq((await c.q(`SELECT count(*)::int n FROM public.event_attendees`)).rows[0].n, 0, 'stranger sees nothing');
+      denied(await c.t(`SELECT public.event_roster($1)`, [ev]), /not_allowed/, 'stranger roster');
+    });
+  });
+
+  await check('paid events: door check-in (window, code formats, already, undo, only organiser/admin) and purchase confirmation', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { method: 'at_venue' });
+      await goLive(c, ev, { url: null });
+      await imp(U.s2);
+      const t = (await c.q(`SELECT public.rsvp_event($1, false, true) r`, [ev])).rows[0].r.ticket_code;
+      denied(await c.t(`SELECT public.checkin_event_attendee($1, $2)`, [ev, t]), /not_allowed/, 'the attendee checking themselves in');
+      await imp(U.s1);
+      denied(await c.t(`SELECT public.confirm_event_purchase($1, $2, true)`, [ev, U.s2]), /not_checked_in/, 'purchase before check-in');
+      denied(await c.t(`SELECT public.checkin_event_attendee($1, 'ffffffffffff')`, [ev]), /ticket_not_found/, 'wrong code');
+      const grouped = `${t.slice(0, 4)}-${t.slice(4, 8)}-${t.slice(8)}`.toUpperCase();
+      const a = (await c.q(`SELECT public.checkin_event_attendee($1, $2) r`, [ev, 'LIORIS:' + grouped])).rows[0].r;
+      eq([a.status, a.user_id], ['checked_in', U.s2], 'scanned QR text');
+      eq((await c.q(`SELECT public.checkin_event_attendee($1, $2) r`, [ev, t])).rows[0].r.status, 'already');
+      eq((await c.q(`SELECT public.confirm_event_purchase($1, $2, true) r`, [ev, U.s2])).rows[0].r.purchase_confirmed_at !== null, true);
+      // the attendee cannot walk away from a checked-in registration
+      await imp(U.s2);
+      denied(await c.t(`SELECT public.cancel_event_rsvp($1)`, [ev]), /already_checked_in/, 'cancel after check-in');
+      // undo clears the purchase too
+      await imp(U.s1);
+      eq((await c.q(`SELECT public.checkin_event_attendee($1, NULL, $2, true) r`, [ev, U.s2])).rows[0].r.status, 'undone');
+      const row = (await c.q(`SELECT checked_in_at, purchase_confirmed_at FROM public.event_attendees WHERE user_id = $1`, [U.s2])).rows[0];
+      eq(row, { checked_in_at: null, purchase_confirmed_at: null });
+      // window: a week out is closed for the organiser, open for an admin
+      await svc();
+      await c.q(`UPDATE public.events SET start_time = now() + interval '7 days', end_time = now() + interval '7 days 2 hours' WHERE id = $1`, [ev]);
+      await imp(U.s1);
+      denied(await c.t(`SELECT public.checkin_event_attendee($1, $2)`, [ev, t]), /checkin_closed/, 'too early');
+      await imp(U.adminA);
+      eq((await c.q(`SELECT public.checkin_event_attendee($1, $2) r`, [ev, t])).rows[0].r.status, 'checked_in');
+    });
+  });
+
+  await check('paid events: purchase confirmation only exists for paid events; free events check in the same way', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { type: 'free' });
+      await svc(); await c.q(`UPDATE public.events SET status = 'upcoming' WHERE id = $1`, [ev]);
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1)`, [ev]);
+      await imp(U.s1);
+      eq((await c.q(`SELECT public.checkin_event_attendee($1, NULL, $2) r`, [ev, U.s2])).rows[0].r.status, 'checked_in');
+      denied(await c.t(`SELECT public.confirm_event_purchase($1, $2, true)`, [ev, U.s2]), /not_paid/, 'purchase on a free event');
+    });
+  });
+
+  await check('paid events: payment page records the referral click and only opens once approved', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c);
+      await imp(U.s2);
+      denied(await c.t(`SELECT public.open_event_payment_page($1)`, [ev]), /payment_not_ready|event_not_open/, 'before review');
+      const info0 = (await c.q(`SELECT public.get_event_payment_info($1) r`, [ev])).rows[0].r;
+      eq([info0.available, info0.reason], [false, 'in_review']);
+      await goLive(c, ev);
+      await imp(U.s2);
+      const page = (await c.q(`SELECT public.open_event_payment_page($1) r`, [ev])).rows[0].r;
+      eq([page.url, page.host], ['https://paystack.com/pay/lioris-test', 'paystack.com']);
+      await c.q(`SELECT public.open_event_payment_page($1)`, [ev]);
+      await imp(U.s4); await c.q(`SELECT public.open_event_payment_page($1)`, [ev]);
+      await imp(U.s1);
+      const rep = (await c.q(`SELECT public.event_referral_report($1) r`, [ev])).rows[0].r;
+      eq([rep.link_clicks, rep.rsvps, rep.checked_in, rep.purchases_confirmed], [2, 0, 0, 0], 'distinct people, not clicks');
+      assert(!('estimated_amount' in rep), 'organiser must not see the fee arithmetic');
+      await svc();
+      eq((await c.q(`SELECT click_count n FROM public.event_payment_clicks WHERE user_id = $1`, [U.s2])).rows[0].n, 2);
+      await c.q(`UPDATE public.events SET payment_method = 'at_venue', payment_review_status = 'approved' WHERE id = $1`, [ev]);
+      await imp(U.s2);
+      denied(await c.t(`SELECT public.open_event_payment_page($1)`, [ev]), /no_payment_page/, 'venue-only event');
+    });
+  });
+
+  await check('paid events: funnel report and the partnership agreement (admin only, fee arithmetic uses confirmed purchases)', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { method: 'at_venue' });
+      await goLive(c, ev, { url: null });
+      for (const u of [U.s2, U.s4]) { await imp(u); await c.q(`SELECT public.rsvp_event($1, false, true)`, [ev]); }
+      await imp(U.s1);
+      for (const u of [U.s2, U.s4]) await c.q(`SELECT public.checkin_event_attendee($1, NULL, $2)`, [ev, u]);
+      await c.q(`SELECT public.confirm_event_purchase($1, $2, true)`, [ev, U.s2]);
+      await svc();
+      denied(await c.t(`SELECT public.admin_save_partnership($1, $2, 'agreed', 'Org', NULL, 300, 7, NULL)`, [ev, U.adminA]), /agreement_incomplete/, 'agreed without contact');
+      await c.q(`SELECT public.admin_save_partnership($1, $2, 'agreed', 'Campus Events Ltd', 'ops@example.com', 300, 14, 'signed by email')`, [ev, U.adminA]);
+      await imp(U.adminA);
+      const rep = (await c.q(`SELECT public.event_referral_report($1) r`, [ev])).rows[0].r;
+      eq([rep.rsvps, rep.checked_in, rep.purchases_confirmed, rep.awaiting_confirmation], [2, 2, 1, 1]);
+      eq([rep.partnership_status, Number(rep.estimated_amount), rep.dispute_window_days], ['agreed', 300, 14]);
+      const ov = (await c.q(`SELECT public.admin_paid_events_overview() r`)).rows[0].r;
+      eq([ov.length, ov[0].purchases_confirmed, ov[0].partnership_status], [1, 1, 'agreed']);
+      await imp(U.s1);
+      eq((await c.q(`SELECT count(*)::int n FROM public.event_partnerships`)).rows[0].n, 0, 'organiser reading the agreement');
+    });
+  });
+
+  await check('paid events: the roster shares matric number and department only when the student agreed', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      await c.q(`ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS student_id_number text, ADD COLUMN IF NOT EXISTS department text`); // harness schema may predate them
+      await c.q(`UPDATE public.profiles SET student_id_number = 'M-1', department = 'Physics' WHERE id IN ($1, $2)`, [U.s2, U.s4]);
+      const ev = await submit(c, { type: 'free' });
+      await svc(); await c.q(`UPDATE public.events SET status = 'upcoming' WHERE id = $1`, [ev]);
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1, true)`, [ev]);
+      await imp(U.s4); await c.q(`SELECT public.rsvp_event($1, false)`, [ev]);
+      await imp(U.s1);
+      const roster = (await c.q(`SELECT public.event_roster($1) r`, [ev])).rows[0].r;
+      const by = Object.fromEntries(roster.map((x) => [x.user_id, x]));
+      eq([by[U.s2].matric_number, by[U.s2].department], ['M-1', 'Physics']);
+      eq([by[U.s4].matric_number, by[U.s4].department], [null, null]);
+    });
+  });
+
+  await check('paid events: reminders go out once, only to people not yet checked in', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { type: 'free' });
+      await svc(); await c.q(`UPDATE public.events SET status = 'upcoming', start_time = now() + interval '30 minutes' WHERE id = $1`, [ev]);
+      for (const u of [U.s2, U.s4]) { await imp(u); await c.q(`SELECT public.rsvp_event($1)`, [ev]); }
+      await imp(U.s1); await c.q(`SELECT public.checkin_event_attendee($1, NULL, $2)`, [ev, U.s4]);
+      await svc();
+      eq((await c.q(`SELECT public.send_event_reminders() n`)).rows[0].n, 1);
+      eq((await c.q(`SELECT public.send_event_reminders() n`)).rows[0].n, 0, 'second run');
+      eq((await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1 AND action_url = $2`, [U.s2, '/events/' + ev])).rows[0].n, 1);
+    });
+  });
+
+  await check('paid events: turning an event free again is blocked once purchases were confirmed', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { method: 'at_venue' });
+      await goLive(c, ev, { url: null });
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1, false, true)`, [ev]);
+      await imp(U.s1);
+      await c.q(`SELECT public.checkin_event_attendee($1, NULL, $2)`, [ev, U.s2]);
+      await c.q(`SELECT public.confirm_event_purchase($1, $2, true)`, [ev, U.s2]);
+      denied(await c.t(`UPDATE public.events SET ticket_type = 'free', ticket_price = 0 WHERE id = $1`, [ev]), /has_confirmed_purchases/, 'free after purchases');
+      denied(await c.t(`UPDATE public.events SET ticket_price = 9000 WHERE id = $1`, [ev]), /has_confirmed_purchases/, 'price change after purchases');
+    });
   });
 }
 

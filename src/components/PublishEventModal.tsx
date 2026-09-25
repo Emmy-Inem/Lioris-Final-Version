@@ -19,6 +19,8 @@ import { getInstitutionByCode } from '@/api/institutions';
 import { VerifiedCampusLocationPicker } from './VerifiedCampusLocationPicker';
 import { haptics } from '@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
+import { TicketSettingsFields } from '@/components/events/TicketSettingsFields';
+import { EMPTY_TICKET_FORM, TicketFormValues, parsePrice, validateTicketForm } from '@/utils/paidEvents';
 
 const EVENT_TYPES = ['Lioris Live Event (In-App)', 'Physical Event', 'External Event'] as const;
 
@@ -125,7 +127,7 @@ export function PublishEventModal({
   const targetCampus = activeCampus;
   const [visibilityScope, setVisibilityScope] = useState<'campus' | 'global'>('campus');
   const [capacity, setCapacity] = useState('');
-  const [ticketPrice, setTicketPrice] = useState('0');
+  const [ticket, setTicket] = useState<TicketFormValues>(EMPTY_TICKET_FORM);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bannerUri, setBannerUri] = useState<string | null>(null);
@@ -258,6 +260,13 @@ export function PublishEventModal({
       return;
     }
 
+    const ticketProblem = validateTicketForm(ticket, { eventEndAt: endAtDate.toISOString() });
+    if (ticketProblem) {
+      setErrorMessage(ticketProblem);
+      haptics.error();
+      return;
+    }
+
     haptics.medium();
     setSubmitting(true);
     try {
@@ -276,7 +285,13 @@ export function PublishEventModal({
         venueType,
         virtualLink: venueType === 'virtual' ? virtualLink.trim() : null,
         capacity: capacity.trim() ? Number(capacity) : null,
-        ticketPrice: Number(ticketPrice) || 0,
+        ticketType: ticket.ticketType,
+        ticketPrice: ticket.ticketType === 'paid' ? parsePrice(ticket.price) : 0,
+        paymentMethod: ticket.ticketType === 'paid' ? ticket.method : null,
+        reservationHeld: ticket.ticketType === 'paid' && ticket.method !== 'online' ? ticket.reservationHeld : false,
+        bookingDeadline: ticket.ticketType === 'paid' && ticket.bookingDeadline ? ticket.bookingDeadline : null,
+        paymentUrl: ticket.ticketType === 'paid' && ticket.method !== 'at_venue' ? ticket.paymentUrl.trim() : null,
+        paymentInstructions: ticket.ticketType === 'paid' ? ticket.instructions.trim() : null,
       });
       onPublish?.();
       onPublished?.();
@@ -291,7 +306,7 @@ export function PublishEventModal({
       setLocation('');
       setVirtualLink('');
       setCapacity('');
-      setTicketPrice('0');
+      setTicket(EMPTY_TICKET_FORM);
       setErrorMessage(null);
     } catch (err: any) {
       haptics.error();
@@ -583,27 +598,23 @@ export function PublishEventModal({
               </View>
             </View>
 
-            {/* Capacity & Price */}
-            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-              <View style={{ flex: 1 }}>
-                <AppTextField
-                  label="Seat Capacity (Optional)"
-                  placeholder="e.g. 150"
-                  value={capacity}
-                  onChangeText={setCapacity}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppTextField
-                  label="Ticket Price (0 for Free)"
-                  placeholder="NGN 0"
-                  value={ticketPrice}
-                  onChangeText={setTicketPrice}
-                  keyboardType="numeric"
-                />
-              </View>
+            {/* Capacity */}
+            <View style={{ marginTop: spacing.xs }}>
+              <AppTextField
+                label="Seat Capacity (Optional)"
+                placeholder="e.g. 150"
+                value={capacity}
+                onChangeText={setCapacity}
+                keyboardType="numeric"
+              />
             </View>
+
+            {/* Tickets: free by default; paid events are discovery + referral (the organiser takes the money) */}
+            <TicketSettingsFields
+              value={ticket}
+              onChange={setTicket}
+              eventStartAt={DATE_RE.test(eventDate) && TIME_RE.test(startTime) ? new Date(`${eventDate}T${startTime}:00`) : null}
+            />
 
             {/* Banner Image Picker */}
             <Pressable

@@ -20,6 +20,9 @@ verify_jwt = true
 [functions.admin-manage-institution]
 verify_jwt = true
 
+[functions.admin-review-paid-event]
+verify_jwt = true
+
 [functions.delete-my-account]
 verify_jwt = true
 

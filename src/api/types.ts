@@ -146,7 +146,11 @@ export interface EventAttendeeInfo {
   department?: string;
   registeredAt: string;
   ticketCode?: string;
+ checkedInAt?: string | null;
+ purchaseConfirmedAt?: string | null;
 }
+
+export type PaymentMethod = 'online' | 'at_venue' | 'both';
 
 export interface CampusEvent {
  id: string;
@@ -170,6 +174,14 @@ export interface CampusEvent {
  venueType?: 'physical' | 'virtual' | 'external';
  virtualLink?: string | null;
  ticketPrice?: number;
+ /** Paid events are discovery + referral only: Lioris never takes the payment (see docs/operations/paid-events.md). */
+ ticketType?: 'free' | 'paid';
+ paymentMethod?: PaymentMethod | null;
+ /** The organiser will hold a place for people who reserve (pay-at-venue events). */
+ reservationHeld?: boolean;
+ bookingDeadline?: string | null;
+ paymentReviewStatus?: 'not_required' | 'pending' | 'approved' | 'rejected';
+ paymentReviewNote?: string | null;
  speakers?: { name: string; title: string }[];
  targetCohort?: string;
  rsvpDeadline?: string;
@@ -420,6 +432,10 @@ export type AuditLogAction =
  | 'institution_reactivated'
  | 'event_spotlight_enabled'
  | 'event_spotlight_disabled'
+ | 'event_payment_approved'
+ | 'event_payment_rejected'
+ | 'event_link_checked'
+ | 'event_partnership_updated'
  | 'verification_approved'
  | 'verification_rejected'
  | 'community_approved'

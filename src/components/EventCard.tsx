@@ -18,6 +18,7 @@ import { CampusEvent } from'@/api/types';
 import { rsvpToEvent } from'@/api/events';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
+import { formatNaira } from '@/utils/paidEvents';
 
 const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
 const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
@@ -96,6 +97,11 @@ export function EventCard({ event }: { event: CampusEvent }) {
  }
 
  async function handleRsvp() {
+ // Paid events need the ticket details (price, how to pay, what the organiser sees), so they open the event page.
+ if (event.ticketType === 'paid') {
+ handleOpenEvent();
+ return;
+ }
  haptics.light();
  setSubmitting(true);
  const next = !rsvpd;
@@ -104,9 +110,10 @@ export function EventCard({ event }: { event: CampusEvent }) {
  try {
  await rsvpToEvent(event.id, next ? 'rsvp' : 'cancel');
  queryClient.invalidateQueries({ queryKey: ['events'] });
- } catch {
+ } catch (err: any) {
  setRsvpd(!next);
  setRsvpCount((prev) => prev + (next ? -1 : 1));
+ Alert.alert('Could not update your RSVP', err?.message || 'Please try again.');
  } finally {
  setSubmitting(false);
  }
@@ -161,9 +168,9 @@ export function EventCard({ event }: { event: CampusEvent }) {
             alignItems: 'center',
           }}
         >
-          {event.ticketPrice && event.ticketPrice > 0 ? (
+          {event.ticketType === 'paid' ? (
             <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, color: '#6EE7B7' }, heroTextShadowStyle]}>
-              NGN {event.ticketPrice.toLocaleString()}
+              Paid · {formatNaira(event.ticketPrice)}
             </AppText>
           ) : null}
           <AppText variant="caption" weight="semiBold" tone="inverse" style={[{ fontSize: 11 }, heroTextShadowStyle]}>
@@ -272,9 +279,10 @@ export function EventCard({ event }: { event: CampusEvent }) {
             <Badge label="Under Review" tone="warning" />
           ) : (
             <AppButton
-              label={rsvpd ? 'Going' : isFull ? 'Join Waitlist' : 'RSVP'}
-              variant={rsvpd ? 'secondary' : 'primary'}
+              label={event.ticketType === 'paid' ? (rsvpd ? 'Registered' : 'View details') : rsvpd ? 'Going' : isFull ? 'Full' : 'RSVP'}
+              variant={rsvpd || event.ticketType === 'paid' ? 'secondary' : 'primary'}
               onPress={handleRsvp}
+              disabled={isFull && event.ticketType !== 'paid'}
               loading={submitting}
             />
           )}

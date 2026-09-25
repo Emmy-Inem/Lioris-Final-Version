@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
   ActivityIndicator,
 } from 'react-native';
@@ -34,23 +33,27 @@ import { useToast } from '@/context/ToastContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import {
   getEvent,
-  rsvpToEvent,
   updateEvent,
   purgeEvent,
   approveEvent,
   revokeEventApproval,
   setEventSpotlight,
-  listEventAttendees,
 } from '@/api/events';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { CAMPUS_LANDMARKS, CAMPUS_CENTERS, CampusLandmark } from '@/api/campusMap';
-import { EventAttendeeInfo, EventCategory, EventAgendaItem } from '@/api/types';
+import { EventCategory, EventAgendaItem } from '@/api/types';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { submitVerificationRequest } from '@/api/verification';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { VerificationRequiredGate } from './VerificationRequiredGate';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { haptics } from '@/utils/haptics';
+import { EventTicketPanel } from './events/EventTicketPanel';
+import { EventDoorDesk } from './events/EventDoorDesk';
+import { TicketSettingsFields } from './events/TicketSettingsFields';
+import { PaymentReviewSheet } from './admin/PaymentReviewSheet';
+import { getEventPaymentDetails, saveEventPaymentDetails } from '@/api/paidEvents';
+import { EMPTY_TICKET_FORM, TicketFormValues, paidLabel, parsePrice, registeredBadge, validateTicketForm } from '@/utils/paidEvents';
 
 const EVENT_MEDIA_MAP: Record<string, any> = {
   event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
@@ -74,8 +77,6 @@ export function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
 
-  const [rsvpd, setRsvpdState] = useState<boolean | null>(null);
-  const [submittingRsvp, setSubmittingRsvp] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'agenda' | 'map'>('overview');
 
@@ -157,18 +158,16 @@ export function EventDetailScreen() {
   const [editStartAt, setEditStartAt] = useState('');
   const [editEndAt, setEditEndAt] = useState('');
   const [editCapacity, setEditCapacity] = useState<string>('');
-  const [editTicketPrice, setEditTicketPrice] = useState<string>('');
+  const [editTicket, setEditTicket] = useState<TicketFormValues>(EMPTY_TICKET_FORM);
   const [editTargetCohort, setEditTargetCohort] = useState<string>('');
   const [editApprovalStatus, setEditApprovalStatus] = useState<'approved' | 'pending' | 'rejected'>('approved');
   const [editIsSpotlight, setEditIsSpotlight] = useState<boolean>(false);
   const [editSponsored, setEditSponsored] = useState<boolean>(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Attendee Roster Modal State
-  const [rosterModalOpen, setRosterModalOpen] = useState(false);
-  const [rosterAttendees, setRosterAttendees] = useState<EventAttendeeInfo[]>([]);
-  const [loadingRoster, setLoadingRoster] = useState(false);
-  const [rosterSearch, setRosterSearch] = useState('');
+  // Door desk (roster, check-in, report) and the admin's payment review
+  const [doorOpen, setDoorOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   // Agenda Editor State
   const [agendaEditorOpen, setAgendaEditorOpen] = useState(false);
@@ -210,9 +209,8 @@ export function EventDetailScreen() {
     }
   }
 
-  const isRsvpd = rsvpd !== null ? rsvpd : !!event?.isRsvpd;
-  const currentRsvpCount =
-    (event?.rsvpCount ?? 0) + (rsvpd === true && !event?.isRsvpd ? 1 : rsvpd === false && event?.isRsvpd ? -1 : 0);
+  const isRsvpd = !!event?.isRsvpd;
+  const currentRsvpCount = event?.rsvpCount ?? 0;
   const capacity = typeof event?.capacity === 'number' && event.capacity > 0 ? event.capacity : null;
   const hasCapacity = capacity !== null;
   const remainingSpots = hasCapacity ? Math.max(0, capacity - currentRsvpCount) : null;
@@ -248,7 +246,22 @@ export function EventDetailScreen() {
     setEditStartAt(toLocalInputValue(event.startAt));
     setEditEndAt(toLocalInputValue(event.endAt));
     setEditCapacity(event.capacity ? String(event.capacity) : '');
-    setEditTicketPrice(event.ticketPrice ? String(event.ticketPrice) : '');
+    setEditTicket({
+      ...EMPTY_TICKET_FORM,
+      ticketType: event.ticketType === 'paid' ? 'paid' : 'free',
+      price: event.ticketPrice ? String(event.ticketPrice) : '',
+      method: event.paymentMethod ?? 'online',
+      reservationHeld: !!event.reservationHeld,
+      bookingDeadline: event.bookingDeadline ?? '',
+    });
+    if (event.ticketType === 'paid') {
+      // The link and instructions live in a private table; the organiser (or an admin) can read their own copy.
+      getEventPaymentDetails(event.id)
+        .then((d) => {
+          if (d) setEditTicket((t) => ({ ...t, paymentUrl: d.paymentUrl, instructions: d.instructions }));
+        })
+        .catch(() => {});
+    }
     setEditTargetCohort(event.targetCohort ?? '');
     setEditApprovalStatus(event.approvalStatus ?? 'approved');
     setEditIsSpotlight(!!event.isSpotlight);
@@ -310,6 +323,12 @@ export function EventDetailScreen() {
       return;
     }
 
+    const ticketProblem = validateTicketForm(editTicket, { eventEndAt: endDate ? endDate.toISOString() : event.endAt });
+    if (ticketProblem) {
+      toast.show(ticketProblem);
+      return;
+    }
+
     const resolvedLocation =
       editVenueType === 'virtual'
         ? (editVirtualLink.trim() || 'Online Virtual Meeting')
@@ -332,19 +351,34 @@ export function EventDetailScreen() {
         startAt: startDate ? startDate.toISOString() : event.startAt,
         endAt: endDate ? endDate.toISOString() : event.endAt,
         capacity: editCapacity.trim() ? parseInt(editCapacity.trim(), 10) : null,
-        ticketPrice: editTicketPrice.trim() ? parseFloat(editTicketPrice.trim()) : 0,
+        ticketType: editTicket.ticketType,
+        ticketPrice: editTicket.ticketType === 'paid' ? parsePrice(editTicket.price) : 0,
+        paymentMethod: editTicket.ticketType === 'paid' ? editTicket.method : null,
+        reservationHeld: editTicket.ticketType === 'paid' && editTicket.method !== 'online' ? editTicket.reservationHeld : false,
+        bookingDeadline: editTicket.ticketType === 'paid' && editTicket.bookingDeadline ? editTicket.bookingDeadline : null,
         targetCohort: editTargetCohort.trim() || undefined,
         ...(isAdmin ? { approvalStatus: editApprovalStatus } : {}),
         ...(canFeature ? { isSpotlight: editIsSpotlight, sponsored: editSponsored } : {}),
       });
+      if (editTicket.ticketType === 'paid') {
+        await saveEventPaymentDetails(
+          event.id,
+          editTicket.method === 'at_venue' ? '' : editTicket.paymentUrl,
+          editTicket.instructions,
+        );
+      }
       await queryClient.invalidateQueries({ queryKey: ['events'] });
       await queryClient.invalidateQueries({ queryKey: ['events', 'detail', event.id] });
       haptics.success();
-      toast.success('Event details updated successfully.');
+      toast.success(
+        editTicket.ticketType === 'paid'
+          ? 'Event saved. Any change to the price or payment details is checked by an administrator before students see it.'
+          : 'Event details updated successfully.',
+      );
       setEditModalOpen(false);
-    } catch {
+    } catch (err: any) {
       haptics.error();
-      toast.error('Could not save changes. Please try again.');
+      toast.error(err?.message || 'Could not save changes. Please try again.');
     } finally {
       setSavingEdit(false);
     }
@@ -371,6 +405,12 @@ export function EventDetailScreen() {
 
   async function handleToggleApproval() {
     if (!event) return;
+    if (event.ticketType === 'paid' && event.paymentReviewStatus === 'pending' && event.approvalStatus !== 'approved') {
+      // A paid event is approved together with its payment details, in the review.
+      haptics.light();
+      setReviewOpen(true);
+      return;
+    }
     haptics.medium();
     setActingApproval(true);
     const isCurrentlyApproved = event.approvalStatus === 'approved';
@@ -393,19 +433,10 @@ export function EventDetailScreen() {
     }
   }
 
-  async function handleOpenRoster() {
+  function handleOpenRoster() {
     if (!event) return;
     haptics.light();
-    setRosterModalOpen(true);
-    setLoadingRoster(true);
-    try {
-      const attendees = await listEventAttendees(event.id);
-      setRosterAttendees(attendees);
-    } catch {
-      toast.show('Could not load attendee roster.');
-    } finally {
-      setLoadingRoster(false);
-    }
+    setDoorOpen(true);
   }
 
   function handleCancelEvent() {
@@ -437,34 +468,6 @@ export function EventDetailScreen() {
         },
       ]
     );
-  }
-
-  async function handleToggleRsvp() {
-    if (!event) return;
-    if (isRestrictedGuest) {
-      haptics.light();
-      setVerificationModalOpen(true);
-      return;
-    }
-    haptics.medium();
-    setSubmittingRsvp(true);
-    try {
-      const action = isRsvpd ? 'cancel' : 'rsvp';
-      await rsvpToEvent(event.id, action);
-      setRsvpdState(!isRsvpd);
-      await queryClient.invalidateQueries({ queryKey: ['events'] });
-      await queryClient.invalidateQueries({ queryKey: ['events', 'detail', event.id] });
-      haptics.success();
-      toast.success(
-        !isRsvpd
-          ? `Seat secured for "${event.title}"! Added to your schedule.`
-          : 'Your RSVP has been cancelled.'
-      );
-    } catch {
-      toast.error('Could not update RSVP status. Please try again.');
-    } finally {
-      setSubmittingRsvp(false);
-    }
   }
 
   function handleLaunchMaps() {
@@ -528,18 +531,6 @@ export function EventDetailScreen() {
     setTimeout(() => setIcsExported(false), 3000);
   }
 
-  const filteredRoster = useMemo(() => {
-    if (!rosterSearch.trim()) return rosterAttendees;
-    const q = rosterSearch.toLowerCase();
-    return rosterAttendees.filter(
-      (a) =>
-        a.fullName.toLowerCase().includes(q) ||
-        (a.matricNumber && a.matricNumber.toLowerCase().includes(q)) ||
-        (a.department && a.department.toLowerCase().includes(q)) ||
-        (a.ticketCode && a.ticketCode.toLowerCase().includes(q))
-    );
-  }, [rosterAttendees, rosterSearch]);
-
   if (isLoading || !event) {
     return (
       <ScreenContainer>
@@ -558,6 +549,42 @@ export function EventDetailScreen() {
     : event.category === 'academic'
     ? EVENT_MEDIA_MAP.event_academic_symposium
     : EVENT_MEDIA_MAP.event_tech_hackathon;
+
+  const reviewLabel =
+    event.paymentReviewStatus === 'approved'
+      ? 'approved: students can see it'
+      : event.paymentReviewStatus === 'rejected'
+      ? 'sent back by an administrator'
+      : 'waiting for an administrator to review it';
+  const paymentNotice =
+    event.ticketType === 'paid' && canManage ? (
+      <View style={{ borderWidth: 1, borderColor: event.paymentReviewStatus === 'approved' ? colors.success : colors.warning, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md }}>
+        <AppText weight="bold" variant="caption">
+          Payment details: {reviewLabel}
+        </AppText>
+        {event.paymentReviewStatus === 'rejected' && event.paymentReviewNote ? (
+          <AppText variant="caption" style={{ marginTop: 2 }}>{event.paymentReviewNote}</AppText>
+        ) : null}
+        {event.paymentReviewStatus !== 'approved' ? (
+          <AppText variant="caption" tone="secondary" style={{ marginTop: 2, lineHeight: 16 }}>
+            Students cannot see the price, link or booking until this is approved. Editing the event sends changed payment details back for review.
+          </AppText>
+        ) : null}
+        {canFeature ? (
+          <View style={{ marginTop: spacing.xs, alignSelf: 'flex-start' }}>
+            <AppButton
+              label={event.paymentReviewStatus === 'pending' ? 'Review payment' : 'Payment details'}
+              size="sm"
+              variant={event.paymentReviewStatus === 'pending' ? 'primary' : 'secondary'}
+              onPress={() => setReviewOpen(true)}
+            />
+          </View>
+        ) : null}
+      </View>
+    ) : null;
+  const ticketPanel = (
+    <EventTicketPanel event={event} isRestrictedGuest={isRestrictedGuest} onNeedVerification={() => setVerificationModalOpen(true)} />
+  );
 
   return (
     <ScreenContainer glow={true} style={{ paddingHorizontal: isDesktop ? 24 : 0 }}>
@@ -829,7 +856,7 @@ export function EventDetailScreen() {
                     </AppText>
                   </View>
                   <Badge label={event.campusCode ? `${event.campusCode} NODE` : 'GLOBAL'} tone="neutral" />
-                  {event.ticketPrice ? <Badge label={`NGN ${event.ticketPrice.toLocaleString()}`} tone="neutral" /> : <Badge label="FREE ENTRY" tone="success" />}
+                  {event.ticketType === 'paid' ? <Badge label={paidLabel(event.ticketPrice)} tone="neutral" /> : <Badge label="FREE ENTRY" tone="success" />}
                   {event.sponsored ? <Badge label="SPONSORED" tone="neutral" /> : null}
                   {event.isSpotlight ? <Badge label="FEATURED ★" tone="neutral" /> : null}
                 </View>
@@ -1151,7 +1178,7 @@ export function EventDetailScreen() {
                 <Badge
                   label={
                     isRsvpd
-                      ? 'Seat Confirmed'
+                      ? registeredBadge(event)
                       : remainingSpots === null
                       ? 'Open Entry'
                       : remainingSpots > 0
@@ -1174,24 +1201,13 @@ export function EventDetailScreen() {
               </View>
 
               <View style={{ marginBottom: spacing.md }}>
-                <AppButton
-                  label={
-                    isRestrictedGuest
-                      ? 'Verify Student ID to RSVP'
-                      : isRsvpd
-                      ? 'Release / Cancel Seat'
-                      : 'Claim Your Seat (RSVP)'
-                  }
-                  variant={isRestrictedGuest ? 'primary' : isRsvpd ? 'secondary' : 'primary'}
-                  loading={submittingRsvp}
-                  onPress={handleToggleRsvp}
-                  fullWidth
-                />
+                {paymentNotice}
+                {ticketPanel}
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
                 <AppText variant="caption" tone="secondary" style={{ fontSize: 12 }}>
-                  {currentRsvpCount} students registered
+                  {currentRsvpCount} {event.ticketType === 'paid' ? 'interested' : 'students registered'}
                 </AppText>
                 {canManage && (
                   <Pressable onPress={handleOpenRoster}>
@@ -1284,7 +1300,7 @@ export function EventDetailScreen() {
                     {event.category}
                   </AppText>
                 </View>
-                {event.ticketPrice ? <Badge label={`NGN ${event.ticketPrice.toLocaleString()}`} tone="neutral" /> : <Badge label="FREE" tone="success" />}
+                {event.ticketType === 'paid' ? <Badge label={paidLabel(event.ticketPrice)} tone="neutral" /> : <Badge label="FREE" tone="success" />}
                 {event.sponsored ? <Badge label="SPONSORED" tone="neutral" /> : null}
                 {event.isSpotlight ? <Badge label="FEATURED ★" tone="neutral" /> : null}
               </View>
@@ -1510,16 +1526,12 @@ export function EventDetailScreen() {
                 <AppText variant="caption" tone="secondary">
                   {currentRsvpCount} attending
                 </AppText>
-                <View style={{ width: 140 }}>
-                  <AppButton
-                    label={isRestrictedGuest ? 'Verify to RSVP' : isRsvpd ? 'Cancel Seat' : 'RSVP Now'}
-                    size="sm"
-                    variant={isRestrictedGuest ? 'primary' : isRsvpd ? 'secondary' : 'primary'}
-                    loading={submittingRsvp}
-                    onPress={handleToggleRsvp}
-                  />
-                </View>
               </View>
+            </View>
+
+            <View style={{ marginBottom: spacing.md }}>
+              {paymentNotice}
+              {ticketPanel}
             </View>
 
             {/* Mobile Tab Selectors */}
@@ -1773,138 +1785,13 @@ export function EventDetailScreen() {
         </ScrollView>
       )}
 
-      {/* ========================================================================= */}
-      {/* ATTENDEE ROSTER MODAL */}
-      {/* ========================================================================= */}
-      <Modal visible={rosterModalOpen} transparent animationType="slide" onRequestClose={() => setRosterModalOpen(false)}>
-        <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setRosterModalOpen(false)} />
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: isDesktop ? spacing.xl : spacing.lg,
-              paddingBottom: Math.max(insets.bottom, spacing.lg),
-              width: '100%',
-              maxWidth: 600,
-              alignSelf: 'center',
-              maxHeight: '85%',
-            }}
-          >
-            {/* Mobile grab handle */}
-            {!isDesktop && (
-              <View
-                style={{
-                  width: 36,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: colors.border,
-                  alignSelf: 'center',
-                  marginBottom: spacing.sm,
-                }}
-              />
-            )}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Ionicons name="people-outline" size={20} color={colors.textSecondary} />
-                <AppText variant="h2" weight="bold">
-                  Registered Attendees ({rosterAttendees.length})
-                </AppText>
-              </View>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setRosterModalOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            {/* Search Bar */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: colors.background,
-                borderRadius: radius.pill,
-                paddingHorizontal: spacing.sm,
-                height: 38,
-                borderWidth: 1,
-                borderColor: colors.border,
-                marginBottom: spacing.md,
-              }}
-            >
-              <Ionicons name="search-outline" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
-              <TextInput accessibilityLabel="Search by name, department, or matric"
-                style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
-                placeholder="Search by name, department, or matric..."
-                placeholderTextColor={colors.textSecondary}
-                value={rosterSearch}
-                onChangeText={setRosterSearch}
-              />
-              {rosterSearch ? (
-                <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setRosterSearch('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
-                </Pressable>
-              ) : null}
-            </View>
-
-            {loadingRoster ? (
-              <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator color={colors.brandPrimary} />
-                <AppText tone="secondary" variant="caption" style={{ marginTop: 8 }}>
-                  Loading attendee list...
-                </AppText>
-              </View>
-            ) : filteredRoster.length > 0 ? (
-              <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%', marginBottom: spacing.md }}>
-                {filteredRoster.map((item, idx) => (
-                  <View
-                    key={item.userId || idx}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingVertical: 10,
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.divider,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                      <Avatar name={item.fullName} size={36} role={(item.role as any) || 'student'} />
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <AppText weight="bold" numberOfLines={1} style={{ fontSize: 13.5 }}>
-                            {item.fullName}
-                          </AppText>
-                          {item.matricNumber && <Badge label={item.matricNumber} tone="neutral" />}
-                        </View>
-                        <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                          {item.department || 'Student'} • {new Date(item.registeredAt).toLocaleDateString()}
-                        </AppText>
-                      </View>
-                    </View>
-
-                    {item.ticketCode && (
-                      <View style={{ backgroundColor: colors.divider, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, marginLeft: 8 }}>
-                        <AppText variant="caption" weight="bold" style={{ fontSize: 11 }}>
-                          #{item.ticketCode.toUpperCase()}
-                        </AppText>
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={{ paddingVertical: 30, alignItems: 'center' }}>
-                <Ionicons name="people-outline" size={36} color={colors.textSecondary} />
-                <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 6 }}>
-                  {rosterSearch ? 'No matching attendees found.' : 'No attendees have registered for this event yet.'}
-                </AppText>
-              </View>
-            )}
-
-            <AppButton label="Done" onPress={() => setRosterModalOpen(false)} fullWidth />
-          </View>
-        </View>
-      </Modal>
+      <EventDoorDesk
+        visible={doorOpen}
+        onClose={() => setDoorOpen(false)}
+        event={{ id: event.id, title: event.title, ticketType: event.ticketType, ticketPrice: event.ticketPrice }}
+        isAdmin={user?.role === 'admin'}
+      />
+      <PaymentReviewSheet eventId={reviewOpen ? event.id : null} onClose={() => setReviewOpen(false)} />
 
       {/* ========================================================================= */}
       {/* COMPREHENSIVE EDIT EVENT MODAL */}
@@ -2120,27 +2007,22 @@ export function EventDetailScreen() {
                 ))}
               </View>
 
-              {/* Capacity & Ticket Pricing */}
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <View style={{ flex: 1 }}>
-                  <AppTextField
-                    label="Seat Capacity"
-                    placeholder="e.g. 150 (Blank = Unlimited)"
-                    value={editCapacity}
-                    onChangeText={setEditCapacity}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppTextField
-                    label="Ticket Price (NGN)"
-                    placeholder="0 = Free Admission"
-                    value={editTicketPrice}
-                    onChangeText={setEditTicketPrice}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
+              {/* Capacity */}
+              <AppTextField
+                label="Seat Capacity"
+                placeholder="e.g. 150 (Blank = Unlimited)"
+                value={editCapacity}
+                onChangeText={setEditCapacity}
+                keyboardType="numeric"
+              />
+
+              {/* Tickets: free, or paid (discovery + referral; the organiser takes the money) */}
+              <TicketSettingsFields
+                value={editTicket}
+                onChange={setEditTicket}
+                eventStartAt={editStartAt ? new Date(editStartAt) : null}
+                reviewNote={event.paymentReviewStatus === 'rejected' ? event.paymentReviewNote : null}
+              />
 
               {/* Target Cohort */}
               <AppTextField

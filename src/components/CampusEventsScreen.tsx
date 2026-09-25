@@ -31,6 +31,9 @@ const STUDENT_EVENT_FILTERS = [
   { key: 'on-campus', label: 'On Campus', icon: 'business-outline' as const },
   { key: 'off-campus', label: 'Off Campus', icon: 'globe-outline' as const },
   { key: 'virtual', label: 'Virtual Event', icon: 'videocam-outline' as const },
+  { key: 'free', label: 'Free', icon: 'gift-outline' as const },
+  { key: 'paid', label: 'Paid', icon: 'ticket-outline' as const },
+  { key: 'rsvp', label: 'My Registrations', icon: 'checkmark-circle-outline' as const },
 ] as const;
 
 const ALUMNI_EVENT_FILTERS = [
@@ -38,6 +41,8 @@ const ALUMNI_EVENT_FILTERS = [
   { key: 'reunions', label: 'Reunions & Homecomings', icon: 'people-outline' as const },
   { key: 'networking', label: 'Networking & Galas', icon: 'wine-outline' as const },
   { key: 'mentorship', label: 'Mentorship Mixers', icon: 'ribbon-outline' as const },
+  { key: 'free', label: 'Free', icon: 'gift-outline' as const },
+  { key: 'paid', label: 'Paid', icon: 'ticket-outline' as const },
   { key: 'rsvp', label: 'My RSVPs', icon: 'checkmark-circle-outline' as const },
 ] as const;
 
@@ -125,6 +130,9 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
     if (filter === 'on-campus') return e.venueType === 'physical' || !isVirtual;
     if (filter === 'off-campus') return e.venueType === 'external';
     if (filter === 'virtual') return e.venueType === 'virtual' || isVirtual;
+    if (filter === 'free') return e.ticketType !== 'paid';
+    if (filter === 'paid') return e.ticketType === 'paid';
+    if (filter === 'rsvp') return !!e.isRsvpd;
 
     if (filter === 'reunions') {
       const text = `${e.title} ${e.description}`.toLowerCase();

@@ -15,6 +15,10 @@ import { CampusEvent, EventCategory } from '@/api/types';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 import { VerifiedCampusLocationPicker } from '@/components/VerifiedCampusLocationPicker';
+import { PaidEventsDesk } from '@/components/admin/PaidEventsDesk';
+import { TicketSettingsFields } from '@/components/events/TicketSettingsFields';
+import { getEventPaymentDetails, saveEventPaymentDetails } from '@/api/paidEvents';
+import { EMPTY_TICKET_FORM, TicketFormValues, paidLabel, parsePrice, validateTicketForm } from '@/utils/paidEvents';
 
 const EVENT_COVER_PRESETS = [
  { id: 'event_tech_hackathon', label: 'Hackathon & Tech', src: require('../../../assets/images/event_tech_hackathon.jpg') },
@@ -31,15 +35,11 @@ const VENUE_TYPE_LABELS: Record<NonNullable<CampusEvent['venueType']>, string> =
  external: 'External',
 };
 
-function parseTicketPrice(value: string): number {
- const parsed = parseFloat(value.replace(/[^0-9.]/g, ''));
- return Number.isFinite(parsed) ? parsed : 0;
-}
-
 export function EventsModerationTab() {
  const { colors, spacing, radius, isDark } = useTheme();
  const queryClient = useQueryClient();
- const [section, setSection] = useState<'approved' | 'pending'>('approved');
+ const [section, setSection] = useState<'approved' | 'pending' | 'paid'>('approved');
+ const [focusPaid, setFocusPaid] = useState<string | null>(null);
  const [searchQuery, setSearchQuery] = useState('');
  const [selectedCategory, setSelectedCategory] = useState<EventCategory | 'all'>('all');
  const [actingId, setActingId] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export function EventsModerationTab() {
  const [formLocation, setFormLocation] = useState('');
  const [formVirtualLink, setFormVirtualLink] = useState('');
  const [formCapacity, setFormCapacity] = useState('150');
- const [formTicketPrice, setFormTicketPrice] = useState('0');
+ const [formTicket, setFormTicket] = useState<TicketFormValues>(EMPTY_TICKET_FORM);
  const [formCover, setFormCover] = useState('event_tech_hackathon');
  const [formSponsored, setFormSponsored] = useState(false);
  const [formSpotlight, setFormSpotlight] = useState(true);
@@ -100,7 +100,7 @@ export function EventsModerationTab() {
  setFormLocation('Faculty of Science Main Auditorium');
  setFormVirtualLink('');
  setFormCapacity('200');
- setFormTicketPrice('0');
+ setFormTicket(EMPTY_TICKET_FORM);
  setFormCover('event_tech_hackathon');
  setFormSponsored(true);
  setFormSpotlight(true);
@@ -120,7 +120,21 @@ export function EventsModerationTab() {
  setFormLocation(event.location);
  setFormVirtualLink(event.virtualLink || '');
  setFormCapacity(event.capacity ? String(event.capacity) : '150');
- setFormTicketPrice(event.ticketPrice != null ? String(event.ticketPrice) : '0');
+ setFormTicket({
+ ...EMPTY_TICKET_FORM,
+ ticketType: event.ticketType === 'paid' ? 'paid' : 'free',
+ price: event.ticketPrice ? String(event.ticketPrice) : '',
+ method: event.paymentMethod ?? 'online',
+ reservationHeld: !!event.reservationHeld,
+ bookingDeadline: event.bookingDeadline ?? '',
+ });
+ if (event.ticketType === 'paid') {
+ getEventPaymentDetails(event.id)
+ .then((d) => {
+ if (d) setFormTicket((t) => ({ ...t, paymentUrl: d.paymentUrl, instructions: d.instructions }));
+ })
+ .catch(() => {});
+ }
  setFormCover(event.coverImageUrl || 'event_tech_hackathon');
  setFormSponsored(!!event.sponsored);
  setFormSpotlight(!!event.isSpotlight);
@@ -136,6 +150,12 @@ export function EventsModerationTab() {
  return;
  }
 
+ const ticketProblem = validateTicketForm(formTicket, { eventEndAt: formEndAt });
+ if (ticketProblem) {
+ Alert.alert('Ticket settings', ticketProblem);
+ return;
+ }
+
  haptics.medium();
  setSaving(true);
  try {
@@ -148,7 +168,11 @@ export function EventsModerationTab() {
  location: formLocation.trim(),
  virtualLink: formVirtualLink.trim() || null,
  capacity: Number(formCapacity) || 150,
- ticketPrice: parseTicketPrice(formTicketPrice),
+ ticketType: formTicket.ticketType,
+ ticketPrice: formTicket.ticketType === 'paid' ? parsePrice(formTicket.price) : 0,
+ paymentMethod: formTicket.ticketType === 'paid' ? formTicket.method : null,
+ reservationHeld: formTicket.ticketType === 'paid' && formTicket.method !== 'online' ? formTicket.reservationHeld : false,
+ bookingDeadline: formTicket.ticketType === 'paid' && formTicket.bookingDeadline ? formTicket.bookingDeadline : null,
  coverImageUrl: formCover,
  sponsored: formSponsored,
  isSpotlight: formSpotlight,
@@ -156,6 +180,9 @@ export function EventsModerationTab() {
  startAt: formStartAt,
  endAt: formEndAt,
  });
+ if (formTicket.ticketType === 'paid') {
+ await saveEventPaymentDetails(editingEvent.id, formTicket.method === 'at_venue' ? '' : formTicket.paymentUrl, formTicket.instructions);
+ }
  recordAuditLogEntry({
  action: 'event_approval_revoked',
  summary: `Updated details for campus event: "${formTitle.trim()}"`,
@@ -179,7 +206,13 @@ export function EventsModerationTab() {
  virtualLink: formVirtualLink.trim() || null,
  capacity: Number(formCapacity) || 150,
  isSpotlight: formSpotlight,
- ticketPrice: parseTicketPrice(formTicketPrice),
+ ticketType: formTicket.ticketType,
+ ticketPrice: formTicket.ticketType === 'paid' ? parsePrice(formTicket.price) : 0,
+ paymentMethod: formTicket.ticketType === 'paid' ? formTicket.method : null,
+ reservationHeld: formTicket.ticketType === 'paid' && formTicket.method !== 'online' ? formTicket.reservationHeld : false,
+ bookingDeadline: formTicket.ticketType === 'paid' && formTicket.bookingDeadline ? formTicket.bookingDeadline : null,
+ paymentUrl: formTicket.ticketType === 'paid' && formTicket.method !== 'at_venue' ? formTicket.paymentUrl.trim() : null,
+ paymentInstructions: formTicket.ticketType === 'paid' ? formTicket.instructions.trim() : null,
  targetCohort: formTargetCohort.trim(),
  });
  Alert.alert('Event Published', `"${formTitle.trim()}"is now live on the campus calendar.`);
@@ -199,13 +232,24 @@ export function EventsModerationTab() {
  async function handleToggleSpotlight(event: CampusEvent) {
  haptics.medium();
  const next = !event.isSpotlight;
+ try {
  await updateEvent(event.id, { isSpotlight: next });
  await queryClient.invalidateQueries({ queryKey: ['events'] });
  await refetch();
  Alert.alert(next ? 'Pinned to Spotlight' : 'Unpinned from Spotlight', `"${event.title}"banner preference updated.`);
+ } catch (err: any) {
+ Alert.alert('Could not change the spotlight', err?.message ?? 'Please try again.');
+ }
  }
 
  async function handleToggleApproval(event: CampusEvent) {
+ if (event.ticketType === 'paid' && event.paymentReviewStatus === 'pending' && event.approvalStatus !== 'approved') {
+ // Approved together with its payment details, in the review.
+ haptics.light();
+ setFocusPaid(event.id);
+ setSection('paid');
+ return;
+ }
  haptics.medium();
  setActingId(event.id);
  const isApproved = event.approvalStatus !== 'rejected' && event.approvalStatus !== 'pending';
@@ -289,8 +333,30 @@ export function EventsModerationTab() {
  Pending Review ({pendingEvents.length})
  </AppText>
  </Pressable>
+
+ <Pressable
+ onPress={() => {
+ haptics.light();
+ setSection('paid');
+ }}
+ style={{
+ flex: 1,
+ paddingVertical: 8,
+ alignItems: 'center',
+ borderRadius: radius.pill,
+ backgroundColor: section === 'paid' ? colors.brandPrimary : colors.divider,
+ }}
+ >
+ <AppText variant="caption"weight="bold"tone={section === 'paid' ? 'inverse' : 'secondary'}>
+ Paid events
+ </AppText>
+ </Pressable>
  </View>
 
+ {section === 'paid' ? (
+ <PaidEventsDesk focusEventId={focusPaid} onFocusHandled={() => setFocusPaid(null)} />
+ ) : (
+ <>
  {/* Header with Search and Create Action */}
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
  <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -429,7 +495,7 @@ export function EventsModerationTab() {
 
  <View style={{ backgroundColor: colors.divider, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill }}>
  <AppText variant="caption"weight="bold">
- {event.ticketPrice ? `NGN ${event.ticketPrice.toLocaleString()}` : 'Free'}
+ {event.ticketType === 'paid' ? `${paidLabel(event.ticketPrice)}${event.paymentReviewStatus === 'pending' ? ' · needs review' : event.paymentReviewStatus === 'rejected' ? ' · sent back' : ''}` : 'Free'}
  </AppText>
  </View>
 
@@ -458,7 +524,7 @@ export function EventsModerationTab() {
  </View>
  <View style={{ flex: 1 }}>
  <AppButton
- label={isApproved ? 'Revoke' : 'Approve'}
+ label={isApproved ? 'Revoke' : event.ticketType === 'paid' && event.paymentReviewStatus === 'pending' ? 'Review & approve' : 'Approve'}
  variant={isApproved ? 'ghost' : 'primary'}
  loading={actingId === event.id}
  onPress={() => handleToggleApproval(event)}
@@ -489,6 +555,9 @@ export function EventsModerationTab() {
  description={section === 'pending' ? 'All student club and faculty event submissions have been approved.' : 'Try a different search query or publish a new event.'}
  />
  ) : null}
+
+ </>
+ )}
 
  {/* Create / Edit Event Modal */}
  <Modal visible={editModalOpen} transparent animationType="slide"onRequestClose={() => setEditModalOpen(false)}>
@@ -599,21 +668,18 @@ export function EventsModerationTab() {
  ))}
  </View>
 
- <View style={{ flexDirection: 'row', gap: spacing.md }}>
- <View style={{ flex: 1 }}>
  <AppTextField
  label="Seat Capacity"placeholder="e.g. 200"value={formCapacity}
  onChangeText={setFormCapacity}
  keyboardType="numeric"
  />
- </View>
- <View style={{ flex: 1 }}>
- <AppTextField
- label="Ticket Price"placeholder="Free or NGN 1,500"value={formTicketPrice}
- onChangeText={setFormTicketPrice}
+
+ <TicketSettingsFields
+ value={formTicket}
+ onChange={setFormTicket}
+ eventStartAt={formStartAt ? new Date(formStartAt) : null}
+ reviewNote={editingEvent?.paymentReviewStatus === 'rejected' ? editingEvent.paymentReviewNote : null}
  />
- </View>
- </View>
 
  <AppTextField
  label="Target Cohort"placeholder="e.g. 300L - 500L or Open to All"value={formTargetCohort}

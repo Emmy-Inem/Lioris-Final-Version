@@ -12,6 +12,7 @@ export type FeatureKey =
   | 'utility_cards'
   | 'study_groups'
   | 'campus_events'
+  | 'paid_events'
   | 'academic_resources'
   | 'alumni_mentorship'
   | 'discussion_workspaces'
@@ -78,6 +79,14 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     tier: 'P0',
     description: 'Highlights university symposiums, hackathons, seminars, and calendar sync.',
     defaultOn: true,
+  },
+  {
+    key: 'paid_events',
+    label: 'Paid Events (Discovery & Referral)',
+    category: 'Campus Life',
+    tier: 'P1',
+    description: 'Lets organisers list ticketed events with a price and their own payment link or pay-at-venue instructions. Lioris never takes the payment; every paid event is reviewed here first. Off = no new paid events and no payment links or bookings for existing ones.',
+    defaultOn: false,
   },
   {
     key: 'academic_resources',

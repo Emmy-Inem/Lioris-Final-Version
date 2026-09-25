@@ -45,7 +45,7 @@ supabase secrets set EXPO_ACCESS_TOKEN=<Expo access token>
 | `SUPABASE_SERVICE_ROLE_KEY` | all functions | Server-only. Never in a client `.env`. |
 | `GEMINI_API_KEY` | gemini-proxy | Rotate the key that was previously exposed in the web bundle. |
 | `ALLOWED_ORIGINS` | all browser-facing functions | Comma separated, exact origins, no trailing slash. Unset = built-in defaults (vercel.app, lioris.app, www.lioris.app, localhost:8081/19006). Drop the localhost entries in production. |
-| `REQUIRE_ADMIN_MFA` | admin-delete-user, admin-impersonate-user, admin-manage-institution | `true`: always require an AAL2 (TOTP-verified) session. `false`: never. Unset (default): only for admins who have enrolled a TOTP factor - matching the app policy that 2FA is voluntary. An admin who is asked for it gets `403 mfa_required`; the User Directory then prompts for the 6-digit code and retries. With `true`, an admin who never enrolled cannot use these functions until they enrol (Settings > Security). |
+| `REQUIRE_ADMIN_MFA` | admin-delete-user, admin-impersonate-user, admin-manage-institution, admin-review-paid-event | `true`: always require an AAL2 (TOTP-verified) session. `false`: never. Unset (default): only for admins who have enrolled a TOTP factor - matching the app policy that 2FA is voluntary. An admin who is asked for it gets `403 mfa_required`; the User Directory then prompts for the 6-digit code and retries. With `true`, an admin who never enrolled cannot use these functions until they enrol (Settings > Security). |
 | `CRON_SECRET` | purge-expired-verification-documents | At least 16 characters; compared in constant time. |
 | `PUSH_WEBHOOK_SECRET` | send-push | At least 16 characters; sent by the Database Webhook as header `x-webhook-secret`; compared in constant time. Missing = the function refuses everything (500). |
 | `TURN_KEY_ID`, `TURN_KEY_API_TOKEN` | turn-credentials | Cloudflare Realtime TURN key (below). Missing = `503 not_configured` and calls fall back to STUN only. |
@@ -75,6 +75,7 @@ WebRTC media/ICE traffic is not governed by the page CSP, so `vercel.json` needs
 | admin-delete-user | true | `supabase functions deploy admin-delete-user` |
 | admin-impersonate-user | true | `supabase functions deploy admin-impersonate-user` |
 | admin-manage-institution | true | `supabase functions deploy admin-manage-institution` |
+| admin-review-paid-event | true | `supabase functions deploy admin-review-paid-event` (paid events desk: payment link check, payment review, revenue arrangement; see `docs/operations/paid-events.md`) |
 | delete-my-account | true | `supabase functions deploy delete-my-account` |
 | turn-credentials | true | `supabase functions deploy turn-credentials` |
 | overpass-proxy | false (public map data) | `supabase functions deploy overpass-proxy --no-verify-jwt` |

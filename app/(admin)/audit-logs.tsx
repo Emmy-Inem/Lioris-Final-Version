@@ -86,6 +86,10 @@ const ACTION_TONE: Partial<Record<AuditLogAction, 'success' | 'critical' | 'warn
   event_updated: 'brand',
   event_spotlight_enabled: 'success',
   event_spotlight_disabled: 'neutral',
+  event_payment_approved: 'success',
+  event_payment_rejected: 'warning',
+  event_link_checked: 'brand',
+  event_partnership_updated: 'brand',
 };
 
 export default function AuditLogsScreen() {

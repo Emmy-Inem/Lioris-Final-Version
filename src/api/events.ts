@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import { isUserBlocked } from './connections';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
+import { parseRpcError, RpcError } from '../utils/rpcErrors';
 
 
 let locallyCreatedEvents: CampusEvent[] = [];
@@ -18,6 +19,23 @@ function mapApprovalStatus(status: string | null | undefined): 'pending' | 'appr
  if (status === 'pending_approval') return 'pending';
  if (status === 'cancelled' || status === 'rejected') return 'rejected';
  return 'approved';
+}
+
+/** Payment / ticket columns of an events row, in the shape the screens use. */
+function mapPaidFields(row: any) {
+  return {
+    ticketType: (row.ticket_type === 'paid' ? 'paid' : 'free') as 'free' | 'paid',
+    paymentMethod: (row.payment_method ?? null) as CampusEvent['paymentMethod'],
+    reservationHeld: !!row.reservation_held,
+    bookingDeadline: (row.booking_deadline ?? null) as string | null,
+    paymentReviewStatus: (row.payment_review_status ?? 'not_required') as CampusEvent['paymentReviewStatus'],
+    paymentReviewNote: (row.payment_review_note ?? null) as string | null,
+  };
+}
+
+/** Database errors raised as "<code>: <sentence>" (or a bare code) become a readable RpcError that keeps the code. */
+function throwReadable(error: unknown, fallback: string): never {
+  throw new RpcError(parseRpcError(error, fallback));
 }
 
 export interface EventsQuery {
@@ -119,10 +137,13 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
     const currentUserId = authData?.user?.id;
 
-    const { data, error } = await supabase
+    let listQuery = supabase
       .from('events')
       .select('*, profiles:creator_id(full_name), event_attendees(user_id)')
       .order('start_time', { ascending: true });
+    // The RSVP table is private: everybody may embed their own row (that is all "am I registered?" needs).
+    if (currentUserId) listQuery = listQuery.eq('event_attendees.user_id', currentUserId);
+    const { data, error } = await listQuery;
 
     if (error) throw error;
 
@@ -163,6 +184,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
           sponsored: !!row.sponsored,
           ticketPrice: row.ticket_price != null ? Number(row.ticket_price) : undefined,
           targetCohort: row.target_cohort ?? undefined,
+          ...mapPaidFields(row),
         };
       });
 
@@ -195,11 +217,12 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
     const { data: authData } = await supabase.auth.getUser();
     const currentUserId = authData?.user?.id;
 
-    const { data, error } = await supabase
+    let detailQuery = supabase
       .from('events')
       .select('*, profiles:creator_id(full_name), event_attendees(user_id)')
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+    if (currentUserId) detailQuery = detailQuery.eq('event_attendees.user_id', currentUserId);
+    const { data, error } = await detailQuery.single();
     if (!error && data) {
       const isRsvpd = currentUserId ? (data.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
       const freshEvent: CampusEvent = {
@@ -225,6 +248,7 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
         sponsored: !!data.sponsored,
         ticketPrice: data.ticket_price != null ? Number(data.ticket_price) : undefined,
         targetCohort: data.target_cohort ?? undefined,
+        ...mapPaidFields(data),
       };
       locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, ...freshEvent } : e));
       return freshEvent;
@@ -256,6 +280,14 @@ export interface CreateEventPayload {
  isSpotlight?: boolean;
  ticketPrice?: number;
  targetCohort?: string;
+ /** Paid events: Lioris only lists them; the organiser takes the money (their link, or at the venue). */
+ ticketType?: 'free' | 'paid';
+ paymentMethod?: CampusEvent['paymentMethod'];
+ reservationHeld?: boolean;
+ bookingDeadline?: string | null;
+ /** Saved with save_event_payment_details() right after the event row; only for paid events. */
+ paymentUrl?: string | null;
+ paymentInstructions?: string | null;
 }
 
 /**
@@ -324,6 +356,7 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
   // moderation queue's admin/staff-only UPDATE path (approveEvent /
   // revokeEventApproval).
   const initialStatus = 'pending_approval';
+  const isPaid = payload.ticketType === 'paid';
 
   const dbVisibilityScope = payload.visibilityScope === 'campus' ? 'campus' : 'global';
 
@@ -346,13 +379,31 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
     capacity: payload.capacity ?? null,
     is_spotlight: false,
     sponsored: false,
-    ticket_price: payload.ticketPrice ?? 0,
+    ticket_price: isPaid ? payload.ticketPrice ?? 0 : 0,
     target_cohort: payload.targetCohort ?? null,
+    ticket_type: isPaid ? 'paid' : 'free',
+    payment_method: isPaid ? payload.paymentMethod ?? 'online' : null,
+    reservation_held: isPaid ? !!payload.reservationHeld : false,
+    booking_deadline: isPaid ? payload.bookingDeadline ?? null : null,
   });
 
   if (error) {
     console.warn('[Events] Supabase create event error:', error.message);
-    throw new Error(error.message || 'Could not publish this event. Please try again.');
+    throwReadable(error, 'Could not publish this event. Please try again.');
+  }
+
+  if (isPaid) {
+    const { error: detailsError } = await supabase.rpc('save_event_payment_details', {
+      p_event: eventId,
+      p_url: payload.paymentUrl ?? null,
+      p_instructions: payload.paymentInstructions ?? null,
+    });
+    if (detailsError) {
+      // Never leave a paid event behind without its payment details.
+      await supabase.from('events').delete().eq('id', eventId);
+      console.warn('[Events] Saving payment details failed:', detailsError.message);
+      throwReadable(detailsError, 'Could not save the payment details. Please try again.');
+    }
   }
 
  const created: CampusEvent = {
@@ -362,6 +413,9 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  isRsvpd: false,
  approvalStatus: mapApprovalStatus(initialStatus),
  ...payload,
+ ticketType: isPaid ? 'paid' : 'free',
+ paymentReviewStatus: isPaid ? 'pending' : 'not_required',
+ ticketPrice: isPaid ? payload.ticketPrice ?? 0 : 0,
  category: (payload.category as any) || 'academic',
  visibilityScope: (payload.visibilityScope as any) || 'global',
  campusCode,
@@ -376,40 +430,89 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  return created;
 }
 
+export interface RsvpResult {
+ eventId: string;
+ status: 'confirmed' | 'cancelled';
+ /** The unique reference (QR / manual entry) the organiser checks at the door. */
+ ticketCode?: string;
+}
+
+/**
+ * Register for (or cancel) an event through the database, which enforces booking rules, capacity, the paid-event
+ * acknowledgement and consent. Throws an RpcError whose `code` says why (event_full, booking_closed, ack_required...).
+ * `acknowledged` must be true for paid events: the student has read that Lioris does not take the payment and what
+ * the organiser will see. `shareDetails` additionally shares the matric number and department with the organiser.
+ */
 export async function rsvpToEvent(
  id: string,
  action: 'rsvp' | 'cancel' = 'rsvp',
-): Promise<{ eventId: string; status: string }> {
- const result = { eventId: id, status: action === 'rsvp' ? 'confirmed' : 'cancelled' };
+ options: { shareDetails?: boolean; acknowledged?: boolean } = {},
+): Promise<RsvpResult> {
+ if (action === 'cancel') {
+ const { error } = await supabase.rpc('cancel_event_rsvp', { p_event: id });
+ if (error) throwReadable(error, 'Could not cancel your registration. Please try again.');
+ locallyCreatedEvents = locallyCreatedEvents.map((e) =>
+ e.id === id ? { ...e, isRsvpd: false, rsvpCount: Math.max(0, e.rsvpCount - 1) } : e,
+ );
+ return { eventId: id, status: 'cancelled' };
+ }
 
- locallyCreatedEvents = locallyCreatedEvents.map((e) => {
- if (e.id !== id) return e;
- const nextRsvpd = action === 'rsvp';
- const nextCount = Math.max(0, e.rsvpCount + (nextRsvpd ? 1 : -1));
- return { ...e, isRsvpd: nextRsvpd, rsvpCount: nextCount };
+ const { data, error } = await supabase.rpc('rsvp_event', {
+ p_event: id,
+ p_share_details: !!options.shareDetails,
+ p_ack: !!options.acknowledged,
  });
-
- try {
- const { data: authData } = await supabase.auth.getUser();
- const userId = authData?.user?.id;
-
- if (userId) {
- if (action === 'rsvp') {
- const { error } = await supabase.from('event_attendees').insert({ event_id: id, user_id: userId });
- if (error) console.warn('[Events] RSVP error:', error.message);
- } else {
- const { error } = await supabase.from('event_attendees').delete().eq('event_id', id).eq('user_id', userId);
- if (error) console.warn('[Events] Cancel RSVP error:', error.message);
- }
- }
- } catch (err) {
- console.warn('[Events] RSVP failure:', err);
- }
-
- return result;
+ if (error) throwReadable(error, 'Could not register you for this event. Please try again.');
+ const result = (data ?? {}) as { ticket_code?: string; already?: boolean };
+ locallyCreatedEvents = locallyCreatedEvents.map((e) =>
+ e.id === id ? { ...e, isRsvpd: true, rsvpCount: e.rsvpCount + (result.already ? 0 : 1) } : e,
+ );
+ return { eventId: id, status: 'confirmed', ticketCode: result.ticket_code };
 }
 
 export async function updateEvent(id: string, updates: Partial<CampusEvent>): Promise<CampusEvent | null> {
+ const dbPayload: any = {};
+ if (updates.title) dbPayload.title = updates.title;
+ if (updates.description) dbPayload.description = updates.description;
+ if (updates.category) dbPayload.category = updates.category;
+ if (updates.location) dbPayload.venue = updates.location;
+ if (updates.startAt) dbPayload.start_time = updates.startAt;
+ if (updates.endAt) dbPayload.end_time = updates.endAt;
+ if (updates.coverImageUrl) dbPayload.banner_url = updates.coverImageUrl;
+ if (updates.capacity !== undefined) dbPayload.capacity = updates.capacity;
+ if (updates.isSpotlight !== undefined) dbPayload.is_spotlight = updates.isSpotlight;
+ if (updates.venueType !== undefined) dbPayload.venue_type = updates.venueType;
+ if (updates.virtualLink !== undefined) dbPayload.virtual_link = updates.virtualLink;
+ if (updates.targetCohort !== undefined) dbPayload.target_cohort = updates.targetCohort;
+ if (updates.campusCode) dbPayload.campus_code = updates.campusCode.toUpperCase();
+ if (updates.visibilityScope) dbPayload.visibility_scope = updates.visibilityScope;
+ if (updates.sponsored !== undefined) dbPayload.sponsored = updates.sponsored;
+ // Ticket settings travel together: the database keeps free events free of any price, method or review.
+ if (updates.ticketType !== undefined) {
+ const paid = updates.ticketType === 'paid';
+ dbPayload.ticket_type = updates.ticketType;
+ dbPayload.ticket_price = paid ? updates.ticketPrice ?? 0 : 0;
+ dbPayload.payment_method = paid ? updates.paymentMethod ?? 'online' : null;
+ dbPayload.reservation_held = paid ? !!updates.reservationHeld : false;
+ dbPayload.booking_deadline = paid ? updates.bookingDeadline ?? null : null;
+ } else if (updates.ticketPrice !== undefined) {
+ dbPayload.ticket_price = updates.ticketPrice;
+ }
+ if (updates.approvalStatus) {
+ dbPayload.status =
+ updates.approvalStatus === 'approved'
+ ? 'upcoming'
+ : updates.approvalStatus === 'pending'
+ ? 'pending_approval'
+ : 'cancelled';
+ }
+
+ if (Object.keys(dbPayload).length > 0) {
+ const { data, error } = await supabase.from('events').update(dbPayload).eq('id', id).select('id');
+ if (error) throwReadable(error, 'Could not save the changes. Please try again.');
+ if (!data || data.length === 0) throw new Error('You do not have permission to change this event.');
+ }
+
  let updated: CampusEvent | null = null;
  locallyCreatedEvents = locallyCreatedEvents.map((e) => {
  if (e.id === id) {
@@ -418,68 +521,25 @@ export async function updateEvent(id: string, updates: Partial<CampusEvent>): Pr
  }
  return e;
  });
-
- try {
- const dbPayload: any = {};
- if (updates.title) dbPayload.title = updates.title;
- if (updates.description) dbPayload.description = updates.description;
- if (updates.category) dbPayload.category = updates.category;
- if (updates.location) dbPayload.venue = updates.location;
- if (updates.startAt) dbPayload.start_time = updates.startAt;
- if (updates.endAt) dbPayload.end_time = updates.endAt;
-    if (updates.coverImageUrl) dbPayload.banner_url = updates.coverImageUrl;
-    if (updates.capacity !== undefined) dbPayload.capacity = updates.capacity;
-    if (updates.isSpotlight !== undefined) dbPayload.is_spotlight = updates.isSpotlight;
-    if (updates.venueType !== undefined) dbPayload.venue_type = updates.venueType;
-    if (updates.virtualLink !== undefined) dbPayload.virtual_link = updates.virtualLink;
-    if (updates.ticketPrice !== undefined) dbPayload.ticket_price = updates.ticketPrice;
-    if (updates.targetCohort !== undefined) dbPayload.target_cohort = updates.targetCohort;
-    if (updates.campusCode) dbPayload.campus_code = updates.campusCode.toUpperCase();
-    if (updates.visibilityScope) dbPayload.visibility_scope = updates.visibilityScope;
-    if (updates.sponsored !== undefined) dbPayload.sponsored = updates.sponsored;
-    if (updates.approvalStatus) {
-      dbPayload.status =
-        updates.approvalStatus === 'approved'
-          ? 'upcoming'
-          : updates.approvalStatus === 'pending'
-          ? 'pending_approval'
-          : 'cancelled';
-    }
-
-    if (Object.keys(dbPayload).length > 0) {
-      await supabase.from('events').update(dbPayload).eq('id', id);
-    }
-  } catch (err) {
-    console.warn('[Events] Supabase updateEvent error:', err);
-  }
-
-  return updated;
+ return updated;
 }
 
+/** The people registered for an event. Organisers, admins and campus staff only (the database refuses anyone else). */
 export async function listEventAttendees(eventId: string): Promise<EventAttendeeInfo[]> {
-  try {
-    const { data, error } = await supabase
-      .from('event_attendees')
-      .select('user_id, ticket_code, registered_at, profiles:user_id(full_name, avatar_url, role, matric_number, department)')
-      .eq('event_id', eventId)
-      .order('registered_at', { ascending: false });
-
-    if (!error && data) {
-      return data.map((row: any) => ({
-        userId: row.user_id,
-        fullName: row.profiles?.full_name || 'Registered Student',
-        avatarUrl: row.profiles?.avatar_url,
-        role: row.profiles?.role || 'student',
-        matricNumber: row.profiles?.matric_number,
-        department: row.profiles?.department,
-        registeredAt: row.registered_at,
-        ticketCode: row.ticket_code,
-      }));
-    }
-  } catch (err) {
-    console.warn('[Events] listEventAttendees error:', err);
-  }
-  return [];
+  const { data, error } = await supabase.rpc('event_roster', { p_event: eventId });
+  if (error) throwReadable(error, 'Could not load the attendee list.');
+  return ((data ?? []) as any[]).map((row) => ({
+    userId: row.user_id,
+    fullName: row.full_name || 'Registered student',
+    avatarUrl: row.avatar_url,
+    role: row.role || 'student',
+    matricNumber: row.matric_number ?? undefined,
+    department: row.department ?? undefined,
+    registeredAt: row.registered_at,
+    ticketCode: row.ticket_code,
+    checkedInAt: row.checked_in_at ?? null,
+    purchaseConfirmedAt: row.purchase_confirmed_at ?? null,
+  }));
 }
 
 /** Administrators only: the database ignores this for anyone else, so a no-op is reported as an error. */
