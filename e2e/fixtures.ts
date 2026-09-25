@@ -102,8 +102,24 @@ export type TestUserRole = 'student' | 'alumni' | 'staff' | 'admin';
  * restores before asking Supabase to refresh the live session. Network calls
  * remain stubbed, so authenticated portal smoke tests never touch production.
  */
-export async function seedAuthenticatedSession(page: Page, role: TestUserRole) {
-  await page.addInitScript((seedRole) => {
+export async function seedAuthenticatedSession(
+  page: Page,
+  role: TestUserRole,
+  options: { currentConsent?: boolean; tutorialComplete?: boolean } = {},
+) {
+  const { currentConsent = true, tutorialComplete = true } = options;
+  // A dashboard test should inspect the dashboard, not the separate legal
+  // re-consent flow. A dedicated accessibility test covers that dialog.
+  await page.route('**/rest/v1/rpc/latest_consent', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify(currentConsent ? '2026-09-24' : null),
+    }),
+  );
+
+  await page.addInitScript(({ seedRole, hasCompletedTutorial }) => {
     const user = {
       id: `e2e-${seedRole}-user`,
       fullName: `E2E ${seedRole[0].toUpperCase()}${seedRole.slice(1)}`,
@@ -117,5 +133,8 @@ export async function seedAuthenticatedSession(page: Page, role: TestUserRole) {
     localStorage.setItem('lioris.accessToken', `e2e-${seedRole}-access-token`);
     localStorage.setItem('lioris.refreshToken', `e2e-${seedRole}-refresh-token`);
     localStorage.setItem('lioris.sessionUser', JSON.stringify(user));
-  }, role);
+    if (hasCompletedTutorial) {
+      localStorage.setItem(`lioris_nav_walkthrough_${user.id}`, 'true');
+    }
+  }, { seedRole: role, hasCompletedTutorial: tutorialComplete });
 }

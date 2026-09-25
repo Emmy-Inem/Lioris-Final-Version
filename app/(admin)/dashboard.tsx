@@ -73,8 +73,13 @@ export default function AdminOverviewScreen() {
         {/* Welcome */}
         <GlassCard radius={24} padded={false} style={{ overflow: 'hidden' }}>
           <View style={{ width: '100%', height: isDesktop ? 150 : 130, position: 'relative' }}>
-            <Image source={require('../../assets/images/hero_student_3d.jpg')} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-            <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: isDark ? 'rgba(10, 19, 38, 0.78)' : 'rgba(15, 23, 42, 0.70)' }} />
+            <Image
+              source={require('../../assets/images/hero_student_3d.jpg')}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="cover"
+              accessibilityLabel="Admin workspace banner"
+            />
+            <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: isDark ? 'rgba(10, 19, 38, 0.84)' : 'rgba(15, 23, 42, 0.82)' }} />
             <View style={{ position: 'absolute', top: 16, left: 16, right: 16, bottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

@@ -160,6 +160,7 @@ export default function AlumniDashboard() {
               source={require('../../assets/images/campus_library_study.jpg')}
               style={{ width: '100%', height: '100%' }}
               contentFit="cover"
+              accessibilityLabel="Campus library banner"
             />
             {/* Ambient Multi-Stop Gradient Overlay */}
             <LinearGradient

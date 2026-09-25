@@ -144,7 +144,8 @@ export function UnverifiedAccountNotice() {
               setModalOpen(true);
             }}
             style={({ pressed }) => ({
-              backgroundColor: pressed ? '#B45309' : '#D97706',
+              // White text needs the deeper amber to retain AA contrast.
+              backgroundColor: pressed ? '#78350F' : '#92400E',
               paddingVertical: 6,
               paddingHorizontal: 12,
               borderRadius: radius.pill,

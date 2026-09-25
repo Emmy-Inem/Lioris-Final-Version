@@ -533,7 +533,7 @@ export default function RegisterScreen() {
  <View style={{ flex: 1.1, position: 'relative', overflow: 'hidden', backgroundColor: '#0F172A', padding: spacing.xxl, justifyContent: 'space-between' }}>
  <Image
  source={require('../../assets/images/campus_students_photo.jpg')}
- alt="University students studying together"
+ accessibilityLabel="University students studying together"
  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 }}
  contentFit="cover"
  />

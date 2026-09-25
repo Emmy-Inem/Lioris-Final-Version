@@ -220,7 +220,9 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleDismiss}>
       <View
+        role="dialog"
         accessibilityViewIsModal
+        accessibilityLabel="Navigation guide"
         style={{
           flex: 1,
           backgroundColor: 'rgba(0,0,0,0.72)',
@@ -308,6 +310,7 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
               </AppText>
 
               <View
+                role={Platform.OS === 'web' ? 'tablist' : undefined}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',

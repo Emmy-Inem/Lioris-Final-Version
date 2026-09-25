@@ -118,6 +118,7 @@ export default function StaffDashboard() {
               source={require('../../assets/images/campus_students_photo.jpg')}
               style={{ width: '100%', height: '100%' }}
               contentFit="cover"
+              accessibilityLabel="Campus staff workspace banner"
             />
             <View
               style={{

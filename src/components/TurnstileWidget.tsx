@@ -201,8 +201,8 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetRef, TurnstileWidgetPro
       />
       {isVerified && (
         <View style={styles.verifiedRow}>
-          <Ionicons name="checkmark-circle" size={15} color="#10B981" />
-          <AppText variant="caption" style={{ color: '#10B981', marginLeft: 4, fontWeight: '600' }}>
+          <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+          <AppText variant="caption" style={{ color: colors.success, marginLeft: 4, fontWeight: '600' }}>
             Security verification complete
           </AppText>
         </View>

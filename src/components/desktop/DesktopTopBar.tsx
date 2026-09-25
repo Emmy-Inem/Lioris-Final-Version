@@ -172,7 +172,7 @@ export function DesktopTopBar() {
             },
           ]}
         >
-          <AppText variant="caption" style={{ fontSize: 10, color: isDark ? '#94A3B8' : '#64748B', fontWeight: 'bold' }}>
+          <AppText variant="caption" style={{ fontSize: 10, color: isDark ? '#CBD5E1' : '#475569', fontWeight: 'bold' }}>
             {isMac ? '⌘K' : 'Ctrl K'}
           </AppText>
         </View>
@@ -195,7 +195,7 @@ export function DesktopTopBar() {
  ]}
  >
  <Ionicons name="eye-outline" size={14} color={colors.textSecondary} />
- <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 11 }}>
+ <AppText variant="caption" weight="bold" style={{ fontSize: 11, color: colors.textPrimary }}>
  View: {role.toUpperCase()}
  </AppText>
  <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />

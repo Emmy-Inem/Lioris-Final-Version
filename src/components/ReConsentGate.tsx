@@ -111,6 +111,7 @@ export function ReConsentGate() {
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
         accessibilityLabel={label}
+        aria-checked={checked}
         hitSlop={8}
       >
         <Ionicons
@@ -137,6 +138,9 @@ export function ReConsentGate() {
         }}
       >
         <View
+          role="dialog"
+          accessibilityViewIsModal
+          accessibilityLabel="Updated terms and privacy consent"
           style={{
             width: '100%',
             maxWidth: 480,

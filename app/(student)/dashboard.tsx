@@ -160,7 +160,12 @@ export default function StudentDashboard() {
         >
           <View style={{ height: isDesktop ? 175 : 148, position: 'relative', width: '100%', overflow: 'hidden' }}>
             {activeCover ? (
-              <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+              <Image
+                source={activeCover}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                accessibilityLabel="Student campus workspace banner"
+              />
             ) : (
               <LinearGradient
                 colors={isDark ? ['#0d1b2a', '#1e293b', '#0f172a'] : ['#dbeafe', '#bfdbfe', '#93c5fd']}

@@ -108,7 +108,11 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
     >
       {loading && !weather ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.brandPrimary} />
+          <ActivityIndicator
+            size="small"
+            color={colors.brandPrimary}
+            accessibilityLabel="Loading live campus weather"
+          />
           <AppText variant="caption" tone="secondary" style={{ marginLeft: spacing.xs }}>
             Loading live campus weather...
           </AppText>

@@ -388,13 +388,12 @@ export function DesktopSidebar() {
                   <AppText
                     variant="caption"
                     weight="bold"
-                    tone="secondary"
-                    style={{ fontSize: 9, textTransform: 'capitalize' }}
+                    style={{ fontSize: 9, textTransform: 'capitalize', color: colors.textPrimary }}
                   >
                     {role}
                   </AppText>
                 </View>
-                <AppText variant="caption" tone="secondary" style={{ fontSize: 10.5, flex: 1, minWidth: 0 }}>
+                <AppText variant="caption" style={{ fontSize: 10.5, flex: 1, minWidth: 0, color: colors.textPrimary }}>
                   {profile?.department || 'Member'}
                 </AppText>
               </View>
