@@ -2,7 +2,7 @@
 
 on:
   push:
-    branches: [main]          # Web deploy on every merge to main
+    branches: [main]          # Web deploy + mobile OTA update on every merge to main
   workflow_dispatch:
     inputs:
       mobile_release:
@@ -78,15 +78,22 @@ jobs:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 2 — Mobile OTA: Expo Updates publish to the production channel
-# Pushes an over-the-air update only after an explicit manual selection.
-# Normal pushes to main never publish mobile code.
-# Requires repository secret: EXPO_TOKEN
+# Every push to main publishes the new JavaScript to installed Android/iOS apps that were built with expo-updates
+# and carry the same runtime version (`version` in app.config.ts). It runs only after the web deploy succeeded and
+# after typecheck, unit tests and the native runtime guard pass on the exact commit being published. Native changes
+# cannot travel over the air: the guard fails until `version` is bumped and a new store build is made.
+# Can also be started by hand (mobile_release = ota). Requires repository secret: EXPO_TOKEN
+# See docs/operations/mobile-releases.md.
 # ─────────────────────────────────────────────────────────────────────────────
   publish-ota:
     name: Publish OTA Update → Expo (production channel)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: github.event_name == 'workflow_dispatch' && inputs.mobile_release == 'ota'
+    timeout-minutes: 20
+    needs: deploy-web
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.mobile_release == 'ota'))
 
     steps:
       - name: Checkout repository
@@ -101,23 +108,35 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Native runtime guard (OTA safety)
+        run: npm run native-runtime
+
       - name: Install EAS CLI
         run: npm install --global eas-cli@latest
 
       - name: Publish Expo update (production channel)
         run: |
-          eas update \
-            --branch production \
-            --channel production \
-            --message "OTA: ${{ github.sha }} — ${{ github.event.head_commit.message }}" \
-            --non-interactive
+          set -euo pipefail
+          # Installed apps ask the "production" channel (eas.json + app.config.ts). Create it, and the branch it
+          # follows, the first time; afterwards this is a no-op.
+          eas channel:view production --non-interactive > /dev/null 2>&1 || eas channel:create production --non-interactive
+          MESSAGE="OTA ${GITHUB_SHA::7}: $(git log -1 --format=%s)"
+          eas update --branch production --environment production --message "$MESSAGE" --non-interactive
           echo "### OTA Update" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Channel:** production" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Commit:** \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Message:** ${{ github.event.head_commit.message }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Commit:** \`$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Message:** $MESSAGE" >> "$GITHUB_STEP_SUMMARY"
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_ENV: production
+          EAS_SKIP_AUTO_FINGERPRINT: '1'
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
 

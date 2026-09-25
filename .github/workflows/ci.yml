@@ -45,6 +45,11 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # Fails when native modules or native config change without a new app `version`, because over-the-air
+      # updates cannot carry native changes (docs/operations/mobile-releases.md).
+      - name: Native runtime guard (OTA safety)
+        run: npm run native-runtime
+
       - name: Install SQL migration harness
         run: npm ci --prefix tools/sql-harness
 

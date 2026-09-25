@@ -9,12 +9,25 @@ const APP_ENV = process.env.APP_ENV ?? 'production';
 // so a locally signed debug build never has to replace the release install.
 const IS_DEV = APP_ENV === 'development';
 
+const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? 'a30e59bc-4050-4706-8844-e4cb9d879c37';
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: IS_DEV ? 'Lioris Dev' : 'Lioris',
   slug: 'lioris',
   scheme: 'lioris',
   version: '1.0.0',
+  // Over-the-air updates (expo-updates). An update is only delivered to installs with the same runtime version, so
+  // `version` must change whenever native code does (new/upgraded native module, plugin or permission change);
+  // `npm run native-runtime` fails CI until it does. See docs/operations/mobile-releases.md.
+  runtimeVersion: { policy: 'appVersion' },
+  updates: {
+    url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+    // The side-by-side dev build loads JS from Metro, never from the update server.
+    enabled: !IS_DEV,
+    // Also set by `channel` in eas.json for EAS builds; local Gradle/Xcode builds only see this.
+    requestHeaders: { 'expo-channel-name': APP_ENV === 'staging' ? 'preview' : 'production' },
+  },
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   userInterfaceStyle: 'automatic', // supports Light + Dark mode, per PRD section 8 (Themes)
@@ -118,7 +131,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     appEnv: APP_ENV,
     eas: {
-      projectId: process.env.EAS_PROJECT_ID ?? 'a30e59bc-4050-4706-8844-e4cb9d879c37',
+      projectId: EAS_PROJECT_ID,
     },
   },
   experiments: {
