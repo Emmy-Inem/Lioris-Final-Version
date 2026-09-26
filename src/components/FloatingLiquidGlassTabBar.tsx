@@ -240,7 +240,7 @@ function FloatingLiquidGlassTabBarView({
     return options.tabBarButton === undefined && (options as any).href !== null;
   });
 
-  const bottomInset = Platform.OS === 'web' ? 18 : Math.max(18, (safeAreaInsets?.bottom ?? 0) + 6);
+  const bottomInset = Platform.OS === 'web' ? Math.max(18, (safeAreaInsets?.bottom ?? 0) + 12) : Math.max(18, (safeAreaInsets?.bottom ?? 0) + 6);
 
   const activeRoute = state.routes[state.index];
   // A page that lives inside a tab's group (e.g. Support inside People) names that tab with the
@@ -353,7 +353,12 @@ function FloatingLiquidGlassTabBarView({
 
   return (
     <View
-      style={[styles.floatingWrapper, { bottom: bottomInset }]}
+      {...({ dataSet: { component: 'floating-tab-bar-wrapper' } } as any)}
+      style={[
+        styles.floatingWrapper,
+        { bottom: bottomInset },
+        Platform.OS === 'web' && ({ bottom: 'calc(18px + env(safe-area-inset-bottom, 0px))' } as any),
+      ]}
       pointerEvents="box-none"
       accessibilityRole="tablist"
       accessibilityLabel="Main navigation"

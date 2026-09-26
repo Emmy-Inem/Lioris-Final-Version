@@ -11,6 +11,7 @@ import { PostCard } from './PostCard';
 import { EventCard } from './EventCard';
 import { ResourceCard } from './ResourceCard';
 import { ResourceReaderModal } from './ResourceReaderModal';
+import { ReportResourceModal } from './ReportResourceModal';
 import { Resource } from '@/api/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -31,6 +32,7 @@ export function SearchScreen() {
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<SearchTab>('posts');
   const [readingResource, setReadingResource] = useState<Resource | null>(null);
+  const [reportingResource, setReportingResource] = useState<Resource | null>(null);
   const trimmed = query.trim();
   const debouncedTrimmed = useDebouncedValue(trimmed);
 
@@ -142,7 +144,7 @@ export function SearchScreen() {
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
             {(resources ?? []).map((item) => (
               <View key={item.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : { marginBottom: spacing.sm }}>
-                <ResourceCard resource={item} onPreview={setReadingResource} />
+                <ResourceCard resource={item} onPreview={setReadingResource} onReport={setReportingResource} />
               </View>
             ))}
           </View>
@@ -157,6 +159,13 @@ export function SearchScreen() {
         resource={readingResource}
         onClose={() => setReadingResource(null)}
       />
+      {reportingResource && (
+        <ReportResourceModal
+          visible={!!reportingResource}
+          resource={reportingResource}
+          onClose={() => setReportingResource(null)}
+        />
+      )}
     </ScreenContainer>
   );
 }

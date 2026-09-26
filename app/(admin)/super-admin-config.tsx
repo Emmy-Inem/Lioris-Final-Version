@@ -147,7 +147,7 @@ export default function CampusesAndSecurityScreen() {
       </View>
 
       <ScrollView
-        style={{ flex: 1, width: '100%' }}
+        style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled

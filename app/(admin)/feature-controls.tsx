@@ -47,7 +47,7 @@ export default function AdminFeatureControlsScreen() {
       <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
         <AdminSectionTabs group="platform" />
       </View>
-      <ScrollView style={{ flex: 1, width: '100%' }}
+      <ScrollView style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled

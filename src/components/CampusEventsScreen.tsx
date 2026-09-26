@@ -75,19 +75,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const desktopFiltersScrollRef = useRef<ScrollView>(null);
   const isInteracting = useRef(false);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const node = (desktopFiltersScrollRef.current as any)?.getScrollableNode?.() || (desktopFiltersScrollRef.current as any);
-    if (!node) return;
-    const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && node.scrollWidth > node.clientWidth) {
-        e.preventDefault();
-        node.scrollLeft += e.deltaY;
-      }
-    };
-    node.addEventListener('wheel', handleWheel, { passive: false });
-    return () => node.removeEventListener('wheel', handleWheel);
-  }, []);
+
 
   const queryScope: EventsQuery['scope'] = isAlumniScope ? 'alumni' : (scope ?? 'student');
 
@@ -493,6 +481,9 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          windowSize={7}
           renderItem={({ item }) => (
             <Animated.View entering={FadeInUp.duration(200)}>
               <View style={{ marginBottom: 12 }}>

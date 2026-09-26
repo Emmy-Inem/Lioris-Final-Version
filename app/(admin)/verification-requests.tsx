@@ -411,7 +411,7 @@ export default function VerificationRequestsScreen() {
       <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
         <AdminSectionTabs group="people" badges={{ verification: adminBadges.verification, support: adminBadges.support }} />
       </View>
-      <ScrollView style={{ flex: 1, width: '100%' }}
+      <ScrollView style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled

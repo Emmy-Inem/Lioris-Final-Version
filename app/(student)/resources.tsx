@@ -28,6 +28,7 @@ import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 import { AcademicLibraryModal } from '@/components/AcademicLibraryModal';
 import { ResearchPapersModal } from '@/components/ResearchPapersModal';
 import { ResourceReaderModal } from '@/components/ResourceReaderModal';
+import { ReportResourceModal } from '@/components/ReportResourceModal';
 import { useResourceBookmarks } from '@/utils/resourceBookmarks';
 import { Resource } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -60,51 +61,21 @@ export default function ResourcesScreen() {
   const queryClient = useQueryClient();
   const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>('CURRENT');
   const [query, setQuery] = useState('');
- const debouncedQuery = useDebouncedValue(query);
- const [uploadModalOpen, setUploadModalOpen] = useState(false);
- const [adminManageOpen, setAdminManageOpen] = useState(false);
- const [filterModalOpen, setFilterModalOpen] = useState(false);
- const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
+  const debouncedQuery = useDebouncedValue(query);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [adminManageOpen, setAdminManageOpen] = useState(false);
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
   const [libraryModalOpen, setLibraryModalOpen] = useState(false);
   const [researchModalOpen, setResearchModalOpen] = useState(false);
   const [readingResource, setReadingResource] = useState<Resource | null>(null);
+  const [reportingResource, setReportingResource] = useState<Resource | null>(null);
   const { isFeatureEnabled } = useFeatureFlags();
-  const { bookmarkedIds } = useResourceBookmarks();
+  const { bookmarkedIds, toggleBookmark } = useResourceBookmarks();
 
-  // Desktop horizontal scroll refs & wheel handlers
+  // Desktop horizontal scroll refs
   const portalsScrollRef = useRef<ScrollView>(null);
   const categoriesScrollRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    const portalNode = (portalsScrollRef.current as any)?.getScrollableNode?.() || (portalsScrollRef.current as any);
-    const handlePortalWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && portalNode && portalNode.scrollWidth > portalNode.clientWidth) {
-        e.preventDefault();
-        portalNode.scrollLeft += e.deltaY;
-      }
-    };
-    if (portalNode) {
-      portalNode.addEventListener('wheel', handlePortalWheel, { passive: false });
-    }
-
-    const catNode = (categoriesScrollRef.current as any)?.getScrollableNode?.() || (categoriesScrollRef.current as any);
-    const handleCatWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && catNode && catNode.scrollWidth > catNode.clientWidth) {
-        e.preventDefault();
-        catNode.scrollLeft += e.deltaY;
-      }
-    };
-    if (catNode) {
-      catNode.addEventListener('wheel', handleCatWheel, { passive: false });
-    }
-
-    return () => {
-      if (portalNode) portalNode.removeEventListener('wheel', handlePortalWheel);
-      if (catNode) catNode.removeEventListener('wheel', handleCatWheel);
-    };
-  }, []);
 
   const scrollPortals = (direction: 'left' | 'right') => {
     const node = (portalsScrollRef.current as any)?.getScrollableNode?.() || (portalsScrollRef.current as any);
@@ -1038,7 +1009,20 @@ export default function ResourcesScreen() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {displayedResources.map((res) => (
               <View key={res.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
-                <ResourceCard resource={res} onPreview={setReadingResource} />
+                <ResourceCard
+                  resource={res}
+                  onPreview={setReadingResource}
+                  isBookmarked={bookmarkedIds.includes(res.id)}
+                  onToggleBookmark={async () => {
+                    const added = await toggleBookmark(res.id);
+                    if (added) {
+                      toast.success(`Bookmarked "${res.title}"`);
+                    } else {
+                      toast.info(`Removed "${res.title}" from bookmarks`);
+                    }
+                  }}
+                  onReport={setReportingResource}
+                />
               </View>
             ))}
           </View>
@@ -1063,7 +1047,22 @@ export default function ResourcesScreen() {
           initialNumToRender={8}
           maxToRenderPerBatch={8}
           contentContainerStyle={{ paddingBottom: 130 }}
-          renderItem={({ item }) => <ResourceCard resource={item} onPreview={setReadingResource} />}
+          renderItem={({ item }) => (
+            <ResourceCard
+              resource={item}
+              onPreview={setReadingResource}
+              isBookmarked={bookmarkedIds.includes(item.id)}
+              onToggleBookmark={async () => {
+                const added = await toggleBookmark(item.id);
+                if (added) {
+                  toast.success(`Bookmarked "${item.title}"`);
+                } else {
+                  toast.info(`Removed "${item.title}" from bookmarks`);
+                }
+              }}
+              onReport={setReportingResource}
+            />
+          )}
           showsVerticalScrollIndicator={false}
           onRefresh={refetch}
           refreshing={isRefetching}
@@ -1098,6 +1097,13 @@ export default function ResourcesScreen() {
         resource={readingResource}
         onClose={() => setReadingResource(null)}
       />
+      {reportingResource && (
+        <ReportResourceModal
+          visible={!!reportingResource}
+          resource={reportingResource}
+          onClose={() => setReportingResource(null)}
+        />
+      )}
     </ScreenContainer>
   );
 }

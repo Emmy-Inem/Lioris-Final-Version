@@ -201,7 +201,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  }
 
   return (
-    <View>
+    <View style={{ flex: 1, minHeight: 0 }}>
       {/* Target Type Filter Bar */}
       <View style={{ marginBottom: spacing.md }}>
         <ChipSelect options={TARGET_FILTERS} selected={[filterType]} onToggle={setFilterType} />
@@ -267,6 +267,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         </ScrollView>
       ) : (
         <FlatList
+          style={{ flex: 1, minHeight: 0 }}
           data={filteredReports}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}

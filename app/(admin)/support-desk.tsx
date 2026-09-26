@@ -337,6 +337,7 @@ export default function SupportDeskScreen() {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1, minHeight: 0 }}
           data={tickets ?? []}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}

@@ -162,19 +162,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // Desktop horizontal channels scrolling ref & wheel listener
   const desktopChannelsScrollRef = useRef<ScrollView>(null);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const node = (desktopChannelsScrollRef.current as any)?.getScrollableNode?.() || (desktopChannelsScrollRef.current as any);
-    if (!node) return;
-    const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && node.scrollWidth > node.clientWidth) {
-        e.preventDefault();
-        node.scrollLeft += e.deltaY;
-      }
-    };
-    node.addEventListener('wheel', handleWheel, { passive: false });
-    return () => node.removeEventListener('wheel', handleWheel);
-  }, []);
+
 
   const scrollDesktopChannels = (direction: 'left' | 'right') => {
     const node = (desktopChannelsScrollRef.current as any)?.getScrollableNode?.() || (desktopChannelsScrollRef.current as any);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
@@ -8,34 +8,55 @@ import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Resource } from '@/api/types';
 import { trackResourceDownload, toggleResourceUpvote } from '@/api/resources';
-import { useResourceBookmarks } from '@/utils/resourceBookmarks';
+import { isResourceBookmarked, toggleResourceBookmark } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { ReportResourceModal } from './ReportResourceModal';
 
-export function ResourceCard({
-  resource,
-  onPreview,
-}: {
+export interface ResourceCardProps {
   resource: Resource;
   onPreview?: (resource: Resource) => void;
-}) {
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
+  onReport?: (resource: Resource) => void;
+}
+
+export const ResourceCard = React.memo(function ResourceCard({
+  resource,
+  onPreview,
+  isBookmarked: externalBookmarked,
+  onToggleBookmark: externalToggleBookmark,
+  onReport,
+}: ResourceCardProps) {
   const { colors, spacing, radius } = useTheme();
   const toast = useToast();
-  const { isBookmarked, toggleBookmark } = useResourceBookmarks();
-  const bookmarked = isBookmarked(resource.id);
+
+  const [internalBookmarked, setInternalBookmarked] = useState(() => isResourceBookmarked(resource.id));
+  const bookmarked = externalBookmarked !== undefined ? externalBookmarked : internalBookmarked;
 
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [upvoted, setUpvoted] = useState(false);
   const [upvotes, setUpvotes] = useState(resource.likesCount);
+  const [upvoting, setUpvoting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+
+  useEffect(() => {
+    if (externalBookmarked === undefined) {
+      setInternalBookmarked(isResourceBookmarked(resource.id));
+    }
+  }, [resource.id, externalBookmarked]);
 
   async function handleToggleBookmark() {
     haptics.medium();
-    const added = await toggleBookmark(resource.id);
+    if (externalToggleBookmark) {
+      externalToggleBookmark();
+      return;
+    }
+    const added = await toggleResourceBookmark(resource.id);
+    setInternalBookmarked(added);
     if (added) {
       toast.success(`Bookmarked "${resource.title}"`);
     } else {
@@ -44,6 +65,7 @@ export function ResourceCard({
   }
 
   async function handleDownload() {
+    if (downloading) return;
     haptics.light();
     setDownloading(true);
     try {
@@ -67,11 +89,26 @@ export function ResourceCard({
   }
 
   function handleToggleUpvote() {
+    if (upvoting) return;
+    setUpvoting(true);
     haptics.light();
     const nextUpvoted = !upvoted;
     setUpvoted(nextUpvoted);
-    setUpvotes(upvotes + (nextUpvoted ? 1 : -1));
-    toggleResourceUpvote(resource.id, nextUpvoted).catch(() => {});
+    setUpvotes((prev) => prev + (nextUpvoted ? 1 : -1));
+    toggleResourceUpvote(resource.id, nextUpvoted)
+      .catch(() => {})
+      .finally(() => {
+        setUpvoting(false);
+      });
+  }
+
+  function handleOpenReport() {
+    haptics.light();
+    if (onReport) {
+      onReport(resource);
+    } else {
+      setReportOpen(true);
+    }
   }
 
   return (
@@ -161,10 +198,7 @@ export function ResourceCard({
             </AppText>
           </Pressable>
           <Pressable
-            onPress={() => {
-              haptics.light();
-              setReportOpen(true);
-            }}
+            onPress={handleOpenReport}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Report this resource or request its removal"
@@ -193,7 +227,9 @@ export function ResourceCard({
           </View>
         </View>
       </View>
-      <ReportResourceModal visible={reportOpen} resource={resource} onClose={() => setReportOpen(false)} />
+      {!onReport && reportOpen && (
+        <ReportResourceModal visible={reportOpen} resource={resource} onClose={() => setReportOpen(false)} />
+      )}
     </SolidCard>
   );
-}
+});

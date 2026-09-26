@@ -90,7 +90,15 @@ export default function RootLayout() {
             will-change: backdrop-filter, -webkit-backdrop-filter !important;
           }
 
+          [data-component="floating-tab-bar-wrapper"] {
+            bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+
           /* Universal Clean Layout & Mobile Touch Optimization */
+          *, *::before, *::after {
+            -webkit-tap-highlight-color: transparent !important;
+          }
+
           html, body, #root {
             height: 100% !important;
             width: 100% !important;
@@ -104,7 +112,7 @@ export default function RootLayout() {
             touch-action: pan-y !important;
           }
 
-          /* Horizontal scroll containers: smooth touch scroll & horizontal pan */
+          /* Horizontal scroll containers: smooth touch scroll & horizontal pan without blocking vertical touch */
           div[style*="overflow-x: auto"],
           div[style*="overflow-x: scroll"],
           .r-overflowX-156q2ks,
@@ -112,7 +120,7 @@ export default function RootLayout() {
           [data-horizontal-scroll="true"] {
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-x: contain !important;
-            touch-action: pan-x !important;
+            touch-action: pan-x pan-y !important;
             display: flex !important;
           }
 
@@ -169,26 +177,19 @@ export default function RootLayout() {
           return;
         }
 
-        // Find best scroll container
-        let targetContainer: HTMLElement | null = null;
-        const allScrollables = Array.from(document.querySelectorAll('*')).filter((el) => {
-          const htmlEl = el as HTMLElement;
-          const style = window.getComputedStyle(htmlEl);
-          return (
-            (style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflow === 'auto' || style.overflow === 'scroll') &&
-            htmlEl.scrollHeight > htmlEl.clientHeight &&
-            htmlEl.clientHeight > 150
-          );
-        }) as HTMLElement[];
+        // Fast target lookup without forcing synchronous style recalculation across all DOM elements
+        const targetContainer =
+          (document.activeElement?.closest('div[style*="overflow-y: auto"], div[style*="overflow-y: scroll"], .r-overflowY-156q2ks') as HTMLElement) ||
+          (document.querySelector('div[style*="overflow-y: auto"], div[style*="overflow-y: scroll"], .r-overflowY-156q2ks') as HTMLElement) ||
+          (document.scrollingElement as HTMLElement);
 
-        targetContainer = allScrollables[allScrollables.length - 1] || null;
         if (!targetContainer) return;
 
         let deltaY = 0;
         if (e.key === 'ArrowDown') deltaY = 120;
         else if (e.key === 'ArrowUp') deltaY = -120;
-        else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey) || (e.key === 'Space' && !e.shiftKey)) deltaY = targetContainer.clientHeight * 0.85;
-        else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey) || (e.key === 'Space' && e.shiftKey)) deltaY = -targetContainer.clientHeight * 0.85;
+        else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey) || (e.key === 'Space' && !e.shiftKey)) deltaY = (targetContainer.clientHeight || window.innerHeight) * 0.85;
+        else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey) || (e.key === 'Space' && e.shiftKey)) deltaY = -(targetContainer.clientHeight || window.innerHeight) * 0.85;
         else if (e.key === 'Home') {
           e.preventDefault();
           targetContainer.scrollTo({ top: 0, behavior: 'smooth' });
@@ -205,50 +206,9 @@ export default function RootLayout() {
         }
       };
 
-      // Finding the main scroll area means style-checking every element on the page; doing that on
-      // each wheel tick made desktop scrolling stutter on busy screens, so the result is reused
-      // while it is still attached and scrollable.
-      let cachedMainScrollable: HTMLElement | null = null;
-      const handleGlobalWheel = (e: WheelEvent) => {
-        const target = e.target as HTMLElement;
-        if (!target) return;
-        let el: HTMLElement | null = target;
-        let canScroll = false;
-        while (el && el !== document.body && el !== document.documentElement) {
-          const style = window.getComputedStyle(el);
-          if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
-            canScroll = true;
-            break;
-          }
-          el = el.parentElement;
-        }
-        if (!canScroll) {
-          const stillValid =
-            cachedMainScrollable &&
-            cachedMainScrollable.isConnected &&
-            cachedMainScrollable.scrollHeight > cachedMainScrollable.clientHeight;
-          if (!stillValid) {
-            cachedMainScrollable = (Array.from(document.querySelectorAll('*')).find((el) => {
-              const htmlEl = el as HTMLElement;
-              const style = window.getComputedStyle(htmlEl);
-              return (
-                (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
-                htmlEl.scrollHeight > htmlEl.clientHeight &&
-                htmlEl.clientHeight > 250
-              );
-            }) as HTMLElement | undefined) ?? null;
-          }
-          if (cachedMainScrollable) {
-            cachedMainScrollable.scrollTop += e.deltaY;
-          }
-        }
-      };
-
       window.addEventListener('keydown', handleGlobalKeyboardScroll, { passive: false });
-      window.addEventListener('wheel', handleGlobalWheel, { passive: true });
       return () => {
         window.removeEventListener('keydown', handleGlobalKeyboardScroll);
-        window.removeEventListener('wheel', handleGlobalWheel);
       };
     }
   }, []);

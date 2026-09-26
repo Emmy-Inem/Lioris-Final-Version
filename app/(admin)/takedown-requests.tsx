@@ -119,6 +119,7 @@ export default function TakedownRequestsScreen() {
         </SolidCard>
       ) : (
         <FlatList
+          style={{ flex: 1, minHeight: 0 }}
           data={data ?? []}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}

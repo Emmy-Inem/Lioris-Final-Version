@@ -195,7 +195,11 @@ export default function SystemHealthScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.md }}>
+      <ScrollView
+        style={{ flex: 1, width: '100%', minHeight: 0 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.md }}
+      >
         {/* Connection Status Card */}
         <SolidCard frosted style={{ padding: spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>

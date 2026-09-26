@@ -41,19 +41,7 @@ export default function MarketplaceScreen() {
 
  const categoriesScrollRef = useRef<ScrollView>(null);
 
- useEffect(() => {
-   if (Platform.OS !== 'web') return;
-   const node = (categoriesScrollRef.current as any)?.getScrollableNode?.() || (categoriesScrollRef.current as any);
-   if (!node) return;
-   const handleWheel = (e: WheelEvent) => {
-     if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && node.scrollWidth > node.clientWidth) {
-       e.preventDefault();
-       node.scrollLeft += e.deltaY;
-     }
-   };
-   node.addEventListener('wheel', handleWheel, { passive: false });
-   return () => node.removeEventListener('wheel', handleWheel);
- }, []);
+
 
  const { data: listings, isLoading } = useQuery({
  queryKey: ['marketplace', debouncedQuery, category, condition, campusCode],

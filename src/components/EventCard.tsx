@@ -31,7 +31,7 @@ function parseEventDate(startAt: string) {
  return { month, day, time };
 }
 
-export function EventCard({ event }: { event: CampusEvent }) {
+export const EventCard = React.memo(function EventCard({ event }: { event: CampusEvent }) {
  const { colors, spacing, radius } = useTheme();
  const queryClient = useQueryClient();
  const segments = useSegments();
@@ -292,7 +292,8 @@ export function EventCard({ event }: { event: CampusEvent }) {
   </SolidCard>
 </Animated.View>
 
- <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
+ {menuOpen && (
+  <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
  <Pressable
  onPress={handleReport}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
@@ -329,6 +330,7 @@ export function EventCard({ event }: { event: CampusEvent }) {
  <AppText style={{ color: colors.critical }} weight="medium">Block Organizer</AppText>
  </Pressable>
  </ActionSheetModal>
+      )}
  </View>
  );
-}
+});

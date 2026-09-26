@@ -107,7 +107,8 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     const { data, error } = await supabase
       .from('resources')
       .select('*, profiles:uploader_id(full_name, role, avatar_url, department)')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (error) throw error;
 
     const dbResources: Resource[] = (data ?? [])

@@ -83,7 +83,7 @@ interface PostCardProps {
   canModerateCommunity?: boolean;
 }
 
-export function PostCard({ post, canModerateCommunity = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, canModerateCommunity = false }: PostCardProps) {
  const { colors, spacing, radius, isDark } = useTheme();
  const insets = useSafeAreaInsets();
  const { user } = useAuth();
@@ -542,6 +542,7 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  </View>
 
  {/* Action Sheet Menu Modal */}
+      {menuOpen && (
  <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
  <Pressable
  onPress={() => {
@@ -645,8 +646,10 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  <AppText style={{ color: colors.critical }} weight="medium">Block {post.authorName}</AppText>
  </Pressable>
  </ActionSheetModal>
+      )}
 
       {/* Report Modal */}
+      {reportOpen && (
       <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>
         <KeyboardAvoidingView accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -702,6 +705,7 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
           </SolidCard>
         </KeyboardAvoidingView>
       </Modal>
+      )}
 
  {/* User Profile Modal Inspector */}
  {inspectUser ? (
@@ -717,12 +721,14 @@ export function PostCard({ post, canModerateCommunity = false }: PostCardProps) 
  ) : null}
 
  {/* Full-Screen Image / Media Lightbox Modal */}
+      {lightboxOpen && (
  <ImageViewerModal
  visible={lightboxOpen}
  onClose={() => setLightboxOpen(false)}
  imageSource={lightboxMedia}
  caption={lightboxCaption}
  />
+      )}
  </SolidCard>
  );
-}
+});

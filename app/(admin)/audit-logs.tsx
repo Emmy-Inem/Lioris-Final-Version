@@ -181,6 +181,7 @@ export default function AuditLogsScreen() {
       </View>
 
       <FlatList
+        style={{ flex: 1, minHeight: 0 }}
         data={filtered}
         keyExtractor={(item) => item.id}
         key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}

@@ -871,7 +871,7 @@ export default function UserDirectoryScreen() {
       {loading && users.length === 0 ? (
         <ShimmerCardList count={isDesktop ? 6 : 4} />
       ) : isDesktop ? (
-        <View style={{ flexDirection: 'row', gap: 24, flex: 1, alignItems: 'flex-start' }}>
+        <View style={{ flexDirection: 'row', gap: 24, flex: 1, minHeight: 0, alignItems: 'stretch' }}>
           {/* Left Column: Search & Filters Rail */}
           <View style={{ width: 280, gap: spacing.md }}>
             <SolidCard radius={20} style={{ padding: spacing.md, gap: spacing.sm }}>
@@ -952,8 +952,9 @@ export default function UserDirectoryScreen() {
           </View>
 
           {/* Right Column: User Cards Grid */}
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, minHeight: 0 }}>
             <FlatList
+              style={{ flex: 1, minHeight: 0 }}
               data={filtered}
               keyExtractor={(item) => item.id}
               numColumns={2}
@@ -1042,6 +1043,7 @@ export default function UserDirectoryScreen() {
           </View>
 
           <FlatList
+            style={{ flex: 1, minHeight: 0 }}
             data={filtered}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
