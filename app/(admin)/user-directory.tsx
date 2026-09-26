@@ -39,6 +39,17 @@ import { AuditLogEntry } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { useAuth } from '@/auth/AuthContext';
 
+
+function formatRelativeTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return 'Never';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 60_000) return 'Just now';
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 interface DirectoryUser {
  id: string;
  fullName: string;
@@ -52,6 +63,9 @@ interface DirectoryUser {
  isVerified: boolean;
  trustScore: number;
  joinedDate: string;
+  lastActiveAt?: string | null;
+  lastLoginAt?: string | null;
+  isBot?: boolean;
 }
 
 /**
@@ -106,6 +120,7 @@ export default function UserDirectoryScreen() {
  const [query, setQuery] = useState('');
  const [role, setRole] = useState('All Roles');
  const [campus, setCampus] = useState(ALL_CAMPUSES);
+  const [botFilter, setBotFilter] = useState<'all' | 'real_only' | 'bots_only'>('all');
  const [users, setUsers] = useState<DirectoryUser[]>([]);
  const [loading, setLoading] = useState(true);
  const [loadError, setLoadError] = useState<string | null>(null);
@@ -308,7 +323,8 @@ export default function UserDirectoryScreen() {
  u.email.toLowerCase().includes(query.toLowerCase()) ||
  u.matricNo.toLowerCase().includes(query.toLowerCase()) ||
  u.department.toLowerCase().includes(query.toLowerCase());
- return matchesRole && matchesCampus && matchesQuery;
+ const matchesBot = botFilter === 'all' ? true : botFilter === 'real_only' ? !u.isBot : u.isBot;
+  return matchesRole && matchesCampus && matchesBot && matchesQuery;
  });
 
  async function handleCreateUser() {

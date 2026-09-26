@@ -1143,6 +1143,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260925130000_normalise_tags_keep_first.sql',
   'supabase/migrations/20260925140000_paid_events.sql',
   'supabase/migrations/20260926150000_seed_campus_community_bots.sql',
+  'supabase/migrations/20260926160000_admin_analytics_and_activity.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1512,6 +1513,48 @@ console.log('\n== community bot personas ==');
       eq(unilagCount, 7, '7 UNILAG posts');
       const funaabCount = (await c.q("SELECT count(*)::int n FROM public.posts WHERE id::text LIKE '00000000-0000-4000-b000-%' AND campus_code = 'FUNAAB'")).rows[0].n;
       eq(funaabCount, 6, '6 FUNAAB posts');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// admin analytics & user activity monitoring (20260926160000_admin_analytics_and_activity.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== admin analytics & user activity monitoring ==');
+{
+  await check('marks 20 seeded bots with is_bot = true and regular users with is_bot = false', async () => {
+    await as('postgres', async (c) => {
+      const botCount = (await c.q("SELECT count(*)::int n FROM public.profiles WHERE is_bot = true")).rows[0].n;
+      eq(botCount, 20, '20 bots flagged');
+      const nonBot = (await c.q("SELECT is_bot FROM public.profiles WHERE id = $1", [U.s1])).rows[0].is_bot;
+      eq(nonBot, false, 'real user is_bot is false');
+    });
+  });
+
+  await check('record_user_activity updates last_active_at, last_login_at on session_start, and records event', async () => {
+    await as(U.s1, async (c) => {
+      await c.q("SELECT public.record_user_activity('session_start', 'app_open', 'UNILAG', '{\"source\":\"web\"}'::jsonb)");
+      const profile = (await c.su("SELECT last_active_at, last_login_at FROM public.profiles WHERE id = $1", [U.s1])).rows[0];
+      assert(profile.last_active_at != null, 'last_active_at set');
+      assert(profile.last_login_at != null, 'last_login_at set');
+
+      await c.q("SELECT public.record_user_activity('page_view', '/feed', 'UNILAG')");
+      await c.q("SELECT public.record_user_activity('feature_use', 'vote_poll', 'UNILAG')");
+    });
+  });
+
+  await check('get_admin_analytics_summary enforces admin role and aggregates real metrics', async () => {
+    await as(U.s1, async (c) => {
+      denied(await c.t("SELECT public.get_admin_analytics_summary(30)"), /admin_required/, 'student forbidden');
+    });
+
+    await as(U.adminA, async (c) => {
+      const res = (await c.q("SELECT public.get_admin_analytics_summary(30) AS data")).rows[0].data;
+      assert(res.total_users >= 20, 'total users counted');
+      eq(res.bot_users, 20, '20 bots counted');
+      assert(Array.isArray(res.most_visited_pages), 'most visited pages array');
+      assert(Array.isArray(res.most_used_features), 'most used features array');
+      assert(Array.isArray(res.campus_metrics), 'campus metrics array');
     });
   });
 }

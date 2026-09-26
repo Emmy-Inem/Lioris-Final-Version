@@ -36,7 +36,10 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     key: 'overview',
     label: 'Overview',
     icon: 'grid-outline',
-    sections: [{ key: 'overview', label: 'Overview', route: '/(admin)/dashboard', path: '/dashboard' }],
+    sections: [
+      { key: 'overview', label: 'Overview', route: '/(admin)/dashboard', path: '/dashboard' },
+      { key: 'analytics', label: 'Analytics & Activity', route: '/(admin)/analytics', path: '/analytics' },
+    ],
   },
   {
     key: 'people',

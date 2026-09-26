@@ -30,6 +30,7 @@ import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { GuestTeaserBanner } from './GuestTeaserBanner';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { useForumScope } from '@/hooks/useForumScope';
+import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
@@ -78,6 +79,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // The Forum's own campus/global toggle. With the admin's Global toggle off it is always
   // 'campus' (never even a stale 'global' on first render) and the Global controls are hidden.
   const { scope: viewScope, setScope: setViewScope, globalEnabled: globalWorkspaceEnabled } = useForumScope();
+  const { showBots, toggleBotVisibility } = useBotVisibility();
 
   const params = useLocalSearchParams<{ category?: string }>();
   const toast = useToast();
@@ -278,17 +280,18 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     }
   }
 
- const { data: rawPosts, isLoading, refetch, isRefetching } = useQuery({
- queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel],
- queryFn: () =>
- listFeedPosts({
- scope,
- q: debouncedQuery || undefined,
- viewScope,
- viewerInstitutionCode,
- category: selectedChannel === 'Polls' ? undefined : selectedChannel ?? undefined,
- }),
- });
+  const { data: rawPosts, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel, showBots],
+    queryFn: () =>
+      listFeedPosts({
+        scope,
+        q: debouncedQuery || undefined,
+        viewScope,
+        viewerInstitutionCode,
+        category: selectedChannel === 'Polls' ? undefined : selectedChannel ?? undefined,
+        showBots,
+      }),
+  });
 
  const handleRefresh = async () => {
    if (manualRefreshing) return;
@@ -486,6 +489,39 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           <Ionicons name="swap-vertical" size={14} color={colors.textSecondary} />
           <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 11 }}>
             {sortBy === 'latest' ? 'Latest' : 'Helpful'}
+          </AppText>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            toggleBotVisibility();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Bot accounts: ${showBots ? 'Shown' : 'Hidden'}`}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            borderWidth: 1,
+            borderColor: showBots ? colors.border : colors.brandPrimary,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            height: 40,
+            backgroundColor: showBots ? colors.surface : (isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF'),
+          }}
+        >
+          <Ionicons
+            name={showBots ? 'sparkles' : 'sparkles-outline'}
+            size={14}
+            color={showBots ? colors.textSecondary : colors.brandPrimary}
+          />
+          <AppText
+            variant="caption"
+            weight="semiBold"
+            tone={showBots ? 'secondary' : 'brand'}
+            style={{ fontSize: 11 }}
+          >
+            {showBots ? 'Bots: On' : 'Bots: Off'}
           </AppText>
         </Pressable>
       </View>

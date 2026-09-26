@@ -246,10 +246,19 @@ export interface FeedQuery {
   * Either way a campus post from ANOTHER university is never shown.
   */
  viewScope?: 'campus' | 'global';
+  showBots?: boolean;
 }
 
 function filterPosts(pool: Post[], query: FeedQuery): Post[] {
   let results = pool.filter((p) => !isUserBlocked(p.authorId));
+
+  if (query.showBots === false) {
+    results = results.filter(
+      (p) =>
+        !p.id.startsWith('00000000-0000-4000-b000-') &&
+        (!p.authorId || !p.authorId.startsWith('00000000-0000-4000-a000-')),
+    );
+  }
 
   // Non-published rows (drafts, scheduled) never belong in a feed. RLS already
   // hides other people's; this also hides the author's own from their feed.

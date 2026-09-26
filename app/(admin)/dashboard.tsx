@@ -51,6 +51,21 @@ export default function AdminOverviewScreen() {
     staleTime: 60_000,
   });
 
+  const { data: activeRealUsers = 0 } = useQuery({
+    queryKey: ['admin', 'active-real-users-count'],
+    queryFn: async () => {
+      const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .gte('last_active_at', fifteenMinsAgo)
+        .eq('is_bot', false);
+      if (error) return 0;
+      return count ?? 0;
+    },
+    staleTime: 30_000,
+  });
+
   const attention = [
     { key: 'verification', label: 'ID verifications to review', count: badges.verification, icon: 'checkmark-circle-outline' as const, tint: '#10B981', route: '/(admin)/verification-requests' },
     { key: 'reports', label: 'Open reports', count: badges.reports, icon: 'flag-outline' as const, tint: colors.critical, route: '/(admin)/moderation-queue' },
@@ -99,6 +114,56 @@ export default function AdminOverviewScreen() {
             </View>
           </View>
         </GlassCard>
+
+        {/* Live Analytics & Real User Activity Quick Hub */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open Campus Analytics & User Activity Hub"
+          onPress={() => {
+            haptics.light();
+            router.push('/(admin)/analytics' as any);
+          }}
+        >
+          <SolidCard
+            radius={20}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: spacing.md,
+              borderWidth: 1,
+              borderColor: 'rgba(59, 130, 246, 0.3)',
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.5)' : '#F8FAFC',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1, minWidth: 0 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="stats-chart" size={22} color={colors.brandPrimary} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <AppText variant="body" weight="bold">
+                    Campus Analytics & Real Activity
+                  </AppText>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
+                </View>
+                <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                  {activeRealUsers > 0 ? `${activeRealUsers} real student${activeRealUsers === 1 ? '' : 's'} active now` : 'Live activity, page traffic & feature metrics'}
+                </AppText>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.brandPrimary} />
+          </SolidCard>
+        </Pressable>
 
         {/* Needs attention */}
         <View style={{ gap: spacing.sm }}>

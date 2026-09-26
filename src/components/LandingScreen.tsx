@@ -192,7 +192,7 @@ export function LandingScreen() {
                   width: '100%',
                 }}
               >
-                THE VERIFIED UNIVERSITY COMMUNITY PLATFORM
+                THE VERIFIED HIGHER INSTITUTION COMMUNITY PLATFORM
               </AppText>
             </View>
 
@@ -502,10 +502,10 @@ export function LandingScreen() {
                 CORE CAMPUS PILLARS
               </AppText>
               <AppText variant="h2" weight="bold" style={{ textAlign: 'center', color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                Designed Around Real University Life
+                Designed Around Real Campus Life in Higher Institutions
               </AppText>
               <AppText tone="secondary" style={{ textAlign: 'center', marginTop: 4, maxWidth: 540 }}>
-                Essential academic, career, and community tools unified into a secure institutional ecosystem.
+                Essential academic, career, and community tools unified into a secure institutional ecosystem for universities, polytechnics, and colleges.
               </AppText>
             </View>
 
@@ -529,7 +529,7 @@ export function LandingScreen() {
                   icon: 'folder',
                   accent: '#3B82F6',
                   title: 'Academic Resources Vault',
-                  desc: 'Crowdsourced past questions archive, course outlines, and solution sheets organized strictly by university, faculty, and code.',
+                  desc: 'Crowdsourced past questions archive, course outlines, and solution sheets organized strictly by institution, faculty, department, and course code.',
                 },
                 {
                   icon: 'calendar',
@@ -609,7 +609,7 @@ export function LandingScreen() {
               {[
                 { number: '100%', label: 'Campus ID Verified', subtext: 'Zero unauthorized outsiders' },
                 { number: '< 3 Min', label: 'Instant Domain Verification', subtext: 'Automatic school email validation' },
-                { number: '7+', label: 'Launch Universities', subtext: 'UI, UNILAG, FUNAAB + 18 expanding' },
+                { number: '7+', label: 'Launch Campuses', subtext: 'Universities, Polytechnics & Colleges' },
                 { number: '₦0', label: 'Student Fees', subtext: 'Built freely for verified learners' },
               ].map((stat, idx) => (
                 <View
@@ -729,7 +729,7 @@ export function LandingScreen() {
                     Don't see your school?
                   </AppText>
                   <AppText variant="bodySmall" tone="secondary">
-                    Nominate your university to fast-track launch priority for your campus.
+                    Nominate your higher institution or polytechnic to fast-track launch priority for your campus.
                   </AppText>
 
                   {waitlistSubmitted ? (
@@ -750,7 +750,7 @@ export function LandingScreen() {
                         </AppText>
                       </View>
                       <AppText variant="caption" tone="secondary">
-                        We'll notify you as soon as your university's campus server goes live.
+                        We'll notify you as soon as your institution's campus network goes live.
                       </AppText>
                     </View>
                   ) : (
@@ -765,7 +765,7 @@ export function LandingScreen() {
                       />
                       <AppTextField
                         label=""
-                        placeholder="University Name"
+                        placeholder="Institution or Polytechnic Name"
                         value={waitlistSchool}
                         onChangeText={setWaitlistSchool}
                       />
@@ -817,7 +817,7 @@ export function LandingScreen() {
               tone="secondary"
               style={{ textAlign: 'center', maxWidth: 520, marginBottom: 24 }}
             >
-              Join thousands of students and alumni experiencing university life with verified privacy and institutional trust.
+              Join thousands of students and alumni experiencing campus life across higher institutions with verified privacy and institutional trust.
             </AppText>
 
             <View
@@ -900,7 +900,7 @@ export function LandingScreen() {
                   <LiorisLogo size={20} variant="wordmark" />
                 </View>
                 <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 22, maxWidth: 340, marginBottom: 16 }}>
-                  The unified university platform connecting verified students and alumni through departmental forums,
+                  The unified higher institution platform connecting verified students and alumni across universities, polytechnics, and colleges through departmental forums,
                   curated academic resource vaults, campus events, and career mentorship.
                 </AppText>
 

@@ -382,7 +382,7 @@ function HomeScreen({ role }: { role: MockRole }) {
           >
             <Ionicons name="school" size={10} color="#68D391" />
             <AppText weight="bold" style={{ fontSize: 9.5, color: '#FFFFFF' }}>
-              {student ? 'Your University' : 'Alumni Chapter'}
+              {student ? 'Your Campus / Institution' : 'Alumni Chapter'}
             </AppText>
           </View>
 
@@ -768,7 +768,7 @@ function EventsScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
         <Ionicons name="school" size={11} color={colors.textSecondary} />
         <AppText weight="bold" tone="secondary" numberOfLines={1} style={{ fontSize: 9 }}>
-          Your University • Campus Hub
+          Your Campus • Institution Hub
         </AppText>
       </View>
       <ScreenTitle title="Campus Events" subtitle="Workshops, career fairs, academic symposiums & student campus gatherings" action="Host Event" actionIcon="add" />
@@ -928,9 +928,9 @@ function LibraryScreen() {
       </View>
       <View style={{ flexDirection: 'row', gap: 6, overflow: 'hidden' }} pointerEvents="none">
         {[
-          { cat: 'Portal', title: 'Student Portal', url: 'portal.university.edu' },
-          { cat: 'Services', title: 'E-Learning', url: 'lms.university.edu' },
-          { cat: 'Library', title: 'Library Catalogue', url: 'library.university.edu' },
+          { cat: 'Portal', title: 'Student Portal', url: 'portal.institution.edu.ng' },
+          { cat: 'Services', title: 'E-Learning', url: 'lms.institution.edu.ng' },
+          { cat: 'Library', title: 'Library Catalogue', url: 'library.institution.edu.ng' },
         ].map((portal) => (
           <View key={portal.title} style={{ width: 82, height: 62, flexShrink: 0, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 7, paddingVertical: 6, gap: 2 }}>
             <AppText weight="semiBold" tone="secondary" numberOfLines={1} style={{ fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 0.4 }}>

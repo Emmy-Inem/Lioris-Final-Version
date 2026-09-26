@@ -21,6 +21,7 @@ import { MaintenanceGate } from '@/components/MaintenanceGate';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { useCampusRegistry } from '@/hooks/useCampusRegistry';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { addNotificationResponseListener } from '@/notifications/push';
 import { resolveNotificationRoute } from '@/utils/notificationRouter';
 
@@ -263,6 +264,7 @@ function StatusBarForTheme() {
 function AppShell() {
   // Keeps the shared campus list (incl. campuses an admin added) fresh for email matching and pickers.
   useCampusRegistry();
+  useActivityTracker();
   const { isLoading } = useFeatureFlags();
   const { user } = useAuth();
 
