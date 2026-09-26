@@ -222,10 +222,16 @@ export function isNetworkError(error: unknown): boolean {
     msg.includes('network request failed') ||
     msg.includes('failed to fetch') ||
     msg.includes('networkerror') ||
+    msg.includes('network connection was lost') ||
     msg.includes('err_connection') ||
+    msg.includes('err_network') ||
     msg.includes('internet') ||
     msg.includes('timeout') ||
-    msg.includes('econnrefused')
+    msg.includes('etimedout') ||
+    msg.includes('econnreset') ||
+    msg.includes('econnrefused') ||
+    msg.includes('enetunreach') ||
+    msg.includes('socket hang up')
   );
 }
 

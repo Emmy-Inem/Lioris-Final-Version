@@ -8,6 +8,8 @@ import { AppText } from '@/components/AppText';
 import { ChipSelect } from '@/components/ChipSelect';
 import { SolidCard } from '@/components/SolidCard';
 import { MarketplaceItemCard } from '@/components/MarketplaceItemCard';
+import { MarketplaceCardSkeletonGrid } from '@/components/Skeleton';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { EmptyState } from '@/components/EmptyState';
 import { SellItemModal } from '@/components/SellItemModal';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -43,7 +45,7 @@ export default function MarketplaceScreen() {
 
 
 
- const { data: listings, isLoading } = useQuery({
+ const { data: listings, isLoading, isError, error, refetch } = useQuery({
  queryKey: ['marketplace', debouncedQuery, category, condition, campusCode],
  queryFn: () => listMarketplaceListings({ q: debouncedQuery || undefined, category: category as any, condition: condition as any, campusCode }),
  });
@@ -187,18 +189,26 @@ export default function MarketplaceScreen() {
             </AppText>
           </View>
 
-          {/* Multi-Column Responsive Grid with Non-Stretching Items */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-            {(listings ?? []).map((item) => (
-              <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 280, maxWidth: 380 }}>
-                <MarketplaceItemCard item={item} />
-              </View>
-            ))}
-          </View>
-
-          {(listings ?? []).length === 0 && !isLoading ? (
+          {/* Multi-Column Responsive Grid with Non-Stretching Items & Skeleton / Error States */}
+          {isLoading ? (
+            <MarketplaceCardSkeletonGrid count={6} />
+          ) : isError ? (
+            <ErrorStateView
+              title="Could not load marketplace"
+              error={error}
+              onRetry={refetch}
+            />
+          ) : (listings ?? []).length === 0 ? (
             <EmptyState title="No listings found" description="Try a different search keyword or category filter." />
-          ) : null}
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+              {(listings ?? []).map((item) => (
+                <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 280, maxWidth: 380 }}>
+                  <MarketplaceItemCard item={item} />
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       ) : (
  /* Mobile Layout */
@@ -278,7 +288,19 @@ export default function MarketplaceScreen() {
  initialNumToRender={10}
  maxToRenderPerBatch={10}
  windowSize={7}
- ListEmptyComponent={!isLoading ? <EmptyState title="No listings found" description="Try a different search or filter." /> : null}
+ ListEmptyComponent={
+              isLoading ? (
+                <MarketplaceCardSkeletonGrid count={4} />
+              ) : isError ? (
+                <ErrorStateView
+                  title="Could not load marketplace"
+                  error={error}
+                  onRetry={refetch}
+                />
+              ) : (
+                <EmptyState title="No listings found" description="Try a different search or filter." />
+              )
+            }
  />
  </View>
  </>

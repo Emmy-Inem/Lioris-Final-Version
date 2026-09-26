@@ -6,6 +6,8 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
+import { AnalyticsSummarySkeleton, ListItemSkeletonList } from '@/components/Skeleton';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { GlassCard } from '@/components/GlassCard';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -51,7 +53,7 @@ export default function AdminAnalyticsScreen() {
   const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'real' | 'bot'>('all');
 
   // Fetch real aggregated analytics summary (campus-filtered, zero fake stats)
-  const { data: summary, isLoading: summaryLoading, refetch: refetchSummary } = useQuery({
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryErrObj, refetch: refetchSummary } = useQuery({
     queryKey: ['admin-analytics-summary', timeRangeDays, campusFilter],
     queryFn: () => fetchAdminAnalyticsSummary(timeRangeDays, campusFilter),
     staleTime: 30_000,
@@ -330,7 +332,17 @@ export default function AdminAnalyticsScreen() {
         </View>
 
         {/* Real User Activity KPI Cards */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+        {summaryLoading ? (
+          <AnalyticsSummarySkeleton />
+        ) : summaryError ? (
+          <ErrorStateView
+            title="Analytics summary unavailable"
+            error={summaryErrObj}
+            onRetry={refetchSummary}
+          />
+        ) : null}
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, display: summaryLoading || summaryError ? 'none' : 'flex' }}>
           {/* Active Now */}
           <SolidCard style={{ flex: 1, minWidth: isDesktop ? 220 : '45%', padding: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
@@ -927,14 +939,16 @@ export default function AdminAnalyticsScreen() {
               );
             })}
 
-            {filteredUsers.length === 0 && (
+            {usersLoading ? (
+              <ListItemSkeletonList count={6} />
+            ) : filteredUsers.length === 0 ? (
               <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
                 <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
                   No members found matching current filters.
                 </AppText>
               </View>
-            )}
+            ) : null}
           </View>
         </SolidCard>
       </ScrollView>

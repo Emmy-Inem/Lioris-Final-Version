@@ -7,6 +7,8 @@ import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
 import { JobCard } from '@/components/JobCard';
+import { ListItemSkeletonList } from '@/components/Skeleton';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -33,7 +35,7 @@ export default function JobsScreen() {
  const debouncedQuery = useDebouncedValue(query);
  const { campusCode } = useCampusScope();
 
- const { data: jobs, isLoading } = useQuery({
+ const { data: jobs, isLoading, isError, error, refetch } = useQuery({
  queryKey: ['jobs', debouncedQuery, campusCode],
  queryFn: () => listJobs({ q: debouncedQuery || undefined, campusCode }),
  });
@@ -172,18 +174,26 @@ export default function JobsScreen() {
             </AppText>
           </View>
 
-          {/* Multi-Column Responsive Grid with Non-Stretching Cards */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-            {filteredJobs.map((item) => (
-              <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
-                <JobCard job={item} />
-              </View>
-            ))}
-          </View>
-
-          {filteredJobs.length === 0 && !isLoading ? (
+          {/* Multi-Column Responsive Grid with Non-Stretching Cards & Skeleton / Error States */}
+          {isLoading ? (
+            <ListItemSkeletonList count={5} />
+          ) : isError ? (
+            <ErrorStateView
+              title="Could not load career openings"
+              error={error}
+              onRetry={refetch}
+            />
+          ) : filteredJobs.length === 0 ? (
             <EmptyState title="No positions found" description="Try adjusting your search keywords or filter category." />
-          ) : null}
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+              {filteredJobs.map((item) => (
+                <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
+                  <JobCard job={item} />
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       ) : (
  /* Mobile Layout */
@@ -285,7 +295,19 @@ export default function JobsScreen() {
  contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
  renderItem={({ item }) => <JobCard job={item} />}
  showsVerticalScrollIndicator={false}
- ListEmptyComponent={!isLoading ? <EmptyState title="No jobs found" description="Try a different search or filter." /> : null}
+ ListEmptyComponent={
+              isLoading ? (
+                <ListItemSkeletonList count={5} />
+              ) : isError ? (
+                <ErrorStateView
+                  title="Could not load career openings"
+                  error={error}
+                  onRetry={refetch}
+                />
+              ) : (
+                <EmptyState title="No jobs found" description="Try a different search or filter." />
+              )
+            }
  />
  </>
  )}

@@ -12,7 +12,8 @@ import { Badge } from './Badge';
 import { SolidCard } from './SolidCard';
 import { GlassCard } from './GlassCard';
 import { EmptyState } from './EmptyState';
-import { ShimmerCardList } from './ShimmerSkeleton';
+import { EventCardSkeletonGrid } from './Skeleton';
+import { ErrorStateView } from './ErrorStateView';
 import { useToast } from '@/context/ToastContext';
 import { EventCard } from './EventCard';
 import { SpotlightEventsCarousel } from './SpotlightEventsCarousel';
@@ -79,7 +80,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
   const queryScope: EventsQuery['scope'] = isAlumniScope ? 'alumni' : (scope ?? 'student');
 
-  const { data: events, isLoading, refetch, isRefetching } = useQuery({
+  const { data: events, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['events', queryScope, 'full', currentCampus],
     queryFn: () => listEvents({ scope: queryScope, campusCode: currentCampus }),
   });
@@ -445,22 +446,16 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
             </AppText>
           </View>
 
-          {/* Multi-Column Responsive Grid with Non-Stretching Cards */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-            {filtered.map((event) => (
-              <View
-                key={event.id}
-                style={{
-                  width: isDesktop ? 320 : '100%',
-                  maxWidth: '100%',
-                }}
-              >
-                <EventCard event={event} />
-              </View>
-            ))}
-          </View>
-
-          {filtered.length === 0 && !isLoading && (
+          {/* Multi-Column Responsive Grid with Non-Stretching Cards & Skeleton / Error States */}
+          {isLoading ? (
+            <EventCardSkeletonGrid count={6} />
+          ) : isError ? (
+            <ErrorStateView
+              title="Could not load campus events"
+              error={error}
+              onRetry={refetch}
+            />
+          ) : filtered.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
               <Ionicons name={isAlumniScope ? 'ribbon-outline' : 'calendar-outline'} size={48} color={colors.textSecondary} />
               <AppText variant="h3" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
@@ -473,6 +468,20 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                   ? `There are no upcoming alumni reunions or events scheduled for ${institutionName} at this time.`
                   : `There are no student campus events scheduled for ${institutionName} at this time.`}
               </AppText>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+              {filtered.map((event) => (
+                <View
+                  key={event.id}
+                  style={{
+                    width: isDesktop ? 320 : '100%',
+                    maxWidth: '100%',
+                  }}
+                >
+                  <EventCard event={event} />
+                </View>
+              ))}
             </View>
           )}
         </ScrollView>
@@ -497,7 +506,15 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           refreshing={isRefetching}
           contentContainerStyle={{ paddingBottom: 150 }}
           ListEmptyComponent={
-            !isLoading ? (
+            isLoading ? (
+              <EventCardSkeletonGrid count={4} />
+            ) : isError ? (
+              <ErrorStateView
+                title="Could not load campus events"
+                error={error}
+                onRetry={refetch}
+              />
+            ) : (
               <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
                 <Ionicons name={isAlumniScope ? 'ribbon-outline' : 'calendar-outline'} size={48} color={colors.textSecondary} />
                 <AppText variant="h3" weight="bold" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
@@ -511,8 +528,6 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                     : `Try changing your search filter or host the first campus event for ${institutionName}!`}
                 </AppText>
               </View>
-            ) : (
-              <ShimmerCardList count={4} />
             )
           }
         />

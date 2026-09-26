@@ -9,6 +9,8 @@ import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
 import { AppButton } from './AppButton';
 import { SolidCard } from './SolidCard';
+import { PostCardSkeletonList } from './Skeleton';
+import { ErrorStateView } from './ErrorStateView';
 import { GlassCard } from './GlassCard';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
@@ -280,7 +282,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     }
   }
 
-  const { data: rawPosts, isLoading, refetch, isRefetching } = useQuery({
+  const { data: rawPosts, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel, showBots],
     queryFn: () =>
       listFeedPosts({
@@ -1207,7 +1209,19 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               refreshing={isRefetching || manualRefreshing}
               alwaysBounceVertical
               overScrollMode="always"
-              ListEmptyComponent={!isLoading ? renderEmptyForumState() : null}
+              ListEmptyComponent={
+                isLoading ? (
+                  <PostCardSkeletonList count={4} />
+                ) : isError ? (
+                  <ErrorStateView
+                    title="Could not load discussions"
+                    error={error}
+                    onRetry={refetch}
+                  />
+                ) : (
+                  renderEmptyForumState()
+                )
+              }
             />
           </View>
 
@@ -1377,7 +1391,19 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         refreshing={isRefetching || manualRefreshing}
         alwaysBounceVertical
         overScrollMode="always"
-        ListEmptyComponent={!isLoading ? renderEmptyForumState() : null}
+        ListEmptyComponent={
+          isLoading ? (
+            <PostCardSkeletonList count={4} />
+          ) : isError ? (
+            <ErrorStateView
+              title="Could not load discussions"
+              error={error}
+              onRetry={refetch}
+            />
+          ) : (
+            renderEmptyForumState()
+          )
+        }
       />
     )}
 

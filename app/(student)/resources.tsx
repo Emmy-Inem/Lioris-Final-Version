@@ -7,6 +7,8 @@ import { AppHeader } from'@/components/AppHeader';
 import { AppText } from'@/components/AppText';
 import { SolidCard } from'@/components/SolidCard';
 import { ResourceCard } from '@/components/ResourceCard';
+import { ResourceCardSkeletonGrid } from '@/components/Skeleton';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { EmptyState } from '@/components/EmptyState';
 import { ShareAcademicFileModal, UploadAcademicPayload } from '@/components/ShareAcademicFileModal';
 import { LibraryFilterModal, LibraryFilters, DEFAULT_LIBRARY_FILTERS } from '@/components/LibraryFilterModal';
@@ -114,7 +116,7 @@ export default function ResourcesScreen() {
     queryFn: () => listPortalLinks(activePortalCampus),
   });
 
-  const { data: resources, isLoading, refetch, isRefetching } = useQuery({
+  const { data: resources, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['resources', debouncedQuery, filters, effectiveCampus],
     queryFn: () =>
       listResources({
@@ -1005,29 +1007,16 @@ export default function ResourcesScreen() {
             </AppText>
           </View>
 
-          {/* Multi-Column Responsive Grid with Non-Stretching Cards */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-            {displayedResources.map((res) => (
-              <View key={res.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
-                <ResourceCard
-                  resource={res}
-                  onPreview={setReadingResource}
-                  isBookmarked={bookmarkedIds.includes(res.id)}
-                  onToggleBookmark={async () => {
-                    const added = await toggleBookmark(res.id);
-                    if (added) {
-                      toast.success(`Bookmarked "${res.title}"`);
-                    } else {
-                      toast.info(`Removed "${res.title}" from bookmarks`);
-                    }
-                  }}
-                  onReport={setReportingResource}
-                />
-              </View>
-            ))}
-          </View>
-
-          {displayedResources.length === 0 && !isLoading ? (
+          {/* Multi-Column Responsive Grid with Non-Stretching Cards & Skeleton / Error States */}
+          {isLoading ? (
+            <ResourceCardSkeletonGrid count={6} />
+          ) : isError ? (
+            <ErrorStateView
+              title="Could not load campus resources"
+              error={error}
+              onRetry={refetch}
+            />
+          ) : displayedResources.length === 0 ? (
             <EmptyState
               title={filters.resourceType === 'Bookmarked' ? 'No Bookmarked Notes' : 'No resources found'}
               description={
@@ -1036,7 +1025,28 @@ export default function ResourcesScreen() {
                   : 'Try a different search query or upload a file for your department.'
               }
             />
-          ) : null}
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+              {displayedResources.map((res) => (
+                <View key={res.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
+                  <ResourceCard
+                    resource={res}
+                    onPreview={setReadingResource}
+                    isBookmarked={bookmarkedIds.includes(res.id)}
+                    onToggleBookmark={async () => {
+                      const added = await toggleBookmark(res.id);
+                      if (added) {
+                        toast.success(`Bookmarked "${res.title}"`);
+                      } else {
+                        toast.info(`Removed "${res.title}" from bookmarks`);
+                      }
+                    }}
+                    onReport={setReportingResource}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       ) : (
         /* Mobile Single Column FlatList */
@@ -1067,7 +1077,15 @@ export default function ResourcesScreen() {
           onRefresh={refetch}
           refreshing={isRefetching}
           ListEmptyComponent={
-            !isLoading ? (
+            isLoading ? (
+              <ResourceCardSkeletonGrid count={4} />
+            ) : isError ? (
+              <ErrorStateView
+                title="Could not load academic resources"
+                error={error}
+                onRetry={refetch}
+              />
+            ) : (
               <EmptyState
                 icon={filters.resourceType === 'Bookmarked' ? 'bookmark-outline' : 'book-outline'}
                 title={filters.resourceType === 'Bookmarked' ? 'No Bookmarked Notes' : 'No Academic Resources Found'}
@@ -1079,7 +1097,7 @@ export default function ResourcesScreen() {
                 actionLabel={filters.resourceType === 'Bookmarked' ? undefined : 'Upload Study Material'}
                 onAction={filters.resourceType === 'Bookmarked' ? undefined : () => setUploadModalOpen(true)}
               />
-            ) : null
+            )
           }
         />
       )}
