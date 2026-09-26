@@ -1,4 +1,5 @@
 import { UserProfile, UserRole } from './types';
+import { getSeedBotProfileById } from '../data/seedBotProfiles';
 
 import { assertWithinStorageQuota } from './platformSettings';
 import { supabase } from './supabase';
@@ -512,5 +513,12 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   } catch (err) {
     console.warn('[Profile] getPublicProfile lookup failed:', err);
   }
+
+  const seedBot = getSeedBotProfileById(userId);
+  if (seedBot) {
+    profileState.set(userId, seedBot);
+    return seedBot;
+  }
+
   return null;
 }

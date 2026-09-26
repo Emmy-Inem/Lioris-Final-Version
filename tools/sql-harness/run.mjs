@@ -1142,6 +1142,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260925120000_events_portals_campuses.sql',
   'supabase/migrations/20260925130000_normalise_tags_keep_first.sql',
   'supabase/migrations/20260925140000_paid_events.sql',
+  'supabase/migrations/20260926150000_seed_campus_community_bots.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1487,6 +1488,34 @@ console.log('\n== paid events ==');
 }
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// community bot personas (20260926150000_seed_campus_community_bots.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== community bot personas ==');
+{
+  await check('seeds 20 community bot users into auth.users and profiles with verified status', async () => {
+    await as('postgres', async (c) => {
+      const authCount = (await c.q("SELECT count(*)::int n FROM auth.users WHERE id::text LIKE '00000000-0000-4000-a000-%'")).rows[0].n;
+      eq(authCount, 20, '20 auth.users seeded');
+      const profileCount = (await c.q("SELECT count(*)::int n FROM public.profiles WHERE id::text LIKE '00000000-0000-4000-a000-%' AND verification_status = 'verified'")).rows[0].n;
+      eq(profileCount, 20, '20 verified profiles seeded');
+    });
+  });
+
+  await check('seeds 20 forum posts partitioned correctly across UI (7), UNILAG (7), and FUNAAB (6)', async () => {
+    await as('postgres', async (c) => {
+      const postsCount = (await c.q("SELECT count(*)::int n FROM public.posts WHERE id::text LIKE '00000000-0000-4000-b000-%'")).rows[0].n;
+      eq(postsCount, 20, '20 forum posts seeded');
+      const uiCount = (await c.q("SELECT count(*)::int n FROM public.posts WHERE id::text LIKE '00000000-0000-4000-b000-%' AND campus_code = 'UI'")).rows[0].n;
+      eq(uiCount, 7, '7 UI posts');
+      const unilagCount = (await c.q("SELECT count(*)::int n FROM public.posts WHERE id::text LIKE '00000000-0000-4000-b000-%' AND campus_code = 'UNILAG'")).rows[0].n;
+      eq(unilagCount, 7, '7 UNILAG posts');
+      const funaabCount = (await c.q("SELECT count(*)::int n FROM public.posts WHERE id::text LIKE '00000000-0000-4000-b000-%' AND campus_code = 'FUNAAB'")).rows[0].n;
+      eq(funaabCount, 6, '6 FUNAAB posts');
+    });
+  });
+}
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n== Summary: ${results.length - failed.length}/${results.length} checks passed ==`);
 if (failed.length) { for (const f of failed) console.log(` FAILED: ${f.name}\n    ${f.err}`); process.exit(1); }

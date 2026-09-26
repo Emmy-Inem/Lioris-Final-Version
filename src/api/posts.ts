@@ -7,6 +7,7 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { escapePostgrestLike } from '../utils/postgrest';
 import { assertSafeHttpUrl } from '../utils/safeUrl';
+import { SEED_FORUM_POSTS } from '../data/seedForumPosts';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -329,7 +330,7 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     // just-created posts (always) plus seed fixtures (only when the admin
     // mock-data toggle is on).
     const merged = [...dbPosts];
-    for (const p of [...locallyCreatedPosts]) {
+    for (const p of [...locallyCreatedPosts, ...SEED_FORUM_POSTS]) {
       if (!merged.some((m) => m.id === p.id)) {
         merged.push(p);
       }
@@ -340,7 +341,7 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     return await decorateViewerState(visible, viewerId);
   } catch (err) {
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
-    return filterPosts([...locallyCreatedPosts], { ...query, viewerInstitutionCode });
+    return filterPosts([...locallyCreatedPosts, ...SEED_FORUM_POSTS], { ...query, viewerInstitutionCode });
   }
 }
 
@@ -426,7 +427,7 @@ export async function listMyPosts(userId?: string): Promise<Post[]> {
     console.warn('[Posts] listMyPosts error:', err);
   }
 
-  return [...locallyCreatedPosts].filter(
+  return [...locallyCreatedPosts, ...SEED_FORUM_POSTS].filter(
     (p) =>
       p.authorId === 'me' ||
       p.authorId === 'student-me' ||
@@ -524,7 +525,7 @@ export async function reschedulePost(postId: string, scheduledAt: string): Promi
 }
 
 export async function getPost(id: string): Promise<Post | null> {
-  const local = locallyCreatedPosts.find((p) => p.id === id);
+  const local = locallyCreatedPosts.find((p) => p.id === id) || SEED_FORUM_POSTS.find((p) => p.id === id);
 
   try {
     const viewerId = await currentUserId();
