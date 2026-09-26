@@ -82,6 +82,8 @@
     if (inner.length === 0 && !root.querySelector('img, svg, canvas, input, button, [role="button"]')) {
       return true;
     }
+    var rect = root.getBoundingClientRect();
+    if (rect.height === 0 && inner.length === 0) return true;
     return false;
   }
 

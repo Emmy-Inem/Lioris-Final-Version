@@ -286,30 +286,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           );
           const { data: profile } = await Promise.race([profilePromise, profileTimeout]);
 
-          // Authorization role must come from `profiles.role` only -
-          // `user_metadata` is client-writable via supabase.auth.updateUser()
-          // and must never be trusted for authorization. Default to the
-          // lowest-privilege role when the profile lookup is missing.
-          const role = (profile?.role || 'student') as UserRole;
-          const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
-          
           const storedUser = await getSessionUser();
+          const fallbackRole = (storedUser?.actualRole || userRef.current?.actualRole || 'student') as UserRole;
+          const role = (profile?.role || fallbackRole) as UserRole;
+          const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || storedUser?.fullName || userRef.current?.fullName || userEmail.split('@')[0] || 'Campus Member';
+          
           const activeRole =
             (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
             (storedUser?.actualRole === 'admin' && storedUser?.role)
               ? ((userRef.current?.role || storedUser?.role) as UserRole)
               : role;
-          // `profiles.onboarding_complete` is the real, server-side signal
-          // (added after discovering onboarding-complete was previously
-          // inferred client-side only, from Boolean(department) backstopped
-          // by localStorage - broken for anyone on a fresh device/browser).
-          // Local flags and the department heuristic stay as fallbacks for
-          // the brief window before every row is backfilled.
-          const isOnboarded =
-            profile?.onboarding_complete === true ||
-            (profile?.onboarding_complete !== false && Boolean(profile?.department)) ||
-            role === 'admin' ||
-            role === 'staff';
+
+          const cachedOnboarding = userRef.current?.onboardingComplete ?? storedUser?.onboardingComplete;
+          const isOnboarded = profile
+            ? (profile.onboarding_complete === true ||
+               (profile.onboarding_complete !== false && Boolean(profile.department)) ||
+               role === 'admin' ||
+               role === 'staff')
+            : (cachedOnboarding ?? (role === 'admin' || role === 'staff'));
 
           const nextUser: SessionUser = {
             id: session.user.id,
@@ -393,21 +387,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (!mounted) return;
 
-        // Authorization role must come from `profiles.role` only
-        const role = (profile?.role || 'student') as UserRole;
-        const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
-
         const storedUser = await getSessionUser();
+        const fallbackRole = (userRef.current?.actualRole || storedUser?.actualRole || 'student') as UserRole;
+        const role = (profile?.role || fallbackRole) as UserRole;
+        const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userRef.current?.fullName || storedUser?.fullName || userEmail.split('@')[0] || 'Campus Member';
+
         const activeRole =
           (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
           (storedUser?.actualRole === 'admin' && storedUser?.role)
             ? ((userRef.current?.role || storedUser?.role) as UserRole)
             : role;
-        const isOnboarded =
-          profile?.onboarding_complete === true ||
-          (profile?.onboarding_complete !== false && Boolean(profile?.department)) ||
-          role === 'admin' ||
-          role === 'staff';
+
+        const cachedOnboarding = userRef.current?.onboardingComplete ?? storedUser?.onboardingComplete;
+        const isOnboarded = profile
+          ? (profile.onboarding_complete === true ||
+             (profile.onboarding_complete !== false && Boolean(profile.department)) ||
+             role === 'admin' ||
+             role === 'staff')
+          : (cachedOnboarding ?? (role === 'admin' || role === 'staff'));
 
         // Returning to the app re-emits SIGNED_IN for the account that is already
         // open. Keep that account's in-memory MFA/onboarding progress and skip the

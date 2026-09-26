@@ -8,6 +8,7 @@ import { generateUUID } from '../utils/uuid';
 import { escapePostgrestLike } from '../utils/postgrest';
 import { assertSafeHttpUrl } from '../utils/safeUrl';
 import { SEED_FORUM_POSTS } from '../data/seedForumPosts';
+import { getSeedCommentsForPost } from '../data/seedForumComments';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -945,20 +946,37 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  isLikedByMe: false,
  }));
 
- // Merge unique - local pool only ever contributes this session's own
- // just-created comments (always) plus seed fixtures (only when the
- // admin mock-data toggle is on).
- const merged = [...dbComments];
- for (const c of [...(locallyCreatedComments[postId] ?? [])]) {
- if (!merged.some((m) => m.id === c.id)) {
- merged.push(c);
- }
- }
- return merged;
- } catch (err) {
- console.warn('[Posts] listPostComments failed, showing local pool only:', err);
- return [...(locallyCreatedComments[postId] ?? [])];
- }
+  // Merge unique - local pool only ever contributes this session's own
+  // just-created comments (always) plus seed fixtures.
+  const merged = [...dbComments];
+  for (const c of [...(locallyCreatedComments[postId] ?? [])]) {
+    if (!merged.some((m) => m.id === c.id)) {
+      merged.push(c);
+    }
+  }
+
+  // If no DB comments exist for this post or it is a seed post, include seed comments
+  if (merged.length === 0 || postId.startsWith('00000000-0000-4000-b000-')) {
+    const seedComments = getSeedCommentsForPost(postId);
+    for (const sc of seedComments) {
+      if (!merged.some((m) => m.id === sc.id)) {
+        merged.push(sc);
+      }
+    }
+  }
+
+  return merged;
+  } catch (err) {
+    console.warn('[Posts] listPostComments failed, showing local and seed pool only:', err);
+    const local = [...(locallyCreatedComments[postId] ?? [])];
+    const seed = getSeedCommentsForPost(postId);
+    for (const sc of seed) {
+      if (!local.some((l) => l.id === sc.id)) {
+        local.push(sc);
+      }
+    }
+    return local;
+  }
 }
 
 /**

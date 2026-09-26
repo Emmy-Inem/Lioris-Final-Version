@@ -139,8 +139,8 @@ DECLARE
     v_features JSONB := '[]'::jsonb;
     v_campuses JSONB := '[]'::jsonb;
 BEGIN
-    SELECT role::text INTO v_caller_role FROM public.profiles WHERE id = auth.uid();
-    IF v_caller_role IS DISTINCT FROM 'admin' THEN
+    SELECT LOWER(COALESCE(role::text, '')) INTO v_caller_role FROM public.profiles WHERE id = auth.uid();
+    IF v_caller_role NOT IN ('admin', 'staff') AND auth.role() <> 'service_role' THEN
         RAISE EXCEPTION 'admin_required';
     END IF;
 

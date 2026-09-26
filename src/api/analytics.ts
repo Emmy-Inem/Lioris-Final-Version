@@ -162,6 +162,9 @@ export async function fetchAdminAnalyticsSummary(
     if (normalizedCampus) eventsQ = eventsQ.eq('campus_code', normalizedCampus);
     const { count: eventsCount } = await eventsQ;
 
+    let commentsQ = supabase.from('post_comments').select('id', { count: 'exact', head: true }).gte('created_at', sinceDate);
+    const { count: commentsCount } = await commentsQ;
+
     // Real analytics events for visited pages & feature uses
     let eventsQuery = supabase
       .from('analytics_events')
@@ -223,7 +226,7 @@ export async function fetchAdminAnalyticsSummary(
       active_7d: active7d,
       active_30d: active30d,
       total_posts: postsCount ?? 0,
-      total_comments: 0,
+      total_comments: commentsCount ?? 0,
       total_resources: resCount ?? 0,
       total_events: eventsCount ?? 0,
       total_rsvps: rsvpsCount,

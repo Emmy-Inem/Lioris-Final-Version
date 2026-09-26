@@ -225,25 +225,27 @@ export default function RootLayout() {
     );
   }
 
- return (
- <GestureHandlerRootView style={{ flex: 1 }}>
- <SafeAreaProvider>
- <QueryClientProvider client={queryClient}>
- <AuthProvider>
- <ThemeProvider>
- <LiquidGlassProvider>
- <ToastProvider>
- <FeatureFlagsProvider>
- <AppShell />
- </FeatureFlagsProvider>
- </ToastProvider>
- </LiquidGlassProvider>
- </ThemeProvider>
- </AuthProvider>
- </QueryClientProvider>
- </SafeAreaProvider>
- </GestureHandlerRootView>
- );
+  return (
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <ThemeProvider>
+                <LiquidGlassProvider>
+                  <ToastProvider>
+                    <FeatureFlagsProvider>
+                      <AppShell />
+                    </FeatureFlagsProvider>
+                  </ToastProvider>
+                </LiquidGlassProvider>
+              </ThemeProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
+  );
 }
 
 function StatusBarForTheme() {
@@ -282,21 +284,19 @@ function AppShell() {
  return <AppLoadingScreen message="Launching Lioris Campus Platform" />;
  }
 
- return (
- <>
- <StatusBarForTheme />
- <ImpersonationBanner />
- <OfflineBanner />
- <ErrorBoundary>
- <MaintenanceGate>
- <Slot />
- </MaintenanceGate>
- </ErrorBoundary>
- <ReConsentGate />
- <AlertHost />
- <AppLockOverlay />
- <PullToRefresh />
- <PwaInstallPrompt />
- </>
- );
+  return (
+    <ErrorBoundary>
+      <StatusBarForTheme />
+      <ImpersonationBanner />
+      <OfflineBanner />
+      <MaintenanceGate>
+        <Slot />
+      </MaintenanceGate>
+      <ReConsentGate />
+      <AlertHost />
+      <AppLockOverlay />
+      <PullToRefresh />
+      <PwaInstallPrompt />
+    </ErrorBoundary>
+  );
 }

@@ -1,4 +1,4 @@
-﻿import type { UserProfile, UserRole } from '../api/types';
+import type { UserProfile, UserRole } from '../api/types';
 
 export interface SeedBotUser {
   id: string;
@@ -17,7 +17,7 @@ export interface SeedBotUser {
 
 export const SEED_BOT_USERS: SeedBotUser[] = [
   // ==========================================
-  // UNIVERSITY OF IBADAN (UI) â€” 7 BOTS
+  // UNIVERSITY OF IBADAN (UI) — 7 BOTS
   // ==========================================
   {
     id: '00000000-0000-4000-a000-000000000101',
@@ -119,7 +119,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
   },
 
   // ==========================================
-  // UNIVERSITY OF LAGOS (UNILAG) â€” 7 BOTS
+  // UNIVERSITY OF LAGOS (UNILAG) — 7 BOTS
   // ==========================================
   {
     id: '00000000-0000-4000-a000-000000000201',
@@ -221,7 +221,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
   },
 
   // ==========================================
-  // FEDERAL UNIVERSITY OF AGRICULTURE, ABEOKUTA (FUNAAB) â€” 6 BOTS
+  // FEDERAL UNIVERSITY OF AGRICULTURE, ABEOKUTA (FUNAAB) — 6 BOTS
   // ==========================================
   {
     id: '00000000-0000-4000-a000-000000000301',

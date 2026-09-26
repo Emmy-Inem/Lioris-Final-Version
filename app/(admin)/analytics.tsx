@@ -50,7 +50,7 @@ export default function AdminAnalyticsScreen() {
   const [timeRangeDays, setTimeRangeDays] = useState<number>(30);
   const [campusFilter, setCampusFilter] = useState<string>('ALL');
   const [userSearch, setUserSearch] = useState('');
-  const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'real' | 'bot'>('all');
+  const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'real' | 'bot'>('real');
 
   // Fetch real aggregated analytics summary (campus-filtered, zero fake stats)
   const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryErrObj, refetch: refetchSummary } = useQuery({
@@ -65,9 +65,9 @@ export default function AdminAnalyticsScreen() {
     queryFn: async () => {
       let query = supabase
         .from('profiles')
-        .select('id, full_name, role, campus_code, verification_status, last_active_at, last_login_at, is_bot, avatar_url')
-        .order('last_active_at', { ascending: false, nullsFirst: false })
-        .limit(100);
+        .select('id, full_name, role, campus_code, verification_status, last_active_at, last_login_at, is_bot, avatar_url, created_at')
+        .order('created_at', { ascending: false })
+        .limit(150);
 
       if (campusFilter !== 'ALL') {
         query = query.eq('campus_code', campusFilter);
@@ -87,7 +87,7 @@ export default function AdminAnalyticsScreen() {
         verificationStatus: p.verification_status || 'unverified',
         lastActiveAt: p.last_active_at,
         lastLoginAt: p.last_login_at,
-        isBot: p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-')),
+        isBot: Boolean(p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-'))),
         avatarUrl: p.avatar_url,
       }));
     },
@@ -118,7 +118,14 @@ export default function AdminAnalyticsScreen() {
       );
     }
 
-    return list;
+    // Prioritize real students first, then sort by activity / recency
+    return [...list].sort((a, b) => {
+      if (!a.isBot && b.isBot) return -1;
+      if (a.isBot && !b.isBot) return 1;
+      const timeA = new Date(a.lastActiveAt || a.lastLoginAt || 0).getTime();
+      const timeB = new Date(b.lastActiveAt || b.lastLoginAt || 0).getTime();
+      return timeB - timeA;
+    });
   }, [recentUsers, userTypeFilter, campusFilter, userSearch]);
 
   const maxVisits = Math.max(1, ...(summary?.most_visited_pages.map((p) => p.visits) ?? [1]));
@@ -138,7 +145,6 @@ export default function AdminAnalyticsScreen() {
         contentContainerStyle={{
           paddingBottom: isDesktop ? 60 : 140,
           paddingTop: isDesktop ? spacing.md : spacing.sm,
-          paddingHorizontal: spacing.md,
           gap: spacing.lg,
         }}
         showsVerticalScrollIndicator={isDesktop}
@@ -968,10 +974,15 @@ export default function AdminAnalyticsScreen() {
             {usersLoading ? (
               <ListItemSkeletonList count={6} />
             ) : filteredUsers.length === 0 ? (
-              <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
+              <View style={{ paddingVertical: spacing.xl, alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
-                <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
-                  No members found matching current filters.
+                <AppText variant="bodySmall" weight="bold">
+                  {userTypeFilter === 'real' ? `No registered real students for ${activeCampusName}` : 'No members found matching current filters'}
+                </AppText>
+                <AppText variant="caption" tone="secondary" style={{ textAlign: 'center', maxWidth: 400 }}>
+                  {userTypeFilter === 'real'
+                    ? 'When students create an account or verify their student matriculation ID, their profile and live activity will be tracked here.'
+                    : 'Try changing the university selector or switching the filter above.'}
                 </AppText>
               </View>
             ) : null}

@@ -46,6 +46,10 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
   const [label, setLabel] = useState(community.label);
   const [description, setDescription] = useState(community.description);
   const [rules, setRules] = useState<string[]>(community.rules);
+  const [accentColor, setAccentColor] = useState(community.accentColor || '#2563EB');
+  const [bannerColor, setBannerColor] = useState(community.bannerColor || '#3B82F6');
+  const [moderatorBadge, setModeratorBadge] = useState(community.moderatorBadge || 'Community Lead');
+  const [moderatorTitle, setModeratorTitle] = useState(community.moderatorTitle || 'Volunteer Moderators');
   const [newRule, setNewRule] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
 
@@ -64,6 +68,10 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
     setLabel(community.label);
     setDescription(community.description);
     setRules(community.rules);
+    setAccentColor(community.accentColor || '#2563EB');
+    setBannerColor(community.bannerColor || '#3B82F6');
+    setModeratorBadge(community.moderatorBadge || 'Community Lead');
+    setModeratorTitle(community.moderatorTitle || 'Volunteer Moderators');
     setNewRule('');
     setAddModeratorOpen(false);
     setModeratorQuery('');
@@ -106,7 +114,15 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
     haptics.light();
     setSavingDetails(true);
     try {
-      await updateCommunityDetails(community.id, { label, description, rules });
+      await updateCommunityDetails(community.id, {
+        label,
+        description,
+        rules,
+        accentColor,
+        bannerColor,
+        moderatorBadge,
+        moderatorTitle,
+      });
       await queryClient.invalidateQueries({ queryKey: ['communities'] });
       haptics.success();
       Alert.alert('Saved', 'Community details updated.');
@@ -238,6 +254,66 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
                 </View>
                 <AppButton label="Add" variant="secondary" size="sm" onPress={handleAddRule} />
               </View>
+              <View style={{ marginTop: spacing.sm, gap: spacing.xs }}>
+                <AppText variant="bodySmall" weight="medium" tone="secondary">
+                  Theme Colour
+                </AppText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {[
+                    { name: 'Blue', color: '#2563EB' },
+                    { name: 'Indigo', color: '#4F46E5' },
+                    { name: 'Emerald', color: '#059669' },
+                    { name: 'Purple', color: '#7C3AED' },
+                    { name: 'Orange', color: '#EA580C' },
+                    { name: 'Pink', color: '#DB2777' },
+                    { name: 'Cyan', color: '#0284C7' },
+                    { name: 'Amber', color: '#D97706' },
+                  ].map((preset) => {
+                    const isSelected = accentColor.toLowerCase() === preset.color.toLowerCase();
+                    return (
+                      <Pressable
+                        key={preset.color}
+                        onPress={() => {
+                          haptics.light();
+                          setAccentColor(preset.color);
+                          setBannerColor(preset.color);
+                        }}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingVertical: 5,
+                          paddingHorizontal: 10,
+                          borderRadius: 16,
+                          backgroundColor: isSelected ? `${preset.color}25` : colors.surface,
+                          borderWidth: 1.5,
+                          borderColor: isSelected ? preset.color : colors.border,
+                        }}
+                      >
+                        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: preset.color }} />
+                        <AppText variant="caption" weight={isSelected ? 'bold' : 'regular'}>
+                          {preset.name}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <AppTextField
+                label="Moderator Role Badge"
+                value={moderatorBadge}
+                onChangeText={setModeratorBadge}
+                maxLength={40}
+                placeholder="e.g. Academic Board, Tech Guild Lead"
+              />
+              <AppTextField
+                label="Moderator Title"
+                value={moderatorTitle}
+                onChangeText={setModeratorTitle}
+                maxLength={60}
+                placeholder="e.g. Department Representatives"
+              />
 
               <AppButton label="Save Details" variant="primary" loading={savingDetails} onPress={handleSaveDetails} fullWidth />
             </SolidCard>

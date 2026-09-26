@@ -1144,6 +1144,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260925140000_paid_events.sql',
   'supabase/migrations/20260926150000_seed_campus_community_bots.sql',
   'supabase/migrations/20260926160000_admin_analytics_and_activity.sql',
+  'supabase/migrations/20260926220000_forum_community_memberships.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1567,6 +1568,38 @@ console.log('\n== admin analytics & user activity monitoring ==');
       const uiRes = (await c.q("SELECT public.get_admin_analytics_summary(30, 'UI') AS data")).rows[0].data;
       eq(uiRes.bot_users, 7, '7 UI bots counted when campus filtered');
       eq(uiRes.total_posts, 7, '7 UI forum posts counted when campus filtered');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// forum community memberships (20260926220000_forum_community_memberships.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== forum community memberships ==');
+{
+  await check('student can join and leave forum community with RLS enforced', async () => {
+    await as(U.s1, async (c) => {
+      // Find a community id
+      const commId = (await c.q("SELECT id FROM public.forum_communities LIMIT 1")).rows[0]?.id;
+      if (!commId) return;
+
+      // Join
+      await c.q("INSERT INTO public.forum_community_members (community_id, user_id) VALUES ($1, $2)", [commId, U.s1]);
+      const joinedCount = (await c.q("SELECT count(*)::int n FROM public.forum_community_members WHERE user_id = $1", [U.s1])).rows[0].n;
+      eq(joinedCount, 1, 's1 joined 1 community');
+
+      // Cannot join for someone else (s2)
+      denied(await c.t("INSERT INTO public.forum_community_members (community_id, user_id) VALUES ($1, $2)", [commId, U.s2]), /violates row-level security policy/, 'cannot join on behalf of peer');
+
+      // Check stats function
+      const stats = (await c.q("SELECT * FROM public.get_forum_communities_stats() WHERE community_id = $1", [commId])).rows[0];
+      assert(stats != null, 'stats row returned');
+      assert(Number(stats.members_count) >= 1, 'members_count includes joined member');
+
+      // Leave
+      await c.q("DELETE FROM public.forum_community_members WHERE community_id = $1 AND user_id = $2", [commId, U.s1]);
+      const afterLeave = (await c.q("SELECT count(*)::int n FROM public.forum_community_members WHERE user_id = $1", [U.s1])).rows[0].n;
+      eq(afterLeave, 0, 's1 left community');
     });
   });
 }

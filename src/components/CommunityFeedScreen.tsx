@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
 import { AppButton } from './AppButton';
+import { EmptyState } from './EmptyState';
 import { SolidCard } from './SolidCard';
 import { PostCardSkeletonList } from './Skeleton';
 import { ErrorStateView } from './ErrorStateView';
@@ -23,6 +24,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts, createPost } from '@/api/posts';
+import { listMyJoinedCommunityIds, joinCommunity, leaveCommunity, DEFAULT_JOINED_COMMUNITY_IDS, BASELINE_COMMUNITY_MEMBERS } from '@/api/forumMemberships';
 import { listCommunities, proposeCommunity, listMyModeratedCommunityIds, ForumCommunityRecord } from '@/api/communities';
 import { getInstitutionByCode } from '@/api/institutions';
 import { CommunityManageModal } from './CommunityManageModal';
@@ -100,6 +102,76 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const [newCommunityName, setNewCommunityName] = useState('');
   const [newCommunityDescription, setNewCommunityDescription] = useState('');
   const [submittingCommunity, setSubmittingCommunity] = useState(false);
+  const [forumViewMode, setForumViewMode] = useState<'joined' | 'explore'>('joined');
+  const [exploreCategory, setExploreCategory] = useState<string>('All');
+  const [exploreSearch, setExploreSearch] = useState<string>('');
+
+  const { data: myJoinedCommunityIds = DEFAULT_JOINED_COMMUNITY_IDS, refetch: refetchJoinedCommunities } = useQuery({
+    queryKey: ['my-joined-community-ids', user?.id],
+    queryFn: () => listMyJoinedCommunityIds(user?.id),
+  });
+
+  const joinedIdsSet = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const id of myJoinedCommunityIds) {
+      set.add(id);
+      set.add(id.toLowerCase());
+    }
+    return set;
+  }, [myJoinedCommunityIds]);
+
+  const isJoined = React.useCallback(
+    (ch: ForumCommunityRecord) => {
+      if (ch.id === 'all') return true;
+      return (
+        joinedIdsSet.has(ch.id) ||
+        joinedIdsSet.has(ch.id.toLowerCase()) ||
+        (ch.category ? joinedIdsSet.has(ch.category.toLowerCase()) : false) ||
+        (ch.slug ? joinedIdsSet.has(ch.slug.replace('c/', '').toLowerCase()) : false)
+      );
+    },
+    [joinedIdsSet],
+  );
+
+  async function handleToggleJoin(community: ForumCommunityRecord) {
+    haptics.medium();
+    const currentlyJoined = isJoined(community);
+    if (currentlyJoined) {
+      Alert.alert(
+        `Leave ${community.label}?`,
+        `Discussions from ${community.label} will no longer appear in your "My Joined Forums" feed. You can rejoin anytime from Explore All Forums.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Leave Space',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await leaveCommunity(community.id, user?.id);
+                await queryClient.invalidateQueries({ queryKey: ['my-joined-community-ids'] });
+                await refetchJoinedCommunities();
+                toast.info(`Left ${community.label}.`);
+                if (selectedChannel === community.category) {
+                  setSelectedChannel(null);
+                }
+              } catch (e: any) {
+                toast.error(e?.message || 'Failed to leave space.');
+              }
+            },
+          },
+        ]
+      );
+    } else {
+      try {
+        await joinCommunity(community.id, user?.id);
+        await queryClient.invalidateQueries({ queryKey: ['my-joined-community-ids'] });
+        await refetchJoinedCommunities();
+        toast.success(`Joined ${community.label}! Discussions from this space are now in your feed.`);
+      } catch (e: any) {
+        toast.error(e?.message || 'Failed to join space.');
+      }
+    }
+  }
 
   const { data: fetchedCommunities } = useQuery({
     queryKey: ['communities'],
@@ -109,6 +181,36 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     () => [ALL_THREADS_CHANNEL, ...(fetchedCommunities ?? [])],
     [fetchedCommunities],
   );
+
+  const filteredExploreCommunities = React.useMemo(() => {
+    return CHANNELS.filter((ch) => {
+      if (ch.id === 'all') return false;
+      const q = exploreSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        ch.label.toLowerCase().includes(q) ||
+        ch.description.toLowerCase().includes(q) ||
+        (ch.category ? ch.category.toLowerCase().includes(q) : false) ||
+        ch.slug.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (exploreCategory === 'Academic & Tech') {
+        return ['tech', 'academic'].includes(ch.id) || ch.category === 'Academic' || ch.category === 'Tech Hub';
+      }
+      if (exploreCategory === 'Campus Life') {
+        return ['housing', 'social', 'lost'].includes(ch.id);
+      }
+      if (exploreCategory === 'Union & Polls') {
+        return ['polls'].includes(ch.id);
+      }
+      return true;
+    });
+  }, [CHANNELS, exploreSearch, exploreCategory]);
+
+  const joinedChannels = React.useMemo(() => {
+    return CHANNELS.filter((ch) => ch.id === 'all' || isJoined(ch));
+  }, [CHANNELS, isJoined]);
 
   const activeSubForum = findActiveChannel(CHANNELS, selectedChannel);
   const [manageCommunityOpen, setManageCommunityOpen] = useState(false);
@@ -197,6 +299,26 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     : null;
 
   function renderEmptyForumState() {
+    if (forumViewMode === 'explore') return null;
+    if (joinedChannels.length <= 1) {
+      return (
+        <SolidCard radius={18} style={{ padding: spacing.xl, alignItems: 'center', marginTop: spacing.md }}>
+          <Ionicons name="compass-outline" size={40} color={colors.brandPrimary} style={{ marginBottom: spacing.sm }} />
+          <AppText variant="h3" weight="bold" style={{ textAlign: 'center', marginBottom: spacing.xs }}>
+            Personalize Your Discussion Feed
+          </AppText>
+          <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md }}>
+            You haven't joined any campus discussion spaces yet. Join academic, coding, and hostel forums to see peer discussions.
+          </AppText>
+          <AppButton
+            label="Explore & Join Spaces"
+            variant="primary"
+            icon="compass-outline"
+            onPress={() => setForumViewMode('explore')}
+          />
+        </SolidCard>
+      );
+    }
     if (isExploringOtherCampus) {
       return (
         <View style={{ alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.xl }}>
@@ -339,11 +461,16 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   });
 
   const communityStats = React.useMemo(() => {
-    const stats = new Map<string, { threads: number; contributors: number }>();
+    const stats = new Map<string, { threads: number; contributors: number; members: number }>();
     const pool = allCommunityPosts ?? [];
     for (const community of CHANNELS) {
       const matches = community.id === 'all' ? pool : pool.filter((p) => p.category === community.category);
-      stats.set(community.id, { threads: matches.length, contributors: new Set(matches.map((p) => p.authorId)).size });
+      const baseline = BASELINE_COMMUNITY_MEMBERS[community.id] || 380;
+      stats.set(community.id, {
+        threads: matches.length,
+        contributors: new Set(matches.map((p) => p.authorId)).size,
+        members: baseline + (matches.length > 0 ? new Set(matches.map((p) => p.authorId)).size * 4 : 0),
+      });
     }
     return stats;
   }, [allCommunityPosts, CHANNELS]);
@@ -447,7 +574,348 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
       {/* Gamification & Streaks Widget */}
 
-      {/* Quick Search & Sort Bar */}
+      {/* Forum Navigation Switcher: My Joined Forums vs Explore All Forums */}
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: 6,
+          marginBottom: spacing.sm,
+          padding: 3,
+          backgroundColor: isDark ? 'rgba(30, 41, 59, 0.50)' : 'rgba(241, 245, 249, 0.85)',
+          borderRadius: radius.pill,
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+        }}
+      >
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setForumViewMode('joined');
+          }}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: forumViewMode === 'joined' }}
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            paddingVertical: 7,
+            borderRadius: radius.pill,
+            backgroundColor: forumViewMode === 'joined' ? (isDark ? colors.surface : '#FFFFFF') : 'transparent',
+            ...(Platform.OS === 'web' && forumViewMode === 'joined'
+              ? { boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+              : {}),
+          }}
+        >
+          <Ionicons
+            name="chatbubbles"
+            size={14}
+            color={forumViewMode === 'joined' ? colors.brandPrimary : colors.textSecondary}
+          />
+          <AppText
+            variant="caption"
+            weight="bold"
+            tone={forumViewMode === 'joined' ? 'primary' : 'secondary'}
+            style={{ fontSize: 11.5 }}
+          >
+            My Joined Forums ({joinedChannels.length})
+          </AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setForumViewMode('explore');
+          }}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: forumViewMode === 'explore' }}
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            paddingVertical: 7,
+            borderRadius: radius.pill,
+            backgroundColor: forumViewMode === 'explore' ? (isDark ? colors.surface : '#FFFFFF') : 'transparent',
+            ...(Platform.OS === 'web' && forumViewMode === 'explore'
+              ? { boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+              : {}),
+          }}
+        >
+          <Ionicons
+            name="compass-outline"
+            size={15}
+            color={forumViewMode === 'explore' ? colors.brandPrimary : colors.textSecondary}
+          />
+          <AppText
+            variant="caption"
+            weight="bold"
+            tone={forumViewMode === 'explore' ? 'primary' : 'secondary'}
+            style={{ fontSize: 11.5 }}
+          >
+            Explore All Forums ({CHANNELS.length - 1})
+          </AppText>
+        </Pressable>
+      </View>
+
+      {forumViewMode === 'explore' ? (
+        <View style={{ marginBottom: spacing.md }}>
+          {/* Explore Search and Propose Button */}
+          <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm, alignItems: 'center' }}>
+            <View
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.xs,
+                backgroundColor: colors.surface,
+                borderRadius: radius.pill,
+                borderWidth: 1,
+                borderColor: colors.border,
+                paddingHorizontal: spacing.md,
+                height: 40,
+              }}
+            >
+              <Ionicons name="search" size={15} color={colors.textSecondary} />
+              <TextInput
+                accessibilityLabel="Search all forums and communities"
+                value={exploreSearch}
+                onChangeText={setExploreSearch}
+                placeholder="Search spaces by name, subject, or code..."
+                placeholderTextColor={colors.textSecondary}
+                style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
+              />
+              {exploreSearch ? (
+                <Pressable onPress={() => setExploreSearch('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={15} color={colors.textSecondary} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setProposeCommunityOpen(true);
+              }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                paddingHorizontal: 12,
+                height: 40,
+                borderRadius: radius.pill,
+                backgroundColor: colors.brandPrimary,
+              }}
+            >
+              <Ionicons name="add" size={16} color="#FFFFFF" />
+              <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF', fontSize: 11.5 }}>
+                Propose Space
+              </AppText>
+            </Pressable>
+          </View>
+
+          {/* Category Filter Pills */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingBottom: 6 }}
+            style={{ width: '100%', flexGrow: 0, marginBottom: spacing.sm }}
+          >
+            {(['All', 'Academic & Tech', 'Campus Life', 'Union & Polls'] as const).map((cat) => {
+              const selected = exploreCategory === cat;
+              return (
+                <Pressable
+                  key={cat}
+                  onPress={() => {
+                    haptics.light();
+                    setExploreCategory(cat);
+                  }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
+                    borderRadius: radius.pill,
+                    backgroundColor: selected ? colors.brandPrimary : colors.surface,
+                    borderWidth: 1,
+                    borderColor: selected ? colors.brandPrimary : colors.border,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
+                    {cat}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* Directory of Communities */}
+          <View style={{ gap: spacing.md }}>
+            {filteredExploreCommunities.map((ch) => {
+              const joined = isJoined(ch);
+              const membersCount = communityStats.get(ch.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[ch.id] ?? 450;
+              const threadsCount = communityStats.get(ch.id)?.threads ?? 0;
+              return (
+                <SolidCard
+                  key={ch.id}
+                  radius={18}
+                  frosted
+                  style={{
+                    padding: spacing.md,
+                    borderLeftWidth: 4,
+                    borderLeftColor: ch.accentColor,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                      <View
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 12,
+                          backgroundColor: `${ch.accentColor}18`,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name={ch.icon} size={22} color={ch.accentColor} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <AppText weight="bold" variant="body">
+                            {ch.label}
+                          </AppText>
+                          <View style={{ backgroundColor: `${ch.accentColor}20`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
+                            <AppText weight="bold" style={{ color: ch.accentColor, fontSize: 10.5 }}>
+                              {ch.slug}
+                            </AppText>
+                          </View>
+                          {ch.approvalStatus === 'pending' && <Badge label="Pending Review" tone="warning" />}
+                        </View>
+                        <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 2 }}>
+                          👥 {membersCount.toLocaleString()} Members • 💬 {threadsCount.toLocaleString()} Discussions
+                        </AppText>
+                      </View>
+                    </View>
+
+                    {/* Join / Leave button */}
+                    <Pressable
+                      onPress={() => handleToggleJoin(ch)}
+                      hitSlop={8}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: radius.pill,
+                        backgroundColor: joined
+                          ? isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7'
+                          : colors.brandPrimary,
+                        borderWidth: 1,
+                        borderColor: joined
+                          ? isDark ? 'rgba(16, 185, 129, 0.40)' : '#86EFAC'
+                          : colors.brandPrimary,
+                      }}
+                    >
+                      <Ionicons
+                        name={joined ? 'checkmark-circle' : 'add-circle-outline'}
+                        size={14}
+                        color={joined ? '#10B981' : '#FFFFFF'}
+                      />
+                      <AppText
+                        variant="caption"
+                        weight="bold"
+                        style={{
+                          color: joined ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF',
+                          fontSize: 11,
+                        }}
+                      >
+                        {joined ? 'Joined' : 'Join Space'}
+                      </AppText>
+                    </Pressable>
+                  </View>
+
+                  <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 18, marginBottom: 10 }}>
+                    {ch.description}
+                  </AppText>
+
+                  {/* Moderator & Actions Bar */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingTop: 8,
+                      borderTopWidth: 1,
+                      borderTopColor: colors.border,
+                      flexWrap: 'wrap',
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 180 }}>
+                      <Ionicons name="shield-checkmark" size={13} color={colors.textSecondary} />
+                      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11 }}>
+                        <AppText weight="bold" tone="primary" style={{ fontSize: 11 }}>
+                          {ch.moderatorBadge}:
+                        </AppText>{' '}
+                        {ch.moderatorTitle}
+                      </AppText>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Pressable
+                        onPress={() => {
+                          setSelectedChannel(ch.category);
+                          setRulesModalOpen(true);
+                        }}
+                        hitSlop={8}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 4, paddingHorizontal: 8 }}
+                      >
+                        <Ionicons name="document-text-outline" size={12} color={colors.textSecondary} />
+                        <AppText variant="caption" weight="medium" tone="secondary" style={{ fontSize: 11 }}>
+                          Rules ({ch.rules.length})
+                        </AppText>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => {
+                          haptics.light();
+                          setSelectedChannel(ch.category);
+                          setForumViewMode('joined');
+                        }}
+                        hitSlop={8}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: radius.pill,
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                        }}
+                      >
+                        <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+                          Open Forum →
+                        </AppText>
+                      </Pressable>
+                    </View>
+                  </View>
+                </SolidCard>
+              );
+            })}
+
+            {filteredExploreCommunities.length === 0 && (
+              <EmptyState
+                title="No matching discussion spaces"
+                description="Try a different search term or category filter, or propose a new space."
+              />
+            )}
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Quick Search & Sort Bar */}
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
         <View
           style={{
@@ -550,17 +1018,17 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </AppText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                      ðŸ’¡ {tp.likesCount} helpful
+                      💡 {tp.likesCount} helpful
                     </AppText>
                     <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                      ðŸ’¬ {tp.commentsCount ?? 0}
+                      💬 {tp.commentsCount ?? 0}
                     </AppText>
                   </View>
                 </Pressable>
               ))
             ) : (
               <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                No active discussions yet â€” be the first to ask a useful question.
+                No active discussions yet — be the first to ask a useful question.
               </AppText>
             )}
           </ScrollView>
@@ -577,7 +1045,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         </View>
         <Pressable onPress={() => setSubForumsDirectoryOpen(true)} hitSlop={8}>
           <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-            Browse All ({CHANNELS.length - 1}) â†’
+            Browse All ({CHANNELS.length - 1}) →
           </AppText>
         </Pressable>
       </View>
@@ -590,7 +1058,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         style={{ width: '100%', flexGrow: 0, marginBottom: spacing.xs }}
         {...({ 'data-horizontal-scroll': 'true' } as any)}
       >
-        {CHANNELS.filter((ch: any) => (ch.flagKey ? isFeatureEnabled(ch.flagKey) : true)).map((ch) => {
+        {(forumViewMode === 'joined' ? joinedChannels : CHANNELS)
+          .filter((ch: any) => (ch.flagKey ? isFeatureEnabled(ch.flagKey) : true))
+          .map((ch) => {
           const selected = selectedChannel === ch.category;
           return (
             <Pressable
@@ -644,6 +1114,33 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             </Pressable>
           );
         })}
+        {forumViewMode === 'joined' && (
+          <Pressable
+            onPress={() => {
+              haptics.light();
+              setForumViewMode('explore');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Explore more discussion spaces"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+              backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.08)',
+              borderRadius: radius.pill,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderWidth: 1,
+              borderColor: colors.brandPrimary,
+              borderStyle: 'dashed',
+            }}
+          >
+            <Ionicons name="add" size={13} color={colors.brandPrimary} />
+            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11.5 }}>
+              + Explore More Spaces
+            </AppText>
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* Reddit-Style Sub-Forum Space Banner when a specific community is active */}
@@ -679,29 +1176,68 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </View>
                 </View>
                 <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
-                  ðŸ’¬ {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads â€¢ {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
+                  👥 {(communityStats.get(activeSubForum.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[activeSubForum.id] ?? 450).toLocaleString()} members • 💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads
                 </AppText>
               </View>
             </View>
 
-            <Pressable
-              onPress={() => setSelectedChannel(null)}
-              hitSlop={8}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 3,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: radius.pill,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-              }}
-            >
-              <Ionicons name="arrow-back" size={12} color={colors.textSecondary} />
-              <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 10.5 }}>
-                All Feed
-              </AppText>
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {activeSubForum.id !== 'all' && (
+                <Pressable
+                  onPress={() => handleToggleJoin(activeSubForum)}
+                  hitSlop={8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 3,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: radius.pill,
+                    backgroundColor: isJoined(activeSubForum)
+                      ? isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7'
+                      : colors.brandPrimary,
+                    borderWidth: 1,
+                    borderColor: isJoined(activeSubForum)
+                      ? isDark ? 'rgba(16, 185, 129, 0.40)' : '#86EFAC'
+                      : colors.brandPrimary,
+                  }}
+                >
+                  <Ionicons
+                    name={isJoined(activeSubForum) ? 'checkmark-circle' : 'add-circle-outline'}
+                    size={12}
+                    color={isJoined(activeSubForum) ? '#10B981' : '#FFFFFF'}
+                  />
+                  <AppText
+                    variant="caption"
+                    weight="bold"
+                    style={{
+                      color: isJoined(activeSubForum) ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF',
+                      fontSize: 10.5,
+                    }}
+                  >
+                    {isJoined(activeSubForum) ? 'Joined' : 'Join Space'}
+                  </AppText>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => setSelectedChannel(null)}
+                hitSlop={8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 3,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: radius.pill,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                }}
+              >
+                <Ionicons name="arrow-back" size={12} color={colors.textSecondary} />
+                <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 10.5 }}>
+                  All Feed
+                </AppText>
+              </Pressable>
+            </View>
           </View>
 
           <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, lineHeight: 16, marginBottom: 8 }}>
@@ -790,6 +1326,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </View>
         </GlassCard>
       </Pressable>
+        </>
+      )}
     </View>
   );
 
@@ -814,7 +1352,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </View>
                 <AppText tone="secondary" variant="caption" style={{ fontSize: 12, marginTop: 2 }}>
                   {user?.role === 'admin'
-                    ? 'Global discourse desk â€” publish announcements, pin updates, and approve pending threads.'
+                    ? 'Global discourse desk — publish announcements, pin updates, and approve pending threads.'
                     : 'Connect, ask questions, exchange notes, and participate in polls.'}
                 </AppText>
               </View>
@@ -1013,29 +1551,68 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         </View>
                       </View>
                       <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, marginTop: 2 }}>
-                        ðŸ’¬ {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads â€¢ {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
+                        👥 {(communityStats.get(activeSubForum.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[activeSubForum.id] ?? 450).toLocaleString()} members • 💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads
                       </AppText>
                     </View>
                   </View>
 
-                  <Pressable
-                    onPress={() => setSelectedChannel(null)}
-                    hitSlop={8}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
-                      borderRadius: radius.pill,
-                      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                    }}
-                  >
-                    <Ionicons name="arrow-back" size={13} color={colors.textSecondary} />
-                    <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 11 }}>
-                      All Feed
-                    </AppText>
-                  </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {activeSubForum.id !== 'all' && (
+                      <Pressable
+                        onPress={() => handleToggleJoin(activeSubForum)}
+                        hitSlop={8}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: radius.pill,
+                          backgroundColor: isJoined(activeSubForum)
+                            ? isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7'
+                            : colors.brandPrimary,
+                          borderWidth: 1,
+                          borderColor: isJoined(activeSubForum)
+                            ? isDark ? 'rgba(16, 185, 129, 0.40)' : '#86EFAC'
+                            : colors.brandPrimary,
+                        }}
+                      >
+                        <Ionicons
+                          name={isJoined(activeSubForum) ? 'checkmark-circle' : 'add-circle-outline'}
+                          size={14}
+                          color={isJoined(activeSubForum) ? '#10B981' : '#FFFFFF'}
+                        />
+                        <AppText
+                          variant="caption"
+                          weight="bold"
+                          style={{
+                            color: isJoined(activeSubForum) ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF',
+                            fontSize: 11,
+                          }}
+                        >
+                          {isJoined(activeSubForum) ? 'Joined Space' : 'Join Space'}
+                        </AppText>
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={() => setSelectedChannel(null)}
+                      hitSlop={8}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: radius.pill,
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                      }}
+                    >
+                      <Ionicons name="arrow-back" size={13} color={colors.textSecondary} />
+                      <AppText variant="caption" weight="semiBold" tone="secondary" style={{ fontSize: 11 }}>
+                        All Feed
+                      </AppText>
+                    </Pressable>
+                  </View>
                 </View>
 
                 <AppText tone="secondary" variant="bodySmall" style={{ fontSize: 13, lineHeight: 18, marginBottom: 10 }}>
@@ -1166,7 +1743,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
             {/* Posts Feed Stream */}
             <FlatList
-              data={posts}
+              data={forumViewMode === 'explore' ? [] : posts}
               keyExtractor={(item) => item.id}
               initialNumToRender={8}
               maxToRenderPerBatch={8}
@@ -1228,6 +1805,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
                   <View>
+                    <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
+                      {(communityStats.get(activeSubForum.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[activeSubForum.id] ?? 450).toLocaleString()}
+                    </AppText>
+                    <AppText variant="caption" tone="secondary">Members</AppText>
+                  </View>
+                  <View>
                     <AppText weight="bold" variant="bodySmall">
                       {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()}
                     </AppText>
@@ -1251,7 +1834,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <AppText variant="caption" weight="bold" tone="brand">
-                    View Space Rules ({activeSubForum.rules.length}) â†’
+                    View Space Rules ({activeSubForum.rules.length}) →
                   </AppText>
                 </Pressable>
                 {canManageActiveCommunity && (
@@ -1281,7 +1864,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     Communities
                   </AppText>
                   <Pressable onPress={() => setSubForumsDirectoryOpen(true)}>
-                    <AppText variant="caption" weight="bold" tone="brand">All ({CHANNELS.length - 1}) â†’</AppText>
+                    <AppText variant="caption" weight="bold" tone="brand">All ({CHANNELS.length - 1}) →</AppText>
                   </Pressable>
                 </View>
                 <View style={{ gap: 8 }}>
@@ -1450,7 +2033,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   {activeSubForum.label} Rules
                 </AppText>
                 <AppText variant="caption" tone="secondary">
-                  {activeSubForum.slug} â€¢ Moderated Space
+                  {activeSubForum.slug} • Moderated Space
                 </AppText>
               </View>
             </View>
@@ -1578,9 +2161,38 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                       </View>
                       {sf.approvalStatus === 'pending' ? <Badge label="Pending Review" tone="warning" /> : null}
                     </View>
-                    <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                      ðŸ’¬ {(communityStats.get(sf.id)?.threads ?? 0).toLocaleString()}
-                    </AppText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                        👥 {(communityStats.get(sf.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[sf.id] ?? 450).toLocaleString()}
+                      </AppText>
+                      {sf.id !== 'all' && (
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleToggleJoin(sf);
+                          }}
+                          hitSlop={6}
+                          style={{
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: radius.pill,
+                            backgroundColor: isJoined(sf)
+                              ? isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7'
+                              : colors.brandPrimary,
+                          }}
+                        >
+                          <AppText
+                            weight="bold"
+                            style={{
+                              fontSize: 10,
+                              color: isJoined(sf) ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF',
+                            }}
+                          >
+                            {isJoined(sf) ? 'Joined ✓' : '+ Join'}
+                          </AppText>
+                        </Pressable>
+                      )}
+                    </View>
                   </View>
 
                   <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ lineHeight: 16 }}>

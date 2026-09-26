@@ -14,6 +14,7 @@ import { listCommunities, approveCommunity, rejectCommunity, deleteCommunity, Fo
 import { Post } from '@/api/types';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { PublishThreadModal } from '@/components/PublishThreadModal';
+import { CommunityManageModal } from '@/components/CommunityManageModal';
 import { FORUM_COMMUNITIES } from '@/constants/forumCommunities';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
@@ -39,6 +40,7 @@ export function ForumsModerationTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [actingId, setActingId] = useState<string | null>(null);
   const [communityStatusFilter, setCommunityStatusFilter] = useState<CommunityStatusFilter>('All');
+  const [editingCommunity, setEditingCommunity] = useState<ForumCommunityRecord | null>(null);
 
   const { data: communities = [], isLoading: loadingCommunities, refetch: refetchCommunities } = useQuery({
     queryKey: ['communities', 'admin-all'],
@@ -325,15 +327,16 @@ export function ForumsModerationTab() {
 
             return (
               <SolidCard key={community.id} radius={18} frosted style={{ marginBottom: spacing.md, borderWidth: 1, borderColor }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+                <Pressable onPress={() => setEditingCommunity(community)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
                   <View style={{ flex: 1, marginRight: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons name={community.icon} size={18} color={community.accentColor} />
                     <AppText weight="bold" variant="body">
                       {community.label}
                     </AppText>
+                    <Ionicons name="create-outline" size={15} color={colors.textSecondary} />
                   </View>
                   <Badge label={badge.label} tone={badge.tone} />
-                </View>
+                </Pressable>
 
                 <AppText
                   tone="secondary"
@@ -370,6 +373,12 @@ export function ForumsModerationTab() {
                       </View>
                     </>
                   ) : null}
+                  <AppButton
+                    label="Edit Space"
+                    variant="secondary"
+                    icon="create-outline"
+                    onPress={() => setEditingCommunity(community)}
+                  />
                   <Pressable accessibilityRole="button" accessibilityLabel="Delete"
                     onPress={() => handleDeleteCommunityConfirm(community)}
                     disabled={actingId === community.id}
@@ -508,6 +517,18 @@ export function ForumsModerationTab() {
           toast.success('Official announcement published to the Forum!');
         }}
       />
+
+      {editingCommunity ? (
+        <CommunityManageModal
+          visible={!!editingCommunity}
+          onClose={() => {
+            setEditingCommunity(null);
+            refetchCommunities();
+          }}
+          community={editingCommunity}
+          isAdmin={true}
+        />
+      ) : null}
     </View>
   );
 }
