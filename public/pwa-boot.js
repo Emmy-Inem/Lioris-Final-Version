@@ -49,12 +49,19 @@
     window.location.reload();
   }
 
-  // A bundle file that failed to load (removed by a newer deploy, flaky network).
+  // A bundle file that failed to load (removed by a newer deploy, flaky network) or unhandled chunk syntax error.
   window.addEventListener(
     'error',
     function (event) {
       var el = event && event.target;
-      if (el && el.tagName === 'SCRIPT' && el.src && el.src.indexOf('/_expo/') !== -1) reloadOnce();
+      if (el && el.tagName === 'SCRIPT' && el.src && el.src.indexOf('/_expo/') !== -1) {
+        reloadOnce();
+        return;
+      }
+      var msg = String((event && (event.message || (event.error && event.error.message))) || '');
+      if (/SyntaxError: Unexpected token '<'|ChunkLoadError|Loading chunk|dynamically imported module/i.test(msg)) {
+        reloadOnce();
+      }
     },
     true,
   );
@@ -70,7 +77,12 @@
 
   function appIsBlank() {
     var root = document.getElementById('root');
-    return !root || root.childElementCount === 0;
+    if (!root || root.childElementCount === 0) return true;
+    var inner = (root.innerText || root.textContent || '').trim();
+    if (inner.length === 0 && !root.querySelector('img, svg, canvas, input, button, [role="button"]')) {
+      return true;
+    }
+    return false;
   }
 
   // Coming back from minimized / a discarded tab / bfcache with nothing rendered.

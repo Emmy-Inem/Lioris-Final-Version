@@ -18,6 +18,7 @@ import { fetchAdminAnalyticsSummary } from '@/api/analytics';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 
 interface RecentActiveUser {
   id: string;
@@ -142,7 +143,10 @@ export default function AdminAnalyticsScreen() {
         }}
         showsVerticalScrollIndicator={isDesktop}
       >
-        {/* Platform Analytics — top-level page, no redundant section pill row */}
+        {/* Platform Group Navigation Tabs */}
+        <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+          <AdminSectionTabs group="platform" />
+        </View>
 
         {/* Top Controls Bar */}
         <View
@@ -263,13 +267,9 @@ export default function AdminAnalyticsScreen() {
           </View>
         </View>
 
-        {/* Institution / Campus Filter Pills */}
+        {/* Institution / Campus Filter - Mobile-Optimized Horizontal Scroll */}
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: spacing.xs,
             backgroundColor: colors.surface,
             borderRadius: radius.md,
             padding: spacing.sm,
@@ -277,56 +277,82 @@ export default function AdminAnalyticsScreen() {
             borderColor: colors.border,
           }}
         >
-          <AppText variant="caption" weight="bold" tone="secondary" style={{ marginRight: spacing.xs }}>
-            FILTER BY INSTITUTION:
-          </AppText>
-          <Pressable
-            onPress={() => {
-              haptics.light();
-              setCampusFilter('ALL');
-            }}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 5,
-              borderRadius: radius.pill,
-              backgroundColor: campusFilter === 'ALL' ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-            }}
-          >
-            <AppText
-              variant="caption"
-              weight="bold"
-              tone={campusFilter === 'ALL' ? 'inverse' : 'primary'}
-            >
-              All Higher Institutions
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+            <AppText variant="caption" weight="bold" tone="secondary">
+              FILTER BY UNIVERSITY / CAMPUS:
             </AppText>
-          </Pressable>
-
-          {LAUNCH_INSTITUTIONS.map((inst) => {
-            const active = campusFilter === inst.code;
-            return (
+            {campusFilter !== 'ALL' && (
               <Pressable
-                key={inst.code}
                 onPress={() => {
                   haptics.light();
-                  setCampusFilter(inst.code);
+                  setCampusFilter('ALL');
                 }}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 5,
-                  borderRadius: radius.pill,
-                  backgroundColor: active ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-                }}
+                hitSlop={8}
               >
-                <AppText
-                  variant="caption"
-                  weight="bold"
-                  tone={active ? 'inverse' : 'primary'}
-                >
-                  {inst.shortName}
+                <AppText variant="caption" weight="bold" tone="brand">
+                  Reset (Show All)
                 </AppText>
               </Pressable>
-            );
-          })}
+            )}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: spacing.xs, alignItems: 'center' }}
+            {...({ 'data-horizontal-scroll': 'true' } as any)}
+          >
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setCampusFilter('ALL');
+              }}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                borderRadius: radius.pill,
+                backgroundColor: campusFilter === 'ALL' ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                borderWidth: 1,
+                borderColor: campusFilter === 'ALL' ? colors.brandPrimary : colors.border,
+              }}
+            >
+              <AppText
+                variant="caption"
+                weight="bold"
+                tone={campusFilter === 'ALL' ? 'inverse' : 'primary'}
+              >
+                All Institutions
+              </AppText>
+            </Pressable>
+
+            {LAUNCH_INSTITUTIONS.map((inst) => {
+              const active = campusFilter === inst.code;
+              return (
+                <Pressable
+                  key={inst.code}
+                  onPress={() => {
+                    haptics.light();
+                    setCampusFilter(inst.code);
+                  }}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 7,
+                    borderRadius: radius.pill,
+                    backgroundColor: active ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                    borderWidth: 1,
+                    borderColor: active ? colors.brandPrimary : colors.border,
+                  }}
+                >
+                  <AppText
+                    variant="caption"
+                    weight="bold"
+                    tone={active ? 'inverse' : 'primary'}
+                  >
+                    {inst.shortName || inst.name}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {/* Real User Activity KPI Cards */}
@@ -897,18 +923,20 @@ export default function AdminAnalyticsScreen() {
                       )}
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start', gap: 4 }}>
                         <AppText variant="bodySmall" weight="bold" numberOfLines={1}>
                           {u.fullName}
                         </AppText>
-                        {u.isBot ? (
-                          <Badge label="Bot Persona" tone="neutral" />
-                        ) : (
-                          <Badge label="Real User" tone="success" />
-                        )}
-                        <Badge label={u.campusCode} tone="brand" />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                          {u.isBot ? (
+                            <Badge label="Bot Persona" tone="neutral" />
+                          ) : (
+                            <Badge label="Real User" tone="success" />
+                          )}
+                          <Badge label={u.campusCode} tone="brand" />
+                        </View>
                       </View>
-                      <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
                         Role: {u.role} • {u.verificationStatus}
                       </AppText>
                     </View>

@@ -375,12 +375,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user && mounted) {
         const userEmail = session.user.email ?? '';
 
-        // Securely query database profile for role
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
+        // Securely query database profile for role with 3s timeout failsafe
+        let profile: any = null;
+        try {
+          const profileFetch = supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          const timeout = new Promise<any>((_, reject) =>
+            setTimeout(() => reject(new Error('Profile query timeout on resume')), 3000)
+          );
+          const result = await Promise.race([profileFetch, timeout]);
+          profile = result?.data ?? null;
+        } catch (fetchErr) {
+          console.warn('[AuthContext] Profile query timed out or failed on resume, using cached session metadata:', fetchErr);
+        }
         if (!mounted) return;
 
         // Authorization role must come from `profiles.role` only

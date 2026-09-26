@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -82,7 +82,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // The Forum's own campus/global toggle. With the admin's Global toggle off it is always
   // 'campus' (never even a stale 'global' on first render) and the Global controls are hidden.
   const { scope: viewScope, setScope: setViewScope, globalEnabled: globalWorkspaceEnabled } = useForumScope();
-  const { showBots, toggleBotVisibility } = useBotVisibility();
+  const { showBots } = useBotVisibility();
 
   const params = useLocalSearchParams<{ category?: string }>();
   const toast = useToast();
@@ -498,39 +498,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             {sortBy === 'latest' ? 'Latest' : 'Helpful'}
           </AppText>
         </Pressable>
-        <Pressable
-          onPress={() => {
-            haptics.light();
-            toggleBotVisibility();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={`Bot accounts: ${showBots ? 'Shown' : 'Hidden'}`}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            borderWidth: 1,
-            borderColor: showBots ? colors.border : colors.brandPrimary,
-            borderRadius: radius.pill,
-            paddingHorizontal: spacing.md,
-            height: 40,
-            backgroundColor: showBots ? colors.surface : (isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF'),
-          }}
-        >
-          <Ionicons
-            name={showBots ? 'eye-off-outline' : 'eye-outline'}
-            size={14}
-            color={showBots ? colors.brandPrimary : colors.textSecondary}
-          />
-          <AppText
-            variant="caption"
-            weight="semiBold"
-            tone={showBots ? 'brand' : 'secondary'}
-            style={{ fontSize: 11 }}
-          >
-            {showBots ? 'Hide Bots' : 'Show Bots'}
-          </AppText>
-        </Pressable>
+        
       </View>
 
       {/* Active academic discussions */}

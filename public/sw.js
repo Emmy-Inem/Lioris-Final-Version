@@ -96,7 +96,13 @@ async function handleStatic(request) {
   if (cached) return cached;
   const response = await fetch(request);
   const type = response.headers.get('content-type') || '';
-  // A deploy that removed the file answers with the SPA index.html; never cache that as JS.
+  // A deploy that removed the file answers with the SPA index.html; never serve or cache that as JS/CSS.
+  if (response.ok && type.includes('text/html')) {
+    const reqUrl = new URL(request.url);
+    if (reqUrl.pathname.endsWith('.js') || reqUrl.pathname.endsWith('.css') || reqUrl.pathname.startsWith('/_expo/')) {
+      return new Response('Stale asset', { status: 404, statusText: 'Not Found' });
+    }
+  }
   if (response.ok && !type.includes('text/html')) {
     cache.put(request, response.clone()).then(trimStaticCache).catch(() => undefined);
   }

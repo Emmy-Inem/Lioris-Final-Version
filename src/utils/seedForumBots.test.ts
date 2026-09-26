@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import path from 'node:path';
 // @ts-ignore TS5097
 import { SEED_BOT_USERS, getSeedBotProfileById } from '../data/seedBotProfiles.ts';
 // @ts-ignore TS5097
@@ -53,6 +56,29 @@ test('campus community bot personas and forum posts integrity', async (t) => {
       assert.equal(profile.isVerified, true);
       assert.equal(profile.verificationStatus, 'verified');
     }
+  });
+
+  await t.test('every bot account has a unique display picture with no duplicate images', () => {
+    const avatarUrls = new Set<string>();
+    const imageHashes = new Map<string, string>();
+
+    for (const b of SEED_BOT_USERS) {
+      assert.ok(!avatarUrls.has(b.avatarUrl), `Duplicate avatarUrl detected: ${b.avatarUrl} for bot ${b.username}`);
+      avatarUrls.add(b.avatarUrl);
+
+      const fileName = b.avatarUrl.endsWith('.jpg') ? b.avatarUrl : `${b.avatarUrl}.jpg`;
+      const filePath = path.join(process.cwd(), 'assets', 'images', 'bots', fileName);
+      assert.ok(fs.existsSync(filePath), `Bot image file must exist: ${filePath}`);
+
+      const content = fs.readFileSync(filePath);
+      assert.ok(content.length > 5000, `Bot image file too small: ${filePath}`);
+      const hash = crypto.createHash('md5').update(content).digest('hex');
+      assert.ok(!imageHashes.has(hash), `Duplicate image hash detected: ${fileName} has same image as ${imageHashes.get(hash)}`);
+      imageHashes.set(hash, fileName);
+    }
+
+    assert.equal(avatarUrls.size, 20, 'All 20 bots must have distinct avatar presets');
+    assert.equal(imageHashes.size, 20, 'All 20 bots must have distinct physical images');
   });
 
   await t.test('contains exactly 20 insightful forum posts covering all discussion spaces', () => {

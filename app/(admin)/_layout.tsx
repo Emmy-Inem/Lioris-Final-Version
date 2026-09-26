@@ -88,6 +88,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="feature-controls" options={{ href: null, tabGroup: 'platform-config' } as any} />
       <Tabs.Screen name="super-admin-config" options={{ href: null, tabGroup: 'platform-config' } as any} />
       <Tabs.Screen name="system-health" options={{ href: null, tabGroup: 'platform-config' } as any} />
+      <Tabs.Screen name="analytics" options={{ href: null, tabGroup: 'platform-config' } as any} />
       <Tabs.Screen name="forum" options={{ href: null, tabGroup: 'content-desk' } as any} />
       <Tabs.Screen name="events-list" options={{ href: null, tabGroup: 'content-desk' } as any} />
       <Tabs.Screen name="events/[id]" options={{ href: null, tabGroup: 'content-desk' } as any} />
