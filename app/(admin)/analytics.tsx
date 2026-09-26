@@ -11,7 +11,6 @@ import { ErrorStateView } from '@/components/ErrorStateView';
 import { GlassCard } from '@/components/GlassCard';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
-import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
@@ -143,8 +142,7 @@ export default function AdminAnalyticsScreen() {
         }}
         showsVerticalScrollIndicator={isDesktop}
       >
-        {/* Moved under Platform Navigation Group */}
-        <AdminSectionTabs group="platform" />
+        {/* Platform Analytics — top-level page, no redundant section pill row */}
 
         {/* Top Controls Bar */}
         <View

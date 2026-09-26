@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -33,6 +33,7 @@ import { GuestTeaserBanner } from './GuestTeaserBanner';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { useForumScope } from '@/hooks/useForumScope';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
+import { useForumChannel, useForumSort } from '@/hooks/useForumState';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
@@ -88,7 +89,11 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState<string | null>(params.category || null);
+  const { selectedChannel: _storedChannel, setSelectedChannel: _setChannel } = useForumChannel();
+  // Prefer URL param on first mount, otherwise use persisted value
+  const [localChannel, setLocalChannel] = React.useState<string | null>(params.category || _storedChannel);
+  const selectedChannel = localChannel;
+  const setSelectedChannel = (ch: string | null) => { setLocalChannel(ch); _setChannel(ch); };
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
   const [subForumsDirectoryOpen, setSubForumsDirectoryOpen] = useState(false);
   const [proposeCommunityOpen, setProposeCommunityOpen] = useState(false);
@@ -159,7 +164,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     }
   }, [params.category]);
 
-  const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
+  const { sortBy, setSortBy } = useForumSort();
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
 
@@ -513,17 +518,17 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           }}
         >
           <Ionicons
-            name={showBots ? 'sparkles' : 'sparkles-outline'}
+            name={showBots ? 'eye-off-outline' : 'eye-outline'}
             size={14}
-            color={showBots ? colors.textSecondary : colors.brandPrimary}
+            color={showBots ? colors.brandPrimary : colors.textSecondary}
           />
           <AppText
             variant="caption"
             weight="semiBold"
-            tone={showBots ? 'secondary' : 'brand'}
+            tone={showBots ? 'brand' : 'secondary'}
             style={{ fontSize: 11 }}
           >
-            {showBots ? 'Bots: On' : 'Bots: Off'}
+            {showBots ? 'Hide Bots' : 'Show Bots'}
           </AppText>
         </Pressable>
       </View>
@@ -577,17 +582,17 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </AppText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                      💡 {tp.likesCount} helpful
+                      ðŸ’¡ {tp.likesCount} helpful
                     </AppText>
                     <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                      💬 {tp.commentsCount ?? 0}
+                      ðŸ’¬ {tp.commentsCount ?? 0}
                     </AppText>
                   </View>
                 </Pressable>
               ))
             ) : (
               <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                No active discussions yet — be the first to ask a useful question.
+                No active discussions yet â€” be the first to ask a useful question.
               </AppText>
             )}
           </ScrollView>
@@ -604,7 +609,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         </View>
         <Pressable onPress={() => setSubForumsDirectoryOpen(true)} hitSlop={8}>
           <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-            Browse All ({CHANNELS.length - 1}) →
+            Browse All ({CHANNELS.length - 1}) â†’
           </AppText>
         </Pressable>
       </View>
@@ -706,7 +711,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </View>
                 </View>
                 <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
-                  💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads • {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
+                  ðŸ’¬ {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads â€¢ {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
                 </AppText>
               </View>
             </View>
@@ -841,7 +846,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </View>
                 <AppText tone="secondary" variant="caption" style={{ fontSize: 12, marginTop: 2 }}>
                   {user?.role === 'admin'
-                    ? 'Global discourse desk — publish announcements, pin updates, and approve pending threads.'
+                    ? 'Global discourse desk â€” publish announcements, pin updates, and approve pending threads.'
                     : 'Connect, ask questions, exchange notes, and participate in polls.'}
                 </AppText>
               </View>
@@ -1040,7 +1045,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         </View>
                       </View>
                       <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, marginTop: 2 }}>
-                        💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads • {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
+                        ðŸ’¬ {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads â€¢ {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()} contributors
                       </AppText>
                     </View>
                   </View>
@@ -1278,7 +1283,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <AppText variant="caption" weight="bold" tone="brand">
-                    View Space Rules ({activeSubForum.rules.length}) →
+                    View Space Rules ({activeSubForum.rules.length}) â†’
                   </AppText>
                 </Pressable>
                 {canManageActiveCommunity && (
@@ -1308,7 +1313,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     Communities
                   </AppText>
                   <Pressable onPress={() => setSubForumsDirectoryOpen(true)}>
-                    <AppText variant="caption" weight="bold" tone="brand">All ({CHANNELS.length - 1}) →</AppText>
+                    <AppText variant="caption" weight="bold" tone="brand">All ({CHANNELS.length - 1}) â†’</AppText>
                   </Pressable>
                 </View>
                 <View style={{ gap: 8 }}>
@@ -1477,7 +1482,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   {activeSubForum.label} Rules
                 </AppText>
                 <AppText variant="caption" tone="secondary">
-                  {activeSubForum.slug} • Moderated Space
+                  {activeSubForum.slug} â€¢ Moderated Space
                 </AppText>
               </View>
             </View>
@@ -1606,7 +1611,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                       {sf.approvalStatus === 'pending' ? <Badge label="Pending Review" tone="warning" /> : null}
                     </View>
                     <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                      💬 {(communityStats.get(sf.id)?.threads ?? 0).toLocaleString()}
+                      ðŸ’¬ {(communityStats.get(sf.id)?.threads ?? 0).toLocaleString()}
                     </AppText>
                   </View>
 

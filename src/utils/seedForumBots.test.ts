@@ -44,7 +44,7 @@ test('campus community bot personas and forum posts integrity', async (t) => {
 
       assert.ok(b.bio && b.bio.length > 15, `bio must be descriptive: ${b.username}`);
       assert.ok(b.department && b.department.length > 2, `missing department: ${b.username}`);
-      assert.ok(b.avatarUrl && b.avatarUrl.startsWith('https://'), `avatar required: ${b.username}`);
+      assert.ok(b.avatarUrl && (b.avatarUrl.startsWith('https://') || b.avatarUrl.startsWith('bot_')), `avatar required: ${b.username}`);
       assert.equal(b.isVerified, true, 'bots must be verified');
 
       const profile = getSeedBotProfileById(b.id);
