@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Image } from'expo-image';
 import { router, useLocalSearchParams, useSegments } from'expo-router';
 import { Ionicons } from'@expo/vector-icons';
@@ -53,7 +53,16 @@ function timeAgo(iso: string) {
 
 export function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const segments = useSegments();
+  const roleGroup = segments[0] ?? '(student)';
   const { colors, spacing, radius, isDark } = useTheme();
+  const handleGoBack = () => {
+    if (router.canGoBack()) {
+      handleGoBack();
+    } else {
+      router.replace(`/${roleGroup}/feed` as any);
+    }
+  };
   const { isDesktop, contentMaxWidth } = useResponsive();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -127,7 +136,7 @@ export function PostDetailScreen() {
  const [reportOpen, setReportOpen] = useState(false);
  const [reportReason, setReportReason] = useState('');
 
- const { data: comments, refetch: refetchComments } = useQuery({
+ const { data: comments, refetch: refetchComments, isLoading: commentsLoading } = useQuery({
  queryKey: ['post-comments', id],
  queryFn: () => id ? listPostComments(id) : Promise.resolve([]),
  enabled: !!id,
@@ -241,12 +250,35 @@ export function PostDetailScreen() {
  ? STOCK_IMAGES[post.imageUrl] ?? (post.imageUrl.startsWith('http') ? { uri: post.imageUrl } : null)
  : null;
 
+  if (postLoading) {
+    return (
+      <ScreenContainer glow={true}>
+        <AppHeader />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surface, opacity: 0.7 }} />
+          <View style={{ width: 200, height: 16, borderRadius: 8, backgroundColor: colors.surface, opacity: 0.6 }} />
+          <View style={{ width: 140, height: 12, borderRadius: 6, backgroundColor: colors.surface, opacity: 0.4 }} />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   if (!post) {
     return (
       <ScreenContainer glow={true}>
         <AppHeader />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <AppText tone="secondary">Post not found or loading...</AppText>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 }}>
+          <Ionicons name="document-outline" size={48} color={colors.textSecondary} />
+          <AppText variant="h3" weight="bold" style={{ textAlign: 'center' }}>Thread Not Found</AppText>
+          <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center' }}>
+            This discussion may have been removed or is no longer available.
+          </AppText>
+          <Pressable
+            onPress={handleGoBack}
+            style={{ marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.brandPrimary }}
+          >
+            <AppText tone="inverse" weight="bold">Go Back</AppText>
+          </Pressable>
         </View>
       </ScreenContainer>
     );
@@ -257,7 +289,7 @@ export function PostDetailScreen() {
  {/* Top Thread Navigation Bar */}
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.xs, marginBottom: spacing.sm }}>
  <Pressable
- onPress={() => router.back()}
+ onPress={handleGoBack}
  hitSlop={8}
  accessibilityRole="button"
  accessibilityLabel="Back to community feed"
@@ -505,6 +537,13 @@ export function PostDetailScreen() {
             campusCode={post.institutionCode}
             featureName="comments"
           />
+        ) : commentsLoading ? (
+          <View style={{ paddingVertical: spacing.xl, alignItems: 'center', gap: spacing.xs }}>
+            <ActivityIndicator size="small" color={colors.brandPrimary} />
+            <AppText variant="caption" tone="secondary">
+              Loading discussion replies...
+            </AppText>
+          </View>
         ) : comments && comments.length > 0 ? (
           <View style={{ position: 'relative', marginBottom: spacing.md }}>
  {comments.map((c, index) => {
@@ -751,7 +790,7 @@ export function PostDetailScreen() {
  await queryClient.invalidateQueries({ queryKey: ['feed'] });
  haptics.medium();
  Alert.alert('Post Deleted', 'Your thread has been deleted.');
- router.back();
+ handleGoBack();
  } catch (err: any) {
  Alert.alert('Error', getFriendlyErrorMessage(err, 'Could not delete post.'));
  }
@@ -805,7 +844,7 @@ export function PostDetailScreen() {
  await deletePost(post.id);
  await queryClient.invalidateQueries({ queryKey: ['feed'] });
  Alert.alert('Post Removed', 'The thread was removed by moderator action.');
- router.back();
+ handleGoBack();
  },
  },
  ]

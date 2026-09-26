@@ -540,13 +540,11 @@ export async function getPost(id: string): Promise<Post | null> {
   try {
     const viewerId = await currentUserId();
 
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*, profiles:author_id(full_name, role, avatar_url, campus_code, verification_status), post_likes(user_id)')
-      .eq('id', id)
-      .maybeSingle();
+    const { rows } = await selectPostsWithFallback((select) =>
+      supabase.from('posts').select(select).eq('id', id)
+    );
 
-    if (error) throw error;
+    const data = rows[0];
     if (!data) return local || null;
 
     const post = mapPostRow(data, viewerId);

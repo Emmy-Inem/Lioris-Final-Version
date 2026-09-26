@@ -59,23 +59,49 @@ export default function AdminAnalyticsScreen() {
     staleTime: 30_000,
   });
 
-  // Fetch recent users with real activity timestamps
+  // Fetch recent users via SECURITY DEFINER RPC (bypasses profile RLS for admin view)
   const { data: recentUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<RecentActiveUser[]>({
     queryKey: ['admin-active-users-roster', campusFilter],
     queryFn: async () => {
+      // Use admin_get_user_profiles RPC which uses SECURITY DEFINER to bypass
+      // the profiles table RLS (which would otherwise only return the admin's own row).
+      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_get_user_profiles', {
+        p_campus_code: campusFilter !== 'ALL' ? campusFilter : null,
+        p_limit: 200,
+      });
+
+      if (!rpcError && rpcData && rpcData.length > 0) {
+        return (rpcData as any[]).map((p: any) => ({
+          id: p.id,
+          fullName: p.full_name || 'Campus Member',
+          role: p.role || 'student',
+          campusCode: p.campus_code || 'GLOBAL',
+          verificationStatus: p.verification_status || 'unverified',
+          lastActiveAt: p.last_active_at,
+          lastLoginAt: p.last_login_at,
+          isBot: Boolean(p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-'))),
+          avatarUrl: p.avatar_url,
+        }));
+      }
+
+      if (rpcError) {
+        console.warn('[Analytics] admin_get_user_profiles RPC failed, trying direct query:', rpcError.message);
+      }
+
+      // Safe fallback: direct table query (only request columns that always exist in production)
       let query = supabase
         .from('profiles')
-        .select('id, full_name, role, campus_code, verification_status, last_active_at, last_login_at, is_bot, avatar_url, created_at')
+        .select('id, full_name, role, campus_code, verification_status, last_active_at, avatar_url, created_at')
         .order('created_at', { ascending: false })
-        .limit(150);
+        .limit(200);
 
       if (campusFilter !== 'ALL') {
-        query = query.eq('campus_code', campusFilter);
+        query = query.ilike('campus_code', campusFilter);
       }
 
       const { data, error } = await query;
       if (error) {
-        console.warn('[Analytics] Failed to fetch recent profiles:', error);
+        console.warn('[Analytics] Fallback profile fetch failed:', error.message);
         return [];
       }
 
@@ -86,8 +112,8 @@ export default function AdminAnalyticsScreen() {
         campusCode: p.campus_code || 'GLOBAL',
         verificationStatus: p.verification_status || 'unverified',
         lastActiveAt: p.last_active_at,
-        lastLoginAt: p.last_login_at,
-        isBot: Boolean(p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-'))),
+        lastLoginAt: p.last_active_at,
+        isBot: Boolean((p as any).is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-'))),
         avatarUrl: p.avatar_url,
       }));
     },
@@ -105,7 +131,7 @@ export default function AdminAnalyticsScreen() {
     }
 
     if (campusFilter !== 'ALL') {
-      list = list.filter((u) => u.campusCode === campusFilter);
+      list = list.filter((u) => u.campusCode?.toUpperCase() === campusFilter.toUpperCase());
     }
 
     if (userSearch.trim()) {
@@ -767,7 +793,10 @@ export default function AdminAnalyticsScreen() {
               {(summary?.campus_metrics ?? []).map((campus) => {
                 const institution = LAUNCH_INSTITUTIONS.find((i) => i.code === campus.campus_code);
                 const name = institution ? institution.shortName : campus.campus_code;
+                const fullName = institution ? institution.name : campus.campus_code;
                 const verifyPct = campus.total_members > 0 ? Math.round((campus.verified_members / campus.total_members) * 100) : 0;
+                const isSelected = campusFilter === campus.campus_code;
+                const botCount = Math.max(0, campus.total_members - campus.real_members);
 
                 return (
                   <Pressable
@@ -776,40 +805,68 @@ export default function AdminAnalyticsScreen() {
                       haptics.light();
                       setCampusFilter(campus.campus_code);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Filter by ${name}`}
                     style={{
                       flex: 1,
-                      minWidth: isDesktop ? 220 : '46%',
-                      backgroundColor: colors.surface,
+                      minWidth: isDesktop ? 220 : '100%',
+                      backgroundColor: isSelected ? (isDark ? 'rgba(37, 99, 235, 0.16)' : '#EFF6FF') : colors.surface,
                       borderRadius: radius.md,
                       padding: spacing.md,
-                      borderWidth: 1,
-                      borderColor: colors.border,
+                      borderWidth: isSelected ? 2 : 1,
+                      borderColor: isSelected ? colors.brandPrimary : colors.border,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <AppText variant="body" weight="bold">
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                      <AppText variant="body" weight="bold" numberOfLines={1} style={{ flex: 1, marginRight: 6 }}>
                         {name}
                       </AppText>
-                      <Badge label={campus.campus_code} tone="brand" />
+                      <Badge label={campus.campus_code} tone={isSelected ? 'brand' : 'neutral'} />
                     </View>
 
-                    <AppText variant="h2" weight="bold" style={{ marginTop: 4 }}>
-                      {campus.total_members} <AppText variant="caption" tone="secondary">members</AppText>
+                    <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginBottom: spacing.xs, fontSize: 11 }}>
+                      {fullName}
                     </AppText>
 
-                    <View style={{ marginTop: spacing.sm, gap: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                      <AppText variant="h2" weight="bold">
+                        {campus.total_members}
+                      </AppText>
+                      <AppText variant="caption" tone="secondary">
+                        total members
+                      </AppText>
+                    </View>
+
+                    {/* Verification Rate Progress Bar */}
+                    <View style={{ marginTop: spacing.xs, marginBottom: spacing.xs }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                        <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>Verification Rate</AppText>
+                        <AppText variant="caption" weight="bold" style={{ color: '#10B981', fontSize: 11 }}>{verifyPct}%</AppText>
+                      </View>
+                      <View style={{ height: 4, width: '100%', backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0', borderRadius: 2, overflow: 'hidden' }}>
+                        <View style={{ height: '100%', width: `${verifyPct}%`, backgroundColor: '#10B981', borderRadius: 2 }} />
+                      </View>
+                    </View>
+
+                    <View style={{ marginTop: spacing.xs, gap: 4, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <AppText variant="caption" tone="secondary">Real Students:</AppText>
-                        <AppText variant="caption" weight="bold">{campus.real_members}</AppText>
+                        <AppText variant="caption" weight="bold" tone="brand">{campus.real_members}</AppText>
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <AppText variant="caption" tone="secondary">Verified Rate:</AppText>
-                        <AppText variant="caption" weight="bold" style={{ color: '#10B981' }}>{verifyPct}%</AppText>
+                        <AppText variant="caption" tone="secondary">Bot Personas:</AppText>
+                        <AppText variant="caption" weight="semiBold" tone="secondary">{botCount}</AppText>
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <AppText variant="caption" tone="secondary">Active (7d):</AppText>
                         <AppText variant="caption" weight="bold">{campus.active_7d}</AppText>
                       </View>
+                    </View>
+
+                    <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <AppText variant="caption" weight="bold" tone={isSelected ? 'brand' : 'secondary'} style={{ fontSize: 11 }}>
+                        {isSelected ? '✓ Currently filtered' : 'Tap to filter this campus →'}
+                      </AppText>
                     </View>
                   </Pressable>
                 );

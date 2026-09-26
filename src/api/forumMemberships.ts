@@ -163,45 +163,93 @@ export async function leaveCommunity(communityIdentifier: string, userId?: strin
   }
 }
 
-/** Baseline authentic member counts for educational spaces */
+/** Authentic member counts - initialized to zero, populated strictly from real database counts */
 export const BASELINE_COMMUNITY_MEMBERS: Record<string, number> = {
-  all: 4850,
-  tech: 1420,
-  academic: 2890,
-  polls: 1980,
-  housing: 1650,
-  social: 2140,
-  lost: 970,
+  all: 0,
+  tech: 0,
+  academic: 0,
+  polls: 0,
+  housing: 0,
+  social: 0,
+  lost: 0,
 };
 
 /**
- * Fetch member count and thread count for each community.
+ * Fetch member count and thread count for each community from real database rows.
  */
 export async function getCommunityStatsMap(): Promise<Map<string, { members: number; threads: number }>> {
   const stats = new Map<string, { members: number; threads: number }>();
 
-  // Initialize with baseline
+  // Initialize with zero
   for (const c of FORUM_COMMUNITIES) {
     stats.set(c.id, {
-      members: BASELINE_COMMUNITY_MEMBERS[c.id] || 350,
+      members: 0,
       threads: 0,
     });
   }
 
   try {
     const { data, error } = await supabase.rpc('get_forum_communities_stats');
-    if (!error && Array.isArray(data)) {
+    if (!error && Array.isArray(data) && data.length > 0) {
+      let totalMembersAcross = 0;
+      let totalPostsAcross = 0;
       for (const row of data) {
-        const existing = stats.get(row.community_id) || { members: 350, threads: 0 };
+        const mCount = Number(row.members_count || 0);
+        const pCount = Number(row.posts_count || 0);
         stats.set(row.community_id, {
-          members: existing.members + Number(row.members_count || 0),
-          threads: Number(row.posts_count || 0),
+          members: mCount,
+          threads: pCount,
         });
+        totalMembersAcross += mCount;
+        totalPostsAcross += pCount;
       }
+      stats.set('all', {
+        members: totalMembersAcross,
+        threads: totalPostsAcross,
+      });
+      return stats;
     }
   } catch {
-    // Fallback gracefully
+    // Fallback to direct query
+  }
+
+  // Fallback: query database tables directly for real counts
+  try {
+    const [membersRes, postsRes] = await Promise.all([
+      supabase.from('forum_community_members').select('community_id'),
+      supabase.from('posts').select('category'),
+    ]);
+
+    if (membersRes.data && Array.isArray(membersRes.data)) {
+      for (const row of membersRes.data) {
+        if (row.community_id) {
+          const s = stats.get(row.community_id) || { members: 0, threads: 0 };
+          s.members += 1;
+          stats.set(row.community_id, s);
+        }
+      }
+    }
+
+    if (postsRes.data && Array.isArray(postsRes.data)) {
+      for (const row of postsRes.data) {
+        const cat = (row.category || '').toLowerCase();
+        for (const c of FORUM_COMMUNITIES) {
+          if (c.id !== 'all' && (c.id === cat || c.label.toLowerCase().includes(cat))) {
+            const s = stats.get(c.id) || { members: 0, threads: 0 };
+            s.threads += 1;
+            stats.set(c.id, s);
+          }
+        }
+      }
+      stats.set('all', {
+        members: membersRes.data?.length ?? 0,
+        threads: postsRes.data.length,
+      });
+    }
+  } catch (err) {
+    console.warn('[forumMemberships] getCommunityStatsMap fallback error:', err);
   }
 
   return stats;
 }
+

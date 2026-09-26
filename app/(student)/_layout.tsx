@@ -18,6 +18,7 @@ export default function StudentLayout() {
  const tabsContent = (
  <BlurredTabsHost renderTabBar={(p, t) => <FloatingLiquidGlassTabBarView {...p} blurTarget={t} />}>
 <Tabs
+  backBehavior="history"
   tabBar={(props) => <FloatingLiquidGlassTabBar {...props} />}
  screenOptions={{
  headerShown: false,
@@ -90,6 +91,7 @@ export default function StudentLayout() {
  <Tabs.Screen name="settings"options={{ href: null }} />
  <Tabs.Screen name="messages"options={{ href: null }} />
  <Tabs.Screen name="post/[id]" options={{ href: null }} />
+ <Tabs.Screen name="forum/explore" options={{ href: null }} />
  </Tabs>
 </BlurredTabsHost>
  );

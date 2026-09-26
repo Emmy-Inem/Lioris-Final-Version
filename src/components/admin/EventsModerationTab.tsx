@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,6 +19,23 @@ import { PaidEventsDesk } from '@/components/admin/PaidEventsDesk';
 import { TicketSettingsFields } from '@/components/events/TicketSettingsFields';
 import { getEventPaymentDetails, saveEventPaymentDetails } from '@/api/paidEvents';
 import { EMPTY_TICKET_FORM, TicketFormValues, paidLabel, parsePrice, validateTicketForm } from '@/utils/paidEvents';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsive } from '@/hooks/useResponsive';
+
+function toLocalInputValue(iso?: string | null) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function addMinutesToDateTime(dtStr: string, minutes: number) {
+  const d = dtStr ? new Date(dtStr) : new Date();
+  if (isNaN(d.getTime())) return '';
+  d.setMinutes(d.getMinutes() + minutes);
+  return toLocalInputValue(d.toISOString());
+}
 
 const EVENT_COVER_PRESETS = [
  { id: 'event_tech_hackathon', label: 'Hackathon & Tech', src: require('../../../assets/images/event_tech_hackathon.jpg') },
@@ -37,6 +54,8 @@ const VENUE_TYPE_LABELS: Record<NonNullable<CampusEvent['venueType']>, string> =
 
 export function EventsModerationTab() {
  const { colors, spacing, radius, isDark } = useTheme();
+ const { isDesktop } = useResponsive();
+ const insets = useSafeAreaInsets();
  const queryClient = useQueryClient();
  const [section, setSection] = useState<'approved' | 'pending' | 'paid'>('approved');
  const [focusPaid, setFocusPaid] = useState<string | null>(null);
@@ -105,8 +124,10 @@ export function EventsModerationTab() {
  setFormSponsored(true);
  setFormSpotlight(true);
  setFormTargetCohort('All Levels (100L - 500L)');
- setFormStartAt(new Date(Date.now() + 86400000 * 3).toISOString());
- setFormEndAt(new Date(Date.now() + 86400000 * 3 + 14400000).toISOString());
+ const defaultStart = new Date(Date.now() + 86400000 * 3);
+ const defaultEnd = new Date(Date.now() + 86400000 * 3 + 14400000);
+ setFormStartAt(toLocalInputValue(defaultStart.toISOString()));
+ setFormEndAt(toLocalInputValue(defaultEnd.toISOString()));
  setEditModalOpen(true);
  }
 
@@ -139,8 +160,8 @@ export function EventsModerationTab() {
  setFormSponsored(!!event.sponsored);
  setFormSpotlight(!!event.isSpotlight);
  setFormTargetCohort(event.targetCohort || 'All Levels');
- setFormStartAt(event.startAt);
- setFormEndAt(event.endAt);
+ setFormStartAt(toLocalInputValue(event.startAt));
+ setFormEndAt(toLocalInputValue(event.endAt));
  setEditModalOpen(true);
  }
 
@@ -150,7 +171,26 @@ export function EventsModerationTab() {
  return;
  }
 
- const ticketProblem = validateTicketForm(formTicket, { eventEndAt: formEndAt });
+ const startDate = formStartAt ? new Date(formStartAt) : null;
+ const endDate = formEndAt ? new Date(formEndAt) : null;
+
+ if (formStartAt && (!startDate || isNaN(startDate.getTime()))) {
+ Alert.alert('Invalid Date', 'Please enter a valid start date and time.');
+ return;
+ }
+ if (formEndAt && (!endDate || isNaN(endDate.getTime()))) {
+ Alert.alert('Invalid Date', 'Please enter a valid end date and time.');
+ return;
+ }
+ if (startDate && endDate && endDate <= startDate) {
+ Alert.alert('Invalid Schedule', 'Event end time must be after the start time.');
+ return;
+ }
+
+ const startIso = startDate ? startDate.toISOString() : new Date().toISOString();
+ const endIso = endDate ? endDate.toISOString() : new Date(Date.now() + 7200000).toISOString();
+
+ const ticketProblem = validateTicketForm(formTicket, { eventEndAt: endIso });
  if (ticketProblem) {
  Alert.alert('Ticket settings', ticketProblem);
  return;
@@ -177,8 +217,8 @@ export function EventsModerationTab() {
  sponsored: formSponsored,
  isSpotlight: formSpotlight,
  targetCohort: formTargetCohort.trim(),
- startAt: formStartAt,
- endAt: formEndAt,
+ startAt: startIso,
+ endAt: endIso,
  });
  if (formTicket.ticketType === 'paid') {
  await saveEventPaymentDetails(editingEvent.id, formTicket.method === 'at_venue' ? '' : formTicket.paymentUrl, formTicket.instructions);
@@ -190,7 +230,7 @@ export function EventsModerationTab() {
  targetId: editingEvent.id,
  reason: 'Administrative event parameter revision',
  });
- Alert.alert('Event Updated', `Changes to"${formTitle.trim()}"have been saved.`);
+ Alert.alert('Event Updated', `Changes to "${formTitle.trim()}" have been saved.`);
  } else {
  await createEvent({
  title: formTitle.trim(),
@@ -198,8 +238,8 @@ export function EventsModerationTab() {
  category: formCategory,
  location: formLocation.trim(),
  visibilityScope: 'global',
- startAt: formStartAt || new Date().toISOString(),
- endAt: formEndAt || new Date(Date.now() + 7200000).toISOString(),
+ startAt: startIso,
+ endAt: endIso,
  imageUrl: formCover,
  sponsored: formSponsored,
  venueType: formVenueType,
@@ -560,16 +600,38 @@ export function EventsModerationTab() {
  )}
 
  {/* Create / Edit Event Modal */}
- <Modal visible={editModalOpen} transparent animationType="slide"onRequestClose={() => setEditModalOpen(false)}>
- <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
- <Pressable style={{ flex: 1 }} onPress={() => setEditModalOpen(false)} />
+ <Modal visible={editModalOpen} transparent animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={() => setEditModalOpen(false)}>
+ <KeyboardAvoidingView
+ behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+ style={{
+ flex: 1,
+ backgroundColor: 'rgba(0,0,0,0.65)',
+ justifyContent: isDesktop ? 'center' : 'flex-end',
+ alignItems: isDesktop ? 'center' : 'stretch',
+ paddingTop: isDesktop ? spacing.lg : Math.max(insets.top, 16),
+ paddingHorizontal: isDesktop ? spacing.lg : 0,
+ paddingBottom: isDesktop ? spacing.lg : 0,
+ }}
+ >
+ <Pressable style={{ flex: isDesktop ? 0 : 1 }} onPress={() => setEditModalOpen(false)} />
  <View
+ accessibilityViewIsModal
  style={{
  backgroundColor: colors.surface,
  borderTopLeftRadius: 24,
  borderTopRightRadius: 24,
+ borderBottomLeftRadius: isDesktop ? 24 : 0,
+ borderBottomRightRadius: isDesktop ? 24 : 0,
  padding: spacing.lg,
- maxHeight: '90%',
+ maxHeight: isDesktop ? '90%' : '92%',
+ width: '100%',
+ maxWidth: isDesktop ? 640 : undefined,
+ alignSelf: 'center',
+ shadowColor: '#000',
+ shadowOffset: { width: 0, height: 6 },
+ shadowOpacity: 0.25,
+ shadowRadius: 16,
+ elevation: 8,
  }}
  >
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
@@ -584,11 +646,71 @@ export function EventsModerationTab() {
  </Pressable>
  </View>
 
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
+ <ScrollView
+ style={{ flex: 1, width: '100%' }}
+ showsVerticalScrollIndicator={false}
+ keyboardShouldPersistTaps="handled"
+ contentContainerStyle={{ paddingBottom: spacing.lg }}
+ >
  <AppTextField
  label="Event Title"placeholder="e.g. Annual Faculty Hackathon & Symposium"value={formTitle}
  onChangeText={setFormTitle}
  />
+
+ {/* Timing / Schedule */}
+ <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
+ DATE & SCHEDULE
+ </AppText>
+ <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: spacing.sm, marginBottom: spacing.xs }}>
+ <View style={{ flex: 1 }}>
+ <AppTextField
+ label="Start Time (YYYY-MM-DDTHH:mm)"
+ placeholder="2026-10-15T09:00"
+ value={formStartAt}
+ onChangeText={setFormStartAt}
+ />
+ </View>
+ <View style={{ flex: 1 }}>
+ <AppTextField
+ label="End Time (YYYY-MM-DDTHH:mm)"
+ placeholder="2026-10-15T13:00"
+ value={formEndAt}
+ onChangeText={setFormEndAt}
+ />
+ </View>
+ </View>
+
+ {/* Duration Quick Helpers */}
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
+ {[
+ { label: '+1 Hour', mins: 60 },
+ { label: '+2 Hours', mins: 120 },
+ { label: '+3 Hours', mins: 180 },
+ { label: 'All Day (+8h)', mins: 480 },
+ ].map((q) => (
+ <Pressable
+ key={q.label}
+ onPress={() => {
+ if (formStartAt) {
+ setFormEndAt(addMinutesToDateTime(formStartAt, q.mins));
+ haptics.light();
+ }
+ }}
+ style={{
+ paddingHorizontal: spacing.sm,
+ paddingVertical: 5,
+ borderRadius: radius.pill,
+ backgroundColor: colors.pastelPrimaryBg,
+ borderWidth: 1,
+ borderColor: colors.brandPrimary,
+ }}
+ >
+ <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 11 }}>
+ {q.label}
+ </AppText>
+ </Pressable>
+ ))}
+ </View>
 
  {/* Venue Type Picker */}
  <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
@@ -724,7 +846,7 @@ export function EventsModerationTab() {
  />
  </ScrollView>
 
- <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+ <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
  <AppButton label="Cancel"variant="ghost"onPress={() => setEditModalOpen(false)} />
  <AppButton
  label={editingEvent ? 'Save Changes' : 'Publish Live'}
@@ -734,13 +856,13 @@ export function EventsModerationTab() {
  />
  </View>
  </View>
- </View>
+ </KeyboardAvoidingView>
  </Modal>
 
  {/* Attendee Roster Modal */}
  <Modal visible={!!rosterEvent} transparent animationType="fade"onRequestClose={() => setRosterEvent(null)}>
- <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: spacing.lg }}>
- <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '80%' }}>
+ <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: isDesktop ? spacing.lg : spacing.md }}>
+ <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: spacing.lg, maxHeight: '85%', width: '100%', maxWidth: 560 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h3"weight="bold">
  Registered Attendees

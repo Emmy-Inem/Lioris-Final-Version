@@ -28,7 +28,7 @@ import { haptics } from '@/utils/haptics';
  */
 const HUB_DESCRIPTIONS: Record<string, string> = {
   people: 'Members, ID verification and support tickets',
-  content: 'Threads, events, resources and comments',
+  content: 'Threads, events and resources',
   safety: 'Reports, copyright takedowns and the audit log',
   platform: 'Broadcasts, feature switches, campuses and health',
 };

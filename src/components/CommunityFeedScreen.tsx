@@ -24,7 +24,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts, createPost } from '@/api/posts';
-import { listMyJoinedCommunityIds, joinCommunity, leaveCommunity, DEFAULT_JOINED_COMMUNITY_IDS, BASELINE_COMMUNITY_MEMBERS } from '@/api/forumMemberships';
+import { listMyJoinedCommunityIds, joinCommunity, leaveCommunity, DEFAULT_JOINED_COMMUNITY_IDS, getCommunityStatsMap } from '@/api/forumMemberships';
 import { listCommunities, proposeCommunity, listMyModeratedCommunityIds, ForumCommunityRecord } from '@/api/communities';
 import { getInstitutionByCode } from '@/api/institutions';
 import { CommunityManageModal } from './CommunityManageModal';
@@ -460,20 +460,26 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     queryFn: () => listFeedPosts({ scope, viewScope, viewerInstitutionCode }),
   });
 
+  const { data: liveCommunityStats } = useQuery({
+    queryKey: ['forum-communities-stats'],
+    queryFn: getCommunityStatsMap,
+    staleTime: 60_000,
+  });
+
   const communityStats = React.useMemo(() => {
     const stats = new Map<string, { threads: number; contributors: number; members: number }>();
     const pool = allCommunityPosts ?? [];
     for (const community of CHANNELS) {
       const matches = community.id === 'all' ? pool : pool.filter((p) => p.category === community.category);
-      const baseline = BASELINE_COMMUNITY_MEMBERS[community.id] || 380;
+      const liveStat = liveCommunityStats?.get(community.id);
       stats.set(community.id, {
-        threads: matches.length,
+        threads: liveStat?.threads ?? matches.length,
         contributors: new Set(matches.map((p) => p.authorId)).size,
-        members: baseline + (matches.length > 0 ? new Set(matches.map((p) => p.authorId)).size * 4 : 0),
+        members: liveStat?.members ?? (community.id === 'all' ? (liveCommunityStats?.get('all')?.members ?? 0) : 0),
       });
     }
     return stats;
-  }, [allCommunityPosts, CHANNELS]);
+  }, [allCommunityPosts, CHANNELS, liveCommunityStats]);
 
   // Top Trending Discussions - real engagement only. Previously fell back to
   // 4 fabricated "#TechHackathon"-style tags with made-up engagement counts
@@ -578,344 +584,48 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       <View
         style={{
           flexDirection: 'row',
-          gap: 6,
+          alignItems: 'center',
+          justifyContent: 'space-between',
           marginBottom: spacing.sm,
-          padding: 3,
-          backgroundColor: isDark ? 'rgba(30, 41, 59, 0.50)' : 'rgba(241, 245, 249, 0.85)',
-          borderRadius: radius.pill,
-          borderWidth: 1,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+          paddingVertical: 4,
+          paddingHorizontal: 2,
         }}
       >
-        <Pressable
-          onPress={() => {
-            haptics.light();
-            setForumViewMode('joined');
-          }}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: forumViewMode === 'joined' }}
-          style={{
-            flex: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            paddingVertical: 7,
-            borderRadius: radius.pill,
-            backgroundColor: forumViewMode === 'joined' ? (isDark ? colors.surface : '#FFFFFF') : 'transparent',
-            ...(Platform.OS === 'web' && forumViewMode === 'joined'
-              ? { boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
-              : {}),
-          }}
-        >
-          <Ionicons
-            name="chatbubbles"
-            size={14}
-            color={forumViewMode === 'joined' ? colors.brandPrimary : colors.textSecondary}
-          />
-          <AppText
-            variant="caption"
-            weight="bold"
-            tone={forumViewMode === 'joined' ? 'primary' : 'secondary'}
-            style={{ fontSize: 11.5 }}
-          >
-            My Joined Forums ({joinedChannels.length})
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="chatbubbles" size={16} color={colors.brandPrimary} />
+          <AppText variant="bodySmall" weight="bold">
+            My Discussion Spaces ({joinedChannels.length})
           </AppText>
-        </Pressable>
+        </View>
 
         <Pressable
           onPress={() => {
             haptics.light();
-            setForumViewMode('explore');
+            router.push('/(student)/forum/explore' as any);
           }}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: forumViewMode === 'explore' }}
+          accessibilityRole="button"
+          accessibilityLabel="Explore all discussion spaces"
+          hitSlop={8}
           style={{
-            flex: 1,
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            paddingVertical: 7,
+            gap: 5,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
             borderRadius: radius.pill,
-            backgroundColor: forumViewMode === 'explore' ? (isDark ? colors.surface : '#FFFFFF') : 'transparent',
-            ...(Platform.OS === 'web' && forumViewMode === 'explore'
-              ? { boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
-              : {}),
+            backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.08)',
+            borderWidth: 1,
+            borderColor: colors.brandPrimary,
           }}
         >
-          <Ionicons
-            name="compass-outline"
-            size={15}
-            color={forumViewMode === 'explore' ? colors.brandPrimary : colors.textSecondary}
-          />
-          <AppText
-            variant="caption"
-            weight="bold"
-            tone={forumViewMode === 'explore' ? 'primary' : 'secondary'}
-            style={{ fontSize: 11.5 }}
-          >
-            Explore All Forums ({CHANNELS.length - 1})
+          <Ionicons name="compass-outline" size={14} color={colors.brandPrimary} />
+          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11.5 }}>
+            Explore All Forums ({CHANNELS.length - 1}) →
           </AppText>
         </Pressable>
       </View>
 
-      {forumViewMode === 'explore' ? (
-        <View style={{ marginBottom: spacing.md }}>
-          {/* Explore Search and Propose Button */}
-          <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm, alignItems: 'center' }}>
-            <View
-              style={{
-                flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.xs,
-                backgroundColor: colors.surface,
-                borderRadius: radius.pill,
-                borderWidth: 1,
-                borderColor: colors.border,
-                paddingHorizontal: spacing.md,
-                height: 40,
-              }}
-            >
-              <Ionicons name="search" size={15} color={colors.textSecondary} />
-              <TextInput
-                accessibilityLabel="Search all forums and communities"
-                value={exploreSearch}
-                onChangeText={setExploreSearch}
-                placeholder="Search spaces by name, subject, or code..."
-                placeholderTextColor={colors.textSecondary}
-                style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
-              />
-              {exploreSearch ? (
-                <Pressable onPress={() => setExploreSearch('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={15} color={colors.textSecondary} />
-                </Pressable>
-              ) : null}
-            </View>
-
-            <Pressable
-              onPress={() => {
-                haptics.light();
-                setProposeCommunityOpen(true);
-              }}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 5,
-                paddingHorizontal: 12,
-                height: 40,
-                borderRadius: radius.pill,
-                backgroundColor: colors.brandPrimary,
-              }}
-            >
-              <Ionicons name="add" size={16} color="#FFFFFF" />
-              <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF', fontSize: 11.5 }}>
-                Propose Space
-              </AppText>
-            </Pressable>
-          </View>
-
-          {/* Category Filter Pills */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, paddingBottom: 6 }}
-            style={{ width: '100%', flexGrow: 0, marginBottom: spacing.sm }}
-          >
-            {(['All', 'Academic & Tech', 'Campus Life', 'Union & Polls'] as const).map((cat) => {
-              const selected = exploreCategory === cat;
-              return (
-                <Pressable
-                  key={cat}
-                  onPress={() => {
-                    haptics.light();
-                    setExploreCategory(cat);
-                  }}
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 5,
-                    borderRadius: radius.pill,
-                    backgroundColor: selected ? colors.brandPrimary : colors.surface,
-                    borderWidth: 1,
-                    borderColor: selected ? colors.brandPrimary : colors.border,
-                  }}
-                >
-                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
-                    {cat}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Directory of Communities */}
-          <View style={{ gap: spacing.md }}>
-            {filteredExploreCommunities.map((ch) => {
-              const joined = isJoined(ch);
-              const membersCount = communityStats.get(ch.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[ch.id] ?? 450;
-              const threadsCount = communityStats.get(ch.id)?.threads ?? 0;
-              return (
-                <SolidCard
-                  key={ch.id}
-                  radius={18}
-                  frosted
-                  style={{
-                    padding: spacing.md,
-                    borderLeftWidth: 4,
-                    borderLeftColor: ch.accentColor,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                      <View
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 12,
-                          backgroundColor: `${ch.accentColor}18`,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Ionicons name={ch.icon} size={22} color={ch.accentColor} />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <AppText weight="bold" variant="body">
-                            {ch.label}
-                          </AppText>
-                          <View style={{ backgroundColor: `${ch.accentColor}20`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                            <AppText weight="bold" style={{ color: ch.accentColor, fontSize: 10.5 }}>
-                              {ch.slug}
-                            </AppText>
-                          </View>
-                          {ch.approvalStatus === 'pending' && <Badge label="Pending Review" tone="warning" />}
-                        </View>
-                        <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 2 }}>
-                          👥 {membersCount.toLocaleString()} Members • 💬 {threadsCount.toLocaleString()} Discussions
-                        </AppText>
-                      </View>
-                    </View>
-
-                    {/* Join / Leave button */}
-                    <Pressable
-                      onPress={() => handleToggleJoin(ch)}
-                      hitSlop={8}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 4,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: radius.pill,
-                        backgroundColor: joined
-                          ? isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7'
-                          : colors.brandPrimary,
-                        borderWidth: 1,
-                        borderColor: joined
-                          ? isDark ? 'rgba(16, 185, 129, 0.40)' : '#86EFAC'
-                          : colors.brandPrimary,
-                      }}
-                    >
-                      <Ionicons
-                        name={joined ? 'checkmark-circle' : 'add-circle-outline'}
-                        size={14}
-                        color={joined ? '#10B981' : '#FFFFFF'}
-                      />
-                      <AppText
-                        variant="caption"
-                        weight="bold"
-                        style={{
-                          color: joined ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF',
-                          fontSize: 11,
-                        }}
-                      >
-                        {joined ? 'Joined' : 'Join Space'}
-                      </AppText>
-                    </Pressable>
-                  </View>
-
-                  <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 18, marginBottom: 10 }}>
-                    {ch.description}
-                  </AppText>
-
-                  {/* Moderator & Actions Bar */}
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingTop: 8,
-                      borderTopWidth: 1,
-                      borderTopColor: colors.border,
-                      flexWrap: 'wrap',
-                      gap: 8,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 180 }}>
-                      <Ionicons name="shield-checkmark" size={13} color={colors.textSecondary} />
-                      <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11 }}>
-                        <AppText weight="bold" tone="primary" style={{ fontSize: 11 }}>
-                          {ch.moderatorBadge}:
-                        </AppText>{' '}
-                        {ch.moderatorTitle}
-                      </AppText>
-                    </View>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Pressable
-                        onPress={() => {
-                          setSelectedChannel(ch.category);
-                          setRulesModalOpen(true);
-                        }}
-                        hitSlop={8}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 4, paddingHorizontal: 8 }}
-                      >
-                        <Ionicons name="document-text-outline" size={12} color={colors.textSecondary} />
-                        <AppText variant="caption" weight="medium" tone="secondary" style={{ fontSize: 11 }}>
-                          Rules ({ch.rules.length})
-                        </AppText>
-                      </Pressable>
-
-                      <Pressable
-                        onPress={() => {
-                          haptics.light();
-                          setSelectedChannel(ch.category);
-                          setForumViewMode('joined');
-                        }}
-                        hitSlop={8}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 4,
-                          paddingHorizontal: 10,
-                          paddingVertical: 5,
-                          borderRadius: radius.pill,
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                        }}
-                      >
-                        <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-                          Open Forum →
-                        </AppText>
-                      </Pressable>
-                    </View>
-                  </View>
-                </SolidCard>
-              );
-            })}
-
-            {filteredExploreCommunities.length === 0 && (
-              <EmptyState
-                title="No matching discussion spaces"
-                description="Try a different search term or category filter, or propose a new space."
-              />
-            )}
-          </View>
-        </View>
-      ) : (
-        <>
-          {/* Quick Search & Sort Bar */}
+      {/* Quick Search & Sort Bar */}
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
         <View
           style={{
@@ -1043,9 +753,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             Discussion Spaces
           </AppText>
         </View>
-        <Pressable onPress={() => setSubForumsDirectoryOpen(true)} hitSlop={8}>
+        <Pressable onPress={() => router.push('/(student)/forum/explore' as any)} hitSlop={8}>
           <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-            Browse All ({CHANNELS.length - 1}) →
+            Explore All ({CHANNELS.length - 1}) →
           </AppText>
         </Pressable>
       </View>
@@ -1058,7 +768,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         style={{ width: '100%', flexGrow: 0, marginBottom: spacing.xs }}
         {...({ 'data-horizontal-scroll': 'true' } as any)}
       >
-        {(forumViewMode === 'joined' ? joinedChannels : CHANNELS)
+        {joinedChannels
           .filter((ch: any) => (ch.flagKey ? isFeatureEnabled(ch.flagKey) : true))
           .map((ch) => {
           const selected = selectedChannel === ch.category;
@@ -1114,33 +824,31 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             </Pressable>
           );
         })}
-        {forumViewMode === 'joined' && (
-          <Pressable
-            onPress={() => {
-              haptics.light();
-              setForumViewMode('explore');
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Explore more discussion spaces"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-              backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.08)',
-              borderRadius: radius.pill,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderWidth: 1,
-              borderColor: colors.brandPrimary,
-              borderStyle: 'dashed',
-            }}
-          >
-            <Ionicons name="add" size={13} color={colors.brandPrimary} />
-            <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11.5 }}>
-              + Explore More Spaces
-            </AppText>
-          </Pressable>
-        )}
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            router.push('/(student)/forum/explore' as any);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Explore all discussion spaces"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+            backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.08)',
+            borderRadius: radius.pill,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderWidth: 1,
+            borderColor: colors.brandPrimary,
+            borderStyle: 'dashed',
+          }}
+        >
+          <Ionicons name="add" size={13} color={colors.brandPrimary} />
+          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11.5 }}>
+            + Explore More Spaces
+          </AppText>
+        </Pressable>
       </ScrollView>
 
       {/* Reddit-Style Sub-Forum Space Banner when a specific community is active */}
@@ -1176,7 +884,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </View>
                 </View>
                 <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
-                  👥 {(communityStats.get(activeSubForum.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[activeSubForum.id] ?? 450).toLocaleString()} members • 💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads
+                  👥 {(communityStats.get(activeSubForum.id)?.members ?? 0).toLocaleString()} members • 💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads
                 </AppText>
               </View>
             </View>
@@ -1326,8 +1034,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </View>
         </GlassCard>
       </Pressable>
-        </>
-      )}
     </View>
   );
 
@@ -1551,7 +1257,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         </View>
                       </View>
                       <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, marginTop: 2 }}>
-                        👥 {(communityStats.get(activeSubForum.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[activeSubForum.id] ?? 450).toLocaleString()} members • 💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads
+                        👥 {(communityStats.get(activeSubForum.id)?.members ?? 0).toLocaleString()} members • 💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads
                       </AppText>
                     </View>
                   </View>
@@ -1806,7 +1512,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
                   <View>
                     <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
-                      {(communityStats.get(activeSubForum.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[activeSubForum.id] ?? 450).toLocaleString()}
+                      {(communityStats.get(activeSubForum.id)?.members ?? 0).toLocaleString()}
                     </AppText>
                     <AppText variant="caption" tone="secondary">Members</AppText>
                   </View>
@@ -1863,12 +1569,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   <AppText variant="h3" weight="bold">
                     Communities
                   </AppText>
-                  <Pressable onPress={() => setSubForumsDirectoryOpen(true)}>
-                    <AppText variant="caption" weight="bold" tone="brand">All ({CHANNELS.length - 1}) →</AppText>
+                  <Pressable onPress={() => router.push('/(student)/forum/explore' as any)}>
+                    <AppText variant="caption" weight="bold" tone="brand">Explore All ({CHANNELS.length - 1}) →</AppText>
                   </Pressable>
                 </View>
                 <View style={{ gap: 8 }}>
-                  {CHANNELS.filter((sf) => sf.id !== 'all').map((sf) => (
+                  {joinedChannels.filter((sf) => sf.id !== 'all').map((sf) => (
                     <Pressable
                       key={sf.id}
                       onPress={() => setSelectedChannel(sf.category)}
@@ -2163,7 +1869,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                        👥 {(communityStats.get(sf.id)?.members ?? BASELINE_COMMUNITY_MEMBERS[sf.id] ?? 450).toLocaleString()}
+                        👥 {(communityStats.get(sf.id)?.members ?? 0).toLocaleString()}
                       </AppText>
                       {sf.id !== 'all' && (
                         <Pressable

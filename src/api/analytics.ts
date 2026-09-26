@@ -105,17 +105,38 @@ export async function fetchAdminAnalyticsSummary(
 
   // Pure real data fallback computed directly from database tables
   try {
-    let profileQuery = supabase
-      .from('profiles')
-      .select('id, is_bot, campus_code, verification_status, last_active_at');
+    let all: any[] = [];
+    try {
+      let profileQuery = supabase
+        .from('profiles')
+        .select('id, is_bot, campus_code, verification_status, last_active_at');
 
-    if (normalizedCampus) {
-      profileQuery = profileQuery.eq('campus_code', normalizedCampus);
+      if (normalizedCampus) {
+        profileQuery = profileQuery.ilike('campus_code', normalizedCampus);
+      }
+
+      const { data, error } = await profileQuery;
+      if (!error && data) {
+        all = data;
+      } else {
+        // Fallback without is_bot if column not present in schema cache
+        let q2 = supabase
+          .from('profiles')
+          .select('id, campus_code, verification_status, last_active_at');
+        if (normalizedCampus) q2 = q2.ilike('campus_code', normalizedCampus);
+        const { data: data2 } = await q2;
+        all = data2 ?? [];
+      }
+    } catch {
+      let q2 = supabase
+        .from('profiles')
+        .select('id, campus_code, verification_status, last_active_at');
+      if (normalizedCampus) q2 = q2.ilike('campus_code', normalizedCampus);
+      const { data: data2 } = await q2;
+      all = data2 ?? [];
     }
 
-    const { data: profiles } = await profileQuery;
-    const all = profiles ?? [];
-    const bots = all.filter((p: any) => p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-')));
+    const bots = all.filter((p: any) => Boolean(p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-'))));
     const real = all.filter((p: any) => !p.is_bot && (!p.id || !p.id.startsWith('00000000-0000-4000-a000-')));
     const now = Date.now();
     const active15m = real.filter((p: any) => p.last_active_at && now - new Date(p.last_active_at).getTime() <= 15 * 60 * 1000).length;
@@ -124,11 +145,17 @@ export async function fetchAdminAnalyticsSummary(
     const active30d = real.filter((p: any) => p.last_active_at && now - new Date(p.last_active_at).getTime() <= 30 * 24 * 60 * 60 * 1000).length;
     const pendingVerifications = all.filter((p: any) => p.verification_status === 'pending').length;
 
-    // Campus aggregation
+    // Campus aggregation - initialize with known launch institutions so all appear
     const campusMap = new Map<string, { total: number; real: number; verified: number; active7d: number }>();
+    const DEFAULT_CAMPUS_CODES = ['UI', 'UNILAG', 'FUNAAB', 'UNN', 'OAU', 'CU'];
+    for (const code of DEFAULT_CAMPUS_CODES) {
+      campusMap.set(code, { total: 0, real: 0, verified: 0, active7d: 0 });
+    }
+
     for (const p of all) {
-      const code = p.campus_code || 'GLOBAL';
-      const isBot = p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-'));
+      const rawCode = (p.campus_code || 'GLOBAL').toUpperCase();
+      const code = DEFAULT_CAMPUS_CODES.includes(rawCode) ? rawCode : rawCode;
+      const isBot = Boolean(p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-')));
       const isVerified = p.verification_status === 'verified';
       const isActive7d = p.last_active_at && now - new Date(p.last_active_at).getTime() <= 7 * 24 * 60 * 60 * 1000;
       const entry = campusMap.get(code) || { total: 0, real: 0, verified: 0, active7d: 0 };
@@ -151,7 +178,7 @@ export async function fetchAdminAnalyticsSummary(
     const sinceDate = new Date(Date.now() - days * 86_400_000).toISOString();
 
     let postsQ = supabase.from('posts').select('id', { count: 'exact', head: true }).gte('created_at', sinceDate);
-    if (normalizedCampus) postsQ = postsQ.eq('campus_code', normalizedCampus);
+    if (normalizedCampus) postsQ = postsQ.ilike('campus_code', normalizedCampus);
     const { count: postsCount } = await postsQ;
 
     let resQ = supabase.from('resources').select('id', { count: 'exact', head: true }).gte('created_at', sinceDate);

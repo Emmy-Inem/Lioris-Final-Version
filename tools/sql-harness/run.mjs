@@ -1145,6 +1145,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260926150000_seed_campus_community_bots.sql',
   'supabase/migrations/20260926160000_admin_analytics_and_activity.sql',
   'supabase/migrations/20260926220000_forum_community_memberships.sql',
+  'supabase/migrations/20260926230000_admin_user_profiles_rpc.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1568,6 +1569,19 @@ console.log('\n== admin analytics & user activity monitoring ==');
       const uiRes = (await c.q("SELECT public.get_admin_analytics_summary(30, 'UI') AS data")).rows[0].data;
       eq(uiRes.bot_users, 7, '7 UI bots counted when campus filtered');
       eq(uiRes.total_posts, 7, '7 UI forum posts counted when campus filtered');
+    });
+  });
+
+  await check('admin_get_user_profiles enforces admin and returns profiles', async () => {
+    await as(U.s1, async (c) => {
+      denied(await c.t("SELECT * FROM public.admin_get_user_profiles()"), /admin_required/, 'student forbidden');
+    });
+
+    await as(U.adminA, async (c) => {
+      const res = (await c.q("SELECT * FROM public.admin_get_user_profiles()")).rows;
+      assert(res.length > 0, 'profiles returned');
+      const hasBots = res.some((p) => p.is_bot === true);
+      assert(hasBots, 'bots flagged in profiles');
     });
   });
 }

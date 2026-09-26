@@ -34,7 +34,8 @@ export default function StaffLayout() {
 
  const tabsContent = (
  <BlurredTabsHost renderTabBar={(p, t) => <FloatingLiquidGlassTabBarView {...p} blurTarget={t} />}>
-<Tabs
+    <Tabs
+      backBehavior="history"
  tabBar={(props) => <FloatingLiquidGlassTabBar {...props} />}
  screenOptions={{
  headerShown: false,
