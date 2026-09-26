@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,27 +46,32 @@ export default function AdminAnalyticsScreen() {
   const { showBots, toggleBotVisibility } = useBotVisibility();
 
   const [timeRangeDays, setTimeRangeDays] = useState<number>(30);
-  const [userSearch, setUserSearch] = useState('');
   const [campusFilter, setCampusFilter] = useState<string>('ALL');
+  const [userSearch, setUserSearch] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'real' | 'bot'>('all');
 
-  // Fetch aggregated analytics summary via RPC / fallback
+  // Fetch real aggregated analytics summary (campus-filtered, zero fake stats)
   const { data: summary, isLoading: summaryLoading, refetch: refetchSummary } = useQuery({
-    queryKey: ['admin-analytics-summary', timeRangeDays],
-    queryFn: () => fetchAdminAnalyticsSummary(timeRangeDays),
+    queryKey: ['admin-analytics-summary', timeRangeDays, campusFilter],
+    queryFn: () => fetchAdminAnalyticsSummary(timeRangeDays, campusFilter),
     staleTime: 30_000,
   });
 
-  // Fetch recent users with activity timestamps
+  // Fetch recent users with real activity timestamps
   const { data: recentUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<RecentActiveUser[]>({
-    queryKey: ['admin-active-users-roster'],
+    queryKey: ['admin-active-users-roster', campusFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select('id, full_name, role, campus_code, verification_status, last_active_at, last_login_at, is_bot, avatar_url')
         .order('last_active_at', { ascending: false, nullsFirst: false })
         .limit(100);
 
+      if (campusFilter !== 'ALL') {
+        query = query.eq('campus_code', campusFilter);
+      }
+
+      const { data, error } = await query;
       if (error) {
         console.warn('[Analytics] Failed to fetch recent profiles:', error);
         return [];
@@ -88,7 +93,7 @@ export default function AdminAnalyticsScreen() {
   });
 
   // Filtered users for activity stream
-  const filteredUsers = React.useMemo(() => {
+  const filteredUsers = useMemo(() => {
     let list = recentUsers;
 
     if (userTypeFilter === 'real') {
@@ -117,6 +122,12 @@ export default function AdminAnalyticsScreen() {
   const maxVisits = Math.max(1, ...(summary?.most_visited_pages.map((p) => p.visits) ?? [1]));
   const maxUses = Math.max(1, ...(summary?.most_used_features.map((f) => f.uses) ?? [1]));
 
+  const activeCampusName = useMemo(() => {
+    if (campusFilter === 'ALL') return 'All Higher Institutions';
+    const found = LAUNCH_INSTITUTIONS.find((i) => i.code === campusFilter);
+    return found ? found.name : campusFilter;
+  }, [campusFilter]);
+
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
@@ -130,7 +141,8 @@ export default function AdminAnalyticsScreen() {
         }}
         showsVerticalScrollIndicator={isDesktop}
       >
-        <AdminSectionTabs group="overview" />
+        {/* Moved under Platform Navigation Group */}
+        <AdminSectionTabs group="platform" />
 
         {/* Top Controls Bar */}
         <View
@@ -147,11 +159,14 @@ export default function AdminAnalyticsScreen() {
           }}
         >
           <View>
-            <AppText variant="h2" weight="bold">
-              Campus Analytics & User Activity
-            </AppText>
-            <AppText tone="secondary" variant="bodySmall">
-              Monitor active students, feature usage, and traffic across all institutions.
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <AppText variant="h2" weight="bold">
+                Platform Analytics & Traffic
+              </AppText>
+              <Badge label={campusFilter === 'ALL' ? 'All Institutions' : campusFilter} tone="brand" />
+            </View>
+            <AppText tone="secondary" variant="bodySmall" style={{ marginTop: 2 }}>
+              Real metrics computed directly from database tables. No simulated data.
             </AppText>
           </View>
 
@@ -165,26 +180,32 @@ export default function AdminAnalyticsScreen() {
                 padding: 3,
               }}
             >
-              {[7, 30, 90].map((days) => (
+              {[
+                { label: '24H', days: 1 },
+                { label: '7D', days: 7 },
+                { label: '30D', days: 30 },
+                { label: '90D', days: 90 },
+                { label: 'All', days: 365 },
+              ].map((opt) => (
                 <Pressable
-                  key={days}
+                  key={opt.days}
                   onPress={() => {
                     haptics.light();
-                    setTimeRangeDays(days);
+                    setTimeRangeDays(opt.days);
                   }}
                   style={{
-                    paddingHorizontal: 12,
+                    paddingHorizontal: 10,
                     paddingVertical: 5,
                     borderRadius: radius.pill,
-                    backgroundColor: timeRangeDays === days ? colors.brandPrimary : 'transparent',
+                    backgroundColor: timeRangeDays === opt.days ? colors.brandPrimary : 'transparent',
                   }}
                 >
                   <AppText
                     variant="caption"
                     weight="bold"
-                    tone={timeRangeDays === days ? 'inverse' : 'secondary'}
+                    tone={timeRangeDays === opt.days ? 'inverse' : 'secondary'}
                   >
-                    {days}D
+                    {opt.label}
                   </AppText>
                 </Pressable>
               ))}
@@ -200,8 +221,8 @@ export default function AdminAnalyticsScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
-                paddingHorizontal: 14,
-                paddingVertical: 7,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
                 borderRadius: radius.pill,
                 borderWidth: 1,
                 borderColor: showBots ? colors.border : colors.brandPrimary,
@@ -210,7 +231,7 @@ export default function AdminAnalyticsScreen() {
             >
               <Ionicons
                 name={showBots ? 'sparkles' : 'sparkles-outline'}
-                size={15}
+                size={14}
                 color={showBots ? colors.textSecondary : colors.brandPrimary}
               />
               <AppText
@@ -218,7 +239,7 @@ export default function AdminAnalyticsScreen() {
                 weight="bold"
                 tone={showBots ? 'secondary' : 'brand'}
               >
-                {showBots ? 'Bots: Visible' : 'Bots: Hidden'}
+                {showBots ? 'Bots Visible' : 'Bots Hidden'}
               </AppText>
             </Pressable>
 
@@ -237,9 +258,75 @@ export default function AdminAnalyticsScreen() {
                 borderColor: colors.border,
               }}
             >
-              <Ionicons name="refresh" size={16} color={colors.textSecondary} />
+              <Ionicons name="refresh" size={15} color={colors.textSecondary} />
             </Pressable>
           </View>
+        </View>
+
+        {/* Institution / Campus Filter Pills */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: spacing.xs,
+            backgroundColor: colors.surface,
+            borderRadius: radius.md,
+            padding: spacing.sm,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <AppText variant="caption" weight="bold" tone="secondary" style={{ marginRight: spacing.xs }}>
+            FILTER BY INSTITUTION:
+          </AppText>
+          <Pressable
+            onPress={() => {
+              haptics.light();
+              setCampusFilter('ALL');
+            }}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: radius.pill,
+              backgroundColor: campusFilter === 'ALL' ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
+            }}
+          >
+            <AppText
+              variant="caption"
+              weight="bold"
+              tone={campusFilter === 'ALL' ? 'inverse' : 'primary'}
+            >
+              All Higher Institutions
+            </AppText>
+          </Pressable>
+
+          {LAUNCH_INSTITUTIONS.map((inst) => {
+            const active = campusFilter === inst.code;
+            return (
+              <Pressable
+                key={inst.code}
+                onPress={() => {
+                  haptics.light();
+                  setCampusFilter(inst.code);
+                }}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 5,
+                  borderRadius: radius.pill,
+                  backgroundColor: active ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  weight="bold"
+                  tone={active ? 'inverse' : 'primary'}
+                >
+                  {inst.shortName}
+                </AppText>
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* Real User Activity KPI Cards */}
@@ -256,7 +343,7 @@ export default function AdminAnalyticsScreen() {
               {summary?.active_15m ?? 0}
             </AppText>
             <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-              Real users in last 15 mins
+              Real users online in last 15m
             </AppText>
           </SolidCard>
 
@@ -272,7 +359,7 @@ export default function AdminAnalyticsScreen() {
               {summary?.active_24h ?? 0}
             </AppText>
             <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-              Daily active real users
+              Daily active real students
             </AppText>
           </SolidCard>
 
@@ -292,11 +379,11 @@ export default function AdminAnalyticsScreen() {
             </AppText>
           </SolidCard>
 
-          {/* Total Registered Accounts */}
+          {/* Total Community */}
           <SolidCard style={{ flex: 1, minWidth: isDesktop ? 220 : '45%', padding: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
               <AppText variant="caption" weight="semiBold" tone="secondary">
-                TOTAL COMMUNITY
+                COMMUNITY ACCOUNTS
               </AppText>
               <Ionicons name="shield-checkmark-outline" size={16} color="#F59E0B" />
             </View>
@@ -308,11 +395,154 @@ export default function AdminAnalyticsScreen() {
                 {summary?.real_users ?? 0} Real
               </AppText>
               <AppText variant="caption" tone="secondary">
-                • {summary?.bot_users ?? 0} Bot Personas
+                • {summary?.bot_users ?? 0} Bots
               </AppText>
             </View>
           </SolidCard>
         </View>
+
+        {/* Content & Campus Velocity Dashboard */}
+        <SolidCard style={{ padding: spacing.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.md }}>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: radius.md,
+                backgroundColor: 'rgba(139, 92, 246, 0.12)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="trending-up-outline" size={18} color="#8B5CF6" />
+            </View>
+            <View>
+              <AppText variant="h3" weight="bold">
+                Campus Engagement & Content Velocity
+              </AppText>
+              <AppText variant="caption" tone="secondary">
+                Total content created across {activeCampusName} ({timeRangeDays}d window)
+              </AppText>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+            {/* Forum Threads */}
+            <View
+              style={{
+                flex: 1,
+                minWidth: isDesktop ? 160 : '45%',
+                backgroundColor: colors.surface,
+                borderRadius: radius.md,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption" tone="secondary" weight="semiBold">
+                FORUM THREADS
+              </AppText>
+              <AppText variant="h2" weight="bold" style={{ marginTop: 4, color: colors.brandPrimary }}>
+                {summary?.total_posts ?? 0}
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                Discussions published
+              </AppText>
+            </View>
+
+            {/* Poll Votes Cast */}
+            <View
+              style={{
+                flex: 1,
+                minWidth: isDesktop ? 160 : '45%',
+                backgroundColor: colors.surface,
+                borderRadius: radius.md,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption" tone="secondary" weight="semiBold">
+                POLL VOTES CAST
+              </AppText>
+              <AppText variant="h2" weight="bold" style={{ marginTop: 4, color: '#8B5CF6' }}>
+                {summary?.total_poll_votes ?? 0}
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                Student referendum votes
+              </AppText>
+            </View>
+
+            {/* Academic Resources */}
+            <View
+              style={{
+                flex: 1,
+                minWidth: isDesktop ? 160 : '45%',
+                backgroundColor: colors.surface,
+                borderRadius: radius.md,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption" tone="secondary" weight="semiBold">
+                ACADEMIC RESOURCES
+              </AppText>
+              <AppText variant="h2" weight="bold" style={{ marginTop: 4, color: '#10B981' }}>
+                {summary?.total_resources ?? 0}
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                Past questions & notes
+              </AppText>
+            </View>
+
+            {/* Campus Events */}
+            <View
+              style={{
+                flex: 1,
+                minWidth: isDesktop ? 160 : '45%',
+                backgroundColor: colors.surface,
+                borderRadius: radius.md,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption" tone="secondary" weight="semiBold">
+                CAMPUS EVENTS
+              </AppText>
+              <AppText variant="h2" weight="bold" style={{ marginTop: 4, color: '#F59E0B' }}>
+                {summary?.total_events ?? 0}
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                Scheduled symposia & hackathons
+              </AppText>
+            </View>
+
+            {/* Pending ID Verifications */}
+            <View
+              style={{
+                flex: 1,
+                minWidth: isDesktop ? 160 : '45%',
+                backgroundColor: colors.surface,
+                borderRadius: radius.md,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption" tone="secondary" weight="semiBold">
+                ID VERIFICATION QUEUE
+              </AppText>
+              <AppText variant="h2" weight="bold" style={{ marginTop: 4, color: summary?.pending_verifications ? '#EF4444' : '#10B981' }}>
+                {summary?.pending_verifications ?? 0}
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                Pending approval by admin
+              </AppText>
+            </View>
+          </View>
+        </SolidCard>
 
         {/* Most Visited Pages & Most Used Features */}
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: spacing.lg }}>
@@ -336,7 +566,7 @@ export default function AdminAnalyticsScreen() {
                   Most Visited Pages
                 </AppText>
                 <AppText variant="caption" tone="secondary">
-                  Top routes ranked by total visits ({timeRangeDays}d)
+                  Real route traffic from analytics_events ({timeRangeDays}d)
                 </AppText>
               </View>
             </View>
@@ -384,7 +614,7 @@ export default function AdminAnalyticsScreen() {
               <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
                 <Ionicons name="bar-chart-outline" size={32} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
-                  No page views recorded yet in this timeframe.
+                  No page visits recorded yet for this institution or timeframe.
                 </AppText>
               </View>
             )}
@@ -410,7 +640,7 @@ export default function AdminAnalyticsScreen() {
                   Most Used Features
                 </AppText>
                 <AppText variant="caption" tone="secondary">
-                  High-engagement features ({timeRangeDays}d)
+                  Real feature interactions from analytics_events ({timeRangeDays}d)
                 </AppText>
               </View>
             </View>
@@ -458,87 +688,93 @@ export default function AdminAnalyticsScreen() {
               <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
                 <Ionicons name="sparkles-outline" size={32} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
-                  No feature interactions recorded yet.
+                  No feature interactions recorded yet for this institution or timeframe.
                 </AppText>
               </View>
             )}
           </SolidCard>
         </View>
 
-        {/* Multi-Campus Breakdown Section */}
-        <SolidCard style={{ padding: spacing.lg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.md }}>
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: radius.md,
-                backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="business-outline" size={18} color="#F59E0B" />
+        {/* Multi-Campus Breakdown Section (Shown when viewing All Institutions) */}
+        {campusFilter === 'ALL' && (
+          <SolidCard style={{ padding: spacing.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.md }}>
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: radius.md,
+                  backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="business-outline" size={18} color="#F59E0B" />
+              </View>
+              <View>
+                <AppText variant="h3" weight="bold">
+                  Higher Institution & Campus Breakdown
+                </AppText>
+                <AppText variant="caption" tone="secondary">
+                  Real member distribution and verification rates across universities & polytechnics
+                </AppText>
+              </View>
             </View>
-            <View>
-              <AppText variant="h3" weight="bold">
-                Higher Institution & Campus Breakdown
-              </AppText>
-              <AppText variant="caption" tone="secondary">
-                Member distribution and verification metrics across universities & polytechnics
-              </AppText>
-            </View>
-          </View>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-            {(summary?.campus_metrics ?? []).map((campus) => {
-              const institution = LAUNCH_INSTITUTIONS.find((i) => i.code === campus.campus_code);
-              const name = institution ? institution.shortName : campus.campus_code;
-              const verifyPct = campus.total_members > 0 ? Math.round((campus.verified_members / campus.total_members) * 100) : 0;
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+              {(summary?.campus_metrics ?? []).map((campus) => {
+                const institution = LAUNCH_INSTITUTIONS.find((i) => i.code === campus.campus_code);
+                const name = institution ? institution.shortName : campus.campus_code;
+                const verifyPct = campus.total_members > 0 ? Math.round((campus.verified_members / campus.total_members) * 100) : 0;
 
-              return (
-                <View
-                  key={campus.campus_code}
-                  style={{
-                    flex: 1,
-                    minWidth: isDesktop ? 220 : '46%',
-                    backgroundColor: colors.surface,
-                    borderRadius: radius.md,
-                    padding: spacing.md,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <AppText variant="body" weight="bold">
-                      {name}
+                return (
+                  <Pressable
+                    key={campus.campus_code}
+                    onPress={() => {
+                      haptics.light();
+                      setCampusFilter(campus.campus_code);
+                    }}
+                    style={{
+                      flex: 1,
+                      minWidth: isDesktop ? 220 : '46%',
+                      backgroundColor: colors.surface,
+                      borderRadius: radius.md,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <AppText variant="body" weight="bold">
+                        {name}
+                      </AppText>
+                      <Badge label={campus.campus_code} tone="brand" />
+                    </View>
+
+                    <AppText variant="h2" weight="bold" style={{ marginTop: 4 }}>
+                      {campus.total_members} <AppText variant="caption" tone="secondary">members</AppText>
                     </AppText>
-                    <Badge label={campus.campus_code} tone="brand" />
-                  </View>
 
-                  <AppText variant="h2" weight="bold" style={{ marginTop: 4 }}>
-                    {campus.total_members} <AppText variant="caption" tone="secondary">members</AppText>
-                  </AppText>
-
-                  <View style={{ marginTop: spacing.sm, gap: 4 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <AppText variant="caption" tone="secondary">Real Students:</AppText>
-                      <AppText variant="caption" weight="bold">{campus.real_members}</AppText>
+                    <View style={{ marginTop: spacing.sm, gap: 4 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <AppText variant="caption" tone="secondary">Real Students:</AppText>
+                        <AppText variant="caption" weight="bold">{campus.real_members}</AppText>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <AppText variant="caption" tone="secondary">Verified Rate:</AppText>
+                        <AppText variant="caption" weight="bold" style={{ color: '#10B981' }}>{verifyPct}%</AppText>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <AppText variant="caption" tone="secondary">Active (7d):</AppText>
+                        <AppText variant="caption" weight="bold">{campus.active_7d}</AppText>
+                      </View>
                     </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <AppText variant="caption" tone="secondary">Verified Rate:</AppText>
-                      <AppText variant="caption" weight="bold" style={{ color: '#10B981' }}>{verifyPct}%</AppText>
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <AppText variant="caption" tone="secondary">Active (7d):</AppText>
-                      <AppText variant="caption" weight="bold">{campus.active_7d}</AppText>
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </SolidCard>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </SolidCard>
+        )}
 
         {/* Live User Activity & Login Tracker */}
         <SolidCard style={{ padding: spacing.lg }}>
@@ -548,13 +784,12 @@ export default function AdminAnalyticsScreen() {
                 Real User Activity & Login Monitor
               </AppText>
               <AppText variant="caption" tone="secondary">
-                Track who is active and when last each user logged in
+                Track active students and recent logins for {activeCampusName}
               </AppText>
             </View>
 
-            {/* Filter controls */}
+            {/* User type selector */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-              {/* User type selector */}
               {(['all', 'real', 'bot'] as const).map((type) => (
                 <Pressable
                   key={type}
@@ -601,7 +836,7 @@ export default function AdminAnalyticsScreen() {
             <TextInput
               value={userSearch}
               onChangeText={setUserSearch}
-              placeholder="Search user by name, campus, or role..."
+              placeholder="Search member by name, campus, or role..."
               placeholderTextColor={colors.textSecondary}
               style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}
             />
@@ -614,7 +849,7 @@ export default function AdminAnalyticsScreen() {
 
           {/* User Roster */}
           <View style={{ gap: spacing.xs }}>
-            {filteredUsers.slice(0, 25).map((u) => {
+            {filteredUsers.slice(0, 30).map((u) => {
               const isOnline = u.lastActiveAt && Date.now() - new Date(u.lastActiveAt).getTime() <= 15 * 60 * 1000;
 
               return (
@@ -696,7 +931,7 @@ export default function AdminAnalyticsScreen() {
               <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
                 <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
-                  No users found matching current filters.
+                  No members found matching current filters.
                 </AppText>
               </View>
             )}

@@ -1552,9 +1552,21 @@ console.log('\n== admin analytics & user activity monitoring ==');
       const res = (await c.q("SELECT public.get_admin_analytics_summary(30) AS data")).rows[0].data;
       assert(res.total_users >= 20, 'total users counted');
       eq(res.bot_users, 20, '20 bots counted');
+      assert(res.total_posts !== undefined, 'total posts metric present');
+      assert(res.total_comments !== undefined, 'total comments metric present');
+      assert(res.total_resources !== undefined, 'total resources metric present');
+      assert(res.total_events !== undefined, 'total events metric present');
+      assert(res.total_rsvps !== undefined, 'total rsvps metric present');
+      assert(res.total_poll_votes !== undefined, 'total poll votes metric present');
+      assert(res.pending_verifications !== undefined, 'pending verifications metric present');
       assert(Array.isArray(res.most_visited_pages), 'most visited pages array');
       assert(Array.isArray(res.most_used_features), 'most used features array');
       assert(Array.isArray(res.campus_metrics), 'campus metrics array');
+
+      // Test campus filtering
+      const uiRes = (await c.q("SELECT public.get_admin_analytics_summary(30, 'UI') AS data")).rows[0].data;
+      eq(uiRes.bot_users, 7, '7 UI bots counted when campus filtered');
+      eq(uiRes.total_posts, 7, '7 UI forum posts counted when campus filtered');
     });
   });
 }

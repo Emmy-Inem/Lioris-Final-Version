@@ -623,7 +623,7 @@ INSERT INTO public.profiles (
   'Science',
   '400L',
   '400L CS @ UI | Fullstack Dev (React/Node) | Earning in USD on Upwork | Building tech solutions for Nigerian students.',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Law_Students_Nigeria_Iftar_2023_01.jpg/500px-Law_Students_Nigeria_Iftar_2023_01.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -661,7 +661,7 @@ INSERT INTO public.profiles (
   'Agriculture',
   '300L',
   'Agric Econ 300L @ UI | Founder of Campus Fruit Bowl (Smoothies & Healthy Parfait across Kuti, Queens & Idia Halls).',
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Law_Students_Nigeria_Iftar_2023_02.jpg/500px-Law_Students_Nigeria_Iftar_2023_02.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -699,7 +699,7 @@ INSERT INTO public.profiles (
   'Clinical Sciences',
   'Alumni (MBBS ''21)',
   'UI MBBS ''21 | Global Health Researcher | Rhodes Scholar Finalist | Helping UIites secure fully-funded study abroad scholarships.',
-  'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Law_Students_Nigeria_Iftar_2023_16.jpg/500px-Law_Students_Nigeria_Iftar_2023_16.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -737,7 +737,7 @@ INSERT INTO public.profiles (
   'The Social Sciences',
   '400L',
   'Economics 400L @ UI | Financial Markets & Macro Analyst | Freelance Data Analyst (PowerBI, Python).',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Law_Students_Nigeria_Iftar_2023_12.jpg/500px-Law_Students_Nigeria_Iftar_2023_12.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -775,7 +775,7 @@ INSERT INTO public.profiles (
   'Law',
   '500L',
   '500L Law @ UI | Moot & Mock Winner | Tech Law Researcher | Believer in disciplined study habits without academic burnout.',
-  'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Law_Students_Nigeria_Iftar_2023_17.jpg/500px-Law_Students_Nigeria_Iftar_2023_17.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -813,7 +813,7 @@ INSERT INTO public.profiles (
   'Technology',
   '300L',
   'Mech Eng 300L @ UI | Mellanby Hall Executive | Off-campus housing scout helping students avoid agent extortion in Agbowo & Bodija.',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Law_Students_Nigeria_Iftar_2023_13.jpg/500px-Law_Students_Nigeria_Iftar_2023_13.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -851,7 +851,7 @@ INSERT INTO public.profiles (
   'Basic Medical Sciences',
   '200L',
   '200L Biochemistry @ UI | Queen Idia Hall | Campus volunteer with passion for community service and campus recovery.',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Law_Students_Nigeria_Iftar_2023_18.jpg/500px-Law_Students_Nigeria_Iftar_2023_18.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -889,7 +889,7 @@ INSERT INTO public.profiles (
   'Engineering',
   '400L',
   'Systems Eng 400L @ UNILAG | Senior Product Designer | Remote Contractor earning in USD | Passionate about building global digital careers from Akoka.',
-  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Law_Students_Nigeria_Iftar_2023_14.jpg/500px-Law_Students_Nigeria_Iftar_2023_14.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -927,7 +927,7 @@ INSERT INTO public.profiles (
   'Management Sciences',
   '300L',
   'Finance 300L @ UNILAG | ICAN Candidate | Financial modeler helping small businesses in Lagos automate bookkeeping.',
-  'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Discovery_For_Youth_02.jpg/500px-Discovery_For_Youth_02.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -965,7 +965,7 @@ INSERT INTO public.profiles (
   'Social Sciences',
   'Alumni (''22)',
   'UNILAG Mass Comm ''22 | Growth Marketing Lead at YC-backed Fintech | Career Coach for ambitious undergraduates.',
-  'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Law_Students_Nigeria_Iftar_2023_15.jpg/500px-Law_Students_Nigeria_Iftar_2023_15.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1003,7 +1003,7 @@ INSERT INTO public.profiles (
   'Science',
   '200L',
   '200L CS @ UNILAG | Frontend Developer & UI tinkerer | Google Women Techmakers Ambassador | Community builder.',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Discovery_For_Youth_03.jpg/500px-Discovery_For_Youth_03.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1041,7 +1041,7 @@ INSERT INTO public.profiles (
   'Management Sciences',
   '300L',
   'Business Admin 300L @ UNILAG | Jaja Hall Resident | Tech Accessories & Gadget Trader on campus.',
-  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Discovery_For_Youth_04.jpg/500px-Discovery_For_Youth_04.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1079,7 +1079,7 @@ INSERT INTO public.profiles (
   'Arts',
   '300L',
   'Creative Arts 300L @ UNILAG | 3D Animator & Visual Storyteller | Freelance Brand Designer for Lagos tech startups.',
-  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Discovery_For_Youth_05.jpg/500px-Discovery_For_Youth_05.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1117,7 +1117,7 @@ INSERT INTO public.profiles (
   'Engineering',
   '400L',
   'EEE 400L @ UNILAG | Robotics & Embedded Systems Enthusiast | Faculty of Engineering Student Welfare Committee.',
-  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Discovery_For_Youth_06.jpg/500px-Discovery_For_Youth_06.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1155,7 +1155,7 @@ INSERT INTO public.profiles (
   'Agricultural Management',
   '500L',
   '500L Farm Management @ FUNAAB | Agribusiness Entrepreneur | Managing a 350-bird poultry unit in Kotopo | Empowering students to build farm wealth.',
-  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Discovery_For_Youth_07.jpg/500px-Discovery_For_Youth_07.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1193,7 +1193,7 @@ INSERT INTO public.profiles (
   'Physical Sciences',
   '400L',
   '400L CS @ FUNAAB | Backend Developer (Golang & PostgreSQL) | Remote freelancer working from Camp/Alabata.',
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Discovery_For_Youth_08.jpg/500px-Discovery_For_Youth_08.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1231,7 +1231,7 @@ INSERT INTO public.profiles (
   'Food Science',
   '300L',
   'Food Science 300L @ FUNAAB | Pastry Chef & Packaged Healthy Snacks Producer | Supplying university cafeterias and hostelites.',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Discovery_For_Youth_09.jpg/500px-Discovery_For_Youth_09.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1269,7 +1269,7 @@ INSERT INTO public.profiles (
   'Engineering',
   '400L',
   'Mechatronics 400L @ FUNAAB | Hardware Hacker | Solar power setups and automated drip-irrigation enthusiast.',
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Discovery_For_Youth_10.jpg/500px-Discovery_For_Youth_10.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1307,7 +1307,7 @@ INSERT INTO public.profiles (
   'Animal Science',
   'Alumni (''20)',
   'FUNAAB Alumni ''20 | Managing Director at GreenField Agro Exports | Mentoring agricultural students on agribusiness export value chains.',
-  'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Discovery_For_Youth_11.jpg/500px-Discovery_For_Youth_11.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -1345,7 +1345,7 @@ INSERT INTO public.profiles (
   'Plant Science',
   '200L',
   '200L PBST @ FUNAAB | Nimbe Adedipe Library Regular | Peer tutor and campus hostel logistics enthusiast.',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Discovery_For_Youth_16.jpg/500px-Discovery_For_Youth_16.jpg',
   'verified'::verification_status_type
 ) ON CONFLICT (id) DO UPDATE SET
   full_name = EXCLUDED.full_name,
@@ -2536,3 +2536,42 @@ Golden Rule: Verify that the lodge has a functioning generator or solar inverter
   status = EXCLUDED.status;
 
 COMMIT;
+
+
+-- Update bot profile avatars to authentic Nigerian student portraits
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'tr_prevent_profile_role_escalation') THEN
+    ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation;
+  END IF;
+
+  UPDATE public.profiles
+  SET avatar_url = CASE id::text
+    WHEN '00000000-0000-4000-a000-000000000101' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Law_Students_Nigeria_Iftar_2023_01.jpg/500px-Law_Students_Nigeria_Iftar_2023_01.jpg'
+    WHEN '00000000-0000-4000-a000-000000000102' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Law_Students_Nigeria_Iftar_2023_02.jpg/500px-Law_Students_Nigeria_Iftar_2023_02.jpg'
+    WHEN '00000000-0000-4000-a000-000000000103' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Law_Students_Nigeria_Iftar_2023_16.jpg/500px-Law_Students_Nigeria_Iftar_2023_16.jpg'
+    WHEN '00000000-0000-4000-a000-000000000104' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Law_Students_Nigeria_Iftar_2023_12.jpg/500px-Law_Students_Nigeria_Iftar_2023_12.jpg'
+    WHEN '00000000-0000-4000-a000-000000000105' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Law_Students_Nigeria_Iftar_2023_17.jpg/500px-Law_Students_Nigeria_Iftar_2023_17.jpg'
+    WHEN '00000000-0000-4000-a000-000000000106' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Law_Students_Nigeria_Iftar_2023_13.jpg/500px-Law_Students_Nigeria_Iftar_2023_13.jpg'
+    WHEN '00000000-0000-4000-a000-000000000107' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Law_Students_Nigeria_Iftar_2023_18.jpg/500px-Law_Students_Nigeria_Iftar_2023_18.jpg'
+    WHEN '00000000-0000-4000-a000-000000000201' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Law_Students_Nigeria_Iftar_2023_14.jpg/500px-Law_Students_Nigeria_Iftar_2023_14.jpg'
+    WHEN '00000000-0000-4000-a000-000000000202' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Discovery_For_Youth_02.jpg/500px-Discovery_For_Youth_02.jpg'
+    WHEN '00000000-0000-4000-a000-000000000203' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Law_Students_Nigeria_Iftar_2023_15.jpg/500px-Law_Students_Nigeria_Iftar_2023_15.jpg'
+    WHEN '00000000-0000-4000-a000-000000000204' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Discovery_For_Youth_03.jpg/500px-Discovery_For_Youth_03.jpg'
+    WHEN '00000000-0000-4000-a000-000000000205' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Discovery_For_Youth_04.jpg/500px-Discovery_For_Youth_04.jpg'
+    WHEN '00000000-0000-4000-a000-000000000206' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Discovery_For_Youth_05.jpg/500px-Discovery_For_Youth_05.jpg'
+    WHEN '00000000-0000-4000-a000-000000000207' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Discovery_For_Youth_06.jpg/500px-Discovery_For_Youth_06.jpg'
+    WHEN '00000000-0000-4000-a000-000000000301' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Discovery_For_Youth_07.jpg/500px-Discovery_For_Youth_07.jpg'
+    WHEN '00000000-0000-4000-a000-000000000302' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Discovery_For_Youth_08.jpg/500px-Discovery_For_Youth_08.jpg'
+    WHEN '00000000-0000-4000-a000-000000000303' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Discovery_For_Youth_09.jpg/500px-Discovery_For_Youth_09.jpg'
+    WHEN '00000000-0000-4000-a000-000000000304' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Discovery_For_Youth_10.jpg/500px-Discovery_For_Youth_10.jpg'
+    WHEN '00000000-0000-4000-a000-000000000305' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Discovery_For_Youth_11.jpg/500px-Discovery_For_Youth_11.jpg'
+    WHEN '00000000-0000-4000-a000-000000000306' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Discovery_For_Youth_16.jpg/500px-Discovery_For_Youth_16.jpg'
+    ELSE avatar_url
+  END
+  WHERE id::text LIKE '00000000-0000-4000-a000-%';
+
+  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'tr_prevent_profile_role_escalation') THEN
+    ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation;
+  END IF;
+END $$;

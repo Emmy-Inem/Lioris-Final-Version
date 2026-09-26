@@ -106,7 +106,13 @@ REVOKE ALL ON FUNCTION public.record_user_activity(TEXT, TEXT, TEXT, JSONB) FROM
 GRANT EXECUTE ON FUNCTION public.record_user_activity(TEXT, TEXT, TEXT, JSONB) TO anon, authenticated, service_role;
 
 -- 5. RPC: get_admin_analytics_summary ----------------------------------------
-CREATE OR REPLACE FUNCTION public.get_admin_analytics_summary(p_days INT DEFAULT 30)
+DROP FUNCTION IF EXISTS public.get_admin_analytics_summary(INT);
+DROP FUNCTION IF EXISTS public.get_admin_analytics_summary(INT, TEXT);
+
+CREATE OR REPLACE FUNCTION public.get_admin_analytics_summary(
+    p_days INT DEFAULT 30,
+    p_campus_code TEXT DEFAULT NULL
+)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -115,16 +121,23 @@ AS $$
 DECLARE
     v_caller_role TEXT;
     v_since TIMESTAMPTZ;
-    v_total_users INT;
-    v_real_users INT;
-    v_bot_users INT;
-    v_active_15m INT;
-    v_active_24h INT;
-    v_active_7d INT;
-    v_active_30d INT;
-    v_pages JSONB;
-    v_features JSONB;
-    v_campuses JSONB;
+    v_total_users INT := 0;
+    v_real_users INT := 0;
+    v_bot_users INT := 0;
+    v_active_15m INT := 0;
+    v_active_24h INT := 0;
+    v_active_7d INT := 0;
+    v_active_30d INT := 0;
+    v_total_posts INT := 0;
+    v_total_comments INT := 0;
+    v_total_resources INT := 0;
+    v_total_events INT := 0;
+    v_total_rsvps INT := 0;
+    v_total_poll_votes INT := 0;
+    v_pending_verifications INT := 0;
+    v_pages JSONB := '[]'::jsonb;
+    v_features JSONB := '[]'::jsonb;
+    v_campuses JSONB := '[]'::jsonb;
 BEGIN
     SELECT role::text INTO v_caller_role FROM public.profiles WHERE id = auth.uid();
     IF v_caller_role IS DISTINCT FROM 'admin' THEN
@@ -133,6 +146,7 @@ BEGIN
 
     v_since := NOW() - (p_days || ' days')::INTERVAL;
 
+    -- User population & activity
     SELECT
         COUNT(*)::INT,
         COUNT(*) FILTER (WHERE NOT COALESCE(is_bot, false))::INT,
@@ -149,14 +163,59 @@ BEGIN
         v_active_24h,
         v_active_7d,
         v_active_30d
-    FROM public.profiles;
+    FROM public.profiles
+    WHERE (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code);
+
+    -- Content & Campus Life Velocity
+    SELECT COUNT(*)::INT INTO v_total_posts
+    FROM public.posts
+    WHERE created_at >= v_since
+      AND (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code);
+
+    IF p_campus_code IS NOT NULL AND p_campus_code <> 'ALL' THEN
+        SELECT COUNT(*)::INT INTO v_total_comments
+        FROM public.post_comments c
+        JOIN public.posts p ON p.id = c.post_id
+        WHERE c.created_at >= v_since AND p.campus_code = p_campus_code;
+    ELSE
+        SELECT COUNT(*)::INT INTO v_total_comments
+        FROM public.post_comments c
+        WHERE c.created_at >= v_since;
+    END IF;
+
+    SELECT COUNT(*)::INT INTO v_total_resources
+    FROM public.resources
+    WHERE created_at >= v_since
+      AND (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code);
+
+    SELECT COUNT(*)::INT INTO v_total_events
+    FROM public.events
+    WHERE created_at >= v_since
+      AND (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code);
+
+    SELECT COUNT(*)::INT INTO v_total_rsvps
+    FROM public.analytics_events
+    WHERE event_type = 'feature_use' AND name = 'event_rsvp' AND created_at >= v_since
+      AND (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code);
+
+    SELECT COUNT(*)::INT INTO v_total_poll_votes
+    FROM public.analytics_events
+    WHERE event_type = 'feature_use' AND name = 'vote_poll' AND created_at >= v_since
+      AND (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code);
+
+    SELECT COUNT(*)::INT INTO v_pending_verifications
+    FROM public.profiles
+    WHERE verification_status = 'pending'
+      AND (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code);
 
     -- Most visited pages
     SELECT COALESCE(JSONB_AGG(sub), '[]'::jsonb) INTO v_pages
     FROM (
         SELECT name, COUNT(*)::INT AS visits, COUNT(DISTINCT user_id)::INT AS unique_visitors
         FROM public.analytics_events
-        WHERE event_type = 'page_view' AND created_at >= v_since
+        WHERE event_type = 'page_view'
+          AND created_at >= v_since
+          AND (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code)
         GROUP BY name
         ORDER BY visits DESC
         LIMIT 15
@@ -167,7 +226,9 @@ BEGIN
     FROM (
         SELECT name, COUNT(*)::INT AS uses, COUNT(DISTINCT user_id)::INT AS unique_users
         FROM public.analytics_events
-        WHERE event_type = 'feature_use' AND created_at >= v_since
+        WHERE event_type = 'feature_use'
+          AND created_at >= v_since
+          AND (p_campus_code IS NULL OR p_campus_code = 'ALL' OR campus_code = p_campus_code)
         GROUP BY name
         ORDER BY uses DESC
         LIMIT 15
@@ -188,13 +249,20 @@ BEGIN
     ) sub;
 
     RETURN JSONB_BUILD_OBJECT(
-        'total_users', v_total_users,
-        'real_users', v_real_users,
-        'bot_users', v_bot_users,
-        'active_15m', v_active_15m,
-        'active_24h', v_active_24h,
-        'active_7d', v_active_7d,
-        'active_30d', v_active_30d,
+        'total_users', COALESCE(v_total_users, 0),
+        'real_users', COALESCE(v_real_users, 0),
+        'bot_users', COALESCE(v_bot_users, 0),
+        'active_15m', COALESCE(v_active_15m, 0),
+        'active_24h', COALESCE(v_active_24h, 0),
+        'active_7d', COALESCE(v_active_7d, 0),
+        'active_30d', COALESCE(v_active_30d, 0),
+        'total_posts', COALESCE(v_total_posts, 0),
+        'total_comments', COALESCE(v_total_comments, 0),
+        'total_resources', COALESCE(v_total_resources, 0),
+        'total_events', COALESCE(v_total_events, 0),
+        'total_rsvps', COALESCE(v_total_rsvps, 0),
+        'total_poll_votes', COALESCE(v_total_poll_votes, 0),
+        'pending_verifications', COALESCE(v_pending_verifications, 0),
         'most_visited_pages', v_pages,
         'most_used_features', v_features,
         'campus_metrics', v_campuses
@@ -202,7 +270,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.get_admin_analytics_summary(INT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_admin_analytics_summary(INT) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.get_admin_analytics_summary(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_admin_analytics_summary(INT, TEXT) TO authenticated, service_role;
 
 COMMIT;

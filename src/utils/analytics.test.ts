@@ -56,4 +56,26 @@ test('analytics and bot visibility logic', async (t) => {
     assert.equal(isOnline(threeDaysAgo), false);
     assert.equal(isOnline(null), false);
   });
+
+  await t.test('analytics is situated under the platform admin group', async () => {
+    // @ts-ignore TS5097
+    const { adminGroupForPath } = await import('../components/admin/adminNav.ts');
+    const groupForAnalytics = adminGroupForPath('/analytics');
+    assert.ok(groupForAnalytics, 'group should be resolved');
+    assert.equal(groupForAnalytics.key, 'platform', 'analytics must belong to platform group');
+
+    const groupForAdminAnalytics = adminGroupForPath('/(admin)/analytics');
+    assert.ok(groupForAdminAnalytics);
+    assert.equal(groupForAdminAnalytics.key, 'platform');
+  });
+
+  await t.test('all bot personas use authentic Nigerian student avatars', async () => {
+    // @ts-ignore TS5097
+    const { SEED_BOT_USERS } = await import('../data/seedBotProfiles.ts');
+    for (const bot of SEED_BOT_USERS) {
+      assert.ok(bot.avatarUrl.includes('Law_Students_Nigeria') || bot.avatarUrl.includes('Discovery_For_Youth'),
+        `Bot ${bot.username} avatar must be authentic Nigerian student photo`);
+      assert.ok(!bot.avatarUrl.includes('images.unsplash.com/photo-1534528741775'), 'Must not use stock white photo');
+    }
+  });
 });

@@ -30,7 +30,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Science',
     level: '400L',
     bio: '400L CS @ UI | Fullstack Dev (React/Node) | Earning in USD on Upwork | Building tech solutions for Nigerian students.',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Law_Students_Nigeria_Iftar_2023_01.jpg/500px-Law_Students_Nigeria_Iftar_2023_01.jpg',
     isVerified: true,
   },
   {
@@ -44,7 +44,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Agriculture',
     level: '300L',
     bio: 'Agric Econ 300L @ UI | Founder of Campus Fruit Bowl (Smoothies & Healthy Parfait across Kuti, Queens & Idia Halls).',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Law_Students_Nigeria_Iftar_2023_02.jpg/500px-Law_Students_Nigeria_Iftar_2023_02.jpg',
     isVerified: true,
   },
   {
@@ -58,7 +58,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Clinical Sciences',
     level: 'Alumni (MBBS \'21)',
     bio: 'UI MBBS \'21 | Global Health Researcher | Rhodes Scholar Finalist | Helping UIites secure fully-funded study abroad scholarships.',
-    avatarUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Law_Students_Nigeria_Iftar_2023_16.jpg/500px-Law_Students_Nigeria_Iftar_2023_16.jpg',
     isVerified: true,
   },
   {
@@ -72,7 +72,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'The Social Sciences',
     level: '400L',
     bio: 'Economics 400L @ UI | Financial Markets & Macro Analyst | Freelance Data Analyst (PowerBI, Python).',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Law_Students_Nigeria_Iftar_2023_12.jpg/500px-Law_Students_Nigeria_Iftar_2023_12.jpg',
     isVerified: true,
   },
   {
@@ -86,7 +86,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Law',
     level: '500L',
     bio: '500L Law @ UI | Moot & Mock Winner | Tech Law Researcher | Believer in disciplined study habits without academic burnout.',
-    avatarUrl: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Law_Students_Nigeria_Iftar_2023_17.jpg/500px-Law_Students_Nigeria_Iftar_2023_17.jpg',
     isVerified: true,
   },
   {
@@ -100,7 +100,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Technology',
     level: '300L',
     bio: 'Mech Eng 300L @ UI | Mellanby Hall Executive | Off-campus housing scout helping students avoid agent extortion in Agbowo & Bodija.',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Law_Students_Nigeria_Iftar_2023_13.jpg/500px-Law_Students_Nigeria_Iftar_2023_13.jpg',
     isVerified: true,
   },
   {
@@ -114,7 +114,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Basic Medical Sciences',
     level: '200L',
     bio: '200L Biochemistry @ UI | Queen Idia Hall | Campus volunteer with passion for community service and campus recovery.',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Law_Students_Nigeria_Iftar_2023_18.jpg/500px-Law_Students_Nigeria_Iftar_2023_18.jpg',
     isVerified: true,
   },
 
@@ -132,7 +132,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Engineering',
     level: '400L',
     bio: 'Systems Eng 400L @ UNILAG | Senior Product Designer | Remote Contractor earning in USD | Passionate about building global digital careers from Akoka.',
-    avatarUrl: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Law_Students_Nigeria_Iftar_2023_14.jpg/500px-Law_Students_Nigeria_Iftar_2023_14.jpg',
     isVerified: true,
   },
   {
@@ -146,7 +146,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Management Sciences',
     level: '300L',
     bio: 'Finance 300L @ UNILAG | ICAN Candidate | Financial modeler helping small businesses in Lagos automate bookkeeping.',
-    avatarUrl: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Discovery_For_Youth_02.jpg/500px-Discovery_For_Youth_02.jpg',
     isVerified: true,
   },
   {
@@ -160,7 +160,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Social Sciences',
     level: 'Alumni (\'22)',
     bio: 'UNILAG Mass Comm \'22 | Growth Marketing Lead at YC-backed Fintech | Career Coach for ambitious undergraduates.',
-    avatarUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Law_Students_Nigeria_Iftar_2023_15.jpg/500px-Law_Students_Nigeria_Iftar_2023_15.jpg',
     isVerified: true,
   },
   {
@@ -174,7 +174,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Science',
     level: '200L',
     bio: '200L CS @ UNILAG | Frontend Developer & UI tinkerer | Google Women Techmakers Ambassador | Community builder.',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Discovery_For_Youth_03.jpg/500px-Discovery_For_Youth_03.jpg',
     isVerified: true,
   },
   {
@@ -188,7 +188,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Management Sciences',
     level: '300L',
     bio: 'Business Admin 300L @ UNILAG | Jaja Hall Resident | Tech Accessories & Gadget Trader on campus.',
-    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Discovery_For_Youth_04.jpg/500px-Discovery_For_Youth_04.jpg',
     isVerified: true,
   },
   {
@@ -202,7 +202,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Arts',
     level: '300L',
     bio: 'Creative Arts 300L @ UNILAG | 3D Animator & Visual Storyteller | Freelance Brand Designer for Lagos tech startups.',
-    avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Discovery_For_Youth_05.jpg/500px-Discovery_For_Youth_05.jpg',
     isVerified: true,
   },
   {
@@ -216,7 +216,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Engineering',
     level: '400L',
     bio: 'EEE 400L @ UNILAG | Robotics & Embedded Systems Enthusiast | Faculty of Engineering Student Welfare Committee.',
-    avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Discovery_For_Youth_06.jpg/500px-Discovery_For_Youth_06.jpg',
     isVerified: true,
   },
 
@@ -234,7 +234,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Agricultural Management',
     level: '500L',
     bio: '500L Farm Management @ FUNAAB | Agribusiness Entrepreneur | Managing a 350-bird poultry unit in Kotopo | Empowering students to build farm wealth.',
-    avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Discovery_For_Youth_07.jpg/500px-Discovery_For_Youth_07.jpg',
     isVerified: true,
   },
   {
@@ -248,7 +248,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Physical Sciences',
     level: '400L',
     bio: '400L CS @ FUNAAB | Backend Developer (Golang & PostgreSQL) | Remote freelancer working from Camp/Alabata.',
-    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Discovery_For_Youth_08.jpg/500px-Discovery_For_Youth_08.jpg',
     isVerified: true,
   },
   {
@@ -262,7 +262,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Food Science',
     level: '300L',
     bio: 'Food Science 300L @ FUNAAB | Pastry Chef & Packaged Healthy Snacks Producer | Supplying university cafeterias and hostelites.',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Discovery_For_Youth_09.jpg/500px-Discovery_For_Youth_09.jpg',
     isVerified: true,
   },
   {
@@ -276,7 +276,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Engineering',
     level: '400L',
     bio: 'Mechatronics 400L @ FUNAAB | Hardware Hacker | Solar power setups and automated drip-irrigation enthusiast.',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Discovery_For_Youth_10.jpg/500px-Discovery_For_Youth_10.jpg',
     isVerified: true,
   },
   {
@@ -290,7 +290,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Animal Science',
     level: 'Alumni (\'20)',
     bio: 'FUNAAB Alumni \'20 | Managing Director at GreenField Agro Exports | Mentoring agricultural students on agribusiness export value chains.',
-    avatarUrl: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Discovery_For_Youth_11.jpg/500px-Discovery_For_Youth_11.jpg',
     isVerified: true,
   },
   {
@@ -304,7 +304,7 @@ export const SEED_BOT_USERS: SeedBotUser[] = [
     faculty: 'Plant Science',
     level: '200L',
     bio: '200L PBST @ FUNAAB | Nimbe Adedipe Library Regular | Peer tutor and campus hostel logistics enthusiast.',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Discovery_For_Youth_16.jpg/500px-Discovery_For_Youth_16.jpg',
     isVerified: true,
   },
 ];
