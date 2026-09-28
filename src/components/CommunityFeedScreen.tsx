@@ -326,7 +326,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             No Threads at {exploringInstitutionName} Yet
           </AppText>
           <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md }}>
-            You're exploring {exploringInstitutionName}'s workspace as an admin - this isn't your home campus, so it has its own, separate thread history.
+            You're exploring {exploringInstitutionName}'s campus as an admin - this isn't your home campus, so it has its own, separate thread history.
           </AppText>
           <AppButton
             label="Return to My Campus"

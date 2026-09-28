@@ -175,7 +175,7 @@ export function DesktopSidebar() {
  <View>
  <LiorisLogo size={18} variant="wordmark" />
  <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>
- Campus Workspace
+ Campus Network
  </AppText>
  </View>
  )}
@@ -209,7 +209,7 @@ export function DesktopSidebar() {
  <Pressable
  onPress={user?.actualRole === 'admin' ? () => setWorkspaceModalOpen(true) : undefined}
  accessibilityRole={user?.actualRole === 'admin' ? 'button' : undefined}
- accessibilityLabel={user?.actualRole === 'admin' ? 'Switch campus workspace' : undefined}
+ accessibilityLabel={user?.actualRole === 'admin' ? 'Switch campus network' : undefined}
  style={[
  styles.campusPill,
  {

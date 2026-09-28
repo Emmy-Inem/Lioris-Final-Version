@@ -12,8 +12,7 @@ export interface MarketplaceQuery {
 
 import { isUserBlocked } from './connections';
 import { getInstitutionForEmail } from './institutions';
-
-let wishlistIds = new Set<string>();
+import { isItemSavedSync, toggleSavedItem } from './bookmarks';
 
 // Listings this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch. This is never
@@ -37,7 +36,7 @@ function filterListings(pool: MarketplaceListing[], query: MarketplaceQuery): Ma
 
  if (query.category && query.category !== 'All Categories') {
  if (query.category === 'Wishlist') {
- results = results.filter((item) => wishlistIds.has(item.id));
+ results = results.filter((item) => isItemSavedSync('marketplace', item.id));
  } else {
  results = results.filter((item) => item.category === query.category);
  }
@@ -144,17 +143,23 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
 }
 
 export function isWishlisted(id: string): boolean {
- return wishlistIds.has(id);
+  return isItemSavedSync('marketplace', id);
 }
 
-export async function toggleWishlist(id: string): Promise<boolean> {
- if (wishlistIds.has(id)) {
- wishlistIds.delete(id);
- } else {
- wishlistIds.add(id);
- }
- return wishlistIds.has(id);
+export async function toggleWishlist(
+  id: string,
+  meta?: { title?: string; subtitle?: string; imageUrl?: string | null }
+): Promise<boolean> {
+  const current = isItemSavedSync('marketplace', id);
+  const next = !current;
+  return toggleSavedItem('marketplace', id, next, meta ? {
+    title: meta.title,
+    subtitle: meta.subtitle,
+    imageUrl: meta.imageUrl || undefined,
+  } : undefined);
 }
+
+
 
 export interface CreateListingPayload {
  title: string;

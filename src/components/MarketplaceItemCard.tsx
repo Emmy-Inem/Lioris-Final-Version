@@ -48,7 +48,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
  async function handleToggleWishlist() {
  haptics.light();
- const next = await toggleWishlist(item.id);
+ const next = await toggleWishlist(item.id, { title: item.title, subtitle: item.price, imageUrl: item.imageUrl });
  setSaved(next);
  }
 

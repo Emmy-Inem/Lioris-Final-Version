@@ -82,7 +82,7 @@ export default function StaffDashboard() {
   });
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Dr. Faculty Member';
-  const institutionName = profile?.institutionName || LAUNCH_INSTITUTIONS.find((i) => i.code === effectiveCampus)?.name || 'Campus Workspace';
+  const institutionName = profile?.institutionName || LAUNCH_INSTITUTIONS.find((i) => i.code === effectiveCampus)?.name || 'Campus Network';
   const openReportsCount = openReports?.length ?? 0;
   const pendingResourcesCount = pendingResources?.length ?? 0;
   const upcomingEvents = (events ?? []).slice(0, 2);
@@ -118,7 +118,7 @@ export default function StaffDashboard() {
               source={require('../../assets/images/campus_students_photo.jpg')}
               style={{ width: '100%', height: '100%' }}
               contentFit="cover"
-              accessibilityLabel="Campus staff workspace banner"
+              accessibilityLabel="Campus staff banner"
             />
             <View
               style={{

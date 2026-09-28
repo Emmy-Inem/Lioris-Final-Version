@@ -339,7 +339,7 @@ export function LandingScreen() {
           </View>
 
           {/* =========================================================================
-              2. PRODUCT WORKSPACE PREVIEW
+              2. PRODUCT PLATFORM PREVIEW
              ========================================================================= */}
           <View
             // @ts-ignore
@@ -353,10 +353,10 @@ export function LandingScreen() {
             {/* Clean Section Header (No pill badge) */}
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
               <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1.2, marginBottom: 6 }}>
-                PLATFORM WORKSPACE PREVIEW
+                CAMPUS PLATFORM PREVIEW
               </AppText>
               <AppText variant="h2" weight="bold" style={{ textAlign: 'center', color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                Explore the Lioris Campus Workspace
+                Explore the Lioris Campus Experience
               </AppText>
               <AppText tone="secondary" style={{ textAlign: 'center', marginTop: 4, maxWidth: 520 }}>
                 A small live demo of the app. Switch between student and alumni, and tap the tabs.
@@ -418,7 +418,7 @@ export function LandingScreen() {
               })}
             </View>
 
-            {/* Student and alumni workspace preview */}
+            {/* Student and alumni platform preview */}
             <View
               style={{
                 flexDirection: isDesktop ? 'row' : 'column',

@@ -190,7 +190,7 @@ export async function getMyProfile(user?: {
        faculty: data.faculty || fallback.faculty,
        academicLevel: data.level || fallback.academicLevel,
        interests: data.interests || fallback.interests,
-       institutionName: inst?.name || fallback.institutionName || 'Campus Workspace',
+       institutionName: inst?.name || fallback.institutionName || 'Campus Network',
        institutionCode: inst?.code || fallback.institutionCode,
        avatarUrl: data.avatar_url || fallback.avatarUrl,
        coverUrl: data.banner_url || fallback.coverUrl,

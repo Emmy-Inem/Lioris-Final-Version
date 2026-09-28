@@ -236,7 +236,7 @@ export default function RegisterScreen() {
  </View>
 
  <AppText variant="h1" weight="bold" style={{ marginBottom: spacing.xs }}>
- {portal === 'student' ? 'Create Student Workspace' : 'Create Alumni Workspace'}
+ {portal === 'student' ? 'Create Student Account' : 'Create Alumni Account'}
  </AppText>
  <AppText tone="secondary" style={{ marginBottom: spacing.md }}>
  Select your university below. You can verify that you're a student right after sign-up, or later.

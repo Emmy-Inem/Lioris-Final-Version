@@ -21,6 +21,7 @@ const FILTERS: { key: FilterKey; label: string; icon: keyof typeof Ionicons.glyp
   { key: 'resource', label: 'Resources', icon: 'folder-open-outline' },
   { key: 'event', label: 'Events', icon: 'calendar-outline' },
   { key: 'job', label: 'Jobs', icon: 'briefcase-outline' },
+  { key: 'marketplace', label: 'Marketplace', icon: 'pricetag-outline' },
 ];
 
 const KIND_ICON: Record<SavedKind, keyof typeof Ionicons.glyphMap> = {
@@ -28,6 +29,7 @@ const KIND_ICON: Record<SavedKind, keyof typeof Ionicons.glyphMap> = {
   resource: 'folder-open-outline',
   event: 'calendar-outline',
   job: 'briefcase-outline',
+  marketplace: 'pricetag-outline',
 };
 
 const KIND_LABEL: Record<SavedKind, string> = {
@@ -35,6 +37,7 @@ const KIND_LABEL: Record<SavedKind, string> = {
   resource: 'Resource',
   event: 'Event',
   job: 'Opportunity',
+  marketplace: 'Marketplace',
 };
 
 function savedAtLabel(iso: string): string {

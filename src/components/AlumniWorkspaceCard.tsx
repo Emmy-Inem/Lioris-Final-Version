@@ -23,7 +23,7 @@ export function AlumniWorkspaceCard() {
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
  <Ionicons name="ribbon-outline"size={18} color={colors.brandMagenta} />
  <AppText variant="caption"weight="bold"style={{ color: colors.brandMagenta, letterSpacing: 1 }}>
- ALUMNI V1 WORKSPACE
+ ALUMNI NETWORK HUB
  </AppText>
  </View>
  <Badge label="Verified Alumni"tone="accent" />

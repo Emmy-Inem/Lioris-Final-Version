@@ -169,7 +169,7 @@ export default function VerifyEmailScreen() {
           {knownEmail ? (
             <AppText tone="secondary" style={{ marginBottom: spacing.sm }}>
               We sent a confirmation code to <AppText weight="bold">{knownEmail}</AppText>. Enter it below to confirm your address
-              and access your workspace.
+              and access your campus network.
             </AppText>
           ) : (
             <>

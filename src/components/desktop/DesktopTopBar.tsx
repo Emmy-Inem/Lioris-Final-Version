@@ -399,7 +399,7 @@ export function DesktopTopBar() {
  {/* Quick Actions List */}
  <ScrollView style={{ flex: 1, width: '100%',  maxHeight: 380, padding: 8 }} showsVerticalScrollIndicator={false}>
  <AppText variant="caption" tone="secondary" weight="bold" style={{ paddingHorizontal: 12, paddingVertical: 6, textTransform: 'uppercase', fontSize: 10 }}>
- Quick Navigation & Workspaces
+ Quick Navigation & Hubs
  </AppText>
  {filteredCommands.map((cmd) => (
  <Pressable

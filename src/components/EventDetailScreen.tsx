@@ -1853,11 +1853,11 @@ export function EventDetailScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="school" size={15} color={colors.textSecondary} />
                   <AppText variant="caption" weight="bold" tone="secondary">
-                    Campus Workspace: {event?.campusCode || editCampus || 'GLOBAL'}
+                    Campus Network: {event?.campusCode || editCampus || 'GLOBAL'}
                   </AppText>
                 </View>
                 <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>
-                  Scoped strictly to verified members of this university workspace.
+                  Scoped strictly to verified members of this campus network.
                 </AppText>
               </View>
 

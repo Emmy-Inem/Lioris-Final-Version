@@ -503,7 +503,7 @@ export function ForumsModerationTab() {
           ))}
 
           {!isLoading && filteredPosts.length === 0 ? (
-            <EmptyState title="No forum discussions found" description="Try selecting a different workspace channel or search term." />
+            <EmptyState title="No forum discussions found" description="Try selecting a different forum channel or search term." />
           ) : null}
         </View>
       )}

@@ -42,9 +42,9 @@ export function ChangeWorkspaceScopeModal({
   // database-verified account role and cannot be changed by the preview tool.
   const isAdmin = user?.actualRole === 'admin';
 
-  // Guest explored workspaces list (exclude home institution and global)
+  // Guest explored campuses list (exclude home institution and global)
   const cleanHomeCode = (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL') ? homeInstitutionCode : '';
-  const cleanHomeName = (homeInstitution && !homeInstitution.includes('Global')) ? homeInstitution : 'Campus Workspace';
+  const cleanHomeName = (homeInstitution && !homeInstitution.includes('Global')) ? homeInstitution : 'Campus Network';
 
   const [guestWorkspaces, setGuestWorkspaces] = useState<{ code: string; name: string; description: string }[]>(
     LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== cleanHomeCode && inst.code !== 'GLOBAL').map((inst) => ({
@@ -54,7 +54,7 @@ export function ChangeWorkspaceScopeModal({
     })),
   );
 
-  // New custom workspace modal state
+  // New custom campus modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newCampusName, setNewCampusName] = useState('');
   const [newCampusCode, setNewCampusCode] = useState('');
@@ -88,7 +88,7 @@ export function ChangeWorkspaceScopeModal({
       setNewCampusName('');
       setNewCampusCode('');
       setCreateModalOpen(false);
-      Alert.alert('Campus added', `${name} (${code}) is now a workspace. Add its email domains under Admin > Platform > Campuses so its students are verified automatically.`);
+      Alert.alert('Campus added', `${name} (${code}) is now active. Add its email domains under Admin > Platform > Campuses so its students are verified automatically.`);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to add institution node.');
     } finally {
@@ -129,7 +129,7 @@ export function ChangeWorkspaceScopeModal({
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
  <Ionicons name="globe" size={20} color={colors.textSecondary} />
  <AppText variant="h2" weight="bold">
- Change Workspace Scope
+ Change Campus Scope
  </AppText>
  </View>
  <AppText tone="secondary" style={{ marginBottom: spacing.lg }}>
@@ -140,7 +140,7 @@ export function ChangeWorkspaceScopeModal({
  <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
  <ScopeOption
  icon="school"
- title="My Campus Workspace"
+ title="My Campus Network"
  subtitle={`${cleanHomeName} (${cleanHomeCode})`}
  selected={scope === 'campus' && (!activeCampusCode || activeCampusCode === cleanHomeCode)}
  onPress={() => {
@@ -166,7 +166,7 @@ export function ChangeWorkspaceScopeModal({
 
  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
  <AppText variant="caption"weight="bold"tone="secondary"style={{ letterSpacing: 1 }}>
- EXPLORE OTHER CAMPUS WORKSPACES
+ EXPLORE OTHER CAMPUSES
  </AppText>
  <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
  <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 9 }}>
@@ -185,7 +185,7 @@ export function ChangeWorkspaceScopeModal({
  setCustomAccent(null);
  onSelectScope('campus');
  onClose();
- Alert.alert('Workspace Switched', `Active campus workspace switched to ${w.name} (${w.code}). Theme palette updated.`);
+ Alert.alert('Campus Switched', `Active campus switched to ${w.name} (${w.code}). Theme palette updated.`);
  }}
  style={{
  flexDirection: 'row',
@@ -215,7 +215,7 @@ export function ChangeWorkspaceScopeModal({
 
  <View style={{ marginTop: spacing.md, marginBottom: spacing.lg }}>
  <AppButton
- label="+ Add Campus Workspace"variant="secondary"onPress={() => setCreateModalOpen(true)}
+ label="+ Add Campus Network"variant="secondary"onPress={() => setCreateModalOpen(true)}
  fullWidth
  />
  </View>
@@ -247,7 +247,7 @@ export function ChangeWorkspaceScopeModal({
               <SolidCard style={{ width: '100%' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
                   <AppText variant="h3" weight="bold">
-                    Add Campus Workspace
+                    Add Campus Network
                   </AppText>
                   <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setCreateModalOpen(false)} hitSlop={8}>
                     <Ionicons name="close" size={20} color={colors.textSecondary} />
@@ -272,7 +272,7 @@ export function ChangeWorkspaceScopeModal({
                 <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
                   <AppButton label="Cancel" variant="ghost" onPress={() => setCreateModalOpen(false)} />
                   <AppButton
-                    label="Provision Workspace"
+                    label="Add Campus Network"
                     loading={isSubmitting}
                     disabled={!newCampusName.trim() || !newCampusCode.trim() || isSubmitting}
                     onPress={handleAddCustomWorkspace}

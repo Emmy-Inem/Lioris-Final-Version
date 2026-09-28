@@ -194,10 +194,10 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
   },
   {
     key: 'global_workspace',
-    label: 'Cross-University Workspace',
+    label: 'Cross-University Network',
     category: 'Academic Community',
     tier: 'P1',
-    description: 'Shows Global workspace selectors and cross-university publishing. Disable to remove those controls and keep members in their campus workspace.',
+    description: 'Shows Global scope selectors and cross-university publishing. Disable to remove those controls and keep members in their campus space.',
     defaultOn: true,
   },
   {

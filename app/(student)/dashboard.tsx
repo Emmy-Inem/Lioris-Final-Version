@@ -164,7 +164,7 @@ export default function StudentDashboard() {
                 source={activeCover}
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
-                accessibilityLabel="Student campus workspace banner"
+                accessibilityLabel="Student campus banner"
               />
             ) : (
               <LinearGradient
@@ -223,7 +223,7 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="school" size={13} color="#68D391" style={heroTextShadowStyle} />
                   <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
-                    {profile?.institutionName ?? 'Campus Workspace'}
+                    {profile?.institutionName ?? 'Campus Network'}
                   </AppText>
                 </View>
               </View>

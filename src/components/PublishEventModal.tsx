@@ -438,7 +438,7 @@ export function PublishEventModal({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="school" size={15} color={colors.textSecondary} />
                 <AppText variant="caption" weight="bold" tone="secondary">
-                  University Workspace: {institutionName} ({targetCampus})
+                  Campus Network: {institutionName} ({targetCampus})
                 </AppText>
               </View>
               <AppText variant="caption" tone="secondary" style={{ marginTop: 2, fontSize: 11 }}>

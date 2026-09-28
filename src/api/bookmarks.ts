@@ -13,7 +13,7 @@ import * as SecureStore from 'expo-secure-store';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 
-export type SavedKind = 'post' | 'resource' | 'event' | 'job';
+export type SavedKind = 'post' | 'resource' | 'event' | 'job' | 'marketplace';
 
 export interface SavedItem {
   /** Row id (or `${kind}:${itemId}` for a local-only entry). */

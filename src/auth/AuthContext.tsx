@@ -479,7 +479,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await setSessionUser(null as any);
           await supabase.auth.signOut();
           setUser(null);
-          throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
+          throw new Error('Your campus account has been suspended by administration. Access to this campus network has been revoked.');
         }
 
         const isOnboarded =

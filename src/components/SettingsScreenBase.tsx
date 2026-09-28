@@ -72,7 +72,7 @@ async function setStoredPref(key: string, value: string): Promise<void> {
 
 const ALL_SETTINGS_SECTIONS = [
   { key: 'account', label: 'Account', fullLabel: 'Account & Profile', icon: 'person-outline' as const },
-  { key: 'workspace', label: 'Scope', fullLabel: 'Workspace Scope', icon: 'globe-outline' as const },
+  { key: 'workspace', label: 'Scope', fullLabel: 'Campus Scope', icon: 'globe-outline' as const },
   { key: 'appearance', label: 'Theme', fullLabel: 'Theme & Display', icon: 'color-palette-outline' as const },
   { key: 'notifications', label: 'Alerts', fullLabel: 'Notifications', icon: 'notifications-outline' as const },
   { key: 'security', label: 'Security', fullLabel: 'Security & Logins', icon: 'shield-checkmark-outline' as const },
@@ -81,22 +81,87 @@ const ALL_SETTINGS_SECTIONS = [
   { key: 'legal', label: 'Policies', fullLabel: 'Terms & Policies', icon: 'document-text-outline' as const },
 ] as const;
 
-/** Category heading shown above each group of settings in the single scrolling list. */
-function SettingsSectionLabel({ sectionKey }: { sectionKey: (typeof ALL_SETTINGS_SECTIONS)[number]['key'] }) {
-  const { colors, spacing } = useTheme();
+/** Category accordion heading shown above each group of settings. */
+function SettingsAccordionHeader({
+  sectionKey,
+  isCollapsed,
+  onToggle,
+  summary,
+}: {
+  sectionKey: (typeof ALL_SETTINGS_SECTIONS)[number]['key'];
+  isCollapsed: boolean;
+  onToggle: () => void;
+  summary?: string;
+}) {
+  const { colors, spacing, radius, isDark } = useTheme();
   const section = ALL_SETTINGS_SECTIONS.find((sec) => sec.key === sectionKey);
   if (!section) return null;
+
   return (
-    <View
-      accessibilityRole="header"
-      style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, marginBottom: -spacing.xs, paddingHorizontal: spacing.xs }}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${section.fullLabel}, ${isCollapsed ? 'collapsed' : 'expanded'}`}
+      accessibilityState={{ expanded: !isCollapsed }}
+      onPress={onToggle}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        paddingHorizontal: spacing.sm,
+        marginTop: spacing.xs,
+        borderRadius: radius.md,
+        backgroundColor: pressed
+          ? isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
+          : 'transparent',
+      })}
     >
-      <Ionicons name={section.icon} size={15} color={colors.brandPrimary} />
-      <AppText variant="caption" weight="bold" tone="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-        {section.fullLabel}
-      </AppText>
-      <View style={{ flex: 1, height: 1, backgroundColor: colors.divider }} />
-    </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            backgroundColor: !isCollapsed ? colors.pastelPrimaryBg : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons
+            name={section.icon}
+            size={17}
+            color={!isCollapsed ? colors.brandPrimary : colors.textSecondary}
+          />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText
+            variant="bodySmall"
+            weight="bold"
+            tone={!isCollapsed ? 'brand' : 'primary'}
+            numberOfLines={1}
+          >
+            {section.fullLabel}
+          </AppText>
+          {summary ? (
+            <AppText
+              variant="caption"
+              tone="secondary"
+              numberOfLines={1}
+              style={{ fontSize: 11, marginTop: 1 }}
+            >
+              {summary}
+            </AppText>
+          ) : null}
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: spacing.xs }}>
+        <Ionicons
+          name={isCollapsed ? 'chevron-down' : 'chevron-up'}
+          size={18}
+          color={colors.textSecondary}
+        />
+      </View>
+    </Pressable>
   );
 }
 
@@ -127,6 +192,52 @@ export function SettingsScreen() {
   const toast = useToast();
   const { scope, setScope, activeCampusCode, homeInstitutionCode } = useCampusScope();
   const [workspaceScopeModalOpen, setWorkspaceScopeModalOpen] = useState(false);
+
+  // Collapsible category state: default Account and Appearance expanded, others collapsed
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    workspace: true,
+    notifications: true,
+    security: true,
+    preview: true,
+    privacy: true,
+    legal: true,
+  });
+
+  const isSectionCollapsed = (key: string) => !!collapsedSections[key];
+
+  const toggleSection = (key: string) => {
+    haptics.light();
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleLogoutPrompt = () => {
+    haptics.light();
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined' ? window.confirm('Are you sure you want to log out of your Lioris account?') : true;
+      if (confirmed) {
+        logout().then(() => router.replace('/(auth)/login'));
+      }
+      return;
+    }
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out of your Lioris account?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/(auth)/login');
+          },
+        },
+      ]
+    );
+  };
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
   const isSuperAdmin = user?.actualRole === 'admin';
@@ -137,6 +248,22 @@ export function SettingsScreen() {
     : ALL_SETTINGS_SECTIONS.filter((sec) => sec.key !== 'preview' && sec.key !== 'workspace');
   const showSection = (key: (typeof ALL_SETTINGS_SECTIONS)[number]['key']) =>
     SETTINGS_SECTIONS.some((sec) => sec.key === key);
+
+  const allVisibleSections = SETTINGS_SECTIONS.map((s) => s.key);
+  const allAreCollapsed = allVisibleSections.every((k) => isSectionCollapsed(k));
+
+  const handleToggleAllSections = () => {
+    haptics.medium();
+    if (allAreCollapsed) {
+      setCollapsedSections({});
+    } else {
+      const next: Record<string, boolean> = {};
+      for (const s of allVisibleSections) {
+        next[s] = true;
+      }
+      setCollapsedSections(next);
+    }
+  };
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -212,6 +339,15 @@ export function SettingsScreen() {
           if (typeof parsed.announcements === 'boolean') setAnnouncementAlerts(parsed.announcements);
           if (typeof parsed.events === 'boolean') setEventAlerts(parsed.events);
           if (typeof parsed.emailDigest === 'boolean') setEmailDigestAlerts(parsed.emailDigest);
+        } else {
+          const supaUser = (await supabase.auth.getUser()).data?.user;
+          const remote = supaUser?.user_metadata?.lioris_notifications;
+          if (remote) {
+            if (typeof remote.push === 'boolean') setPushEnabled(remote.push);
+            if (typeof remote.announcements === 'boolean') setAnnouncementAlerts(remote.announcements);
+            if (typeof remote.events === 'boolean') setEventAlerts(remote.events);
+            if (typeof remote.emailDigest === 'boolean') setEmailDigestAlerts(remote.emailDigest);
+          }
         }
         const bio = await getStoredPref('lioris_setting_biometrics');
         if (bio !== null) {
@@ -405,6 +541,9 @@ export function SettingsScreen() {
 
   function saveNotifPreference(updated: { push: boolean; announcements: boolean; events: boolean; emailDigest?: boolean }) {
     setStoredPref('lioris_setting_notifications', JSON.stringify(updated));
+    if (user?.id) {
+      supabase.auth.updateUser({ data: { lioris_notifications: updated } }).catch(() => {});
+    }
   }
 
   function handleTogglePush(next: boolean) {
@@ -659,10 +798,48 @@ export function SettingsScreen() {
 
         {/* One vertical list, grouped by category (no tabs to switch between) */}
         <View style={{ width: '100%', maxWidth: isDesktop ? 820 : undefined, alignSelf: 'center', gap: spacing.md }}>
+          {/* Category Controls Bar */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: spacing.xs,
+              paddingTop: spacing.xs,
+              marginBottom: -spacing.xs,
+            }}
+          >
+            <AppText variant="caption" tone="secondary" weight="semiBold" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Settings Categories
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={allAreCollapsed ? 'Expand all categories' : 'Collapse all categories'}
+              onPress={handleToggleAllSections}
+              hitSlop={8}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8 }}
+            >
+              <Ionicons
+                name={allAreCollapsed ? 'chevron-down-circle-outline' : 'chevron-up-circle-outline'}
+                size={14}
+                color={colors.brandPrimary}
+              />
+              <AppText variant="caption" tone="brand" weight="bold">
+                {allAreCollapsed ? 'Expand All' : 'Collapse All'}
+              </AppText>
+            </Pressable>
+          </View>
             {/* 1. Account & Profile */}
-            {showSection('account') ? <SettingsSectionLabel sectionKey="account" /> : null}
             {showSection('account') && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="account"
+                  isCollapsed={isSectionCollapsed('account')}
+                  onToggle={() => toggleSection('account')}
+                  summary={`${profile?.fullName ?? user?.fullName ?? 'User'} • ${departmentDisplay}`}
+                />
+                {!isSectionCollapsed('account') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View
                   style={{
                     flexDirection: 'row',
@@ -742,494 +919,319 @@ export function SettingsScreen() {
                       setSupportModalOpen(true);
                     }}
                   />
-                  <AppButton
-                    label="Log Out of Workspace"
-                    variant="secondary"
-                    onPress={async () => {
-                      await logout();
-                      router.replace('/(auth)/login');
-                    }}
-                  />
                 </View>
               </SolidCard>
+                )}
+              </View>
             )}
 
-            {/* Workspace Scope - moved here from the small pill that used to sit in
-                the app header on every screen, since it's a persistent account
-                preference rather than a per-screen control. */}
-            {showSection('workspace') ? <SettingsSectionLabel sectionKey="workspace" /> : null}
+            {/* Campus Scope */}
             {showSection('workspace') && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
-                <View>
-                  <AppText variant="h3" weight="bold">
-                    Workspace Scope
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    Admin tool: choose which campus workspace (or the global network) you are viewing while administering the platform
-                  </AppText>
-                </View>
-
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: spacing.sm,
-                    backgroundColor: colors.divider,
-                    borderRadius: radius.md,
-                    padding: spacing.md,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
-                    <Ionicons name={scope === 'campus' ? 'school' : 'globe'} size={20} color={colors.textSecondary} />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText weight="bold" variant="bodySmall">
-                        {scope === 'campus'
-                          ? (activeCampusCode && activeCampusCode !== homeInstitutionCode
-                              ? `Exploring ${getInstitutionByCode(activeCampusCode)?.name ?? activeCampusCode}`
-                              : institutionDisplay)
-                          : 'All Lioris Global Feed'}
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="workspace"
+                  isCollapsed={isSectionCollapsed('workspace')}
+                  onToggle={() => toggleSection('workspace')}
+                  summary={scope === 'campus' ? (activeCampusCode && activeCampusCode !== homeInstitutionCode ? (getInstitutionByCode(activeCampusCode)?.name ?? activeCampusCode) : institutionDisplay) : 'All Lioris Global Network'}
+                />
+                {!isSectionCollapsed('workspace') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+                    <View>
+                      <AppText variant="h3" weight="bold">
+                        Campus Scope
                       </AppText>
-                      <AppText tone="secondary" variant="caption">
-                        {scope === 'campus' ? 'My Campus Workspace' : 'Cross-university content'}
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                        Admin tool: choose which campus network (or the global network) you are viewing while administering the platform
                       </AppText>
                     </View>
-                  </View>
-                  <Badge label={scope === 'campus' ? 'CAMPUS' : 'GLOBAL'} tone="neutral" />
-                </View>
 
-                <AppButton
-                  label="Change Workspace Scope"
-                  variant="secondary"
-                  icon="swap-horizontal-outline"
-                  onPress={() => {
-                    haptics.light();
-                    setWorkspaceScopeModalOpen(true);
-                  }}
-                />
-              </SolidCard>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: spacing.sm,
+                        backgroundColor: colors.divider,
+                        borderRadius: radius.md,
+                        padding: spacing.md,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                        <Ionicons name={scope === 'campus' ? 'school' : 'globe'} size={20} color={colors.textSecondary} />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <AppText weight="bold" variant="bodySmall">
+                            {scope === 'campus'
+                              ? (activeCampusCode && activeCampusCode !== homeInstitutionCode
+                                  ? `Exploring ${getInstitutionByCode(activeCampusCode)?.name ?? activeCampusCode}`
+                                  : institutionDisplay)
+                              : 'All Lioris Global Feed'}
+                          </AppText>
+                          <AppText tone="secondary" variant="caption">
+                            {scope === 'campus' ? 'My Campus Network' : 'Cross-university network'}
+                          </AppText>
+                        </View>
+                      </View>
+                      <Badge label={scope === 'campus' ? 'CAMPUS' : 'GLOBAL'} tone="neutral" />
+                    </View>
+
+                    <AppButton
+                      label="Change Campus Scope"
+                      variant="secondary"
+                      icon="swap-horizontal-outline"
+                      onPress={() => {
+                        haptics.light();
+                        setWorkspaceScopeModalOpen(true);
+                      }}
+                    />
+                  </SolidCard>
+                )}
+              </View>
             )}
 
             {/* 2. Appearance & Theme */}
-            {showSection('appearance') ? <SettingsSectionLabel sectionKey="appearance" /> : null}
             {showSection('appearance') && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.lg }}>
-                {/* Section Header */}
-                <View>
-                  <AppText variant="h3" weight="bold">
-                    Appearance & Campus Theme
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                    Manage interface appearance mode, brand colors, and institution palettes
-                  </AppText>
-                </View>
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="appearance"
+                  isCollapsed={isSectionCollapsed('appearance')}
+                  onToggle={() => toggleSection('appearance')}
+                  summary={`${themeMode === 'system' ? 'Auto System' : themeMode === 'dark' ? 'Dark Mode' : 'Light Mode'} • ${accentPresets.find((p) => (!customAccent && p.isDefault) || customAccent === p.id)?.label || 'Lioris Blue'}`}
+                />
+                {!isSectionCollapsed('appearance') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+                    {/* Section Header */}
+                    <View>
+                      <AppText variant="h3" weight="bold">
+                        Theme & Display
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                        Customize interface appearance and campus colors
+                      </AppText>
+                    </View>
 
-                {/* Theme Mode Selector */}
-                <View style={{ gap: spacing.xs }}>
-                  <AppText variant="bodySmall" weight="bold">
-                    Display Mode
-                  </AppText>
-                  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                    {[
-                      { id: 'light', label: 'Light', fullLabel: 'Light Mode', icon: 'sunny-outline' as const },
-                      { id: 'dark', label: 'Dark', fullLabel: 'Dark Mode', icon: 'moon-outline' as const },
-                      { id: 'system', label: 'Auto', fullLabel: 'Auto System', icon: 'phone-portrait-outline' as const },
-                    ].map((t) => {
-                      const active = themeMode === t.id;
-                      return (
-                        <Pressable
-                          key={t.id}
-                          onPress={() => {
-                            haptics.light();
-                            setThemeMode(t.id as any);
-                            toast.success(`Theme set to ${t.fullLabel}`);
-                          }}
-                          style={{
-                            flex: 1,
-                            paddingVertical: 12,
-                            paddingHorizontal: 8,
-                            borderRadius: radius.md,
-                            borderWidth: 2,
-                            borderColor: active ? colors.brandPrimary : colors.border,
-                            backgroundColor: active ? colors.pastelPrimaryBg : colors.surface,
-                            alignItems: 'center',
-                            gap: 6,
-                          }}
-                        >
-                          <Ionicons name={t.icon} size={20} color={active ? colors.brandPrimary : colors.textSecondary} />
-                          <AppText variant="caption" weight="bold" tone={active ? 'brand' : 'primary'}>
-                            {isDesktop ? t.fullLabel : t.label}
-                          </AppText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Primary & Secondary Color Utilization Showcase */}
-                <View
-                  style={{
-                    padding: spacing.md,
-                    borderRadius: radius.lg,
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    gap: spacing.sm,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ gap: 2 }}>
+                    {/* Display Mode Selector */}
+                    <View style={{ gap: spacing.xs }}>
                       <AppText variant="bodySmall" weight="bold">
-                        Active Color Hierarchy
+                        Display Mode
                       </AppText>
-                      <AppText variant="caption" tone="secondary">
-                        Coordinated primary brand and secondary accent pairing
-                      </AppText>
-                    </View>
-                    <Badge label={isDefaultTheme ? 'LOGO DEFAULT' : 'CUSTOM ACCENT'} tone={isDefaultTheme ? 'brand' : 'accent'} />
-                  </View>
-
-                  {/* Primary & Secondary Swatches */}
-                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: spacing.sm }}>
-                    {/* Primary Color Card */}
-                    <View
-                      style={{
-                        flex: 1,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 12,
-                        padding: 12,
-                        borderRadius: radius.md,
-                        backgroundColor: colors.surface,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: colors.brandPrimary,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderWidth: 2,
-                          borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-                        }}
-                      >
-                        <Ionicons name="color-palette" size={18} color="#FFFFFF" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <AppText variant="bodySmall" weight="bold">
-                            Primary Color
-                          </AppText>
-                          <AppText variant="caption" tone="brand" weight="bold" style={{ fontSize: 11 }}>
-                            {colors.brandPrimary}
-                          </AppText>
-                        </View>
-                        <AppText variant="caption" tone="secondary">
-                          Buttons, active tabs, brand headers
-                        </AppText>
-                      </View>
-                    </View>
-
-                    {/* Secondary Accent Card */}
-                    <View
-                      style={{
-                        flex: 1,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 12,
-                        padding: 12,
-                        borderRadius: radius.md,
-                        backgroundColor: colors.surface,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: colors.brandAccent,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderWidth: 2,
-                          borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-                        }}
-                      >
-                        <Ionicons name="sparkles" size={18} color={isDark ? '#0A1326' : '#FFFFFF'} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <AppText variant="bodySmall" weight="bold">
-                            Secondary Accent
-                          </AppText>
-                          <AppText variant="caption" tone="accent" weight="bold" style={{ fontSize: 11 }}>
-                            {colors.brandAccent}
-                          </AppText>
-                        </View>
-                        <AppText variant="caption" tone="secondary">
-                          Action tags, badges, notifications, highlights
-                        </AppText>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Component Preview Bar */}
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      flexWrap: 'wrap',
-                      alignItems: 'center',
-                      gap: 8,
-                      paddingTop: 4,
-                    }}
-                  >
-                    <View
-                      style={{
-                        backgroundColor: colors.brandPrimary,
-                        paddingHorizontal: 12,
-                        paddingVertical: 5,
-                        borderRadius: radius.pill,
-                      }}
-                    >
-                      <AppText variant="caption" weight="bold" tone="inverse">
-                        Primary CTA
-                      </AppText>
-                    </View>
-                    <View
-                      style={{
-                        backgroundColor: colors.brandAccent,
-                        paddingHorizontal: 12,
-                        paddingVertical: 5,
-                        borderRadius: radius.pill,
-                      }}
-                    >
-                      <AppText variant="caption" weight="bold" style={{ color: isDark ? '#0A1326' : '#FFFFFF' }}>
-                        Secondary Highlight
-                      </AppText>
-                    </View>
-                    <View
-                      style={{
-                        backgroundColor: colors.pastelPrimaryBg,
-                        borderWidth: 1,
-                        borderColor: colors.brandPrimary,
-                        paddingHorizontal: 10,
-                        paddingVertical: 5,
-                        borderRadius: radius.pill,
-                      }}
-                    >
-                      <AppText variant="caption" weight="bold" tone="brand">
-                        Verified Badge
-                      </AppText>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Return to Default Theme Option Card */}
-                <View
-                  style={{
-                    padding: spacing.md,
-                    borderRadius: radius.lg,
-                    borderWidth: 1.5,
-                    borderColor: isDefaultTheme ? colors.brandPrimary : colors.border,
-                    backgroundColor: isDefaultTheme ? colors.pastelPrimaryBg : colors.surface,
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    alignItems: isDesktop ? 'center' : 'stretch',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    {/* Dual-color badge preview */}
-                    <View
-                      style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 19,
-                        overflow: 'hidden',
-                        flexDirection: 'row',
-                        borderWidth: 1.5,
-                        borderColor: isDark ? '#FFFFFF' : '#0F172A',
-                      }}
-                    >
-                      <View style={{ flex: 1, backgroundColor: '#1A3DFF' }} />
-                      <View style={{ flex: 1, backgroundColor: '#F08A2E' }} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <AppText variant="bodySmall" weight="bold">
-                          Lioris Logo Theme (Default)
-                        </AppText>
-                        {isDefaultTheme && (
-                          <Badge label="ACTIVE" tone="brand" />
-                        )}
-                      </View>
-                      <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-                        Primary Blue (#1A3DFF) & Warm Gold (#F08A2E) sampled from the Lioris emblem
-                      </AppText>
-                    </View>
-                  </View>
-
-                  <Pressable
-                    onPress={async () => {
-                      haptics.medium();
-                      await resetToDefaultTheme();
-                      toast.success('Restored default Lioris Blue & Gold theme');
-                    }}
-                    disabled={isDefaultTheme}
-                    style={({ pressed }) => ({
-                      paddingHorizontal: 16,
-                      paddingVertical: 9,
-                      borderRadius: radius.pill,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      backgroundColor: isDefaultTheme
-                        ? isDark
-                          ? 'rgba(255,255,255,0.1)'
-                          : 'rgba(0,0,0,0.06)'
-                        : colors.brandPrimary,
-                      opacity: pressed ? 0.85 : 1,
-                    })}
-                  >
-                    <Ionicons
-                      name={isDefaultTheme ? 'checkmark-circle' : 'arrow-undo'}
-                      size={16}
-                      color={isDefaultTheme ? (isDark ? '#FFFFFF' : colors.brandPrimary) : '#FFFFFF'}
-                    />
-                    <AppText
-                      variant="caption"
-                      weight="bold"
-                      style={{
-                        color: isDefaultTheme
-                          ? isDark
-                            ? '#FFFFFF'
-                            : colors.brandPrimary
-                          : '#FFFFFF',
-                      }}
-                    >
-                      {isDefaultTheme ? 'Default Active' : 'Return to Default'}
-                    </AppText>
-                  </Pressable>
-                </View>
-
-                {/* Campus Palette Presets */}
-                <View style={{ gap: spacing.sm }}>
-                  <View>
-                    <AppText variant="h3" weight="bold">
-                      Campus & Custom Palettes
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                      Select an institution to adopt its distinct primary and secondary accents
-                    </AppText>
-                  </View>
-
-                  <View style={{ gap: 8 }}>
-                    {accentPresets.map((preset) => {
-                      const isSelected = (!customAccent && preset.isDefault) || customAccent === preset.id;
-                      const displayPrimary = isDark ? preset.primaryDark : preset.primaryLight;
-                      const displayAccent = isDark ? preset.accentDark : preset.accentLight;
-
-                      return (
-                        <Pressable
-                          key={preset.id}
-                          onPress={async () => {
-                            haptics.light();
-                            await setCustomAccent(preset.id);
-                            toast.success(`Applied ${preset.label} palette`);
-                          }}
-                          style={({ pressed }) => ({
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: 12,
-                            borderRadius: radius.md,
-                            borderWidth: isSelected ? 2 : 1,
-                            borderColor: isSelected ? colors.brandPrimary : colors.border,
-                            backgroundColor: isSelected
-                              ? colors.pastelPrimaryBg
-                              : pressed
-                              ? isDark
-                                ? 'rgba(255,255,255,0.04)'
-                                : 'rgba(0,0,0,0.02)'
-                              : colors.surface,
-                            gap: 12,
-                          })}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                            {/* Dual-color swatch circle */}
-                            <View
+                      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                        {[
+                          { id: 'light', label: 'Light', fullLabel: 'Light Mode', icon: 'sunny-outline' as const },
+                          { id: 'dark', label: 'Dark', fullLabel: 'Dark Mode', icon: 'moon-outline' as const },
+                          { id: 'system', label: 'Auto', fullLabel: 'Auto System', icon: 'phone-portrait-outline' as const },
+                        ].map((t) => {
+                          const active = themeMode === t.id;
+                          return (
+                            <Pressable
+                              key={t.id}
+                              accessibilityRole="button"
+                              accessibilityLabel={t.fullLabel}
+                              accessibilityState={{ selected: active }}
+                              onPress={() => {
+                                haptics.light();
+                                setThemeMode(t.id as any);
+                                toast.success(`Theme set to ${t.fullLabel}`);
+                              }}
                               style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 18,
-                                overflow: 'hidden',
-                                flexDirection: 'row',
-                                borderWidth: 1.5,
-                                borderColor: isSelected ? (isDark ? '#FFFFFF' : '#000000') : colors.border,
+                                flex: 1,
+                                paddingVertical: 12,
+                                paddingHorizontal: 8,
+                                borderRadius: radius.md,
+                                borderWidth: 2,
+                                borderColor: active ? colors.brandPrimary : colors.border,
+                                backgroundColor: active ? colors.pastelPrimaryBg : colors.surface,
+                                alignItems: 'center',
+                                gap: 6,
                               }}
                             >
-                              <View style={{ flex: 1, backgroundColor: displayPrimary }} />
-                              <View style={{ flex: 1, backgroundColor: displayAccent }} />
-                            </View>
-
-                            <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <AppText variant="bodySmall" weight={isSelected ? 'bold' : 'medium'}>
-                                  {preset.label}
-                                </AppText>
-                                {preset.isDefault && (
-                                  <Badge label="DEFAULT" tone="brand" />
-                                )}
-                              </View>
-                              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-                                {preset.campusName || 'Institutional Palette'}
+                              <Ionicons name={t.icon} size={20} color={active ? colors.brandPrimary : colors.textSecondary} />
+                              <AppText variant="caption" weight="bold" tone={active ? 'brand' : 'primary'}>
+                                {isDesktop ? t.fullLabel : t.label}
                               </AppText>
-                            </View>
-                          </View>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
 
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            {/* Visual mini swatches */}
-                            <View style={{ flexDirection: 'row', gap: 4 }}>
-                              <View
-                                style={{
-                                  width: 14,
-                                  height: 14,
-                                  borderRadius: 7,
-                                  backgroundColor: displayPrimary,
-                                }}
-                              />
-                              <View
-                                style={{
-                                  width: 14,
-                                  height: 14,
-                                  borderRadius: 7,
-                                  backgroundColor: displayAccent,
-                                }}
-                              />
-                            </View>
-
-                            {isSelected && (
-                              <Ionicons name="checkmark-circle" size={20} color={colors.brandPrimary} />
-                            )}
+                    {/* Active Campus Palette Card */}
+                    <View
+                      style={{
+                        padding: spacing.md,
+                        borderRadius: radius.md,
+                        backgroundColor: colors.surface,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        flexDirection: isDesktop ? 'row' : 'column',
+                        alignItems: isDesktop ? 'center' : 'stretch',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                        <View
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            overflow: 'hidden',
+                            flexDirection: 'row',
+                            borderWidth: 1.5,
+                            borderColor: colors.border,
+                          }}
+                        >
+                          <View style={{ flex: 1, backgroundColor: colors.brandPrimary }} />
+                          <View style={{ flex: 1, backgroundColor: colors.brandAccent }} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <AppText variant="bodySmall" weight="bold">
+                              {accentPresets.find((p) => (!customAccent && p.isDefault) || customAccent === p.id)?.label || 'Lioris Blue & Gold'}
+                            </AppText>
+                            <Badge
+                              label={isDefaultTheme ? 'DEFAULT' : 'CUSTOM'}
+                              tone={isDefaultTheme ? 'brand' : 'accent'}
+                            />
                           </View>
+                          <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                            Primary: {colors.brandPrimary} • Accent: {colors.brandAccent}
+                          </AppText>
+                        </View>
+                      </View>
+
+                      {!isDefaultTheme && (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Restore Default Theme"
+                          onPress={async () => {
+                            haptics.medium();
+                            await resetToDefaultTheme();
+                            toast.success('Restored default Lioris theme');
+                          }}
+                          style={({ pressed }) => ({
+                            paddingHorizontal: 12,
+                            paddingVertical: 7,
+                            borderRadius: radius.pill,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6,
+                            backgroundColor: colors.pastelPrimaryBg,
+                            borderWidth: 1,
+                            borderColor: colors.brandPrimary,
+                            opacity: pressed ? 0.8 : 1,
+                            alignSelf: isDesktop ? 'center' : 'flex-start',
+                          })}
+                        >
+                          <Ionicons name="arrow-undo" size={14} color={colors.brandPrimary} />
+                          <AppText variant="caption" weight="bold" tone="brand">
+                            Restore Default
+                          </AppText>
                         </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              </SolidCard>
+                      )}
+                    </View>
+
+                    {/* Campus Palette Presets */}
+                    <View style={{ gap: spacing.sm }}>
+                      <View>
+                        <AppText variant="bodySmall" weight="bold">
+                          Campus Palettes
+                        </AppText>
+                        <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                          Select an institution palette to style buttons, badges, and accents
+                        </AppText>
+                      </View>
+
+                      <View style={{ gap: 8 }}>
+                        {accentPresets.map((preset) => {
+                          const isSelected = (!customAccent && preset.isDefault) || customAccent === preset.id;
+                          const displayPrimary = isDark ? preset.primaryDark : preset.primaryLight;
+                          const displayAccent = isDark ? preset.accentDark : preset.accentLight;
+
+                          return (
+                            <Pressable
+                              key={preset.id}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${preset.label} palette`}
+                              accessibilityState={{ selected: isSelected }}
+                              onPress={async () => {
+                                haptics.light();
+                                await setCustomAccent(preset.id);
+                                toast.success(`Applied ${preset.label} palette`);
+                              }}
+                              style={({ pressed }) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: 12,
+                                borderRadius: radius.md,
+                                borderWidth: isSelected ? 1.5 : 1,
+                                borderColor: isSelected ? colors.brandPrimary : colors.border,
+                                backgroundColor: isSelected
+                                  ? colors.pastelPrimaryBg
+                                  : pressed
+                                  ? isDark
+                                    ? 'rgba(255,255,255,0.04)'
+                                    : 'rgba(0,0,0,0.02)'
+                                  : colors.surface,
+                                gap: 12,
+                              })}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                                <View
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 16,
+                                    overflow: 'hidden',
+                                    flexDirection: 'row',
+                                    borderWidth: 1.5,
+                                    borderColor: isSelected ? colors.brandPrimary : colors.border,
+                                  }}
+                                >
+                                  <View style={{ flex: 1, backgroundColor: displayPrimary }} />
+                                  <View style={{ flex: 1, backgroundColor: displayAccent }} />
+                                </View>
+
+                                <View style={{ flex: 1 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <AppText variant="bodySmall" weight={isSelected ? 'bold' : 'medium'}>
+                                      {preset.label}
+                                    </AppText>
+                                    {preset.isDefault && (
+                                      <Badge label="DEFAULT" tone="brand" />
+                                    )}
+                                  </View>
+                                  <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                                    {preset.campusName || 'Institutional Palette'}
+                                  </AppText>
+                                </View>
+                              </View>
+
+                              {isSelected && (
+                                <Ionicons name="checkmark-circle" size={20} color={colors.brandPrimary} />
+                              )}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  </SolidCard>
+                )}
+              </View>
             )}
 
             {/* 3. Notifications */}
-            {showSection('notifications') ? <SettingsSectionLabel sectionKey="notifications" /> : null}
             {showSection('notifications') && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="notifications"
+                  isCollapsed={isSectionCollapsed('notifications')}
+                  onToggle={() => toggleSection('notifications')}
+                  summary={`${pushEnabled ? 'Push On' : 'Push Off'} • ${eventAlerts ? 'Events On' : 'Events Off'}`}
+                />
+                {!isSectionCollapsed('notifications') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
                     Notification Preferences
@@ -1287,12 +1289,21 @@ export function SettingsScreen() {
                   />
                 </View>
               </SolidCard>
+                )}
+              </View>
             )}
 
             {/* 4. Security & Credentials */}
-            {showSection('security') ? <SettingsSectionLabel sectionKey="security" /> : null}
             {showSection('security') && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="security"
+                  isCollapsed={isSectionCollapsed('security')}
+                  onToggle={() => toggleSection('security')}
+                  summary={`${mfaFactorId ? '2FA Active' : '2FA Off'} • ${biometricShield ? 'Biometrics On' : 'Biometrics Off'}`}
+                />
+                {!isSectionCollapsed('security') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
                     Security & Credentials
@@ -1464,16 +1475,25 @@ export function SettingsScreen() {
                   />
                 </View>
               </SolidCard>
+                )}
+              </View>
             )}
 
             {/* 5. Role Switcher Preview (Root Admins only) */}
-            {showSection('preview') ? <SettingsSectionLabel sectionKey="preview" /> : null}
             {showSection('preview') && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
-                <View>
-                  <AppText variant="h3" weight="bold">
-                    Workspace Role Switcher
-                  </AppText>
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="preview"
+                  isCollapsed={isSectionCollapsed('preview')}
+                  onToggle={() => toggleSection('preview')}
+                  summary={`Perspective: ${user?.role?.toUpperCase() ?? 'STUDENT'}`}
+                />
+                {!isSectionCollapsed('preview') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+                    <View>
+                      <AppText variant="h3" weight="bold">
+                        Campus Role Switcher
+                      </AppText>
                   <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
                     Switch portal perspectives to preview student, faculty, alumni, or root administrator views
                   </AppText>
@@ -1515,12 +1535,21 @@ export function SettingsScreen() {
                   })}
                 </View>
               </SolidCard>
+                )}
+              </View>
             )}
 
             {/* 6. Privacy & Data */}
-            {showSection('privacy') ? <SettingsSectionLabel sectionKey="privacy" /> : null}
             {showSection('privacy') && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="privacy"
+                  isCollapsed={isSectionCollapsed('privacy')}
+                  onToggle={() => toggleSection('privacy')}
+                  summary={`${directoryDiscovery ? 'Directory Discoverable' : 'Private'} • Data Export`}
+                />
+                {!isSectionCollapsed('privacy') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
                     Privacy & Data
@@ -1599,12 +1628,21 @@ export function SettingsScreen() {
                   ))}
                 </View>
               </SolidCard>
+                )}
+              </View>
             )}
 
             {/* 7. Terms & Policies */}
-            {showSection('legal') ? <SettingsSectionLabel sectionKey="legal" /> : null}
             {showSection('legal') && (
-              <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="legal"
+                  isCollapsed={isSectionCollapsed('legal')}
+                  onToggle={() => toggleSection('legal')}
+                  summary="Institutional Governance & Policies"
+                />
+                {!isSectionCollapsed('legal') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
                 <View>
                   <AppText variant="h3" weight="bold">
                     Institutional Governance & Policies
@@ -1644,7 +1682,39 @@ export function SettingsScreen() {
                   </Pressable>
                 ))}
               </SolidCard>
+                )}
+              </View>
             )}
+
+            {/* Dedicated Log Out Action */}
+            <View style={{ marginTop: spacing.md, gap: spacing.sm, alignItems: 'center' }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Log Out of Lioris"
+                onPress={handleLogoutPrompt}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: spacing.sm,
+                  width: '100%',
+                  paddingVertical: 14,
+                  borderRadius: radius.md,
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.08)',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.25)',
+                  opacity: pressed ? 0.8 : 1,
+                })}
+              >
+                <Ionicons name="log-out-outline" size={20} color={colors.critical} />
+                <AppText variant="bodySmall" weight="bold" style={{ color: colors.critical }}>
+                  Log Out of Lioris
+                </AppText>
+              </Pressable>
+              <AppText variant="caption" tone="secondary" style={{ textAlign: 'center', marginTop: 4 }}>
+                Lioris Campus Platform • Version 1.0.0
+              </AppText>
+            </View>
         </View>
       </ScrollView>
 

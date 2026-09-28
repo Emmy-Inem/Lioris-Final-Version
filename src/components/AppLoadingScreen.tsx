@@ -25,11 +25,11 @@ const LOADING_HINTS = [
   'Establishing secure campus connection...',
   'Syncing academic networks & feeds...',
   'Verifying session security tokens...',
-  'Preparing your campus workspace...',
+  'Preparing your campus hub...',
 ];
 
 export function AppLoadingScreen({
-  message = 'Loading your campus workspace...',
+  message = 'Loading your campus hub...',
   onRetry,
   showTimeoutAction = true,
 }: AppLoadingScreenProps) {
@@ -130,7 +130,7 @@ export function AppLoadingScreen({
     }
   };
 
-  const currentMessage = message !== 'Loading your campus workspace...' ? message : LOADING_HINTS[hintIndex];
+  const currentMessage = message !== 'Loading your campus hub...' ? message : LOADING_HINTS[hintIndex];
 
   // Calculate shimmer translateX (-100 -> 240)
   const shimmerTranslateX = shimmerAnim.interpolate({
