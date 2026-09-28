@@ -31,6 +31,7 @@ import { listPortalLinks } from '@/api/portalLinks';
 import { getMyProfile } from '@/api/profile';
 import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
+import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
@@ -72,9 +73,11 @@ export default function StaffDashboard() {
     queryFn: () => listEvents({ scope: 'global', campusCode: effectiveCampus }),
   });
 
+  const { showBots, isBotPost } = useBotVisibility();
+
   const { data: studentPosts } = useQuery({
-    queryKey: ['posts', 'staff-student-pulse', effectiveCampus],
-    queryFn: () => listFeedPosts({ scope: 'student', viewerInstitutionCode: effectiveCampus, viewScope: 'campus' }),
+    queryKey: ['posts', 'staff-student-pulse', effectiveCampus, showBots],
+    queryFn: () => listFeedPosts({ scope: 'student', viewerInstitutionCode: effectiveCampus, viewScope: 'campus', showBots }),
   });
 
   const { data: portalLinks } = useQuery({
@@ -89,7 +92,9 @@ export default function StaffDashboard() {
   const { isRead, markAsRead } = useReadHomeAlerts();
   const attendingEvents = (events ?? []).filter((e: any) => e.isRsvpd === true);
   const upcomingEvents = (events ?? []).filter((e: any) => !e.isRsvpd).slice(0, 2);
-  const activeDiscussions = (studentPosts ?? []).filter((post: any) => !isRead(post.id)).slice(0, 3);
+  const activeDiscussions = (studentPosts ?? [])
+    .filter((post: any) => (!showBots ? !isBotPost(post) : true) && !isRead(post.id))
+    .slice(0, 3);
 
   function handleOpenPortal(url: string) {
     haptics.light();

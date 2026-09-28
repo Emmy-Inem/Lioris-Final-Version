@@ -1,5 +1,5 @@
-import React from 'react';
-import { ScrollView, View, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Pressable, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
@@ -13,6 +13,7 @@ import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import { ADMIN_GROUPS } from '@/components/admin/adminNav';
+import { AdminUniversalSearchModal } from '@/components/admin/AdminUniversalSearchModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { useAuth } from '@/auth/AuthContext';
@@ -39,6 +40,19 @@ export default function AdminOverviewScreen() {
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
   const badges = useAdminBadges();
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const { data: profile } = useQuery({ queryKey: ['profile', 'me', user?.id], queryFn: () => getMyProfile(user!), enabled: !!user });
   const { data: memberCount } = useQuery({
@@ -114,6 +128,51 @@ export default function AdminOverviewScreen() {
             </View>
           </View>
         </GlassCard>
+
+        {/* Universal Search Quick Bar */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Universal Search: Find features, members, discussions, or controls"
+          onPress={() => {
+            haptics.light();
+            setSearchModalOpen(true);
+          }}
+        >
+          <SolidCard
+            radius={18}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 12,
+              paddingHorizontal: spacing.md,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : colors.border,
+              backgroundColor: colors.surface,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+              <Ionicons name="search" size={20} color={colors.brandPrimary} />
+              <AppText tone="secondary" style={{ fontSize: 13.5 }}>
+                Search features, members, discussions, controls...
+              </AppText>
+            </View>
+            <View
+              style={{
+                paddingVertical: 3,
+                paddingHorizontal: 8,
+                borderRadius: 6,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 11 }}>
+                {isDesktop ? 'Ctrl + K' : 'Search'}
+              </AppText>
+            </View>
+          </SolidCard>
+        </Pressable>
 
         {/* Live Analytics & Real User Activity Quick Hub */}
         <Pressable
@@ -241,6 +300,7 @@ export default function AdminOverviewScreen() {
         {/* Bulletins the platform is showing to members */}
         {isFeatureEnabled('campus_announcements') ? <AnnouncementsWidget scope="global" /> : null}
       </ScrollView>
+      <AdminUniversalSearchModal visible={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
     </ScreenContainer>
   );
 }

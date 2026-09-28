@@ -36,6 +36,7 @@ import { listMentorships } from '@/api/mentorship';
 import { listEvents } from '@/api/events';
 import { listPortalLinks } from '@/api/portalLinks';
 import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
+import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
@@ -64,9 +65,11 @@ export default function AlumniDashboard() {
       ? profile.institutionCode
       : '';
 
+  const { showBots, isBotPost } = useBotVisibility();
+
   const { data: posts } = useQuery({
-    queryKey: ['feed', 'alumni-dash', effectiveCampus],
-    queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus || undefined, viewScope: effectiveCampus ? 'campus' : 'global' }),
+    queryKey: ['feed', 'alumni-dash', effectiveCampus, showBots],
+    queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus || undefined, viewScope: effectiveCampus ? 'campus' : 'global', showBots }),
   });
 
   const { data: jobs } = useQuery({
@@ -102,7 +105,9 @@ export default function AlumniDashboard() {
   const activeJobs = (jobs ?? []).slice(0, 2);
   const attendingEvents = (events ?? []).filter((e: any) => e.isRsvpd === true);
   const upcomingEvents = (events ?? []).filter((e: any) => !e.isRsvpd).slice(0, 2);
-  const activeDiscussions = (posts ?? []).filter((post: any) => !isRead(post.id)).slice(0, 3);
+  const activeDiscussions = (posts ?? [])
+    .filter((post: any) => (!showBots ? !isBotPost(post) : true) && !isRead(post.id))
+    .slice(0, 3);
   const pendingMentees = (mentorships ?? []).filter((m: any) => m.status === 'pending' && m.mentorId === user?.id);
   const openMentorships = (mentorships ?? [])
     .filter((m: any) => (m.status === 'pending' || m.status === 'active') && m.mentorId === user?.id)
@@ -388,41 +393,71 @@ export default function AlumniDashboard() {
                   <Ionicons name="briefcase-outline" size={20} color="#3B82F6" />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
-                      Career Board
+                      Careers & Jobs
                     </AppText>
                     <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
-                      Hire campus talent
+                      Opportunities & hiring
                     </AppText>
                   </View>
                 </GlassCard>
               </Pressable>
             )}
 
-            <Pressable
-              onPress={() => router.push('/(alumni)/network' as any)}
-              style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
-            >
-              <GlassCard
-                radius={16}
-                padded={false}
-                contentStyle={{
-                  padding: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 10,
-                }}
+            {isFeatureEnabled('discussion_workspaces') && (
+              <Pressable
+                onPress={() => router.push('/(alumni)/forum')}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
-                <Ionicons name="people-circle-outline" size={20} color="#8B5CF6" />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
-                    Alumni Network
-                  </AppText>
-                  <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
-                    Fellow directory
-                  </AppText>
-                </View>
-              </GlassCard>
-            </Pressable>
+                <GlassCard
+                  radius={16}
+                  padded={false}
+                  contentStyle={{
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons name="chatbubbles-outline" size={20} color="#EC4899" />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
+                      Discussion Space
+                    </AppText>
+                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
+                      Ideas & updates
+                    </AppText>
+                  </View>
+                </GlassCard>
+              </Pressable>
+            )}
+
+            {isFeatureEnabled('alumni_network') && (
+              <Pressable
+                onPress={() => router.push('/(alumni)/network' as any)}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
+              >
+                <GlassCard
+                  radius={16}
+                  padded={false}
+                  contentStyle={{
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons name="people-circle-outline" size={20} color="#8B5CF6" />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
+                      Alumni Network
+                    </AppText>
+                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
+                      Fellow directory
+                    </AppText>
+                  </View>
+                </GlassCard>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -596,7 +631,7 @@ export default function AlumniDashboard() {
           </View>
         )}
 
-        {/* 7. Campus Discussions (Dismissible) */}
+        {/* 7. Discussion Space (Dismissible) */}
         {activeDiscussions.length > 0 && (
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
@@ -606,7 +641,7 @@ export default function AlumniDashboard() {
                   weight="bold"
                   style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
                 >
-                  Campus Discussions
+                  Discussion Space
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(alumni)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>

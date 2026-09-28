@@ -28,6 +28,7 @@ export type FeatureKey =
   | 'campus_announcements'
   | 'forum_global_scope'
   | 'global_workspace'
+  | 'community_bots'
   | 'staff_role';
 
 export interface FeatureFlagMeta {
@@ -181,7 +182,15 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     label: 'Alumni Network & Directory',
     category: 'Campus Life',
     tier: 'P1',
-    description: 'Enables alumni directory search, fellow graduates discovery, and connection requests.',
+    description: 'Enables alumni directory search, fellow graduates discovery, and connection requests. Disable to completely hide the Alumni Network from the Alumni role.',
+    defaultOn: true,
+  },
+  {
+    key: 'community_bots',
+    label: 'Campus Community Bot Accounts',
+    category: 'Campus Life',
+    tier: 'P1',
+    description: 'Simulated student and alumni persona accounts. Turn off to completely remove all bot accounts, discussions, and posts from the app and homepages.',
     defaultOn: true,
   },
   {

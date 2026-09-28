@@ -307,7 +307,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             Personalize Your Discussion Feed
           </AppText>
           <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.md }}>
-            You haven't joined any campus discussion spaces yet. Join academic, coding, and hostel forums to see peer discussions.
+            You haven't joined any discussion spaces yet. Join academic, coding, and hostel forums to see peer discussions.
           </AppText>
           <AppButton
             label="Explore & Join Spaces"

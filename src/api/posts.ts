@@ -9,6 +9,7 @@ import { escapePostgrestLike } from '../utils/postgrest';
 import { assertSafeHttpUrl } from '../utils/safeUrl';
 import { SEED_FORUM_POSTS } from '../data/seedForumPosts';
 import { getSeedCommentsForPost } from '../data/seedForumComments';
+import { isBotPost, isBotVisibilityEnabled } from '../utils/botVisibility';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -253,12 +254,9 @@ export interface FeedQuery {
 function filterPosts(pool: Post[], query: FeedQuery): Post[] {
   let results = pool.filter((p) => !isUserBlocked(p.authorId));
 
-  if (query.showBots === false) {
-    results = results.filter(
-      (p) =>
-        !p.id.startsWith('00000000-0000-4000-b000-') &&
-        (!p.authorId || !p.authorId.startsWith('00000000-0000-4000-a000-')),
-    );
+  const shouldFilterBots = query.showBots === false || (!query.showBots && !isBotVisibilityEnabled());
+  if (shouldFilterBots) {
+    results = results.filter((p) => !isBotPost(p));
   }
 
   // Non-published rows (drafts, scheduled) never belong in a feed. RLS already

@@ -272,7 +272,7 @@ export function NotificationsScreen() {
                     { label: 'Content Moderation Queue', icon: 'shield-checkmark-outline' as const, href: '/(admin)/moderation-queue' },
                   ]
                 : [
-                    { label: 'Browse Campus Discussions', icon: 'chatbubbles-outline' as const, href: '/(student)/feed' },
+                    { label: 'Browse Discussion Space', icon: 'chatbubbles-outline' as const, href: '/(student)/feed' },
                     { label: 'Explore Events & Meetups', icon: 'calendar-outline' as const, href: '/(student)/events-list' },
                     { label: 'Academic Past Questions Vault', icon: 'folder-open-outline' as const, href: '/(student)/resources' },
                   ]

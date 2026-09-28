@@ -9,17 +9,37 @@ import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { searchAlumniDirectory } from '@/api/connections';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function AlumniNetworkScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const isEnabled = isFeatureEnabled('alumni_network');
 
   const { data: alumniList, isLoading } = useQuery({
     queryKey: ['alumni', 'directory', searchQuery],
     queryFn: () => searchAlumniDirectory({ q: searchQuery.trim() || undefined }),
+    enabled: isEnabled,
   });
+
+  if (!isEnabled) {
+    return (
+      <ScreenContainer glow={false}>
+        {!isDesktop && <AppHeader />}
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+          <EmptyState
+            icon="people-outline"
+            title="Alumni Network Unavailable"
+            description="The Alumni Network directory is currently disabled by university administration."
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer glow={false}>

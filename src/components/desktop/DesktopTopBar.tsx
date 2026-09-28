@@ -151,8 +151,8 @@ export function DesktopTopBar() {
       >
         <Ionicons name="search" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
         <TextInput
-          placeholder="Search campus discussions, courses, events..."
-          accessibilityLabel="Search campus discussions, courses and events"
+          placeholder="Search discussion space, courses, events..."
+          accessibilityLabel="Search discussion space, courses and events"
           placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
           value={searchQuery}
           onChangeText={setSearchQuery}

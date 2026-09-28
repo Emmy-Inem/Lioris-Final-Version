@@ -35,6 +35,7 @@ import { listPortalLinks } from '@/api/portalLinks';
 import { listAnnouncements } from '@/api/announcements';
 import { Announcement } from '@/api/types';
 import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
+import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
@@ -52,6 +53,7 @@ export default function StudentDashboard() {
 
   // Read / Dismissed Tracker for Home broadcasts & discussions
   const { isRead, markAsRead } = useReadHomeAlerts();
+  const { showBots, isBotPost } = useBotVisibility();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -77,12 +79,13 @@ export default function StudentDashboard() {
 
   // 2. Pinned or urgent discussion threads
   const { data: recentPosts = [] } = useQuery({
-    queryKey: ['posts', 'dashboard-feed', effectiveCampus],
+    queryKey: ['posts', 'dashboard-feed', effectiveCampus, showBots],
     queryFn: () =>
       listFeedPosts({
         scope: 'student',
         viewerInstitutionCode: effectiveCampus || undefined,
         viewScope: effectiveCampus ? 'campus' : 'global',
+        showBots,
       }),
   });
 
@@ -154,7 +157,7 @@ export default function StudentDashboard() {
 
   // Filter unread pinned / urgent discussions
   const unreadPinnedDiscussions = (recentPosts ?? [])
-    .filter((p: any) => p.isPinned && !isRead(p.id))
+    .filter((p: any) => (!showBots ? !isBotPost(p) : true) && p.isPinned && !isRead(p.id))
     .slice(0, 2);
 
   // Combine into urgent broadcast list (max 3 items on Home)

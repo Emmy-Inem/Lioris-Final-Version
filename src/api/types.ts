@@ -518,17 +518,23 @@ export interface MarketplaceListing {
 }
 
 export interface JobListing {
- id: string;
- title: string;
- company: string;
- location: string;
- type: 'Full-time' | 'Part-time' | 'Internship' | 'Contract';
- remote: boolean;
- applyUrl: string;
- postedByName: string;
- posterId?: string;
- createdAt: string;
- campusCode?: string;
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: 'Full-time' | 'Part-time' | 'Internship' | 'Contract';
+  remote: boolean;
+  applyUrl: string;
+  postedByName: string;
+  posterId?: string;
+  createdAt: string;
+  campusCode?: string;
+  salary?: string;
+  description?: string;
+  workplaceType?: 'Remote' | 'Hybrid' | 'On-site';
+  experienceLevel?: 'Entry level' | 'Mid-Senior level' | 'Executive';
+  industry?: string;
+  isSaved?: boolean;
 }
 
 export type PodRole = 'owner' | 'moderator' | 'member';

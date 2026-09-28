@@ -66,7 +66,7 @@ const STUDENT_STEPS: NavStep[] = [
     simpleText: 'Discuss academic topics, ask course questions, and connect with students in your department.',
     points: [
       { icon: 'help-circle-outline', text: 'Ask and answer course questions' },
-      { icon: 'people-outline', text: 'Department and campus discussions' },
+      { icon: 'people-outline', text: 'Department and peer discussion spaces' },
     ],
   },
   {

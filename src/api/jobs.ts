@@ -1,15 +1,23 @@
 import { JobListing } from './types';
 import { supabase } from './supabase';
+import { listSavedItemIds } from './bookmarks';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { isUserBlocked } from './connections';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
+import { inferWorkplaceType, inferExperienceLevel } from '../utils/careerFilters';
+
+export { inferWorkplaceType, inferExperienceLevel };
 
 export interface JobsQuery {
- q?: string;
- type?: JobListing['type'];
- campusCode?: string;
+  q?: string;
+  type?: JobListing['type'];
+  workplaceType?: 'Remote' | 'Hybrid' | 'On-site';
+  experienceLevel?: 'Entry level' | 'Mid-Senior level' | 'Executive';
+  datePosted?: 'all' | 'past24h' | 'pastWeek' | 'pastMonth';
+  savedOnly?: boolean;
+  campusCode?: string;
 }
 
 // Jobs this session has *successfully* written to Supabase, kept here only
@@ -19,26 +27,40 @@ export interface JobsQuery {
 let locallyCreatedJobs: JobListing[] = [];
 
 function getLocalPool(): JobListing[] {
- return [...locallyCreatedJobs];
+  return [...locallyCreatedJobs];
 }
 
 function filterJobs(pool: JobListing[], query: JobsQuery): JobListing[] {
- let results = pool.filter((j) => !isUserBlocked((j as any).posterId));
- if (query.type) results = results.filter((j) => j.type === query.type);
- if (query.campusCode && query.campusCode !== 'GLOBAL') {
- results = results.filter((j) => !j.campusCode || j.campusCode === 'GLOBAL' || j.campusCode === query.campusCode);
- }
- if (query.q) {
- const q = query.q.toLowerCase();
- results = results.filter(
- (j) =>
- j.title.toLowerCase().includes(q) ||
- j.company.toLowerCase().includes(q) ||
- j.location.toLowerCase().includes(q) ||
- j.postedByName.toLowerCase().includes(q),
- );
- }
- return results;
+  let results = pool.filter((j) => !isUserBlocked((j as any).posterId));
+  if (query.type) results = results.filter((j) => j.type === query.type);
+  if (query.workplaceType) results = results.filter((j) => j.workplaceType === query.workplaceType);
+  if (query.experienceLevel) results = results.filter((j) => j.experienceLevel === query.experienceLevel);
+  if (query.savedOnly) results = results.filter((j) => j.isSaved === true);
+  if (query.datePosted && query.datePosted !== 'all') {
+    const now = Date.now();
+    const maxAgeMs =
+      query.datePosted === 'past24h'
+        ? 24 * 60 * 60 * 1000
+        : query.datePosted === 'pastWeek'
+        ? 7 * 24 * 60 * 60 * 1000
+        : 30 * 24 * 60 * 60 * 1000;
+    results = results.filter((j) => now - new Date(j.createdAt).getTime() <= maxAgeMs);
+  }
+  if (query.campusCode && query.campusCode !== 'GLOBAL') {
+    results = results.filter((j) => !j.campusCode || j.campusCode === 'GLOBAL' || j.campusCode === query.campusCode);
+  }
+  if (query.q) {
+    const q = query.q.toLowerCase();
+    results = results.filter(
+      (j) =>
+        j.title.toLowerCase().includes(q) ||
+        j.company.toLowerCase().includes(q) ||
+        j.location.toLowerCase().includes(q) ||
+        (j.description && j.description.toLowerCase().includes(q)) ||
+        j.postedByName.toLowerCase().includes(q),
+    );
+  }
+  return results;
 }
 
 export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
@@ -94,6 +116,8 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  location: row.location,
  type: row.type as JobListing['type'],
  remote: row.is_remote ?? false,
+ workplaceType: inferWorkplaceType(row),
+ experienceLevel: inferExperienceLevel(row),
  // A bad stored link (e.g. javascript:) must never reach an opener.
  applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
  postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
@@ -114,6 +138,17 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  merged.push(item);
  }
  }
+
+ try {
+   const jobIds = merged.map((j) => j.id);
+   const savedIds = await listSavedItemIds('job', jobIds);
+   for (const j of merged) {
+     j.isSaved = savedIds.has(j.id);
+   }
+ } catch {
+   // best effort for saved decoration
+ }
+
  return filterJobs(merged, scopedQuery);
  } catch (err) {
  console.warn('[Jobs] Supabase listJobs error, showing local pool only:', err);
@@ -122,15 +157,17 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
 }
 
 export interface CreateJobPayload {
- title: string;
- company: string;
- location: string;
- type: JobListing['type'];
- remote?: boolean;
- applyUrl: string;
- salary?: string;
- description?: string;
- campusCode?: string;
+  title: string;
+  company: string;
+  location: string;
+  type: JobListing['type'];
+  remote?: boolean;
+  workplaceType?: 'Remote' | 'Hybrid' | 'On-site';
+  experienceLevel?: 'Entry level' | 'Mid-Senior level' | 'Executive';
+  applyUrl: string;
+  salary?: string;
+  description?: string;
+  campusCode?: string;
 }
 
 /**
@@ -139,54 +176,60 @@ export interface CreateJobPayload {
  * catch this and show a real error - see CreateJobModal.
  */
 export async function createJob(payload: CreateJobPayload): Promise<JobListing> {
- const applyUrl = assertSafeHttpUrl(payload.applyUrl, 'The apply link');
- const jobId = generateUUID();
- const { data: authData } = await supabase.auth.getUser();
- let realPosterId = authData?.user?.id;
- const sessionUser = await getSessionUser();
- const posterName = sessionUser?.fullName || authData?.user?.user_metadata?.full_name || 'Alumni Member';
- const campusCode = payload.campusCode || (sessionUser as any)?.campusCode || 'GLOBAL';
+  const applyUrl = assertSafeHttpUrl(payload.applyUrl, 'The apply link');
+  const jobId = generateUUID();
+  const { data: authData } = await supabase.auth.getUser();
+  let realPosterId = authData?.user?.id;
+  const sessionUser = await getSessionUser();
+  const posterName = sessionUser?.fullName || authData?.user?.user_metadata?.full_name || 'Alumni Member';
+  const campusCode = payload.campusCode || (sessionUser as any)?.campusCode || 'GLOBAL';
 
- if (!realPosterId && sessionUser?.id) {
- realPosterId = sessionUser.id;
- }
+  if (!realPosterId && sessionUser?.id) {
+    realPosterId = sessionUser.id;
+  }
 
- if (!realPosterId) {
- throw new Error('You need to be signed in to post an opportunity.');
- }
+  if (!realPosterId) {
+    throw new Error('You need to be signed in to post an opportunity.');
+  }
 
- const { error } = await supabase.from('jobs').insert({
- id: jobId,
- poster_id: realPosterId,
- campus_code: campusCode,
- title: payload.title,
- company: payload.company,
- location: payload.location,
- type: payload.type,
- is_remote: payload.remote ?? false,
- apply_url: applyUrl,
- salary: payload.salary || null,
- description: payload.description || null,
- posted_by_name: posterName,
- });
+  const isRemote = payload.remote ?? payload.workplaceType === 'Remote';
 
- if (error) {
- console.warn('[Jobs] Supabase insert error:', error.message);
- throw new Error('Could not publish this opportunity. Please try again.');
- }
+  const { error } = await supabase.from('jobs').insert({
+    id: jobId,
+    poster_id: realPosterId,
+    campus_code: campusCode,
+    title: payload.title,
+    company: payload.company,
+    location: payload.location,
+    type: payload.type,
+    is_remote: isRemote,
+    apply_url: applyUrl,
+    salary: payload.salary || null,
+    description: payload.description || null,
+    posted_by_name: posterName,
+  });
 
- const created: JobListing = {
- id: jobId,
- title: payload.title,
- company: payload.company,
- location: payload.location,
- type: payload.type,
- remote: payload.remote ?? false,
- applyUrl,
- postedByName: posterName,
- createdAt: new Date().toISOString(),
- };
+  if (error) {
+    console.warn('[Jobs] Supabase insert error:', error.message);
+    throw new Error('Could not publish this opportunity. Please try again.');
+  }
 
- locallyCreatedJobs = [created, ...locallyCreatedJobs];
- return created;
+  const created: JobListing = {
+    id: jobId,
+    title: payload.title,
+    company: payload.company,
+    location: payload.location,
+    type: payload.type,
+    remote: isRemote,
+    workplaceType: payload.workplaceType ?? (isRemote ? 'Remote' : 'On-site'),
+    experienceLevel: payload.experienceLevel ?? 'Entry level',
+    salary: payload.salary,
+    description: payload.description,
+    applyUrl,
+    postedByName: posterName,
+    createdAt: new Date().toISOString(),
+  };
+
+  locallyCreatedJobs = [created, ...locallyCreatedJobs];
+  return created;
 }
