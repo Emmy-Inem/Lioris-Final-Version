@@ -12,7 +12,7 @@ export function AgendaList({ events }: { events: CampusEvent[] }) {
  }
 
  return (
- <View>
+ <View style={{ gap: 12 }}>
  {sorted.map((event) => (
  <EventCard key={event.id} event={event} />
  ))}

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, StyleSheet, View, ViewStyle } from 'react-native';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useReducedMotion } from '@/theme/useReducedMotion';
+import { useResponsive } from '@/hooks/useResponsive';
 import { SolidCard } from './SolidCard';
 
 export interface SkeletonProps {
@@ -170,19 +171,36 @@ export function ResourceCardSkeletonGrid({ count = 4 }: { count?: number }) {
 export function EventCardSkeleton() {
   const { spacing, radius } = useTheme();
   return (
-    <SolidCard style={{ padding: 0, overflow: 'hidden', width: '100%', marginBottom: spacing.sm }}>
+    <SolidCard radius={22} padded={false} style={{ padding: 0, overflow: 'hidden', width: '100%' }}>
       {/* Event banner placeholder */}
       <Skeleton width="100%" height={130} radius={0} />
-      <View style={{ padding: spacing.md, gap: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Skeleton width={50} height={18} radius={radius.pill} />
-          <Skeleton width={70} height={18} radius={radius.pill} />
+      <View style={{ padding: spacing.md }}>
+        {/* Date Box + Title & Info */}
+        <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
+          {/* Calendar Date Box */}
+          <Skeleton width={48} height={52} radius={radius.md} />
+          {/* Title & Info */}
+          <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+            <Skeleton width="85%" height={18} radius={4} />
+            <Skeleton width="55%" height={13} radius={4} />
+          </View>
         </View>
-        <Skeleton width="85%" height={18} radius={4} />
-        <Skeleton width="65%" height={13} radius={4} />
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-          <Skeleton width={100} height={14} radius={4} />
-          <Skeleton width={80} height={30} radius={radius.pill} />
+
+        {/* Description line */}
+        <Skeleton width="95%" height={14} radius={4} style={{ marginTop: spacing.sm }} />
+
+        {/* Bottom Actions Bar */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: spacing.md,
+            paddingTop: spacing.xs,
+          }}
+        >
+          <Skeleton width={110} height={14} radius={4} />
+          <Skeleton width={80} height={32} radius={radius.pill} />
         </View>
       </View>
     </SolidCard>
@@ -190,6 +208,20 @@ export function EventCardSkeleton() {
 }
 
 export function EventCardSkeletonGrid({ count = 3 }: { count?: number }) {
+  const { isDesktop } = useResponsive();
+
+  if (!isDesktop) {
+    return (
+      <View style={{ width: '100%' }}>
+        {Array.from({ length: count }).map((_, i) => (
+          <View key={i} style={{ width: '100%', marginBottom: 12 }}>
+            <EventCardSkeleton />
+          </View>
+        ))}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, width: '100%' }}>
       {Array.from({ length: count }).map((_, i) => (

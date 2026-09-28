@@ -579,51 +579,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
       {/* Gamification & Streaks Widget */}
 
-      {/* Forum Navigation Switcher: My Joined Forums vs Explore All Forums */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: spacing.sm,
-          paddingVertical: 4,
-          paddingHorizontal: 2,
-        }}
-      >
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0, marginRight: 8 }}>
-          <Ionicons name="chatbubbles" size={16} color={colors.brandPrimary} />
-          <AppText variant="bodySmall" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
-            My Discussion Spaces ({joinedChannels.length})
-          </AppText>
-        </View>
 
-        <Pressable
-          onPress={() => {
-            haptics.light();
-            router.push('/(student)/forum/explore' as any);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Explore all discussion spaces"
-          hitSlop={8}
-          style={{
-            flexShrink: 0,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 5,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: radius.pill,
-            backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.08)',
-            borderWidth: 1,
-            borderColor: colors.brandPrimary,
-          }}
-        >
-          <Ionicons name="compass-outline" size={14} color={colors.brandPrimary} />
-          <AppText variant="caption" weight="bold" tone="brand" numberOfLines={1} style={{ fontSize: 11.5 }}>
-            Explore All Forums ({CHANNELS.length - 1}) →
-          </AppText>
-        </Pressable>
-      </View>
 
       {/* Quick Search & Sort Bar */}
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
@@ -755,7 +711,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         </View>
         <Pressable onPress={() => router.push('/(student)/forum/explore' as any)} hitSlop={8}>
           <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-            Explore All ({CHANNELS.length - 1}) →
+            Explore All →
           </AppText>
         </Pressable>
       </View>
@@ -1568,7 +1524,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     Communities
                   </AppText>
                   <Pressable onPress={() => router.push('/(student)/forum/explore' as any)}>
-                    <AppText variant="caption" weight="bold" tone="brand">Explore All ({CHANNELS.length - 1}) →</AppText>
+                    <AppText variant="caption" weight="bold" tone="brand">Explore All →</AppText>
                   </Pressable>
                 </View>
                 <View style={{ gap: 8 }}>
