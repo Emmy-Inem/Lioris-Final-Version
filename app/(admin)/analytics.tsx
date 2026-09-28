@@ -813,7 +813,7 @@ export default function AdminAnalyticsScreen() {
                       backgroundColor: isSelected ? (isDark ? 'rgba(37, 99, 235, 0.16)' : '#EFF6FF') : colors.surface,
                       borderRadius: radius.md,
                       padding: spacing.md,
-                      borderWidth: 1,
+                      borderWidth: isSelected ? 2 : 1,
                       borderColor: isSelected ? colors.brandPrimary : colors.border,
                     }}
                   >

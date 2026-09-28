@@ -738,7 +738,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               ))
             ) : (
               <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                No active discussions yet. Be the first to ask a useful question.
+                No active discussions yet — be the first to ask a useful question.
               </AppText>
             )}
           </ScrollView>
@@ -1058,7 +1058,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </View>
                 <AppText tone="secondary" variant="caption" style={{ fontSize: 12, marginTop: 2 }}>
                   {user?.role === 'admin'
-                    ? 'Global discourse desk. Publish announcements, pin updates, and approve pending threads.'
+                    ? 'Global discourse desk — publish announcements, pin updates, and approve pending threads.'
                     : 'Connect, ask questions, exchange notes, and participate in polls.'}
                 </AppText>
               </View>

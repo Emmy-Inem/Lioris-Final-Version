@@ -28,7 +28,7 @@ export function GlassCard({
   children,
   ...rest
 }: GlassCardProps) {
-  const { spacing, radius: radiusTokens, isDark, colors } = useTheme();
+  const { spacing, radius: radiusTokens, isDark } = useTheme();
   const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
   const cornerRadius = radius ?? radiusTokens.glass ?? 20;
 
@@ -53,16 +53,16 @@ export function GlassCard({
           styles.container,
           {
             borderRadius: cornerRadius,
-            borderColor: colors.border,
+            borderColor: getGlassBorderColor(isDark),
             borderWidth: 1,
             backgroundColor:
               Platform.OS === 'ios'
                 ? isDark
-                  ? 'rgba(19, 30, 49, 0.88)'
-                  : 'rgba(255, 255, 255, 0.90)'
+                  ? 'rgba(12, 20, 36, 0.20)'
+                  : 'rgba(255, 255, 255, 0.18)'
                 : isDark
-                  ? `rgba(19, 30, 49, ${Math.max(0.85, Math.min(0.95, settings.translucency * 1.5)).toFixed(2)})`
-                  : `rgba(255, 255, 255, ${Math.max(0.88, Math.min(0.96, settings.translucency * 1.6)).toFixed(2)})`,
+                  ? `rgba(19, 30, 49, ${Math.min(0.88, settings.translucency * 1.5).toFixed(2)})`
+                  : `rgba(255, 255, 255, ${Math.min(0.92, settings.translucency * 1.6).toFixed(2)})`,
           },
           Platform.OS === 'web' &&
             ({

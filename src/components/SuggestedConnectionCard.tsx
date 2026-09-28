@@ -45,7 +45,7 @@ export function SuggestedConnectionCard({ person, index }: { person: SuggestedPe
         style={{
           width: '100%',
           borderRadius: radius.md,
-          backgroundColor: colors.surface,
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : colors.surface,
           borderWidth: 1,
           borderColor: colors.border,
           paddingVertical: 12,

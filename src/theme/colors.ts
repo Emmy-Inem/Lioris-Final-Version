@@ -217,9 +217,9 @@ export const darkColors: ThemeColors = {
  lavenderBg: 'rgba(109, 93, 174, 0.26)',
  lavenderText: '#D8B4FE',
 
- border: 'rgba(255, 255, 255, 0.12)',
+ border: 'rgba(255, 255, 255, 0.08)',
  inputBorder: '#64748F',
- divider: 'rgba(255, 255, 255, 0.08)',
+ divider: 'rgba(255, 255, 255, 0.06)',
 
  success: '#22C55E',
  warning: '#FBBF24',

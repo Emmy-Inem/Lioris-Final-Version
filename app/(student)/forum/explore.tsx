@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { ScrollView, Pressable, TextInput, View, Alert } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -259,7 +259,7 @@ export default function ExploreForumsScreen() {
               <SolidCard
                 key={ch.id}
                 radius={20}
-                frosted={false}
+                frosted
                 style={{
                   padding: spacing.md,
                   borderLeftWidth: 4,
@@ -293,20 +293,9 @@ export default function ExploreForumsScreen() {
                         </View>
                         {ch.approvalStatus === 'pending' && <Badge label="Under Review" tone="warning" />}
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 3 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Ionicons name="people-outline" size={12} color={colors.textSecondary} />
-                          <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                            {realMembers} members
-                          </AppText>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Ionicons name="chatbubbles-outline" size={12} color={colors.textSecondary} />
-                          <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                            {realThreads} discussions
-                          </AppText>
-                        </View>
-                      </View>
+                      <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 2 }}>
+                        👥 {realMembers} members • 💬 {realThreads} discussions
+                      </AppText>
                     </View>
                   </View>
 
@@ -324,7 +313,6 @@ export default function ExploreForumsScreen() {
                       backgroundColor: joined ? (isDark ? 'rgba(16,185,129,0.15)' : '#DCFCE7') : colors.brandPrimary,
                       borderWidth: 1,
                       borderColor: joined ? (isDark ? 'rgba(16,185,129,0.40)' : '#86EFAC') : colors.brandPrimary,
-                      flexShrink: 0,
                     }}
                   >
                     <Ionicons name={joined ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={joined ? '#10B981' : '#FFFFFF'} />

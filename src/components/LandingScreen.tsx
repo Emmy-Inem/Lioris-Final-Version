@@ -74,15 +74,15 @@ export function LandingScreen() {
 
   // Liquid glass container style generator
   const glassStyle = (customRadius = 24, customAlpha?: number) => {
-    const alpha = customAlpha ?? (isDark ? 0.88 : 0.92);
+    const alpha = customAlpha ?? (isDark ? 0.45 : 0.65);
     return [
       {
         borderRadius: customRadius,
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+        borderColor: getGlassBorderColor(isDark),
         borderWidth: 1,
         backgroundColor: isDark
-          ? `rgba(19, 30, 49, ${Math.max(0.85, alpha)})`
-          : `rgba(255, 255, 255, ${Math.max(0.88, alpha)})`,
+          ? `rgba(15, 23, 42, ${alpha})`
+          : `rgba(255, 255, 255, ${alpha})`,
         overflow: 'hidden' as const,
         position: 'relative' as const,
       },

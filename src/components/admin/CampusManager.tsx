@@ -199,7 +199,7 @@ export function CampusManager() {
       </View>
 
       {(requests.data ?? []).length > 0 ? (
-        <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.border, gap: spacing.sm }}>
+        <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.brandPrimary, gap: spacing.sm }}>
           <AppText weight="bold" variant="bodySmall">
             {requests.data!.length} university request{requests.data!.length === 1 ? '' : 's'} waiting
           </AppText>
