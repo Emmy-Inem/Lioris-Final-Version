@@ -102,7 +102,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
       });
 
       haptics.success();
-      Alert.alert('Opening Published 🚀', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
+      Alert.alert('Opening Published', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
       reset();
       onCreated();
       onClose();
@@ -152,7 +152,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
               <View>
                 <AppText variant="h1" weight="bold">
-                  Post Opportunity 💼
+                  Post Opportunity
                 </AppText>
  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
  Share internships, graduate roles & referrals

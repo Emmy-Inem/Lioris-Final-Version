@@ -247,7 +247,7 @@ export function ChangeWorkspaceScopeModal({
               <SolidCard style={{ width: '100%' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
                   <AppText variant="h3" weight="bold">
-                    Add Campus Workspace 🎓
+                    Add Campus Workspace
                   </AppText>
                   <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setCreateModalOpen(false)} hitSlop={8}>
                     <Ionicons name="close" size={20} color={colors.textSecondary} />

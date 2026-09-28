@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, FlatList, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -494,11 +493,9 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           maxToRenderPerBatch={6}
           windowSize={7}
           renderItem={({ item }) => (
-            <Animated.View entering={FadeInUp.duration(200)}>
-              <View style={{ marginBottom: 12 }}>
-                <EventCard event={item} />
-              </View>
-            </Animated.View>
+            <View style={{ marginBottom: 12 }}>
+              <EventCard event={item} />
+            </View>
           )}
           ListHeaderComponent={renderHeader}
           showsVerticalScrollIndicator={false}

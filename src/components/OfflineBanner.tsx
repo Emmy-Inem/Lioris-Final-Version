@@ -103,7 +103,7 @@ export function OfflineBanner() {
       <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11.5 }}>
         {checking
           ? 'Checking network connection...'
-          : "You're offline — tap to reconnect"}
+          : "You're offline. Tap to reconnect"}
       </AppText>
       <Ionicons name="refresh-outline" size={12} color="#FFFFFF" style={{ opacity: 0.9 }} />
     </Pressable>

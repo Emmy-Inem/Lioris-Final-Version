@@ -263,7 +263,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
               <View style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.warning, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.md }}>
                 <AppText weight="bold" variant="bodySmall" style={{ color: colors.warning, marginBottom: 4 }}>
-                  Peer-to-peer sale — no Lioris payment protection
+                  Peer-to-peer sale: no Lioris payment protection
                 </AppText>
                 <AppText variant="caption" tone="secondary">
                   Lioris does not process or hold payment, provide escrow, inspect this item, or guarantee the seller. Avoid advance transfers, verify the item and seller, and pay only after a safe handover.

@@ -67,7 +67,7 @@ export function GuestTeaserBanner() {
           styles.banner,
           {
             backgroundColor: isDark ? 'rgba(30, 41, 59, 0.9)' : colors.pastelPrimaryBg,
-            borderColor: colors.brandPrimary,
+            borderColor: colors.border,
             borderRadius: radius.md,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,

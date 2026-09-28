@@ -94,7 +94,7 @@ export function LibraryFilterModal({ visible, onClose, filters, onApply }: Libra
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
             <AppText variant="h2" weight="bold">
-              Library Filter Options 📚
+              Library Filter Options
             </AppText>
             <AppText weight="bold" tone="brand" onPress={handleReset}>
               Reset All

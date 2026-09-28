@@ -689,7 +689,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                       }}
                     >
                       <AppText variant="caption" weight={selected ? 'bold' : 'medium'} tone={selected ? 'brand' : 'secondary'}>
-                        {v === 'Campus Only' ? '🏫 My Campus' : '🌍 All Universities'}
+                        {v === 'Campus Only' ? 'My Campus' : 'All Universities'}
                       </AppText>
                     </Pressable>
                   );

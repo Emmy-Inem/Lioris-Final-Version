@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from './ScreenContainer';
@@ -739,7 +738,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               ))
             ) : (
               <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
-                No active discussions yet — be the first to ask a useful question.
+                No active discussions yet. Be the first to ask a useful question.
               </AppText>
             )}
           </ScrollView>
@@ -1059,7 +1058,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </View>
                 <AppText tone="secondary" variant="caption" style={{ fontSize: 12, marginTop: 2 }}>
                   {user?.role === 'admin'
-                    ? 'Global discourse desk — publish announcements, pin updates, and approve pending threads.'
+                    ? 'Global discourse desk: publish announcements, pin updates, and approve pending threads.'
                     : 'Connect, ask questions, exchange notes, and participate in polls.'}
                 </AppText>
               </View>
@@ -1456,10 +1455,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               maxToRenderPerBatch={8}
               windowSize={7}
               contentContainerStyle={{ paddingBottom: 40 }}
-              renderItem={({ item, index }) => (
-                <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
-                  <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} />
-                </Animated.View>
+              renderItem={({ item }) => (
+                <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} />
               )}
               showsVerticalScrollIndicator={true}
               onRefresh={handleRefresh}
@@ -1644,10 +1641,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         maxToRenderPerBatch={8}
         windowSize={7}
         contentContainerStyle={{ paddingBottom: 120 }}
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 40).duration(220)}>
-            <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} />
-          </Animated.View>
+        renderItem={({ item }) => (
+          <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} />
         )}
         showsVerticalScrollIndicator={false}
         onRefresh={handleRefresh}
