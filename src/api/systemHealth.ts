@@ -69,7 +69,7 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
     ] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('posts').select('*', { count: 'exact', head: true }),
-      supabase.from('comments').select('*', { count: 'exact', head: true }),
+      supabase.from('post_comments').select('*', { count: 'exact', head: true }),
       supabase.from('resources').select('*', { count: 'exact', head: true }),
       supabase.from('events').select('*', { count: 'exact', head: true }),
       supabase.from('support_tickets').select('*', { count: 'exact', head: true }),
@@ -94,7 +94,7 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
   try {
     // Check for comments referencing deleted posts
     const { data: orphanedComments } = await supabase
-      .from('comments')
+      .from('post_comments')
       .select('id, post_id')
       .limit(100);
 

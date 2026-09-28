@@ -1146,6 +1146,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260926160000_admin_analytics_and_activity.sql',
   'supabase/migrations/20260926220000_forum_community_memberships.sql',
   'supabase/migrations/20260926230000_admin_user_profiles_rpc.sql',
+  'supabase/migrations/20260928170000_marketplace_saved_items.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1614,6 +1615,24 @@ console.log('\n== forum community memberships ==');
       await c.q("DELETE FROM public.forum_community_members WHERE community_id = $1 AND user_id = $2", [commId, U.s1]);
       const afterLeave = (await c.q("SELECT count(*)::int n FROM public.forum_community_members WHERE user_id = $1", [U.s1])).rows[0].n;
       eq(afterLeave, 0, 's1 left community');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// marketplace saved items (20260928170000_marketplace_saved_items.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== marketplace saved items ==');
+{
+  await check('saved_items accepts kind = marketplace and enforces RLS', async () => {
+    await as(U.s1, async (c) => {
+      // s1 saves a marketplace listing
+      assert((await c.t("INSERT INTO public.saved_items (user_id, kind, item_id, title) VALUES ($1, 'marketplace', 'item-abc', 'Calculus Textbook')", [U.s1])).ok, 's1 saved marketplace item');
+      const count = (await c.q("SELECT count(*)::int n FROM public.saved_items WHERE user_id = $1 AND kind = 'marketplace'", [U.s1])).rows[0].n;
+      eq(count, 1, 's1 sees 1 saved marketplace item');
+
+      // invalid kind still rejected
+      denied(await c.t("INSERT INTO public.saved_items (user_id, kind, item_id) VALUES ($1, 'invalid_kind', 'item-xyz')", [U.s1]), /check/i, 'bogus kind rejected');
     });
   });
 }
