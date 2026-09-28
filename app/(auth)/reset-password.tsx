@@ -120,9 +120,10 @@ export default function ResetPasswordScreen() {
     haptics.light();
     setSubmitting(true);
     try {
-      await authApi.sendPasswordResetEmail(cleanEmail, captchaToken || undefined);
+      const res = await authApi.sendPasswordResetEmail(cleanEmail, captchaToken || undefined);
       haptics.success();
-      setSuccessMessage(`Recovery email dispatched to ${cleanEmail}. Check your inbox or spam folder.`);
+      const baseMsg = `Recovery email dispatched to ${cleanEmail}. Check your inbox or spam folder.`;
+      setSuccessMessage(res?.warning ? `${baseMsg}\n${res.warning}` : baseMsg);
       setActiveTab('enter_code');
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err: any) {

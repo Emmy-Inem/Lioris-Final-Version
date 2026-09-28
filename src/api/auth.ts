@@ -7,6 +7,31 @@ import { recordAuditLogEntry } from './auditLog';
 import { unregisterDevicePushToken } from './notifications';
 import { checkPassword, isPasswordValid, isValidEmailFormat } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errors';
+import {
+  checkLoginRateLimit,
+  recordLoginFailure,
+  clearLoginAttempts,
+  checkPasswordResetRateLimit,
+  recordPasswordResetAttempt,
+  checkResendCooldown,
+  recordResendAttempt,
+  checkOtpRateLimit,
+  recordOtpFailure,
+  clearOtpFailures,
+} from '../utils/authRateLimit';
+
+export {
+  checkLoginRateLimit,
+  recordLoginFailure,
+  clearLoginAttempts,
+  checkPasswordResetRateLimit,
+  recordPasswordResetAttempt,
+  checkResendCooldown,
+  recordResendAttempt,
+  checkOtpRateLimit,
+  recordOtpFailure,
+  clearOtpFailures,
+};
 
 export function getAuthRedirectUrl(path: string = 'reset-password'): string {
   const cleanPath = path.replace(/^\//, '');
@@ -138,65 +163,18 @@ export async function getEmailForUsername(username: string): Promise<string | nu
   return null;
 }
 
-// Client-side login throttle. This is only a UX nicety (it slows down accidental
-// hammering from this tab); real brute-force protection is Supabase Auth's own
-// rate limits. There is deliberately no server-side per-email lockout: it would
-// let anyone lock a victim out of their account.
-interface LoginAttemptRecord {
- failures: number;
- lockedUntil?: number;
- lastAttempt: number;
-}
-
-const loginAttempts = new Map<string, LoginAttemptRecord>();
-
-function checkLoginRateLimit(email: string): void {
- const clean = email.toLowerCase().trim();
-
- // Client-side memory check
- const record = loginAttempts.get(clean);
- if (!record) return;
- const now = Date.now();
- if (record.lockedUntil && now < record.lockedUntil) {
- const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
- throw new Error(`Too many failed login attempts. Account temporarily locked for security. Please try again in ${remainingSec}s.`);
- }
- if (now - record.lastAttempt > 15 * 60 * 1000) {
- loginAttempts.delete(clean);
- }
-}
-
-function recordLoginFailure(email: string): void {
- const key = email.toLowerCase().trim();
- const now = Date.now();
-
- // Record locally
- const existing = loginAttempts.get(key) || { failures: 0, lastAttempt: now };
- const failures = existing.failures + 1;
- let lockedUntil: number | undefined;
-
- if (failures >= 5) {
- const lockoutDurationSec = Math.min(300, 60 * (failures - 4));
- lockedUntil = now + lockoutDurationSec * 1000;
- }
-
- loginAttempts.set(key, {
- failures,
- lockedUntil,
- lastAttempt: now,
- });
-}
-
-function clearLoginFailures(email: string): void {
- const key = email.toLowerCase().trim();
- loginAttempts.delete(key);
-}
+// Rate limiting for login, password reset, email resend, and OTP verification
+// is handled by ../utils/authRateLimit with persistent storage and approaching limit alerts.
 
 // Sends a fresh 6-digit confirmation code. Delivery is real email (Supabase custom SMTP);
 // there is deliberately no server-side "just activate it" fallback any more.
 export async function resendConfirmationEmail(email: string): Promise<{ success: boolean }> {
-  const cleanEmail = email.trim();
+  const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail) throw new Error('Please enter your registered email address.');
+
+  // Rate limit check: enforce 60s cooldown
+  checkResendCooldown(cleanEmail);
+
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email: cleanEmail,
@@ -211,6 +189,7 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
         : 'We could not send the code right now. Please check the address and try again.',
     );
   }
+  recordResendAttempt(cleanEmail);
   return { success: true };
 }
 
@@ -240,7 +219,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     }
   }
 
-  // Client-side throttle (UX only; Supabase Auth enforces the real limits)
+  // Client-side rate limiting throttle with persistent storage and lockout
   checkLoginRateLimit(cleanEmail);
 
   let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -255,21 +234,31 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   }
 
   if (signInError || !signInData?.session || !signInData?.user) {
-    recordLoginFailure(cleanEmail);
+    const rateStatus = recordLoginFailure(cleanEmail);
     if (signInError?.code === 'captcha_failed' || signInError?.message?.toLowerCase().includes('captcha')) {
       const err: any = new Error('Security verification failed or expired. Please complete the security check again.');
       err.code = 'captcha_failed';
       throw err;
     }
+
+    if (rateStatus.isLocked && rateStatus.remainingLockoutSeconds) {
+      throw new Error(`Too many failed login attempts. Account temporarily locked for security. Please try again in ${rateStatus.remainingLockoutSeconds}s.`);
+    }
+
+    const baseMessage = 'Incorrect password. Please verify your password and try again, or reset it if forgotten.';
+    if (rateStatus.isApproachingLimit && rateStatus.warningMessage) {
+      throw new Error(`${baseMessage} (${rateStatus.warningMessage})`);
+    }
+
     const friendly = getFriendlyErrorMessage(
       signInError,
-      'Incorrect password. Please verify your password and try again, or reset it if forgotten.',
+      baseMessage,
     );
     throw new Error(friendly);
   }
 
   // Clear failures upon successful authentication
-  clearLoginFailures(cleanEmail);
+  clearLoginAttempts(cleanEmail);
 
   // Fetch verified user profile from Supabase profiles table with targeted column projection
   const { data: profile } = await supabase
@@ -380,9 +369,16 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
  };
 }
 
-export async function sendPasswordResetEmail(email: string, captchaToken?: string): Promise<{ success: boolean }> {
-  const cleanEmail = email.trim();
+export async function sendPasswordResetEmail(
+  email: string,
+  captchaToken?: string,
+): Promise<{ success: boolean; warning?: string }> {
+  const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail) throw new Error('Please enter your registered email address.');
+
+  // Check rate limit: max 3 requests per 15-minute window
+  checkPasswordResetRateLimit(cleanEmail);
+
   const redirectTo = getAuthRedirectUrl('reset-password');
   const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
     captchaToken,
@@ -391,7 +387,9 @@ export async function sendPasswordResetEmail(email: string, captchaToken?: strin
   if (error) {
     throw new Error(getFriendlyErrorMessage(error, 'Could not send recovery email. Please check your email address.'));
   }
-  return { success: true };
+
+  const { warning } = recordPasswordResetAttempt(cleanEmail);
+  return { success: true, warning };
 }
 
 // ---------------------------------------------------------------------------
@@ -488,39 +486,52 @@ export async function updateUserPassword(newPassword: string): Promise<{ success
 }
 
 export async function verifyPasswordResetOtpAndSetPassword(
- email: string,
- token: string,
- newPassword: string,
+  email: string,
+  token: string,
+  newPassword: string,
 ): Promise<{ success: boolean }> {
- const cleanEmail = email.trim();
- const cleanToken = token.trim();
- if (!cleanToken) throw new Error('Recovery code is required.');
- if (!newPassword || !isPasswordValid(newPassword)) {
- const unmet = checkPassword(newPassword ?? '')
- .filter((c) => !c.met)
- .map((c) => c.label.toLowerCase());
- throw new Error(`New password does not meet the password policy: ${unmet.join(', ')}.`);
- }
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanToken = token.trim();
+  if (!cleanToken) throw new Error('Recovery code is required.');
+  if (!newPassword || !isPasswordValid(newPassword)) {
+    const unmet = checkPassword(newPassword ?? '')
+      .filter((c) => !c.met)
+      .map((c) => c.label.toLowerCase());
+    throw new Error(`New password does not meet the password policy: ${unmet.join(', ')}.`);
+  }
 
- const { data, error } = await supabase.auth.verifyOtp({
- email: cleanEmail,
- token: cleanToken,
- type: 'recovery',
- });
+  // Check rate limit: max 5 failed attempts per 10-minute window
+  checkOtpRateLimit(cleanEmail);
 
- if (error || !data.session) {
- throw new Error(getFriendlyErrorMessage(error, 'Invalid or expired recovery code.'));
- }
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: cleanEmail,
+    token: cleanToken,
+    type: 'recovery',
+  });
 
- const { error: updateError } = await supabase.auth.updateUser({
- password: newPassword,
- });
+  if (error || !data.session) {
+    const otpStatus = recordOtpFailure(cleanEmail);
+    if (otpStatus.locked && otpStatus.remainingSec) {
+      throw new Error(`Too many invalid code attempts. Verification temporarily locked. Please try again in ${otpStatus.remainingSec}s.`);
+    }
+    const baseMsg = 'Invalid or expired recovery code.';
+    if (otpStatus.warning) {
+      throw new Error(`${baseMsg} (${otpStatus.warning})`);
+    }
+    throw new Error(getFriendlyErrorMessage(error, baseMsg));
+  }
 
- if (updateError) {
- throw new Error(getFriendlyErrorMessage(updateError, 'Failed to update password.'));
- }
+  clearOtpFailures(cleanEmail);
 
- return { success: true };
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (updateError) {
+    throw new Error(getFriendlyErrorMessage(updateError, 'Failed to update password.'));
+  }
+
+  return { success: true };
 }
 
 // Real Supabase email confirmation via supabase.auth.verifyOtp - no custom
@@ -528,33 +539,44 @@ export async function verifyPasswordResetOtpAndSetPassword(
 // project configs deliver the same code under the generic 'email' OTP type,
 // so both are attempted before giving up.
 export async function verifyEmail(code: string, email?: string): Promise<{ verified: boolean }> {
- const cleanCode = code.trim();
- if (!cleanCode) throw new Error('Verification code is required.');
- if (!email) throw new Error('No email address associated with this session. Please log in again.');
+  const cleanCode = code.trim();
+  if (!cleanCode) throw new Error('Verification code is required.');
+  if (!email) throw new Error('No email address associated with this session. Please log in again.');
 
- const cleanEmail = email.trim();
+  const cleanEmail = email.trim().toLowerCase();
+  checkOtpRateLimit(cleanEmail);
 
- const { data, error } = await supabase.auth.verifyOtp({
- email: cleanEmail,
- token: cleanCode,
- type: 'signup',
- });
- if (!error && data?.session) {
- return { verified: true };
- }
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: cleanEmail,
+    token: cleanCode,
+    type: 'signup',
+  });
+  if (!error && data?.session) {
+    clearOtpFailures(cleanEmail);
+    return { verified: true };
+  }
 
- // Also try 'email' type, since some Supabase project configurations
- // deliver the signup code under the generic email OTP type.
- const { data: emailData, error: emailError } = await supabase.auth.verifyOtp({
- email: cleanEmail,
- token: cleanCode,
- type: 'email',
- });
- if (!emailError && emailData?.session) {
- return { verified: true };
- }
+  // Also try 'email' type, since some Supabase project configurations
+  // deliver the signup code under the generic email OTP type.
+  const { data: emailData, error: emailError } = await supabase.auth.verifyOtp({
+    email: cleanEmail,
+    token: cleanCode,
+    type: 'email',
+  });
+  if (!emailError && emailData?.session) {
+    clearOtpFailures(cleanEmail);
+    return { verified: true };
+  }
 
- throw new Error(getFriendlyErrorMessage(error || emailError, 'Invalid verification code. Please check your email.'));
+  const otpStatus = recordOtpFailure(cleanEmail);
+  if (otpStatus.locked && otpStatus.remainingSec) {
+    throw new Error(`Too many invalid code attempts. Verification temporarily locked. Please try again in ${otpStatus.remainingSec}s.`);
+  }
+  const baseMsg = 'Invalid verification code. Please check your email.';
+  if (otpStatus.warning) {
+    throw new Error(`${baseMsg} (${otpStatus.warning})`);
+  }
+  throw new Error(getFriendlyErrorMessage(error || emailError, baseMsg));
 }
 
 // Real Supabase TOTP MFA verification via supabase.auth.mfa - no custom

@@ -77,9 +77,12 @@ export default function LoginScreen() {
  }
  setSubmittingForgot(true);
  try {
- await sendPasswordResetEmail(forgotEmail.trim(), captchaToken || undefined);
+ const res = await sendPasswordResetEmail(forgotEmail.trim(), captchaToken || undefined);
  setForgotStep('sent');
  haptics.success();
+ if (res?.warning) {
+  Alert.alert('Security Notice', res.warning);
+ }
  } catch (err: any) {
  haptics.error();
  if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
@@ -277,98 +280,135 @@ export default function LoginScreen() {
     </Pressable>
   </View>
 
-  {errorMessage ? (
-    <View
-      style={{
-        backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
-        borderColor: colors.critical,
-        borderWidth: 1,
-        borderRadius: radius.md,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        marginBottom: spacing.md,
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-        <Ionicons
-          name={
-            isNetworkError(errorMessage)
-              ? 'cloud-offline'
-              : isCredentialError(errorMessage)
-              ? 'lock-closed'
-              : 'alert-circle'
-          }
-          size={18}
-          color={colors.critical}
-          style={{ marginTop: 2 }}
-        />
-        <View style={{ flex: 1 }}>
-          {isCredentialError(errorMessage) ? (
-            <AppText variant="bodySmall" weight="bold" style={{ color: colors.critical, marginBottom: 2 }}>
-              Incorrect Password
-            </AppText>
-          ) : isNetworkError(errorMessage) ? (
-            <AppText variant="bodySmall" weight="bold" style={{ color: colors.critical, marginBottom: 2 }}>
-              Network Unavailable
-            </AppText>
-          ) : null}
-          <AppText variant="caption" weight="medium" style={{ color: colors.critical, lineHeight: 18 }}>
-            {errorMessage}
-          </AppText>
-        </View>
-      </View>
+  {errorMessage ? (() => {
+    const isWarning = errorMessage.includes('Warning:') || errorMessage.includes('remaining before');
+    const isLockout = errorMessage.includes('temporarily locked') || errorMessage.includes('try again in');
+    const warningBorder = isDark ? '#D97706' : '#F59E0B';
+    const warningBg = isDark ? 'rgba(245, 158, 11, 0.16)' : '#FEF3C7';
+    const warningText = isDark ? '#FDE68A' : '#92400E';
 
-      {isCredentialError(errorMessage) ? (
-        <View style={{ marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(239,68,68,0.2)' : '#FECACA', gap: 6 }}>
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/(auth)/reset-password' as any,
-                params: { email: email.includes('@') ? email.trim() : undefined },
-              })
+    return (
+      <View
+        style={{
+          backgroundColor: isWarning ? warningBg : isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
+          borderColor: isWarning ? warningBorder : colors.critical,
+          borderWidth: 1,
+          borderRadius: radius.md,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          marginBottom: spacing.md,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+          <Ionicons
+            name={
+              isLockout
+                ? 'lock-closed'
+                : isWarning
+                ? 'warning-outline'
+                : isNetworkError(errorMessage)
+                ? 'cloud-offline'
+                : isCredentialError(errorMessage)
+                ? 'lock-closed'
+                : 'alert-circle'
             }
-            hitSlop={8}
-            style={{ alignSelf: 'flex-start' }}
-          >
-            <AppText variant="caption" tone="brand" weight="bold">
-              Forgot your password? Reset it here →
+            size={18}
+            color={isWarning ? warningBorder : colors.critical}
+            style={{ marginTop: 2 }}
+          />
+          <View style={{ flex: 1 }}>
+            {isLockout ? (
+              <AppText variant="bodySmall" weight="bold" style={{ color: colors.critical, marginBottom: 2 }}>
+                Account Temporarily Locked
+              </AppText>
+            ) : isWarning ? (
+              <AppText variant="bodySmall" weight="bold" style={{ color: warningText, marginBottom: 2 }}>
+                Security Notice: Limit Approaching
+              </AppText>
+            ) : isCredentialError(errorMessage) ? (
+              <AppText variant="bodySmall" weight="bold" style={{ color: colors.critical, marginBottom: 2 }}>
+                Incorrect Password
+              </AppText>
+            ) : isNetworkError(errorMessage) ? (
+              <AppText variant="bodySmall" weight="bold" style={{ color: colors.critical, marginBottom: 2 }}>
+                Network Unavailable
+              </AppText>
+            ) : null}
+            <AppText
+              variant="caption"
+              weight="medium"
+              style={{
+                color: isWarning ? warningText : colors.critical,
+                lineHeight: 18,
+              }}
+            >
+              {errorMessage}
             </AppText>
-          </Pressable>
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/(auth)/verify-email',
-                params: { email: email.includes('@') ? email.trim() : undefined },
-              })
-            }
-            hitSlop={8}
-            style={{ alignSelf: 'flex-start' }}
-          >
-            <AppText variant="caption" tone="brand" weight="semiBold" style={{ opacity: 0.9 }}>
-              Unconfirmed email? Enter your 6-digit code →
-            </AppText>
-          </Pressable>
+          </View>
         </View>
-      ) : (
-        <View style={{ marginTop: 8, gap: 6 }}>
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/(auth)/verify-email',
-                params: { email: email.includes('@') ? email.trim() : undefined },
-              })
-            }
-            hitSlop={8}
-            style={{ alignSelf: 'flex-start' }}
+
+        {isCredentialError(errorMessage) || isWarning ? (
+          <View
+            style={{
+              marginTop: 10,
+              paddingTop: 8,
+              borderTopWidth: 1,
+              borderTopColor: isWarning
+                ? (isDark ? 'rgba(245, 158, 11, 0.3)' : '#FDE68A')
+                : (isDark ? 'rgba(239,68,68,0.2)' : '#FECACA'),
+              gap: 6,
+            }}
           >
-            <AppText variant="caption" tone="brand" weight="bold">
-              Need to confirm your email? Enter your 6-digit code →
-            </AppText>
-          </Pressable>
-        </View>
-      )}
-    </View>
-  ) : null}
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/(auth)/reset-password' as any,
+                  params: { email: email.includes('@') ? email.trim() : undefined },
+                })
+              }
+              hitSlop={8}
+              style={{ alignSelf: 'flex-start' }}
+            >
+              <AppText variant="caption" tone="brand" weight="bold">
+                Forgot your password? Reset it here →
+              </AppText>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/(auth)/verify-email',
+                  params: { email: email.includes('@') ? email.trim() : undefined },
+                })
+              }
+              hitSlop={8}
+              style={{ alignSelf: 'flex-start' }}
+            >
+              <AppText variant="caption" tone="brand" weight="semiBold" style={{ opacity: 0.9 }}>
+                Unconfirmed email? Enter your 6-digit code →
+              </AppText>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={{ marginTop: 8, gap: 6 }}>
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/(auth)/verify-email',
+                  params: { email: email.includes('@') ? email.trim() : undefined },
+                })
+              }
+              hitSlop={8}
+              style={{ alignSelf: 'flex-start' }}
+            >
+              <AppText variant="caption" tone="brand" weight="bold">
+                Need to confirm your email? Enter your 6-digit code →
+              </AppText>
+            </Pressable>
+          </View>
+        )}
+      </View>
+    );
+  })() : null}
 
  <TurnstileWidget
    ref={turnstileRef}

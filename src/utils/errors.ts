@@ -33,6 +33,16 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
     rawCode = (err.code ? String(err.code) : '') || (err.status ? String(err.status) : '');
   }
 
+  // Preserve explicit rate limit warnings, lockout countdowns, and approaching notifications
+  if (
+    rawMsg.includes('Warning:') ||
+    rawMsg.includes('try again in ') ||
+    rawMsg.includes('remaining before') ||
+    rawMsg.includes('temporarily locked')
+  ) {
+    return rawMsg;
+  }
+
   const msg = rawMsg.toLowerCase().trim();
   const code = rawCode.toLowerCase().trim();
 

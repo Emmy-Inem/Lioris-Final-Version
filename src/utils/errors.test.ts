@@ -70,3 +70,11 @@ test('translates expired tokens', () => {
     'This verification code or recovery link has expired. Please request a fresh one.',
   );
 });
+
+test('preserves approaching limit warnings and lockout countdowns intact', () => {
+  const warnMsg = 'Incorrect password. (Warning: 2 attempts remaining before temporary account lock.)';
+  assert.equal(getFriendlyErrorMessage(new Error(warnMsg)), warnMsg);
+
+  const lockMsg = 'Too many failed login attempts. Account temporarily locked for security. Please try again in 54s.';
+  assert.equal(getFriendlyErrorMessage(new Error(lockMsg)), lockMsg);
+});
