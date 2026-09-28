@@ -591,9 +591,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           paddingHorizontal: 2,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0, marginRight: 8 }}>
           <Ionicons name="chatbubbles" size={16} color={colors.brandPrimary} />
-          <AppText variant="bodySmall" weight="bold">
+          <AppText variant="bodySmall" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
             My Discussion Spaces ({joinedChannels.length})
           </AppText>
         </View>
@@ -607,10 +607,11 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           accessibilityLabel="Explore all discussion spaces"
           hitSlop={8}
           style={{
+            flexShrink: 0,
             flexDirection: 'row',
             alignItems: 'center',
             gap: 5,
-            paddingHorizontal: 12,
+            paddingHorizontal: 10,
             paddingVertical: 6,
             borderRadius: radius.pill,
             backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.08)',
@@ -619,7 +620,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           }}
         >
           <Ionicons name="compass-outline" size={14} color={colors.brandPrimary} />
-          <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11.5 }}>
+          <AppText variant="caption" weight="bold" tone="brand" numberOfLines={1} style={{ fontSize: 11.5 }}>
             Explore All Forums ({CHANNELS.length - 1}) →
           </AppText>
         </Pressable>
