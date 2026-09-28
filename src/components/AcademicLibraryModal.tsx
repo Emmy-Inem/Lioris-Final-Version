@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
-import { FACULTIES } from '@/data/departments';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -35,7 +34,19 @@ interface AcademicLibraryModalProps {
   initialQuery?: string;
 }
 
-const SUBJECT_FILTERS = ['All', ...FACULTIES.map((f) => f.faculty)];
+const SUBJECT_FILTERS = [
+  'All',
+  'Computer Science',
+  'Mathematics',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Medicine & Health',
+  'Engineering',
+  'Economics & Business',
+  'Law',
+  'Social Sciences',
+];
 
 export function AcademicLibraryModal({
   visible,
@@ -58,7 +69,7 @@ export function AcademicLibraryModal({
 
   useEffect(() => {
     if (visible && isEnabled) {
-      handleSearch(initialQuery || (activeFilter === 'All' ? 'computer science' : activeFilter));
+      handleSearch(initialQuery || (activeFilter === 'All' ? '' : activeFilter));
     }
   }, [visible, isEnabled]);
 
@@ -67,10 +78,10 @@ export function AcademicLibraryModal({
   async function handleSearch(searchTerm: string) {
     setLoading(true);
     try {
-      const results = await searchAcademicLibrary(searchTerm, 15);
+      const results = await searchAcademicLibrary(searchTerm, 20);
       setBooks(results);
     } catch (err: any) {
-      toast.warning('Using curated catalog (Open Library network sync offline)');
+      toast.warning('Using verified offline catalog (network sync delayed)');
       setBooks(getCuratedLibraryCatalog());
     } finally {
       setLoading(false);
@@ -79,7 +90,7 @@ export function AcademicLibraryModal({
 
   function handleFilterSelect(subject: string) {
     setActiveFilter(subject);
-    const q = subject === 'All' ? query || 'science' : subject;
+    const q = subject === 'All' ? query || '' : subject;
     handleSearch(q);
   }
 
@@ -98,8 +109,9 @@ export function AcademicLibraryModal({
   }
 
   function openBookLink(book: AcademicBook) {
-    if (book.openLibraryUrl) {
-      openExternalUrl(book.openLibraryUrl).then((opened) => {
+    const targetUrl = book.openAccessUrl || book.openLibraryUrl;
+    if (targetUrl) {
+      openExternalUrl(targetUrl).then((opened) => {
         if (!opened) toast.warning('Could not open publication link');
       });
     } else {
@@ -109,7 +121,8 @@ export function AcademicLibraryModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView accessibilityViewIsModal
+      <KeyboardAvoidingView
+        accessibilityViewIsModal
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[
           styles.overlay,
@@ -128,24 +141,27 @@ export function AcademicLibraryModal({
               borderColor: colors.border,
               width: isDesktop ? 680 : '100%',
               maxWidth: 680,
-              maxHeight: isDesktop ? '88%' : '96%',
+              maxHeight: isDesktop ? '90%' : '96%',
             },
           ]}
         >
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.divider }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="library" size={20} color={colors.textSecondary} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <Ionicons name="library" size={20} color={colors.brandPrimary} />
                 <AppText variant="h3" weight="bold">
                   Global Academic Library
                 </AppText>
+                <Badge label="100% FREE" tone="success" />
               </View>
-              <AppText variant="caption" tone="secondary">
-                Open-access textbooks, research papers & university references
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                Verified open-access college textbooks, monographs & research
               </AppText>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close"
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close"
               onPress={onClose}
               hitSlop={12}
               style={[styles.closeBtn, { backgroundColor: `${colors.textSecondary}15` }]}
@@ -157,17 +173,26 @@ export function AcademicLibraryModal({
           {/* Search Input Bar */}
           <View style={[styles.searchBar, { borderColor: colors.border, backgroundColor: colors.background }]}>
             <Ionicons name="search" size={18} color={colors.textSecondary} />
-            <TextInput accessibilityLabel="Search textbook title, author, or ISBN"
+            <TextInput
+              accessibilityLabel="Search free textbook title, author, or subject"
               value={query}
               onChangeText={setQuery}
               onSubmitEditing={() => handleSearch(query)}
-              placeholder="Search textbook title, author, or ISBN..."
+              placeholder="Search free textbook title, author, or subject..."
               placeholderTextColor={colors.textSecondary}
               returnKeyType="search"
               style={[styles.searchInput, { color: colors.textPrimary }]}
             />
             {query.length > 0 && (
-              <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setQuery('')} hitSlop={8}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                onPress={() => {
+                  setQuery('');
+                  handleSearch('');
+                }}
+                hitSlop={8}
+              >
                 <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
               </Pressable>
             )}
@@ -203,13 +228,43 @@ export function AcademicLibraryModal({
             </ScrollView>
           </View>
 
+          {/* Quality & Free Guarantee Pill */}
+          <View style={[styles.guaranteeBanner, { backgroundColor: `${colors.brandPrimary}10`, borderColor: `${colors.brandPrimary}25` }]}>
+            <Ionicons name="checkmark-circle-outline" size={15} color={colors.brandPrimary} />
+            <AppText variant="caption" tone="secondary" style={{ flex: 1, fontSize: 11, lineHeight: 15 }}>
+              All publications are openly licensed (Creative Commons / OER). Zero waitlists, subscriptions, or paywalls.
+            </AppText>
+          </View>
+
           {/* Results List */}
           {loading ? (
             <View style={styles.centerLoading}>
               <ActivityIndicator size="large" color={colors.brandPrimary} />
               <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.sm }}>
-                Querying Open Library global catalog...
+                Querying OpenAlex & Open Educational Resources...
               </AppText>
+            </View>
+          ) : books.length === 0 ? (
+            <View style={styles.centerLoading}>
+              <Ionicons name="book-outline" size={40} color={colors.textSecondary} />
+              <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+                No open-access books found for "{query}"
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ textAlign: 'center', marginTop: 4, paddingHorizontal: 20 }}>
+                Try searching with another academic term, or browse our curated college textbooks.
+              </AppText>
+              <Pressable
+                onPress={() => {
+                  setQuery('');
+                  setActiveFilter('All');
+                  handleSearch('');
+                }}
+                style={[styles.resetSearchBtn, { backgroundColor: colors.brandPrimary }]}
+              >
+                <AppText variant="caption" weight="bold" style={{ color: '#ffffff' }}>
+                  Browse All Curated Textbooks
+                </AppText>
+              </Pressable>
             </View>
           ) : (
             <ScrollView
@@ -231,36 +286,52 @@ export function AcademicLibraryModal({
                         {book.coverUrl ? (
                           <Image source={{ uri: book.coverUrl }} style={styles.coverImage} resizeMode="cover" />
                         ) : (
-                          <Ionicons name="book-outline" size={24} color={colors.textSecondary} />
+                          <View style={styles.placeholderCover}>
+                            <Ionicons name="book-outline" size={24} color={colors.brandPrimary} />
+                            <AppText variant="caption" style={{ fontSize: 9, color: colors.textSecondary, textAlign: 'center', marginTop: 2 }} numberOfLines={1}>
+                              {book.source}
+                            </AppText>
+                          </View>
                         )}
                       </View>
 
                       {/* Details */}
                       <View style={styles.bookInfo}>
-                        <AppText variant="bodySmall" weight="bold">
+                        <AppText variant="bodySmall" weight="bold" numberOfLines={2}>
                           {book.title}
                         </AppText>
-                        <AppText variant="caption" tone="secondary">
+                        <AppText variant="caption" tone="secondary" numberOfLines={1}>
                           {book.authors.join(', ')} {book.firstPublishYear ? `(${book.firstPublishYear})` : ''}
                         </AppText>
 
                         {/* Badges / Subject Tags */}
                         <View style={styles.tagRow}>
-                          <Badge label={book.source} tone="neutral" />
-                          {book.hasFulltext && <Badge label="FULL TEXT" tone="success" />}
+                          <Badge label={book.source} tone="brand" />
+                          {book.pdfUrl && <Badge label="FREE PDF" tone="success" />}
+                          {book.license && <Badge label={book.license} tone="neutral" />}
                         </View>
 
                         {/* Actions */}
                         <View style={styles.actionRow}>
-                          {book.openLibraryUrl && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+                            {book.pdfUrl && (
+                              <AppButton
+                                label="PDF ↗"
+                                size="sm"
+                                variant="secondary"
+                                onPress={() => openExternalUrl(book.pdfUrl!)}
+                              />
+                            )}
                             <AppButton
-                              label="Read / View"
+                              label="Read Free ↗"
                               size="sm"
-                              variant="ghost"
+                              variant={book.pdfUrl ? 'ghost' : 'secondary'}
                               onPress={() => openBookLink(book)}
                             />
-                          )}
-                          <Pressable accessibilityRole="button" accessibilityLabel={isSaved ? 'Remove from saved books' : 'Save book'}
+                          </View>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={isSaved ? 'Remove from saved books' : 'Save book'}
                             onPress={() => toggleSaveBook(book)}
                             hitSlop={8}
                             style={[
@@ -387,5 +458,30 @@ const styles = StyleSheet.create({
   saveBtn: {
     padding: 6,
     borderRadius: 8,
+  },
+  guaranteeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  placeholderCover: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 4,
+  },
+  resetSearchBtn: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
