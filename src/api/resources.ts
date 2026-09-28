@@ -6,7 +6,6 @@ import { assertWithinStorageQuota } from './platformSettings';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
-import { VERIFIED_PUBLIC_RESOURCES } from '../data/verifiedPublicResources';
 
 // Content types a resource upload may be stored with.
 const ALLOWED_RESOURCE_MIME_TYPES = new Set([
@@ -147,8 +146,8 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         syllabusTopic: row.syllabus_topic,
       }));
 
-    // Merge unique - local session creations and verified public university course materials (real PDFs).
-    const pool = [...locallyCreatedResources, ...VERIFIED_PUBLIC_RESOURCES];
+    // Merge unique - local session creations not yet reflected by the query above.
+    const pool = [...locallyCreatedResources];
     const merged = [...dbResources];
     for (const r of pool) {
       if (!merged.some((m) => m.id === r.id || (m.title.toLowerCase() === r.title.toLowerCase() && m.courseCode.toLowerCase() === r.courseCode.toLowerCase())) && !isUserBlocked(r.authorId)) {
@@ -167,9 +166,9 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     }
     return filterResources(merged, query);
   } catch (err) {
-    console.warn('[Resources] listResources failed, showing verified and local pool:', err);
+    console.warn('[Resources] listResources failed, showing local pool:', err);
     const targetCampus = ((query as any).campusCode || 'GLOBAL').toUpperCase();
-    const fallbackPool = [...locallyCreatedResources, ...VERIFIED_PUBLIC_RESOURCES].filter((r) => {
+    const fallbackPool = [...locallyCreatedResources].filter((r) => {
       const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
       if (targetCampus === 'GLOBAL') return true;
       return rCampus === targetCampus || rCampus === 'GLOBAL';

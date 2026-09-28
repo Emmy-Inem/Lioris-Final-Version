@@ -74,13 +74,7 @@ export default function AlumniLayout() {
   />
   <Tabs.Screen
     name="mentorship"
-    options={{
-      href: isFeatureEnabled('alumni_mentorship') ? undefined : null,
-      title: 'Mentorship',
-      tabBarIcon: ({ focused, size }) => (
-        <TabIcon name={focused ? 'ribbon' : 'ribbon-outline'} focused={focused} size={size} />
-      ),
-    }}
+    options={{ href: null, title: 'Mentorship' }}
   />
  {/* Reachable via header avatar / dashboard / Alumni Hub links, not bottom tabs. */}
   <Tabs.Screen name="events" options={{ href: null }} />

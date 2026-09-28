@@ -153,7 +153,7 @@ export function AcademicLibraryModal({
                 <AppText variant="h3" weight="bold">
                   Global Academic Library
                 </AppText>
-                <Badge label="100% FREE" tone="success" />
+                <Badge label="OPEN ACCESS" tone="success" />
               </View>
               <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
                 Verified open-access college textbooks, monographs & research
@@ -174,11 +174,11 @@ export function AcademicLibraryModal({
           <View style={[styles.searchBar, { borderColor: colors.border, backgroundColor: colors.background }]}>
             <Ionicons name="search" size={18} color={colors.textSecondary} />
             <TextInput
-              accessibilityLabel="Search free textbook title, author, or subject"
+              accessibilityLabel="Search textbook title, author, or subject"
               value={query}
               onChangeText={setQuery}
               onSubmitEditing={() => handleSearch(query)}
-              placeholder="Search free textbook title, author, or subject..."
+              placeholder="Search textbook title, author, or subject..."
               placeholderTextColor={colors.textSecondary}
               returnKeyType="search"
               style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -228,11 +228,11 @@ export function AcademicLibraryModal({
             </ScrollView>
           </View>
 
-          {/* Quality & Free Guarantee Pill */}
+          {/* Quality & Access Guarantee Pill */}
           <View style={[styles.guaranteeBanner, { backgroundColor: `${colors.brandPrimary}10`, borderColor: `${colors.brandPrimary}25` }]}>
             <Ionicons name="checkmark-circle-outline" size={15} color={colors.brandPrimary} />
             <AppText variant="caption" tone="secondary" style={{ flex: 1, fontSize: 11, lineHeight: 15 }}>
-              1,000,000+ verified free open-access books & textbooks from Open Library Public Scans, Project Gutenberg, and OpenStax. Zero waitlists, loans, or paywalls.
+              1,000,000+ verified open-access books & textbooks from Open Library Public Scans, Project Gutenberg, and OpenStax. Zero waitlists, loans, or paywalls.
             </AppText>
           </View>
 
@@ -318,7 +318,7 @@ export function AcademicLibraryModal({
                                 : 'success'
                             }
                           />
-                          {book.pdfUrl && <Badge label="FREE PDF" tone="success" />}
+                          {book.pdfUrl && <Badge label="PDF" tone="success" />}
                           {book.epubUrl && <Badge label="EPUB" tone="brand" />}
                           {book.license && <Badge label={book.license} tone="neutral" />}
                         </View>
@@ -343,7 +343,7 @@ export function AcademicLibraryModal({
                               />
                             )}
                             <AppButton
-                              label="Read Free ↗"
+                              label="Read ↗"
                               size="sm"
                               variant={book.pdfUrl || book.epubUrl ? 'ghost' : 'secondary'}
                               onPress={() => openBookLink(book)}
