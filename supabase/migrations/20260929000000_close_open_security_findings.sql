@@ -56,14 +56,37 @@ BEGIN;
 --     onboarding_complete (read for the caller's own row at login/onboarding
 --     - src/api/auth.ts, src/auth/AuthContext.tsx), is_bot, created_at,
 --     updated_at.
+--
+--     Built from information_schema rather than a static column list: some
+--     of these (is_bot, last_login_at) only exist once
+--     20260926160000_admin_analytics_and_activity.sql has been applied, and
+--     this migration must not fail on a database where that hasn't happened
+--     yet. Any candidate column not present on this database is silently
+--     skipped rather than erroring the whole migration.
 -- ----------------------------------------------------------------------------
 REVOKE SELECT ON public.profiles FROM authenticated, anon;
-GRANT SELECT (
-    id, full_name, username, role, campus_code, department, faculty, level,
-    bio, interests, avatar_url, banner_url, verification_status,
-    custom_accent_color, trust_score, is_suspended, onboarding_complete,
-    is_bot, created_at, updated_at
-) ON public.profiles TO authenticated;
+DO $$
+DECLARE
+    v_candidate_cols TEXT[] := ARRAY[
+        'id', 'full_name', 'username', 'role', 'campus_code', 'department',
+        'faculty', 'level', 'bio', 'interests', 'avatar_url', 'banner_url',
+        'verification_status', 'custom_accent_color', 'trust_score',
+        'is_suspended', 'onboarding_complete', 'is_bot', 'created_at', 'updated_at'
+    ];
+    v_existing_cols TEXT[];
+BEGIN
+    SELECT array_agg(quote_ident(column_name) ORDER BY column_name)
+    INTO v_existing_cols
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles'
+      AND column_name = ANY(v_candidate_cols);
+
+    IF v_existing_cols IS NULL OR array_length(v_existing_cols, 1) IS NULL THEN
+        RAISE EXCEPTION 'profiles: none of the expected safe columns were found - check this against the live schema before re-running';
+    END IF;
+
+    EXECUTE format('GRANT SELECT (%s) ON public.profiles TO authenticated', array_to_string(v_existing_cols, ', '));
+END $$;
 
 -- 1b. Self-service RPC: the caller's own full row (all columns), regardless
 --     of the column REVOKE above - SECURITY DEFINER runs as the function
@@ -191,8 +214,20 @@ CREATE POLICY "Admins or authentic senders can create notifications" ON notifica
 --    read raw membership rows. The public member-count UI already goes
 --    through get_forum_communities_stats() (SECURITY DEFINER), not this
 --    table directly, so nothing user-facing changes.
+--
+--    Guarded on the table existing: it's only created by
+--    20260926220000_forum_community_memberships.sql, which may not have
+--    been applied to this database yet.
 -- ----------------------------------------------------------------------------
-DROP POLICY IF EXISTS "Memberships are visible to anon" ON public.forum_community_members;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'forum_community_members'
+    ) THEN
+        EXECUTE 'DROP POLICY IF EXISTS "Memberships are visible to anon" ON public.forum_community_members';
+    END IF;
+END $$;
 
 NOTIFY pgrst, 'reload schema';
 
