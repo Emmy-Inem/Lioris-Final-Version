@@ -189,7 +189,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
  const userEmail = session.user.email ?? '';
  const { data: profile } = await supabase
  .from('profiles')
- .select('*')
+ .select('role, full_name')
  .eq('id', session.user.id)
  .maybeSingle();
 
@@ -278,7 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Securely query verified database profile for role with 3s timeout
           const profilePromise = supabase
             .from('profiles')
-            .select('*')
+            .select('role, full_name, onboarding_complete, department')
             .eq('id', session.user.id)
             .maybeSingle();
           const profileTimeout = new Promise<{ data: null }>((resolve) =>
@@ -374,7 +374,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const profileFetch = supabase
             .from('profiles')
-            .select('*')
+            .select('role, full_name')
             .eq('id', session.user.id)
             .maybeSingle();
           const timeout = new Promise<any>((_, reject) =>

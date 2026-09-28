@@ -6,11 +6,15 @@ Scope: the codebase at commit `a6c2a48` (branch `claude/pensive-bardeen-pcpp3g` 
 
 **Overall read.** This is an unusually well-hardened codebase for its stage. There's a real, dated incident history (`supabase_launch_hardening_2026.md`, `supabase_security_hardening_2026.md`) showing an admin-email auto-elevation backdoor, a public-storage-bucket leak, and a profile self-insert privilege escalation were all found and fixed, with the team's own test harness reproducing each one before the fix. `npm audit` reports zero known vulnerabilities across 761 packages. No SQL injection, `eval`, `dangerouslySetInnerHTML`, or hardcoded secrets were found anywhere in `src/` or `supabase/functions/`. The remaining risk is concentrated in a small number of already-identified, not-yet-shipped RLS gaps — not in the classic OWASP injection/secrets categories.
 
+> **Update — 2026-09-28, same day.** Findings 1.1, 1.2 and 1.3 below have been fixed and shipped: `supabase/migrations/20260929000000_close_open_security_findings.sql` plus matching client changes in `src/auth/AuthContext.tsx`, `src/api/systemHealth.ts`, `src/api/supportTickets.ts`, and `src/components/admin/AdminUniversalSearchModal.tsx`. The fix was verified two ways, not just by static review: (a) `npm run test:sql` — the project's own PGlite-backed migration test harness (`tools/sql-harness/`) — runs the new migration against a real Postgres 17 instance with 10 new assertions covering every finding (peer email/matric now denied, self/admin RPCs still work, notification type spoofing denied, forum membership anon read denied), alongside all 150 pre-existing regression checks, **160/160 passing**; (b) `tsc --noEmit`, `eslint`, and the unit test suite (126/126) all pass clean on the updated client code. Each finding below is marked **FIXED** with what changed; the original write-up is left intact underneath for the record.
+
 ---
 
 ## 1. Findings — ranked by severity
 
-### 1.1 HIGH — Any authenticated user can read classmates' email address and matriculation/student ID number
+### 1.1 HIGH — Any authenticated user can read classmates' email address and matriculation/student ID number — **FIXED 2026-09-28**
+
+**Fix:** `profiles` no longer has a table-level `SELECT` grant for `authenticated`/`anon`; only a safe column list is granted back (excludes `email`, `student_id_number`, `push_token`, `suspension_reason`, `last_active_at`, `last_login_at`). Three new `SECURITY DEFINER` RPCs cover the legitimate cases that need the excluded columns: `get_my_profile()` (caller's own full row), `admin_get_profile_contacts(uuid[])` and `admin_search_profiles(text, int)` (admin/staff-gated). Every client call site that touched the removed columns was updated: `src/api/supportTickets.ts` (4 functions), `src/components/admin/AdminUniversalSearchModal.tsx`, and the three self-profile `select('*')` calls in `src/auth/AuthContext.tsx` (narrowed to the columns they actually use — `select('*')` errors outright once a role loses any column's privilege, so these had to be explicit regardless of sensitivity). See `supabase/migrations/20260929000000_close_open_security_findings.sql` section 1.
 
 **Where:** `supabase_schema.sql:586`
 ```sql
@@ -27,7 +31,9 @@ RLS is row-level, not column-level. This policy grants `SELECT *` on every profi
 
 **Status:** this is not a new finding — the team already found and documented it themselves at `supabase_launch_hardening_2026.md:118-132`, labeled "6b (reported, NOT changed)," with a proposed fix already designed (replace `select('*')` in `src/auth/AuthContext.tsx`, `src/components/admin/UserProfilesTab.tsx`, and the support-ticket embed with explicit column lists + a `get_my_profile()` / `admin_list_profiles()` RPC pair, then `REVOKE`/column-`GRANT` on `profiles`). I re-verified the policy text is still exactly as documented and the client still does `select('*')` against `profiles` in `src/auth/AuthContext.tsx` (3 call sites). **This is the single biggest open item and the team's own doc calls it that too.** I did not implement the fix myself since it's a coordinated client+DB migration the doc says should ship together, and touching it without your review risks breaking the app if I get a call site wrong — happy to do it as a follow-up if you want.
 
-### 1.2 MEDIUM — Any user can push an in-app "notification" to any other user with arbitrary free text and a deep link
+### 1.2 MEDIUM — Any user can push an in-app "notification" to any other user with arbitrary free text and a deep link — **FIXED 2026-09-28**
+
+**Fix:** rebuilt the `notifications` INSERT policy's non-admin branch to require `type IN ('message', 'system')` — the only two types real peer-to-peer flows (`connections.ts`) actually use; `'system_announcement'`, `'announcement'` and `'moderation'` (and anything else, e.g. an undeclared `'emergency'`) are now admin/staff-only. Also added `title`/`body` length caps (150/1000 chars) and requires `action_url` to be an in-app absolute path (`/...`, not `//...`) when present, mirroring what `send-push`'s `safeDeepLink()` already enforced at delivery time. Admin/staff sending is entirely unaffected. See `supabase/migrations/20260929000000_close_open_security_findings.sql` section 2.
 
 **Where:** `supabase_schema.sql:874`
 ```sql
@@ -38,7 +44,9 @@ CREATE POLICY "Admins or authentic senders can create notifications" ON notifica
 ```
 Any non-suspended authenticated user can insert a `notifications` row naming themselves as `sender_id` and any other user as `recipient_id`, with free-text `title`, `body`, and `action_url`. The push-delivery function (`send-push`) validates `action_url` is an in-app path only (`supabase/functions/send-push/index.ts:89-96`, good), but the in-app notification feed itself will render the free text, so this is an in-app phishing/social-engineering vector ("Your account will be suspended, tap here") — throttled only by a 1000-inserts/hour-per-sender cap, not blocked. Documented by the team as "6d (noted, not changed)" at `supabase_launch_hardening_2026.md:136-139`, with the durable fix (move notification creation into `SECURITY DEFINER` triggers instead of direct client insert) already scoped but not shipped.
 
-### 1.3 LOW/MEDIUM — Forum community membership is readable by unauthenticated (`anon`) requests
+### 1.3 LOW/MEDIUM — Forum community membership is readable by unauthenticated (`anon`) requests — **FIXED 2026-09-28**
+
+**Fix:** dropped the "Memberships are visible to anon" RLS policy. The member-count UI already gets its numbers from `get_forum_communities_stats()` (a `SECURITY DEFINER` RPC already granted to `anon`), so nothing user-facing changes — logged-out visitors still see accurate counts, they just can no longer pull the raw `(community_id, user_id)` rows. Authenticated access is unchanged (see the original note below on why that's lower-severity and out of scope for this pass). See `supabase/migrations/20260929000000_close_open_security_findings.sql` section 3.
 
 **Where:** `supabase/migrations/20260926220000_forum_community_memberships.sql:22-24`
 ```sql
@@ -115,11 +123,13 @@ Mapped loosely to OWASP ASVS / Mobile Top 10 categories, since this is a mobile+
 
 ## 4. Recommended priority order
 
-1. **Ship the `profiles` column-exposure fix** (1.1) — the team's own doc already has the migration designed; this is the highest-impact item (classmate emails + matric numbers today).
-2. **Decide on `notifications` insert scoping** (1.2) — move notification creation server-side (`SECURITY DEFINER` trigger/RPC) so a client can no longer free-write another user's notification feed.
-3. **Tighten `forum_community_members` anon SELECT** (1.3) — swap the raw-row anon policy for a members-count RPC if the anon count is the only thing that needs to be public.
-4. **Decide explicitly whether admin MFA should be mandatory, not opt-in** (1.4) — this is a product/ops policy call, not a code bug; flagging so it's a deliberate choice rather than a default.
+1. ~~Ship the `profiles` column-exposure fix (1.1)~~ — **done 2026-09-28**.
+2. ~~Decide on `notifications` insert scoping (1.2)~~ — **done 2026-09-28**.
+3. ~~Tighten `forum_community_members` anon SELECT (1.3)~~ — **done 2026-09-28**.
+4. **Decide explicitly whether admin MFA should be mandatory, not opt-in** (1.4) — this is a product/ops policy call, not a code bug; flagging so it's a deliberate choice rather than a default. Not implemented as part of the fixes above since it's a policy decision (making it mandatory today would lock out any admin who hasn't enrolled TOTP yet — see 1.4 for why).
 5. Everything else above is either already mitigated (1.5), informational (1.6), or confirms things are already solid (1.7, §2, §3) — no action required unless you want the EAS OTA code-signing and Apple/Azure-provider settings confirmed, which I can't see from inside this container.
+
+**Still to decide:** item 4 needs a human call (do you want to force MFA enrollment on the `admin` role, and if so, what's the rollout plan for admins who haven't enrolled yet?). Everything else in this report is either fixed or was already fine.
 
 ## 5. Could not verify from this container
 

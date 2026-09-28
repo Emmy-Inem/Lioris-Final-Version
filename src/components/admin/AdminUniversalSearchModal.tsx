@@ -178,11 +178,10 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
     const timer = setTimeout(async () => {
       try {
         const [membersRes, postsRes, resourcesRes] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('id, full_name, email, role, campus_code, verification_status')
-            .or(`full_name.ilike.%${trimmed}%,email.ilike.%${trimmed}%`)
-            .limit(5),
+          // profiles.email is no longer selectable via a plain table query
+          // (docs/security/security-assessment-2026-09-28.md, finding 1.1);
+          // this admin-only search goes through a role-checked RPC instead.
+          supabase.rpc('admin_search_profiles', { p_query: trimmed, p_limit: 5 }),
           supabase
             .from('posts')
             .select('id, title, category, author_name, campus_code')

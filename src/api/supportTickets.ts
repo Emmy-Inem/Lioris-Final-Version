@@ -58,7 +58,7 @@ export async function createSupportTicket(payload: CreateSupportTicketPayload): 
       priority: payload.priority || 'medium',
       status: 'open',
     })
-    .select('*, profiles:user_id(full_name, email, role, campus_code, student_id_number)')
+    .select('*, profiles:user_id(full_name, role, campus_code)')
     .single();
 
   if (error) {
@@ -66,15 +66,20 @@ export async function createSupportTicket(payload: CreateSupportTicketPayload): 
     throw new Error('Could not submit support ticket. Please try again.');
   }
 
+  // email / student_id_number are no longer directly selectable on profiles
+  // (docs/security/security-assessment-2026-09-28.md, finding 1.1) - the
+  // submitter is always the caller here, so their own full row comes from
+  // the self-service RPC instead of the (now column-restricted) embed.
   const profile = (data as any).profiles;
+  const { data: myProfile } = await supabase.rpc('get_my_profile');
   return {
     id: data.id,
     userId: data.user_id,
     userName: profile?.full_name || 'Campus User',
-    userEmail: profile?.email,
+    userEmail: myProfile?.email,
     userRole: profile?.role,
     userCampus: profile?.campus_code,
-    userMatric: profile?.student_id_number,
+    userMatric: myProfile?.student_id_number,
     category: data.category as SupportTicketCategory,
     title: data.title,
     description: data.description,
@@ -95,7 +100,7 @@ export async function getUserSupportTickets(): Promise<SupportTicket[]> {
 
   const { data, error } = await supabase
     .from('support_tickets')
-    .select('*, profiles:user_id(full_name, email, role, campus_code, student_id_number)')
+    .select('*, profiles:user_id(full_name, role, campus_code)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -104,14 +109,18 @@ export async function getUserSupportTickets(): Promise<SupportTicket[]> {
     return [];
   }
 
+  // Every row here belongs to the caller (filtered by their own user_id
+  // above), so one self-service RPC call covers email/matric for all of them.
+  const { data: myProfile } = await supabase.rpc('get_my_profile');
+
   return (data || []).map((row: any) => ({
     id: row.id,
     userId: row.user_id,
     userName: row.profiles?.full_name || 'Campus User',
-    userEmail: row.profiles?.email,
+    userEmail: myProfile?.email,
     userRole: row.profiles?.role,
     userCampus: row.profiles?.campus_code,
-    userMatric: row.profiles?.student_id_number,
+    userMatric: myProfile?.student_id_number,
     category: row.category,
     title: row.title,
     description: row.description,
@@ -133,7 +142,7 @@ export async function getAllSupportTickets(query?: {
 }): Promise<SupportTicket[]> {
   let builder = supabase
     .from('support_tickets')
-    .select('*, profiles:user_id(full_name, email, role, campus_code, student_id_number)')
+    .select('*, profiles:user_id(full_name, role, campus_code)')
     .order('created_at', { ascending: false });
 
   if (query?.status && query.status !== 'all') {
@@ -152,14 +161,26 @@ export async function getAllSupportTickets(query?: {
     return [];
   }
 
+  // This lists every submitter's ticket, so email/matric come from the
+  // admin/staff-only RPC (profiles no longer exposes those columns to a
+  // plain table select) rather than the embed above.
+  const submitterIds = Array.from(new Set((data || []).map((row: any) => row.user_id).filter(Boolean)));
+  const contactsById = new Map<string, { email?: string; student_id_number?: string }>();
+  if (submitterIds.length > 0) {
+    const { data: contacts } = await supabase.rpc('admin_get_profile_contacts', { p_user_ids: submitterIds });
+    for (const c of contacts || []) {
+      contactsById.set(c.id, { email: c.email, student_id_number: c.student_id_number });
+    }
+  }
+
   let results: SupportTicket[] = (data || []).map((row: any) => ({
     id: row.id,
     userId: row.user_id,
     userName: row.profiles?.full_name || 'Campus User',
-    userEmail: row.profiles?.email,
+    userEmail: contactsById.get(row.user_id)?.email,
     userRole: row.profiles?.role,
     userCampus: row.profiles?.campus_code,
-    userMatric: row.profiles?.student_id_number,
+    userMatric: contactsById.get(row.user_id)?.student_id_number,
     category: row.category,
     title: row.title,
     description: row.description,
@@ -211,7 +232,7 @@ export async function updateSupportTicket(
     .from('support_tickets')
     .update(dbUpdates)
     .eq('id', ticketId)
-    .select('*, profiles:user_id(full_name, email)')
+    .select('*')
     .single();
 
   if (error) {

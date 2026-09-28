@@ -67,7 +67,7 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
       { count: ticketCount },
       { count: modCount },
     ] = await Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
       supabase.from('posts').select('*', { count: 'exact', head: true }),
       supabase.from('post_comments').select('*', { count: 'exact', head: true }),
       supabase.from('resources').select('*', { count: 'exact', head: true }),

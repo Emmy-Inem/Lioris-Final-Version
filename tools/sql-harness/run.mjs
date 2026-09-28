@@ -681,6 +681,10 @@ await check('self-insert may still choose alumni; the signup trigger (no JWT) an
   });
 });
 
+// Baseline, pre-fix state only: these two email/column findings are closed by
+// 20260929000000_close_open_security_findings.sql, applied and asserted later
+// in this run (see "close open security findings" below). Left here so the
+// baseline-vs-fixed contrast stays visible in the log.
 console.log('\n== Findings probes (informational; do not fail the run) ==');
 const probe = async (label, fn) => { try { console.log(`PROBE ${label}: ${JSON.stringify(await fn())}`); } catch (e) { console.log(`PROBE ${label}: error ${e.message}`); } };
 await probe('same-campus student can read peer email via profiles SELECT', () => as(U.s2, async (c) => (await c.q(`SELECT email FROM public.profiles WHERE id = $1`, [U.s1])).rows[0]));
@@ -1147,6 +1151,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260926220000_forum_community_memberships.sql',
   'supabase/migrations/20260926230000_admin_user_profiles_rpc.sql',
   'supabase/migrations/20260928170000_marketplace_saved_items.sql',
+  'supabase/migrations/20260929000000_close_open_security_findings.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1633,6 +1638,117 @@ console.log('\n== marketplace saved items ==');
 
       // invalid kind still rejected
       denied(await c.t("INSERT INTO public.saved_items (user_id, kind, item_id) VALUES ($1, 'invalid_kind', 'item-xyz')", [U.s1]), /check/i, 'bogus kind rejected');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// close-open-security-findings (20260929000000_close_open_security_findings.sql):
+// profiles PII columns, notifications insert scoping, forum anon read
+// ---------------------------------------------------------------------------
+console.log('\n== close open security findings (profiles PII / notifications / forum anon) ==');
+{
+  await check('peer can no longer read a classmate email/student_id_number from profiles', async () => {
+    await as(U.s2, async (c) => {
+      denied(await c.t(`SELECT email FROM public.profiles WHERE id = $1`, [U.s1]), /permission denied/, 's2 reading s1 email');
+      denied(await c.t(`SELECT student_id_number FROM public.profiles WHERE id = $1`, [U.s1]), /permission denied/, 's2 reading s1 student_id_number');
+    });
+  });
+
+  await check('peer can still read the rest of a same-campus profile (role, full_name, etc.)', async () => {
+    await as(U.s2, async (c) => {
+      const r = (await c.q(`SELECT full_name, role FROM public.profiles WHERE id = $1`, [U.s1])).rows[0];
+      assert(r && r.full_name, 'other columns remain readable');
+    });
+  });
+
+  await check("get_my_profile() returns the caller's own email and student_id_number", async () => {
+    await as(U.s1, async (c) => {
+      const r = (await c.q(`SELECT * FROM public.get_my_profile()`)).rows[0];
+      eq(r.email, 's1@example.test', 'own email via RPC');
+      assert('student_id_number' in r, 'own student_id_number column present via RPC');
+    });
+  });
+
+  await check('admin_get_profile_contacts requires admin/staff and returns email/student_id_number', async () => {
+    await as(U.s1, async (c) => {
+      denied(await c.t(`SELECT * FROM public.admin_get_profile_contacts($1::uuid[])`, [[U.s2]]), /admin_required/, 'student calling admin RPC');
+    });
+    await as(U.adminA, async (c) => {
+      const rows = (await c.q(`SELECT * FROM public.admin_get_profile_contacts($1::uuid[])`, [[U.s1, U.s2]])).rows;
+      eq(rows.length, 2, 'admin got both contacts');
+      assert(rows.every((r) => typeof r.email === 'string' && r.email.length > 0), 'emails populated for admin');
+    });
+  });
+
+  await check('admin_search_profiles requires admin/staff and matches by name or email', async () => {
+    await as(U.s1, async (c) => {
+      denied(await c.t(`SELECT * FROM public.admin_search_profiles($1, $2)`, ['s1', 5]), /admin_required/, 'student calling admin search RPC');
+    });
+    await as(U.adminA, async (c) => {
+      const rows = (await c.q(`SELECT * FROM public.admin_search_profiles($1, $2)`, ['s1@example.test', 5])).rows;
+      assert(rows.some((r) => r.id === U.s1), 'admin search found s1 by email');
+    });
+  });
+
+  await check('non-admin cannot insert a system_announcement-styled notification for someone else', async () => {
+    await as(U.s1, async (c) => {
+      denied(
+        await c.t(
+          `INSERT INTO public.notifications (recipient_id, sender_id, title, body, type) VALUES ($1, $2, 'Urgent', 'Your account will be suspended', 'system_announcement')`,
+          [U.s2, U.s1],
+        ),
+        /violates row-level security policy/,
+        's1 faking a system_announcement to s2',
+      );
+    });
+  });
+
+  await check('a peer-to-peer message notification still works', async () => {
+    await as(U.s1, async (c) => {
+      assert(
+        (
+          await c.t(
+            `INSERT INTO public.notifications (recipient_id, sender_id, title, body, type) VALUES ($1, $2, 'New connection request', 'Someone wants to connect', 'message')`,
+            [U.s2, U.s1],
+          )
+        ).ok,
+        's1 sending a message notification to s2',
+      );
+    });
+  });
+
+  await check('an over-long notification title is rejected for a non-admin sender', async () => {
+    await as(U.s1, async (c) => {
+      denied(
+        await c.t(
+          `INSERT INTO public.notifications (recipient_id, sender_id, title, body, type) VALUES ($1, $2, $3, 'ok', 'message')`,
+          [U.s2, U.s1, 'x'.repeat(200)],
+        ),
+        /violates row-level security policy/,
+        'oversized title rejected',
+      );
+    });
+  });
+
+  await check('admin can still send a system_announcement', async () => {
+    await as(U.adminA, async (c) => {
+      assert(
+        (
+          await c.t(
+            `INSERT INTO public.notifications (recipient_id, sender_id, title, body, type) VALUES ($1, $2, 'Campus notice', 'Scheduled maintenance tonight', 'system_announcement')`,
+            [U.s2, U.adminA],
+          )
+        ).ok,
+        'admin sending a system_announcement',
+      );
+    });
+  });
+
+  await check('forum_community_members is no longer readable by anon', async () => {
+    await as('anon', async (c) => {
+      const rows = (await c.q(`SELECT * FROM public.forum_community_members`)).rows;
+      eq(rows.length, 0, 'anon sees no membership rows');
     });
   });
 }
