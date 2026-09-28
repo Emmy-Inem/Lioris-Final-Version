@@ -327,7 +327,7 @@ export function ManagePortalLinksModal({
 
       {/* add / edit form */}
       {editing ? (
-        <SolidCard style={{ borderWidth: 2, borderColor: colors.brandPrimary, gap: spacing.sm }}>
+        <SolidCard style={{ borderWidth: 1, borderColor: colors.border, gap: spacing.sm }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <AppText weight="bold" tone="brand">
               {editing === 'new' ? 'New portal link' : 'Edit portal link'}

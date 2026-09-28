@@ -20,7 +20,7 @@ export function SolidCard({
   padded = true,
   radius,
   backgroundColor,
-  frosted = true,
+  frosted = false,
   intensity = 35,
   style,
   children,
@@ -44,7 +44,7 @@ export function SolidCard({
         {
           borderRadius: cornerRadius,
           backgroundColor: defaultBg,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : colors.border,
+          borderColor: colors.border,
           borderWidth: 1,
           overflow: 'hidden',
         },

@@ -274,7 +274,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
         <View style={[styles.errorRow, { backgroundColor: 'rgba(239, 68, 68, 0.10)', borderColor: 'rgba(239, 68, 68, 0.20)', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginBottom: 8 }]}>
           <Ionicons name="alert-circle" size={14} color={colors.critical} />
           <AppText variant="caption" style={{ color: colors.critical, fontSize: 11, marginLeft: 4 }}>
-            {radioState.errorMessage} — retrying...
+            {radioState.errorMessage} · retrying...
           </AppText>
         </View>
       ) : null}

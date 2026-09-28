@@ -702,7 +702,7 @@ export function EventsModerationTab() {
  borderRadius: radius.pill,
  backgroundColor: colors.pastelPrimaryBg,
  borderWidth: 1,
- borderColor: colors.brandPrimary,
+ borderColor: colors.border,
  }}
  >
  <AppText variant="caption"weight="bold"tone="brand"style={{ fontSize: 11 }}>
@@ -823,7 +823,7 @@ export function EventsModerationTab() {
  width: 110,
  borderRadius: radius.md,
  overflow: 'hidden',
- borderWidth: isSelected ? 2 : 1,
+ borderWidth: 1,
  borderColor: isSelected ? colors.brandPrimary : colors.border,
  }}
  >

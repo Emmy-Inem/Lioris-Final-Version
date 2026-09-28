@@ -102,7 +102,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
       });
 
       haptics.success();
-      Alert.alert('Opening Published 🚀', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
+      Alert.alert('Opening Published', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
       reset();
       onCreated();
       onClose();
