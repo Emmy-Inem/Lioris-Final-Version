@@ -44,7 +44,7 @@ test('academic library and open-access catalog integrity', async (t) => {
 
       // Ensure open-access source is valid
       assert.ok(
-        ['OpenStax', 'OpenAlex', 'arXiv', 'Curated OER'].includes(book.source),
+        ['OpenStax', 'Open Library', 'Project Gutenberg', 'Curated OER', 'OpenAlex', 'arXiv'].includes(book.source),
         `Book ${book.id} has invalid source: ${book.source}`
       );
     }
@@ -81,5 +81,21 @@ test('academic library and open-access catalog integrity', async (t) => {
     const strangBooks = await searchAcademicLibrary('Strang');
     assert.ok(strangBooks.length > 0);
     assert.ok(strangBooks.some((b) => b.authors.some((a) => a.includes('Strang'))));
+  });
+
+  await t.test('searchAcademicLibrary returns guaranteed free full-text books with safe URLs', async () => {
+    const results = await searchAcademicLibrary('physics', 10);
+    assert.ok(results.length > 0, 'Expected at least 1 book for physics search');
+
+    for (const book of results) {
+      assert.equal(book.isFree, true, 'All returned books must be isFree: true');
+      assert.equal(book.hasFulltext, true, 'All returned books must be hasFulltext: true');
+      assert.ok(book.openAccessUrl, `Book ${book.title} missing openAccessUrl`);
+      assert.ok(isSafeHttpUrl(book.openAccessUrl), `Book ${book.title} has invalid URL: ${book.openAccessUrl}`);
+      assert.ok(
+        ['OpenStax', 'Open Library', 'Project Gutenberg', 'Curated OER'].includes(book.source),
+        `Unexpected book source: ${book.source}`
+      );
+    }
   });
 });

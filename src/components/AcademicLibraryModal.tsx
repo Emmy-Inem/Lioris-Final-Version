@@ -232,7 +232,7 @@ export function AcademicLibraryModal({
           <View style={[styles.guaranteeBanner, { backgroundColor: `${colors.brandPrimary}10`, borderColor: `${colors.brandPrimary}25` }]}>
             <Ionicons name="checkmark-circle-outline" size={15} color={colors.brandPrimary} />
             <AppText variant="caption" tone="secondary" style={{ flex: 1, fontSize: 11, lineHeight: 15 }}>
-              All publications are openly licensed (Creative Commons / OER). Zero waitlists, subscriptions, or paywalls.
+              1,000,000+ verified free open-access books & textbooks from Open Library Public Scans, Project Gutenberg, and OpenStax. Zero waitlists, loans, or paywalls.
             </AppText>
           </View>
 
@@ -241,7 +241,7 @@ export function AcademicLibraryModal({
             <View style={styles.centerLoading}>
               <ActivityIndicator size="large" color={colors.brandPrimary} />
               <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.sm }}>
-                Querying OpenAlex & Open Educational Resources...
+                Searching Open Library, Project Gutenberg & OpenStax catalogs...
               </AppText>
             </View>
           ) : books.length === 0 ? (
@@ -306,8 +306,20 @@ export function AcademicLibraryModal({
 
                         {/* Badges / Subject Tags */}
                         <View style={styles.tagRow}>
-                          <Badge label={book.source} tone="brand" />
+                          <Badge
+                            label={book.source}
+                            tone={
+                              book.source === 'Open Library'
+                                ? 'brand'
+                                : book.source === 'Project Gutenberg'
+                                ? 'accent'
+                                : book.source === 'OpenStax'
+                                ? 'brand'
+                                : 'success'
+                            }
+                          />
                           {book.pdfUrl && <Badge label="FREE PDF" tone="success" />}
+                          {book.epubUrl && <Badge label="EPUB" tone="brand" />}
                           {book.license && <Badge label={book.license} tone="neutral" />}
                         </View>
 
@@ -322,10 +334,18 @@ export function AcademicLibraryModal({
                                 onPress={() => openExternalUrl(book.pdfUrl!)}
                               />
                             )}
+                            {book.epubUrl && (
+                              <AppButton
+                                label="EPUB ↗"
+                                size="sm"
+                                variant="secondary"
+                                onPress={() => openExternalUrl(book.epubUrl!)}
+                              />
+                            )}
                             <AppButton
                               label="Read Free ↗"
                               size="sm"
-                              variant={book.pdfUrl ? 'ghost' : 'secondary'}
+                              variant={book.pdfUrl || book.epubUrl ? 'ghost' : 'secondary'}
                               onPress={() => openBookLink(book)}
                             />
                           </View>

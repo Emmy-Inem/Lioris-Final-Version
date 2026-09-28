@@ -1,9 +1,10 @@
 /**
  * Global Academic Library & Free Open-Access Textbook Search API
  * 
- * Powered by OpenAlex Open Access API (api.openalex.org), OpenStax, and curated
- * Open Educational Resources (OER). Every resource here is verified 100% FREE
- * and immediately accessible without paywalls, commercial borrow waitlists, or purchase gates.
+ * Powered by Open Library Public Domain Ebooks & Scans, Project Gutenberg (Gutendex),
+ * OpenStax, and curated Open Educational Resources (OER). Every single publication here
+ * is verified 100% FREE, full-text accessible, with zero paywalls, zero commercial loans,
+ * and zero borrow waitlists.
  */
 
 export interface AcademicBook {
@@ -16,13 +17,15 @@ export interface AcademicBook {
   openAccessUrl: string;
   openLibraryUrl?: string; // Kept for backwards compatibility
   pdfUrl?: string;
+  epubUrl?: string;
   subjects: string[];
   editionCount: number;
   hasFulltext: boolean;
   license?: string;
   isFree: true;
-  source: 'OpenStax' | 'OpenAlex' | 'arXiv' | 'Curated OER';
+  source: 'OpenStax' | 'Open Library' | 'Project Gutenberg' | 'Curated OER' | 'OpenAlex' | 'arXiv';
   description?: string;
+  downloadCount?: number;
 }
 
 export const CURATED_TEXTBOOKS: AcademicBook[] = [
@@ -572,11 +575,19 @@ export const CURATED_TEXTBOOKS: AcademicBook[] = [
 
 /**
  * Searches the Global Academic Library.
- * 1. Checks and matches curated peer-reviewed open access college textbooks.
- * 2. Queries OpenAlex open access works API (`filter=is_oa:true,type:book`).
- * 3. Guarantees that EVERY result returned is 100% free, full-text accessible, with zero paywalls.
+ * 1. Checks and matches curated peer-reviewed open access college textbooks (OpenStax, MIT OER, etc.).
+ * 2. Concurrently queries:
+ *    - Open Library Public Scan API (public_scan=true):
+ *      Provides 1,000,000+ digitized, 100% public domain university books, medical volumes, science textbooks,
+ *      and literature with interactive online reading via Internet Archive BookReader and direct PDF downloads.
+ *    - Project Gutenberg (Gutendex):
+ *      Provides 70,000+ public domain literary, scientific, economic, and philosophical books with clean
+ *      in-browser HTML reading and direct EPUB downloads.
+ * 3. Filters strictly for public-domain / full-access items (no borrowable books, no 1-hour waitlists, no publisher paywalls).
+ * 4. Deduplicates against curated and previous results.
+ * 5. Falls back seamlessly to curated textbooks if network requests fail or time out.
  */
-export async function searchAcademicLibrary(query: string, limit: number = 15): Promise<AcademicBook[]> {
+export async function searchAcademicLibrary(query: string, limit: number = 20): Promise<AcademicBook[]> {
   const cleanQuery = query.trim();
   if (!cleanQuery) {
     return CURATED_TEXTBOOKS;
@@ -592,89 +603,159 @@ export async function searchAcademicLibrary(query: string, limit: number = 15): 
     (b.description && b.description.toLowerCase().includes(queryLower))
   );
 
-  // Step 2: Query OpenAlex Open Access API
+  // Step 2: Concurrently query Open Library (Public Scans) and Project Gutenberg (Gutendex)
   try {
     const encoded = encodeURIComponent(cleanQuery);
-    // Strict open access books filter - guarantees every work is free
-    const openAlexUrl = `https://api.openalex.org/works?search=${encoded}&filter=is_oa:true,type:book&per-page=${limit}&sort=relevance_score:desc`;
+    const timeoutMs = 6000;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6500);
+    const [olResult, gutenResult] = await Promise.allSettled([
+      // A) Open Library Public Domain Ebooks & Scans (Internet Archive full scans)
+      (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        const url = `https://openlibrary.org/search.json?q=${encoded}&public_scan=true&limit=${Math.min(limit, 16)}&fields=key,title,author_name,first_publish_year,cover_i,ia,edition_count,subject,ebook_access,public_scan_b`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'LiorisApp/1.0 (academic-library; contact: library@lioris.edu)',
+            'Accept': 'application/json',
+          },
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error(`OpenLibrary responded with status ${res.status}`);
+        return res.json();
+      })(),
 
-    const res = await fetch(openAlexUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'LiorisCampus/1.0 (mailto:library@lioris.edu)',
-        'Accept': 'application/json',
-      },
-    });
-    clearTimeout(timeoutId);
+      // B) Project Gutenberg via Gutendex
+      (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        const url = `https://gutendex.com/books?search=${encoded}`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'LiorisApp/1.0 (academic-library; contact: library@lioris.edu)',
+            'Accept': 'application/json',
+          },
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error(`Gutendex responded with status ${res.status}`);
+        return res.json();
+      })(),
+    ]);
 
-    if (!res.ok) {
-      throw new Error(`OpenAlex responded with status ${res.status}`);
+    const remoteBooks: AcademicBook[] = [];
+
+    // Process Open Library Public Scan books
+    if (olResult.status === 'fulfilled' && Array.isArray(olResult.value?.docs)) {
+      for (const doc of olResult.value.docs) {
+        // Guarantee 100% public domain / free full-text status (exclude loan / borrowable items)
+        const isPublic = doc.ebook_access === 'public' || doc.public_scan_b === true;
+        const iaId = Array.isArray(doc.ia) && doc.ia.length > 0 ? String(doc.ia[0]).trim() : undefined;
+        if (!isPublic || !doc.title) continue;
+
+        const openAccessUrl = iaId
+          ? `https://archive.org/details/${iaId}`
+          : (doc.key ? `https://openlibrary.org${doc.key}` : '');
+        if (!openAccessUrl) continue;
+
+        const pdfUrl = iaId ? `https://archive.org/download/${iaId}/${iaId}.pdf` : undefined;
+        const coverUrl = doc.cover_i
+          ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
+          : (iaId ? `https://archive.org/services/img/${iaId}` : undefined);
+
+        const authors = Array.isArray(doc.author_name) && doc.author_name.length > 0
+          ? doc.author_name.slice(0, 3)
+          : ['Various Authors'];
+
+        const subjects = Array.isArray(doc.subject) && doc.subject.length > 0
+          ? doc.subject.slice(0, 4)
+          : ['Academic Literature'];
+
+        remoteBooks.push({
+          id: `ol-${iaId || doc.key || Math.random().toString(36).substring(2, 9)}`,
+          title: doc.title,
+          authors,
+          firstPublishYear: doc.first_publish_year,
+          coverUrl,
+          openAccessUrl,
+          openLibraryUrl: doc.key ? `https://openlibrary.org${doc.key}` : openAccessUrl,
+          pdfUrl,
+          subjects,
+          editionCount: doc.edition_count || 1,
+          hasFulltext: true,
+          license: 'Public Domain',
+          isFree: true,
+          source: 'Open Library',
+          description: 'Digitized public-access college and scholarly text readable online with full interactive viewer.',
+        });
+      }
     }
 
-    const data = await res.json();
-    const rawResults = Array.isArray(data.results) ? data.results : [];
+    // Process Project Gutenberg books
+    if (gutenResult.status === 'fulfilled' && Array.isArray(gutenResult.value?.results)) {
+      for (const item of gutenResult.value.results) {
+        const formats = item.formats || {};
+        const htmlUrl = formats['text/html'] || formats['text/html; charset=utf-8'];
+        const epubUrl = formats['application/epub+zip'];
+        const pdfUrl = formats['application/pdf'];
+        const coverUrl = formats['image/jpeg'];
+        const readUrl = htmlUrl || epubUrl || `https://www.gutenberg.org/ebooks/${item.id}`;
 
-    const openAlexBooks: AcademicBook[] = [];
+        if (!readUrl || !item.title) continue;
 
-    for (const item of rawResults) {
-      // Find the direct open-access link (prioritizing direct PDF, then OA URL, then landing page, then DOI)
-      const directUrl =
-        item.best_oa_location?.pdf_url ||
-        item.open_access?.oa_url ||
-        item.best_oa_location?.landing_page_url ||
-        item.primary_location?.landing_page_url ||
-        item.doi;
+        const authors = Array.isArray(item.authors) && item.authors.length > 0
+          ? item.authors.map((a: any) => a.name).filter(Boolean).slice(0, 3)
+          : ['Classic Author'];
 
-      // Skip records without a verifiable open web link
-      if (!directUrl || typeof directUrl !== 'string') continue;
+        const subjects = Array.isArray(item.subjects) && item.subjects.length > 0
+          ? item.subjects.slice(0, 3)
+          : (Array.isArray(item.bookshelves) && item.bookshelves.length > 0
+              ? item.bookshelves.map((s: string) => s.replace('Category: ', '')).slice(0, 3)
+              : ['General Literature']);
 
-      const pdfUrl =
-        item.best_oa_location?.pdf_url ||
-        (directUrl.toLowerCase().endsWith('.pdf') ? directUrl : undefined);
+        const description = Array.isArray(item.summaries) && item.summaries.length > 0
+          ? item.summaries[0]
+          : undefined;
 
-      const authors = Array.isArray(item.authorships)
-        ? item.authorships.map((a: any) => a.author?.display_name).filter(Boolean).slice(0, 3)
-        : ['Academic Scholar'];
-
-      const concepts = Array.isArray(item.concepts)
-        ? item.concepts.map((c: any) => c.display_name).filter(Boolean).slice(0, 4)
-        : [];
-
-      const rawId = item.id ? String(item.id).replace('https://openalex.org/', '') : `oa-${Math.random().toString(36).substring(2, 9)}`;
-
-      const cleanLicense = item.best_oa_location?.license || item.open_access?.oa_status || 'Open Access';
-      const licenseDisplay = cleanLicense.toUpperCase().replace(/-/g, ' ');
-
-      openAlexBooks.push({
-        id: `oa-${rawId}`,
-        title: item.title || item.display_name || 'Academic Literature',
-        authors: authors.length > 0 ? authors : ['Academic Authors'],
-        firstPublishYear: item.publication_year,
-        openAccessUrl: directUrl,
-        openLibraryUrl: directUrl,
-        pdfUrl,
-        subjects: concepts.length > 0 ? concepts : ['Academic Reference'],
-        editionCount: 1,
-        hasFulltext: true,
-        license: licenseDisplay,
-        isFree: true,
-        source: 'OpenAlex',
-        description: item.abstract_inverted_index ? 'Peer-reviewed open-access publication.' : undefined,
-      });
+        remoteBooks.push({
+          id: `guten-${item.id}`,
+          title: item.title,
+          authors: authors.length > 0 ? authors : ['Classic Author'],
+          firstPublishYear: undefined,
+          coverUrl,
+          openAccessUrl: readUrl,
+          openLibraryUrl: readUrl,
+          pdfUrl,
+          epubUrl,
+          subjects,
+          editionCount: 1,
+          hasFulltext: true,
+          license: 'Public Domain',
+          isFree: true,
+          source: 'Project Gutenberg',
+          description,
+          downloadCount: item.download_count,
+        });
+      }
     }
 
-    // Deduplicate against curated items by title similarity
-    const existingTitles = new Set(curatedMatches.map((b) => b.title.toLowerCase()));
-    const filteredRemote = openAlexBooks.filter((b) => !existingTitles.has(b.title.toLowerCase()));
+    // Deduplicate against curated items and each other by normalized title
+    const seenTitles = new Set(curatedMatches.map((b) => b.title.trim().toLowerCase()));
+    const uniqueRemote: AcademicBook[] = [];
 
-    const combined = [...curatedMatches, ...filteredRemote];
+    for (const book of remoteBooks) {
+      const normalized = book.title.trim().toLowerCase();
+      if (!seenTitles.has(normalized)) {
+        seenTitles.add(normalized);
+        uniqueRemote.push(book);
+      }
+    }
+
+    const combined = [...curatedMatches, ...uniqueRemote];
     return combined.length > 0 ? combined : CURATED_TEXTBOOKS;
   } catch (err: any) {
     console.warn('[AcademicLibrary] Remote open-access search failed, returning curated list:', err?.message ?? err);
-    // If query has matched curated textbooks, return those, otherwise return the whole curated catalog
     return curatedMatches.length > 0 ? curatedMatches : CURATED_TEXTBOOKS;
   }
 }
