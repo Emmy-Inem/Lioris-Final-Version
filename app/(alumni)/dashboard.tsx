@@ -35,6 +35,7 @@ import { listJobs } from '@/api/jobs';
 import { listMentorships } from '@/api/mentorship';
 import { listEvents } from '@/api/events';
 import { listPortalLinks } from '@/api/portalLinks';
+import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
@@ -46,6 +47,7 @@ export default function AlumniDashboard() {
   const { isFeatureEnabled } = useFeatureFlags();
   const { campusCode, homeInstitutionCode } = useCampusScope();
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
+  const { isRead, markAsRead } = useReadHomeAlerts();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -98,7 +100,9 @@ export default function AlumniDashboard() {
   }
 
   const activeJobs = (jobs ?? []).slice(0, 2);
-  const upcomingEvents = (events ?? []).slice(0, 2);
+  const attendingEvents = (events ?? []).filter((e: any) => e.isRsvpd === true);
+  const upcomingEvents = (events ?? []).filter((e: any) => !e.isRsvpd).slice(0, 2);
+  const activeDiscussions = (posts ?? []).filter((post: any) => !isRead(post.id)).slice(0, 3);
   const pendingMentees = (mentorships ?? []).filter((m: any) => m.status === 'pending' && m.mentorId === user?.id);
   const openMentorships = (mentorships ?? [])
     .filter((m: any) => (m.status === 'pending' || m.status === 'active') && m.mentorId === user?.id)
@@ -294,19 +298,15 @@ export default function AlumniDashboard() {
         {/* Verification Notice for unverified personal email accounts */}
         <UnverifiedAccountNotice />
 
-        {/* Alma Mater Live Campus Weather */}
-        {isFeatureEnabled('live_weather') && <CampusWeatherWidget />}
+        
 
-        {/* Live Campus Radio Stream */}
-        {isFeatureEnabled('campus_radio') && <CampusRadioPlayer />}
-
-        {/* 2. Quick Alumni Action Hub (Responsive Grid) */}
+        {/* 2. Quick Alumni Action Hub (Clean 4-Item Grid) */}
         <View>
           <AppText
             weight="bold"
             style={{
-              fontSize: isDesktop ? 18 : 15,
-              lineHeight: isDesktop ? 24 : 20,
+              fontSize: isDesktop ? 17 : 14.5,
+              lineHeight: isDesktop ? 22 : 18,
               letterSpacing: -0.2,
               marginBottom: spacing.xs,
             }}
@@ -317,89 +317,25 @@ export default function AlumniDashboard() {
             {isFeatureEnabled('e2ee_messaging') && (
               <Pressable
                 onPress={() => router.push('/(alumni)/messages')}
-                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
                 <GlassCard
                   radius={16}
                   padded={false}
                   contentStyle={{
-                    padding: isDesktop ? 10 : 10,
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    alignItems: isDesktop ? 'center' : 'flex-start',
-                    gap: isDesktop ? 8 : 8,
-                    minHeight: isDesktop ? 64 : 78,
-                    justifyContent: 'center',
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
                   }}
                 >
-                  <Ionicons name="chatbubble-ellipses" size={20} color={colors.textSecondary} />
-                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.brandPrimary} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
                       Direct Messages
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
                       Mentees & fellows
-                    </AppText>
-                  </View>
-                </GlassCard>
-              </Pressable>
-            )}
-
-            {isFeatureEnabled('currency_converter') && (
-              <Pressable
-                onPress={() => {
-                  haptics.light();
-                  setCurrencyModalOpen(true);
-                }}
-                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
-              >
-                <GlassCard
-                  radius={16}
-                  padded={false}
-                  contentStyle={{
-                    padding: isDesktop ? 10 : 10,
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    alignItems: isDesktop ? 'center' : 'flex-start',
-                    gap: isDesktop ? 8 : 8,
-                    minHeight: isDesktop ? 64 : 78,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons name="cash-outline" size={20} color="#10B981" />
-                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
-                      FX & Endowments
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
-                      Live rate converter
-                    </AppText>
-                  </View>
-                </GlassCard>
-              </Pressable>
-            )}
-            {isFeatureEnabled('career_page') && (
-              <Pressable
-                onPress={() => router.push('/(alumni)/jobs')}
-                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
-              >
-                <GlassCard
-                  radius={16}
-                  padded={false}
-                  contentStyle={{
-                    padding: isDesktop ? 10 : 10,
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    alignItems: isDesktop ? 'center' : 'flex-start',
-                    gap: isDesktop ? 8 : 8,
-                    minHeight: isDesktop ? 64 : 78,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons name="briefcase" size={20} color={colors.textSecondary} />
-                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
-                      Careers
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
-                      Post & find jobs
                     </AppText>
                   </View>
                 </GlassCard>
@@ -409,143 +345,79 @@ export default function AlumniDashboard() {
             {isFeatureEnabled('alumni_mentorship') && (
               <Pressable
                 onPress={() => router.push('/(alumni)/mentorship')}
-                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
                 <GlassCard
                   radius={16}
                   padded={false}
                   contentStyle={{
-                    padding: isDesktop ? 10 : 10,
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    alignItems: isDesktop ? 'center' : 'flex-start',
-                    gap: isDesktop ? 8 : 8,
-                    minHeight: isDesktop ? 64 : 78,
-                    justifyContent: 'center',
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
                   }}
                 >
-                  <Ionicons name="people" size={20} color="#10B981" />
-                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                  <Ionicons name="people-outline" size={20} color="#10B981" />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
                       Mentorship
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
-                      {pendingMentees.length > 0 ? `${pendingMentees.length} requests` : 'Guide students'}
+                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
+                      {pendingMentees.length > 0 ? `${pendingMentees.length} pending` : 'Guide students'}
                     </AppText>
                   </View>
                 </GlassCard>
               </Pressable>
             )}
 
-            {isFeatureEnabled('campus_events') && (
+            {isFeatureEnabled('career_page') && (
               <Pressable
-                onPress={() => router.push('/(alumni)/events-list' as any)}
-                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
+                onPress={() => router.push('/(alumni)/jobs')}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
                 <GlassCard
                   radius={16}
                   padded={false}
                   contentStyle={{
-                    padding: isDesktop ? 10 : 10,
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    alignItems: isDesktop ? 'center' : 'flex-start',
-                    gap: isDesktop ? 8 : 8,
-                    minHeight: isDesktop ? 64 : 78,
-                    justifyContent: 'center',
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
                   }}
                 >
-                  <Ionicons name="calendar" size={20} color="#3B82F6" />
-                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
-                      Events
+                  <Ionicons name="briefcase-outline" size={20} color="#3B82F6" />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
+                      Career Board
                     </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
-                      Reunions & talks
+                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
+                      Hire campus talent
                     </AppText>
                   </View>
                 </GlassCard>
               </Pressable>
             )}
-
-            {isFeatureEnabled('marketplace') && (
-              <Pressable
-                onPress={() => router.push('/(alumni)/marketplace' as any)}
-                style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
-              >
-                <GlassCard
-                  radius={16}
-                  padded={false}
-                  contentStyle={{
-                    padding: isDesktop ? 10 : 10,
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    alignItems: isDesktop ? 'center' : 'flex-start',
-                    gap: isDesktop ? 8 : 8,
-                    minHeight: isDesktop ? 64 : 78,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons name="cart" size={20} color="#D97706" />
-                  <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                    <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
-                      Campus Trade
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
-                      Books & gear
-                    </AppText>
-                  </View>
-                </GlassCard>
-              </Pressable>
-            )}
-
-            <Pressable
-              onPress={() => router.push('/(alumni)/forum')}
-              style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
-            >
-              <GlassCard
-                radius={16}
-                padded={false}
-                contentStyle={{
-                  padding: isDesktop ? 10 : 10,
-                  flexDirection: isDesktop ? 'row' : 'column',
-                  alignItems: isDesktop ? 'center' : 'flex-start',
-                  gap: isDesktop ? 8 : 8,
-                  minHeight: isDesktop ? 64 : 78,
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="chatbubbles" size={20} color="#EC4899" />
-                <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
-                    Global Forum
-                  </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
-                    Fellowship feed
-                  </AppText>
-                </View>
-              </GlassCard>
-            </Pressable>
 
             <Pressable
               onPress={() => router.push('/(alumni)/network' as any)}
-              style={{ width: isDesktop ? 170 : '48%', flexGrow: 1 }}
+              style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
             >
               <GlassCard
                 radius={16}
                 padded={false}
                 contentStyle={{
-                  padding: isDesktop ? 10 : 10,
-                  flexDirection: isDesktop ? 'row' : 'column',
-                  alignItems: isDesktop ? 'center' : 'flex-start',
-                  gap: isDesktop ? 8 : 8,
-                  minHeight: isDesktop ? 64 : 78,
-                  justifyContent: 'center',
+                  padding: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
                 }}
               >
-                <Ionicons name="people-circle" size={20} color="#8B5CF6" />
-                <View style={{ flex: isDesktop ? 1 : undefined, width: isDesktop ? undefined : '100%', minWidth: 0 }}>
-                  <AppText weight="bold" style={{ fontSize: isDesktop ? 13 : 12, lineHeight: 16 }}>
+                <Ionicons name="people-circle-outline" size={20} color="#8B5CF6" />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
                     Alumni Network
                   </AppText>
-                  <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10, marginTop: 1 }}>
+                  <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
                     Fellow directory
                   </AppText>
                 </View>
@@ -657,7 +529,7 @@ export default function AlumniDashboard() {
           </View>
         )}
 
-        {/* 6. Upcoming Alumni Reunions & Events */}
+        {/* 6. Alumni Reunions & Events */}
         {isFeatureEnabled('campus_events') && (
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
@@ -667,7 +539,7 @@ export default function AlumniDashboard() {
                   weight="bold"
                   style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
                 >
-                  Reunions & Events
+                  {attendingEvents.length > 0 ? "Reunions You're Attending" : 'Alumni Reunions & Events'}
                 </AppText>
               </View>
               <Pressable onPress={() => router.push('/(alumni)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
@@ -677,7 +549,41 @@ export default function AlumniDashboard() {
               </Pressable>
             </View>
 
-            {upcomingEvents.length === 0 ? (
+            {attendingEvents.length > 0 ? (
+              <View style={{ gap: spacing.md }}>
+                {attendingEvents.slice(0, 2).map((evt: any) => (
+                  <View key={evt.id} style={{ gap: 6 }}>
+                    <EventCard event={evt} />
+                    <Pressable
+                      onPress={() => router.push(`/(alumni)/events/${evt.id}` as any)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 7,
+                        paddingHorizontal: 12,
+                        backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)',
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.2)',
+                      }}
+                    >
+                      <Ionicons name="qr-code-outline" size={15} color="#10B981" />
+                      <AppText weight="bold" style={{ color: '#10B981', fontSize: 12 }}>
+                        View Alumni Pass & Registration
+                      </AppText>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : upcomingEvents.length > 0 ? (
+              <View style={{ gap: spacing.sm }}>
+                {upcomingEvents.map((evt: any) => (
+                  <EventCard key={evt.id} event={evt} />
+                ))}
+              </View>
+            ) : (
               <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
                 <Ionicons name="calendar-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
                 <AppText weight="bold" variant="bodySmall">No upcoming reunions scheduled</AppText>
@@ -686,94 +592,99 @@ export default function AlumniDashboard() {
                 </AppText>
                 <AppButton label="Browse Alumni Events" variant="secondary" size="sm" onPress={() => router.push('/(alumni)/events-list' as any)} />
               </SolidCard>
-            ) : (
-              <View style={{ gap: spacing.sm }}>
-                {upcomingEvents.map((evt: any) => (
-                  <EventCard key={evt.id} event={evt} />
-                ))}
-              </View>
             )}
           </View>
         )}
 
-        {/* 7. Live Campus & Alumni Pulse Feed */}
-        <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-              <Ionicons name="chatbubbles-outline" size={16} color="#EC4899" style={{ flexShrink: 0 }} />
-              <AppText
-                weight="bold"
-                style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
-              >
-                Campus Discussions
-              </AppText>
+        {/* 7. Campus Discussions (Dismissible) */}
+        {activeDiscussions.length > 0 && (
+          <View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                <Ionicons name="chatbubbles-outline" size={16} color="#EC4899" style={{ flexShrink: 0 }} />
+                <AppText
+                  weight="bold"
+                  style={{ fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2, flex: 1 }}
+                >
+                  Campus Discussions
+                </AppText>
+              </View>
+              <Pressable onPress={() => router.push('/(alumni)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>
+                <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
+                  Forum →
+                </AppText>
+              </Pressable>
             </View>
-            <Pressable onPress={() => router.push('/(alumni)/forum')} style={{ flexShrink: 0 }} hitSlop={8}>
-              <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                Forum →
-              </AppText>
-            </Pressable>
-          </View>
 
-          <View style={{ gap: spacing.xs }}>
-            {(posts ?? []).length === 0 ? (
-              <SolidCard radius={18} style={{ padding: 0 }}>
-                <EmptyState
-                  icon="chatbubbles-outline"
-                  title="No discussions yet"
-                  description="Be the first to start a conversation on the global forum."
-                  actionLabel="Open Forum"
-                  onAction={() => router.push('/(alumni)/forum')}
-                />
-              </SolidCard>
-            ) : null}
-            {(posts ?? []).slice(0, 3).map((post: any) => (
-              <Pressable
-                key={post.id}
-                onPress={() => router.push(`/(alumni)/post/${post.id}` as any)}
-              >
-                <SolidCard radius={16} style={{ padding: 12 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                      <Avatar name={post.authorName ?? 'Fellow'} size={26} />
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <AppText variant="caption" weight="bold">
-                          {post.authorName ?? 'Fellow'}
+            <View style={{ gap: spacing.xs }}>
+              {activeDiscussions.map((post: any) => (
+                <Pressable
+                  key={post.id}
+                  onPress={() => {
+                    markAsRead(post.id);
+                    router.push(`/(alumni)/post/${post.id}` as any);
+                  }}
+                >
+                  <SolidCard radius={16} style={{ padding: 12 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                        <Avatar name={post.authorName ?? 'Fellow'} size={26} />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <AppText variant="caption" weight="bold">
+                            {post.authorName ?? 'Fellow'}
+                          </AppText>
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                            {post.department ?? 'Alumni Network'}
+                          </AppText>
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        <Badge label={post.category ?? 'Discussion'} tone="neutral" />
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            haptics.light();
+                            markAsRead(post.id);
+                          }}
+                          hitSlop={10}
+                          accessibilityLabel="Dismiss notice from home"
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 3, opacity: 0.7 }}
+                        >
+                          <Ionicons name="checkmark-done" size={15} color={colors.textSecondary} />
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                            Dismiss
+                          </AppText>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 2, marginBottom: 2 }}>
+                      {post.title}
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" numberOfLines={2}>
+                      {post.content}
+                    </AppText>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="heart-outline" size={13} color={colors.textSecondary} />
+                        <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                          {post.upvotesCount ?? 0}
                         </AppText>
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                          {post.department ?? 'Alumni Network'}
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="chatbubble-outline" size={13} color={colors.textSecondary} />
+                        <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                          {post.commentsCount ?? 0} replies
                         </AppText>
                       </View>
                     </View>
-                    <Badge label={post.category ?? 'Discussion'} tone="neutral" />
-                  </View>
-
-                  <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 2, marginBottom: 2 }}>
-                    {post.title}
-                  </AppText>
-                  <AppText tone="secondary" variant="caption">
-                    {post.content}
-                  </AppText>
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="heart-outline" size={13} color={colors.textSecondary} />
-                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                        {post.upvotesCount ?? 0}
-                      </AppText>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="chatbubble-outline" size={13} color={colors.textSecondary} />
-                      <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                        {post.commentsCount ?? 0} replies
-                      </AppText>
-                    </View>
-                  </View>
-                </SolidCard>
-              </Pressable>
-            ))}
+                  </SolidCard>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* 8. Institutional Alumni & Graduate Services */}
         <View>

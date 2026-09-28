@@ -14,6 +14,7 @@ import { listAnnouncements } from '@/api/announcements';
 import { Announcement } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
+import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
 
 const PRIORITY_TONE = {
  normal: 'neutral',
@@ -44,7 +45,7 @@ export function AnnouncementsWidget({
  const { isFeatureEnabled } = useFeatureFlags();
  const insets = useSafeAreaInsets();
  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
- const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+ const { isRead, markAsRead } = useReadHomeAlerts();
 
  const announcementsEnabled = isFeatureEnabled('campus_announcements');
  const { campusCode: viewerCampus } = useCampusScope();
@@ -58,7 +59,7 @@ export function AnnouncementsWidget({
 
  // Filter announcements for current audience scope and active expiration
  const activeAnnouncements = (announcements ?? [])
- .filter((a) => !dismissedIds.includes(a.id))
+ .filter((a) => !isRead(a.id))
  // Staff and admins can READ every campus's bulletins (database policy), so the home widget has to
  // narrow to the campus being viewed itself, or another university's notices show up on home.
  .filter((a) => {
@@ -115,7 +116,10 @@ export function AnnouncementsWidget({
     return (
       <View style={{ marginBottom: spacing.md }}>
         <Pressable
-          onPress={() => setSelectedAnnouncement(topAnnouncement)}
+          onPress={() => {
+            markAsRead(topAnnouncement.id);
+            setSelectedAnnouncement(topAnnouncement);
+          }}
           style={[
             {
               flexDirection: 'row',
@@ -216,7 +220,10 @@ export function AnnouncementsWidget({
                   <AppButton
                     label="Dismiss"
                     variant="primary"
-                    onPress={() => setSelectedAnnouncement(null)}
+                    onPress={() => {
+                      if (selectedAnnouncement) markAsRead(selectedAnnouncement.id);
+                      setSelectedAnnouncement(null);
+                    }}
                   />
                 </>
               )}
@@ -250,7 +257,7 @@ export function AnnouncementsWidget({
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
  <Badge label={item.priority.toUpperCase()} tone={PRIORITY_TONE[item.priority]} />
  <Pressable accessibilityRole="button" accessibilityLabel="Close"
- onPress={() => setDismissedIds((prev) => [...prev, item.id])}
+ onPress={() => markAsRead(item.id)}
  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
  >
  <Ionicons name="close" size={16} color={colors.textSecondary} />
@@ -269,7 +276,13 @@ export function AnnouncementsWidget({
             <AppText variant="caption" tone="secondary" style={{ fontSize: 11, minWidth: 0 }}>
               {item.authorName} • {new Date(item.publishedAt).toLocaleDateString()}
             </AppText>
- <Pressable onPress={() => setSelectedAnnouncement(item)} style={{ flexShrink: 0 }}>
+ <Pressable
+   onPress={() => {
+     markAsRead(item.id);
+     setSelectedAnnouncement(item);
+   }}
+   style={{ flexShrink: 0 }}
+ >
  <AppText variant="caption" weight="bold" tone="brand">
  Read More →
  </AppText>
@@ -327,7 +340,10 @@ export function AnnouncementsWidget({
  <AppButton
  label="Close"
  variant="primary"
- onPress={() => setSelectedAnnouncement(null)}
+ onPress={() => {
+   if (selectedAnnouncement) markAsRead(selectedAnnouncement.id);
+   setSelectedAnnouncement(null);
+ }}
  />
  </>
  )}
