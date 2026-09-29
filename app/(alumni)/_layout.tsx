@@ -77,6 +77,7 @@ export default function AlumniLayout() {
     options={{ href: null, title: 'Mentorship' }}
   />
  {/* Reachable via header avatar / dashboard / Alumni Hub links, not bottom tabs. */}
+  <Tabs.Screen name="network" options={{ href: null }} />
   <Tabs.Screen name="events" options={{ href: null }} />
   <Tabs.Screen name="profile" options={{ href: null }} />
   <Tabs.Screen name="saved" options={{ href: null }} />
