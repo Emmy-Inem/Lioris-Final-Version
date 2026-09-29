@@ -1153,6 +1153,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260928170000_marketplace_saved_items.sql',
   'supabase/migrations/20260929000000_close_open_security_findings.sql',
   'supabase/migrations/20260930000000_job_applications.sql',
+  'supabase/migrations/20261001000000_workflow_gaps.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1797,6 +1798,12 @@ console.log('\n== job applications (CV, screening questions, ranking) ==');
         'job with neither in-app nor external apply path',
       );
 
+      // Inserted via svc() (no JWT -> the moderation trigger added by
+      // 20261001000000_workflow_gaps.sql leaves is_approved alone) so these
+      // fixtures land pre-approved, the same way the existing "close open
+      // security findings" jobs migration test isn't about moderation
+      // itself - that gets its own dedicated test below.
+      await svc();
       const r1 = await c.q(
         `INSERT INTO public.jobs (poster_id, title, company, location, description, accepts_in_app_applications, is_approved) VALUES ($1, 'Frontend Engineer Intern', 'Acme', 'Lagos', 'React TypeScript JavaScript frontend web development', true, true) RETURNING id`,
         [U.alumni],
@@ -1807,6 +1814,7 @@ console.log('\n== job applications (CV, screening questions, ranking) ==');
         [U.alumni],
       );
       const jobExternalOnlyId = r2.rows[0].id;
+      await imp(U.alumni);
 
       const rq = await c.q(
         `INSERT INTO public.job_questions (job_id, question_text, question_type, order_index) VALUES ($1, 'Are you available to start immediately?', 'yes_no', 0) RETURNING id`,
@@ -1905,6 +1913,260 @@ console.log('\n== job applications (CV, screening questions, ranking) ==');
       await imp(U.s1);
       await c.q(`UPDATE public.profiles SET resume_url = $1 WHERE id = $2`, [`${U.s1}/resume.pdf`, U.s1]);
       eq((await c.q(`SELECT resume_url FROM public.profiles WHERE id = $1`, [U.s1])).rows[0].resume_url, `${U.s1}/resume.pdf`, 's1 set and read their own resume_url');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// workflow gaps (20261001000000_workflow_gaps.sql): forum notifications +
+// real comment-like persistence, alumni directory fields, event waitlist,
+// donations, jobs moderation. Runs inside ONE as('postgres', ...) transaction
+// with local imp()/svc() helpers, same reasoning as the job-applications
+// section above.
+// ---------------------------------------------------------------------------
+console.log('\n== workflow gaps (notifications, directory, waitlist, donations, job moderation) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+  const STARTS = "now() + interval '2 hours'";
+  const ENDS = "now() + interval '4 hours'";
+
+  /** A live (status='upcoming'), free, not-yet-full event created by s1. */
+  async function mkFreeEvent(c, capacity) {
+    await svc();
+    const r = await c.q(
+      `INSERT INTO public.events (creator_id, campus_code, title, description, venue, start_time, end_time, category, status, ticket_type, capacity)
+       VALUES ($1, 'GLOBAL', 'Waitlist test event', 'desc', 'Hall', ${STARTS}, ${ENDS}, 'Academic', 'upcoming', 'free', $2) RETURNING id`,
+      [U.s1, capacity],
+    );
+    return r.rows[0].id;
+  }
+
+  await check('forum notifications: liking a post notifies its author (not yourself), commenting notifies the author', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      const post = await c.q(
+        `INSERT INTO public.posts (author_id, campus_code, content) VALUES ($1, 'GLOBAL', 'A post to react to') RETURNING id`,
+        [U.s1],
+      );
+      const postId = post.rows[0].id;
+
+      // s1 likes their own post: no self-notification.
+      await c.q(`INSERT INTO public.post_likes (post_id, user_id) VALUES ($1, $2)`, [postId, U.s1]);
+      eq((await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1`, [U.s1])).rows[0].n, 0, 'no self-notification for liking your own post');
+
+      await imp(U.s2);
+      await c.q(`INSERT INTO public.post_likes (post_id, user_id) VALUES ($1, $2)`, [postId, U.s2]);
+      // notifications RLS only lets a caller read rows where they are the
+      // recipient - svc() (superuser, bypasses RLS) is needed to inspect
+      // someone else's notifications from the test.
+      await svc();
+      const likeNotif = (await c.q(
+        `SELECT sender_id, type, action_url FROM public.notifications WHERE recipient_id = $1 AND type = 'system' ORDER BY created_at DESC LIMIT 1`,
+        [U.s1],
+      )).rows[0];
+      eq(likeNotif, { sender_id: U.s2, type: 'system', action_url: `/post/${postId}` }, 's1 is notified that s2 liked their post');
+
+      await imp(U.s2);
+      const comment = await c.q(
+        `INSERT INTO public.post_comments (post_id, author_id, content) VALUES ($1, $2, 'Nice post!') RETURNING id`,
+        [postId, U.s2],
+      );
+      const commentId = comment.rows[0].id;
+      await svc();
+      const commentNotifCount = (await c.q(
+        `SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1 AND title = 'New comment'`,
+        [U.s1],
+      )).rows[0].n;
+      eq(commentNotifCount, 1, 's1 is notified that s2 commented on their post');
+
+      // Liking someone else's comment notifies the comment's author, not the post's author.
+      await imp(U.s3);
+      await c.q(`INSERT INTO public.post_comment_likes (comment_id, user_id) VALUES ($1, $2)`, [commentId, U.s3]);
+      eq((await c.q(`SELECT likes_count FROM public.post_comments WHERE id = $1`, [commentId])).rows[0].likes_count, 1, 'post_comments.likes_count now tracks a real like');
+      await svc();
+      const commentLikeNotif = (await c.q(
+        `SELECT recipient_id, sender_id FROM public.notifications WHERE title = 'New like' AND sender_id = $1`,
+        [U.s3],
+      )).rows[0];
+      eq(commentLikeNotif, { recipient_id: U.s2, sender_id: U.s3 }, 's2 (comment author) is notified, not s1 (post author)');
+
+      // Unliking the comment drops the count back down.
+      await c.q(`DELETE FROM public.post_comment_likes WHERE comment_id = $1 AND user_id = $2`, [commentId, U.s3]);
+      eq((await c.q(`SELECT likes_count FROM public.post_comments WHERE id = $1`, [commentId])).rows[0].likes_count, 0, 'unliking a comment decrements likes_count');
+
+      // Only the comment's own author can remove someone else's like row (RLS: owner-only delete).
+      await imp(U.s3);
+      const forged = await c.t(`INSERT INTO public.post_comment_likes (comment_id, user_id) VALUES ($1, $2)`, [commentId, U.s4]);
+      denied(forged, /row-level/i, 's3 liking a comment as s4');
+    });
+  });
+
+  await check('alumni directory fields: graduation_year/industry/company/job_title/location round-trip and are range-checked', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      await c.q(
+        `UPDATE public.profiles SET graduation_year = 2024, industry = 'Software', company = 'Acme', job_title = 'Engineer', location = 'Lagos' WHERE id = $1`,
+        [U.s1],
+      );
+      const row = (await c.q(
+        `SELECT graduation_year, industry, company, job_title, location FROM public.profiles WHERE id = $1`,
+        [U.s1],
+      )).rows[0];
+      eq(row, { graduation_year: 2024, industry: 'Software', company: 'Acme', job_title: 'Engineer', location: 'Lagos' }, 'fields round-trip through a normal profile update');
+
+      denied(
+        await c.t(`UPDATE public.profiles SET graduation_year = 1899 WHERE id = $1`, [U.s1]),
+        /graduation_year/,
+        'a graduation_year outside 1950-2100 is rejected',
+      );
+
+      await imp(U.s2);
+      const peerRead = (await c.q(`SELECT graduation_year, company FROM public.profiles WHERE id = $1`, [U.s1])).rows[0];
+      eq(peerRead, { graduation_year: 2024, company: 'Acme' }, 'a classmate can read these directory fields (they are not private PII)');
+    });
+  });
+
+  await check('event waitlist: joining requires the event to actually be full, auto-promotes on cancellation, notifies the promoted user', async () => {
+    await as('postgres', async (c) => {
+      const ev = await mkFreeEvent(c, 1);
+
+      await imp(U.s2);
+      denied(await c.t(`SELECT public.join_event_waitlist($1)`, [ev]), /not_full/, 'cannot join the waitlist while the event still has open places');
+
+      await c.q(`SELECT public.rsvp_event($1, false, false)`, [ev]);
+
+      await imp(U.s3);
+      const joined = (await c.q(`SELECT public.join_event_waitlist($1) r`, [ev])).rows[0].r;
+      eq(joined, { position: 1 }, 's3 is first on the waitlist');
+
+      await imp(U.s4);
+      const joined2 = (await c.q(`SELECT public.join_event_waitlist($1) r`, [ev])).rows[0].r;
+      eq(joined2, { position: 2 }, 's4 is second on the waitlist');
+      const rejoined = (await c.q(`SELECT public.join_event_waitlist($1) r`, [ev])).rows[0].r;
+      eq(rejoined, { position: 2 }, 'joining again while already on the waitlist is idempotent (same position, no duplicate row)');
+
+      const status4 = (await c.q(`SELECT public.my_event_waitlist_status($1) r`, [ev])).rows[0].r;
+      eq(status4, { position: 2, promoted: false, onWaitlist: true }, "s4 sees their own waitlist position");
+
+      // s3 leaves voluntarily; s4 is now first.
+      await imp(U.s3);
+      await c.q(`SELECT public.leave_event_waitlist($1)`, [ev]);
+      await imp(U.s4);
+      eq((await c.q(`SELECT public.my_event_waitlist_status($1) r`, [ev])).rows[0].r.position, 1, 's4 moves up to first after s3 leaves');
+
+      // s2 (the only registrant) cancels -> s4 should be auto-promoted.
+      await imp(U.s2);
+      await c.q(`SELECT public.cancel_event_rsvp($1)`, [ev]);
+
+      await svc();
+      const attendee = (await c.q(`SELECT user_id FROM public.event_attendees WHERE event_id = $1`, [ev])).rows[0];
+      eq(attendee.user_id, U.s4, 's4 was auto-registered off the waitlist');
+      const promoRow = (await c.q(`SELECT promoted_at IS NOT NULL AS promoted FROM public.event_waitlist WHERE event_id = $1 AND user_id = $2`, [ev, U.s4])).rows[0];
+      assert(promoRow.promoted, "s4's waitlist row is marked promoted");
+      const promoNotif = (await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1 AND title = 'A place opened up!'`, [U.s4])).rows[0].n;
+      eq(promoNotif, 1, 's4 was notified of the promotion');
+    });
+  });
+
+  await check('donations: a non-admin campaign is held for review with zeroed totals; the giving link is https-only; review/click/total functions are properly gated', async () => {
+    await as('postgres', async (c) => {
+      const flag = (on) => c.q(
+        `INSERT INTO public.platform_settings (key, value) VALUES ('feature_flags', $1::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+        [JSON.stringify({ donations: on })]);
+
+      await imp(U.alumni);
+      denied(
+        await c.t(`INSERT INTO public.giving_campaigns (creator_id, title, giving_url) VALUES ($1, 'Scholarship Fund', 'http://example.com/give')`, [U.alumni]),
+        /giving_url|payment_url_problem|check/i,
+        'a plain http:// giving link is rejected',
+      );
+
+      const camp = await c.q(
+        `INSERT INTO public.giving_campaigns (creator_id, title, giving_url, review_status, confirmed_total) VALUES ($1, 'Scholarship Fund', 'https://give.example.com/lioris', 'approved', 5000) RETURNING id, review_status, confirmed_total`,
+        [U.alumni],
+      );
+      eq(
+        { review_status: camp.rows[0].review_status, confirmed_total: Number(camp.rows[0].confirmed_total) },
+        { review_status: 'pending', confirmed_total: 0 },
+        "a non-admin's attempt to insert an already-approved, pre-funded campaign is forced back to pending/0",
+      );
+      const campaignId = camp.rows[0].id;
+
+      denied(
+        await c.t(`SELECT public.admin_review_giving_campaign($1, true, NULL)`, [campaignId]),
+        /permission denied/,
+        'a signed-in alumnus cannot call the admin review function directly',
+      );
+
+      await svc(); await flag(false);
+      await imp(U.alumni);
+      denied(await c.t(`SELECT public.open_giving_page($1)`, [campaignId]), /donations_disabled/, 'giving is off by default');
+
+      await svc(); await flag(true);
+      denied(await c.t(`SELECT public.open_giving_page($1)`, [campaignId]), /not_available/, 'a pending campaign is not yet open to give to');
+
+      await svc();
+      await c.q(`SELECT public.admin_review_giving_campaign($1, true, 'looks good')`, [campaignId]);
+      await c.q(`SELECT public.admin_update_giving_total($1, 12500)`, [campaignId]);
+
+      await imp(U.s1);
+      const url = (await c.q(`SELECT public.open_giving_page($1) r`, [campaignId])).rows[0].r;
+      eq(url, 'https://give.example.com/lioris', 'an approved, open campaign hands back its external giving URL');
+
+      await svc();
+      const clicks = (await c.q(`SELECT count(*)::int n FROM public.giving_campaign_clicks WHERE campaign_id = $1 AND user_id = $2`, [campaignId, U.s1])).rows[0].n;
+      eq(clicks, 1, 'the click was recorded');
+      const total = (await c.q(`SELECT confirmed_total FROM public.giving_campaigns WHERE id = $1`, [campaignId])).rows[0].confirmed_total;
+      eq(Number(total), 12500, "the admin's manually confirmed total stuck");
+
+      // Editing an approved campaign as its owner sends it back to review.
+      await imp(U.alumni);
+      await c.q(`UPDATE public.giving_campaigns SET title = 'Scholarship Fund 2027' WHERE id = $1`, [campaignId]);
+      await svc();
+      eq((await c.q(`SELECT review_status FROM public.giving_campaigns WHERE id = $1`, [campaignId])).rows[0].review_status, 'pending', "editing an approved campaign's own details resends it for review");
+    });
+  });
+
+  await check('jobs moderation: a non-staff posting is held for review, invisible to others but visible to its own poster; staff postings are trusted at insert; a poster cannot self-approve by editing', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.alumni);
+      const posted = await c.q(
+        `INSERT INTO public.jobs (poster_id, title, company, location, apply_url, is_approved) VALUES ($1, 'Unreviewed Role', 'Acme', 'Lagos', 'https://acme.example/careers', true) RETURNING id, is_approved`,
+        [U.alumni],
+      );
+      eq(posted.rows[0].is_approved, false, "a non-staff poster's attempt to self-approve at insert is overridden");
+      const jobId = posted.rows[0].id;
+
+      await imp(U.s2);
+      eq((await c.q(`SELECT id FROM public.jobs WHERE id = $1`, [jobId])).rows.length, 0, 'another student cannot see the unreviewed posting');
+
+      await imp(U.alumni);
+      eq((await c.q(`SELECT id FROM public.jobs WHERE id = $1`, [jobId])).rows.length, 1, 'the poster can still see their own pending posting');
+
+      // The UPDATE statement itself is allowed by RLS (a poster may update their own
+      // job row) - it is the moderation trigger that quietly reverts is_approved, so
+      // this succeeds as a statement but must not change the stored value.
+      const selfApprove = await c.t(`UPDATE public.jobs SET is_approved = true WHERE id = $1`, [jobId]);
+      assert(selfApprove.ok, "a poster's own UPDATE to their job row is not itself refused");
+      const stillPending = (await c.q(`SELECT is_approved FROM public.jobs WHERE id = $1`, [jobId])).rows[0].is_approved;
+      eq(stillPending, false, "a poster's own UPDATE cannot flip is_approved (the trigger reverts it, so the UPDATE succeeds but changes nothing)");
+
+      await svc();
+      const staffJob = await c.q(
+        `INSERT INTO public.jobs (poster_id, title, company, location, apply_url, is_approved) VALUES ($1, 'Staff-Posted Role', 'Acme', 'Lagos', 'https://acme.example/careers', true) RETURNING is_approved`,
+        [U.staffU],
+      );
+      eq(staffJob.rows[0].is_approved, true, 'a job inserted with no JWT (service/migration context) is left alone');
+
+      await imp(U.adminA);
+      await c.q(`UPDATE public.jobs SET is_approved = true, approved_by = $2 WHERE id = $1`, [jobId, U.adminA]);
+      const approved = (await c.q(`SELECT is_approved, approved_by FROM public.jobs WHERE id = $1`, [jobId])).rows[0];
+      eq(approved, { is_approved: true, approved_by: U.adminA }, 'an admin can approve the posting');
     });
   });
 }

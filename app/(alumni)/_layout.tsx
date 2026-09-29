@@ -89,6 +89,7 @@ export default function AlumniLayout() {
  <Tabs.Screen name="messages" options={{ href: null }} />
  <Tabs.Screen name="post/[id]" options={{ href: null }} />
  <Tabs.Screen name="mentorship-space/[id]" options={{ href: null }} />
+ <Tabs.Screen name="giving" options={{ href: null }} />
  </Tabs>
 </BlurredTabsHost>
  );

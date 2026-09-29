@@ -403,6 +403,34 @@ export default function AlumniDashboard() {
               </Pressable>
             )}
 
+            {isFeatureEnabled('donations') && (
+              <Pressable
+                onPress={() => router.push('/(alumni)/giving' as any)}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
+              >
+                <GlassCard
+                  radius={16}
+                  padded={false}
+                  contentStyle={{
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons name="heart-outline" size={20} color="#EC4899" />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>
+                      Give Back
+                    </AppText>
+                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
+                      Scholarship & giving campaigns
+                    </AppText>
+                  </View>
+                </GlassCard>
+              </Pressable>
+            )}
+
             {isFeatureEnabled('discussion_workspaces') && (
               <Pressable
                 onPress={() => router.push('/(alumni)/forum')}

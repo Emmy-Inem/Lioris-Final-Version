@@ -7,6 +7,7 @@ import { Badge } from './Badge';
 import { AppButton } from './AppButton';
 import { JobApplyModal } from './JobApplyModal';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
 import { JobListing } from '@/api/types';
 import { hasAppliedToJob } from '@/api/jobApplications';
 import { haptics } from '@/utils/haptics';
@@ -15,6 +16,7 @@ import { openExternalUrl } from '@/utils/openExternalUrl';
 
 export function JobCard({ job, onApplied }: { job: JobListing; onApplied?: () => void }) {
   const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
   const [applied, setApplied] = useState(false);
   const [checkingApplied, setCheckingApplied] = useState(false);
@@ -71,9 +73,12 @@ export function JobCard({ job, onApplied }: { job: JobListing; onApplied?: () =>
         </View>
 
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-            <Badge label={job.type} tone={job.type === 'Internship' ? 'accent' : 'brand'} />
-            {job.remote && <Badge label="Remote" tone="success" />}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2, gap: 4 }}>
+            <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' }}>
+              <Badge label={job.type} tone={job.type === 'Internship' ? 'accent' : 'brand'} />
+              {job.remote && <Badge label="Remote" tone="success" />}
+            </View>
+            {!job.isApproved && job.posterId === user?.id && <Badge label="Pending Review" tone="warning" />}
           </View>
           <AppText variant="h3" weight="bold" style={{ marginTop: 2 }}>
             {job.title}

@@ -85,10 +85,13 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
 
  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
+ // No .eq('is_approved', true) here any more: RLS itself now decides visibility
+ // (approved postings to everyone in scope, plus a poster's own row regardless
+ // of status, plus staff/admin see everything) - see 20261001000000_workflow_gaps.sql.
+ // Filtering client-side instead lets a poster see their own pending posting.
  let req = supabase
  .from('jobs')
  .select('*, poster:profiles!jobs_poster_id_fkey(full_name, role, avatar_url, campus_code)')
- .eq('is_approved', true)
  .order('created_at', { ascending: false });
 
  if (query.type) {
@@ -100,6 +103,10 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
 
  const dbJobs: JobListing[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.poster_id))
+ // This is the normal browse feed, not the moderation queue: an unapproved
+ // posting only belongs here for its own poster, checking on its review status -
+ // never mixed into anyone else's feed just because they happen to be staff/admin.
+ .filter((row: any) => row.is_approved === true || row.poster_id === authData?.user?.id)
     .filter((row: any) => {
       if (isStaffOrAdmin && !query.campusCode) return true;
       const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
@@ -122,6 +129,7 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
  acceptsInAppApplications: row.accepts_in_app_applications ?? false,
  applicationsCount: row.applications_count ?? 0,
+ isApproved: row.is_approved ?? true,
  postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
  posterId: row.poster_id,
  createdAt: row.created_at,
@@ -260,10 +268,99 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
     applyUrl,
     acceptsInAppApplications: acceptsInApp,
     applicationsCount: 0,
+    // Optimistic placeholder only - the moderation trigger decides the real
+    // value server-side (false for a non-staff/admin poster), and the next
+    // listJobs() refetch replaces this local entry with the DB row.
+    isApproved: true,
     postedByName: posterName,
     createdAt: new Date().toISOString(),
   };
 
   locallyCreatedJobs = [created, ...locallyCreatedJobs];
   return created;
+}
+
+/** Every job the signed-in user has posted, any review status - backs a "My Postings" view. */
+export async function listMyJobs(): Promise<JobListing[]> {
+  const { data: authData } = await supabase.auth.getUser();
+  const uid = authData?.user?.id;
+  if (!uid) return [];
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('*, poster:profiles!jobs_poster_id_fkey(full_name)')
+    .eq('poster_id', uid)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    title: row.title,
+    company: row.company,
+    location: row.location,
+    type: row.type as JobListing['type'],
+    remote: row.is_remote ?? false,
+    workplaceType: inferWorkplaceType(row),
+    experienceLevel: inferExperienceLevel(row),
+    applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
+    acceptsInAppApplications: row.accepts_in_app_applications ?? false,
+    applicationsCount: row.applications_count ?? 0,
+    isApproved: row.is_approved ?? true,
+    postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
+    posterId: row.poster_id,
+    createdAt: row.created_at,
+    description: row.description || '',
+    salary: row.salary || undefined,
+    campusCode: row.campus_code || 'GLOBAL',
+  }));
+}
+
+// --- Admin moderation ---
+
+/** Every job awaiting review - admin/staff only (RLS-enforced). */
+export async function listPendingJobs(): Promise<JobListing[]> {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('*, poster:profiles!jobs_poster_id_fkey(full_name)')
+    .eq('is_approved', false)
+    .order('created_at', { ascending: true });
+  if (error) return [];
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    title: row.title,
+    company: row.company,
+    location: row.location,
+    type: row.type as JobListing['type'],
+    remote: row.is_remote ?? false,
+    workplaceType: inferWorkplaceType(row),
+    experienceLevel: inferExperienceLevel(row),
+    applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
+    acceptsInAppApplications: row.accepts_in_app_applications ?? false,
+    applicationsCount: row.applications_count ?? 0,
+    isApproved: row.is_approved ?? false,
+    postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
+    posterId: row.poster_id,
+    createdAt: row.created_at,
+    description: row.description || '',
+    salary: row.salary || undefined,
+    campusCode: row.campus_code || 'GLOBAL',
+  }));
+}
+
+export async function approveJob(id: string): Promise<void> {
+  const { data: authData } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from('jobs')
+    .update({ is_approved: true, approved_by: authData?.user?.id ?? null, approved_at: new Date().toISOString(), rejection_reason: null })
+    .eq('id', id);
+  if (error) {
+    console.warn('[Jobs] approveJob error:', error.message);
+    throw new Error('Could not approve this posting. Please try again.');
+  }
+}
+
+export async function rejectJob(id: string, reason?: string): Promise<void> {
+  const { error } = await supabase.from('jobs').update({ is_approved: false, rejection_reason: reason || 'Did not meet posting standards.' }).eq('id', id);
+  if (error) {
+    console.warn('[Jobs] rejectJob error:', error.message);
+    throw new Error('Could not reject this posting. Please try again.');
+  }
 }

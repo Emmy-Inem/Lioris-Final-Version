@@ -470,6 +470,38 @@ export async function rsvpToEvent(
  return { eventId: id, status: 'confirmed', ticketCode: result.ticket_code };
 }
 
+export interface EventWaitlistStatus {
+  onWaitlist: boolean;
+  position?: number;
+  promoted?: boolean;
+}
+
+/**
+ * Joins the caller onto an event's waitlist. Only succeeds once the event is
+ * actually full under the same capacity rule rsvp_event() enforces (free
+ * events, or paid ones where the organiser holds reservations) - throws
+ * `not_full` otherwise, so the UI should only offer this once rsvpToEvent
+ * has already refused with `event_full`.
+ */
+export async function joinEventWaitlist(eventId: string): Promise<{ position: number }> {
+  const { data, error } = await supabase.rpc('join_event_waitlist', { p_event: eventId });
+  if (error) throwReadable(error, 'Could not join the waitlist. Please try again.');
+  return { position: (data as any)?.position ?? 0 };
+}
+
+export async function leaveEventWaitlist(eventId: string): Promise<void> {
+  const { error } = await supabase.rpc('leave_event_waitlist', { p_event: eventId });
+  if (error) throwReadable(error, 'Could not leave the waitlist. Please try again.');
+}
+
+/** The caller's own waitlist position for one event - never someone else's. */
+export async function getMyEventWaitlistStatus(eventId: string): Promise<EventWaitlistStatus> {
+  const { data, error } = await supabase.rpc('my_event_waitlist_status', { p_event: eventId });
+  if (error) return { onWaitlist: false };
+  const row = (data ?? {}) as { onWaitlist?: boolean; position?: number; promoted?: boolean };
+  return { onWaitlist: !!row.onWaitlist, position: row.position, promoted: row.promoted };
+}
+
 export async function updateEvent(id: string, updates: Partial<CampusEvent>): Promise<CampusEvent | null> {
  const dbPayload: any = {};
  if (updates.title) dbPayload.title = updates.title;

@@ -16,6 +16,11 @@ export interface UserProfile {
  faculty?: string | null;
  academicLevel?: string | null;
  interests?: string[];
+ /** Alumni professional details - shown in the directory, editable in Settings. */
+ industry?: string | null;
+ company?: string | null;
+ jobTitle?: string | null;
+ location?: string | null;
  institutionName?: string;
  institutionCode?: string;
  avatarUrl?: string | null;
@@ -481,7 +486,7 @@ export interface AuditLogEntry {
  actorRole: UserRole;
  action: AuditLogAction;
  summary: string;
- targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'community' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system';
+ targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'community' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system' | 'job' | 'giving_campaign';
  targetId: string;
  reason?: string;
  institutionCode?: string;
@@ -532,6 +537,8 @@ export interface JobListing {
   acceptsInAppApplications: boolean;
   /** How many people have applied in-app. Only meaningful when acceptsInAppApplications is true. */
   applicationsCount: number;
+  /** False while a non-staff/admin posting awaits moderation - only the poster (and staff/admin) can see it at all. */
+  isApproved: boolean;
   postedByName: string;
   posterId?: string;
   createdAt: string;

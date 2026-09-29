@@ -780,7 +780,13 @@ export default function AlumniJobsScreen() {
         onCreated={() => {
           setCreateModalOpen(false);
           void refetch();
-          toast.show({ message: 'Opportunity successfully posted to the Alumni Career Portal', tone: 'success' });
+          const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff';
+          toast.show({
+            message: isStaffOrAdmin
+              ? 'Opportunity successfully posted to the Alumni Career Portal'
+              : 'Opportunity submitted for review - it will appear once approved.',
+            tone: 'success',
+          });
         }}
       />
 

@@ -29,7 +29,7 @@ export async function searchAlumniDirectory(
   try {
     let q = supabase
       .from('profiles')
-      .select('id, full_name, department, bio, avatar_url, role');
+      .select('id, full_name, department, bio, avatar_url, role, graduation_year, industry, company');
 
     if (query.roles && query.roles.length > 0) {
       q = q.in('role', query.roles);
@@ -53,6 +53,15 @@ export async function searchAlumniDirectory(
     if (query.department) {
       q = q.eq('department', query.department);
     }
+    if (query.graduationYear) {
+      q = q.eq('graduation_year', query.graduationYear);
+    }
+    if (query.industry) {
+      q = q.eq('industry', query.industry);
+    }
+    if (query.company) {
+      q = q.ilike('company', `%${escapePostgrestLike(query.company)}%`);
+    }
 
     const { data, error } = await q.limit(20);
     if (error || !data) return [];
@@ -62,6 +71,9 @@ export async function searchAlumniDirectory(
       fullName: p.full_name || 'Alumni Member',
       department: p.department || 'Alumni Network',
       bio: p.bio || '',
+      graduationYear: p.graduation_year ?? null,
+      industry: p.industry ?? null,
+      company: p.company ?? null,
       avatarUrl: p.avatar_url || null,
       connectionStatus: 'none' as const,
     }));

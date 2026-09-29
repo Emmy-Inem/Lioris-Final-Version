@@ -13,6 +13,7 @@ export type FeatureKey =
   | 'study_groups'
   | 'campus_events'
   | 'paid_events'
+  | 'donations'
   | 'academic_resources'
   | 'alumni_mentorship'
   | 'discussion_workspaces'
@@ -87,6 +88,14 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'Campus Life',
     tier: 'P1',
     description: 'Lets organisers list ticketed events with a price and their own payment link or pay-at-venue instructions. Lioris never takes the payment; every paid event is reviewed here first. Off = no new paid events and no payment links or bookings for existing ones.',
+    defaultOn: false,
+  },
+  {
+    key: 'donations',
+    label: 'Alumni Giving & Donation Campaigns',
+    category: 'Commerce & Career',
+    tier: 'P2',
+    description: 'Lets alumni propose giving/fundraising campaigns pointing at their own external giving page. Lioris never processes a gift; every campaign is reviewed here first. Off = no new campaigns can be given to.',
     defaultOn: false,
   },
   {

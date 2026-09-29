@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FlatList, View, TextInput, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { FlatList, View, TextInput, ActivityIndicator, Pressable, ScrollView } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
@@ -11,20 +11,48 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { searchAlumniDirectory } from '@/api/connections';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Ionicons } from '@expo/vector-icons';
+import { haptics } from '@/utils/haptics';
+
+const INDUSTRY_OPTIONS = [
+  'Software & Technology',
+  'Finance & Banking',
+  'Healthcare',
+  'Education',
+  'Engineering',
+  'Oil & Gas',
+  'Government & Public Policy',
+  'Media & Communications',
+  'Consulting',
+  'Agriculture',
+];
 
 export default function AlumniNetworkScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
 
   const isEnabled = isFeatureEnabled('alumni_network');
 
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 12 }, (_, i) => current - i);
+  }, []);
+
   const { data: alumniList, isLoading } = useQuery({
-    queryKey: ['alumni', 'directory', searchQuery],
-    queryFn: () => searchAlumniDirectory({ q: searchQuery.trim() || undefined }),
+    queryKey: ['alumni', 'directory', searchQuery, selectedYear, selectedIndustry],
+    queryFn: () =>
+      searchAlumniDirectory({
+        q: searchQuery.trim() || undefined,
+        graduationYear: selectedYear ?? undefined,
+        industry: selectedIndustry ?? undefined,
+      }),
     enabled: isEnabled,
   });
+
+  const hasActiveFilters = !!selectedYear || !!selectedIndustry;
 
   if (!isEnabled) {
     return (
@@ -90,6 +118,96 @@ export default function AlumniNetworkScreen() {
           />
         )}
       </View>
+
+      {/* Filter chips: Class Year + Industry */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingBottom: spacing.sm }}
+        style={{ flexGrow: 0, marginBottom: spacing.sm }}
+      >
+        {hasActiveFilters && (
+          <Pressable
+            onPress={() => {
+              haptics.light();
+              setSelectedYear(null);
+              setSelectedIndustry(null);
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+              borderRadius: radius.pill,
+              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Ionicons name="refresh" size={13} color={colors.critical} />
+            <AppText variant="caption" weight="bold" style={{ color: colors.critical }}>
+              Reset
+            </AppText>
+          </Pressable>
+        )}
+        {yearOptions.map((year) => {
+          const active = selectedYear === year;
+          return (
+            <Pressable
+              key={year}
+              onPress={() => {
+                haptics.light();
+                setSelectedYear(active ? null : year);
+              }}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: radius.pill,
+                backgroundColor: active ? colors.brandPrimary : colors.surface,
+                borderWidth: 1,
+                borderColor: active ? colors.brandPrimary : colors.border,
+              }}
+            >
+              <AppText variant="caption" weight={active ? 'bold' : 'regular'} tone={active ? 'inverse' : 'secondary'}>
+                Class of {year}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingBottom: spacing.sm }}
+        style={{ flexGrow: 0, marginBottom: spacing.md }}
+      >
+        {INDUSTRY_OPTIONS.map((industry) => {
+          const active = selectedIndustry === industry;
+          return (
+            <Pressable
+              key={industry}
+              onPress={() => {
+                haptics.light();
+                setSelectedIndustry(active ? null : industry);
+              }}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: radius.pill,
+                backgroundColor: active ? colors.pastelPrimaryBg : colors.surface,
+                borderWidth: 1,
+                borderColor: active ? colors.brandPrimary : colors.border,
+              }}
+            >
+              <AppText variant="caption" weight={active ? 'bold' : 'regular'} tone={active ? 'brand' : 'secondary'}>
+                {industry}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {isLoading ? (
         <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>

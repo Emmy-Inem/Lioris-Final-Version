@@ -315,6 +315,11 @@ export function SettingsScreen() {
   const [editUsername, setEditUsername] = useState('');
   const [editDepartment, setEditDepartment] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [editGraduationYear, setEditGraduationYear] = useState('');
+  const [editIndustry, setEditIndustry] = useState('');
+  const [editCompany, setEditCompany] = useState('');
+  const [editJobTitle, setEditJobTitle] = useState('');
+  const [editLocation, setEditLocation] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [editProfileError, setEditProfileError] = useState<string | null>(null);
 
@@ -655,6 +660,11 @@ export function SettingsScreen() {
     setEditUsername(profile.username || user?.fullName?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || '');
     setEditDepartment(profile.department || '');
     setEditBio(profile.bio || '');
+    setEditGraduationYear(profile.graduationYear ? String(profile.graduationYear) : '');
+    setEditIndustry(profile.industry || '');
+    setEditCompany(profile.company || '');
+    setEditJobTitle(profile.jobTitle || '');
+    setEditLocation(profile.location || '');
     setEditProfileError(null);
     setEditProfileModalOpen(true);
   }
@@ -669,6 +679,11 @@ export function SettingsScreen() {
       setEditProfileError('Username must be at least 3 characters (letters, numbers, dots, underscores).');
       return;
     }
+    const parsedYear = editGraduationYear.trim() ? Number(editGraduationYear.trim()) : null;
+    if (editGraduationYear.trim() && (!Number.isInteger(parsedYear) || parsedYear! < 1950 || parsedYear! > 2100)) {
+      setEditProfileError('Graduation year must be a valid year between 1950 and 2100.');
+      return;
+    }
     setSavingProfile(true);
     setEditProfileError(null);
     try {
@@ -677,6 +692,15 @@ export function SettingsScreen() {
         username: cleanUsername,
         department: editDepartment.trim(),
         bio: editBio.trim(),
+        ...(isSuperAdmin || user?.role === 'alumni'
+          ? {
+              graduationYear: parsedYear,
+              industry: editIndustry.trim() || null,
+              company: editCompany.trim() || null,
+              jobTitle: editJobTitle.trim() || null,
+              location: editLocation.trim() || null,
+            }
+          : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
       setEditProfileModalOpen(false);
@@ -2174,6 +2198,44 @@ export function SettingsScreen() {
                   numberOfLines={3}
                   placeholder="Tell classmates about your academic focus or projects..."
                 />
+                {(isSuperAdmin || user?.role === 'alumni') && (
+                  <>
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginTop: spacing.xs }}>
+                      PROFESSIONAL DETAILS (shown in the Alumni Directory)
+                    </AppText>
+                    <AppTextField
+                      label="Graduation Year"
+                      value={editGraduationYear}
+                      onChangeText={(t) => setEditGraduationYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
+                      placeholder="e.g. 2021"
+                      keyboardType="numeric"
+                    />
+                    <AppTextField
+                      label="Industry"
+                      value={editIndustry}
+                      onChangeText={setEditIndustry}
+                      placeholder="e.g. Software & Technology"
+                    />
+                    <AppTextField
+                      label="Company"
+                      value={editCompany}
+                      onChangeText={setEditCompany}
+                      placeholder="e.g. Acme Inc."
+                    />
+                    <AppTextField
+                      label="Job Title"
+                      value={editJobTitle}
+                      onChangeText={setEditJobTitle}
+                      placeholder="e.g. Software Engineer"
+                    />
+                    <AppTextField
+                      label="Location"
+                      value={editLocation}
+                      onChangeText={setEditLocation}
+                      placeholder="e.g. Lagos, Nigeria"
+                    />
+                  </>
+                )}
               </View>
             </ScrollView>
 

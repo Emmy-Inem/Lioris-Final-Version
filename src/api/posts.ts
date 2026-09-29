@@ -928,6 +928,21 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
 
  if (error) throw error;
 
+ const commentIds = (data ?? []).map((row: any) => row.id);
+ let likedCommentIds = new Set<string>();
+ if (commentIds.length > 0) {
+ const { data: authData } = await supabase.auth.getUser();
+ const uid = authData?.user?.id;
+ if (uid) {
+ const { data: myLikes } = await supabase
+ .from('post_comment_likes')
+ .select('comment_id')
+ .eq('user_id', uid)
+ .in('comment_id', commentIds);
+ likedCommentIds = new Set((myLikes ?? []).map((r: any) => r.comment_id));
+ }
+ }
+
  const dbComments: PostComment[] = (data ?? []).map((row: any) => ({
  id: row.id,
  postId: row.post_id,
@@ -939,7 +954,7 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  content: row.content,
  createdAt: row.created_at,
  likesCount: row.likes_count || 0,
- isLikedByMe: false,
+ isLikedByMe: likedCommentIds.has(row.id),
  }));
 
   // Merge unique - local pool only ever contributes this session's own
@@ -1069,6 +1084,22 @@ export async function toggleCommentLike(postId: string, commentId: string, liked
  ? { ...c, isLikedByMe: liked, likesCount: Math.max(0, c.likesCount + (liked ? 1 : -1)) }
  : c
  );
+
+ try {
+ const { data: authData } = await supabase.auth.getUser();
+ const userId = authData?.user?.id;
+ if (userId) {
+ if (liked) {
+ const { error } = await supabase.from('post_comment_likes').insert({ comment_id: commentId, user_id: userId });
+ if (error) console.warn('[Posts] Comment like persistence error:', error.message);
+ } else {
+ const { error } = await supabase.from('post_comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId);
+ if (error) console.warn('[Posts] Comment unlike error:', error.message);
+ }
+ }
+ } catch (err) {
+ console.warn('[Posts] Comment like error:', err);
+ }
 }
 
 /**

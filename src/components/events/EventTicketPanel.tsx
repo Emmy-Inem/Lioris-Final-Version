@@ -12,7 +12,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { CampusEvent } from '@/api/types';
-import { rsvpToEvent } from '@/api/events';
+import { rsvpToEvent, joinEventWaitlist, leaveEventWaitlist, getMyEventWaitlistStatus } from '@/api/events';
 import { getEventPaymentInfo, getMyTicket, openEventPaymentPage } from '@/api/paidEvents';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { haptics } from '@/utils/haptics';
@@ -108,6 +108,43 @@ export function EventTicketPanel({
   const [busy, setBusy] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [waitlistBusy, setWaitlistBusy] = useState(false);
+
+  const { data: waitlist } = useQuery({
+    queryKey: ['events', 'waitlist', event.id, user?.id],
+    queryFn: () => getMyEventWaitlistStatus(event.id),
+    enabled: !!user?.id && !registered && state === 'full',
+  });
+
+  async function handleJoinWaitlist() {
+    haptics.light();
+    setWaitlistBusy(true);
+    try {
+      await joinEventWaitlist(event.id);
+      await queryClient.invalidateQueries({ queryKey: ['events', 'waitlist', event.id] });
+      haptics.success();
+      toast.success("You're on the waitlist. We'll register you automatically if a place opens up.");
+    } catch (err: any) {
+      haptics.error();
+      toast.error(err?.message || 'Could not join the waitlist. Please try again.');
+    } finally {
+      setWaitlistBusy(false);
+    }
+  }
+
+  async function handleLeaveWaitlist() {
+    haptics.light();
+    setWaitlistBusy(true);
+    try {
+      await leaveEventWaitlist(event.id);
+      await queryClient.invalidateQueries({ queryKey: ['events', 'waitlist', event.id] });
+      toast.success('You left the waitlist.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not leave the waitlist. Please try again.');
+    } finally {
+      setWaitlistBusy(false);
+    }
+  }
 
   async function refresh() {
     await Promise.all([
@@ -298,6 +335,24 @@ export function EventTicketPanel({
             <AppText variant="caption" tone="secondary" style={{ marginTop: 6, textAlign: 'center' }}>
               {message}
             </AppText>
+          ) : null}
+
+          {state === 'full' && !isRestrictedGuest ? (
+            <View style={{ marginTop: spacing.sm }}>
+              {waitlist?.onWaitlist ? (
+                <View style={{ alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <Ionicons name="time-outline" size={15} color={colors.brandPrimary} />
+                    <AppText variant="caption" weight="bold" tone="brand">
+                      You're #{waitlist.position ?? 1} on the waitlist
+                    </AppText>
+                  </View>
+                  <AppButton label="Leave Waitlist" variant="ghost" size="sm" loading={waitlistBusy} onPress={handleLeaveWaitlist} />
+                </View>
+              ) : (
+                <AppButton label="Join Waitlist" variant="secondary" loading={waitlistBusy} onPress={handleJoinWaitlist} fullWidth />
+              )}
+            </View>
           ) : null}
         </View>
       ) : null}

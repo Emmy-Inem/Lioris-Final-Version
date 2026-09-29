@@ -125,7 +125,7 @@ export async function getMyProfile(user?: {
  try {
  const { data, error } = await supabase
  .from('profiles')
- .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, is_suspended')
+ .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, is_suspended, graduation_year, industry, company, job_title, location')
  .eq('id', resolvedUser.id)
  .single();
    if (!error && data) {
@@ -195,6 +195,11 @@ export async function getMyProfile(user?: {
        avatarUrl: data.avatar_url || fallback.avatarUrl,
        coverUrl: data.banner_url || fallback.coverUrl,
        resumeUrl: data.resume_url || null,
+       graduationYear: data.graduation_year ?? fallback.graduationYear ?? null,
+       industry: data.industry || null,
+       company: data.company || null,
+       jobTitle: data.job_title || null,
+       location: data.location || null,
        userType: dbRole,
        isVerified,
        verificationStatus,
@@ -382,6 +387,11 @@ export async function updateMyProfile(
    if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
    if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
    if (patch.resumeUrl !== undefined) dbPatch.resume_url = patch.resumeUrl;
+   if (patch.graduationYear !== undefined) dbPatch.graduation_year = patch.graduationYear;
+   if (patch.industry !== undefined) dbPatch.industry = patch.industry;
+   if (patch.company !== undefined) dbPatch.company = patch.company;
+   if (patch.jobTitle !== undefined) dbPatch.job_title = patch.jobTitle;
+   if (patch.location !== undefined) dbPatch.location = patch.location;
 
     if (userId !== 'me') {
       const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
@@ -477,7 +487,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role')
+      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, graduation_year, industry, company, job_title, location')
       .eq('id', userId)
       .single();
 
@@ -493,9 +503,13 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         username: data.username || data.full_name?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user',
         email: '',
         userType: dbRole,
-        graduationYear: undefined,
+        graduationYear: data.graduation_year ?? null,
         bio: data.bio || '',
         department: data.department || 'Academic',
+        industry: data.industry || null,
+        company: data.company || null,
+        jobTitle: data.job_title || null,
+        location: data.location || null,
         institutionName: inst?.name || (data.campus_code && data.campus_code !== 'GLOBAL' ? data.campus_code : 'Campus'),
         institutionCode: inst?.code || data.campus_code || undefined,
         avatarUrl: data.avatar_url || undefined,
