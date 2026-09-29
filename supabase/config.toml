@@ -23,6 +23,9 @@ verify_jwt = true
 [functions.admin-review-paid-event]
 verify_jwt = true
 
+[functions.admin-review-giving-campaign]
+verify_jwt = true
+
 [functions.delete-my-account]
 verify_jwt = true
 
