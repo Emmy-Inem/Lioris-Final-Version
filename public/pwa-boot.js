@@ -88,16 +88,46 @@
   }
 
   // Coming back from minimized / a discarded tab / bfcache with nothing rendered.
+  // A single check shortly after resume is not enough: a freeze that develops a
+  // little later (e.g. a stale network request finally timing out and unmounting
+  // something) lands right after the one check finds everything still fine, so it
+  // is missed. Recheck a few times over the following seconds instead of once.
+  var RESUME_CHECK_DELAYS_MS = [1500, 4000, 8000];
   function checkAfterResume() {
-    if (document.visibilityState !== 'visible') return;
-    setTimeout(function () {
-      if (document.visibilityState === 'visible' && appIsBlank()) reloadOnce();
-    }, 1500);
+    RESUME_CHECK_DELAYS_MS.forEach(function (delay) {
+      setTimeout(function () {
+        if (document.visibilityState === 'visible' && appIsBlank()) reloadOnce();
+      }, delay);
+    });
   }
-  document.addEventListener('visibilitychange', checkAfterResume);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') checkAfterResume();
+  });
   window.addEventListener('pageshow', function (event) {
     if (event.persisted) checkAfterResume();
   });
+  // Some mobile browsers (and in-app/PWA shells) fire `focus` on resume more
+  // reliably than `visibilitychange`; treat it as the same signal.
+  window.addEventListener('focus', checkAfterResume);
+
+  // The mounted React tree can also disappear WITHOUT throwing (so React's own
+  // error boundary never sees it) and without being tied to a resume event at
+  // all - e.g. something calls into a stale closure left over from before the
+  // app was backgrounded. Watch #root directly so a vanished tree is caught the
+  // instant it happens, whatever the cause or timing.
+  (function watchRootForVanishing() {
+    var root = document.getElementById('root');
+    if (!root || typeof MutationObserver === 'undefined') return;
+    var everMounted = false;
+    var observer = new MutationObserver(function () {
+      if (root.childElementCount > 0) {
+        everMounted = true;
+        return;
+      }
+      if (everMounted) reloadOnce();
+    });
+    observer.observe(root, { childList: true });
+  })();
 
   // First-load safety net: the bundle never mounted at all.
   window.addEventListener('load', function () {
