@@ -20,6 +20,8 @@ export interface UserProfile {
  institutionCode?: string;
  avatarUrl?: string | null;
  coverUrl?: string | null;
+ /** Storage path in the private `resumes` bucket; resolve with signedUrls.ts before rendering/opening. */
+ resumeUrl?: string | null;
  isVerified: boolean;
  /**
  * 'verified' = blue tick shown on profile. Auto-set at registration
@@ -524,7 +526,12 @@ export interface JobListing {
   location: string;
   type: 'Full-time' | 'Part-time' | 'Internship' | 'Contract';
   remote: boolean;
+  /** Empty when the job only accepts in-app applications. */
   applyUrl: string;
+  /** Whether candidates can apply inside Lioris (CV + screening questions), independent of applyUrl. */
+  acceptsInAppApplications: boolean;
+  /** How many people have applied in-app. Only meaningful when acceptsInAppApplications is true. */
+  applicationsCount: number;
   postedByName: string;
   posterId?: string;
   createdAt: string;
@@ -535,6 +542,49 @@ export interface JobListing {
   experienceLevel?: 'Entry level' | 'Mid-Senior level' | 'Executive';
   industry?: string;
   isSaved?: boolean;
+}
+
+/** A poster-defined screening question attached to a job posting. */
+export interface JobQuestion {
+  id: string;
+  jobId: string;
+  questionText: string;
+  questionType: 'text' | 'yes_no';
+  isRequired: boolean;
+  orderIndex: number;
+}
+
+export type JobApplicationStatus = 'applied' | 'reviewed' | 'interview' | 'rejected' | 'hired';
+
+/** An in-app application to a job. Only the applicant and the job's poster/admin can see one. */
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  applicantId: string;
+  status: JobApplicationStatus;
+  /** Storage path in the private `resumes` bucket; resolve with signedUrls.ts before rendering/opening. */
+  resumeUrl: string | null;
+  coverNote: string | null;
+  portfolioUrl: string | null;
+  /** Keyed by JobQuestion.id. */
+  answers: Record<string, string>;
+  /**
+   * Automatic relevance score (0-100-ish, Postgres full-text rank) between the
+   * applicant's profile text (bio/skills/department) and the job's
+   * title+description+company, computed once at application time. This is
+   * NOT resume-content parsing - there is no text extraction from the
+   * uploaded PDF/DOC in this stack, so it reflects profile data only.
+   */
+  matchScore: number | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  // Denormalised for the applicant's "My Applications" list and the poster's
+  // "Applicants" view, so neither screen needs a second round-trip.
+  jobTitle?: string;
+  company?: string;
+  applicantName?: string;
+  applicantAvatarUrl?: string;
+  applicantDepartment?: string;
 }
 
 export type PodRole = 'owner' | 'moderator' | 'member';

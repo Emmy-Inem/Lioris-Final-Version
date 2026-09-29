@@ -7,7 +7,8 @@ import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { createJob } from '@/api/jobs';
+import { createJob, CreateJobQuestionInput } from '@/api/jobs';
+import { generateUUID } from '@/utils/uuid';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { getFriendlyErrorMessage } from '@/utils/errors';
@@ -32,9 +33,25 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
   const [salary, setSalary] = useState('');
   const [applyUrl, setApplyUrl] = useState('');
   const [description, setDescription] = useState('');
+  const [acceptsInApp, setAcceptsInApp] = useState(true);
+  const [questions, setQuestions] = useState<{ id: string; text: string; type: 'text' | 'yes_no'; required: boolean }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  function addQuestion() {
+    haptics.light();
+    setQuestions((prev) => [...prev, { id: generateUUID(), text: '', type: 'text', required: true }]);
+  }
+
+  function removeQuestion(id: string) {
+    haptics.light();
+    setQuestions((prev) => prev.filter((q) => q.id !== id));
+  }
+
+  function updateQuestion(id: string, patch: Partial<{ text: string; type: 'text' | 'yes_no'; required: boolean }>) {
+    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+  }
 
   // The error banner renders at the very top of the form, above every
   // field - invisible to anyone who has scrolled down to the "Publish"
@@ -55,6 +72,8 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
     setSalary('');
     setApplyUrl('');
     setDescription('');
+    setAcceptsInApp(true);
+    setQuestions([]);
     setErrorMessage(null);
   }
 
@@ -75,12 +94,12 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
       haptics.error();
       return;
     }
-    if (!applyUrl.trim()) {
-      showError('Please provide an application link (https://...).');
+    if (!acceptsInApp && !applyUrl.trim()) {
+      showError('Add an external application link, or turn on "Accept applications in Lioris".');
       haptics.error();
       return;
     }
-    if (!isSafeHttpUrl(applyUrl.trim())) {
+    if (applyUrl.trim() && !isSafeHttpUrl(applyUrl.trim())) {
       showError('The application link must be a valid http:// or https:// URL.');
       haptics.error();
       return;
@@ -90,6 +109,10 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
     haptics.medium();
 
     try {
+      const cleanQuestions: CreateJobQuestionInput[] = questions
+        .filter((q) => q.text.trim())
+        .map((q) => ({ text: q.text.trim(), type: q.type, required: q.required }));
+
       await createJob({
         title: title.trim(),
         company: company.trim(),
@@ -97,7 +120,9 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
         type: jobType,
         remote: isRemote,
         salary: salary.trim() || undefined,
-        applyUrl: applyUrl.trim(),
+        applyUrl: applyUrl.trim() || undefined,
+        acceptsInAppApplications: acceptsInApp,
+        questions: cleanQuestions,
         description: description.trim() || undefined,
       });
 
@@ -274,8 +299,38 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  onChangeText={setSalary}
  />
 
+ {/* Accept in-app applications */}
+ <Pressable
+ onPress={() => {
+ haptics.light();
+ setAcceptsInApp(!acceptsInApp);
+ if (errorMessage) setErrorMessage(null);
+ }}
+ style={{
+ flexDirection: 'row',
+ alignItems: 'center',
+ justifyContent: 'space-between',
+ paddingVertical: spacing.sm,
+ marginBottom: spacing.md,
+ }}
+ >
+ <View style={{ flex: 1 }}>
+ <AppText weight="bold" variant="bodySmall">
+ Accept Applications in Lioris
+ </AppText>
+ <AppText tone="secondary" variant="caption">
+ Candidates apply with their CV and answer your screening questions right here
+ </AppText>
+ </View>
+ <Ionicons
+ name={acceptsInApp ? 'checkbox' : 'square-outline'}
+ size={24}
+ color={acceptsInApp ? colors.brandPrimary : colors.textSecondary}
+ />
+ </Pressable>
+
  <AppTextField
- label="Application Link"
+ label={acceptsInApp ? 'External Application Link (Optional)' : 'Application Link'}
  placeholder="https://company.com/apply"
  value={applyUrl}
  onChangeText={(t) => {
@@ -284,6 +339,97 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  }}
  autoCapitalize="none"
  />
+
+ {acceptsInApp && (
+ <View style={{ marginBottom: spacing.md }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, marginTop: spacing.sm }}>
+ <AppText weight="bold" variant="caption">
+ SCREENING QUESTIONS (OPTIONAL)
+ </AppText>
+ <Pressable
+ accessibilityRole="button"
+ accessibilityLabel="Add screening question"
+ onPress={addQuestion}
+ hitSlop={8}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+ >
+ <Ionicons name="add-circle-outline" size={16} color={colors.brandPrimary} />
+ <AppText variant="caption" weight="bold" tone="brand">
+ Add Question
+ </AppText>
+ </Pressable>
+ </View>
+
+ {questions.map((q, idx) => (
+ <View
+ key={q.id}
+ style={{
+ backgroundColor: colors.surface,
+ borderWidth: 1,
+ borderColor: colors.border,
+ borderRadius: radius.md,
+ padding: spacing.sm,
+ marginBottom: spacing.sm,
+ gap: spacing.xs,
+ }}
+ >
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+ <View style={{ flex: 1 }}>
+ <AppTextField
+ label={`Question ${idx + 1}`}
+ placeholder="e.g. Are you available to start immediately?"
+ value={q.text}
+ onChangeText={(t) => updateQuestion(q.id, { text: t })}
+ />
+ </View>
+ <Pressable
+ accessibilityRole="button"
+ accessibilityLabel="Remove question"
+ onPress={() => removeQuestion(q.id)}
+ hitSlop={8}
+ style={{ padding: 6, marginTop: 14 }}
+ >
+ <Ionicons name="trash-outline" size={18} color={colors.critical} />
+ </Pressable>
+ </View>
+
+ <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+ {(['text', 'yes_no'] as const).map((t) => (
+ <Pressable
+ key={t}
+ onPress={() => updateQuestion(q.id, { type: t })}
+ style={{
+ paddingHorizontal: spacing.sm,
+ paddingVertical: 6,
+ borderRadius: radius.pill,
+ borderWidth: 1,
+ borderColor: q.type === t ? colors.brandPrimary : colors.border,
+ backgroundColor: q.type === t ? colors.pastelPrimaryBg : 'transparent',
+ }}
+ >
+ <AppText variant="caption" weight="bold" tone={q.type === t ? 'brand' : 'secondary'}>
+ {t === 'text' ? 'Short answer' : 'Yes / No'}
+ </AppText>
+ </Pressable>
+ ))}
+ <Pressable
+ onPress={() => updateQuestion(q.id, { required: !q.required })}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' }}
+ >
+ <Ionicons
+ name={q.required ? 'checkbox' : 'square-outline'}
+ size={16}
+ color={q.required ? colors.brandPrimary : colors.textSecondary}
+ />
+ <AppText variant="caption" tone="secondary">
+ Required
+ </AppText>
+ </Pressable>
+ </View>
+ </View>
+ ))}
+ </View>
+ )}
 
  <AppTextField
  label="Role Description & Requirements"

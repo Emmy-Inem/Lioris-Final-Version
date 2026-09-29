@@ -23,6 +23,8 @@ import { Avatar } from '@/components/Avatar';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateJobModal } from '@/components/CreateJobModal';
+import { JobApplyModal } from '@/components/JobApplyModal';
+import { JobApplicantsModal } from '@/components/JobApplicantsModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
@@ -31,6 +33,7 @@ import { useCampusScope } from '@/hooks/useCampusScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { listJobs, JobsQuery } from '@/api/jobs';
 import { toggleSavedItem, SAVED_ITEMS_KEY } from '@/api/bookmarks';
+import { hasAppliedToJob } from '@/api/jobApplications';
 import { JobListing } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
@@ -68,6 +71,10 @@ export default function AlumniJobsScreen() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [savingJobId, setSavingJobId] = useState<string | null>(null);
+  const [applyModalJob, setApplyModalJob] = useState<JobListing | null>(null);
+  const [applicantsJob, setApplicantsJob] = useState<JobListing | null>(null);
+  const [appliedJobIds, setAppliedJobIds] = useState<Record<string, boolean>>({});
+  const [checkingApplied, setCheckingApplied] = useState(false);
 
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
@@ -141,6 +148,17 @@ export default function AlumniJobsScreen() {
       void openExternalUrl(job.applyUrl);
     } else {
       toast.show({ message: 'No direct external link provided for this posting', tone: 'warning' });
+    }
+  }
+
+  function handleOpenJobDetail(job: JobListing) {
+    haptics.light();
+    setSelectedJob(job);
+    if (job.acceptsInAppApplications) {
+      setCheckingApplied(true);
+      hasAppliedToJob(job.id)
+        .then((applied) => setAppliedJobIds((prev) => ({ ...prev, [job.id]: applied })))
+        .finally(() => setCheckingApplied(false));
     }
   }
 
@@ -432,10 +450,7 @@ export default function AlumniJobsScreen() {
             contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.sm }}
             renderItem={({ item }) => (
               <Pressable
-                onPress={() => {
-                  haptics.light();
-                  setSelectedJob(item);
-                }}
+                onPress={() => handleOpenJobDetail(item)}
               >
                 <SolidCard
                   radius={18}
@@ -543,7 +558,7 @@ export default function AlumniJobsScreen() {
                         </Pressable>
                       )}
                       <Pressable
-                        onPress={() => setSelectedJob(item)}
+                        onPress={() => handleOpenJobDetail(item)}
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
@@ -560,6 +575,31 @@ export default function AlumniJobsScreen() {
                       </Pressable>
                     </View>
                   </View>
+
+                  {item.posterId === user?.id && (
+                    <Pressable
+                      onPress={(e: any) => {
+                        e?.stopPropagation?.();
+                        haptics.light();
+                        setApplicantsJob(item);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        marginTop: spacing.xs,
+                        paddingVertical: 7,
+                        borderRadius: 10,
+                        backgroundColor: colors.pastelPrimaryBg,
+                      }}
+                    >
+                      <Ionicons name="people-outline" size={14} color={colors.brandPrimary} />
+                      <AppText variant="caption" weight="bold" tone="brand">
+                        View Applicants{item.applicationsCount ? ` (${item.applicationsCount})` : ''}
+                      </AppText>
+                    </Pressable>
+                  )}
                 </SolidCard>
               </Pressable>
             )}
@@ -703,15 +743,30 @@ export default function AlumniJobsScreen() {
                   />
                 </View>
 
-                <View style={{ flex: 2 }}>
-                  <AppButton
-                    label="Apply on Company Site ↗"
-                    variant="primary"
-                    size="md"
-                    fullWidth
-                    onPress={() => handleApply(selectedJob)}
-                  />
-                </View>
+                {isSafeHttpUrl(selectedJob.applyUrl) && (
+                  <View style={{ flex: selectedJob.acceptsInAppApplications ? 1 : 2 }}>
+                    <AppButton
+                      label={selectedJob.acceptsInAppApplications ? 'Company Site ↗' : 'Apply on Company Site ↗'}
+                      variant={selectedJob.acceptsInAppApplications ? 'secondary' : 'primary'}
+                      size="md"
+                      fullWidth
+                      onPress={() => handleApply(selectedJob)}
+                    />
+                  </View>
+                )}
+
+                {selectedJob.acceptsInAppApplications && (
+                  <View style={{ flex: 2 }}>
+                    <AppButton
+                      label={appliedJobIds[selectedJob.id] ? 'Applied ✓' : 'Apply in Lioris'}
+                      variant={appliedJobIds[selectedJob.id] ? 'secondary' : 'primary'}
+                      size="md"
+                      fullWidth
+                      disabled={appliedJobIds[selectedJob.id] || checkingApplied}
+                      onPress={() => setApplyModalJob(selectedJob)}
+                    />
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -727,6 +782,24 @@ export default function AlumniJobsScreen() {
           void refetch();
           toast.show({ message: 'Opportunity successfully posted to the Alumni Career Portal', tone: 'success' });
         }}
+      />
+
+      {applyModalJob && (
+        <JobApplyModal
+          visible={!!applyModalJob}
+          job={applyModalJob}
+          onClose={() => setApplyModalJob(null)}
+          onApplied={() => {
+            setAppliedJobIds((prev) => ({ ...prev, [applyModalJob.id]: true }));
+            setApplyModalJob(null);
+          }}
+        />
+      )}
+
+      <JobApplicantsModal
+        visible={!!applicantsJob}
+        job={applicantsJob}
+        onClose={() => setApplicantsJob(null)}
       />
     </ScreenContainer>
   );

@@ -26,7 +26,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase, SUPABASE_URL } from './supabase';
 import { isSafeHttpUrl } from '../utils/safeUrl';
 
-export type PrivateBucket = 'resources' | 'campus-media';
+export type PrivateBucket = 'resources' | 'campus-media' | 'resumes';
 
 /**
  * TTL for a minted URL, in seconds.

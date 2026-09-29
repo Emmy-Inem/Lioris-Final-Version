@@ -120,6 +120,8 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  experienceLevel: inferExperienceLevel(row),
  // A bad stored link (e.g. javascript:) must never reach an opener.
  applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
+ acceptsInAppApplications: row.accepts_in_app_applications ?? false,
+ applicationsCount: row.applications_count ?? 0,
  postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
  posterId: row.poster_id,
  createdAt: row.created_at,
@@ -156,6 +158,12 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  }
 }
 
+export interface CreateJobQuestionInput {
+  text: string;
+  type: 'text' | 'yes_no';
+  required: boolean;
+}
+
 export interface CreateJobPayload {
   title: string;
   company: string;
@@ -164,7 +172,11 @@ export interface CreateJobPayload {
   remote?: boolean;
   workplaceType?: 'Remote' | 'Hybrid' | 'On-site';
   experienceLevel?: 'Entry level' | 'Mid-Senior level' | 'Executive';
-  applyUrl: string;
+  /** External apply link. Optional when acceptsInAppApplications is true. */
+  applyUrl?: string;
+  /** Accept CV + screening-question applications inside Lioris. Defaults to true. */
+  acceptsInAppApplications?: boolean;
+  questions?: CreateJobQuestionInput[];
   salary?: string;
   description?: string;
   campusCode?: string;
@@ -176,7 +188,11 @@ export interface CreateJobPayload {
  * catch this and show a real error - see CreateJobModal.
  */
 export async function createJob(payload: CreateJobPayload): Promise<JobListing> {
-  const applyUrl = assertSafeHttpUrl(payload.applyUrl, 'The apply link');
+  const acceptsInApp = payload.acceptsInAppApplications ?? true;
+  const applyUrl = payload.applyUrl?.trim() ? assertSafeHttpUrl(payload.applyUrl, 'The apply link') : '';
+  if (!acceptsInApp && !applyUrl) {
+    throw new Error('Add an external apply link, or turn on in-app applications.');
+  }
   const jobId = generateUUID();
   const { data: authData } = await supabase.auth.getUser();
   let realPosterId = authData?.user?.id;
@@ -203,7 +219,8 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
     location: payload.location,
     type: payload.type,
     is_remote: isRemote,
-    apply_url: applyUrl,
+    apply_url: applyUrl || null,
+    accepts_in_app_applications: acceptsInApp,
     salary: payload.salary || null,
     description: payload.description || null,
     posted_by_name: posterName,
@@ -212,6 +229,21 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
   if (error) {
     console.warn('[Jobs] Supabase insert error:', error.message);
     throw new Error('Could not publish this opportunity. Please try again.');
+  }
+
+  const questions = (payload.questions ?? []).filter((q) => q.text.trim());
+  if (acceptsInApp && questions.length > 0) {
+    const { error: qError } = await supabase.from('job_questions').insert(
+      questions.map((q, i) => ({
+        job_id: jobId,
+        question_text: q.text.trim(),
+        question_type: q.type,
+        is_required: q.required,
+        order_index: i,
+      })),
+    );
+    // Non-fatal: the job itself is already live; a poster can add questions later.
+    if (qError) console.warn('[Jobs] Could not save screening questions:', qError.message);
   }
 
   const created: JobListing = {
@@ -226,6 +258,8 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
     salary: payload.salary,
     description: payload.description,
     applyUrl,
+    acceptsInAppApplications: acceptsInApp,
+    applicationsCount: 0,
     postedByName: posterName,
     createdAt: new Date().toISOString(),
   };

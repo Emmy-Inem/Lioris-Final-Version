@@ -11,9 +11,12 @@ import { ListItemSkeletonList } from '@/components/Skeleton';
 import { ErrorStateView } from '@/components/ErrorStateView';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateJobModal } from '@/components/CreateJobModal';
+import { JobApplicantsModal } from '@/components/JobApplicantsModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
 import { listJobs } from '@/api/jobs';
+import { JobListing } from '@/api/types';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { haptics } from '@/utils/haptics';
@@ -28,10 +31,12 @@ const JOB_FILTERS = [
 export default function JobsScreen() {
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
+ const { user } = useAuth();
  const queryClient = useQueryClient();
  const [query, setQuery] = useState('');
  const [selectedFilter, setSelectedFilter] = useState('all');
  const [createModalOpen, setCreateModalOpen] = useState(false);
+ const [applicantsJob, setApplicantsJob] = useState<JobListing | null>(null);
  const debouncedQuery = useDebouncedValue(query);
  const { campusCode } = useCampusScope();
 
@@ -188,8 +193,27 @@ export default function JobsScreen() {
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
               {filteredJobs.map((item) => (
-                <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
+                <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560, gap: 6 }}>
                   <JobCard job={item} />
+                  {item.posterId === user?.id && (
+                    <Pressable
+                      onPress={() => setApplicantsJob(item)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 8,
+                        borderRadius: radius.md,
+                        backgroundColor: colors.pastelPrimaryBg,
+                      }}
+                    >
+                      <Ionicons name="people-outline" size={14} color={colors.brandPrimary} />
+                      <AppText variant="caption" weight="bold" tone="brand">
+                        View Applicants{item.applicationsCount ? ` (${item.applicationsCount})` : ''}
+                      </AppText>
+                    </Pressable>
+                  )}
                 </View>
               ))}
             </View>
@@ -293,7 +317,30 @@ export default function JobsScreen() {
  data={filteredJobs}
  keyExtractor={(item) => item.id}
  contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
- renderItem={({ item }) => <JobCard job={item} />}
+ renderItem={({ item }) => (
+   <View style={{ gap: 6 }}>
+     <JobCard job={item} />
+     {item.posterId === user?.id && (
+       <Pressable
+         onPress={() => setApplicantsJob(item)}
+         style={{
+           flexDirection: 'row',
+           alignItems: 'center',
+           justifyContent: 'center',
+           gap: 6,
+           paddingVertical: 8,
+           borderRadius: radius.md,
+           backgroundColor: colors.pastelPrimaryBg,
+         }}
+       >
+         <Ionicons name="people-outline" size={14} color={colors.brandPrimary} />
+         <AppText variant="caption" weight="bold" tone="brand">
+           View Applicants{item.applicationsCount ? ` (${item.applicationsCount})` : ''}
+         </AppText>
+       </Pressable>
+     )}
+   </View>
+ )}
  showsVerticalScrollIndicator={false}
  ListEmptyComponent={
               isLoading ? (
@@ -316,6 +363,11 @@ export default function JobsScreen() {
  visible={createModalOpen}
  onClose={() => setCreateModalOpen(false)}
  onCreated={() => queryClient.invalidateQueries({ queryKey: ['jobs'] })}
+ />
+ <JobApplicantsModal
+   visible={!!applicantsJob}
+   job={applicantsJob}
+   onClose={() => setApplicantsJob(null)}
  />
  </ScreenContainer>
  );

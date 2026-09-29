@@ -1152,6 +1152,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260926230000_admin_user_profiles_rpc.sql',
   'supabase/migrations/20260928170000_marketplace_saved_items.sql',
   'supabase/migrations/20260929000000_close_open_security_findings.sql',
+  'supabase/migrations/20260930000000_job_applications.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1749,6 +1750,161 @@ console.log('\n== close open security findings (profiles PII / notifications / f
     await as('anon', async (c) => {
       const rows = (await c.q(`SELECT * FROM public.forum_community_members`)).rows;
       eq(rows.length, 0, 'anon sees no membership rows');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// job applications (20260930000000_job_applications.sql): CV upload,
+// screening questions, automatic ranking
+//
+// Everything below runs inside ONE as('postgres', ...) transaction, switching
+// identity with local imp()/svc() helpers (the same pattern the paid-events
+// suite above uses) - unlike as(user, fn), which opens and rolls back its
+// OWN transaction, so fixtures created inside one as() call are invisible to
+// the next. Sharing one transaction is what lets "poster creates a job" and
+// "student applies to it" see the same row.
+// ---------------------------------------------------------------------------
+console.log('\n== job applications (CV, screening questions, ranking) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  await check('job applications: full lifecycle (screening questions, apply, rank, review, withdraw) + resume storage RLS', async () => {
+    await as('postgres', async (c) => {
+      // Give s1 a profile that closely matches the job below; s2's profile is
+      // unrelated, so the ranking assertion has a real signal to check.
+      await c.q(
+        `UPDATE public.profiles SET bio = 'I love building web apps with React and TypeScript', interests = ARRAY['React','TypeScript','Frontend'], department = 'Computer Science' WHERE id = $1`,
+        [U.s1],
+      );
+      await c.q(
+        `UPDATE public.profiles SET bio = 'Passionate about crop science and soil health', interests = ARRAY['Agriculture','Farming'], department = 'Agriculture' WHERE id = $1`,
+        [U.s2],
+      );
+
+      await imp(U.alumni);
+      denied(
+        await c.t(
+          `INSERT INTO public.jobs (poster_id, title, company, location, accepts_in_app_applications, apply_url) VALUES ($1, 'No way to apply', 'Acme', 'Lagos', false, NULL)`,
+          [U.alumni],
+        ),
+        /jobs_has_an_apply_path/,
+        'job with neither in-app nor external apply path',
+      );
+
+      const r1 = await c.q(
+        `INSERT INTO public.jobs (poster_id, title, company, location, description, accepts_in_app_applications, is_approved) VALUES ($1, 'Frontend Engineer Intern', 'Acme', 'Lagos', 'React TypeScript JavaScript frontend web development', true, true) RETURNING id`,
+        [U.alumni],
+      );
+      const jobId = r1.rows[0].id;
+      const r2 = await c.q(
+        `INSERT INTO public.jobs (poster_id, title, company, location, accepts_in_app_applications, apply_url, is_approved) VALUES ($1, 'External Only Role', 'Acme', 'Lagos', false, 'https://acme.example/careers/123', true) RETURNING id`,
+        [U.alumni],
+      );
+      const jobExternalOnlyId = r2.rows[0].id;
+
+      const rq = await c.q(
+        `INSERT INTO public.job_questions (job_id, question_text, question_type, order_index) VALUES ($1, 'Are you available to start immediately?', 'yes_no', 0) RETURNING id`,
+        [jobId],
+      );
+      const questionId = rq.rows[0].id;
+
+      await imp(U.s3);
+      denied(
+        await c.t(`INSERT INTO public.job_questions (job_id, question_text) VALUES ($1, 'Why should we hire you?')`, [jobId]),
+        /row-level/i,
+        's3 adding a question to someone else\'s job',
+      );
+      eq((await c.q(`SELECT id FROM public.job_questions WHERE job_id = $1`, [jobId])).rows.length, 1, 'anyone can read screening questions');
+
+      await imp(U.s1);
+      denied(
+        await c.t(`INSERT INTO public.job_applications (job_id, applicant_id, cover_note) VALUES ($1, $2, 'hi')`, [jobExternalOnlyId, U.s1]),
+        /row-level/i,
+        's1 applying in-app to an external-only job',
+      );
+      denied(
+        await c.t(`INSERT INTO public.job_applications (job_id, applicant_id) VALUES ($1, $2)`, [jobId, U.s2]),
+        /row-level/i,
+        's1 applying as s2',
+      );
+      await c.q(
+        `INSERT INTO public.job_applications (job_id, applicant_id, resume_url, cover_note, answers) VALUES ($1, $2, $3, 'Excited to apply!', $4::jsonb)`,
+        [jobId, U.s1, `${U.s1}/resume_test.pdf`, JSON.stringify({ [questionId]: 'yes' })],
+      );
+      denied(await c.t(`INSERT INTO public.job_applications (job_id, applicant_id) VALUES ($1, $2)`, [jobId, U.s1]), /duplicate|unique/i, 's1 applying twice');
+
+      await imp(U.s2);
+      await c.q(`INSERT INTO public.job_applications (job_id, applicant_id, resume_url) VALUES ($1, $2, $3)`, [jobId, U.s2, `${U.s2}/resume_test.pdf`]);
+
+      await svc();
+      const ranked = (await c.q(`SELECT applicant_id, match_score FROM public.job_applications WHERE job_id = $1 ORDER BY match_score DESC NULLS LAST`, [jobId])).rows;
+      eq(ranked.length, 2, 'both applications present');
+      assert(ranked.every((r) => r.match_score !== null), 'match_score computed for every application');
+      eq(ranked[0].applicant_id, U.s1, 's1 (matching profile) ranks above s2 (unrelated profile)');
+      assert(Number(ranked[0].match_score) > Number(ranked[1].match_score), 's1 scores strictly higher than s2');
+      eq((await c.q(`SELECT applications_count FROM public.jobs WHERE id = $1`, [jobId])).rows[0].applications_count, 2, 'two applications counted');
+
+      await imp(U.s3);
+      eq((await c.q(`SELECT id FROM public.job_applications WHERE job_id = $1`, [jobId])).rows.length, 0, 's3 sees no applications for a job that is not theirs');
+      await imp(U.s1);
+      eq((await c.q(`SELECT id FROM public.job_applications WHERE job_id = $1`, [jobId])).rows.length, 1, 's1 sees only their own application');
+      const s1AppId = (await c.q(`SELECT id FROM public.job_applications WHERE job_id = $1 AND applicant_id = $2`, [jobId, U.s1])).rows[0].id;
+      await imp(U.alumni);
+      eq((await c.q(`SELECT id FROM public.job_applications WHERE job_id = $1`, [jobId])).rows.length, 2, 'the poster sees every application to their job');
+
+      // An UPDATE's USING clause filters rows rather than throwing, so an
+      // unauthorised update silently matches zero rows instead of erroring -
+      // assert on the affected-row count and the unchanged value, not denied().
+      await imp(U.s3);
+      const s3Update = await c.t(`UPDATE public.job_applications SET status = 'rejected' WHERE id = $1`, [s1AppId]);
+      eq(s3Update.n ?? 0, 0, 's3 changing someone else\'s application status affects zero rows');
+      await svc();
+      eq((await c.q(`SELECT status FROM public.job_applications WHERE id = $1`, [s1AppId])).rows[0].status, 'applied', 'status unchanged after s3\'s no-op update');
+
+      await imp(U.alumni);
+      await c.q(`UPDATE public.job_applications SET status = 'reviewed' WHERE id = $1`, [s1AppId]);
+      await svc();
+      const reviewed = (await c.q(`SELECT status, reviewed_at FROM public.job_applications WHERE id = $1`, [s1AppId])).rows[0];
+      eq(reviewed.status, 'reviewed', 'poster moved the application to reviewed');
+      assert(reviewed.reviewed_at !== null, 'reviewed_at was stamped automatically');
+
+      // s2's application is still 'applied' (untouched) - withdrawal should succeed.
+      await imp(U.s2);
+      const del1 = await c.t(`DELETE FROM public.job_applications WHERE job_id = $1 AND applicant_id = $2`, [jobId, U.s2]);
+      assert(del1.ok && del1.n === 1, 's2 withdrew their unreviewed application');
+      // s1's application was moved to 'reviewed' above - withdrawal should now be refused.
+      await imp(U.s1);
+      const del2 = await c.t(`DELETE FROM public.job_applications WHERE job_id = $1 AND applicant_id = $2`, [jobId, U.s1]);
+      eq(del2.n ?? 0, 0, 's1 cannot withdraw a reviewed application');
+      await svc();
+      eq((await c.q(`SELECT applications_count FROM public.jobs WHERE id = $1`, [jobId])).rows[0].applications_count, 1, 'count dropped back to 1 after the withdrawal');
+
+      // Resume storage RLS: owner writes own folder; another user cannot; poster/admin can read.
+      const bucket = (await c.q(`SELECT id FROM storage.buckets WHERE id = 'resumes'`)).rows[0];
+      if (bucket) {
+        await imp(U.s1);
+        denied(
+          await c.t(`INSERT INTO storage.objects (bucket_id, name, owner) VALUES ('resumes', $1 || '/x.pdf', $2)`, [U.s2, U.s1]),
+          /row-level/i,
+          's1 writing into s2\'s resume folder',
+        );
+        const ownFolder = await c.t(`INSERT INTO storage.objects (bucket_id, name, owner) VALUES ('resumes', $1 || '/resume.pdf', $1::uuid)`, [U.s1]);
+        assert(ownFolder.ok, 's1 can upload into their own resume folder');
+        eq((await c.q(`SELECT name FROM storage.objects WHERE bucket_id = 'resumes' AND name = $1`, [`${U.s1}/resume.pdf`])).rows.length, 1, 'owner can read their own resume object');
+
+        await imp(U.s3);
+        eq((await c.q(`SELECT name FROM storage.objects WHERE bucket_id = 'resumes' AND name = $1`, [`${U.s1}/resume.pdf`])).rows.length, 0, 'an unrelated student cannot read s1\'s resume object');
+      }
+
+      await imp(U.s1);
+      await c.q(`UPDATE public.profiles SET resume_url = $1 WHERE id = $2`, [`${U.s1}/resume.pdf`, U.s1]);
+      eq((await c.q(`SELECT resume_url FROM public.profiles WHERE id = $1`, [U.s1])).rows[0].resume_url, `${U.s1}/resume.pdf`, 's1 set and read their own resume_url');
     });
   });
 }

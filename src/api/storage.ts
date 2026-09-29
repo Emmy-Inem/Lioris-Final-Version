@@ -2,20 +2,21 @@ import { supabase } from './supabase';
 import { isLocalMediaUri, isSafeHttpUrl } from '../utils/safeUrl';
 import { getFriendlyErrorMessage } from '../utils/errors';
 
-type Bucket = 'resources' | 'avatars' | 'verifications' | 'campus-media';
+type Bucket = 'resources' | 'avatars' | 'verifications' | 'campus-media' | 'resumes';
 
 /**
  * Buckets whose objects are NOT world-readable. Uploads to these return the
  * storage PATH; a URL is minted per read via ./signedUrls. `avatars` is
  * deliberately absent - it stays public.
  */
-const PRIVATE_BUCKETS: ReadonlySet<Bucket> = new Set<Bucket>(['resources', 'campus-media', 'verifications']);
+const PRIVATE_BUCKETS: ReadonlySet<Bucket> = new Set<Bucket>(['resources', 'campus-media', 'verifications', 'resumes']);
 
 const BUCKET_LIMITS: Record<string, { maxSize: number; label: string }> = {
  resources: { maxSize: 50 * 1024 * 1024, label: '50MB' },
  avatars: { maxSize: 5 * 1024 * 1024, label: '5MB' },
  'campus-media': { maxSize: 25 * 1024 * 1024, label: '25MB' },
  verifications: { maxSize: 10 * 1024 * 1024, label: '10MB' },
+ resumes: { maxSize: 10 * 1024 * 1024, label: '10MB' },
 };
 
 // mime type -> file extension. The extension (and the stored contentType) is
@@ -72,6 +73,8 @@ const BUCKET_ALLOWED_MIMES: Record<Bucket, string[]> = {
  'text/plain',
  ],
  verifications: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'],
+ // Matches the resumes storage bucket's own allowed_mime_types (20260930000000_job_applications.sql).
+ resumes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
 };
 
 function randomToken(bytes = 8): string {

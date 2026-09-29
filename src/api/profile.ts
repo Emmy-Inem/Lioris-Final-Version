@@ -125,7 +125,7 @@ export async function getMyProfile(user?: {
  try {
  const { data, error } = await supabase
  .from('profiles')
- .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, verification_status, role, is_suspended')
+ .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, is_suspended')
  .eq('id', resolvedUser.id)
  .single();
    if (!error && data) {
@@ -194,6 +194,7 @@ export async function getMyProfile(user?: {
        institutionCode: inst?.code || fallback.institutionCode,
        avatarUrl: data.avatar_url || fallback.avatarUrl,
        coverUrl: data.banner_url || fallback.coverUrl,
+       resumeUrl: data.resume_url || null,
        userType: dbRole,
        isVerified,
        verificationStatus,
@@ -380,6 +381,7 @@ export async function updateMyProfile(
    }
    if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
    if (patch.coverUrl !== undefined) dbPatch.banner_url = patch.coverUrl;
+   if (patch.resumeUrl !== undefined) dbPatch.resume_url = patch.resumeUrl;
 
     if (userId !== 'me') {
       const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);

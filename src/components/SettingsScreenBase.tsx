@@ -23,6 +23,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from '@/api/profile';
+import { uploadResume } from '@/api/jobApplications';
+import { pickResume } from '@/utils/pickResume';
 import { roleRequiresMfa } from '@/auth/mfaPolicy';
 import { DATA_CONTROLLER, DSR_RESPONSE_DAYS, PRIVACY_VERSION, TERMS_VERSION } from '@/constants/legal';
 import { LAUNCH_INSTITUTIONS, getInstitutionByCode } from '@/api/institutions';
@@ -193,15 +195,8 @@ export function SettingsScreen() {
   const { scope, setScope, activeCampusCode, homeInstitutionCode } = useCampusScope();
   const [workspaceScopeModalOpen, setWorkspaceScopeModalOpen] = useState(false);
 
-  // Collapsible category state: default Account and Appearance expanded, others collapsed
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
-    workspace: true,
-    notifications: true,
-    security: true,
-    preview: true,
-    privacy: true,
-    legal: true,
-  });
+  // Collapsible category state: all categories expanded by default.
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   const isSectionCollapsed = (key: string) => !!collapsedSections[key];
 
@@ -327,6 +322,9 @@ export function SettingsScreen() {
   const [emailDigestAlerts, setEmailDigestAlerts] = useState(true);
   const [directoryDiscovery, setDirectoryDiscovery] = useState(true);
   const [isSigningOutOthers, setIsSigningOutOthers] = useState(false);
+
+  // Résumé / CV on file - reused across every job application (JobCard.tsx offers it as the default choice)
+  const [uploadingResume, setUploadingResume] = useState(false);
 
   // Hydrate preferences on mount
   useEffect(() => {
@@ -690,6 +688,28 @@ export function SettingsScreen() {
     }
   }
 
+  async function handleUploadResume() {
+    haptics.light();
+    setUploadingResume(true);
+    try {
+      const picked = await pickResume();
+      if (!picked) {
+        setUploadingResume(false);
+        return;
+      }
+      const resumeUrl = await uploadResume(picked.source);
+      await updateMyProfile(user!.id, { resumeUrl });
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      haptics.success();
+      toast.success('Your CV has been saved. It will be offered by default on every job application.');
+    } catch (err: any) {
+      haptics.error();
+      toast.error(err?.message || 'Could not upload your résumé. Please try again.');
+    } finally {
+      setUploadingResume(false);
+    }
+  }
+
   async function handleSubmitSupportRequest() {
     if (!supportMessage.trim()) {
       toast.error('Please describe your issue before submitting.');
@@ -895,6 +915,42 @@ export function SettingsScreen() {
                       {academicStandingDisplay}
                     </AppText>
                   </View>
+                </View>
+
+                {/* Résumé / CV on file - reused as the default across every job application */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: spacing.sm,
+                    backgroundColor: colors.divider,
+                    borderRadius: radius.md,
+                    padding: spacing.md,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                    <Ionicons
+                      name={profile?.resumeUrl ? 'document-text' : 'document-attach-outline'}
+                      size={20}
+                      color={profile?.resumeUrl ? colors.brandPrimary : colors.textSecondary}
+                    />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <AppText weight="bold" variant="bodySmall">
+                        My Résumé / CV
+                      </AppText>
+                      <AppText tone="secondary" variant="caption">
+                        {profile?.resumeUrl ? 'On file - used by default on job applications' : 'Not uploaded yet'}
+                      </AppText>
+                    </View>
+                  </View>
+                  <AppButton
+                    label={uploadingResume ? 'Uploading…' : profile?.resumeUrl ? 'Update' : 'Upload'}
+                    variant="secondary"
+                    size="sm"
+                    loading={uploadingResume}
+                    onPress={handleUploadResume}
+                  />
                 </View>
 
                 <View style={{ paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
