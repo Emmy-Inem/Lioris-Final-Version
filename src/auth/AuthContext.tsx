@@ -469,7 +469,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { data: prof } = await supabase
           .from('profiles')
-          .select('department, is_suspended, onboarding_complete')
+          .select('department, is_suspended, deactivated_at, onboarding_complete')
           .eq('id', session.user.id)
           .maybeSingle();
 
@@ -480,6 +480,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await supabase.auth.signOut();
           setUser(null);
           throw new Error('Your campus account has been suspended by administration. Access to this campus network has been revoked.');
+        }
+
+        // Logging back in is the reactivation step for a self-deactivated
+        // account (see deactivateMyAccount in Settings) - best-effort, never
+        // blocks a successful sign-in.
+        if (prof?.deactivated_at) {
+          try {
+            await supabase.rpc('reactivate_my_account');
+          } catch {}
         }
 
         const isOnboarded =

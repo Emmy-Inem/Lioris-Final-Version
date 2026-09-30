@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,11 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
-import { deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from '@/api/profile';
+import { deactivateMyAccount, deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from '@/api/profile';
+import { getMyNotificationPreferences, updateMyNotificationPreferences } from '@/api/notificationPreferences';
+import { listMyDevices, removeMyDevice, MyDevice } from '@/api/devices';
+import { registerForPushNotificationsAsync } from '@/notifications/push';
+import { relativeTime } from '@/utils/dateTime';
 import { uploadResume } from '@/api/jobApplications';
 import { pickResume } from '@/utils/pickResume';
 import { roleRequiresMfa } from '@/auth/mfaPolicy';
@@ -44,11 +48,12 @@ import {
 // Mirrors the pattern already used in ThemeProvider.tsx: web uses
 // localStorage, native uses expo-secure-store (raw `localStorage` is a
 // no-op on native and was silently losing these settings there).
-// NOTE: this is still device-local only - there is no backend column/table
-// wired up for notification or biometric preferences yet, so these settings
-// do not sync across devices or actually gate server-side push delivery.
-// Server-side sync is a known follow-up once a preferences table/column
-// exists to persist to.
+// Notification preferences now have a real backend home (public.
+// notification_preferences, src/api/notificationPreferences.ts) that
+// send-push actually checks before delivering; this local cache is just a
+// fast/offline-friendly mirror of that table, not the source of truth.
+// Biometric preference is still device-local only by design - it protects
+// this specific device, so it should not sync to a new one automatically.
 const isWeb = Platform.OS === 'web';
 
 async function getStoredPref(key: string): Promise<string | null> {
@@ -299,6 +304,12 @@ export function SettingsScreen() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deactivatingAccount, setDeactivatingAccount] = useState(false);
+
+  // Devices with push notifications registered (Security section)
+  const [devices, setDevices] = useState<MyDevice[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [removingDeviceId, setRemovingDeviceId] = useState<string | null>(null);
 
   // Contact Support / Report a Problem
   const [supportModalOpen, setSupportModalOpen] = useState(false);
@@ -331,6 +342,9 @@ export function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
+        // Paint instantly from the local cache, then reconcile with the
+        // server (the real source of truth send-push reads from) once it
+        // answers - avoids a loading flash while staying accurate.
         const notifs = await getStoredPref('lioris_setting_notifications');
         if (notifs) {
           const parsed = JSON.parse(notifs);
@@ -338,15 +352,22 @@ export function SettingsScreen() {
           if (typeof parsed.announcements === 'boolean') setAnnouncementAlerts(parsed.announcements);
           if (typeof parsed.events === 'boolean') setEventAlerts(parsed.events);
           if (typeof parsed.emailDigest === 'boolean') setEmailDigestAlerts(parsed.emailDigest);
-        } else {
-          const supaUser = (await supabase.auth.getUser()).data?.user;
-          const remote = supaUser?.user_metadata?.lioris_notifications;
-          if (remote) {
-            if (typeof remote.push === 'boolean') setPushEnabled(remote.push);
-            if (typeof remote.announcements === 'boolean') setAnnouncementAlerts(remote.announcements);
-            if (typeof remote.events === 'boolean') setEventAlerts(remote.events);
-            if (typeof remote.emailDigest === 'boolean') setEmailDigestAlerts(remote.emailDigest);
+        }
+        if (user?.id) {
+          try {
+            const remote = await getMyNotificationPreferences();
+            setPushEnabled(remote.push);
+            setAnnouncementAlerts(remote.announcements);
+            setEventAlerts(remote.events);
+            setEmailDigestAlerts(remote.emailDigest);
+            setStoredPref('lioris_setting_notifications', JSON.stringify(remote));
+          } catch {
+            // Offline or a transient error - the local cache applied above still stands.
           }
+          setDevicesLoading(true);
+          listMyDevices()
+            .then(setDevices)
+            .finally(() => setDevicesLoading(false));
         }
         const bio = await getStoredPref('lioris_setting_biometrics');
         if (bio !== null) {
@@ -515,6 +536,66 @@ export function SettingsScreen() {
     setDeleteModalOpen(true);
   }
 
+  function handleRemoveDevice(device: MyDevice) {
+    haptics.light();
+    Alert.alert(
+      'Remove This Device?',
+      "It will stop receiving push notifications. If you're still signed in on it, it can register itself again next time it opens the app.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setRemovingDeviceId(device.id);
+            try {
+              await removeMyDevice(device.id);
+              setDevices((prev) => prev.filter((d) => d.id !== device.id));
+            } catch (err: any) {
+              haptics.error();
+              toast.error(err?.message || 'Could not remove this device. Please try again.');
+            } finally {
+              setRemovingDeviceId(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function handleDeactivateAccount() {
+    if (deactivatingAccount) return;
+    haptics.light();
+    Alert.alert(
+      'Deactivate Your Account?',
+      "You'll be signed out immediately and your profile will be paused. Log back in any time to reactivate - nothing is deleted.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Deactivate',
+          style: 'destructive',
+          onPress: async () => {
+            setDeactivatingAccount(true);
+            haptics.medium();
+            try {
+              await deactivateMyAccount();
+              try {
+                await logout();
+              } catch {}
+              toast.success('Your account is deactivated. Log back in any time to reactivate it.');
+              router.replace('/(auth)/login');
+            } catch (err: any) {
+              haptics.error();
+              toast.error(err?.message || 'Could not deactivate your account. Please try again.');
+            } finally {
+              setDeactivatingAccount(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   async function handleDeleteAccount() {
     if (deletingAccount || deleteConfirmText.trim() !== 'DELETE') return;
     setDeletingAccount(true);
@@ -538,18 +619,36 @@ export function SettingsScreen() {
     }
   }
 
-  function saveNotifPreference(updated: { push: boolean; announcements: boolean; events: boolean; emailDigest?: boolean }) {
+  function saveNotifPreference(updated: { push: boolean; announcements: boolean; events: boolean; emailDigest: boolean }) {
     setStoredPref('lioris_setting_notifications', JSON.stringify(updated));
     if (user?.id) {
-      supabase.auth.updateUser({ data: { lioris_notifications: updated } }).catch(() => {});
+      // Best-effort: the local cache above already reflects the change, and
+      // this screen's own state is what the switches render from.
+      updateMyNotificationPreferences(updated).catch(() => {});
     }
   }
 
-  function handleTogglePush(next: boolean) {
+  async function handleTogglePush(next: boolean) {
     haptics.light();
     setPushEnabled(next);
     saveNotifPreference({ push: next, announcements: announcementAlerts, events: eventAlerts, emailDigest: emailDigestAlerts });
     toast.info(next ? 'Push notifications enabled' : 'Push notifications muted');
+
+    if (!next) return;
+    // Turning the preference on only controls what we're willing to send -
+    // if this device has notifications blocked at the OS level, say so and
+    // offer the one fix that actually works (there's no in-app override).
+    const result = await registerForPushNotificationsAsync();
+    if (result.status === 'denied') {
+      Alert.alert(
+        'Notifications Are Blocked on This Device',
+        'Your preference is saved, but this device has notifications turned off at the system level, so nothing will arrive here until you allow them.',
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
+        ],
+      );
+    }
   }
 
   function handleToggleAnnouncements(next: boolean) {
@@ -1525,6 +1624,65 @@ export function SettingsScreen() {
                     loading={isSigningOutOthers}
                   />
                 </View>
+
+                {(devicesLoading || devices.length > 0) && (
+                  <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                    <View>
+                      <AppText weight="bold" variant="bodySmall">Your Devices</AppText>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                        Devices registered to receive notifications. Remove one you don't recognize or no longer use.
+                      </AppText>
+                    </View>
+                    {devicesLoading ? (
+                      <AppText tone="secondary" variant="caption">Loading…</AppText>
+                    ) : (
+                      devices.map((device) => (
+                        <View
+                          key={device.id}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: spacing.sm,
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            borderRadius: radius.md,
+                            backgroundColor: colors.divider,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                            <Ionicons
+                              name={device.platform === 'ios' || device.platform === 'android' ? 'phone-portrait-outline' : 'desktop-outline'}
+                              size={16}
+                              color={colors.textSecondary}
+                            />
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <AppText variant="bodySmall" weight="medium" numberOfLines={1}>
+                                {device.platform ? device.platform.charAt(0).toUpperCase() + device.platform.slice(1) : 'Device'}
+                              </AppText>
+                              <AppText variant="caption" tone="secondary">
+                                Active {relativeTime(device.updatedAt)}
+                              </AppText>
+                            </View>
+                          </View>
+                          <Pressable
+                            onPress={() => handleRemoveDevice(device)}
+                            hitSlop={8}
+                            disabled={removingDeviceId === device.id}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Remove ${device.platform || 'this'} device`}
+                          >
+                            {removingDeviceId === device.id ? (
+                              <AppText variant="caption" tone="secondary">Removing…</AppText>
+                            ) : (
+                              <Ionicons name="close-circle-outline" size={20} color={colors.critical} />
+                            )}
+                          </Pressable>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                )}
               </SolidCard>
                 )}
               </View>
@@ -1636,6 +1794,25 @@ export function SettingsScreen() {
                     onPress={handleExportData}
                     loading={exportingData}
                     disabled={exportingData || deletingAccount}
+                  />
+                </View>
+
+                <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                  <View>
+                    <AppText weight="bold" variant="bodySmall">
+                      Deactivate my account
+                    </AppText>
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                      Sign out and pause your account without deleting anything. Log back in any time to pick up right where you left off.
+                    </AppText>
+                  </View>
+                  <AppButton
+                    label={deactivatingAccount ? 'Deactivating…' : 'Deactivate my account'}
+                    variant="secondary"
+                    icon="pause-circle-outline"
+                    onPress={handleDeactivateAccount}
+                    loading={deactivatingAccount}
+                    disabled={exportingData || deletingAccount || deactivatingAccount}
                   />
                 </View>
 

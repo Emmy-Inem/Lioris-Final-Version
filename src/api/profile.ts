@@ -477,6 +477,26 @@ export async function exportMyData(): Promise<Record<string, unknown>> {
   return (data ?? {}) as Record<string, unknown>;
 }
 
+/**
+ * Pauses the account (distinct from permanent deletion): logging back in
+ * clears it automatically - see reactivateMyAccount() and the deactivated_at
+ * check in AuthContext's sign-in flow.
+ */
+export async function deactivateMyAccount(): Promise<void> {
+  const { error } = await supabase.rpc('deactivate_my_account');
+  if (error) {
+    throw new Error(error.message || 'Could not deactivate your account. Please try again.');
+  }
+}
+
+/** Called automatically on a successful sign-in when the profile is deactivated. */
+export async function reactivateMyAccount(): Promise<void> {
+  const { error } = await supabase.rpc('reactivate_my_account');
+  if (error) {
+    throw new Error(error.message || 'Could not reactivate your account. Please try again.');
+  }
+}
+
 export async function getPublicProfile(userId: string): Promise<UserProfile | null> {
   if (!userId) return null;
   const cached = profileState.get(userId);

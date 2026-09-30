@@ -207,6 +207,28 @@ Deno.serve(async (req: Request) => {
       if (block) return json({ success: true, sent: 0, removed: 0, skipped: 'blocked' }, 200);
     }
 
+    // Respect the recipient's notification preferences. No row yet = every
+    // category defaults on (matches the client's own defaults), so a user
+    // who never opened Settings still gets notified normally.
+    const notificationType = typeof record.type === 'string' ? record.type : '';
+    const { data: prefs, error: prefsError } = await admin
+      .from('notification_preferences')
+      .select('push_enabled, announcements_enabled, events_enabled')
+      .eq('user_id', recipientId)
+      .maybeSingle();
+    if (prefsError) throw prefsError;
+    if (prefs) {
+      if (prefs.push_enabled === false) {
+        return json({ success: true, sent: 0, removed: 0, skipped: 'push_disabled' }, 200);
+      }
+      if ((notificationType === 'announcement' || notificationType === 'system_announcement') && prefs.announcements_enabled === false) {
+        return json({ success: true, sent: 0, removed: 0, skipped: 'announcements_muted' }, 200);
+      }
+      if (notificationType === 'event' && prefs.events_enabled === false) {
+        return json({ success: true, sent: 0, removed: 0, skipped: 'events_muted' }, 200);
+      }
+    }
+
     const { data: tokenRows, error: tokenError } = await admin
       .from('push_tokens')
       .select('token')
@@ -219,12 +241,11 @@ Deno.serve(async (req: Request) => {
       .filter((t: unknown): t is string => typeof t === 'string' && EXPO_TOKEN_RE.test(t));
     if (tokens.length === 0) return json({ success: true, sent: 0, removed: 0, skipped: 'no_tokens' }, 200);
 
-    const type = typeof record.type === 'string' ? record.type : '';
-    const critical = CRITICAL_TYPES.has(type);
+    const critical = CRITICAL_TYPES.has(notificationType);
     const deepLinkPath = safeDeepLink(record.action_url);
     const data: Record<string, string> = {};
     if (deepLinkPath) data.deepLinkPath = deepLinkPath;
-    if (type) data.type = type;
+    if (notificationType) data.type = notificationType;
 
     const messages = tokens.map((to: string) => ({
       to,

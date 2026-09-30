@@ -1157,6 +1157,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261002000000_customer_care.sql',
   'supabase/migrations/20261003000000_trust_safety_gaps.sql',
   'supabase/migrations/20261003010000_admin_directory_and_analytics_fixes.sql',
+  'supabase/migrations/20261003020000_tier3_account_and_notifications.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2353,6 +2354,73 @@ console.log('\n== admin directory + analytics fixes (permission fix, heartbeat e
       assert(!featureNames.includes('heartbeat'), 'heartbeat does not pollute most_used_features');
       assert(featureNames.includes('test_feature_xyz'), 'a real feature-use event still appears in most_used_features');
       assert(typeof summary.new_signups === 'number' && summary.new_signups >= 1, 'new_signups is present and counts at least the fixture students created for this run');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// tier 3: notification preferences (owner-only, service_role read) + self-
+// service account deactivation (20261003020000).
+// ---------------------------------------------------------------------------
+console.log('\n== tier 3: notification preferences + account deactivation ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  await check('notification_preferences: a user can upsert and read their own row, not read/write another user\'s, and send-push (service_role) can read any', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      await c.q(
+        `INSERT INTO public.notification_preferences (user_id, push_enabled, announcements_enabled, events_enabled, digest_enabled) VALUES ($1, false, true, false, true)`,
+        [U.s1],
+      );
+      const mine = await c.q(`SELECT push_enabled, events_enabled FROM public.notification_preferences WHERE user_id = $1`, [U.s1]);
+      eq(mine.rows[0], { push_enabled: false, events_enabled: false }, 'the owner reads back what they wrote');
+
+      denied(
+        await c.t(
+          `INSERT INTO public.notification_preferences (user_id, push_enabled) VALUES ($1, false)`,
+          [U.s2],
+        ),
+        /row-level|policy/i,
+        'a user cannot write a notification_preferences row for someone else',
+      );
+
+      const peekOther = await c.q(`SELECT * FROM public.notification_preferences WHERE user_id = $1`, [U.s2]);
+      eq(peekOther.rows.length, 0, 'a user cannot read another user\'s notification preferences (RLS hides the row, not an error)');
+
+      await svc();
+      const asService = await c.q(`SELECT push_enabled FROM public.notification_preferences WHERE user_id = $1`, [U.s1]);
+      eq(asService.rows[0].push_enabled, false, 'service_role (send-push) can read any row to decide whether to deliver');
+    });
+  });
+
+  await check('deactivate_my_account / reactivate_my_account operate on the caller only (auth.uid(), no target parameter)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s3);
+      await c.q(`SELECT public.deactivate_my_account()`);
+
+      await svc();
+      const deactivatedRow = await c.q(`SELECT deactivated_at FROM public.profiles WHERE id = $1`, [U.s3]);
+      assert(deactivatedRow.rows[0].deactivated_at !== null, 'deactivate_my_account set deactivated_at for the caller');
+
+      await imp(U.s3);
+      await c.q(`SELECT public.reactivate_my_account()`);
+      await svc();
+      const reactivatedRow = await c.q(`SELECT deactivated_at FROM public.profiles WHERE id = $1`, [U.s3]);
+      assert(reactivatedRow.rows[0].deactivated_at === null, 'reactivate_my_account cleared it again');
+
+      await imp(U.s4);
+      await c.q(`SELECT public.deactivate_my_account()`);
+      await svc();
+      const s4Row = await c.q(`SELECT deactivated_at FROM public.profiles WHERE id = $1`, [U.s4]);
+      const s3RowUnaffected = await c.q(`SELECT deactivated_at FROM public.profiles WHERE id = $1`, [U.s3]);
+      assert(s4Row.rows[0].deactivated_at !== null, 's4 deactivated itself');
+      assert(s3RowUnaffected.rows[0].deactivated_at === null, 's3 is untouched by s4 deactivating their own account - there is no target parameter, only auth.uid()');
     });
   });
 }

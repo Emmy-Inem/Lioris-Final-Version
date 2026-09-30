@@ -14,6 +14,11 @@ Notifications.setNotificationHandler({
  }),
 });
 
+export type PushRegistrationResult =
+  | { status: 'granted'; token: string }
+  | { status: 'denied' }
+  | { status: 'unavailable' };
+
 /**
  * Requests permission and registers the device's Expo push token with
  * the backend Notification Service (PRD Section 12.3). Call this after
@@ -22,10 +27,10 @@ Notifications.setNotificationHandler({
  * (e.g. right after enabling notifications in onboarding) over an
  * immediate app-launch prompt.
  */
-export async function registerForPushNotificationsAsync(): Promise<string | null> {
+export async function registerForPushNotificationsAsync(): Promise<PushRegistrationResult> {
  if (!Device.isDevice) {
  // Push tokens aren't available on simulators/emulators.
- return null;
+ return { status: 'unavailable' };
  }
 
  const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -37,7 +42,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
  }
 
  if (finalStatus !== 'granted') {
- return null;
+ return { status: 'denied' };
  }
 
  if (Platform.OS === 'android') {
@@ -61,7 +66,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
  );
 
  await registerDevicePushToken(tokenResponse.data);
- return tokenResponse.data;
+ return { status: 'granted', token: tokenResponse.data };
 }
 
 /**
