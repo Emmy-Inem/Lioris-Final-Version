@@ -138,3 +138,37 @@ export async function updateGivingCampaignTotal(campaignId: string, confirmedTot
     throw new Error((data as any)?.message || getFriendlyErrorMessage(error, 'Could not update the confirmed total.'));
   }
 }
+
+// --- Owner self-service (direct table writes - RLS + the moderation trigger
+// let the campaign's own creator do these without going through an admin) ---
+
+/** The signed-in owner updates their own campaign's manually-confirmed total. */
+export async function updateMyCampaignTotal(campaignId: string, confirmedTotal: number): Promise<void> {
+  const { error } = await supabase
+    .from('giving_campaigns')
+    .update({ confirmed_total: confirmedTotal })
+    .eq('id', campaignId);
+  if (error) {
+    throw new Error(getFriendlyErrorMessage(error, 'Could not update your confirmed total. Please try again.'));
+  }
+}
+
+/** The signed-in owner closes their own campaign (stops accepting gifts). */
+export async function closeMyCampaign(campaignId: string): Promise<void> {
+  const { error } = await supabase
+    .from('giving_campaigns')
+    .update({ is_closed: true })
+    .eq('id', campaignId);
+  if (error) {
+    throw new Error(getFriendlyErrorMessage(error, 'Could not close this campaign. Please try again.'));
+  }
+}
+
+/** Referral click count for a campaign - the owner or an admin only. */
+export async function getCampaignClickCount(campaignId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('get_giving_campaign_click_count', { p_campaign: campaignId });
+  if (error) {
+    throw new Error(getFriendlyErrorMessage(error, 'Could not load the click count.'));
+  }
+  return Number(data ?? 0);
+}

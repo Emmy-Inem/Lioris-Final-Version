@@ -8,12 +8,32 @@ import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
-import { GivingCampaign, listPendingGivingCampaigns, reviewGivingCampaign, updateGivingCampaignTotal, listGivingCampaigns } from '@/api/donations';
+import {
+  GivingCampaign,
+  getCampaignClickCount,
+  listPendingGivingCampaigns,
+  reviewGivingCampaign,
+  updateGivingCampaignTotal,
+  listGivingCampaigns,
+} from '@/api/donations';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 
 function formatNaira(amount: number): string {
   return `₦${amount.toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
+}
+
+function ClickCount({ campaignId }: { campaignId: string }) {
+  const { data: clickCount } = useQuery({
+    queryKey: ['giving-campaign-clicks', campaignId],
+    queryFn: () => getCampaignClickCount(campaignId),
+  });
+  if (typeof clickCount !== 'number') return null;
+  return (
+    <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+      {clickCount} click{clickCount === 1 ? '' : 's'} on the giving link
+    </AppText>
+  );
 }
 
 function TotalEditor({ campaign, onSaved }: { campaign: GivingCampaign; onSaved: () => void }) {
@@ -180,6 +200,7 @@ export function DonationsModerationTab() {
           <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.sm }}>
             {formatNaira(c.confirmedTotal)} confirmed{c.goalAmount ? ` of ${formatNaira(c.goalAmount)} goal` : ''}
           </AppText>
+          <ClickCount campaignId={c.id} />
 
           {section === 'pending' ? (
             <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.md }}>

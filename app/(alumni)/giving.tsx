@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +14,16 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
-import { GivingCampaign, createGivingCampaign, listGivingCampaigns, listMyGivingCampaigns, openGivingPage } from '@/api/donations';
+import {
+  GivingCampaign,
+  closeMyCampaign,
+  createGivingCampaign,
+  getCampaignClickCount,
+  listGivingCampaigns,
+  listMyGivingCampaigns,
+  openGivingPage,
+  updateMyCampaignTotal,
+} from '@/api/donations';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { haptics } from '@/utils/haptics';
@@ -62,6 +71,106 @@ function CampaignCard({ campaign, onGive }: { campaign: GivingCampaign; onGive: 
         <AppButton label="Give ↗" variant="primary" onPress={() => onGive(campaign)} fullWidth />
       </View>
     </SolidCard>
+  );
+}
+
+/** Owner-only controls shown under "My Campaigns": update the confirmed
+ * total, close the campaign, and see how many people clicked through. */
+function MyCampaignOwnerPanel({ campaign, onGive, onChanged }: { campaign: GivingCampaign; onGive: (c: GivingCampaign) => void; onChanged: () => void }) {
+  const { colors, spacing } = useTheme();
+  const toast = useToast();
+  const [totalInput, setTotalInput] = useState(String(campaign.confirmedTotal));
+  const [savingTotal, setSavingTotal] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  const { data: clickCount } = useQuery({
+    queryKey: ['giving-campaign-clicks', campaign.id],
+    queryFn: () => getCampaignClickCount(campaign.id),
+  });
+
+  async function saveTotal() {
+    const num = Number(totalInput.replace(/[^0-9.]/g, ''));
+    if (!Number.isFinite(num) || num < 0) {
+      toast.error('Enter a valid confirmed total (0 or more).');
+      return;
+    }
+    haptics.light();
+    setSavingTotal(true);
+    try {
+      await updateMyCampaignTotal(campaign.id, num);
+      haptics.success();
+      toast.success('Confirmed total updated.');
+      onChanged();
+    } catch (err: any) {
+      haptics.error();
+      toast.error(err?.message || 'Could not update the confirmed total.');
+    } finally {
+      setSavingTotal(false);
+    }
+  }
+
+  async function doClose() {
+    setClosing(true);
+    try {
+      await closeMyCampaign(campaign.id);
+      haptics.success();
+      toast.success('Campaign closed.');
+      onChanged();
+    } catch (err: any) {
+      haptics.error();
+      toast.error(err?.message || 'Could not close this campaign.');
+    } finally {
+      setClosing(false);
+    }
+  }
+
+  function confirmClose() {
+    haptics.medium();
+    Alert.alert(
+      'Close This Campaign?',
+      `"${campaign.title}" will stop accepting new gifts. You can still see it under My Campaigns afterwards.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Close Campaign', style: 'destructive', onPress: doClose },
+      ],
+    );
+  }
+
+  return (
+    <View>
+      <CampaignCard campaign={campaign} onGive={onGive} />
+      <SolidCard radius={18} style={{ padding: spacing.md, marginTop: spacing.xs }}>
+        <AppText variant="caption" tone="secondary">
+          {typeof clickCount === 'number' ? `${clickCount} click${clickCount === 1 ? '' : 's'}` : '…'} {'→'} {formatNaira(campaign.confirmedTotal)} confirmed
+        </AppText>
+
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, marginTop: spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
+              Update Confirmed Total (₦)
+            </AppText>
+            <TextInput
+              value={totalInput}
+              onChangeText={(t) => setTotalInput(t.replace(/[^0-9.]/g, ''))}
+              keyboardType="numeric"
+              placeholderTextColor={colors.textSecondary}
+              style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
+            />
+          </View>
+          <AppButton label="Save" variant="secondary" size="sm" loading={savingTotal} onPress={saveTotal} />
+        </View>
+
+        {campaign.isClosed ? (
+          <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.sm }}>
+            This campaign is closed and no longer accepting gifts.
+          </AppText>
+        ) : (
+          <View style={{ marginTop: spacing.sm }}>
+            <AppButton label="Close Campaign" variant="ghost" size="sm" loading={closing} onPress={confirmClose} fullWidth />
+          </View>
+        )}
+      </SolidCard>
+    </View>
   );
 }
 
@@ -226,7 +335,15 @@ export default function AlumniGivingScreen() {
                   />
                 </View>
               )}
-              <CampaignCard campaign={c} onGive={handleGive} />
+              {tab === 'mine' ? (
+                <MyCampaignOwnerPanel
+                  campaign={c}
+                  onGive={handleGive}
+                  onChanged={() => queryClient.invalidateQueries({ queryKey: ['giving-campaigns'] })}
+                />
+              ) : (
+                <CampaignCard campaign={c} onGive={handleGive} />
+              )}
             </View>
           ))}
         </ScrollView>
