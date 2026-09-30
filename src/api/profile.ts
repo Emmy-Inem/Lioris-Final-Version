@@ -125,7 +125,7 @@ export async function getMyProfile(user?: {
  try {
  const { data, error } = await supabase
  .from('profiles')
- .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, is_suspended, graduation_year, industry, company, job_title, location')
+ .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, is_suspended, graduation_year, industry, company, job_title, location, linkedin_url')
  .eq('id', resolvedUser.id)
  .single();
    if (!error && data) {
@@ -200,6 +200,7 @@ export async function getMyProfile(user?: {
        company: data.company || null,
        jobTitle: data.job_title || null,
        location: data.location || null,
+       linkedinUrl: data.linkedin_url || null,
        userType: dbRole,
        isVerified,
        verificationStatus,
@@ -392,6 +393,7 @@ export async function updateMyProfile(
    if (patch.company !== undefined) dbPatch.company = patch.company;
    if (patch.jobTitle !== undefined) dbPatch.job_title = patch.jobTitle;
    if (patch.location !== undefined) dbPatch.location = patch.location;
+   if (patch.linkedinUrl !== undefined) dbPatch.linkedin_url = patch.linkedinUrl ? patch.linkedinUrl.trim() : null;
 
     if (userId !== 'me') {
       const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
@@ -507,7 +509,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title')
+      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title, linkedin_url')
       .eq('id', userId)
       .single();
 
@@ -530,6 +532,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         company: data.directory_hide_company ? null : (data.company || null),
         jobTitle: data.directory_hide_job_title ? null : (data.job_title || null),
         location: data.directory_hide_location ? null : (data.location || null),
+        linkedinUrl: data.linkedin_url || null,
         institutionName: inst?.name || (data.campus_code && data.campus_code !== 'GLOBAL' ? data.campus_code : 'Campus'),
         institutionCode: inst?.code || data.campus_code || undefined,
         avatarUrl: data.avatar_url || undefined,
@@ -557,4 +560,89 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Peer skill endorsements (public.skill_endorsements)
+// ---------------------------------------------------------------------------
+
+export interface SkillEndorsementSummary {
+  skill: string;
+  count: number;
+  /** Whether the signed-in viewer has already endorsed this skill - lets the UI toggle endorse/un-endorse. */
+  endorsedByMe: boolean;
+}
+
+async function currentProfileUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getUser();
+  if (data?.user?.id) return data.user.id;
+  const stored = await getSessionUser();
+  return stored?.id ?? null;
+}
+
+/**
+ * Per-skill endorsement counts for a profile, aggregated from the raw
+ * skill_endorsements rows (readable by any signed-in member), plus whether
+ * the signed-in viewer has already endorsed each one. Skills nobody has
+ * endorsed yet simply do not appear in the result.
+ */
+export async function getSkillEndorsements(profileId: string): Promise<SkillEndorsementSummary[]> {
+  const { data, error } = await supabase
+    .from('skill_endorsements')
+    .select('skill, endorser_id')
+    .eq('profile_id', profileId);
+  if (error) {
+    throw new Error(getFriendlyErrorMessage(error, 'Could not load skill endorsements.'));
+  }
+
+  const viewerId = await currentProfileUserId();
+  const bySkill = new Map<string, { count: number; endorsedByMe: boolean }>();
+  for (const row of data ?? []) {
+    const entry = bySkill.get(row.skill) ?? { count: 0, endorsedByMe: false };
+    entry.count += 1;
+    if (viewerId && row.endorser_id === viewerId) entry.endorsedByMe = true;
+    bySkill.set(row.skill, entry);
+  }
+  return Array.from(bySkill.entries()).map(([skill, { count, endorsedByMe }]) => ({ skill, count, endorsedByMe }));
+}
+
+/**
+ * Endorses another member's listed skill as the signed-in user. The server
+ * also refuses a self-endorsement (skill_endorsements_not_self_chk) - this
+ * client-side check just gives a friendlier message for the same case; the
+ * UI itself should never offer the affordance on the profile owner's own
+ * skills in the first place.
+ */
+export async function endorseSkill(profileId: string, skill: string): Promise<void> {
+  const userId = await currentProfileUserId();
+  if (!userId) throw new Error('Please sign in again to continue.');
+  const cleanSkill = skill.trim();
+  if (!cleanSkill) throw new Error('That skill is not valid.');
+  if (userId === profileId) throw new Error('You cannot endorse your own skill.');
+
+  const { error } = await supabase
+    .from('skill_endorsements')
+    .insert({ profile_id: profileId, skill: cleanSkill, endorser_id: userId });
+  if (error) {
+    if (error.code === '23505' || /duplicate|unique/i.test(error.message)) {
+      throw new Error('You have already endorsed this skill.');
+    }
+    throw new Error(getFriendlyErrorMessage(error, 'Could not endorse this skill.'));
+  }
+}
+
+/** Removes the signed-in user's own endorsement of a skill (a no-op if they had not endorsed it). */
+export async function removeEndorsement(profileId: string, skill: string): Promise<void> {
+  const userId = await currentProfileUserId();
+  if (!userId) throw new Error('Please sign in again to continue.');
+
+  const { error } = await supabase
+    .from('skill_endorsements')
+    .delete()
+    .eq('profile_id', profileId)
+    .eq('skill', skill)
+    .eq('endorser_id', userId);
+  if (error) {
+    throw new Error(getFriendlyErrorMessage(error, 'Could not remove your endorsement.'));
+  }
 }

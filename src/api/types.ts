@@ -21,6 +21,8 @@ export interface UserProfile {
  company?: string | null;
  jobTitle?: string | null;
  location?: string | null;
+ /** Shown on the directory/connections profile view; distinct from MentorProfile.linkedinUrl (mentor-only). */
+ linkedinUrl?: string | null;
  institutionName?: string;
  institutionCode?: string;
  avatarUrl?: string | null;
