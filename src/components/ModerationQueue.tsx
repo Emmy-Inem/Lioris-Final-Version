@@ -22,6 +22,7 @@ import { deleteListing } from '@/api/marketplace';
 import { rejectJob } from '@/api/jobs';
 import { Report } from '@/api/types';
 import { haptics } from '@/utils/haptics';
+import { buildCsv, downloadCsv, CsvColumn } from '@/utils/csvExport';
 
 const STATUS_TONE: Record<Report['status'], 'warning' | 'brand' | 'success' | 'neutral'> = {
  open: 'warning',
@@ -31,6 +32,16 @@ const STATUS_TONE: Record<Report['status'], 'warning' | 'brand' | 'success' | 'n
 };
 
 const TARGET_FILTERS = ['All Flags', 'Posts', 'Pod posts', 'Messages', 'Events', 'Listings', 'Jobs', 'Users'];
+
+const MODERATION_QUEUE_CSV_COLUMNS: CsvColumn<Report>[] = [
+  { header: 'ID', value: (r) => r.id },
+  { header: 'TargetType', value: (r) => r.targetType },
+  { header: 'Institution', value: (r) => r.institutionCode ?? 'GLOBAL' },
+  { header: 'Status', value: (r) => r.status },
+  { header: 'Reason', value: (r) => r.reason },
+  { header: 'TargetID', value: (r) => r.targetId },
+  { header: 'Filed', value: (r) => r.createdAt },
+];
 
 interface ModerationQueueProps {
  institutionCode?: string;
@@ -71,6 +82,16 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  if (filterType === 'Users') return r.targetType === 'user';
  return true;
  });
+
+ async function handleExportCsv() {
+ haptics.medium();
+ const csvContent = buildCsv(filteredReports, MODERATION_QUEUE_CSV_COLUMNS);
+ await downloadCsv(csvContent, 'moderation_queue', {
+ successTitle: 'Moderation Queue Exported',
+ successMessage: 'Compliance CSV download has been initiated.',
+ shareTitle: 'Export Moderation Queue CSV',
+ });
+ }
 
  async function handleDismiss(report: Report) {
  haptics.light();
@@ -241,8 +262,19 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
       {/* Target Type Filter Bar */}
-      <View style={{ marginBottom: spacing.md }}>
-        <ChipSelect options={TARGET_FILTERS} selected={[filterType]} onToggle={setFilterType} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <ChipSelect options={TARGET_FILTERS} selected={[filterType]} onToggle={setFilterType} />
+        </View>
+        <View style={{ flexShrink: 0 }}>
+          <AppButton
+            label="Export CSV"
+            variant="secondary"
+            size="sm"
+            onPress={handleExportCsv}
+            disabled={filteredReports.length === 0}
+          />
+        </View>
       </View>
 
       {isDesktop ? (

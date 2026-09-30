@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
+import { AppButton } from '@/components/AppButton';
 import { AnalyticsSummarySkeleton, ListItemSkeletonList } from '@/components/Skeleton';
 import { ErrorStateView } from '@/components/ErrorStateView';
 import { GlassCard } from '@/components/GlassCard';
@@ -13,12 +14,13 @@ import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { fetchAdminAnalyticsSummary } from '@/api/analytics';
+import { fetchAdminAnalyticsSummary, AdminAnalyticsSummary } from '@/api/analytics';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useAdminBadges } from '@/components/admin/useAdminBadges';
+import { buildCsv, downloadCsv } from '@/utils/csvExport';
 
 interface RecentActiveUser {
   id: string;
@@ -35,6 +37,54 @@ interface RecentActiveUser {
 const ACTIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 function isActiveUser(lastActiveAt: string | null): boolean {
   return !!lastActiveAt && Date.now() - new Date(lastActiveAt).getTime() <= ACTIVE_WINDOW_MS;
+}
+
+/** Builds the multi-section export CSV: one small table per card on this screen, in the order they appear. */
+function buildAnalyticsCsv(summary: AdminAnalyticsSummary, timeRangeDays: number, campusLabel: string): string {
+  const summaryRows = [
+    { label: 'Active Right Now (15m)', value: summary.active_15m },
+    { label: 'Active Today (24h)', value: summary.active_24h },
+    { label: 'Weekly Active (7d)', value: summary.active_7d },
+    { label: 'Total Users', value: summary.real_users },
+    { label: `New Signups (${timeRangeDays}d)`, value: summary.new_signups },
+    { label: 'Forum Threads', value: summary.total_posts },
+    { label: 'Comments', value: summary.total_comments },
+    { label: 'Poll Votes Cast', value: summary.total_poll_votes },
+    { label: 'Academic Resources', value: summary.total_resources },
+    { label: 'Campus Events', value: summary.total_events },
+    { label: 'Pending ID Verifications', value: summary.pending_verifications },
+  ];
+
+  return [
+    `Platform Analytics Summary - ${campusLabel} (${timeRangeDays}d window)`,
+    buildCsv(summaryRows, [
+      { header: 'Metric', value: (r) => r.label },
+      { header: 'Value', value: (r) => r.value },
+    ]),
+    '',
+    'Most Visited Pages',
+    buildCsv(summary.most_visited_pages, [
+      { header: 'Page', value: (p) => p.name },
+      { header: 'Visits', value: (p) => p.visits },
+      { header: 'Unique Visitors', value: (p) => p.unique_visitors },
+    ]),
+    '',
+    'Most Used Features',
+    buildCsv(summary.most_used_features, [
+      { header: 'Feature', value: (f) => f.name },
+      { header: 'Uses', value: (f) => f.uses },
+      { header: 'Unique Users', value: (f) => f.unique_users },
+    ]),
+    '',
+    'Higher Institution & Campus Breakdown',
+    buildCsv(summary.campus_metrics, [
+      { header: 'Campus Code', value: (c) => c.campus_code },
+      { header: 'Total Members', value: (c) => c.total_members },
+      { header: 'Real Members', value: (c) => c.real_members },
+      { header: 'Verified Members', value: (c) => c.verified_members },
+      { header: 'Active (7d)', value: (c) => c.active_7d },
+    ]),
+  ].join('\n');
 }
 
 function formatRelativeTime(dateStr: string | null): string {
@@ -56,6 +106,7 @@ export default function AdminAnalyticsScreen() {
   const [campusFilter, setCampusFilter] = useState<string>('ALL');
   const [userSearch, setUserSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   // Fetch real aggregated analytics summary (campus-filtered, zero fake stats)
   const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryErrObj, refetch: refetchSummary } = useQuery({
@@ -170,6 +221,25 @@ export default function AdminAnalyticsScreen() {
     return found ? found.name : campusFilter;
   }, [campusFilter]);
 
+  async function handleExportCsv() {
+    if (!summary) return;
+    haptics.medium();
+    setExportingCsv(true);
+    try {
+      const csvContent = buildAnalyticsCsv(summary, timeRangeDays, activeCampusName);
+      await downloadCsv(csvContent, `campus_analytics_${campusFilter}`, {
+        successTitle: 'Analytics Exported',
+        successMessage: 'Compliance CSV download has been initiated.',
+        shareTitle: 'Export Platform Analytics CSV',
+      });
+    } catch (err) {
+      console.error('[Analytics] Export failed:', err);
+      Alert.alert('Export Error', 'Unable to export analytics. Please try again.');
+    } finally {
+      setExportingCsv(false);
+    }
+  }
+
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
@@ -253,6 +323,16 @@ export default function AdminAnalyticsScreen() {
                 </Pressable>
               ))}
             </View>
+
+            {/* Export CSV */}
+            <AppButton
+              label="Export CSV"
+              variant="secondary"
+              size="sm"
+              onPress={handleExportCsv}
+              loading={exportingCsv}
+              disabled={!summary || summaryLoading || exportingCsv}
+            />
 
             {/* Refresh button */}
             <Pressable
