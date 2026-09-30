@@ -1159,6 +1159,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261003010000_admin_directory_and_analytics_fixes.sql',
   'supabase/migrations/20261003020000_tier3_account_and_notifications.sql',
   'supabase/migrations/20261004000000_discovery_and_polish.sql',
+  'supabase/migrations/20261005040000_admin_user_diagnostics.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2576,6 +2577,79 @@ console.log('\n== discovery & polish: mute, job alerts, directory privacy ==');
       await imp(U.s1);
       const peer = await c.q(`SELECT directory_discoverable d, directory_hide_company hc FROM public.profiles WHERE id = $1`, [U.s2]);
       eq(peer.rows[0], { d: false, hc: true }, 'a same-campus peer can read the updated flags through the new column grant');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// admin user diagnostics (20261005040000_admin_user_diagnostics.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== admin user diagnostics ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+
+  await check('admin_get_user_diagnostics: an admin gets an accurate mute/job-alert/notification-preference summary for any user', async () => {
+    await as('postgres', async (c) => {
+      // s1 is the target: s1 muted s3 (recently), s2 muted s1 (so s1 is muted-by 1).
+      await imp(U.s1);
+      await c.q(`INSERT INTO public.user_mutes (muter_id, muted_id) VALUES ($1, $2)`, [U.s1, U.s3]);
+      // s1 has two job alerts, one active one not.
+      await c.q(`INSERT INTO public.job_alerts (user_id, keywords, job_type, remote_only, campus_code, is_active) VALUES ($1, 'Engineer', NULL, false, NULL, true)`, [U.s1]);
+      await c.q(`INSERT INTO public.job_alerts (user_id, keywords, job_type, remote_only, campus_code, is_active) VALUES ($1, 'Designer', NULL, false, NULL, false)`, [U.s1]);
+      // s1 turns push notifications off (a non-default row).
+      await c.q(`INSERT INTO public.notification_preferences (user_id, push_enabled) VALUES ($1, false)`, [U.s1]);
+
+      await imp(U.s2);
+      await c.q(`INSERT INTO public.user_mutes (muter_id, muted_id) VALUES ($1, $2)`, [U.s2, U.s1]);
+
+      await imp(U.adminA);
+      const data = (await c.q(`SELECT public.admin_get_user_diagnostics($1) AS data`, [U.s1])).rows[0].data;
+
+      eq(data.mutes.muted_count, 1, 's1 has muted 1 user');
+      eq(data.mutes.muted_by_count, 1, 's1 has been muted by 1 user');
+      eq(data.mutes.recent_muted.map((r) => r.user_id), [U.s3], 'recent_muted names who s1 muted');
+      eq(data.mutes.recent_muted_by.map((r) => r.user_id), [U.s2], 'recent_muted_by names who muted s1');
+
+      eq(data.job_alerts.total_count, 2, 's1 has 2 job alerts total');
+      eq(data.job_alerts.active_count, 1, 's1 has 1 active job alert');
+      eq(data.job_alerts.alerts.map((a) => a.keywords).sort(), ['Designer', 'Engineer'], 'both alerts are returned in full');
+
+      eq(data.notification_preferences.has_custom_row, true, 's1 has a saved notification_preferences row');
+      eq(data.notification_preferences.push_enabled, false, 'the saved (non-default) push_enabled value is reflected');
+      eq(data.notification_preferences.announcements_enabled, true, 'unset columns keep their table default');
+
+      // s2 never wrote a notification_preferences row - diagnostics falls back
+      // to the same all-on defaults the client itself assumes. (jsonb does not
+      // preserve key insertion order, so fields are checked individually
+      // rather than via a whole-object eq().)
+      const dataS2 = (await c.q(`SELECT public.admin_get_user_diagnostics($1) AS data`, [U.s2])).rows[0].data;
+      const prefsS2 = dataS2.notification_preferences;
+      eq(prefsS2.has_custom_row, false, 'no row yet -> has_custom_row is false');
+      eq(prefsS2.push_enabled, true, 'no row yet -> push_enabled defaults true');
+      eq(prefsS2.announcements_enabled, true, 'no row yet -> announcements_enabled defaults true');
+      eq(prefsS2.events_enabled, true, 'no row yet -> events_enabled defaults true');
+      eq(prefsS2.digest_enabled, true, 'no row yet -> digest_enabled defaults true');
+      eq(prefsS2.updated_at, null, 'no row yet -> updated_at is null');
+    });
+  });
+
+  await check('admin_get_user_diagnostics: a plain student is denied', async () => {
+    await as(U.s1, async (c) => {
+      denied(await c.t(`SELECT public.admin_get_user_diagnostics($1)`, [U.s2]), /admin_required/, 'student forbidden');
+    });
+  });
+
+  await check('admin_get_user_diagnostics: staff are scoped to their own campus (a staff member from a different campus is denied; same-campus staff succeeds)', async () => {
+    await as('postgres', async (c) => {
+      // staffU is UNILAG, staffI is UI; s1 is UNILAG.
+      await imp(U.staffI);
+      denied(await c.t(`SELECT public.admin_get_user_diagnostics($1)`, [U.s1]), /admin_required/, 'UI staff cannot diagnose a UNILAG user');
+
+      await imp(U.staffU);
+      const data = (await c.q(`SELECT public.admin_get_user_diagnostics($1) AS data`, [U.s1])).rows[0].data;
+      eq(data.user_id, U.s1, 'same-campus staff can diagnose the user');
     });
   });
 }

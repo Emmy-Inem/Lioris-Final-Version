@@ -34,6 +34,7 @@ import {
 import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { usePullRefreshHandler } from '@/components/PullToRefresh';
 import { adminDirectVerifyUser } from '@/api/verification';
+import { getUserDiagnostics, UserDiagnostics } from '@/api/adminDiagnostics';
 import { useToast } from '@/context/ToastContext';
 import { AuditLogEntry } from '@/api/types';
 import { haptics } from '@/utils/haptics';
@@ -244,6 +245,29 @@ export default function UserDirectoryScreen() {
   const [editSuspended, setEditSuspended] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
 
+  // Diagnostics (user_mutes / job_alerts / notification_preferences summary)
+  // - collapsible, lazy-loaded section inside the Edit modal. Lets an admin
+  // or staff member handling a complaint ("still seeing someone I muted",
+  // "not getting job alert notifications") inspect that state without the
+  // SQL editor.
+  const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
+  const [diagnosticsData, setDiagnosticsData] = useState<UserDiagnostics | null>(null);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
+
+  function toggleDiagnostics() {
+    const next = !diagnosticsExpanded;
+    setDiagnosticsExpanded(next);
+    if (next && !diagnosticsData && !diagnosticsLoading && editModalUser) {
+      setDiagnosticsLoading(true);
+      setDiagnosticsError(null);
+      getUserDiagnostics(editModalUser.id)
+        .then(setDiagnosticsData)
+        .catch((err: any) => setDiagnosticsError(err?.message || 'Could not load diagnostics for this user.'))
+        .finally(() => setDiagnosticsLoading(false));
+    }
+  }
+
   function openEditModal(target: DirectoryUser) {
     setEditModalUser(target);
     setEditFullName(target.fullName);
@@ -253,6 +277,9 @@ export default function UserDirectoryScreen() {
     setEditRole(target.role);
     setEditVerified(target.isVerified);
     setEditSuspended(target.suspended);
+    setDiagnosticsExpanded(false);
+    setDiagnosticsData(null);
+    setDiagnosticsError(null);
   }
 
   async function handleSaveEditedUser() {
@@ -1687,6 +1714,90 @@ export default function UserDirectoryScreen() {
                     onPress={handleSendPasswordResetFromModal}
                     loading={editSaving}
                   />
+                </View>
+
+                {/* Diagnostics: mute activity / job alerts / notification preferences -
+                    read-only, for handling complaints ("still seeing someone I muted",
+                    "not getting job alert notifications") without the SQL editor. */}
+                <View style={{ backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.md, overflow: 'hidden' }}>
+                  <Pressable
+                    onPress={toggleDiagnostics}
+                    style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md }}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: diagnosticsExpanded }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="pulse-outline" size={16} color={colors.brandPrimary} />
+                      <AppText weight="bold">Diagnostics</AppText>
+                      <AppText tone="secondary" variant="caption">(mutes, job alerts, notifications)</AppText>
+                    </View>
+                    <Ionicons name={diagnosticsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
+                  </Pressable>
+
+                  {diagnosticsExpanded && (
+                    <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md, gap: spacing.sm }}>
+                      {diagnosticsLoading ? (
+                        <AppText tone="secondary" variant="caption">Loading diagnostics...</AppText>
+                      ) : diagnosticsError ? (
+                        <AppText style={{ color: colors.critical }} variant="caption">{diagnosticsError}</AppText>
+                      ) : diagnosticsData ? (
+                        <>
+                          {/* Mutes */}
+                          <View>
+                            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>MUTES</AppText>
+                            <AppText variant="bodySmall">
+                              Has muted <AppText weight="bold">{diagnosticsData.mutes.mutedCount}</AppText> user{diagnosticsData.mutes.mutedCount === 1 ? '' : 's'} • Muted by <AppText weight="bold">{diagnosticsData.mutes.mutedByCount}</AppText> user{diagnosticsData.mutes.mutedByCount === 1 ? '' : 's'}
+                            </AppText>
+                            {diagnosticsData.mutes.recentMuted.length > 0 && (
+                              <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                                Recently muted: {diagnosticsData.mutes.recentMuted.map((m) => m.fullName).join(', ')}
+                              </AppText>
+                            )}
+                            {diagnosticsData.mutes.recentMutedBy.length > 0 && (
+                              <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                                Recently muted by: {diagnosticsData.mutes.recentMutedBy.map((m) => m.fullName).join(', ')}
+                              </AppText>
+                            )}
+                          </View>
+
+                          {/* Job Alerts */}
+                          <View>
+                            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>JOB ALERTS</AppText>
+                            <AppText variant="bodySmall">
+                              <AppText weight="bold">{diagnosticsData.jobAlerts.activeCount}</AppText> active of <AppText weight="bold">{diagnosticsData.jobAlerts.totalCount}</AppText> total
+                            </AppText>
+                            {diagnosticsData.jobAlerts.alerts.length === 0 ? (
+                              <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>No saved job alerts.</AppText>
+                            ) : (
+                              <View style={{ marginTop: 4, gap: 4 }}>
+                                {diagnosticsData.jobAlerts.alerts.map((a) => (
+                                  <View key={a.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Badge label={a.isActive ? 'ACTIVE' : 'PAUSED'} tone={a.isActive ? 'success' : 'neutral'} />
+                                    <AppText variant="caption" style={{ flex: 1 }} numberOfLines={1}>
+                                      {[a.keywords, a.jobType, a.remoteOnly ? 'Remote only' : null, a.campusCode].filter(Boolean).join(' • ') || 'Any job'}
+                                    </AppText>
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+
+                          {/* Notification Preferences */}
+                          <View>
+                            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+                              NOTIFICATION PREFERENCES{diagnosticsData.notificationPreferences.hasCustomRow ? '' : ' (defaults - never saved)'}
+                            </AppText>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                              <Badge label={`Push ${diagnosticsData.notificationPreferences.pushEnabled ? 'ON' : 'OFF'}`} tone={diagnosticsData.notificationPreferences.pushEnabled ? 'success' : 'critical'} />
+                              <Badge label={`Announcements ${diagnosticsData.notificationPreferences.announcementsEnabled ? 'ON' : 'OFF'}`} tone={diagnosticsData.notificationPreferences.announcementsEnabled ? 'success' : 'critical'} />
+                              <Badge label={`Events ${diagnosticsData.notificationPreferences.eventsEnabled ? 'ON' : 'OFF'}`} tone={diagnosticsData.notificationPreferences.eventsEnabled ? 'success' : 'critical'} />
+                              <Badge label={`Digest ${diagnosticsData.notificationPreferences.digestEnabled ? 'ON' : 'OFF'}`} tone={diagnosticsData.notificationPreferences.digestEnabled ? 'success' : 'critical'} />
+                            </View>
+                          </View>
+                        </>
+                      ) : null}
+                    </View>
+                  )}
                 </View>
 
                 <AppButton
