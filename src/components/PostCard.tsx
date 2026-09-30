@@ -17,11 +17,12 @@ import { ActionSheetModal } from'./ActionSheetModal';
 import { ImageViewerModal } from'./ImageViewerModal';
 import { UserProfileModal } from'./UserProfileModal';
 import { VisibilityBadge } from'./VisibilityBadge';
+import { EditPostModal } from'./EditPostModal';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Post } from'@/api/types';
-import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost } from'@/api/posts';
+import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, resolvePostMentions } from'@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY } from'@/api/bookmarks';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
@@ -77,6 +78,13 @@ function timeAgo(iso: string) {
  return `${Math.floor(hours / 24)}d ago`;
 }
 
+// Splits body text on @mention/#hashtag tokens so they can be rendered as
+// nested, individually-tappable AppText runs inside one clamped parent Text
+// (plain Pressables here would break inline/numberOfLines text flow).
+const CONTENT_TOKEN_SPLIT = /(@[a-zA-Z0-9_.]{2,40}|#[a-zA-Z0-9_]{2,40})/g;
+const MENTION_TOKEN = /^@[a-zA-Z0-9_.]{2,40}$/;
+const HASHTAG_TOKEN = /^#[a-zA-Z0-9_]{2,40}$/;
+
 interface PostCardProps {
   post: Post;
   /** True when this session's user created, or was appointed to moderate, this post's community - see CommunityFeedScreen's myManagedCategories. Grants the same pin/remove controls as admin/staff, scoped to this one community. */
@@ -101,6 +109,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  const [savingBookmark, setSavingBookmark] = useState(false);
  const [menuOpen, setMenuOpen] = useState(false);
  const [deleting, setDeleting] = useState(false);
+ const [editOpen, setEditOpen] = useState(false);
 
  React.useEffect(() => {
  setBookmarked(!!post.isBookmarkedByMe);
@@ -113,6 +122,62 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
 
  // User Profile Inspector Modal
  const [inspectUser, setInspectUser] = useState<{ id: string; name: string; role: any; avatarUrl?: string | null; isVerified?: boolean } | null>(null);
+
+ // @mentions found in this post's content, resolved to a profile when one exists
+ // (profiles.username - see resolvePostMentions for why) so they can render as
+ // tappable brand-colored text instead of plain "@handle".
+ const mentionHandles = React.useMemo(() => extractMentionHandles(post.content), [post.content]);
+ const { data: resolvedMentions } = useQuery({
+   queryKey: ['post-mentions', mentionHandles, post.institutionCode],
+   queryFn: () => resolvePostMentions(mentionHandles, post.institutionCode),
+   enabled: mentionHandles.length > 0,
+   staleTime: 5 * 60_000,
+ });
+ const mentionByHandle = React.useMemo(() => {
+   const map = new Map<string, { id: string; fullName: string }>();
+   for (const u of resolvedMentions ?? []) map.set(u.username.toLowerCase(), u);
+   return map;
+ }, [resolvedMentions]);
+
+ function renderContent(content: string) {
+   return content.split(CONTENT_TOKEN_SPLIT).map((part, i) => {
+     if (MENTION_TOKEN.test(part)) {
+       const match = mentionByHandle.get(part.slice(1).toLowerCase());
+       if (!match) return part;
+       return (
+         <AppText
+           key={i}
+           weight="bold"
+           tone="brand"
+           accessibilityLabel={`View ${match.fullName}'s profile`}
+           onPress={() => {
+             haptics.light();
+             setInspectUser({ id: match.id, name: match.fullName, role: 'student' });
+           }}
+         >
+           {part}
+         </AppText>
+       );
+     }
+     if (HASHTAG_TOKEN.test(part)) {
+       return (
+         <AppText
+           key={i}
+           weight="bold"
+           tone="brand"
+           accessibilityLabel={`Search posts tagged ${part}`}
+           onPress={() => {
+             haptics.light();
+             router.push({ pathname: `/${roleGroup}/search` as any, params: { q: part.slice(1) } });
+           }}
+         >
+           {part}
+         </AppText>
+       );
+     }
+     return part;
+   });
+ }
 
  // Poll state
  const [poll, setPoll] = useState(post.poll);
@@ -338,7 +403,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  {/* The body is the ONE clamped field left: this is a dense feed row and tapping
      the card opens the full thread, where the text is shown in full. */}
  <AppText tone="primary" variant="bodySmall" numberOfLines={4} style={{ lineHeight: 20, fontSize: 13, flexShrink: 1 }}>
- {post.content}
+ {renderContent(post.content)}
  </AppText>
  </Pressable>
 
@@ -555,10 +620,20 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  <AppText weight="medium">Copy Discussion Link</AppText>
  </Pressable>
 
- {/* Author Delete Thread Control */}
+ {/* Author Edit / Delete Thread Controls */}
  {isAuthor && !canModerate && (
  <>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
+ <Pressable
+ onPress={() => {
+ setMenuOpen(false);
+ setEditOpen(true);
+ }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 }}
+ >
+ <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
+ <AppText weight="medium">Edit Post</AppText>
+ </Pressable>
  <Pressable
  onPress={() => {
  setMenuOpen(false);
@@ -583,9 +658,14 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  <Pressable
  onPress={async () => {
  setMenuOpen(false);
+ try {
  await updatePost(post.id, { isPinned: !post.isPinned });
  await invalidatePostCaches(queryClient, post.id);
  Alert.alert('Moderation Action', post.isPinned ? 'Thread unpinned.' : 'Thread pinned as an official announcement.');
+ } catch (err: any) {
+ haptics.error();
+ Alert.alert('Action failed', getFriendlyErrorMessage(err, 'Could not update this thread. Please try again.'));
+ }
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
@@ -719,6 +799,21 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  isVerified={inspectUser.isVerified}
  />
  ) : null}
+
+ {/* Author Edit Post Modal */}
+ {editOpen && (
+ <EditPostModal
+ visible={editOpen}
+ post={post}
+ onClose={() => setEditOpen(false)}
+ onSaved={async () => {
+ setEditOpen(false);
+ await invalidatePostCaches(queryClient, post.id);
+ haptics.success();
+ Alert.alert('Post Updated', 'Your changes have been saved.');
+ }}
+ />
+ )}
 
  {/* Full-Screen Image / Media Lightbox Modal */}
       {lightboxOpen && (

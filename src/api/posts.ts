@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { listSavedItemIds } from './bookmarks';
 import { isUserBlocked } from './connections';
 import { getInstitutionForEmail } from './institutions';
+import { createNotification } from './notifications';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { escapePostgrestLike } from '../utils/postgrest';
@@ -1242,14 +1243,23 @@ export async function deletePost(postId: string): Promise<void> {
 }
 
 /**
- * Persists to Supabase first. A post that isn't in this session's local
- * cache (any post fetched from the database in the normal case) still
- * gets updated for real - this just returns a best-effort merged object
- * for it instead of throwing, since the write already succeeded.
+ * Persists to Supabase and THROWS when the write did not really happen -
+ * either the update() call itself errored, or it matched zero rows. The
+ * latter is how a refused write shows up here: the author/admin/staff/
+ * community-manager UPDATE policy filters rows via USING, so someone who
+ * isn't allowed to edit this post doesn't get a Postgres error, they just
+ * silently match nothing (the same trap deletePost/deletePostComment above
+ * already guard against with their own "did it actually affect a row?"
+ * check).
+ *
+ * This used to catch+warn the Supabase error and still return a merged
+ * object as if the save had gone through, which quietly turned a rejected
+ * edit into a lie the UI believed - the thread reverted on the next reload
+ * with no indication anything had failed.
  */
 export async function updatePost(postId: string, updates: Partial<Post>): Promise<Post> {
  if (updates.imageUrl && !/^asset:/i.test(updates.imageUrl)) assertSafeHttpUrl(updates.imageUrl, 'The image link');
- try {
+
  const dbPayload: any = {};
  if (updates.title) dbPayload.title = updates.title;
  if (updates.content) dbPayload.content = updates.content;
@@ -1258,10 +1268,14 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
  if (updates.isPinned !== undefined) dbPayload.is_pinned = updates.isPinned;
 
  if (Object.keys(dbPayload).length > 0) {
- await supabase.from('posts').update(dbPayload).eq('id', postId);
+ const { data, error } = await supabase.from('posts').update(dbPayload).eq('id', postId).select('id');
+ if (error) {
+ console.warn('[Posts] Backend updatePost error:', error.message);
+ throw new Error('Could not save your changes. Please try again.');
  }
- } catch (err) {
- console.warn('[Posts] Backend updatePost error:', err);
+ if (!data || data.length === 0) {
+ throw new Error('This post could not be updated. You may not have permission to edit it.');
+ }
  }
 
  let updated: Post | undefined;
@@ -1276,4 +1290,95 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
  if (updated) return updated;
 
   return { id: postId, ...updates } as Post;
+}
+
+const MENTION_REGEX = /@([a-zA-Z0-9_.]{2,40})/g;
+
+/** Unique, lower-cased @handles found in a post's content, in no particular order. */
+export function extractMentionHandles(content: string): string[] {
+  const handles = Array.from(content.matchAll(MENTION_REGEX), (m) => m[1].toLowerCase());
+  return Array.from(new Set(handles));
+}
+
+export interface ResolvedMentionUser {
+  id: string;
+  fullName: string;
+  username: string;
+}
+
+/**
+ * Resolves @handles against profiles.username. That column (not full_name)
+ * is what a mention is matched on: it's the only handle in this schema with
+ * a uniqueness constraint, so matching on a display name instead would risk
+ * pinging the wrong "John Smith". The tradeoff is that username is optional
+ * and unset for most accounts (nothing in onboarding prompts for one), so a
+ * mention of someone who never chose a username simply resolves to nothing
+ * - it still renders, just as plain text (see PostCard/PostDetailScreen).
+ *
+ * Scoped to the post's own campus plus global profiles, same "own campus or
+ * global" rule announcements.ts uses for its audience queries.
+ */
+export async function resolvePostMentions(
+  handles: string[],
+  campusCode?: string,
+): Promise<ResolvedMentionUser[]> {
+  const cleaned = Array.from(new Set(handles.map((h) => h.toLowerCase()))).filter(Boolean);
+  if (cleaned.length === 0) return [];
+
+  try {
+    let q = supabase.from('profiles').select('id, full_name, username');
+    if (campusCode && campusCode !== 'GLOBAL') {
+      const safeCampus = escapePostgrestLike(campusCode).replace(/[^A-Za-z0-9_-]/g, '');
+      if (safeCampus) q = q.or(`campus_code.eq.${safeCampus},campus_code.eq.GLOBAL`);
+    }
+
+    const { data, error } = await q.in('username', cleaned);
+    if (error) throw error;
+
+    return (data ?? [])
+      .filter((r: any) => !!r.username)
+      .map((r: any) => ({ id: r.id, fullName: r.full_name || 'Campus Member', username: r.username as string }));
+  } catch (err) {
+    console.warn('[Posts] Could not resolve @mentions:', err);
+    return [];
+  }
+}
+
+/**
+ * Best-effort: parses @mentions out of a just-created or just-edited post's
+ * content and pings each resolved user, skipping the author mentioning
+ * themself. Never throws and is never awaited by its callers on the hot
+ * path - a failed or slow notification must not undo, or hold up, a post
+ * write that already succeeded.
+ */
+export async function notifyPostMentions(params: {
+  postId: string;
+  content: string;
+  campusCode?: string;
+  authorId: string;
+  authorName: string;
+}): Promise<void> {
+  try {
+    const handles = extractMentionHandles(params.content);
+    if (handles.length === 0) return;
+
+    const matched = await resolvePostMentions(handles, params.campusCode);
+    const recipients = matched.filter((u) => u.id !== params.authorId);
+    if (recipients.length === 0) return;
+
+    await Promise.all(
+      recipients.map((u) =>
+        createNotification({
+          type: 'system',
+          title: 'You were mentioned',
+          body: `${params.authorName} mentioned you in a post.`,
+          deepLinkPath: `/(student)/post/${params.postId}`,
+          recipientId: u.id,
+          senderId: params.authorId,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.warn('[Posts] notifyPostMentions failed:', err);
+  }
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from './ScreenContainer';
 import { AppText } from './AppText';
@@ -29,7 +29,11 @@ export function SearchScreen() {
   const { isDesktop } = useResponsive();
   const { campusCode } = useCampusScope();
   const { scope: forumScope } = useForumScope();
-  const [query, setQuery] = useState('');
+  // Carries a prefilled query in from callers like DesktopTopBar's search submit
+  // or a tapped #hashtag - initial value only (see CommunityFeedScreen's
+  // params.category for the same "seed from the param, don't keep resyncing" convention).
+  const params = useLocalSearchParams<{ q?: string }>();
+  const [query, setQuery] = useState(params.q ?? '');
   const [tab, setTab] = useState<SearchTab>('posts');
   const [readingResource, setReadingResource] = useState<Resource | null>(null);
   const [reportingResource, setReportingResource] = useState<Resource | null>(null);
