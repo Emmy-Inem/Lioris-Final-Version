@@ -1154,6 +1154,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260929000000_close_open_security_findings.sql',
   'supabase/migrations/20260930000000_job_applications.sql',
   'supabase/migrations/20261001000000_workflow_gaps.sql',
+  'supabase/migrations/20261002000000_customer_care.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2167,6 +2168,53 @@ console.log('\n== workflow gaps (notifications, directory, waitlist, donations, 
       await c.q(`UPDATE public.jobs SET is_approved = true, approved_by = $2 WHERE id = $1`, [jobId, U.adminA]);
       const approved = (await c.q(`SELECT is_approved, approved_by FROM public.jobs WHERE id = $1`, [jobId])).rows[0];
       eq(approved, { is_approved: true, approved_by: U.adminA }, 'an admin can approve the posting');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// customer care (20261002000000_customer_care.sql): the 'feedback' ticket
+// category, and origin/chat_transcript for AI-escalated tickets.
+// ---------------------------------------------------------------------------
+console.log('\n== customer care (support tickets: feedback category, AI escalation columns) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+
+  await check("support tickets: 'feedback' is an accepted category; origin/chat_transcript default sanely; the transcript length cap holds", async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+
+      const feedbackTicket = await c.q(
+        `INSERT INTO public.support_tickets (user_id, category, title, description) VALUES ($1, 'feedback', 'Love the new jobs page', 'Just wanted to say the CV upload flow is great.') RETURNING category, origin, chat_transcript`,
+        [U.s1],
+      );
+      eq(feedbackTicket.rows[0], { category: 'feedback', origin: 'user', chat_transcript: null }, "a plain feedback ticket defaults origin to 'user' with no transcript");
+
+      const escalated = await c.q(
+        `INSERT INTO public.support_tickets (user_id, category, title, description, origin, chat_transcript) VALUES ($1, 'general', 'AI could not help', 'Escalated from chat', 'ai_escalation', 'User: How do I reset my matric number?\nAssistant: That needs a human to verify.') RETURNING origin, chat_transcript`,
+        [U.s1],
+      );
+      assert(escalated.rows[0].origin === 'ai_escalation' && escalated.rows[0].chat_transcript.includes('matric number'), 'an AI-escalated ticket records its origin and transcript');
+
+      denied(
+        await c.t(`INSERT INTO public.support_tickets (user_id, category, title, description) VALUES ($1, 'not_a_real_category', 't', 'd')`, [U.s1]),
+        /support_tickets_category_check/,
+        'an unrecognised category is still rejected',
+      );
+
+      denied(
+        await c.t(`INSERT INTO public.support_tickets (user_id, category, title, description, origin) VALUES ($1, 'general', 't', 'd', 'not_a_real_origin')`, [U.s1]),
+        /support_tickets_origin_check|check constraint/i,
+        'an unrecognised origin is rejected',
+      );
+
+      denied(
+        await c.t(`INSERT INTO public.support_tickets (user_id, category, title, description, chat_transcript) VALUES ($1, 'general', 't', 'd', repeat('x', 12001))`, [U.s1]),
+        /chat_transcript|check constraint/i,
+        'a transcript over the 12000-character cap is rejected',
+      );
     });
   });
 }

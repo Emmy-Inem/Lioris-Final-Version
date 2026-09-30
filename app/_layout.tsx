@@ -5,7 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
-import { Slot, router } from 'expo-router';
+import { Slot, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
@@ -24,6 +24,7 @@ import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { addNotificationResponseListener } from '@/notifications/push';
 import { resolveNotificationRoute } from '@/utils/notificationRouter';
+import { addBreadcrumb } from '@/monitoring/breadcrumbs';
 
 import { loadBlockedUserIds } from '@/api/connections';
 import { AppLockOverlay } from '@/components/AppLockOverlay';
@@ -269,6 +270,11 @@ function AppShell() {
   useActivityTracker();
   const { isLoading } = useFeatureFlags();
   const { user } = useAuth();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    addBreadcrumb('navigation', `-> ${pathname}`);
+  }, [pathname]);
 
   useEffect(() => {
     const subscription = addNotificationResponseListener((path, data) => {

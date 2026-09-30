@@ -33,9 +33,35 @@ import {
 } from '@/api/supportTickets';
 import { adminDirectVerifyUser } from '@/api/verification';
 import { adminTriggerPasswordReset, adminUpdateUserProfile } from '@/api/auth';
+import { supabase } from '@/api/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { haptics } from '@/utils/haptics';
 import { useToast } from '@/hooks/useToast';
+
+interface UserErrorReport {
+  id: string;
+  message: string | null;
+  url: string | null;
+  level: string | null;
+  occurrences: number | null;
+  last_seen_at: string | null;
+}
+
+/** Recent client-side error reports for one user (admin RLS). Never throws. */
+async function fetchUserErrorReports(userId: string): Promise<UserErrorReport[]> {
+  try {
+    const { data, error } = await supabase
+      .from('client_errors')
+      .select('id, message, url, level, occurrences, last_seen_at')
+      .eq('user_id', userId)
+      .order('last_seen_at', { ascending: false })
+      .limit(10);
+    if (error) return [];
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
 
 const CATEGORY_LABELS: Record<SupportTicketCategory, string> = {
   account_issue: 'Account / Login',
@@ -44,6 +70,7 @@ const CATEGORY_LABELS: Record<SupportTicketCategory, string> = {
   verification_appeal: 'Verification Appeal',
   content_issue: 'Content Flag',
   bug_report: 'Bug Report',
+  feedback: 'Feedback / Suggestion',
   general: 'General Inquiry',
 };
 
@@ -80,6 +107,15 @@ export default function SupportDeskScreen() {
         category: categoryFilter,
         q: searchQuery.trim() || undefined,
       }),
+  });
+
+  // Diagnostics: lets an admin cross-reference this ticket with what the
+  // reporting user's app was actually doing (client_errors, Admin > System
+  // Health's sink) without leaving the ticket.
+  const { data: userErrorReports, isLoading: userErrorsLoading } = useQuery({
+    queryKey: ['support_ticket_user_errors', selectedTicket?.userId],
+    queryFn: () => fetchUserErrorReports(selectedTicket!.userId),
+    enabled: !!selectedTicket,
   });
 
   const openCount = (tickets ?? []).filter((t) => t.status === 'open').length;
@@ -370,6 +406,7 @@ export default function SupportDeskScreen() {
               <View style={{ marginTop: spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Badge label={CATEGORY_LABELS[item.category] || item.category} tone="neutral" />
+                  {item.origin === 'ai_escalation' && <Badge label="AI" tone="brand" />}
                   <AppText weight="bold" style={{ fontSize: 14.5, flex: 1 }}>
                     {item.title}
                   </AppText>
@@ -463,18 +500,66 @@ export default function SupportDeskScreen() {
                   </View>
                 </SolidCard>
 
+                {/* Diagnostics: this user's recent client-side error reports */}
+                {userErrorsLoading ? (
+                  <View style={{ marginBottom: spacing.md, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={colors.brandPrimary} />
+                  </View>
+                ) : userErrorReports && userErrorReports.length > 0 ? (
+                  <View style={{ marginBottom: spacing.md, padding: spacing.md, backgroundColor: isDark ? '#3F1D1D' : '#FEF2F2', borderRadius: radius.md, borderWidth: 1, borderColor: isDark ? '#7F1D1D' : '#FECACA' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <Ionicons name="bug-outline" size={14} color={isDark ? '#FCA5A5' : '#B91C1C'} />
+                      <AppText weight="bold" style={{ color: isDark ? '#FCA5A5' : '#B91C1C', fontSize: 13 }}>
+                        Recent error reports from this user's app ({userErrorReports.length})
+                      </AppText>
+                    </View>
+                    {userErrorReports.map((err) => (
+                      <View key={err.id} style={{ paddingVertical: 4 }}>
+                        <AppText variant="caption" style={{ fontSize: 12 }}>
+                          {err.message || '(no message)'} {err.occurrences && err.occurrences > 1 ? `(${err.occurrences}x)` : ''}
+                        </AppText>
+                        <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5 }}>
+                          {err.url || 'unknown page'} • {err.last_seen_at ? new Date(err.last_seen_at).toLocaleString() : 'unknown time'}
+                        </AppText>
+                      </View>
+                    ))}
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 4, fontSize: 10.5 }}>
+                      Full stack traces and breadcrumbs are in Admin &gt; Database &amp; System Health.
+                    </AppText>
+                  </View>
+                ) : null}
+
                 {/* Ticket Details */}
                 <View style={{ marginBottom: spacing.md }}>
                   <AppText weight="bold" style={{ fontSize: 16 }}>{selectedTicket.title}</AppText>
-                  <View style={{ flexDirection: 'row', gap: 6, marginVertical: 6 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 6 }}>
                     <Badge label={CATEGORY_LABELS[selectedTicket.category] || selectedTicket.category} tone="neutral" />
                     <Badge label={selectedTicket.priority.toUpperCase()} tone={selectedTicket.priority === 'urgent' ? 'warning' : 'neutral'} />
                     <Badge label={selectedTicket.status.toUpperCase()} tone={STATUS_TONES[selectedTicket.status]} />
+                    {selectedTicket.origin === 'ai_escalation' && (
+                      <Badge label="AI COULDN'T HELP" tone="brand" />
+                    )}
                   </View>
                   <AppText tone="primary" style={{ fontSize: 14, lineHeight: 20 }}>
                     {selectedTicket.description}
                   </AppText>
                 </View>
+
+                {selectedTicket.origin === 'ai_escalation' && selectedTicket.chatTranscript && (
+                  <View style={{ marginBottom: spacing.md, padding: spacing.md, backgroundColor: isDark ? '#1E1B4B' : '#EEF2FF', borderRadius: radius.md, borderWidth: 1, borderColor: isDark ? '#3730A3' : '#C7D2FE' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <Ionicons name="sparkles" size={14} color={isDark ? '#A5B4FC' : '#4338CA'} />
+                      <AppText weight="bold" style={{ color: isDark ? '#A5B4FC' : '#4338CA', fontSize: 13 }}>
+                        AI Assistant Conversation
+                      </AppText>
+                    </View>
+                    <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
+                      <AppText selectable tone="secondary" variant="caption" style={{ lineHeight: 18 }}>
+                        {selectedTicket.chatTranscript}
+                      </AppText>
+                    </ScrollView>
+                  </View>
+                )}
 
                 {/* 1-Click Remediation Actions Box */}
                 <View style={{ marginBottom: spacing.md, padding: spacing.md, backgroundColor: isDark ? '#1C1917' : '#FEF3C7', borderRadius: radius.md, borderWidth: 1, borderColor: isDark ? '#44403C' : '#FDE68A' }}>

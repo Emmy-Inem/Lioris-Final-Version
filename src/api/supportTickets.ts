@@ -9,7 +9,10 @@ export type SupportTicketCategory =
   | 'verification_appeal'
   | 'content_issue'
   | 'bug_report'
+  | 'feedback'
   | 'general';
+
+export type SupportTicketOrigin = 'user' | 'ai_escalation';
 
 export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type SupportTicketPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -30,6 +33,9 @@ export interface SupportTicket {
   adminNotes?: string | null;
   resolvedBy?: string | null;
   resolvedAt?: string | null;
+  origin: SupportTicketOrigin;
+  /** Present only when origin === 'ai_escalation': the AI chat conversation that led here. */
+  chatTranscript?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +45,9 @@ export interface CreateSupportTicketPayload {
   title: string;
   description: string;
   priority?: SupportTicketPriority;
+  /** Set when this ticket is being created because the AI assistant could not help. */
+  origin?: SupportTicketOrigin;
+  chatTranscript?: string;
 }
 
 export async function createSupportTicket(payload: CreateSupportTicketPayload): Promise<SupportTicket> {
@@ -57,6 +66,8 @@ export async function createSupportTicket(payload: CreateSupportTicketPayload): 
       description: payload.description.trim(),
       priority: payload.priority || 'medium',
       status: 'open',
+      origin: payload.origin || 'user',
+      chat_transcript: payload.chatTranscript?.trim() || null,
     })
     .select('*, profiles:user_id(full_name, role, campus_code)')
     .single();
@@ -88,6 +99,8 @@ export async function createSupportTicket(payload: CreateSupportTicketPayload): 
     adminNotes: data.admin_notes,
     resolvedBy: data.resolved_by,
     resolvedAt: data.resolved_at,
+    origin: (data.origin as SupportTicketOrigin) || 'user',
+    chatTranscript: data.chat_transcript,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -129,6 +142,8 @@ export async function getUserSupportTickets(): Promise<SupportTicket[]> {
     adminNotes: row.admin_notes,
     resolvedBy: row.resolved_by,
     resolvedAt: row.resolved_at,
+    origin: (row.origin as SupportTicketOrigin) || 'user',
+    chatTranscript: row.chat_transcript,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -189,6 +204,8 @@ export async function getAllSupportTickets(query?: {
     adminNotes: row.admin_notes,
     resolvedBy: row.resolved_by,
     resolvedAt: row.resolved_at,
+    origin: (row.origin as SupportTicketOrigin) || 'user',
+    chatTranscript: row.chat_transcript,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));

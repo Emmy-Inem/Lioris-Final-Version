@@ -34,6 +34,8 @@ interface ClientErrorRow {
   occurrences: number | null;
   last_seen_at: string | null;
   created_at: string | null;
+  user_id: string | null;
+  context: Record<string, unknown> | null;
 }
 
 interface ClientErrorGroup {
@@ -45,6 +47,8 @@ interface ClientErrorGroup {
   level: string;
   occurrences: number;
   lastSeenAt: string | null;
+  userId: string | null;
+  context: Record<string, unknown> | null;
 }
 
 /** Last 50 client error rows (admin RLS), grouped by fingerprint. Never throws. */
@@ -52,7 +56,7 @@ async function fetchClientErrors(): Promise<{ groups: ClientErrorGroup[]; unavai
   try {
     const { data, error } = await supabase
       .from('client_errors')
-      .select('id, fingerprint, message, stack, url, release, level, occurrences, last_seen_at, created_at')
+      .select('id, fingerprint, message, stack, url, release, level, occurrences, last_seen_at, created_at, user_id, context')
       .order('last_seen_at', { ascending: false })
       .limit(50);
     if (error) {
@@ -73,6 +77,8 @@ async function fetchClientErrors(): Promise<{ groups: ClientErrorGroup[]; unavai
         stack: row.stack,
         url: row.url,
         release: row.release,
+        userId: row.user_id,
+        context: row.context,
         level: row.level ?? 'error',
         occurrences: row.occurrences ?? 1,
         lastSeenAt: row.last_seen_at ?? row.created_at,
@@ -421,22 +427,47 @@ export default function SystemHealthScreen() {
                         Last seen {formatLastSeen(group.lastSeenAt)}
                         {group.url ? ` \u00b7 ${group.url}` : ''}
                         {group.release ? ` \u00b7 ${group.release}` : ''}
+                        {group.userId ? ` \u00b7 user ${group.userId.slice(0, 8)}\u2026` : ' \u00b7 anonymous'}
                       </AppText>
                       <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                        {expanded ? 'Hide stack trace' : 'Show stack trace'}
+                        {expanded ? 'Hide details' : 'Show details'}
                       </AppText>
                     </Pressable>
                     {expanded ? (
-                      <ScrollView style={{ marginTop: spacing.sm, maxHeight: 200 }} nestedScrollEnabled>
-                        <AppText
-                          selectable
-                          tone="secondary"
-                          variant="caption"
-                          style={{ fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) }}
-                        >
-                          {group.stack || 'No stack trace was captured.'}
-                        </AppText>
-                      </ScrollView>
+                      <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+                        <View>
+                          <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+                            Stack trace
+                          </AppText>
+                          <ScrollView style={{ maxHeight: 160 }} nestedScrollEnabled>
+                            <AppText
+                              selectable
+                              tone="secondary"
+                              variant="caption"
+                              style={{ fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) }}
+                            >
+                              {group.stack || 'No stack trace was captured.'}
+                            </AppText>
+                          </ScrollView>
+                        </View>
+                        {group.context && Object.keys(group.context).length > 0 ? (
+                          <View>
+                            <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
+                              Context & recent activity (breadcrumbs)
+                            </AppText>
+                            <ScrollView style={{ maxHeight: 160 }} nestedScrollEnabled>
+                              <AppText
+                                selectable
+                                tone="secondary"
+                                variant="caption"
+                                style={{ fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) }}
+                              >
+                                {JSON.stringify(group.context, null, 2)}
+                              </AppText>
+                            </ScrollView>
+                          </View>
+                        ) : null}
+                      </View>
                     ) : null}
                   </View>
                 );

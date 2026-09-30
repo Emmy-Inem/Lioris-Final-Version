@@ -11,6 +11,9 @@ project_id = "fdtnbluslkabwsmspbem"
 [functions.gemini-proxy]
 verify_jwt = true
 
+[functions.support-ai-chat]
+verify_jwt = true
+
 [functions.admin-delete-user]
 verify_jwt = true
 

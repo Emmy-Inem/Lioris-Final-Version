@@ -30,7 +30,7 @@ import { DATA_CONTROLLER, DSR_RESPONSE_DAYS, PRIVACY_VERSION, TERMS_VERSION } fr
 import { LAUNCH_INSTITUTIONS, getInstitutionByCode } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
 import { submitReport } from '@/api/moderation';
-import { createSupportTicket, SupportTicketCategory } from '@/api/supportTickets';
+import { HelpSupportModal } from './HelpSupportModal';
 import * as authApi from '@/api/auth';
 import { haptics } from '@/utils/haptics';
 import {
@@ -302,10 +302,6 @@ export function SettingsScreen() {
 
   // Contact Support / Report a Problem
   const [supportModalOpen, setSupportModalOpen] = useState(false);
-  const [supportCategory, setSupportCategory] = useState<SupportTicketCategory>('general');
-  const [supportTitle, setSupportTitle] = useState('');
-  const [supportMessage, setSupportMessage] = useState('');
-  const [submittingSupport, setSubmittingSupport] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -734,31 +730,6 @@ export function SettingsScreen() {
     }
   }
 
-  async function handleSubmitSupportRequest() {
-    if (!supportMessage.trim()) {
-      toast.error('Please describe your issue before submitting.');
-      return;
-    }
-    setSubmittingSupport(true);
-    try {
-      await createSupportTicket({
-        category: supportCategory,
-        title: supportTitle.trim() || 'General Issue Request',
-        description: supportMessage.trim(),
-        priority: 'medium',
-      });
-      setSupportMessage('');
-      setSupportTitle('');
-      setSupportCategory('general');
-      setSupportModalOpen(false);
-      toast.success('Your support ticket has been submitted to the university admin desk.');
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not send your message. Please try again.');
-    } finally {
-      setSubmittingSupport(false);
-    }
-  }
-
   async function handleUpdatePassword() {
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwords do not match.');
@@ -992,7 +963,7 @@ export function SettingsScreen() {
                     }}
                   />
                   <AppButton
-                    label="Contact Support / Report a Problem"
+                    label="Help & Support / Give Feedback"
                     variant="secondary"
                     onPress={() => {
                       haptics.light();
@@ -1949,174 +1920,7 @@ export function SettingsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Contact Support / Report a Problem Modal */}
-      <Modal
-        visible={supportModalOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSupportModalOpen(false)}
-      >
-        <KeyboardAvoidingView accessibilityViewIsModal
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.md, paddingBottom: Math.max(insets.bottom, 16) }}
-        >
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSupportModalOpen(false)} />
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: 20,
-              padding: spacing.lg,
-              width: '100%',
-              maxWidth: 480,
-              maxHeight: '90%',
-              gap: spacing.md,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <AppText variant="h3" weight="bold">
-                Student & Staff Support Desk
-              </AppText>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close"
-                onPress={() => {
-                  setSupportModalOpen(false);
-                  setSupportMessage('');
-                  setSupportTitle('');
-                }}
-                hitSlop={8}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: colors.background,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="close" size={18} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <AppText tone="secondary" variant="bodySmall">
-              Need assistance with your matric number, department transfer, verification badge, or account issues? Submit a ticket directly to the Root Admin support desk.
-            </AppText>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md }}>
-              <View>
-                <AppText variant="caption" weight="medium" tone="secondary" style={{ marginBottom: 6 }}>
-                  Issue Category
-                </AppText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {(
-                    [
-                      { key: 'account_issue', label: 'Account Issue' },
-                      { key: 'matric_id_correction', label: 'Matric / ID Fix' },
-                      { key: 'campus_transfer', label: 'Campus Transfer' },
-                      { key: 'verification_appeal', label: 'Verification Appeal' },
-                      { key: 'bug_report', label: 'Bug Report' },
-                      { key: 'general', label: 'General Inquiry' },
-                    ] as const
-                  ).map((cat) => {
-                    const isSelected = supportCategory === cat.key;
-                    return (
-                      <Pressable
-                        key={cat.key}
-                        onPress={() => setSupportCategory(cat.key)}
-                        style={{
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: 8,
-                          backgroundColor: isSelected ? colors.brandPrimary : colors.background,
-                          borderWidth: 1,
-                          borderColor: isSelected ? colors.brandPrimary : colors.border,
-                        }}
-                      >
-                        <AppText
-                          variant="caption"
-                          weight={isSelected ? 'bold' : undefined}
-                          style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}
-                        >
-                          {cat.label}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View>
-                <AppText variant="caption" weight="medium" tone="secondary" style={{ marginBottom: 6 }}>
-                  Subject / Summary
-                </AppText>
-                <TextInput accessibilityLabel="e.g., Request to update matriculation number"
-                  value={supportTitle}
-                  onChangeText={setSupportTitle}
-                  placeholder="e.g., Request to update matriculation number"
-                  placeholderTextColor={colors.textSecondary}
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    borderRadius: 10,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    color: colors.textPrimary,
-                    fontSize: 13,
-                  }}
-                />
-              </View>
-
-              <View>
-                <AppText variant="caption" weight="medium" tone="secondary" style={{ marginBottom: 6 }}>
-                  Details & Description
-                </AppText>
-                <TextInput accessibilityLabel="Provide complete details (current details vs correct details, evidence, error codes)"
-                  value={supportMessage}
-                  onChangeText={setSupportMessage}
-                  placeholder="Provide complete details (current details vs correct details, evidence, error codes)..."
-                  placeholderTextColor={colors.textSecondary}
-                  multiline
-                  numberOfLines={4}
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    borderRadius: 10,
-                    padding: 12,
-                    color: colors.textPrimary,
-                    fontSize: 13,
-                    minHeight: 100,
-                    textAlignVertical: 'top',
-                  }}
-                />
-              </View>
-            </ScrollView>
-
-            <View style={{ flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.xs }}>
-              <View style={{ flex: 1 }}>
-                <AppButton
-                  label="Cancel"
-                  variant="secondary"
-                  onPress={() => {
-                    setSupportModalOpen(false);
-                    setSupportMessage('');
-                    setSupportTitle('');
-                  }}
-                />
-              </View>
-              <View style={{ flex: 1.5 }}>
-                <AppButton
-                  label={submittingSupport ? 'Submitting...' : 'Submit to Admin Desk'}
-                  onPress={handleSubmitSupportRequest}
-                  loading={submittingSupport}
-                />
-              </View>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
+      <HelpSupportModal visible={supportModalOpen} onClose={() => setSupportModalOpen(false)} />
       {/* Edit Profile Details Modal in Settings */}
       <Modal
         visible={editProfileModalOpen}

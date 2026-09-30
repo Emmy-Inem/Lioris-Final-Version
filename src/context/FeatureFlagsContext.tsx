@@ -23,6 +23,7 @@ export type FeatureKey =
   | 'campus_radio'
   | 'campus_map'
   | 'ai_study_copilot'
+  | 'ai_support_chat'
   | 'currency_converter'
   | 'forum_trends'
   | 'alumni_network'
@@ -176,6 +177,14 @@ export const FEATURE_CATALOG: FeatureFlagMeta[] = [
     category: 'AI & Tools',
     tier: 'P0',
     description: 'AI study assistant for concept explanation, past questions, and revision summaries (uses Google Gemini once the gemini-proxy key is configured; offline study templates otherwise).',
+    defaultOn: false,
+  },
+  {
+    key: 'ai_support_chat',
+    label: 'AI Customer Care Assistant',
+    category: 'AI & Tools',
+    tier: 'P1',
+    description: 'Answers common "how do I..." questions in Settings > Help & Support and opens a support ticket for anything it cannot resolve (uses Google Gemini via the support-ai-chat function). Off = the Help & Support form goes straight to a ticket.',
     defaultOn: false,
   },
   {

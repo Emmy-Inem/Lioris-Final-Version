@@ -72,6 +72,7 @@ WebRTC media/ICE traffic is not governed by the page CSP, so `vercel.json` needs
 | Function | verify_jwt | Command |
 | --- | --- | --- |
 | gemini-proxy | true | `supabase functions deploy gemini-proxy` |
+| support-ai-chat | true | `supabase functions deploy support-ai-chat` (customer-care AI assistant in Settings > Help & Support; reuses the GEMINI_API_KEY secret) |
 | admin-delete-user | true | `supabase functions deploy admin-delete-user` |
 | admin-impersonate-user | true | `supabase functions deploy admin-impersonate-user` |
 | admin-manage-institution | true | `supabase functions deploy admin-manage-institution` |

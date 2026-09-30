@@ -18,6 +18,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/api/supabase';
+import { getBreadcrumbs } from './breadcrumbs';
 
 export type ErrorLevel = 'error' | 'warning' | 'info';
 export type ErrorContext = Record<string, unknown>;
@@ -240,7 +241,13 @@ function report(level: ErrorLevel, error: unknown, context?: ErrorContext): void
       url: currentRoute(),
       release: `lioris@${Constants.expoConfig?.version ?? 'unknown'}`,
       session_id: sessionId,
-      context: { ...scrubContext(context), platform: Platform.OS, errorName: name },
+      context: {
+        ...scrubContext(context),
+        platform: Platform.OS,
+        errorName: name,
+        // What the user was doing right before this, so a report is more than a stack trace.
+        breadcrumbs: getBreadcrumbs(),
+      },
     };
 
     send(payload).catch(() => {
