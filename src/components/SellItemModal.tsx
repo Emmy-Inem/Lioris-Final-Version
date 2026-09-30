@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -10,6 +10,7 @@ import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { MarketplaceListing } from '@/api/types';
+import { updateListing } from '@/api/marketplace';
 import { haptics } from '@/utils/haptics';
 
 const CATEGORIES: MarketplaceListing['category'][] = ['Electronics', 'Books/Academic', 'Furniture/Room Accessories'];
@@ -18,7 +19,7 @@ const CONDITIONS: MarketplaceListing['condition'][] = ['New', 'Like New', 'Fair'
 interface SellItemModalProps {
   visible: boolean;
   onClose: () => void;
-  onPublish: (payload: {
+  onPublish?: (payload: {
     title: string;
     description: string;
     price: string;
@@ -26,9 +27,13 @@ interface SellItemModalProps {
     category: MarketplaceListing['category'];
     imageUrl?: string | null;
   }) => Promise<void>;
+  /** When set, the modal edits this listing (via updateListing) instead of publishing a new one. */
+  listing?: MarketplaceListing | null;
+  /** Called with the saved listing after a successful edit. */
+  onUpdated?: (updated: MarketplaceListing) => void;
 }
 
-export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProps) {
+export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated }: SellItemModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
@@ -88,7 +93,21 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
     setErrorMessage(null);
   }
 
-  async function handlePublish() {
+  // Edit mode: prefill the form from the listing being edited every time the
+  // modal opens for it. The create path (no `listing`) never runs this, so
+  // its behavior - including not resetting on close - is unchanged.
+  useEffect(() => {
+    if (!visible || !listing) return;
+    setTitle(listing.title);
+    setDescription(listing.description);
+    setPrice(listing.price);
+    setCondition(listing.condition);
+    setCategory(listing.category);
+    setPhotoUri(listing.imageUrl ?? null);
+    setErrorMessage(null);
+  }, [visible, listing]);
+
+  async function handleSubmit() {
     setErrorMessage(null);
     if (!title.trim()) {
       setErrorMessage('Please enter an item title.');
@@ -103,19 +122,25 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
     haptics.medium();
     setSubmitting(true);
     try {
-      await onPublish({
+      const payload = {
         title: title.trim(),
         description: description.trim() || 'No description provided.',
         price: price.trim(),
         condition,
         category,
         imageUrl: photoUri,
-      });
+      };
+      if (listing) {
+        const updated = await updateListing(listing.id, payload);
+        onUpdated?.(updated);
+      } else {
+        await onPublish?.(payload);
+      }
       onClose();
       reset();
     } catch (err: any) {
       haptics.error();
-      setErrorMessage(err?.message || 'Failed to publish listing. Please try again.');
+      setErrorMessage(err?.message || (listing ? 'Failed to update listing. Please try again.' : 'Failed to publish listing. Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -157,7 +182,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
               <AppText variant="h1" weight="bold">
-                Sell an Item
+                {listing ? 'Edit Listing' : 'Sell an Item'}
               </AppText>
               <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
@@ -283,7 +308,7 @@ export function SellItemModal({ visible, onClose, onPublish }: SellItemModalProp
               </View>
             ) : null}
 
-            <AppButton label="Publish Listing" onPress={handlePublish} loading={submitting} fullWidth />
+            <AppButton label={listing ? 'Save Changes' : 'Publish Listing'} onPress={handleSubmit} loading={submitting} fullWidth />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
