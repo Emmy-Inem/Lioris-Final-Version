@@ -83,9 +83,22 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
     counts.events = eventCount ?? 0;
     counts.supportTickets = ticketCount ?? 0;
     counts.moderationQueue = modCount ?? 0;
-    counts.activeSessions = Math.max(1, Math.floor((profCount ?? 0) * 0.18));
   } catch (err) {
     console.warn('[SystemHealth] Table count error:', err);
+  }
+
+  try {
+    const { data: analyticsSummary, error: analyticsError } = await supabase.rpc('get_admin_analytics_summary', {
+      p_days: 1,
+      p_campus_code: null,
+    });
+    if (!analyticsError && analyticsSummary) {
+      counts.activeSessions = Number(analyticsSummary.active_15m ?? 0);
+    } else if (analyticsError) {
+      console.warn('[SystemHealth] get_admin_analytics_summary RPC error:', analyticsError.message);
+    }
+  } catch (err) {
+    console.warn('[SystemHealth] Active sessions RPC error:', err);
   }
 
   // Integrity scanner: check for dangling/orphaned rows

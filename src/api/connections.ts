@@ -92,7 +92,6 @@ export async function sendConnectionRequest(recipientId: string): Promise<Connec
  let senderId = 'me';
  let senderName = 'A campus member';
 
- try {
  const { data: authData } = await supabase.auth.getUser();
  if (authData?.user?.id) {
  senderId = authData.user.id;
@@ -101,7 +100,10 @@ export async function sendConnectionRequest(recipientId: string): Promise<Connec
  if (stored?.id) senderId = stored.id;
  }
 
- if (senderId && senderId !== 'me') {
+ if (!senderId || senderId === 'me') {
+ throw new Error('Could not identify the current user to send this connection request.');
+ }
+
  const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', senderId).maybeSingle();
  if (profile?.full_name) {
  senderName = profile.full_name;
@@ -115,10 +117,7 @@ export async function sendConnectionRequest(recipientId: string): Promise<Connec
  }, { onConflict: 'requester_id,recipient_id' });
  if (error) {
  console.warn('[Connections] Send connection request Supabase error:', error.message);
- }
- }
- } catch (err) {
- console.warn('[Connections] Send request error:', err);
+ throw error;
  }
 
  const created: Connection = {
@@ -144,10 +143,8 @@ export async function respondToConnectionRequest(
  connectionId: string,
  action: 'accept' | 'decline',
 ): Promise<Connection> {
- let realRequesterId: string | undefined;
  let responderName = 'A colleague';
 
- try {
  const { data: authData } = await supabase.auth.getUser();
  const currentUserId = authData?.user?.id;
  if (currentUserId) {
@@ -155,7 +152,7 @@ export async function respondToConnectionRequest(
  if (profile?.full_name) responderName = profile.full_name;
  }
 
- const { data: connRow } = await supabase
+ const { data: connRow, error } = await supabase
  .from('connections')
  .update({
  status: action === 'accept' ? 'accepted' : 'declined',
@@ -165,14 +162,16 @@ export async function respondToConnectionRequest(
  .select('requester_id')
  .maybeSingle();
 
- if (connRow?.requester_id) {
- realRequesterId = connRow.requester_id;
+ if (error) {
+ console.warn('[Connections] Update connection error:', error.message);
+ throw error;
  }
- } catch (err) {
- console.warn('[Connections] Update connection error:', err);
+ if (!connRow?.requester_id) {
+ throw new Error('Could not find that connection request to update.');
  }
+ const realRequesterId = connRow.requester_id;
 
- if (action === 'accept' && realRequesterId) {
+ if (action === 'accept') {
  createNotification({
  recipientId: realRequesterId,
  type: 'system',
@@ -184,7 +183,7 @@ export async function respondToConnectionRequest(
 
  return {
  id: connectionId,
- requesterId: realRequesterId ?? 'unknown',
+ requesterId: realRequesterId,
  recipientId: 'me',
  status: action === 'accept' ? 'accepted' : 'declined',
  createdAt: new Date().toISOString(),
