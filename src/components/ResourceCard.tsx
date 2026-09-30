@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SolidCard } from './SolidCard';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
+import { AppTextField } from './AppTextField';
+import { StarRating } from './common/StarRating';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
 import { Resource } from '@/api/types';
-import { trackResourceDownload, toggleResourceUpvote } from '@/api/resources';
+import {
+  trackResourceDownload,
+  toggleResourceUpvote,
+  getResourceRatingSummary,
+  submitResourceRating,
+  ResourceRatingSummary,
+} from '@/api/resources';
 import { isResourceBookmarked, toggleResourceBookmark } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
@@ -31,6 +42,9 @@ export const ResourceCard = React.memo(function ResourceCard({
   onReport,
 }: ResourceCardProps) {
   const { colors, spacing, radius } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const toast = useToast();
 
   const [internalBookmarked, setInternalBookmarked] = useState(() => isResourceBookmarked(resource.id));
@@ -43,11 +57,31 @@ export const ResourceCard = React.memo(function ResourceCard({
   const [upvoting, setUpvoting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
+  const [ratingSummary, setRatingSummary] = useState<ResourceRatingSummary>({ avgRating: 0, ratingCount: 0 });
+  const [rateOpen, setRateOpen] = useState(false);
+  const [myRating, setMyRating] = useState(0);
+  const [myReview, setMyReview] = useState('');
+  const [savingRating, setSavingRating] = useState(false);
+
   useEffect(() => {
     if (externalBookmarked === undefined) {
       setInternalBookmarked(isResourceBookmarked(resource.id));
     }
   }, [resource.id, externalBookmarked]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getResourceRatingSummary(resource.id)
+      .then((summary) => {
+        if (!cancelled) setRatingSummary(summary);
+      })
+      .catch(() => {
+        // Read-only display; a failed fetch just leaves the 0/0 placeholder.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resource.id]);
 
   async function handleToggleBookmark() {
     haptics.medium();
@@ -108,6 +142,35 @@ export const ResourceCard = React.memo(function ResourceCard({
       onReport(resource);
     } else {
       setReportOpen(true);
+    }
+  }
+
+  function handleOpenRate() {
+    haptics.light();
+    if (!user) {
+      Alert.alert('Sign in required', 'Sign in to rate this resource.');
+      return;
+    }
+    setRateOpen(true);
+  }
+
+  async function handleSaveRating() {
+    if (myRating < 1) {
+      toast.error('Choose a star rating first.');
+      return;
+    }
+    haptics.medium();
+    setSavingRating(true);
+    try {
+      await submitResourceRating(resource.id, myRating, myReview);
+      const next = await getResourceRatingSummary(resource.id);
+      setRatingSummary(next);
+      toast.success('Thanks for rating this resource.');
+      setRateOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not save your rating. Please try again.');
+    } finally {
+      setSavingRating(false);
     }
   }
 
@@ -198,6 +261,15 @@ export const ResourceCard = React.memo(function ResourceCard({
             </AppText>
           </Pressable>
           <Pressable
+            onPress={handleOpenRate}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Rate this resource. Average ${ratingSummary.avgRating.toFixed(1)} out of 5 from ${ratingSummary.ratingCount} rating${ratingSummary.ratingCount === 1 ? '' : 's'}`}
+            style={{ flexDirection: 'row', alignItems: 'center' }}
+          >
+            <StarRating value={ratingSummary.avgRating} size={13} showValue count={ratingSummary.ratingCount} />
+          </Pressable>
+          <Pressable
             onPress={handleOpenReport}
             hitSlop={8}
             accessibilityRole="button"
@@ -229,6 +301,63 @@ export const ResourceCard = React.memo(function ResourceCard({
       </View>
       {!onReport && reportOpen && (
         <ReportResourceModal visible={reportOpen} resource={resource} onClose={() => setReportOpen(false)} />
+      )}
+      {rateOpen && (
+        <Modal visible={rateOpen} transparent animationType="fade" onRequestClose={() => setRateOpen(false)}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              justifyContent: isDesktop ? 'center' : 'flex-end',
+              alignItems: 'center',
+            }}
+          >
+            <Pressable
+              accessible={false}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              onPress={() => setRateOpen(false)}
+            />
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 480,
+                backgroundColor: colors.surface,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                borderBottomLeftRadius: isDesktop ? 24 : 0,
+                borderBottomRightRadius: isDesktop ? 24 : 0,
+                padding: spacing.lg,
+                paddingBottom: Math.max(insets.bottom, spacing.lg),
+                gap: spacing.sm,
+              }}
+            >
+              <AppText weight="bold" style={{ fontSize: 15 }}>
+                Rate "{resource.title}"
+              </AppText>
+              <AppText tone="secondary" variant="caption">
+                Your rating helps other students judge quality at a glance.
+              </AppText>
+              <StarRating value={myRating} onChange={setMyRating} size={28} />
+              <AppTextField
+                label=""
+                value={myReview}
+                onChangeText={(v) => setMyReview(v.slice(0, 1000))}
+                placeholder="What did you think? (optional)"
+                multiline
+                numberOfLines={3}
+              />
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                <View style={{ flex: 1 }}>
+                  <AppButton label="Cancel" variant="secondary" onPress={() => setRateOpen(false)} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppButton label="Submit rating" variant="primary" loading={savingRating} onPress={handleSaveRating} />
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       )}
     </SolidCard>
   );

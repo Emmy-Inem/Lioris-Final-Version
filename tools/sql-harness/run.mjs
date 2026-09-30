@@ -1160,6 +1160,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261003020000_tier3_account_and_notifications.sql',
   'supabase/migrations/20261004000000_discovery_and_polish.sql',
   'supabase/migrations/20261005010000_giving_campaign_self_service.sql',
+  'supabase/migrations/20261005020000_resource_ratings.sql',
   'supabase/migrations/20261005030000_alumni_profile_extras.sql',
 ];
 for (const file of currentProductMigrations) {
@@ -2788,6 +2789,142 @@ console.log('\n== giving campaign self-service (owner confirmed_total/close, cli
         await c.t(`SELECT public.get_giving_campaign_click_count($1)`, [campaignId]),
         /not_allowed/,
         'an unrelated, non-owner, non-admin user cannot see the click count',
+      );
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// resource ratings (20261005020000): star ratings + optional short reviews
+// on academic resources, mirroring the mentorship-feedback shape (owner-only
+// writes, read follows the resource's own visibility, aggregate summary via
+// get_resource_rating_summary()).
+// ---------------------------------------------------------------------------
+console.log('\n== resource ratings (star ratings + reviews) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  // Committed fixture (outside any check/as rollback) so every check below can
+  // build on the same resource. Inserted with no JWT claims set (auth.uid() IS
+  // NULL), which the moderation trigger treats as "service_role / migrations"
+  // and leaves is_approved as given - same as the other superuser fixture
+  // inserts in this file (mkUser, push tokens, role promotions above).
+  const resourceRow = await admin(
+    `INSERT INTO public.resources (uploader_id, campus_code, course_code, course_title, title, file_url, is_approved)
+     VALUES ($1, 'UNILAG', 'CSC201', 'Data Structures', 'DS Lecture Notes', 'https://example.com/ds.pdf', true) RETURNING id`,
+    [U.s1],
+  );
+  const resourceId = resourceRow.rows[0].id;
+
+  await check('a user can rate a resource they can see', async () => {
+    await as(U.s2, async (c) => {
+      const r = await c.t(
+        `INSERT INTO public.resource_ratings (resource_id, rater_id, rating, review) VALUES ($1, $2, 4, 'Helpful notes') RETURNING rating, review`,
+        [resourceId, U.s2],
+      );
+      assert(r.ok, `rating a visible resource was refused: ${r.err?.message}`);
+      eq(r.rows[0], { rating: 4, review: 'Helpful notes' });
+    });
+  });
+
+  await check('re-rating the same resource updates the existing row instead of duplicating it (unique constraint + client upsert)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s2);
+      await c.q(
+        `INSERT INTO public.resource_ratings (resource_id, rater_id, rating, review) VALUES ($1, $2, 4, 'First pass')`,
+        [resourceId, U.s2],
+      );
+      await c.q(
+        `INSERT INTO public.resource_ratings (resource_id, rater_id, rating, review) VALUES ($1, $2, 2, 'Actually mediocre')
+         ON CONFLICT (resource_id, rater_id) DO UPDATE SET rating = EXCLUDED.rating, review = EXCLUDED.review`,
+        [resourceId, U.s2],
+      );
+      await svc();
+      const rows = await c.q(`SELECT rating, review FROM public.resource_ratings WHERE resource_id = $1 AND rater_id = $2`, [resourceId, U.s2]);
+      eq(rows.rows.length, 1, 'still exactly one row for this (resource, rater) pair');
+      eq(rows.rows[0], { rating: 2, review: 'Actually mediocre' }, 'the row was updated to the latest submission, not duplicated');
+    });
+  });
+
+  await check('a user cannot forge rater_id and rate a resource on someone else\'s behalf', async () => {
+    await as(U.s4, async (c) => {
+      denied(
+        await c.t(`INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 5)`, [resourceId, U.s5]),
+        /row-level|policy/i,
+        'inserting a rating row with rater_id != auth.uid()',
+      );
+    });
+  });
+
+  await check('a user cannot update (or delete) another user\'s individual rating row', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s2);
+      await c.q(`INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 4)`, [resourceId, U.s2]);
+
+      await imp(U.s4);
+      const upd = await c.t(`UPDATE public.resource_ratings SET rating = 1 WHERE resource_id = $1 AND rater_id = $2`, [resourceId, U.s2]);
+      // RLS hides the target row from s4 rather than raising: the UPDATE matches zero rows.
+      assert(!upd.ok || upd.n === 0, "s4's UPDATE touched a row it does not own");
+      const del = await c.t(`DELETE FROM public.resource_ratings WHERE resource_id = $1 AND rater_id = $2`, [resourceId, U.s2]);
+      assert(!del.ok || del.n === 0, "s4's DELETE removed a row it does not own");
+
+      await svc();
+      const stillThere = await c.q(`SELECT rating FROM public.resource_ratings WHERE resource_id = $1 AND rater_id = $2`, [resourceId, U.s2]);
+      eq(stillThere.rows[0]?.rating, 4, "s2's rating is untouched by s4");
+    });
+  });
+
+  await check('anyone who can see the resource can read every rating on it, not just their own', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      await c.q(
+        `INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 4) ON CONFLICT (resource_id, rater_id) DO UPDATE SET rating = EXCLUDED.rating`,
+        [resourceId, U.s1],
+      );
+      await imp(U.s2);
+      await c.q(
+        `INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 2) ON CONFLICT (resource_id, rater_id) DO UPDATE SET rating = EXCLUDED.rating`,
+        [resourceId, U.s2],
+      );
+      // The uploader can read both their own rating and s2's, not only their own.
+      await imp(U.s1);
+      const rows = await c.q(`SELECT rater_id FROM public.resource_ratings WHERE resource_id = $1 ORDER BY rater_id`, [resourceId]);
+      eq(rows.rows.length, 2, 'the uploader sees every rating on their own resource');
+    });
+  });
+
+  await check('get_resource_rating_summary returns a correct average and count across multiple raters', async () => {
+    await as('postgres', async (c) => {
+      for (const [uid, rating] of [[U.s1, 4], [U.s2, 2], [U.s4, 3], [U.s5, 5]]) {
+        await imp(uid);
+        await c.q(
+          `INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, $3)
+           ON CONFLICT (resource_id, rater_id) DO UPDATE SET rating = EXCLUDED.rating`,
+          [resourceId, uid, rating],
+        );
+      }
+      await svc();
+      // (4 + 2 + 3 + 5) / 4 = 3.5
+      const r = await c.q(`SELECT * FROM public.get_resource_rating_summary($1)`, [resourceId]);
+      eq(Number(r.rows[0].avg_rating), 3.5, 'average across the four raters');
+      eq(Number(r.rows[0].rating_count), 4, 'count of raters');
+    });
+  });
+
+  await check('a student on another campus cannot see or rate a resource restricted to a different campus', async () => {
+    await as(U.s3, async (c) => {
+      // U.s3 is on campus UI; the fixture resource above is UNILAG-only (not GLOBAL).
+      const peek = await c.q(`SELECT * FROM public.resource_ratings WHERE resource_id = $1`, [resourceId]);
+      eq(peek.rows.length, 0, 'RLS hides every rating on a resource this student cannot see');
+      denied(
+        await c.t(`INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 5)`, [resourceId, U.s3]),
+        /row-level|policy/i,
+        'rating a resource on a campus this student cannot see',
       );
     });
   });
