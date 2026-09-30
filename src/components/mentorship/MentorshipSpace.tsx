@@ -594,6 +594,7 @@ function SessionsPanel({
 }) {
   const { colors, spacing } = useTheme();
   const now = Date.now();
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const isCurrent = (s: MentorshipSession) => (s.status === 'proposed' || s.status === 'confirmed') && new Date(endTimeOf(s.scheduledAt, s.durationMinutes)).getTime() > now;
   const upcoming = sessions.filter(isCurrent).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
   const earlier = sessions.filter((s) => !isCurrent(s)).sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt));
@@ -647,13 +648,7 @@ function SessionsPanel({
             ) : null}
             {joinable ? <AppButton label="Join video call" icon="videocam-outline" size="sm" onPress={onJoinCall} /> : null}
             {s.status === 'confirmed' && started ? (
-              <AppButton
-                label="Mark as done"
-                size="sm"
-                variant="secondary"
-                loading={busy === `m-${s.id}`}
-                onPress={() => run(`m-${s.id}`, async () => void (await respondToMentorshipSession(s.id, 'complete')), 'Marked as done.')}
-              />
+              <AppButton label="Mark as done" size="sm" variant="secondary" onPress={() => setCompletingId(s.id)} />
             ) : null}
             <AppButton
               label="Cancel"
@@ -691,7 +686,72 @@ function SessionsPanel({
           {earlier.map(card)}
         </>
       ) : null}
+
+      <CompleteSessionSheet
+        visible={!!completingId}
+        onClose={() => setCompletingId(null)}
+        onSubmit={async (note) => {
+          const id = completingId;
+          setCompletingId(null);
+          if (!id) return;
+          await run(`m-${id}`, async () => void (await respondToMentorshipSession(id, 'complete', note)), 'Marked as done.');
+        }}
+      />
     </View>
+  );
+}
+
+function CompleteSessionSheet({
+  visible,
+  onClose,
+  onSubmit,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (note?: string) => Promise<void>;
+}) {
+  const { spacing } = useTheme();
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  return (
+    <FormSheet
+      visible={visible}
+      onClose={onClose}
+      title="Mark session as done"
+      subtitle="A quick takeaway helps you both remember what you covered - totally optional."
+      footer={
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <AppButton label="Cancel" variant="ghost" onPress={onClose} fullWidth disabled={busy} />
+          </View>
+          <View style={{ flex: 2 }}>
+            <AppButton
+              label="Mark as done"
+              loading={busy}
+              fullWidth
+              onPress={async () => {
+                setBusy(true);
+                try {
+                  await onSubmit(note.trim() || undefined);
+                  setNote('');
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+          </View>
+        </View>
+      }
+    >
+      <AppTextField
+        label="Takeaways (optional)"
+        value={note}
+        onChangeText={(v) => setNote(v.slice(0, 500))}
+        placeholder="What did you take away from this session?"
+        multiline
+        numberOfLines={3}
+      />
+    </FormSheet>
   );
 }
 
