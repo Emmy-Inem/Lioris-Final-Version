@@ -31,6 +31,7 @@ export interface AdminAnalyticsSummary {
   total_users: number;
   real_users: number;
   bot_users: number;
+  new_signups: number;
   active_15m: number;
   active_24h: number;
   active_7d: number;
@@ -80,6 +81,7 @@ export async function fetchAdminAnalyticsSummary(
         total_users: Number(data.total_users ?? 0),
         real_users: Number(data.real_users ?? 0),
         bot_users: Number(data.bot_users ?? 0),
+        new_signups: Number(data.new_signups ?? 0),
         active_15m: Number(data.active_15m ?? 0),
         active_24h: Number(data.active_24h ?? 0),
         active_7d: Number(data.active_7d ?? 0),
@@ -109,7 +111,7 @@ export async function fetchAdminAnalyticsSummary(
     try {
       let profileQuery = supabase
         .from('profiles')
-        .select('id, is_bot, campus_code, verification_status, last_active_at');
+        .select('id, is_bot, campus_code, verification_status, last_active_at, created_at');
 
       if (normalizedCampus) {
         profileQuery = profileQuery.ilike('campus_code', normalizedCampus);
@@ -122,7 +124,7 @@ export async function fetchAdminAnalyticsSummary(
         // Fallback without is_bot if column not present in schema cache
         let q2 = supabase
           .from('profiles')
-          .select('id, campus_code, verification_status, last_active_at');
+          .select('id, campus_code, verification_status, last_active_at, created_at');
         if (normalizedCampus) q2 = q2.ilike('campus_code', normalizedCampus);
         const { data: data2 } = await q2;
         all = data2 ?? [];
@@ -130,7 +132,7 @@ export async function fetchAdminAnalyticsSummary(
     } catch {
       let q2 = supabase
         .from('profiles')
-        .select('id, campus_code, verification_status, last_active_at');
+        .select('id, campus_code, verification_status, last_active_at, created_at');
       if (normalizedCampus) q2 = q2.ilike('campus_code', normalizedCampus);
       const { data: data2 } = await q2;
       all = data2 ?? [];
@@ -144,6 +146,8 @@ export async function fetchAdminAnalyticsSummary(
     const active7d = real.filter((p: any) => p.last_active_at && now - new Date(p.last_active_at).getTime() <= 7 * 24 * 60 * 60 * 1000).length;
     const active30d = real.filter((p: any) => p.last_active_at && now - new Date(p.last_active_at).getTime() <= 30 * 24 * 60 * 60 * 1000).length;
     const pendingVerifications = all.filter((p: any) => p.verification_status === 'pending').length;
+    const sinceMs = now - days * 86_400_000;
+    const newSignups = real.filter((p: any) => p.created_at && new Date(p.created_at).getTime() >= sinceMs).length;
 
     // Campus aggregation - initialize with known launch institutions so all appear
     const campusMap = new Map<string, { total: number; real: number; verified: number; active7d: number }>();
@@ -248,6 +252,7 @@ export async function fetchAdminAnalyticsSummary(
       total_users: all.length,
       real_users: real.length,
       bot_users: bots.length,
+      new_signups: newSignups,
       active_15m: active15m,
       active_24h: active24h,
       active_7d: active7d,
@@ -270,6 +275,7 @@ export async function fetchAdminAnalyticsSummary(
       total_users: 0,
       real_users: 0,
       bot_users: 0,
+      new_signups: 0,
       active_15m: 0,
       active_24h: 0,
       active_7d: 0,

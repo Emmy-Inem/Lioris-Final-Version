@@ -1156,6 +1156,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261001000000_workflow_gaps.sql',
   'supabase/migrations/20261002000000_customer_care.sql',
   'supabase/migrations/20261003000000_trust_safety_gaps.sql',
+  'supabase/migrations/20261003010000_admin_directory_and_analytics_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2310,6 +2311,48 @@ console.log('\n== trust & safety gaps (reportable listings/jobs, admin mentorshi
         /not_allowed/,
         'withdrawing a pending request stays the requesting student\'s call, even for an admin',
       );
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// admin directory + analytics fixes (20261003010000): the User Directory
+// permission bug, heartbeat noise, new_signups.
+// ---------------------------------------------------------------------------
+console.log('\n== admin directory + analytics fixes (permission fix, heartbeat exclusion, new signups) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+
+  await check('admin_get_user_profiles returns student_id_number/department/trust_score/is_suspended for admins; a plain select(*) on profiles is still refused (that refusal is the bug - the fix is calling this RPC instead)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.adminA);
+      const rows = await c.q(`SELECT * FROM public.admin_get_user_profiles($1, $2) WHERE id = $3`, [null, 5000, U.s1]);
+      assert(rows.rows.length === 1, 'admin_get_user_profiles returns a row for the target student');
+      const row = rows.rows[0];
+      assert('student_id_number' in row && 'department' in row && 'trust_score' in row && 'is_suspended' in row, 'the widened RPC exposes the columns the User Directory screen needs');
+
+      await imp(U.s1);
+      denied(await c.t(`SELECT * FROM public.profiles WHERE id = $1`, [U.s1]), /permission denied/i, 'select(*) on profiles is refused even for your own row (email/student_id_number are not in the column-level grant)');
+      denied(await c.t(`SELECT * FROM public.admin_get_user_profiles($1, $2)`, [null, 10]), /admin_required/, 'a non-admin/staff student cannot call admin_get_user_profiles');
+    });
+  });
+
+  await check("get_admin_analytics_summary: 'heartbeat' pings are excluded from most_used_features (still a real feature use); new_signups counts recent real signups", async () => {
+    await as('postgres', async (c) => {
+      await c.q(`DELETE FROM public.analytics_events WHERE name IN ('heartbeat', 'test_feature_xyz')`);
+      for (let i = 0; i < 5; i++) {
+        await c.q(`INSERT INTO public.analytics_events (user_id, event_type, name, campus_code) VALUES ($1, 'feature_use', 'heartbeat', 'UNILAG')`, [U.s1]);
+      }
+      await c.q(`INSERT INTO public.analytics_events (user_id, event_type, name, campus_code) VALUES ($1, 'feature_use', 'test_feature_xyz', 'UNILAG')`, [U.s1]);
+
+      await imp(U.adminA);
+      const summary = (await c.q(`SELECT public.get_admin_analytics_summary(365, NULL) AS s`)).rows[0].s;
+      const featureNames = (summary.most_used_features || []).map((f) => f.name);
+      assert(!featureNames.includes('heartbeat'), 'heartbeat does not pollute most_used_features');
+      assert(featureNames.includes('test_feature_xyz'), 'a real feature-use event still appears in most_used_features');
+      assert(typeof summary.new_signups === 'number' && summary.new_signups >= 1, 'new_signups is present and counts at least the fixture students created for this run');
     });
   });
 }

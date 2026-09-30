@@ -130,7 +130,10 @@ export default function UserDirectoryScreen() {
  setLoadError(null);
  try {
  const { supabase } = await import('@/api/supabase');
- const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+ // profiles has no direct table-level SELECT grant for authenticated users any more
+ // (20260929000000_close_open_security_findings.sql); this admin-only SECURITY
+ // DEFINER RPC is the sanctioned way to read every column, admins included.
+ const { data, error } = await supabase.rpc('admin_get_user_profiles', { p_campus_code: null, p_limit: 5000 });
  if (error) throw error;
  if (data) {
  const mapped: DirectoryUser[] = data.map((p: any) => ({
@@ -146,6 +149,9 @@ export default function UserDirectoryScreen() {
  isVerified: p.verification_status === 'verified',
  trustScore: p.trust_score ? Math.round(Number(p.trust_score)) : 85,
  joinedDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2024',
+ lastActiveAt: p.last_active_at,
+ lastLoginAt: p.last_login_at,
+ isBot: !!p.is_bot,
  }));
  setUsers(mapped);
  }

@@ -13,12 +13,12 @@ import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { fetchAdminAnalyticsSummary } from '@/api/analytics';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
+import { useAdminBadges } from '@/components/admin/useAdminBadges';
 
 interface RecentActiveUser {
   id: string;
@@ -28,8 +28,13 @@ interface RecentActiveUser {
   verificationStatus: string;
   lastActiveAt: string | null;
   lastLoginAt: string | null;
-  isBot: boolean;
   avatarUrl: string | null;
+}
+
+/** A user counts as active once they've used the app in the last 7 days; otherwise inactive. */
+const ACTIVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+function isActiveUser(lastActiveAt: string | null): boolean {
+  return !!lastActiveAt && Date.now() - new Date(lastActiveAt).getTime() <= ACTIVE_WINDOW_MS;
 }
 
 function formatRelativeTime(dateStr: string | null): string {
@@ -45,12 +50,12 @@ function formatRelativeTime(dateStr: string | null): string {
 export default function AdminAnalyticsScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
-  const { showBots, toggleBotVisibility } = useBotVisibility();
+  const adminBadges = useAdminBadges();
 
   const [timeRangeDays, setTimeRangeDays] = useState<number>(30);
   const [campusFilter, setCampusFilter] = useState<string>('ALL');
   const [userSearch, setUserSearch] = useState('');
-  const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'real' | 'bot'>('real');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   // Fetch real aggregated analytics summary (campus-filtered, zero fake stats)
   const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryErrObj, refetch: refetchSummary } = useQuery({
@@ -67,21 +72,24 @@ export default function AdminAnalyticsScreen() {
       // the profiles table RLS (which would otherwise only return the admin's own row).
       const { data: rpcData, error: rpcError } = await supabase.rpc('admin_get_user_profiles', {
         p_campus_code: campusFilter !== 'ALL' ? campusFilter : null,
-        p_limit: 200,
+        p_limit: 500,
       });
 
+      const isSeededBot = (p: any) => Boolean(p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-')));
+
       if (!rpcError && rpcData && rpcData.length > 0) {
-        return (rpcData as any[]).map((p: any) => ({
-          id: p.id,
-          fullName: p.full_name || 'Campus Member',
-          role: p.role || 'student',
-          campusCode: p.campus_code || 'GLOBAL',
-          verificationStatus: p.verification_status || 'unverified',
-          lastActiveAt: p.last_active_at,
-          lastLoginAt: p.last_login_at,
-          isBot: Boolean(p.is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-'))),
-          avatarUrl: p.avatar_url,
-        }));
+        return (rpcData as any[])
+          .filter((p) => !isSeededBot(p))
+          .map((p: any) => ({
+            id: p.id,
+            fullName: p.full_name || 'Campus Member',
+            role: p.role || 'student',
+            campusCode: p.campus_code || 'GLOBAL',
+            verificationStatus: p.verification_status || 'unverified',
+            lastActiveAt: p.last_active_at,
+            lastLoginAt: p.last_login_at,
+            avatarUrl: p.avatar_url,
+          }));
       }
 
       if (rpcError) {
@@ -91,7 +99,7 @@ export default function AdminAnalyticsScreen() {
       // Safe fallback: direct table query (only request columns that always exist in production)
       let query = supabase
         .from('profiles')
-        .select('id, full_name, role, campus_code, verification_status, last_active_at, avatar_url, created_at')
+        .select('id, full_name, role, campus_code, verification_status, avatar_url, created_at')
         .order('created_at', { ascending: false })
         .limit(200);
 
@@ -105,17 +113,18 @@ export default function AdminAnalyticsScreen() {
         return [];
       }
 
-      return (data ?? []).map((p: any) => ({
-        id: p.id,
-        fullName: p.full_name || 'Campus Member',
-        role: p.role || 'student',
-        campusCode: p.campus_code || 'GLOBAL',
-        verificationStatus: p.verification_status || 'unverified',
-        lastActiveAt: p.last_active_at,
-        lastLoginAt: p.last_active_at,
-        isBot: Boolean((p as any).is_bot || (p.id && p.id.startsWith('00000000-0000-4000-a000-'))),
-        avatarUrl: p.avatar_url,
-      }));
+      return (data ?? [])
+        .filter((p: any) => !isSeededBot(p))
+        .map((p: any) => ({
+          id: p.id,
+          fullName: p.full_name || 'Campus Member',
+          role: p.role || 'student',
+          campusCode: p.campus_code || 'GLOBAL',
+          verificationStatus: p.verification_status || 'unverified',
+          lastActiveAt: null,
+          lastLoginAt: null,
+          avatarUrl: p.avatar_url,
+        }));
     },
     staleTime: 30_000,
   });
@@ -124,10 +133,10 @@ export default function AdminAnalyticsScreen() {
   const filteredUsers = useMemo(() => {
     let list = recentUsers;
 
-    if (userTypeFilter === 'real') {
-      list = list.filter((u) => !u.isBot);
-    } else if (userTypeFilter === 'bot') {
-      list = list.filter((u) => u.isBot);
+    if (statusFilter === 'active') {
+      list = list.filter((u) => isActiveUser(u.lastActiveAt));
+    } else if (statusFilter === 'inactive') {
+      list = list.filter((u) => !isActiveUser(u.lastActiveAt));
     }
 
     if (campusFilter !== 'ALL') {
@@ -144,15 +153,13 @@ export default function AdminAnalyticsScreen() {
       );
     }
 
-    // Prioritize real students first, then sort by activity / recency
+    // Most recently active first.
     return [...list].sort((a, b) => {
-      if (!a.isBot && b.isBot) return -1;
-      if (a.isBot && !b.isBot) return 1;
       const timeA = new Date(a.lastActiveAt || a.lastLoginAt || 0).getTime();
       const timeB = new Date(b.lastActiveAt || b.lastLoginAt || 0).getTime();
       return timeB - timeA;
     });
-  }, [recentUsers, userTypeFilter, campusFilter, userSearch]);
+  }, [recentUsers, statusFilter, campusFilter, userSearch]);
 
   const maxVisits = Math.max(1, ...(summary?.most_visited_pages.map((p) => p.visits) ?? [1]));
   const maxUses = Math.max(1, ...(summary?.most_used_features.map((f) => f.uses) ?? [1]));
@@ -246,38 +253,6 @@ export default function AdminAnalyticsScreen() {
                 </Pressable>
               ))}
             </View>
-
-            {/* Bot Visibility Quick Toggle */}
-            <Pressable
-              onPress={() => {
-                haptics.light();
-                toggleBotVisibility();
-              }}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: radius.pill,
-                borderWidth: 1,
-                borderColor: showBots ? colors.border : colors.brandPrimary,
-                backgroundColor: showBots ? colors.surface : isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
-              }}
-            >
-              <Ionicons
-                name={showBots ? 'sparkles' : 'sparkles-outline'}
-                size={14}
-                color={showBots ? colors.textSecondary : colors.brandPrimary}
-              />
-              <AppText
-                variant="caption"
-                weight="bold"
-                tone={showBots ? 'secondary' : 'brand'}
-              >
-                {showBots ? 'Bots Visible' : 'Bots Hidden'}
-              </AppText>
-            </Pressable>
 
             {/* Refresh button */}
             <Pressable
@@ -411,7 +386,7 @@ export default function AdminAnalyticsScreen() {
               {summary?.active_15m ?? 0}
             </AppText>
             <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-              Real users online in last 15m
+              Users online in the last 15m
             </AppText>
           </SolidCard>
 
@@ -427,7 +402,7 @@ export default function AdminAnalyticsScreen() {
               {summary?.active_24h ?? 0}
             </AppText>
             <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-              Daily active real students
+              Daily active students
             </AppText>
           </SolidCard>
 
@@ -451,22 +426,81 @@ export default function AdminAnalyticsScreen() {
           <SolidCard style={{ flex: 1, minWidth: isDesktop ? 220 : '45%', padding: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
               <AppText variant="caption" weight="semiBold" tone="secondary">
-                COMMUNITY ACCOUNTS
+                TOTAL USERS
               </AppText>
               <Ionicons name="shield-checkmark-outline" size={16} color="#F59E0B" />
             </View>
             <AppText variant="h1" weight="bold" style={{ fontSize: 28 }}>
-              {summary?.total_users ?? 0}
+              {summary?.real_users ?? 0}
             </AppText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
               <AppText variant="caption" weight="bold" tone="brand">
-                {summary?.real_users ?? 0} Real
+                {summary?.active_7d ?? 0} active
               </AppText>
               <AppText variant="caption" tone="secondary">
-                • {summary?.bot_users ?? 0} Bots
+                • {Math.max(0, (summary?.real_users ?? 0) - (summary?.active_7d ?? 0))} inactive
               </AppText>
             </View>
           </SolidCard>
+
+          {/* New Signups */}
+          <SolidCard style={{ flex: 1, minWidth: isDesktop ? 220 : '45%', padding: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+              <AppText variant="caption" weight="semiBold" tone="secondary">
+                NEW SIGNUPS
+              </AppText>
+              <Ionicons name="person-add-outline" size={16} color="#3B82F6" />
+            </View>
+            <AppText variant="h1" weight="bold" style={{ fontSize: 28 }}>
+              {summary?.new_signups ?? 0}
+            </AppText>
+            <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+              Joined in the last {timeRangeDays}d
+            </AppText>
+          </SolidCard>
+        </View>
+
+        {/* Needs Attention - open items across trust & safety queues */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: spacing.sm,
+            backgroundColor: colors.surface,
+            borderRadius: radius.lg,
+            padding: spacing.md,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <AppText variant="bodySmall" weight="bold" tone="secondary" style={{ marginRight: spacing.xs }}>
+            Needs Attention:
+          </AppText>
+          {[
+            { label: 'Reports', count: adminBadges.reports, icon: 'flag-outline' as const },
+            { label: 'Verifications', count: adminBadges.verification, icon: 'shield-checkmark-outline' as const },
+            { label: 'Support Tickets', count: adminBadges.support, icon: 'help-buoy-outline' as const },
+            { label: 'Takedowns', count: adminBadges.takedowns, icon: 'alert-circle-outline' as const },
+          ].map((item) => (
+            <View
+              key={item.label}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: radius.pill,
+                backgroundColor: item.count > 0 ? (isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2') : colors.divider,
+              }}
+            >
+              <Ionicons name={item.icon} size={13} color={item.count > 0 ? '#EF4444' : colors.textSecondary} />
+              <AppText variant="caption" weight="bold" style={{ color: item.count > 0 ? '#EF4444' : colors.textSecondary }}>
+                {item.count} {item.label}
+              </AppText>
+            </View>
+          ))}
         </View>
 
         {/* Content & Campus Velocity Dashboard */}
@@ -484,7 +518,7 @@ export default function AdminAnalyticsScreen() {
             >
               <Ionicons name="trending-up-outline" size={18} color="#8B5CF6" />
             </View>
-            <View>
+            <View style={{ flex: 1, minWidth: 0 }}>
               <AppText variant="h3" weight="bold">
                 Campus Engagement & Content Velocity
               </AppText>
@@ -515,6 +549,29 @@ export default function AdminAnalyticsScreen() {
               </AppText>
               <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
                 Discussions published
+              </AppText>
+            </View>
+
+            {/* Comments */}
+            <View
+              style={{
+                flex: 1,
+                minWidth: isDesktop ? 160 : '45%',
+                backgroundColor: colors.surface,
+                borderRadius: radius.md,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption" tone="secondary" weight="semiBold">
+                COMMENTS
+              </AppText>
+              <AppText variant="h2" weight="bold" style={{ marginTop: 4, color: colors.brandPrimary }}>
+                {summary?.total_comments ?? 0}
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                Replies across all threads
               </AppText>
             </View>
 
@@ -629,7 +686,7 @@ export default function AdminAnalyticsScreen() {
               >
                 <Ionicons name="compass-outline" size={18} color={colors.brandPrimary} />
               </View>
-              <View>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <AppText variant="h3" weight="bold">
                   Most Visited Pages
                 </AppText>
@@ -703,7 +760,7 @@ export default function AdminAnalyticsScreen() {
               >
                 <Ionicons name="flash-outline" size={18} color="#10B981" />
               </View>
-              <View>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <AppText variant="h3" weight="bold">
                   Most Used Features
                 </AppText>
@@ -779,7 +836,7 @@ export default function AdminAnalyticsScreen() {
               >
                 <Ionicons name="business-outline" size={18} color="#F59E0B" />
               </View>
-              <View>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <AppText variant="h3" weight="bold">
                   Higher Institution & Campus Breakdown
                 </AppText>
@@ -794,9 +851,9 @@ export default function AdminAnalyticsScreen() {
                 const institution = LAUNCH_INSTITUTIONS.find((i) => i.code === campus.campus_code);
                 const name = institution ? institution.shortName : campus.campus_code;
                 const fullName = institution ? institution.name : campus.campus_code;
-                const verifyPct = campus.total_members > 0 ? Math.round((campus.verified_members / campus.total_members) * 100) : 0;
+                const verifyPct = campus.real_members > 0 ? Math.round((campus.verified_members / campus.real_members) * 100) : 0;
                 const isSelected = campusFilter === campus.campus_code;
-                const botCount = Math.max(0, campus.total_members - campus.real_members);
+                const inactiveCount = Math.max(0, campus.real_members - campus.active_7d);
 
                 return (
                   <Pressable
@@ -830,7 +887,7 @@ export default function AdminAnalyticsScreen() {
 
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
                       <AppText variant="h2" weight="bold">
-                        {campus.total_members}
+                        {campus.real_members}
                       </AppText>
                       <AppText variant="caption" tone="secondary">
                         total members
@@ -850,16 +907,12 @@ export default function AdminAnalyticsScreen() {
 
                     <View style={{ marginTop: spacing.xs, gap: 4, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <AppText variant="caption" tone="secondary">Real Students:</AppText>
-                        <AppText variant="caption" weight="bold" tone="brand">{campus.real_members}</AppText>
-                      </View>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <AppText variant="caption" tone="secondary">Bot Personas:</AppText>
-                        <AppText variant="caption" weight="semiBold" tone="secondary">{botCount}</AppText>
-                      </View>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <AppText variant="caption" tone="secondary">Active (7d):</AppText>
-                        <AppText variant="caption" weight="bold">{campus.active_7d}</AppText>
+                        <AppText variant="caption" weight="bold" tone="brand">{campus.active_7d}</AppText>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <AppText variant="caption" tone="secondary">Inactive:</AppText>
+                        <AppText variant="caption" weight="semiBold" tone="secondary">{inactiveCount}</AppText>
                       </View>
                     </View>
 
@@ -878,39 +931,39 @@ export default function AdminAnalyticsScreen() {
         {/* Live User Activity & Login Tracker */}
         <SolidCard style={{ padding: spacing.lg }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, flexWrap: 'wrap', gap: spacing.sm }}>
-            <View>
+            <View style={{ flex: 1, minWidth: 0 }}>
               <AppText variant="h3" weight="bold">
-                Real User Activity & Login Monitor
+                User Activity & Login Monitor
               </AppText>
               <AppText variant="caption" tone="secondary">
                 Track active students and recent logins for {activeCampusName}
               </AppText>
             </View>
 
-            {/* User type selector */}
+            {/* Status selector */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-              {(['all', 'real', 'bot'] as const).map((type) => (
+              {(['all', 'active', 'inactive'] as const).map((type) => (
                 <Pressable
                   key={type}
                   onPress={() => {
                     haptics.light();
-                    setUserTypeFilter(type);
+                    setStatusFilter(type);
                   }}
                   style={{
                     paddingHorizontal: 10,
                     paddingVertical: 4,
                     borderRadius: radius.pill,
-                    backgroundColor: userTypeFilter === type ? colors.brandPrimary : colors.surface,
+                    backgroundColor: statusFilter === type ? colors.brandPrimary : colors.surface,
                     borderWidth: 1,
-                    borderColor: userTypeFilter === type ? colors.brandPrimary : colors.border,
+                    borderColor: statusFilter === type ? colors.brandPrimary : colors.border,
                   }}
                 >
                   <AppText
                     variant="caption"
                     weight="bold"
-                    tone={userTypeFilter === type ? 'inverse' : 'secondary'}
+                    tone={statusFilter === type ? 'inverse' : 'secondary'}
                   >
-                    {type === 'all' ? 'All Accounts' : type === 'real' ? 'Real Users' : 'Bots'}
+                    {type === 'all' ? 'All Users' : type === 'active' ? 'Active (7d)' : 'Inactive'}
                   </AppText>
                 </Pressable>
               ))}
@@ -991,10 +1044,10 @@ export default function AdminAnalyticsScreen() {
                           {u.fullName}
                         </AppText>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                          {u.isBot ? (
-                            <Badge label="Bot Persona" tone="neutral" />
+                          {isActiveUser(u.lastActiveAt) ? (
+                            <Badge label="Active" tone="success" />
                           ) : (
-                            <Badge label="Real User" tone="success" />
+                            <Badge label="Inactive" tone="neutral" />
                           )}
                           <Badge label={u.campusCode} tone="brand" />
                         </View>
@@ -1034,11 +1087,11 @@ export default function AdminAnalyticsScreen() {
               <View style={{ paddingVertical: spacing.xl, alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
                 <AppText variant="bodySmall" weight="bold">
-                  {userTypeFilter === 'real' ? `No registered real students for ${activeCampusName}` : 'No members found matching current filters'}
+                  {statusFilter === 'active' ? `No users active in the last 7 days for ${activeCampusName}` : 'No members found matching current filters'}
                 </AppText>
                 <AppText variant="caption" tone="secondary" style={{ textAlign: 'center', maxWidth: 400 }}>
-                  {userTypeFilter === 'real'
-                    ? 'When students create an account or verify their student matriculation ID, their profile and live activity will be tracked here.'
+                  {statusFilter === 'active'
+                    ? 'When students use the app, their profile and live activity will be tracked here.'
                     : 'Try changing the university selector or switching the filter above.'}
                 </AppText>
               </View>

@@ -4,6 +4,14 @@
 
 BEGIN;
 
+-- 20261003010000_admin_directory_and_analytics_fixes.sql widened this
+-- function's return columns; CREATE OR REPLACE cannot change a function's
+-- return type, so this file - which must stay safe to re-run on its own -
+-- drops it first. Re-running this file after the later migration is a no-op
+-- on the signature (the later migration's own DROP + CREATE runs right
+-- after in migration order and restores the wider shape).
+DROP FUNCTION IF EXISTS public.admin_get_user_profiles(TEXT, INT);
+
 CREATE OR REPLACE FUNCTION public.admin_get_user_profiles(
     p_campus_code TEXT DEFAULT NULL,
     p_limit INT DEFAULT 200
