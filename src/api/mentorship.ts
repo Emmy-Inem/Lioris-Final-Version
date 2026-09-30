@@ -6,6 +6,7 @@ import {
   MentorshipFeedback,
   MentorshipGoal,
   MentorshipSession,
+  MentorshipStatus,
   MentorshipUpdate,
   MyMentorProfile,
 } from './types';
@@ -167,6 +168,47 @@ export async function endMentorship(
   });
   throwIfRpcError(error, 'Could not update this mentorship. Please try again.');
   return mapMentorship(data);
+}
+
+// ---------------------------------------------------------------------------------------------------
+// admin oversight
+// ---------------------------------------------------------------------------------------------------
+export interface AdminMentorshipRow {
+  id: string;
+  studentId: string;
+  studentName: string;
+  campusCode: string | null;
+  mentorId: string;
+  mentorName: string;
+  status: MentorshipStatus;
+  focusArea: string | null;
+  createdAt: string;
+  startedAt: string | null;
+}
+
+/** Every mentorship pairing, newest first - admin only (RLS-enforced: "Admins manage mentorships"). */
+export async function listMentorshipsForAdmin(status?: MentorshipStatus): Promise<AdminMentorshipRow[]> {
+  let req = supabase
+    .from('mentorships')
+    .select(
+      'id, status, track, created_at, started_at, student:profiles!mentorships_student_id_fkey(id, full_name, campus_code), mentor:profiles!mentorships_mentor_id_fkey(id, full_name)',
+    )
+    .order('created_at', { ascending: false });
+  if (status) req = req.eq('status', status);
+  const { data, error } = await req;
+  if (error) return [];
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    studentId: row.student?.id,
+    studentName: row.student?.full_name || 'Student',
+    campusCode: row.student?.campus_code ?? null,
+    mentorId: row.mentor?.id,
+    mentorName: row.mentor?.full_name || 'Mentor',
+    status: row.status,
+    focusArea: row.track ?? null,
+    createdAt: row.created_at,
+    startedAt: row.started_at ?? null,
+  }));
 }
 
 // ---------------------------------------------------------------------------------------------------

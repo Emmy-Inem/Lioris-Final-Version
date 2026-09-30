@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { MarketplaceListing } from'@/api/types';
 import { isWishlisted, toggleWishlist } from '@/api/marketplace';
+import { submitReport } from '@/api/moderation';
 import { getOrCreateConversationWithUser, sendMessage } from '@/api/messaging';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -50,6 +51,39 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  haptics.light();
  const next = await toggleWishlist(item.id, { title: item.title, subtitle: item.price, imageUrl: item.imageUrl });
  setSaved(next);
+ }
+
+ function handleReport() {
+ haptics.light();
+ const doReport = async (reason?: string) => {
+ try {
+ await submitReport({
+ targetType: 'marketplace_listing',
+ targetId: item.id,
+ institutionCode: (item as any).campusCode,
+ reason: reason?.trim() || 'Reported from the marketplace',
+ });
+ Alert.alert('Reported', 'Thanks - campus moderators will review this listing.');
+ } catch (err: any) {
+ Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
+ }
+ };
+ if (Alert.prompt) {
+ Alert.prompt(
+ 'Report this listing',
+ 'What is wrong with it?',
+ [
+ { text: 'Cancel', style: 'cancel' },
+ { text: 'Report', style: 'destructive', onPress: (reason?: string) => doReport(reason) },
+ ],
+ 'plain-text',
+ );
+ } else {
+ Alert.alert('Report this listing?', 'Campus moderators will review it.', [
+ { text: 'Cancel', style: 'cancel' },
+ { text: 'Report', style: 'destructive', onPress: () => doReport() },
+ ]);
+ }
  }
 
  async function handleMessageSeller() {
@@ -127,14 +161,29 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
             </AppText>
           )}
         </View>
+ <View style={{ position: 'absolute', top: 4, right: 4, flexDirection: 'row', gap: 4 }}>
+ {!isOwnListing ? (
+ <Pressable
+ onPress={handleReport}
+ accessibilityRole="button"
+ accessibilityLabel="Report this listing"
+ style={{
+ width: 24,
+ height: 24,
+ borderRadius: 12,
+ backgroundColor: 'rgba(0,0,0,0.45)',
+ alignItems: 'center',
+ justifyContent: 'center',
+ }}
+ >
+ <Ionicons name="flag-outline" size={12} color="#FFFFFF" />
+ </Pressable>
+ ) : null}
  <Pressable
  onPress={handleToggleWishlist}
  accessibilityRole="button"accessibilityState={{ selected: saved }}
  accessibilityLabel={saved ? 'Remove from wishlist' : 'Add to wishlist'}
  style={{
- position: 'absolute',
- top: 4,
- right: 4,
  width: 24,
  height: 24,
  borderRadius: 12,
@@ -145,6 +194,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  >
  <Ionicons name={saved ? 'heart' : 'heart-outline'} size={13} color={saved ? '#EF4444' : '#FFFFFF'} />
  </Pressable>
+ </View>
  </View>
 
  <View style={{ padding: spacing.sm }}>

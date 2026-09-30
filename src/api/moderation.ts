@@ -94,6 +94,14 @@ async function resolveActionedUserId(target: Report): Promise<string | null> {
  const { data } = await supabase.from('events').select('creator_id').eq('id', target.targetId).maybeSingle();
  return data?.creator_id ?? null;
  }
+ if (target.targetType === 'marketplace_listing') {
+ const { data } = await supabase.from('marketplace_listings').select('seller_id').eq('id', target.targetId).maybeSingle();
+ return data?.seller_id ?? null;
+ }
+ if (target.targetType === 'job') {
+ const { data } = await supabase.from('jobs').select('poster_id').eq('id', target.targetId).maybeSingle();
+ return data?.poster_id ?? null;
+ }
  } catch {
  // Notifying the actioned user is best-effort - never let a lookup
  // failure here block the moderation decision itself.
@@ -107,6 +115,8 @@ const TARGET_TYPE_LABEL: Record<Report['targetType'], string> = {
  message: 'message',
  event: 'event',
  user: 'account',
+ marketplace_listing: 'marketplace listing',
+ job: 'job posting',
 };
 
 // PATCH /reports/{id}

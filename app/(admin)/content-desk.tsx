@@ -9,6 +9,7 @@ import { EventsModerationTab } from '@/components/admin/EventsModerationTab';
 import { ResourcesModerationTab } from '@/components/admin/ResourcesModerationTab';
 import { JobsModerationTab } from '@/components/admin/JobsModerationTab';
 import { DonationsModerationTab } from '@/components/admin/DonationsModerationTab';
+import { MentorshipModerationTab } from '@/components/admin/MentorshipModerationTab';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
@@ -24,6 +25,7 @@ const TABS = [
   { key: 'resources', label: 'Resources', icon: 'folder-open-outline' as const },
   { key: 'jobs', label: 'Jobs', icon: 'briefcase-outline' as const },
   { key: 'donations', label: 'Donations', icon: 'heart-outline' as const },
+  { key: 'mentorship', label: 'Mentorship', icon: 'people-outline' as const },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
 
@@ -95,6 +97,7 @@ export default function ContentDeskScreen() {
         {tab === 'resources' ? <ResourcesModerationTab /> : null}
         {tab === 'jobs' ? <JobsModerationTab /> : null}
         {tab === 'donations' ? <DonationsModerationTab /> : null}
+        {tab === 'mentorship' ? <MentorshipModerationTab /> : null}
       </ScrollView>
     </ScreenContainer>
   );

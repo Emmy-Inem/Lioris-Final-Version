@@ -1155,6 +1155,7 @@ const currentProductMigrations = [
   'supabase/migrations/20260930000000_job_applications.sql',
   'supabase/migrations/20261001000000_workflow_gaps.sql',
   'supabase/migrations/20261002000000_customer_care.sql',
+  'supabase/migrations/20261003000000_trust_safety_gaps.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2214,6 +2215,100 @@ console.log('\n== customer care (support tickets: feedback category, AI escalati
         await c.t(`INSERT INTO public.support_tickets (user_id, category, title, description, chat_transcript) VALUES ($1, 'general', 't', 'd', repeat('x', 12001))`, [U.s1]),
         /chat_transcript|check constraint/i,
         'a transcript over the 12000-character cap is rejected',
+      );
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// trust & safety gaps (20261003000000_trust_safety_gaps.sql): marketplace
+// listings and jobs are now reportable; admin can end an abusive mentorship.
+// ---------------------------------------------------------------------------
+console.log('\n== trust & safety gaps (reportable listings/jobs, admin mentorship override) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+
+  await check('marketplace listings and jobs can now be reported into the moderation queue', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      const listing = await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, description, price_kobo, price_display, category)
+         VALUES ($1, 'UNILAG', 'Used calculator', 'Works fine', 500000, '₦5,000', 'Electronics') RETURNING id`,
+        [U.s1],
+      );
+      const job = await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url)
+         VALUES ($1, 'UNILAG', 'Frontend Intern', 'Acme', 'Lagos', 'https://example.test/apply') RETURNING id`,
+        [U.s1],
+      );
+
+      await imp(U.s2);
+      const listingReport = await c.q(
+        `INSERT INTO public.moderation_queue (item_type, item_id, reporter_id, campus_code, reason, status)
+         VALUES ('marketplace_listing', $1, $2, 'UNILAG', 'Looks like a scam', 'pending') RETURNING item_type::text`,
+        [listing.rows[0].id, U.s2],
+      );
+      eq(listingReport.rows[0].item_type, 'marketplace_listing', 'a marketplace listing can be reported');
+
+      const jobReport = await c.q(
+        `INSERT INTO public.moderation_queue (item_type, item_id, reporter_id, campus_code, reason, status)
+         VALUES ('job', $1, $2, 'UNILAG', 'Pyramid scheme', 'pending') RETURNING item_type::text`,
+        [job.rows[0].id, U.s2],
+      );
+      eq(jobReport.rows[0].item_type, 'job', 'a job posting can be reported');
+    });
+  });
+
+  await check('a non-participant cannot end a mentorship they are not part of', async () => {
+    await as('postgres', async (c) => {
+      const m = await c.q(
+        `INSERT INTO public.mentorships (student_id, mentor_id, status, track, started_at) VALUES ($1, $2, 'active', 'Backend', now()) RETURNING id`,
+        [U.s1, U.alumni],
+      );
+      await imp(U.s3);
+      denied(
+        await c.t(`SELECT public.end_mentorship($1, 'end', 'butting in')`, [m.rows[0].id]),
+        /not_allowed/,
+        'an unrelated student cannot end someone else\'s mentorship',
+      );
+    });
+  });
+
+  await check('an admin can end an active mentorship they are not part of, and both sides are notified', async () => {
+    await as('postgres', async (c) => {
+      const m = await c.q(
+        `INSERT INTO public.mentorships (student_id, mentor_id, status, track, started_at) VALUES ($1, $2, 'active', 'Product design', now()) RETURNING id`,
+        [U.s1, U.alumni],
+      );
+      await imp(U.adminA);
+      await c.q(`SELECT public.end_mentorship($1, 'end', 'Reported for inappropriate conduct')`, [m.rows[0].id]);
+
+      const row = (await c.q(`SELECT status, end_reason, ended_by FROM public.mentorships WHERE id = $1`, [m.rows[0].id])).rows[0];
+      eq(row.status, 'ended', 'admin override actually ends the mentorship');
+      eq(row.ended_by, U.adminA, 'the ending admin is recorded');
+      assert(row.end_reason.includes('inappropriate'), 'the admin reason is recorded');
+
+      const notifCount = (await c.q(
+        `SELECT count(*)::int n FROM public.notifications WHERE recipient_id IN ($1, $2) AND title = 'Mentorship ended by campus staff' AND created_at > now() - interval '1 minute'`,
+        [U.s1, U.alumni],
+      )).rows[0].n;
+      eq(notifCount, 2, 'both the student and the mentor are notified when staff ends it');
+    });
+  });
+
+  await check('an admin still cannot withdraw a pending request on someone else\'s behalf', async () => {
+    await as('postgres', async (c) => {
+      const m = await c.q(
+        `INSERT INTO public.mentorships (student_id, mentor_id, status, track) VALUES ($1, $2, 'pending', 'Data science') RETURNING id`,
+        [U.s2, U.alumni],
+      );
+      await imp(U.adminA);
+      denied(
+        await c.t(`SELECT public.end_mentorship($1, 'withdraw', NULL)`, [m.rows[0].id]),
+        /not_allowed/,
+        'withdrawing a pending request stays the requesting student\'s call, even for an admin',
       );
     });
   });

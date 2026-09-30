@@ -18,6 +18,8 @@ import { deletePost } from '@/api/posts';
 import { deletePodPost } from '@/api/studyGroups';
 import { ReportedContentPreview } from './ReportedContentPreview';
 import { purgeEvent } from '@/api/events';
+import { deleteListing } from '@/api/marketplace';
+import { rejectJob } from '@/api/jobs';
 import { Report } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 
@@ -28,7 +30,7 @@ const STATUS_TONE: Record<Report['status'], 'warning' | 'brand' | 'success' | 'n
  dismissed: 'neutral',
 };
 
-const TARGET_FILTERS = ['All Flags', 'Posts', 'Pod posts', 'Messages', 'Events', 'Users'];
+const TARGET_FILTERS = ['All Flags', 'Posts', 'Pod posts', 'Messages', 'Events', 'Listings', 'Jobs', 'Users'];
 
 interface ModerationQueueProps {
  institutionCode?: string;
@@ -64,6 +66,8 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  if (filterType === 'Pod posts') return r.targetType === 'pod_post';
  if (filterType === 'Messages') return r.targetType === 'message';
  if (filterType === 'Events') return r.targetType === 'event';
+ if (filterType === 'Listings') return r.targetType === 'marketplace_listing';
+ if (filterType === 'Jobs') return r.targetType === 'job';
  if (filterType === 'Users') return r.targetType === 'user';
  return true;
  });
@@ -156,6 +160,40 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         if (punishmentType === 'takedown' || punishmentType === 'permaban') {
           await purgeEvent(report.targetId);
           actionLabel = 'Event purged from campus calendar';
+        }
+      }
+
+      // A reported marketplace listing: the seller is the violator; taking it down deletes the listing.
+      if (report.targetType === 'marketplace_listing' && report.targetId) {
+        try {
+          const { data: listingRow } = await supabase.from('marketplace_listings').select('seller_id').eq('id', report.targetId).maybeSingle();
+          if (listingRow?.seller_id) {
+            targetUserId = listingRow.seller_id;
+          }
+        } catch {
+          // ignore
+        }
+
+        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+          await deleteListing(report.targetId);
+          actionLabel = 'Listing removed from the marketplace';
+        }
+      }
+
+      // A reported job posting: the poster is the violator; taking it down un-approves the posting.
+      if (report.targetType === 'job' && report.targetId) {
+        try {
+          const { data: jobRow } = await supabase.from('jobs').select('poster_id').eq('id', report.targetId).maybeSingle();
+          if (jobRow?.poster_id) {
+            targetUserId = jobRow.poster_id;
+          }
+        } catch {
+          // ignore
+        }
+
+        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+          await rejectJob(report.targetId, adminModNote.trim() || `Removed following a user report: ${report.reason}`);
+          actionLabel = 'Job posting removed from the career board';
         }
       }
 

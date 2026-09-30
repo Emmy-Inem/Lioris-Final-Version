@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
 import { AppText } from './AppText';
@@ -10,6 +10,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { JobListing } from '@/api/types';
 import { hasAppliedToJob } from '@/api/jobApplications';
+import { submitReport } from '@/api/moderation';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
@@ -52,6 +53,39 @@ export function JobCard({ job, onApplied }: { job: JobListing; onApplied?: () =>
     setApplied(true);
     setModalOpen(false);
     onApplied?.();
+  }
+
+  function handleReport() {
+    haptics.light();
+    const doReport = async (reason?: string) => {
+      try {
+        await submitReport({
+          targetType: 'job',
+          targetId: job.id,
+          institutionCode: job.campusCode,
+          reason: reason?.trim() || 'Reported from the career board',
+        });
+        Alert.alert('Reported', 'Thanks - campus moderators will review this posting.');
+      } catch (err: any) {
+        Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
+      }
+    };
+    if (Alert.prompt) {
+      Alert.prompt(
+        'Report this job posting',
+        'What is wrong with it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Report', style: 'destructive', onPress: (reason?: string) => doReport(reason) },
+        ],
+        'plain-text',
+      );
+    } else {
+      Alert.alert('Report this job posting?', 'Campus moderators will review it.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Report', style: 'destructive', onPress: () => doReport() },
+      ]);
+    }
   }
 
   return (
@@ -107,6 +141,17 @@ export function JobCard({ job, onApplied }: { job: JobListing; onApplied?: () =>
         </AppText>
 
         <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flexShrink: 0 }}>
+          {job.posterId !== user?.id && (
+            <Pressable
+              onPress={handleReport}
+              hitSlop={8}
+              style={{ padding: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel="Report this job posting"
+            >
+              <Ionicons name="flag-outline" size={16} color={colors.textSecondary} />
+            </Pressable>
+          )}
           {isSafeHttpUrl(job.applyUrl) && (
             <AppButton
               label="Job Site ↗"

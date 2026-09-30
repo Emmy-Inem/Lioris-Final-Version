@@ -40,6 +40,7 @@ import {
   submitMentorshipFeedback,
 } from '@/api/mentorship';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
+import { submitReport } from '@/api/moderation';
 import { getCallRoomName, getCallUrl } from '@/api/calling';
 import { Mentorship, MentorshipSession, MentorSessionMode } from '@/api/types';
 import { SESSION_MODES, mentorshipStatusLabel, mentorshipStatusTone, sessionStatusLabel } from '@/utils/mentorship';
@@ -197,6 +198,35 @@ export function MentorshipSpace({ mentorshipId, role }: { mentorshipId: string; 
     }
   }
 
+  function handleReportPartner() {
+    if (!partner) return;
+    haptics.light();
+    const doReport = async (reason?: string) => {
+      try {
+        await submitReport({ targetType: 'user', targetId: partner.id, reason: reason?.trim() || 'Reported from a mentorship' });
+        Alert.alert('Reported', 'Thanks - campus moderators will review this.');
+      } catch (err: any) {
+        Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
+      }
+    };
+    if (Alert.prompt) {
+      Alert.prompt(
+        `Report ${partner.name}`,
+        'What happened?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Report', style: 'destructive', onPress: (reason?: string) => doReport(reason) },
+        ],
+        'plain-text',
+      );
+    } else {
+      Alert.alert(`Report ${partner.name}?`, 'Campus moderators will review it.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Report', style: 'destructive', onPress: () => doReport() },
+      ]);
+    }
+  }
+
   if (isLoading) {
     return (
       <ScreenContainer glow={false}>
@@ -254,9 +284,14 @@ export function MentorshipSpace({ mentorshipId, role }: { mentorshipId: string; 
           <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
             <Avatar name={partner.name} uri={partner.avatar} size={56} />
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              <AppText variant="h3" weight="bold" numberOfLines={2}>
-                {partner.name}
-              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                <AppText variant="h3" weight="bold" numberOfLines={2} style={{ flex: 1 }}>
+                  {partner.name}
+                </AppText>
+                <Pressable onPress={handleReportPartner} hitSlop={8} style={{ padding: 2 }} accessibilityRole="button" accessibilityLabel={`Report ${partner.name}`}>
+                  <Ionicons name="flag-outline" size={16} color={colors.textSecondary} />
+                </Pressable>
+              </View>
               <AppText tone="secondary" variant="caption" numberOfLines={2}>
                 {partner.sub}
               </AppText>

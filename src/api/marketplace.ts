@@ -250,3 +250,13 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  locallyCreatedListings = [created, ...locallyCreatedListings];
  return created;
 }
+
+/** Admin/staff/seller takedown - RLS already grants sellers, admins and same-campus staff DELETE. */
+export async function deleteListing(id: string): Promise<void> {
+ const { error } = await supabase.from('marketplace_listings').delete().eq('id', id);
+ if (error) {
+ console.warn('[Marketplace] deleteListing error:', error.message);
+ throw new Error('Could not remove this listing. Please try again.');
+ }
+ locallyCreatedListings = locallyCreatedListings.filter((item) => item.id !== id);
+}

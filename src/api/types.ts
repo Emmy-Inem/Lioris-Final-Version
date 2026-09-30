@@ -417,7 +417,7 @@ export type ReportStatus = 'open' | 'under_review' | 'resolved' | 'dismissed';
 export interface Report {
  id: string;
  reporterId: string;
- targetType: 'post' | 'message' | 'user' | 'event' | 'pod_post';
+ targetType: 'post' | 'message' | 'user' | 'event' | 'pod_post' | 'marketplace_listing' | 'job';
  targetId: string;
  reason: string;
  status: ReportStatus;
