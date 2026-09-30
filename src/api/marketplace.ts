@@ -80,11 +80,16 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
 
  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
+ // Sold listings are excluded from the default browse/search results, the
+ // same way blocked sellers and off-campus listings already are below -
+ // except for the viewer's own, so a seller can still find and manage a
+ // listing they just marked sold.
+ const viewerId = authData?.user?.id;
  let req = supabase
  .from('marketplace_listings')
  .select('*, seller:profiles(full_name, avatar_url, trust_score, campus_code, role, verification_status)')
- .eq('is_sold', false)
  .order('created_at', { ascending: false });
+ req = viewerId ? req.or(`is_sold.eq.false,seller_id.eq.${viewerId}`) : req.eq('is_sold', false);
 
  if (query.category && query.category !== 'All Categories' && query.category !== 'Wishlist') {
  req = req.eq('category', query.category);
@@ -120,6 +125,7 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  imageUrl: row.image_url,
  campusCode: row.campus_code || 'GLOBAL',
  createdAt: row.created_at,
+ isSold: !!row.is_sold,
  }));
 
  // Merge unique - the local pool only ever contributes this session's own
@@ -249,6 +255,94 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
 
  locallyCreatedListings = [created, ...locallyCreatedListings];
  return created;
+}
+
+export interface UpdateListingPayload {
+ title?: string;
+ description?: string;
+ price?: string;
+ condition?: MarketplaceListing['condition'];
+ category?: MarketplaceListing['category'];
+ imageUrl?: string | null;
+}
+
+/**
+ * Edits an existing listing. Mirrors createListing's contract: throws on any
+ * real failure (a rejected update, or RLS silently matching zero rows because
+ * the caller isn't the seller/admin/staff) instead of quietly returning a
+ * fabricated "success" listing.
+ */
+export async function updateListing(listingId: string, updates: UpdateListingPayload): Promise<MarketplaceListing> {
+ const dbUpdates: Record<string, any> = {};
+
+ if (updates.title !== undefined) dbUpdates.title = updates.title;
+ if (updates.description !== undefined) dbUpdates.description = updates.description;
+ if (updates.condition !== undefined) dbUpdates.condition = updates.condition;
+ if (updates.category !== undefined) dbUpdates.category = updates.category;
+ if (updates.price !== undefined) {
+ const priceClean = Number(updates.price.replace(/[^0-9]/g, '')) || 5000;
+ dbUpdates.price_kobo = priceClean * 100;
+ dbUpdates.price_display = updates.price.startsWith('₦') ? updates.price : `₦${updates.price}`;
+ }
+ if (updates.imageUrl !== undefined) {
+ if (updates.imageUrl) {
+ const { resolveMediaUrl } = await import('./storage');
+ dbUpdates.image_url = await resolveMediaUrl(updates.imageUrl, 'marketplace');
+ } else {
+ dbUpdates.image_url = null;
+ }
+ }
+
+ const { data, error } = await supabase
+ .from('marketplace_listings')
+ .update(dbUpdates)
+ .eq('id', listingId)
+ .select('*, seller:profiles(full_name, avatar_url, trust_score, campus_code, role, verification_status)')
+ .maybeSingle();
+
+ if (error || !data) {
+ console.warn('[Marketplace] updateListing error:', error?.message);
+ throw new Error('Could not update your listing. Please try again.');
+ }
+
+ const updated = {
+ id: data.id,
+ sellerId: data.seller_id,
+ sellerName: data.seller?.full_name || 'Campus Student',
+ sellerAvatarUrl: data.seller?.avatar_url || null,
+ sellerTrustLevel: Math.max(1, Math.round((data.seller?.trust_score || 80) / 20)),
+ sellerVerified: data.seller?.verification_status === 'verified' || data.seller?.role === 'admin',
+ title: data.title,
+ description: data.description || '',
+ price: data.price_display || `₦${(data.price_kobo / 100).toLocaleString()}`,
+ condition: data.condition,
+ category: data.category,
+ imageUrl: data.image_url,
+ campusCode: data.campus_code || 'GLOBAL',
+ createdAt: data.created_at,
+ isSold: !!data.is_sold,
+ };
+
+ locallyCreatedListings = locallyCreatedListings.map((item) => (item.id === listingId ? { ...item, ...updated } : item));
+
+ return updated;
+}
+
+/** Focused single-field update - the seller toggling whether their own listing is sold. */
+export async function markListingSold(listingId: string, sold: boolean): Promise<void> {
+ const { data, error } = await supabase
+ .from('marketplace_listings')
+ .update({ is_sold: sold })
+ .eq('id', listingId)
+ .select('id')
+ .maybeSingle();
+
+ if (error || !data) {
+ console.warn('[Marketplace] markListingSold error:', error?.message);
+ throw new Error(sold ? 'Could not mark this listing as sold. Please try again.' : 'Could not mark this listing as available. Please try again.');
+ }
+
+ locallyCreatedListings = locallyCreatedListings.map((item) => (item.id === listingId ? { ...item, isSold: sold } : item));
 }
 
 /** Admin/staff/seller takedown - RLS already grants sellers, admins and same-campus staff DELETE. */
