@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { AuditLogAction, AuditLogEntry, UserRole } from './types';
 import { getSessionUser } from '@/auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
-import { assertUuid } from '../utils/postgrest';
+import { assertUuid, escapePostgrestLike } from '../utils/postgrest';
 
 export interface RecordAuditLogEntryPayload {
   action: AuditLogAction;
@@ -74,33 +74,27 @@ export interface AuditLogQuery {
   * actions they took as an admin, and actions taken against their account.
   */
  involvingUserId?: string;
+ /** Inclusive lower bound on created_at (ISO timestamp). */
+ since?: string;
+ /** Inclusive upper bound on created_at (ISO timestamp). */
+ until?: string;
+ /** Free-text match against the acting admin/staff member's profile name. */
+ actorSearch?: string;
+ /** Zero-based page index, paired with pageSize. Defaults to 0. */
+ page?: number;
+ /** Rows per page. Defaults to 100 (matches the old hard cap) when omitted. */
+ pageSize?: number;
 }
 
-export async function listAuditLogEntries(query: AuditLogQuery = {}): Promise<AuditLogEntry[]> {
- try {
- let queryBuilder = supabase
- .from('audit_logs')
- .select('*, profiles:actor_id(full_name, role)')
- .order('created_at', { ascending: false })
- .limit(100);
+export interface AuditLogPage {
+ entries: AuditLogEntry[];
+ /** Total rows matching the filters across all pages, from the server's exact count. */
+ total: number;
+ hasMore: boolean;
+}
 
- if (query.involvingUserId) {
- const involvingId = assertUuid(query.involvingUserId, 'user id');
- queryBuilder = queryBuilder.or(`actor_id.eq.${involvingId},entity_id.eq.${involvingId}`);
- }
- if (query.action) {
- queryBuilder = queryBuilder.eq('action', query.action);
- }
-
- const { data, error } = await queryBuilder;
-
- if (error) throw error;
- if (data && data.length > 0) {
- let rows = data;
- if (query.institutionCode) {
- rows = rows.filter((row: any) => row.metadata?.institutionCode === query.institutionCode);
- }
- return rows.map((row: any) => ({
+function mapAuditLogRow(row: any): AuditLogEntry {
+ return {
  id: row.id,
  actorId: row.actor_id || 'system',
  actorName: row.profiles?.full_name || row.metadata?.actorName || 'Administrator',
@@ -112,13 +106,66 @@ export async function listAuditLogEntries(query: AuditLogQuery = {}): Promise<Au
  reason: row.metadata?.reason,
  institutionCode: row.metadata?.institutionCode,
  createdAt: row.created_at,
- }));
+ };
+}
+
+/**
+ * Paginated audit log read. `institutionCode` and `actorSearch` are pushed down to
+ * PostgREST (a jsonb path filter and an inner join respectively) rather than
+ * filtered client-side after the fact, so `total`/`hasMore` stay accurate across
+ * pages instead of reflecting a filter applied only to whichever page was fetched.
+ */
+export async function listAuditLogEntriesPage(query: AuditLogQuery = {}): Promise<AuditLogPage> {
+ const pageSize = query.pageSize ?? 100;
+ const page = Math.max(0, query.page ?? 0);
+ const offset = page * pageSize;
+ const actorSearch = query.actorSearch?.trim();
+
+ try {
+ // An actor-name search needs the profiles join to be INNER (not the default LEFT)
+ // so the ilike filter below can actually exclude non-matching rows server-side.
+ let queryBuilder = supabase
+ .from('audit_logs')
+ .select(actorSearch ? '*, profiles:actor_id!inner(full_name, role)' : '*, profiles:actor_id(full_name, role)', { count: 'exact' })
+ .order('created_at', { ascending: false })
+ .range(offset, offset + pageSize - 1);
+
+ if (query.involvingUserId) {
+ const involvingId = assertUuid(query.involvingUserId, 'user id');
+ queryBuilder = queryBuilder.or(`actor_id.eq.${involvingId},entity_id.eq.${involvingId}`);
  }
- } catch (err) {
- console.error('[AuditLog] Failed to load audit entries:', err);
+ if (query.action) {
+ queryBuilder = queryBuilder.eq('action', query.action);
+ }
+ if (query.institutionCode) {
+ queryBuilder = queryBuilder.eq('metadata->>institutionCode', query.institutionCode);
+ }
+ if (query.since) {
+ queryBuilder = queryBuilder.gte('created_at', query.since);
+ }
+ if (query.until) {
+ queryBuilder = queryBuilder.lte('created_at', query.until);
+ }
+ if (actorSearch) {
+ queryBuilder = queryBuilder.ilike('profiles.full_name', `%${escapePostgrestLike(actorSearch)}%`);
  }
 
- return [];
+ const { data, error, count } = await queryBuilder;
+ if (error) throw error;
+
+ const entries = (data ?? []).map(mapAuditLogRow);
+ const total = count ?? entries.length;
+ return { entries, total, hasMore: offset + entries.length < total };
+ } catch (err) {
+ console.error('[AuditLog] Failed to load audit entries:', err);
+ return { entries: [], total: 0, hasMore: false };
+ }
+}
+
+/** Back-compat wrapper for callers that just want a flat list (first page only). */
+export async function listAuditLogEntries(query: AuditLogQuery = {}): Promise<AuditLogEntry[]> {
+ const { entries } = await listAuditLogEntriesPage(query);
+ return entries;
 }
 
 export const listAuditLog = listAuditLogEntries;

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Platform, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, FlatList, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -8,14 +8,17 @@ import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
+import { AppTextField } from '@/components/AppTextField';
 import { ChipSelect } from '@/components/ChipSelect';
 import { EmptyState } from '@/components/EmptyState';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listAuditLog } from '@/api/auditLog';
-import { AuditLogAction } from '@/api/types';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { listAuditLogEntriesPage } from '@/api/auditLog';
+import { AuditLogAction, AuditLogEntry } from '@/api/types';
 import { haptics } from '@/utils/haptics';
+import { buildCsv, downloadCsv, CsvColumn } from '@/utils/csvExport';
 
 /**
  * The one audit trail. (There used to be two screens over the same log - "System Audit Trail" and
@@ -92,61 +95,103 @@ const ACTION_TONE: Partial<Record<AuditLogAction, 'success' | 'critical' | 'warn
   event_partnership_updated: 'brand',
 };
 
+const PAGE_SIZE = 100;
+// Export batches are bigger than the on-screen page (fewer round trips), and the
+// sequential loop is capped so exporting against a campus's entire history can't
+// run away - 40 x 500 = 20,000 rows is far more than any admin needs in one CSV.
+const EXPORT_PAGE_SIZE = 500;
+const MAX_EXPORT_PAGES = 40;
+const DATE_INPUT_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const AUDIT_LOG_CSV_COLUMNS: CsvColumn<AuditLogEntry>[] = [
+  { header: 'ID', value: (e) => e.id },
+  { header: 'Timestamp', value: (e) => e.createdAt },
+  { header: 'Actor', value: (e) => e.actorName },
+  { header: 'Role', value: (e) => e.actorRole },
+  { header: 'Action', value: (e) => e.action },
+  { header: 'Summary', value: (e) => e.summary },
+  { header: 'TargetType', value: (e) => e.targetType },
+  { header: 'Institution', value: (e) => e.institutionCode ?? 'GLOBAL' },
+  { header: 'Reason', value: (e) => e.reason ?? '' },
+];
+
+/** "YYYY-MM-DD" -> an inclusive-day ISO bound, or undefined when blank/malformed. */
+function dateInputToIsoBound(value: string, endOfDay: boolean): string | undefined {
+  const trimmed = value.trim();
+  if (!DATE_INPUT_RE.test(trimmed)) return undefined;
+  const iso = new Date(`${trimmed}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`);
+  return isNaN(iso.getTime()) ? undefined : iso.toISOString();
+}
+
 export default function AuditLogsScreen() {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const [filter, setFilter] = useState('All');
-  const { data: entries, isLoading } = useQuery({ queryKey: ['audit-log'], queryFn: () => listAuditLog() });
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [actorSearchInput, setActorSearchInput] = useState('');
+  const actorSearch = useDebouncedValue(actorSearchInput);
+  const [page, setPage] = useState(0);
+  const [accumulated, setAccumulated] = useState<AuditLogEntry[]>([]);
+  const [exporting, setExporting] = useState(false);
+
+  const since = dateInputToIsoBound(dateFrom, false);
+  const until = dateInputToIsoBound(dateTo, true);
+  const trimmedActorSearch = actorSearch.trim();
+  const filterKey = `${since ?? ''}|${until ?? ''}|${trimmedActorSearch.toLowerCase()}`;
+
+  // A date-range or actor-search change starts a fresh result set at page 0 -
+  // it isn't "more of" whatever was already loaded for the previous filters.
+  useEffect(() => {
+    setPage(0);
+  }, [filterKey]);
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['audit-log', filterKey, page],
+    queryFn: () => listAuditLogEntriesPage({ since, until, actorSearch: trimmedActorSearch || undefined, page, pageSize: PAGE_SIZE }),
+  });
+
+  useEffect(() => {
+    if (!data) return;
+    setAccumulated((prev) => (page === 0 ? data.entries : [...prev, ...data.entries]));
+  }, [data, page]);
 
   const category = CATEGORIES.find((c) => c.label === filter) ?? CATEGORIES[0];
-  const filtered = (entries ?? []).filter((e) => !category.match || category.match(e.action));
+  const filtered = accumulated.filter((e) => !category.match || category.match(e.action));
 
   async function handleExportCsv() {
     haptics.medium();
-    const csvHeader = 'ID,Timestamp,Actor,Role,Action,Summary,TargetType,Institution,Reason\n';
-    const csvRows = filtered
-      .map(
-        (e) =>
-          `"${e.id}","${e.createdAt}","${e.actorName}","${e.actorRole}","${e.action}","${e.summary.replace(/"/g, '""')}","${e.targetType}","${e.institutionCode ?? 'GLOBAL'}","${(e.reason ?? '').replace(/"/g, '""')}"`,
-      )
-      .join('\n');
-    const csvContent = csvHeader + csvRows;
-
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.setAttribute('download', `campus_audit_ledger_${Date.now()}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      Alert.alert('Audit Ledger Exported', 'Compliance CSV download has been initiated.');
-    } else {
-      try {
-        const { File, Paths } = await import('expo-file-system');
-        const Sharing = await import('expo-sharing');
-        const file = new File(Paths.cache, `campus_audit_ledger_${Date.now()}.csv`);
-        file.create({ overwrite: true });
-        file.write(csvContent);
-
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(file.uri, {
-            mimeType: 'text/csv',
-            dialogTitle: 'Export Campus Audit Ledger CSV',
-            UTI: 'public.comma-separated-values-text',
-          });
-        } else {
-          const { Share } = await import('react-native');
-          await Share.share({ title: 'Campus Audit Ledger CSV', message: csvContent });
-        }
-      } catch {
-        try {
-          const { Share } = await import('react-native');
-          await Share.share({ title: 'Campus Audit Ledger CSV', message: csvContent });
-        } catch {
-          Alert.alert('Export Error', 'Unable to initiate export share sheet.');
-        }
+    setExporting(true);
+    try {
+      const all: AuditLogEntry[] = [];
+      for (let exportPage = 0; exportPage < MAX_EXPORT_PAGES; exportPage++) {
+        const result = await listAuditLogEntriesPage({
+          since,
+          until,
+          actorSearch: trimmedActorSearch || undefined,
+          page: exportPage,
+          pageSize: EXPORT_PAGE_SIZE,
+        });
+        all.push(...result.entries);
+        if (!result.hasMore || result.entries.length === 0) break;
       }
+
+      const rows = all.filter((e) => !category.match || category.match(e.action));
+      if (rows.length === 0) {
+        Alert.alert('Nothing to Export', 'No audit entries match the current filters.');
+        return;
+      }
+      const csvContent = buildCsv(rows, AUDIT_LOG_CSV_COLUMNS);
+      await downloadCsv(csvContent, 'campus_audit_ledger', {
+        successTitle: 'Audit Ledger Exported',
+        successMessage: `Compliance CSV download has been initiated (${rows.length} entries).`,
+        shareTitle: 'Export Campus Audit Ledger CSV',
+      });
+    } catch (err) {
+      console.error('[AuditLogs] Export failed:', err);
+      Alert.alert('Export Error', 'Unable to export the audit ledger. Please try again.');
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -171,13 +216,67 @@ export default function AuditLogsScreen() {
             variant="secondary"
             size={isDesktop ? 'md' : 'sm'}
             onPress={handleExportCsv}
-            disabled={filtered.length === 0}
+            loading={exporting}
+            disabled={exporting || (accumulated.length === 0 && !isLoading)}
           />
         </View>
       </View>
 
-      <View style={{ marginVertical: spacing.md }}>
+      <SolidCard radius={16} style={{ marginTop: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
+        <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <AppTextField
+              label="From (YYYY-MM-DD)"
+              placeholder="2026-09-01"
+              value={dateFrom}
+              onChangeText={setDateFrom}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppTextField
+              label="To (YYYY-MM-DD)"
+              placeholder="2026-09-30"
+              value={dateTo}
+              onChangeText={setDateTo}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppTextField
+              label="Actor"
+              placeholder="Search by admin/staff name"
+              value={actorSearchInput}
+              onChangeText={setActorSearchInput}
+              leftIcon="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+        </View>
+        {dateFrom || dateTo || actorSearchInput ? (
+          <AppButton
+            label="Clear Filters"
+            variant="ghost"
+            size="sm"
+            onPress={() => {
+              setDateFrom('');
+              setDateTo('');
+              setActorSearchInput('');
+            }}
+          />
+        ) : null}
+      </SolidCard>
+
+      <View style={{ marginVertical: spacing.md, gap: spacing.xs }}>
         <ChipSelect options={CATEGORIES.map((c) => c.label)} selected={[filter]} onToggle={setFilter} />
+        {data ? (
+          <AppText tone="secondary" variant="caption">
+            Showing {filtered.length} of {data.total} matching {data.total === 1 ? 'entry' : 'entries'}
+          </AppText>
+        ) : null}
       </View>
 
       <FlatList
@@ -229,6 +328,13 @@ export default function AuditLogsScreen() {
               title="No audit entries"
               description={filter === 'All' ? 'System actions will be recorded here automatically.' : `No ${filter.toLowerCase()} entries yet.`}
             />
+          ) : null
+        }
+        ListFooterComponent={
+          data?.hasMore ? (
+            <View style={{ paddingTop: spacing.sm, alignItems: 'center' }}>
+              <AppButton label="Load More" variant="secondary" size="sm" loading={isFetching} onPress={() => setPage((p) => p + 1)} />
+            </View>
           ) : null
         }
       />
