@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router, useSegments } from 'expo-router';
@@ -19,7 +19,7 @@ import { VerifiedBadge } from './VerifiedBadge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getMyProfile, markVerificationPending, updateMyProfile, updateProfileImages, uploadAvatarImage, uploadCoverImage } from '@/api/profile';
+import { endorseSkill, getMyProfile, getSkillEndorsements, markVerificationPending, removeEndorsement, updateMyProfile, updateProfileImages, uploadAvatarImage, uploadCoverImage } from '@/api/profile';
 import { deletePost, listMyDrafts, listMyPosts, listMyScheduled, publishDraft } from '@/api/posts';
 import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
@@ -84,14 +84,46 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const [editGradYear, setEditGradYear] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editInterests, setEditInterests] = useState('');
+  const [editLinkedinUrl, setEditLinkedinUrl] = useState('');
   const [editLevel, setEditLevel] = useState<string>('100L');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [endorsingSkill, setEndorsingSkill] = useState<string | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
     queryFn: () => getMyProfile(user!),
     enabled: !!user,
   });
+
+  /* Per-skill endorsement counts for the "Interests & Skills" chips below.
+     This screen only ever shows the signed-in user's own profile (see the
+     (student|alumni|staff|admin)/profile.tsx routes), so isOwnProfile is
+     always true here and the "+ endorse" affordance never renders - it is
+     built generically (gated on isOwnProfile) so the skill chip already
+     carries the right behaviour if it is ever reused for viewing a peer. */
+  const { data: skillEndorsements } = useQuery({
+    queryKey: ['skill-endorsements', profile?.id],
+    queryFn: () => getSkillEndorsements(profile!.id),
+    enabled: !!profile?.id,
+  });
+  const isOwnProfile = !!user && !!profile && user.id === profile.id;
+
+  async function handleToggleEndorsement(skill: string, alreadyEndorsed: boolean) {
+    if (!profile) return;
+    setEndorsingSkill(skill);
+    try {
+      if (alreadyEndorsed) {
+        await removeEndorsement(profile.id, skill);
+      } else {
+        await endorseSkill(profile.id, skill);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['skill-endorsements', profile.id] });
+    } catch (err: any) {
+      Alert.alert('Error', getFriendlyErrorMessage(err, 'Could not update this endorsement.'));
+    } finally {
+      setEndorsingSkill(null);
+    }
+  }
 
   /* NOTE for other agents: the profile activity list uses the key
      ['my-posts', userId]. Anything that deletes / publishes / reposts a post
@@ -187,6 +219,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     setEditGradYear(profile.graduationYear ? String(profile.graduationYear) : '2026');
     setEditBio(profile.bio ?? '');
     setEditInterests((profile.interests ?? []).join(', '));
+    setEditLinkedinUrl(profile.linkedinUrl ?? '');
     setEditLevel(profile.academicLevel || '100L');
     setEditModalOpen(true);
   }
@@ -196,6 +229,11 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     const cleanUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9._]/g, '');
     if (cleanUsername.length < 3) {
       Alert.alert('Invalid Username', 'Username must be at least 3 characters long and contain only lowercase letters, numbers, dots, or underscores.');
+      return;
+    }
+    const trimmedLinkedin = editLinkedinUrl.trim();
+    if (trimmedLinkedin && !/^https:\/\/([a-z]{2,3}\.)?linkedin\.com\//i.test(trimmedLinkedin)) {
+      Alert.alert('Invalid LinkedIn URL', 'Please enter a full LinkedIn profile URL, e.g. https://www.linkedin.com/in/yourname');
       return;
     }
     setSavingProfile(true);
@@ -213,6 +251,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         graduationYear: parseInt(editGradYear, 10) || null,
         bio: editBio.trim(),
         interests: interestsArray,
+        linkedinUrl: trimmedLinkedin || null,
       });
 
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -513,6 +552,20 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           </AppText>
         ) : null}
 
+        {profile.linkedinUrl ? (
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Open LinkedIn profile"
+            onPress={() => Linking.openURL(profile.linkedinUrl!).catch(() => {})}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm }}
+          >
+            <Ionicons name="logo-linkedin" size={16} color={colors.brandPrimary} />
+            <AppText tone="brand" weight="semiBold" variant="bodySmall">
+              LinkedIn Profile
+            </AppText>
+          </Pressable>
+        ) : null}
+
         {/* Quick Metrics Bar - stays on one line at 375px */}
         <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, marginBottom: spacing.sm }}>
           <StatChip label="Posts" value={myPosts?.length ?? profile.postsCount ?? 0} />
@@ -586,21 +639,48 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  Interests & Skills
  </AppText>
  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
- {profile.interests.map((interest) => (
- <View
- key={interest}
- style={{
- paddingHorizontal: 8,
- paddingVertical: 4,
- backgroundColor: colors.divider,
- borderRadius: radius.pill,
- }}
- >
- <AppText variant="caption" weight="semiBold" style={{ color: colors.textSecondary, fontSize: 11 }}>
- {interest}
- </AppText>
- </View>
- ))}
+ {profile.interests.map((interest) => {
+   const endorsement = skillEndorsements?.find((e) => e.skill === interest);
+   const endorseCount = endorsement?.count ?? 0;
+   const endorsedByMe = endorsement?.endorsedByMe ?? false;
+   return (
+     <View
+       key={interest}
+       style={{
+         flexDirection: 'row',
+         alignItems: 'center',
+         gap: 4,
+         paddingHorizontal: 8,
+         paddingVertical: 4,
+         backgroundColor: colors.divider,
+         borderRadius: radius.pill,
+       }}
+     >
+       <AppText variant="caption" weight="semiBold" style={{ color: colors.textSecondary, fontSize: 11 }}>
+         {interest}{endorseCount > 0 ? ` · ${endorseCount}` : ''}
+       </AppText>
+       {/* Endorsing your own skill is blocked server-side too (the
+           skill_endorsements_not_self_chk constraint), but this screen
+           never shows anyone else's profile, so isOwnProfile is always
+           true and this affordance never renders here. */}
+       {!isOwnProfile ? (
+         <Pressable
+           accessibilityRole="button"
+           accessibilityLabel={endorsedByMe ? `Remove your endorsement for ${interest}` : `Endorse ${interest}`}
+           onPress={() => handleToggleEndorsement(interest, endorsedByMe)}
+           disabled={endorsingSkill === interest}
+           hitSlop={6}
+         >
+           <Ionicons
+             name={endorsedByMe ? 'checkmark-circle' : 'add-circle-outline'}
+             size={14}
+             color={endorsedByMe ? colors.brandPrimary : colors.textSecondary}
+           />
+         </Pressable>
+       ) : null}
+     </View>
+   );
+ })}
  </View>
  </View>
  ) : null}
@@ -1038,6 +1118,16 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             ) : null}
             <AppTextField label="Graduation Year" value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />
             <AppTextField label="Skills & Interests (comma-separated)" value={editInterests} onChangeText={setEditInterests} />
+            <AppTextField
+              label="LinkedIn URL"
+              value={editLinkedinUrl}
+              onChangeText={setEditLinkedinUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              placeholder="https://www.linkedin.com/in/yourname"
+              helperText="Optional. Shown on your profile so peers can connect with you."
+            />
             <AppTextField label="Academic Bio" value={editBio} onChangeText={setEditBio} multiline numberOfLines={3} />
           </ScrollView>
 

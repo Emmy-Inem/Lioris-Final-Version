@@ -1158,6 +1158,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261003000000_trust_safety_gaps.sql',
   'supabase/migrations/20261003010000_admin_directory_and_analytics_fixes.sql',
   'supabase/migrations/20261003020000_tier3_account_and_notifications.sql',
+  'supabase/migrations/20261005030000_alumni_profile_extras.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2421,6 +2422,101 @@ console.log('\n== tier 3: notification preferences + account deactivation ==');
       const s3RowUnaffected = await c.q(`SELECT deactivated_at FROM public.profiles WHERE id = $1`, [U.s3]);
       assert(s4Row.rows[0].deactivated_at !== null, 's4 deactivated itself');
       assert(s3RowUnaffected.rows[0].deactivated_at === null, 's3 is untouched by s4 deactivating their own account - there is no target parameter, only auth.uid()');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// alumni profile extras (20261005030000): profiles.linkedin_url (column
+// grant) + public.skill_endorsements (owner-only RLS + self-check
+// constraint + peer-read via column/table grant - same shape as the tier 3
+// section above).
+// ---------------------------------------------------------------------------
+console.log('\n== alumni profile extras (linkedin_url column grant + skill endorsements) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+
+  await check('profiles.linkedin_url: the CHECK constraint rejects a non-LinkedIn https URL and accepts a real LinkedIn URL', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      denied(
+        await c.t(`UPDATE public.profiles SET linkedin_url = 'https://example.com/in/s1' WHERE id = $1`, [U.s1]),
+        /profiles_linkedin_url_check|check constraint/i,
+        'a non-LinkedIn https URL must be rejected',
+      );
+      denied(
+        await c.t(`UPDATE public.profiles SET linkedin_url = 'http://linkedin.com/in/s1' WHERE id = $1`, [U.s1]),
+        /profiles_linkedin_url_check|check constraint/i,
+        'a non-https linkedin.com URL must be rejected',
+      );
+      const ok = await c.t(`UPDATE public.profiles SET linkedin_url = 'https://www.linkedin.com/in/s1' WHERE id = $1 RETURNING linkedin_url`, [U.s1]);
+      assert(ok.ok, 'a real LinkedIn URL was refused: ' + ok.err?.message);
+      eq(ok.rows[0].linkedin_url, 'https://www.linkedin.com/in/s1');
+    });
+  });
+
+  await check('profiles.linkedin_url: a peer can read it through the column grant (not "permission denied for table profiles")', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      await c.q(`UPDATE public.profiles SET linkedin_url = 'https://linkedin.com/in/s1-peer-read' WHERE id = $1`, [U.s1]);
+
+      await imp(U.s2);
+      const r = await c.t(`SELECT linkedin_url FROM public.profiles WHERE id = $1`, [U.s1]);
+      assert(r.ok, 'peer select of linkedin_url was refused: ' + r.err?.message);
+      eq(r.rows[0].linkedin_url, 'https://linkedin.com/in/s1-peer-read', 'peer did not see the LinkedIn URL through the column grant');
+    });
+  });
+
+  await check('skill_endorsements: a user cannot endorse their own skill (self-check constraint fires)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      denied(
+        await c.t(`INSERT INTO public.skill_endorsements (profile_id, skill, endorser_id) VALUES ($1, 'Python', $1)`, [U.s1]),
+        /skill_endorsements_not_self_chk|check constraint/i,
+        'self-endorsement must be rejected',
+      );
+    });
+  });
+
+  await check('skill_endorsements: a peer can endorse a skill once; a duplicate by the same endorser is rejected; counts aggregate across multiple endorsers', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s2);
+      const first = await c.t(`INSERT INTO public.skill_endorsements (profile_id, skill, endorser_id) VALUES ($1, 'Python', $2)`, [U.s1, U.s2]);
+      assert(first.ok, 'peer endorsement failed: ' + first.err?.message);
+
+      const dup = await c.t(`INSERT INTO public.skill_endorsements (profile_id, skill, endorser_id) VALUES ($1, 'Python', $2)`, [U.s1, U.s2]);
+      denied(dup, /duplicate key|unique/i, 'a duplicate endorsement by the same person must be rejected');
+
+      await imp(U.s3);
+      const second = await c.t(`INSERT INTO public.skill_endorsements (profile_id, skill, endorser_id) VALUES ($1, 'Python', $2)`, [U.s1, U.s3]);
+      assert(second.ok, 'second peer endorsement failed: ' + second.err?.message);
+
+      const counts = await c.q(`SELECT skill, count(*)::int n FROM public.skill_endorsements WHERE profile_id = $1 AND skill = 'Python' GROUP BY skill`, [U.s1]);
+      eq(counts.rows, [{ skill: 'Python', n: 2 }], 'the endorsement count must aggregate across both endorsers');
+    });
+  });
+
+  await check('skill_endorsements: a user can delete only their own endorsement, never someone else\'s', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s2);
+      await c.q(`INSERT INTO public.skill_endorsements (profile_id, skill, endorser_id) VALUES ($1, 'Design', $2)`, [U.s4, U.s2]);
+
+      await imp(U.s5);
+      const stolenDelete = await c.t(`DELETE FROM public.skill_endorsements WHERE profile_id = $1 AND skill = 'Design'`, [U.s4]);
+      assert(stolenDelete.ok && stolenDelete.n === 0, 's5 must not be able to delete s2\'s endorsement');
+
+      await imp(U.s2);
+      const ownDelete = await c.t(`DELETE FROM public.skill_endorsements WHERE profile_id = $1 AND skill = 'Design' AND endorser_id = $2`, [U.s4, U.s2]);
+      assert(ownDelete.ok && ownDelete.n === 1, 'the owner could not delete their own endorsement');
+    });
+  });
+
+  await check('skill_endorsements: anon has no access at all', async () => {
+    await as('anon', async (c) => {
+      denied(await c.t(`SELECT * FROM public.skill_endorsements`), /permission denied/i, 'anon select');
+      denied(await c.t(`INSERT INTO public.skill_endorsements (profile_id, skill, endorser_id) VALUES ($1, 'x', $1)`, [U.s1]), /permission denied/i, 'anon insert');
     });
   });
 }
