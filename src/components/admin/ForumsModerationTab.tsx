@@ -41,6 +41,8 @@ export function ForumsModerationTab() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [communityStatusFilter, setCommunityStatusFilter] = useState<CommunityStatusFilter>('All');
   const [editingCommunity, setEditingCommunity] = useState<ForumCommunityRecord | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   const { data: communities = [], isLoading: loadingCommunities, refetch: refetchCommunities } = useQuery({
     queryKey: ['communities', 'admin-all'],
@@ -164,6 +166,89 @@ export function ForumsModerationTab() {
     );
   }
 
+  function toggleSelected(id: string) {
+    haptics.light();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function handleBulkApproveCommunities() {
+    const targets = communities.filter((c) => selectedIds.has(c.id) && c.approvalStatus === 'pending');
+    if (targets.length === 0 || bulkProcessing) return;
+    haptics.medium();
+    setBulkProcessing(true);
+    let succeeded = 0;
+    let failed = 0;
+    for (const community of targets) {
+      try {
+        await approveCommunity(community.id);
+        recordAuditLogEntry({
+          action: 'community_approved',
+          summary: `Approved community: "${community.label}"`,
+          targetType: 'community',
+          targetId: community.id,
+          reason: 'Community approval (bulk)',
+        });
+        succeeded += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    await refreshEverything();
+    setBulkProcessing(false);
+    clearSelection();
+    if (failed > 0) haptics.error();
+    else haptics.success();
+    Alert.alert('Bulk Approve Complete', failed > 0 ? `${succeeded} approved, ${failed} failed. Retry the failed ones individually.` : `${succeeded} communit${succeeded === 1 ? 'y' : 'ies'} approved.`);
+  }
+
+  function handleBulkRejectCommunities() {
+    const targets = communities.filter((c) => selectedIds.has(c.id) && c.approvalStatus === 'pending');
+    if (targets.length === 0 || bulkProcessing) return;
+    haptics.error();
+    Alert.alert('Reject These Communities?', `${targets.length} communit${targets.length === 1 ? 'y' : 'ies'} will stay hidden and their proposers will see they were not approved.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: async () => {
+          setBulkProcessing(true);
+          let succeeded = 0;
+          let failed = 0;
+          for (const community of targets) {
+            try {
+              await rejectCommunity(community.id, 'Did not meet community guidelines.');
+              recordAuditLogEntry({
+                action: 'community_rejected',
+                summary: `Rejected community: "${community.label}"`,
+                targetType: 'community',
+                targetId: community.id,
+                reason: 'Did not meet community guidelines (bulk).',
+              });
+              succeeded += 1;
+            } catch {
+              failed += 1;
+            }
+          }
+          await refreshEverything();
+          setBulkProcessing(false);
+          clearSelection();
+          if (failed > 0) haptics.error();
+          else haptics.success();
+          Alert.alert('Bulk Reject Complete', failed > 0 ? `${succeeded} rejected, ${failed} failed. Retry the failed ones individually.` : `${succeeded} communit${succeeded === 1 ? 'y' : 'ies'} rejected.`);
+        },
+      },
+    ]);
+  }
+
   async function handleTogglePin(post: Post) {
     haptics.medium();
     setActingId(post.id);
@@ -262,6 +347,7 @@ export function ForumsModerationTab() {
         <Pressable
           onPress={() => {
             haptics.light();
+            clearSelection();
             setSection('threads');
           }}
           style={{
@@ -311,6 +397,25 @@ export function ForumsModerationTab() {
             })}
           </ScrollView>
 
+          {selectedIds.size > 0 && (
+            <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: colors.pastelPrimaryBg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+                <View style={{ flex: 1, minWidth: 120 }}>
+                  <AppText weight="bold" variant="bodySmall">{selectedIds.size} selected</AppText>
+                </View>
+                <View style={{ flexShrink: 0 }}>
+                  <AppButton label="Clear" variant="ghost" size="sm" onPress={clearSelection} disabled={bulkProcessing} />
+                </View>
+                <View style={{ flexShrink: 0, minWidth: 110 }}>
+                  <AppButton label="Bulk Reject" variant="secondary" size="sm" loading={bulkProcessing} onPress={handleBulkRejectCommunities} />
+                </View>
+                <View style={{ flexShrink: 0, minWidth: 130 }}>
+                  <AppButton label="Bulk Approve" size="sm" loading={bulkProcessing} onPress={handleBulkApproveCommunities} />
+                </View>
+              </View>
+            </SolidCard>
+          )}
+
           {filteredCommunities.map((community) => {
             const badge =
               community.approvalStatus === 'pending'
@@ -327,16 +432,33 @@ export function ForumsModerationTab() {
 
             return (
               <SolidCard key={community.id} radius={18} frosted style={{ marginBottom: spacing.md, borderWidth: 1, borderColor }}>
-                <Pressable onPress={() => setEditingCommunity(community)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
                   <View style={{ flex: 1, marginRight: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name={community.icon} size={18} color={community.accentColor} />
-                    <AppText weight="bold" variant="body">
-                      {community.label}
-                    </AppText>
-                    <Ionicons name="create-outline" size={15} color={colors.textSecondary} />
+                    {community.approvalStatus === 'pending' ? (
+                      <Pressable
+                        onPress={() => toggleSelected(community.id)}
+                        hitSlop={8}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selectedIds.has(community.id) }}
+                        accessibilityLabel={`Select ${community.label}`}
+                      >
+                        <Ionicons
+                          name={selectedIds.has(community.id) ? 'checkbox' : 'square-outline'}
+                          size={18}
+                          color={selectedIds.has(community.id) ? colors.brandPrimary : colors.textSecondary}
+                        />
+                      </Pressable>
+                    ) : null}
+                    <Pressable onPress={() => setEditingCommunity(community)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <Ionicons name={community.icon} size={18} color={community.accentColor} />
+                      <AppText weight="bold" variant="body">
+                        {community.label}
+                      </AppText>
+                      <Ionicons name="create-outline" size={15} color={colors.textSecondary} />
+                    </Pressable>
                   </View>
                   <Badge label={badge.label} tone={badge.tone} />
-                </Pressable>
+                </View>
 
                 <AppText
                   tone="secondary"

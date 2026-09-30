@@ -2,7 +2,7 @@ import { CampusEvent, EventAttendeeInfo } from './types';
 import { recordAuditLogEntry } from './auditLog';
 import { getSessionUser } from '@/auth/tokenStorage';
 import { supabase } from './supabase';
-import { isUserBlocked } from './connections';
+import { isUserBlocked, isUserMuted } from './connections';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { parseRpcError, RpcError } from '../utils/rpcErrors';
@@ -48,7 +48,7 @@ export interface EventsQuery {
 }
 
 function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: string, isStaffOrAdmin: boolean = false): CampusEvent[] {
-  let results = pool.filter((e) => !isUserBlocked(e.organizerId));
+  let results = pool.filter((e) => !isUserBlocked(e.organizerId) && !isUserMuted(e.organizerId));
 
   if (query.approvalStatus && query.approvalStatus !== 'all') {
     results = results.filter((e) => e.approvalStatus === query.approvalStatus);
@@ -148,7 +148,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     if (error) throw error;
 
     const dbEvents: CampusEvent[] = (data ?? [])
-      .filter((row: any) => !isUserBlocked(row.creator_id))
+      .filter((row: any) => !isUserBlocked(row.creator_id) && !isUserMuted(row.creator_id))
       .filter((row: any) => {
         // Strict university workspace isolation:
         // Only members of that university see that university's events.
@@ -195,7 +195,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     const merged = [...dbEvents];
     const activeCampus = (userCampus || 'GLOBAL').toUpperCase();
     for (const e of pool) {
-      if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId)) {
+      if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId) && !isUserMuted(e.organizerId)) {
         const eCampus = (e.campusCode || 'GLOBAL').toUpperCase();
         if (activeCampus === 'GLOBAL') {
           if (eCampus === 'GLOBAL') merged.push(e);

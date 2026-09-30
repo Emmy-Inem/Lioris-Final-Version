@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SolidCard } from '@/components/SolidCard';
@@ -9,6 +9,7 @@ import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { listPendingJobs, approveJob, rejectJob } from '@/api/jobs';
+import { JobListing } from '@/api/types';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 
@@ -16,24 +17,44 @@ export function JobsModerationTab() {
   const { colors, spacing } = useTheme();
   const queryClient = useQueryClient();
   const [actingId, setActingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   const { data: pendingJobs = [], isLoading, refetch } = useQuery({
     queryKey: ['jobs', 'admin-pending'],
     queryFn: listPendingJobs,
   });
 
-  async function handleApprove(job: (typeof pendingJobs)[number]) {
+  function toggleSelected(id: string) {
+    haptics.light();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function approveCore(job: JobListing) {
+    await approveJob(job.id);
+    recordAuditLogEntry({
+      action: 'report_resolved',
+      summary: `Approved job posting: "${job.title}" at ${job.company} by ${job.postedByName}`,
+      targetType: 'job',
+      targetId: job.id,
+      reason: 'Posting reviewed and meets community standards',
+    });
+  }
+
+  async function handleApprove(job: JobListing) {
     haptics.medium();
     setActingId(job.id);
     try {
-      await approveJob(job.id);
-      recordAuditLogEntry({
-        action: 'report_resolved',
-        summary: `Approved job posting: "${job.title}" at ${job.company} by ${job.postedByName}`,
-        targetType: 'job',
-        targetId: job.id,
-        reason: 'Posting reviewed and meets community standards',
-      });
+      await approveCore(job);
       await queryClient.invalidateQueries({ queryKey: ['jobs'] });
       await refetch();
       Alert.alert('Posting Approved', `"${job.title}" is now live on the career board.`);
@@ -42,7 +63,7 @@ export function JobsModerationTab() {
     }
   }
 
-  function handleRejectConfirm(job: (typeof pendingJobs)[number]) {
+  function handleRejectConfirm(job: JobListing) {
     haptics.error();
     const doReject = async (reason?: string) => {
       setActingId(job.id);
@@ -74,6 +95,77 @@ export function JobsModerationTab() {
     }
   }
 
+  function getSelectedJobs(): JobListing[] {
+    return pendingJobs.filter((j) => selectedIds.has(j.id));
+  }
+
+  async function handleBulkApprove() {
+    const targets = getSelectedJobs();
+    if (targets.length === 0 || bulkProcessing) return;
+    haptics.medium();
+    setBulkProcessing(true);
+    let succeeded = 0;
+    let failed = 0;
+    for (const job of targets) {
+      try {
+        await approveCore(job);
+        succeeded += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    await refetch();
+    setBulkProcessing(false);
+    clearSelection();
+    if (failed > 0) haptics.error();
+    else haptics.success();
+    Alert.alert('Bulk Approve Complete', failed > 0 ? `${succeeded} approved, ${failed} failed. Retry the failed ones individually.` : `${succeeded} posting${succeeded === 1 ? '' : 's'} approved.`);
+  }
+
+  function handleBulkReject() {
+    const targets = getSelectedJobs();
+    if (targets.length === 0 || bulkProcessing) return;
+    haptics.error();
+    const doReject = async (reason?: string) => {
+      setBulkProcessing(true);
+      let succeeded = 0;
+      let failed = 0;
+      for (const job of targets) {
+        try {
+          await rejectJob(job.id, reason || 'Did not meet posting standards.');
+          succeeded += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      await refetch();
+      setBulkProcessing(false);
+      clearSelection();
+      if (failed > 0) haptics.error();
+      else haptics.success();
+      Alert.alert('Bulk Reject Complete', failed > 0 ? `${succeeded} rejected, ${failed} failed. Retry the failed ones individually.` : `${succeeded} posting${succeeded === 1 ? '' : 's'} rejected.`);
+    };
+    if (Alert.prompt) {
+      Alert.prompt(
+        'Reject Postings',
+        `Provide a reason for declining ${targets.length} posting${targets.length === 1 ? '' : 's'}:`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Reject', style: 'destructive', onPress: (reason?: string) => doReject(reason) },
+        ],
+        'plain-text',
+        'Looks like spam or off-topic for this community.',
+      );
+    } else {
+      Alert.alert('Reject Postings?', `Decline ${targets.length} posting${targets.length === 1 ? '' : 's'}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reject', style: 'destructive', onPress: () => doReject() },
+      ]);
+    }
+  }
+
   return (
     <View>
       <View style={{ marginBottom: spacing.md }}>
@@ -85,19 +177,54 @@ export function JobsModerationTab() {
         </AppText>
       </View>
 
+      {selectedIds.size > 0 && (
+        <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: colors.pastelPrimaryBg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <View style={{ flex: 1, minWidth: 120 }}>
+              <AppText weight="bold" variant="bodySmall">{selectedIds.size} selected</AppText>
+            </View>
+            <View style={{ flexShrink: 0 }}>
+              <AppButton label="Clear" variant="ghost" size="sm" onPress={clearSelection} disabled={bulkProcessing} />
+            </View>
+            <View style={{ flexShrink: 0, minWidth: 110 }}>
+              <AppButton label="Bulk Reject" variant="secondary" size="sm" loading={bulkProcessing} onPress={handleBulkReject} />
+            </View>
+            <View style={{ flexShrink: 0, minWidth: 130 }}>
+              <AppButton label="Bulk Approve" size="sm" loading={bulkProcessing} onPress={handleBulkApprove} />
+            </View>
+          </View>
+        </SolidCard>
+      )}
+
       {pendingJobs.map((job) => (
         <SolidCard key={job.id} radius={18} style={{ padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.brandPrimary}50` }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <AppText variant="body" weight="bold">
-                {job.title}
-              </AppText>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                {job.company} • {job.location}
-              </AppText>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                Posted by <AppText weight="bold" variant="caption">{job.postedByName}</AppText>
-              </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+              <Pressable
+                onPress={() => toggleSelected(job.id)}
+                hitSlop={8}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selectedIds.has(job.id) }}
+                accessibilityLabel={`Select ${job.title}`}
+                style={{ paddingTop: 2 }}
+              >
+                <Ionicons
+                  name={selectedIds.has(job.id) ? 'checkbox' : 'square-outline'}
+                  size={20}
+                  color={selectedIds.has(job.id) ? colors.brandPrimary : colors.textSecondary}
+                />
+              </Pressable>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText variant="body" weight="bold">
+                  {job.title}
+                </AppText>
+                <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                  {job.company} • {job.location}
+                </AppText>
+                <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                  Posted by <AppText weight="bold" variant="caption">{job.postedByName}</AppText>
+                </AppText>
+              </View>
             </View>
             <Badge label="Pending Review" tone="warning" />
           </View>

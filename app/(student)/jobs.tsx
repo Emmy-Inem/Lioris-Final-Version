@@ -12,6 +12,7 @@ import { ErrorStateView } from '@/components/ErrorStateView';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { JobApplicantsModal } from '@/components/JobApplicantsModal';
+import { JobAlertsModal } from '@/components/JobAlertsModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
@@ -37,6 +38,7 @@ export default function JobsScreen() {
  const [selectedFilter, setSelectedFilter] = useState('all');
  const [createModalOpen, setCreateModalOpen] = useState(false);
  const [applicantsJob, setApplicantsJob] = useState<JobListing | null>(null);
+ const [alertsModalOpen, setAlertsModalOpen] = useState(false);
  const debouncedQuery = useDebouncedValue(query);
  const { campusCode } = useCampusScope();
 
@@ -75,6 +77,28 @@ export default function JobsScreen() {
                 <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" weight="semiBold">Campus Network Listings</AppText>
               </View>
+
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setAlertsModalOpen(true);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name="notifications-outline" size={16} color={colors.textPrimary} />
+                <AppText variant="bodySmall" weight="bold">
+                  Job Alerts
+                </AppText>
+              </Pressable>
 
               <Pressable
                 onPress={() => {
@@ -228,29 +252,50 @@ export default function JobsScreen() {
             <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
               Career & Jobs
             </AppText>
-            <Pressable
-              onPress={() => {
-                haptics.light();
-                setCreateModalOpen(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Post a new job opening"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: colors.brandPrimary,
-                borderRadius: radius.pill,
-                paddingHorizontal: spacing.md,
-                paddingVertical: 7,
-                flexShrink: 0,
-              }}
-            >
-              <Ionicons name="add" size={16} color="#FFFFFF" />
-              <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
-                Post Job
-              </AppText>
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setAlertsModalOpen(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Job alerts"
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name="notifications-outline" size={16} color={colors.textPrimary} />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setCreateModalOpen(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Post a new job opening"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 7,
+                  flexShrink: 0,
+                }}
+              >
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+                  Post Job
+                </AppText>
+              </Pressable>
+            </View>
           </View>
           <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
             Community-posted roles, alumni referrals & industry gigs
@@ -368,6 +413,11 @@ export default function JobsScreen() {
    visible={!!applicantsJob}
    job={applicantsJob}
    onClose={() => setApplicantsJob(null)}
+ />
+ <JobAlertsModal
+   visible={alertsModalOpen}
+   onClose={() => setAlertsModalOpen(false)}
+   initialKeywords={query}
  />
  </ScreenContainer>
  );

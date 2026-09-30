@@ -23,6 +23,7 @@ import { Avatar } from '@/components/Avatar';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateJobModal } from '@/components/CreateJobModal';
+import { JobAlertsModal } from '@/components/JobAlertsModal';
 import { JobApplyModal } from '@/components/JobApplyModal';
 import { JobApplicantsModal } from '@/components/JobApplicantsModal';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -69,6 +70,7 @@ export default function AlumniJobsScreen() {
 
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [alertsModalOpen, setAlertsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [savingJobId, setSavingJobId] = useState<string | null>(null);
   const [applyModalJob, setApplyModalJob] = useState<JobListing | null>(null);
@@ -205,6 +207,16 @@ export default function AlumniJobsScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <AppButton
+              label="Job Alerts"
+              icon="notifications-outline"
+              variant="secondary"
+              size="sm"
+              onPress={() => {
+                haptics.light();
+                setAlertsModalOpen(true);
+              }}
+            />
             <AppButton
               label="Post Opportunity"
               icon="add"
@@ -772,6 +784,12 @@ export default function AlumniJobsScreen() {
           </View>
         </Modal>
       )}
+
+      <JobAlertsModal
+        visible={alertsModalOpen}
+        onClose={() => setAlertsModalOpen(false)}
+        initialKeywords={searchQuery}
+      />
 
       {/* Post Opportunity Modal */}
       <CreateJobModal

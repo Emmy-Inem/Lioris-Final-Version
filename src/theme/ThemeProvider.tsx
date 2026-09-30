@@ -12,7 +12,17 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 
 const THEME_MODE_KEY = 'lioris.themeMode';
 const ACCENT_COLOR_KEY = 'lioris.customAccent';
+const FONT_SCALE_KEY = 'lioris.fontScale';
 const isWeb = Platform.OS === 'web';
+
+/** Discrete steps rather than a free slider - keeps every screen's layout testable. */
+export const FONT_SCALE_STEPS = [
+  { value: 0.9, label: 'Small' },
+  { value: 1, label: 'Default' },
+  { value: 1.15, label: 'Large' },
+  { value: 1.3, label: 'Extra Large' },
+] as const;
+export type FontScale = (typeof FONT_SCALE_STEPS)[number]['value'];
 
 async function getStoredValue(key: string): Promise<string | null> {
  try {
@@ -50,6 +60,8 @@ interface ThemeContextValue {
  radius: typeof radius;
  minTouchTarget: number;
  glassBlur: typeof glassBlur;
+ fontScale: FontScale;
+ setFontScale: (scale: FontScale) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -84,6 +96,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  const systemScheme = useColorScheme();
  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
  const [customAccent, setCustomAccentState] = useState<string | null>(null);
+ const [fontScale, setFontScaleState] = useState<FontScale>(1);
  const { user } = useAuth();
  const { scope, activeCampusCode } = useViewScope();
 
@@ -96,6 +109,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  const storedAccent = await getStoredValue(ACCENT_COLOR_KEY);
  if (storedAccent) {
  setCustomAccentState(storedAccent);
+ }
+ const storedFontScale = await getStoredValue(FONT_SCALE_KEY);
+ const parsedScale = storedFontScale ? Number(storedFontScale) : NaN;
+ if (FONT_SCALE_STEPS.some((s) => s.value === parsedScale)) {
+ setFontScaleState(parsedScale as FontScale);
  }
  })();
  }, []);
@@ -116,6 +134,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  const toggleTheme = async () => {
  const nextMode: ThemeMode = isDark ? 'light' : 'dark';
  await setThemeMode(nextMode);
+ };
+
+ const setFontScale = async (scale: FontScale) => {
+ setFontScaleState(scale);
+ await setStoredValue(FONT_SCALE_KEY, String(scale));
  };
 
  const setCustomAccent = async (accentId: string | null) => {
@@ -171,8 +194,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  radius,
  minTouchTarget,
  glassBlur,
+ fontScale,
+ setFontScale,
  };
- }, [isDark, themeMode, customAccent, scope, activeCampusCode, profile?.institutionCode]);
+ }, [isDark, themeMode, customAccent, scope, activeCampusCode, profile?.institutionCode, fontScale]);
 
  useWebA11yStyles(value.colors.brandPrimary);
 

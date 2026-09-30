@@ -507,7 +507,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, graduation_year, industry, company, job_title, location')
+      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title')
       .eq('id', userId)
       .single();
 
@@ -527,9 +527,9 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         bio: data.bio || '',
         department: data.department || 'Academic',
         industry: data.industry || null,
-        company: data.company || null,
-        jobTitle: data.job_title || null,
-        location: data.location || null,
+        company: data.directory_hide_company ? null : (data.company || null),
+        jobTitle: data.directory_hide_job_title ? null : (data.job_title || null),
+        location: data.directory_hide_location ? null : (data.location || null),
         institutionName: inst?.name || (data.campus_code && data.campus_code !== 'GLOBAL' ? data.campus_code : 'Campus'),
         institutionCode: inst?.code || data.campus_code || undefined,
         avatarUrl: data.avatar_url || undefined,

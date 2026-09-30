@@ -29,7 +29,8 @@ export async function searchAlumniDirectory(
   try {
     let q = supabase
       .from('profiles')
-      .select('id, full_name, department, bio, avatar_url, role, graduation_year, industry, company');
+      .select('id, full_name, department, bio, avatar_url, role, graduation_year, industry, company, directory_hide_company')
+      .eq('directory_discoverable', true);
 
     if (query.roles && query.roles.length > 0) {
       q = q.in('role', query.roles);
@@ -73,7 +74,7 @@ export async function searchAlumniDirectory(
       bio: p.bio || '',
       graduationYear: p.graduation_year ?? null,
       industry: p.industry ?? null,
-      company: p.company ?? null,
+      company: p.directory_hide_company ? null : (p.company ?? null),
       avatarUrl: p.avatar_url || null,
       connectionStatus: 'none' as const,
     }));
@@ -328,6 +329,68 @@ export async function unblockUser(userId: string): Promise<void> {
  }
  } catch (err) {
  console.warn('[Connections] Unblock user backend error:', err);
+ }
+}
+
+// Mute: a lighter option than block - hides their posts/listings/jobs/events/
+// resources from your feeds, but never affects messaging (they can still
+// message you, and you can still message them). Deliberately not threaded
+// into src/api/messaging.ts for that reason.
+const mutedUserIdsState = new Set<string>();
+
+export function isUserMuted(userId?: string | null): boolean {
+ if (!userId) return false;
+ return mutedUserIdsState.has(userId);
+}
+
+export async function loadMutedUserIds(): Promise<string[]> {
+ try {
+ const { data: authData } = await supabase.auth.getUser();
+ if (authData?.user?.id) {
+ const { data, error } = await supabase
+ .from('user_mutes')
+ .select('muted_id')
+ .eq('muter_id', authData.user.id);
+ if (!error && data) {
+ for (const row of data) {
+ mutedUserIdsState.add(row.muted_id);
+ }
+ }
+ }
+ } catch {
+ // fallback
+ }
+ return Array.from(mutedUserIdsState);
+}
+
+export async function muteUser(userId: string, _userName?: string): Promise<void> {
+ mutedUserIdsState.add(userId);
+ try {
+ const { data: authData } = await supabase.auth.getUser();
+ if (authData?.user?.id) {
+ await supabase.from('user_mutes').upsert({
+ muter_id: authData.user.id,
+ muted_id: userId,
+ });
+ }
+ } catch (err) {
+ console.warn('[Connections] Mute user backend error:', err);
+ }
+}
+
+export async function unmuteUser(userId: string): Promise<void> {
+ mutedUserIdsState.delete(userId);
+ try {
+ const { data: authData } = await supabase.auth.getUser();
+ if (authData?.user?.id) {
+ await supabase
+ .from('user_mutes')
+ .delete()
+ .eq('muter_id', authData.user.id)
+ .eq('muted_id', userId);
+ }
+ } catch (err) {
+ console.warn('[Connections] Unmute user backend error:', err);
  }
 }
 

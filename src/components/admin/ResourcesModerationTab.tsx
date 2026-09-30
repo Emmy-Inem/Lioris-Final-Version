@@ -37,6 +37,8 @@ export function ResourcesModerationTab() {
   const [searchQuery, setSearchQuery] = useState('');
  const [selectedCategory, setSelectedCategory] = useState<Resource['category'] | 'all'>('all');
  const [actingId, setActingId] = useState<string | null>(null);
+ const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+ const [bulkProcessing, setBulkProcessing] = useState(false);
 
  // Edit / Create Modal State
  const [editModalOpen, setEditModalOpen] = useState(false);
@@ -216,6 +218,87 @@ export function ResourcesModerationTab() {
  }
  }
 
+ function toggleSelected(id: string) {
+ haptics.light();
+ setSelectedIds((prev) => {
+ const next = new Set(prev);
+ if (next.has(id)) next.delete(id);
+ else next.add(id);
+ return next;
+ });
+ }
+
+ function clearSelection() {
+ setSelectedIds(new Set());
+ }
+
+ async function handleBulkApprove() {
+ const targets = pendingSubmissions.filter((r) => selectedIds.has(r.id));
+ if (targets.length === 0 || bulkProcessing) return;
+ haptics.medium();
+ setBulkProcessing(true);
+ let succeeded = 0;
+ let failed = 0;
+ for (const resource of targets) {
+ try {
+ await approveResource(resource.id);
+ succeeded += 1;
+ } catch {
+ failed += 1;
+ }
+ }
+ await queryClient.invalidateQueries({ queryKey: ['resources'] });
+ await refetch();
+ setBulkProcessing(false);
+ clearSelection();
+ if (failed > 0) haptics.error();
+ else haptics.success();
+ Alert.alert('Bulk Approve Complete', failed > 0 ? `${succeeded} approved, ${failed} failed. Retry the failed ones individually.` : `${succeeded} file${succeeded === 1 ? '' : 's'} approved.`);
+ }
+
+ function handleBulkReject() {
+ const targets = pendingSubmissions.filter((r) => selectedIds.has(r.id));
+ if (targets.length === 0 || bulkProcessing) return;
+ haptics.error();
+ const doReject = async (reason?: string) => {
+ setBulkProcessing(true);
+ let succeeded = 0;
+ let failed = 0;
+ for (const resource of targets) {
+ try {
+ await rejectResource(resource.id, reason || 'Did not meet quality standards.');
+ succeeded += 1;
+ } catch {
+ failed += 1;
+ }
+ }
+ await queryClient.invalidateQueries({ queryKey: ['resources'] });
+ await refetch();
+ setBulkProcessing(false);
+ clearSelection();
+ if (failed > 0) haptics.error();
+ else haptics.success();
+ Alert.alert('Bulk Reject Complete', failed > 0 ? `${succeeded} rejected, ${failed} failed. Retry the failed ones individually.` : `${succeeded} file${succeeded === 1 ? '' : 's'} rejected.`);
+ };
+ if (Alert.prompt) {
+ Alert.prompt(
+ 'Reject Submissions',
+ `Provide a reason for declining ${targets.length} file${targets.length === 1 ? '' : 's'}:`,
+ [
+ { text: 'Cancel', style: 'cancel' },
+ { text: 'Decline Files', style: 'destructive', onPress: (reason?: string) => doReject(reason) },
+ ],
+ 'plain-text',
+ 'Incomplete solutions or unclear scans.',
+ );
+ } else {
+ Alert.alert('Reject Submissions?', `Decline ${targets.length} file${targets.length === 1 ? '' : 's'}?`, [
+ { text: 'Cancel', style: 'cancel' },
+ { text: 'Decline Files', style: 'destructive', onPress: () => doReject() },
+ ]);
+ }
+ }
+
  async function handleDeleteConfirm(resource: Resource) {
  haptics.error();
  Alert.alert(
@@ -255,6 +338,7 @@ export function ResourcesModerationTab() {
  <Pressable
  onPress={() => {
  haptics.light();
+ clearSelection();
  setSection('approved');
  }}
  style={{
@@ -348,6 +432,25 @@ export function ResourcesModerationTab() {
  })}
  </ScrollView>
 
+ {section === 'pending' && selectedIds.size > 0 && (
+ <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: colors.pastelPrimaryBg }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+ <View style={{ flex: 1, minWidth: 120 }}>
+ <AppText weight="bold" variant="bodySmall">{selectedIds.size} selected</AppText>
+ </View>
+ <View style={{ flexShrink: 0 }}>
+ <AppButton label="Clear" variant="ghost" size="sm" onPress={clearSelection} disabled={bulkProcessing} />
+ </View>
+ <View style={{ flexShrink: 0, minWidth: 110 }}>
+ <AppButton label="Bulk Reject" variant="secondary" size="sm" loading={bulkProcessing} onPress={handleBulkReject} />
+ </View>
+ <View style={{ flexShrink: 0, minWidth: 130 }}>
+ <AppButton label="Bulk Approve" size="sm" loading={bulkProcessing} onPress={handleBulkApprove} />
+ </View>
+ </View>
+ </SolidCard>
+ )}
+
  {/* Review Queue or Live Catalog List */}
  {displayedResources.map((resource) => {
  const isPending = resource.approvalStatus === 'pending';
@@ -371,9 +474,27 @@ export function ResourcesModerationTab() {
  />
  <View style={{ flex: 1 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
- <AppText variant="body"weight="bold"style={{ flex: 1, marginRight: 6 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, flex: 1, marginRight: 6 }}>
+ {isPending ? (
+ <Pressable
+ onPress={() => toggleSelected(resource.id)}
+ hitSlop={8}
+ accessibilityRole="checkbox"
+ accessibilityState={{ checked: selectedIds.has(resource.id) }}
+ accessibilityLabel={`Select ${resource.title}`}
+ style={{ paddingTop: 2 }}
+ >
+ <Ionicons
+ name={selectedIds.has(resource.id) ? 'checkbox' : 'square-outline'}
+ size={18}
+ color={selectedIds.has(resource.id) ? colors.brandPrimary : colors.textSecondary}
+ />
+ </Pressable>
+ ) : null}
+ <AppText variant="body"weight="bold"style={{ flex: 1 }}>
  {resource.title}
  </AppText>
+ </View>
  <Badge
  label={isPending ? 'Pending Review' : 'Indexed'}
  tone={isPending ? 'warning' : 'success'}

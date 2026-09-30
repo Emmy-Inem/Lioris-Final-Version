@@ -619,6 +619,21 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  </Pressable>
 
  <Pressable
+ onPress={async () => {
+ setMenuOpen(false);
+ const { muteUser } = await import('@/api/connections');
+ await muteUser(post.authorId, post.authorName);
+ await queryClient.invalidateQueries({ queryKey: ['feed'] });
+ haptics.light();
+ Alert.alert('User Muted', `You will no longer see posts from ${post.authorName}. They can still message you and won't be notified.`);
+ }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ >
+ <Ionicons name="volume-mute-outline" size={18} color={colors.textPrimary} />
+ <AppText weight="medium">Mute {post.authorName}</AppText>
+ </Pressable>
+
+ <Pressable
  onPress={() => {
  setMenuOpen(false);
  Alert.alert(

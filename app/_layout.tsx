@@ -26,7 +26,7 @@ import { addNotificationResponseListener } from '@/notifications/push';
 import { resolveNotificationRoute } from '@/utils/notificationRouter';
 import { addBreadcrumb } from '@/monitoring/breadcrumbs';
 
-import { loadBlockedUserIds } from '@/api/connections';
+import { loadBlockedUserIds, loadMutedUserIds } from '@/api/connections';
 import { AppLockOverlay } from '@/components/AppLockOverlay';
 
 import { FeatureFlagsProvider, useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -70,6 +70,9 @@ export default function RootLayout() {
 
  useEffect(() => {
     loadBlockedUserIds().catch(() => {
+      // background load
+    });
+    loadMutedUserIds().catch(() => {
       // background load
     });
 

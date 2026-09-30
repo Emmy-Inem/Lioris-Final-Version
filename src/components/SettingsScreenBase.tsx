@@ -27,6 +27,8 @@ import { getMyNotificationPreferences, updateMyNotificationPreferences } from '@
 import { listMyDevices, removeMyDevice, MyDevice } from '@/api/devices';
 import { registerForPushNotificationsAsync } from '@/notifications/push';
 import { relativeTime } from '@/utils/dateTime';
+import { FONT_SCALE_STEPS, FontScale } from '@/theme/ThemeProvider';
+import { getReducedMotionOverride, setReducedMotionOverride } from '@/theme/useReducedMotion';
 import { uploadResume } from '@/api/jobApplications';
 import { pickResume } from '@/utils/pickResume';
 import { roleRequiresMfa } from '@/auth/mfaPolicy';
@@ -35,6 +37,8 @@ import { LAUNCH_INSTITUTIONS, getInstitutionByCode } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
 import { submitReport } from '@/api/moderation';
 import { HelpSupportModal } from './HelpSupportModal';
+import { FaqHelpCenterModal } from './FaqHelpCenterModal';
+import { WhatsNewModal, CURRENT_CHANGELOG_VERSION } from './WhatsNewModal';
 import * as authApi from '@/api/auth';
 import { haptics } from '@/utils/haptics';
 import {
@@ -81,6 +85,7 @@ const ALL_SETTINGS_SECTIONS = [
   { key: 'account', label: 'Account', fullLabel: 'Account & Profile', icon: 'person-outline' as const },
   { key: 'workspace', label: 'Scope', fullLabel: 'Campus Scope', icon: 'globe-outline' as const },
   { key: 'appearance', label: 'Theme', fullLabel: 'Theme & Display', icon: 'color-palette-outline' as const },
+  { key: 'accessibility', label: 'Access', fullLabel: 'Accessibility', icon: 'accessibility-outline' as const },
   { key: 'notifications', label: 'Alerts', fullLabel: 'Notifications', icon: 'notifications-outline' as const },
   { key: 'security', label: 'Security', fullLabel: 'Security & Logins', icon: 'shield-checkmark-outline' as const },
   { key: 'preview', label: 'Switcher', fullLabel: 'Role Switcher', icon: 'swap-horizontal-outline' as const },
@@ -192,6 +197,8 @@ export function SettingsScreen() {
     resetToDefaultTheme,
     isDefaultTheme,
     accentPresets,
+    fontScale,
+    setFontScale,
   } = useTheme();
   const { user, logout, switchRole } = useAuth();
   const { isDesktop } = useResponsive();
@@ -313,6 +320,9 @@ export function SettingsScreen() {
 
   // Contact Support / Report a Problem
   const [supportModalOpen, setSupportModalOpen] = useState(false);
+  const [faqModalOpen, setFaqModalOpen] = useState(false);
+  const [whatsNewModalOpen, setWhatsNewModalOpen] = useState(false);
+  const [hasUnseenWhatsNew, setHasUnseenWhatsNew] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -333,10 +343,29 @@ export function SettingsScreen() {
   // Missing Settings states
   const [emailDigestAlerts, setEmailDigestAlerts] = useState(true);
   const [directoryDiscovery, setDirectoryDiscovery] = useState(true);
+  const [reduceMotionOverride, setReduceMotionOverrideState] = useState<boolean | null>(() => getReducedMotionOverride());
+  const [hideCompany, setHideCompany] = useState(false);
+  const [hideLocation, setHideLocation] = useState(false);
+  const [hideJobTitle, setHideJobTitle] = useState(false);
   const [isSigningOutOthers, setIsSigningOutOthers] = useState(false);
 
   // Résumé / CV on file - reused across every job application (JobCard.tsx offers it as the default choice)
   const [uploadingResume, setUploadingResume] = useState(false);
+
+  // "NEW" badge on What's New: compare the last version the user opened it at.
+  useEffect(() => {
+    (async () => {
+      const lastSeen = await getStoredPref('lioris_changelog_last_seen');
+      setHasUnseenWhatsNew(lastSeen !== CURRENT_CHANGELOG_VERSION);
+    })();
+  }, []);
+
+  function handleOpenWhatsNew() {
+    haptics.light();
+    setWhatsNewModalOpen(true);
+    setHasUnseenWhatsNew(false);
+    setStoredPref('lioris_changelog_last_seen', CURRENT_CHANGELOG_VERSION);
+  }
 
   // Hydrate preferences on mount
   useEffect(() => {
@@ -375,10 +404,18 @@ export function SettingsScreen() {
         } else {
           setBiometricShield(false);
         }
-        const privacy = await getStoredPref('lioris_setting_privacy');
-        if (privacy) {
-          const parsed = JSON.parse(privacy);
-          if (typeof parsed.directoryDiscovery === 'boolean') setDirectoryDiscovery(parsed.directoryDiscovery);
+        if (user?.id) {
+          const { data: privacyRow } = await supabase
+            .from('profiles')
+            .select('directory_discoverable, directory_hide_company, directory_hide_location, directory_hide_job_title')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (privacyRow) {
+            setDirectoryDiscovery(privacyRow.directory_discoverable ?? true);
+            setHideCompany(!!privacyRow.directory_hide_company);
+            setHideLocation(!!privacyRow.directory_hide_location);
+            setHideJobTitle(!!privacyRow.directory_hide_job_title);
+          }
         }
       } catch {}
     })();
@@ -719,8 +756,21 @@ export function SettingsScreen() {
   function handleToggleDirectoryDiscovery(next: boolean) {
     haptics.light();
     setDirectoryDiscovery(next);
-    setStoredPref('lioris_setting_privacy', JSON.stringify({ directoryDiscovery: next }));
+    if (user?.id) {
+      supabase.from('profiles').update({ directory_discoverable: next }).eq('id', user.id).then(() => {});
+    }
     toast.info(next ? 'Profile discovery in campus directory enabled' : 'Profile hidden from public campus directory');
+  }
+
+  function handleToggleHideField(field: 'company' | 'location' | 'jobTitle', next: boolean) {
+    haptics.light();
+    const column = field === 'company' ? 'directory_hide_company' : field === 'location' ? 'directory_hide_location' : 'directory_hide_job_title';
+    if (field === 'company') setHideCompany(next);
+    else if (field === 'location') setHideLocation(next);
+    else setHideJobTitle(next);
+    if (user?.id) {
+      supabase.from('profiles').update({ [column]: next }).eq('id', user.id).then(() => {});
+    }
   }
 
   async function handleSignOutOtherDevices() {
@@ -1069,6 +1119,33 @@ export function SettingsScreen() {
                       setSupportModalOpen(true);
                     }}
                   />
+                  <AppButton
+                    label="FAQ & Help Center"
+                    variant="secondary"
+                    icon="help-circle-outline"
+                    onPress={() => {
+                      haptics.light();
+                      setFaqModalOpen(true);
+                    }}
+                  />
+                  <View style={{ position: 'relative' }}>
+                    <AppButton label="What's New" variant="secondary" icon="sparkles-outline" onPress={handleOpenWhatsNew} />
+                    {hasUnseenWhatsNew ? (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: -4,
+                          right: -4,
+                          width: 10,
+                          height: 10,
+                          borderRadius: 5,
+                          backgroundColor: colors.critical,
+                          borderWidth: 2,
+                          borderColor: colors.surface,
+                        }}
+                      />
+                    ) : null}
+                  </View>
                 </View>
               </SolidCard>
                 )}
@@ -1366,6 +1443,117 @@ export function SettingsScreen() {
                         })}
                       </View>
                     </View>
+                  </SolidCard>
+                )}
+              </View>
+            )}
+
+            {/* 2b. Accessibility */}
+            {showSection('accessibility') && (
+              <View style={{ gap: spacing.xs }}>
+                <SettingsAccordionHeader
+                  sectionKey="accessibility"
+                  isCollapsed={isSectionCollapsed('accessibility')}
+                  onToggle={() => toggleSection('accessibility')}
+                  summary={`${FONT_SCALE_STEPS.find((s) => s.value === fontScale)?.label || 'Default'} text • Motion ${reduceMotionOverride === true ? 'Reduced' : reduceMotionOverride === false ? 'On' : 'Auto'}`}
+                />
+                {!isSectionCollapsed('accessibility') && (
+                  <SolidCard radius={20} style={{ padding: isDesktop ? spacing.lg : spacing.md, gap: spacing.md }}>
+                    <View>
+                      <AppText variant="h3" weight="bold">
+                        Accessibility
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                        Adjust text size and motion to suit how you read and navigate
+                      </AppText>
+                    </View>
+
+                    {/* Font Scale Selector */}
+                    <View style={{ gap: spacing.xs }}>
+                      <AppText variant="bodySmall" weight="bold">
+                        Text Size
+                      </AppText>
+                      <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+                        {FONT_SCALE_STEPS.map((step) => {
+                          const active = fontScale === step.value;
+                          return (
+                            <Pressable
+                              key={step.value}
+                              accessibilityRole="button"
+                              accessibilityLabel={step.label}
+                              accessibilityState={{ selected: active }}
+                              onPress={() => {
+                                haptics.light();
+                                setFontScale(step.value as FontScale);
+                              }}
+                              style={{
+                                flexGrow: 1,
+                                flexBasis: isDesktop ? undefined : '47%',
+                                paddingVertical: 12,
+                                paddingHorizontal: 8,
+                                borderRadius: radius.md,
+                                borderWidth: 2,
+                                borderColor: active ? colors.brandPrimary : colors.border,
+                                backgroundColor: active ? colors.pastelPrimaryBg : colors.surface,
+                                alignItems: 'center',
+                              }}
+                            >
+                              <AppText
+                                weight="bold"
+                                tone={active ? 'brand' : 'primary'}
+                                style={{ fontSize: 14 * step.value }}
+                              >
+                                Aa
+                              </AppText>
+                              <AppText variant="caption" weight="bold" tone={active ? 'brand' : 'secondary'} style={{ marginTop: 4 }}>
+                                {step.label}
+                              </AppText>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+
+                    {/* Reduce Motion Override */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, gap: 12 }}>
+                      <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
+                        <AppText weight="bold" variant="bodySmall">Reduce Motion</AppText>
+                        <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                          {reduceMotionOverride === null
+                            ? 'Following your device setting'
+                            : reduceMotionOverride
+                            ? 'Animations minimized in-app'
+                            : 'Animations enabled in-app'}
+                        </AppText>
+                      </View>
+                      <Switch
+                        value={reduceMotionOverride === true}
+                        onValueChange={(v) => {
+                          haptics.light();
+                          const next = v ? true : false;
+                          setReduceMotionOverrideState(next);
+                          setReducedMotionOverride(next);
+                        }}
+                        trackColor={{ false: colors.divider, true: colors.brandPrimary }}
+                      />
+                    </View>
+
+                    {reduceMotionOverride !== null && (
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => {
+                          haptics.light();
+                          setReduceMotionOverrideState(null);
+                          setReducedMotionOverride(null);
+                        }}
+                        hitSlop={8}
+                        style={{ alignSelf: 'flex-start' }}
+                      >
+                        <AppText variant="caption" weight="bold" tone="brand">
+                          Follow Device Setting
+                        </AppText>
+                      </Pressable>
+                    )}
                   </SolidCard>
                 )}
               </View>
@@ -1781,6 +1969,25 @@ export function SettingsScreen() {
                 </View>
 
                 <View style={{ gap: spacing.sm, paddingTop: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border }}>
+                  <AppText weight="bold" variant="bodySmall">Hide From My Profile</AppText>
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: -4 }}>
+                    Keep these fields filled in, but hidden from other people viewing your profile.
+                  </AppText>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+                    <AppText variant="bodySmall">Company</AppText>
+                    <Switch value={hideCompany} onValueChange={(v) => handleToggleHideField('company', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+                    <AppText variant="bodySmall">Job Title</AppText>
+                    <Switch value={hideJobTitle} onValueChange={(v) => handleToggleHideField('jobTitle', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+                    <AppText variant="bodySmall">Location</AppText>
+                    <Switch value={hideLocation} onValueChange={(v) => handleToggleHideField('location', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+                  </View>
+                </View>
+
+                <View style={{ gap: spacing.sm, paddingTop: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border }}>
                   <View>
                     <AppText weight="bold" variant="bodySmall">Export my data</AppText>
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
@@ -2098,6 +2305,12 @@ export function SettingsScreen() {
       </Modal>
 
       <HelpSupportModal visible={supportModalOpen} onClose={() => setSupportModalOpen(false)} />
+      <FaqHelpCenterModal
+        visible={faqModalOpen}
+        onClose={() => setFaqModalOpen(false)}
+        onContactSupport={() => setSupportModalOpen(true)}
+      />
+      <WhatsNewModal visible={whatsNewModalOpen} onClose={() => setWhatsNewModalOpen(false)} />
       {/* Edit Profile Details Modal in Settings */}
       <Modal
         visible={editProfileModalOpen}

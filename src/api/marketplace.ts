@@ -10,7 +10,7 @@ export interface MarketplaceQuery {
  campusCode?: string;
 }
 
-import { isUserBlocked } from './connections';
+import { isUserBlocked, isUserMuted } from './connections';
 import { getInstitutionForEmail } from './institutions';
 import { isItemSavedSync, toggleSavedItem } from './bookmarks';
 
@@ -26,7 +26,7 @@ function getLocalPool(): MarketplaceListing[] {
 }
 
 function filterListings(pool: MarketplaceListing[], query: MarketplaceQuery): MarketplaceListing[] {
- let results = pool.filter((item) => !isUserBlocked(item.sellerId));
+ let results = pool.filter((item) => !isUserBlocked(item.sellerId) && !isUserMuted(item.sellerId));
 
  if (query.campusCode && query.campusCode !== 'GLOBAL') {
  results = results.filter(
@@ -95,7 +95,7 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  if (error) throw error;
 
  const dbListings: MarketplaceListing[] = (data ?? [])
- .filter((row: any) => !isUserBlocked(row.seller_id))
+ .filter((row: any) => !isUserBlocked(row.seller_id) && !isUserMuted(row.seller_id))
   .filter((row: any) => {
     if (isStaffOrAdmin && !query.campusCode) return true;
     const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
@@ -128,7 +128,7 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  const local = filterListings(getLocalPool(), { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
  const merged = [...dbListings];
  for (const item of local) {
- if (!merged.some((m) => m.id === item.id) && !isUserBlocked(item.sellerId)) {
+ if (!merged.some((m) => m.id === item.id) && !isUserBlocked(item.sellerId) && !isUserMuted(item.sellerId)) {
  merged.push(item);
  }
  }

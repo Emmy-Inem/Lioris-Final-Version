@@ -36,7 +36,7 @@ export function AppText({
  ellipsizeMode = 'tail',
  ...rest
 }: AppTextProps) {
- const { colors } = useTheme();
+ const { colors, fontScale } = useTheme();
 
  const toneColor: Record<Tone, string> = {
  primary: colors.textPrimary,
@@ -48,8 +48,10 @@ export function AppText({
  critical: colors.critical,
  };
 
+ const base = typeScale[variant];
  const computedStyle: TextStyle = {
- ...typeScale[variant],
+ fontSize: base.fontSize * fontScale,
+ lineHeight: base.lineHeight * fontScale,
  fontFamily: familyForWeight[weight],
  fontWeight: weightForPlatform[weight],
  color: toneColor[tone],

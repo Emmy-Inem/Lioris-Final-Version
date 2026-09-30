@@ -8,7 +8,7 @@ import {
   StudyGroup,
 } from './types';
 import { getSessionUser } from '../auth/tokenStorage';
-import { isUserBlocked } from './connections';
+import { isUserBlocked, isUserMuted } from './connections';
 import { assertUuid } from '../utils/postgrest';
 import { RpcError, throwIfRpcError } from '../utils/rpcErrors';
 
@@ -76,7 +76,7 @@ export async function listStudyGroups(campusCode?: string, options: ListStudyGro
     p_mine_only: options.mineOnly ?? false,
   });
   throwIfRpcError(error, 'Could not load study pods.');
-  return (data ?? []).map(mapGroup).filter((g: StudyGroup) => !g.creatorId || !isUserBlocked(g.creatorId));
+  return (data ?? []).map(mapGroup).filter((g: StudyGroup) => !g.creatorId || (!isUserBlocked(g.creatorId) && !isUserMuted(g.creatorId)));
 }
 
 export async function getStudyGroup(id: string): Promise<StudyGroup | null> {

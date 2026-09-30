@@ -228,9 +228,16 @@ export function CampusManager() {
         <EmptyState icon="cloud-offline-outline" title="Could not load campuses" description={(overview.error as Error)?.message || 'Check your connection and try again.'} actionLabel="Try again" onAction={() => overview.refetch()} />
       ) : null}
       {overview.isError && plain.data ? (
-        <AppText variant="caption" tone="secondary">
-          Member and link counts are not available yet - the database update for this screen has not been applied.
-        </AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <AppText variant="caption" tone="secondary" style={{ flex: 1, minWidth: 160 }}>
+            Couldn't load member and link counts ({(overview.error as Error)?.message || 'unknown error'}). Showing the plain campus list instead.
+          </AppText>
+          <Pressable onPress={() => overview.refetch()} hitSlop={8}>
+            <AppText variant="caption" weight="bold" tone="brand">
+              Retry
+            </AppText>
+          </Pressable>
+        </View>
       ) : null}
 
       {shown.length === 0 && !overview.isLoading && !overview.isError ? (

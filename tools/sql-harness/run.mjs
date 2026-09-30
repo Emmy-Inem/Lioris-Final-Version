@@ -1158,6 +1158,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261003000000_trust_safety_gaps.sql',
   'supabase/migrations/20261003010000_admin_directory_and_analytics_fixes.sql',
   'supabase/migrations/20261003020000_tier3_account_and_notifications.sql',
+  'supabase/migrations/20261004000000_discovery_and_polish.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2421,6 +2422,160 @@ console.log('\n== tier 3: notification preferences + account deactivation ==');
       const s3RowUnaffected = await c.q(`SELECT deactivated_at FROM public.profiles WHERE id = $1`, [U.s3]);
       assert(s4Row.rows[0].deactivated_at !== null, 's4 deactivated itself');
       assert(s3RowUnaffected.rows[0].deactivated_at === null, 's3 is untouched by s4 deactivating their own account - there is no target parameter, only auth.uid()');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// discovery & polish (20261004000000): mute, job alerts, granular directory
+// privacy.
+// ---------------------------------------------------------------------------
+console.log('\n== discovery & polish: mute, job alerts, directory privacy ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  await check('user_mutes: owner-only RLS - mirrors user_blocks (mute yourself is rejected, mute another is owned, list and unmute are self-scoped)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      denied(await c.t(`INSERT INTO public.user_mutes (muter_id, muted_id) VALUES ($1, $1)`, [U.s1]), /user_mutes_not_self/, 'muting yourself');
+      await c.q(`INSERT INTO public.user_mutes (muter_id, muted_id) VALUES ($1, $2)`, [U.s1, U.s2]);
+
+      denied(
+        await c.t(`INSERT INTO public.user_mutes (muter_id, muted_id) VALUES ($1, $2)`, [U.s2, U.s4]),
+        /row-level|policy/i,
+        'a user cannot insert a mute row on someone else\'s behalf',
+      );
+
+      const mine = await c.q(`SELECT muted_id FROM public.user_mutes WHERE muter_id = $1`, [U.s1]);
+      eq(mine.rows.map((r) => r.muted_id), [U.s2], 'the muter reads their own mute list');
+
+      await imp(U.s2);
+      const peekOther = await c.q(`SELECT * FROM public.user_mutes WHERE muter_id = $1`, [U.s1]);
+      eq(peekOther.rows.length, 0, 'a user cannot read another user\'s mute list (RLS hides the row)');
+
+      // RLS "muter_id = auth.uid()" makes s1's row invisible to this DELETE - it
+      // succeeds as a no-op (0 rows), it does not throw.
+      const foreignDelete = await c.t(`DELETE FROM public.user_mutes WHERE muter_id = $1 AND muted_id = $2`, [U.s1, U.s2]);
+      assert(foreignDelete.ok && foreignDelete.n === 0, 'deleting from another user\'s mute list is a silent no-op, not a thrown error');
+
+      await imp(U.s1);
+      await c.q(`DELETE FROM public.user_mutes WHERE muter_id = $1 AND muted_id = $2`, [U.s1, U.s2]);
+      const afterUnmute = await c.q(`SELECT count(*)::int n FROM public.user_mutes WHERE muter_id = $1`, [U.s1]);
+      eq(afterUnmute.rows[0].n, 0, 'the owner can unmute');
+    });
+  });
+
+  await check('job_alerts: owner-only RLS (create, list, toggle, delete are self-scoped)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      const ins = await c.q(
+        `INSERT INTO public.job_alerts (user_id, keywords, job_type, remote_only, campus_code) VALUES ($1, 'Engineer', NULL, false, NULL) RETURNING id`,
+        [U.s1],
+      );
+      const alertId = ins.rows[0].id;
+
+      denied(
+        await c.t(`INSERT INTO public.job_alerts (user_id, keywords) VALUES ($1, 'x')`, [U.s2]),
+        /row-level|policy/i,
+        'a user cannot create a job_alerts row for someone else',
+      );
+      denied(
+        await c.t(`INSERT INTO public.job_alerts (user_id, job_type) VALUES ($1, 'Weekend')`, [U.s1]),
+        /job_alerts_type_valid/,
+        'an invalid job_type is rejected',
+      );
+      denied(
+        await c.t(`INSERT INTO public.job_alerts (user_id, keywords) VALUES ($1, repeat('x', 201))`, [U.s1]),
+        /job_alerts_keywords_len/,
+        'keywords over 200 chars are rejected',
+      );
+
+      await imp(U.s2);
+      const peekOther = await c.q(`SELECT * FROM public.job_alerts WHERE user_id = $1`, [U.s1]);
+      eq(peekOther.rows.length, 0, 'a user cannot list another user\'s job alerts');
+      const foreignUpdate = await c.t(`UPDATE public.job_alerts SET is_active = false WHERE id = $1`, [alertId]);
+      assert(foreignUpdate.ok && foreignUpdate.n === 0, 'updating another user\'s job alert is a silent no-op, not a thrown error');
+
+      await imp(U.s1);
+      await c.q(`UPDATE public.job_alerts SET is_active = false WHERE id = $1`, [alertId]);
+      const toggled = await c.q(`SELECT is_active FROM public.job_alerts WHERE id = $1`, [alertId]);
+      eq(toggled.rows[0].is_active, false, 'the owner can toggle their own alert');
+      await c.q(`DELETE FROM public.job_alerts WHERE id = $1`, [alertId]);
+      eq((await c.q(`SELECT count(*)::int n FROM public.job_alerts WHERE user_id = $1`, [U.s1])).rows[0].n, 0, 'the owner can delete their own alert');
+    });
+  });
+
+  await check('job_alerts: notified only on approval (not on the non-approved insert, not on an unrelated edit), matches keywords/type/remote/campus, and never notifies the poster\'s own alert', async () => {
+    await as('postgres', async (c) => {
+      // s1: matches on keywords, any type, non-remote-only -> should fire.
+      await imp(U.s1);
+      await c.q(`INSERT INTO public.job_alerts (user_id, keywords, job_type, remote_only, campus_code) VALUES ($1, 'Engineer', NULL, false, NULL)`, [U.s1]);
+      // s2: wrong job_type -> must not fire.
+      await imp(U.s2);
+      await c.q(`INSERT INTO public.job_alerts (user_id, keywords, job_type, remote_only, campus_code) VALUES ($1, NULL, 'Internship', false, NULL)`, [U.s2]);
+      // s5: matches everything but is inactive -> must not fire.
+      await imp(U.s5);
+      await c.q(`INSERT INTO public.job_alerts (user_id, keywords, job_type, remote_only, campus_code, is_active) VALUES ($1, NULL, NULL, false, NULL, false)`, [U.s5]);
+      // s4 is the poster below and also saves a matching alert on themself -> must never self-notify.
+      await imp(U.s4);
+      const jobIns = await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, type, is_remote, apply_url)
+         VALUES ($1, 'UNILAG', 'Senior Engineer', 'Acme Corp', 'Lagos', 'Full-time', false, 'https://example.com/apply') RETURNING id, is_approved`,
+        [U.s4],
+      );
+      const jobId = jobIns.rows[0].id;
+      eq(jobIns.rows[0].is_approved, false, 'enforce_job_moderation forces a non-staff poster\'s new job into pending');
+      await c.q(`INSERT INTO public.job_alerts (user_id, keywords) VALUES ($1, 'Engineer')`, [U.s4]);
+
+      await svc();
+      const beforeApproval = await c.q(`SELECT count(*)::int n FROM public.notifications WHERE type = 'system' AND action_url = '/jobs'`);
+      eq(beforeApproval.rows[0].n, 0, 'inserting a not-yet-approved job notifies nobody');
+
+      await imp(U.adminA);
+      await c.q(`UPDATE public.jobs SET is_approved = true WHERE id = $1`, [jobId]);
+
+      await svc();
+      const afterApproval = await c.q(
+        `SELECT recipient_id FROM public.notifications WHERE type = 'system' AND action_url = '/jobs' ORDER BY recipient_id`,
+      );
+      eq(afterApproval.rows.map((r) => r.recipient_id).sort(), [U.s1], 'only the one matching, active, non-poster alert owner (s1) is notified');
+
+      const lastNotified = await c.q(
+        `SELECT last_notified_at IS NOT NULL AS stamped FROM public.job_alerts WHERE user_id = $1 AND keywords = 'Engineer'`,
+        [U.s1],
+      );
+      assert(lastNotified.rows[0].stamped, 'the matched alert has last_notified_at stamped');
+
+      // An unrelated edit while already approved must not refire the trigger.
+      await imp(U.s4);
+      await c.q(`UPDATE public.jobs SET description = 'now with more detail' WHERE id = $1`, [jobId]);
+      await svc();
+      const afterUnrelatedEdit = await c.q(`SELECT count(*)::int n FROM public.notifications WHERE type = 'system' AND action_url = '/jobs'`);
+      eq(afterUnrelatedEdit.rows[0].n, 1, 'editing an already-approved job does not re-notify');
+    });
+  });
+
+  await check('directory privacy: the owner can update their own discoverability/hide flags; another same-campus user can read them (the column grant works, not "permission denied for table profiles")', async () => {
+    await as('postgres', async (c) => {
+      const defaults = await c.su(`SELECT directory_discoverable d, directory_hide_company hc, directory_hide_location hl, directory_hide_job_title hj FROM public.profiles WHERE id = $1`, [U.s2]);
+      eq(defaults.rows[0], { d: true, hc: false, hl: false, hj: false }, 'new profiles default to discoverable and fully visible');
+
+      await imp(U.s2);
+      await c.q(`UPDATE public.profiles SET directory_discoverable = false, directory_hide_company = true WHERE id = $1`, [U.s2]);
+      const foreignUpdate = await c.t(`UPDATE public.profiles SET directory_discoverable = true WHERE id = $1`, [U.s1]);
+      assert(foreignUpdate.ok && foreignUpdate.n === 0, 'a user cannot flip another user\'s directory flags (RLS "own row only" already covers this - zero rows affected, not a thrown error)');
+
+      // s1 and s2 are both UNILAG, so s1 can see s2's row under the existing
+      // same-campus SELECT policy; the point under test is the new column
+      // grant, not row visibility.
+      await imp(U.s1);
+      const peer = await c.q(`SELECT directory_discoverable d, directory_hide_company hc FROM public.profiles WHERE id = $1`, [U.s2]);
+      eq(peer.rows[0], { d: false, hc: true }, 'a same-campus peer can read the updated flags through the new column grant');
     });
   });
 }

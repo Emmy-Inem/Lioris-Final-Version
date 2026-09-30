@@ -303,6 +303,21 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  </Pressable>
 
  <Pressable
+ onPress={async () => {
+ setMenuOpen(false);
+ const { muteUser } = await import('@/api/connections');
+ await muteUser(event.organizerId, event.organizerName);
+ await queryClient.invalidateQueries({ queryKey: ['events'] });
+ haptics.light();
+ Alert.alert('Organizer Muted', `You will no longer see events from ${event.organizerName || 'this organizer'}. They won't be notified.`);
+ }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ >
+ <Ionicons name="volume-mute-outline" size={18} color={colors.textPrimary} />
+ <AppText weight="medium">Mute Organizer</AppText>
+ </Pressable>
+
+ <Pressable
  onPress={() => {
  setMenuOpen(false);
  Alert.alert(

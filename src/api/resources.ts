@@ -1,7 +1,7 @@
 import { Resource } from './types';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
-import { isUserBlocked } from './connections';
+import { isUserBlocked, isUserMuted } from './connections';
 import { assertWithinStorageQuota } from './platformSettings';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
@@ -111,7 +111,7 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     if (error) throw error;
 
     const dbResources: Resource[] = (data ?? [])
-      .filter((row: any) => !isUserBlocked(row.uploader_id))
+      .filter((row: any) => !isUserBlocked(row.uploader_id) && !isUserMuted(row.uploader_id))
       .filter((row: any) => {
         if (isStaffOrAdmin && !(query as any).campusCode) return true;
         const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
@@ -150,7 +150,7 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     const pool = [...locallyCreatedResources];
     const merged = [...dbResources];
     for (const r of pool) {
-      if (!merged.some((m) => m.id === r.id || (m.title.toLowerCase() === r.title.toLowerCase() && m.courseCode.toLowerCase() === r.courseCode.toLowerCase())) && !isUserBlocked(r.authorId)) {
+      if (!merged.some((m) => m.id === r.id || (m.title.toLowerCase() === r.title.toLowerCase() && m.courseCode.toLowerCase() === r.courseCode.toLowerCase())) && !isUserBlocked(r.authorId) && !isUserMuted(r.authorId)) {
         if (isStaffOrAdmin && !(query as any).campusCode) {
           merged.push(r);
         } else {

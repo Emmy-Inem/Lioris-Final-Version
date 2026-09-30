@@ -1,7 +1,7 @@
 import { Post, PostPoll, PostStatus, PostVisibilityScope } from './types';
 import { supabase } from './supabase';
 import { listSavedItemIds } from './bookmarks';
-import { isUserBlocked } from './connections';
+import { isUserBlocked, isUserMuted } from './connections';
 import { getInstitutionForEmail } from './institutions';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
@@ -252,7 +252,7 @@ export interface FeedQuery {
 }
 
 function filterPosts(pool: Post[], query: FeedQuery): Post[] {
-  let results = pool.filter((p) => !isUserBlocked(p.authorId));
+  let results = pool.filter((p) => !isUserBlocked(p.authorId) && !isUserMuted(p.authorId));
 
   const shouldFilterBots = query.showBots === false || (!query.showBots && !isBotVisibilityEnabled());
   if (shouldFilterBots) {

@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { listSavedItemIds } from './bookmarks';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
-import { isUserBlocked } from './connections';
+import { isUserBlocked, isUserMuted } from './connections';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
 import { inferWorkplaceType, inferExperienceLevel } from '../utils/careerFilters';
@@ -31,7 +31,7 @@ function getLocalPool(): JobListing[] {
 }
 
 function filterJobs(pool: JobListing[], query: JobsQuery): JobListing[] {
-  let results = pool.filter((j) => !isUserBlocked((j as any).posterId));
+  let results = pool.filter((j) => !isUserBlocked((j as any).posterId) && !isUserMuted((j as any).posterId));
   if (query.type) results = results.filter((j) => j.type === query.type);
   if (query.workplaceType) results = results.filter((j) => j.workplaceType === query.workplaceType);
   if (query.experienceLevel) results = results.filter((j) => j.experienceLevel === query.experienceLevel);
@@ -102,7 +102,7 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  if (error) throw error;
 
  const dbJobs: JobListing[] = (data ?? [])
- .filter((row: any) => !isUserBlocked(row.poster_id))
+ .filter((row: any) => !isUserBlocked(row.poster_id) && !isUserMuted(row.poster_id))
  // This is the normal browse feed, not the moderation queue: an unapproved
  // posting only belongs here for its own poster, checking on its review status -
  // never mixed into anyone else's feed just because they happen to be staff/admin.
@@ -144,7 +144,7 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  const merged = [...dbJobs];
  const scopedQuery = { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus };
  for (const item of getLocalPool()) {
- if (!merged.some((j) => j.id === item.id) && !isUserBlocked((item as any).posterId)) {
+ if (!merged.some((j) => j.id === item.id) && !isUserBlocked((item as any).posterId) && !isUserMuted((item as any).posterId)) {
  merged.push(item);
  }
  }
