@@ -501,7 +501,7 @@ export function EventDetailScreen() {
     });
   }
 
-  function handleExportIcs() {
+  async function handleExportIcs() {
     if (!event) return;
     haptics.light();
     const icsContent = [
@@ -517,18 +517,38 @@ export function EventDetailScreen() {
       'END:VEVENT',
       'END:VCALENDAR',
     ].join('\r\n');
+    const filename = `${event.title.replace(/\s+/g, '_')}.ics`;
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.setAttribute('download', `${event.title.replace(/\s+/g, '_')}.ics`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setIcsExported(true);
+      setTimeout(() => setIcsExported(false), 3000);
+      return;
     }
-    setIcsExported(true);
-    setTimeout(() => setIcsExported(false), 3000);
+
+    try {
+      const { File, Paths } = await import('expo-file-system');
+      const Sharing = await import('expo-sharing');
+      if (!(await Sharing.isAvailableAsync())) {
+        toast.show('Sharing is not available on this device.');
+        return;
+      }
+      const file = new File(Paths.cache, filename);
+      file.create({ overwrite: true });
+      file.write(icsContent);
+      await Sharing.shareAsync(file.uri, { mimeType: 'text/calendar' });
+      setIcsExported(true);
+      setTimeout(() => setIcsExported(false), 3000);
+    } catch {
+      haptics.error();
+      toast.error('Could not export this event as a calendar file.');
+    }
   }
 
   if (isLoading || !event) {
