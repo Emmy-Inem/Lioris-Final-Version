@@ -104,6 +104,15 @@ export default function StaffLayout() {
       ),
     }}
   />
+  <Tabs.Screen
+    name="analytics"
+    options={{
+      title: 'Analytics',
+      tabBarIcon: ({ focused, size }) => (
+        <TabIcon name={focused ? 'bar-chart' : 'bar-chart-outline'} focused={focused} size={size} />
+      ),
+    }}
+  />
 
   {/* Reachable via header avatar / dashboard quick links, not bottom tabs. */}
   <Tabs.Screen name="events" options={{ href: null }} />
