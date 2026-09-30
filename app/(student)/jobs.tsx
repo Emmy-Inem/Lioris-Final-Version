@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,11 +12,13 @@ import { ErrorStateView } from '@/components/ErrorStateView';
 import { EmptyState } from '@/components/EmptyState';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { JobApplicantsModal } from '@/components/JobApplicantsModal';
+import { MyApplicationsModal } from '@/components/MyApplicationsModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
 import { listJobs } from '@/api/jobs';
-import { JobListing } from '@/api/types';
+import { listMyApplications } from '@/api/jobApplications';
+import { JobApplicationStatus, JobListing } from '@/api/types';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { haptics } from '@/utils/haptics';
@@ -37,6 +39,7 @@ export default function JobsScreen() {
  const [selectedFilter, setSelectedFilter] = useState('all');
  const [createModalOpen, setCreateModalOpen] = useState(false);
  const [applicantsJob, setApplicantsJob] = useState<JobListing | null>(null);
+ const [myApplicationsOpen, setMyApplicationsOpen] = useState(false);
  const debouncedQuery = useDebouncedValue(query);
  const { campusCode } = useCampusScope();
 
@@ -44,6 +47,18 @@ export default function JobsScreen() {
  queryKey: ['jobs', debouncedQuery, campusCode],
  queryFn: () => listJobs({ q: debouncedQuery || undefined, campusCode }),
  });
+
+ const { data: myApplications } = useQuery({
+ queryKey: ['my-applications'],
+ queryFn: () => listMyApplications(),
+ });
+ const myApplicationStatusByJobId = useMemo(() => {
+ const map: Record<string, JobApplicationStatus> = {};
+ (myApplications ?? []).forEach((app) => {
+ map[app.jobId] = app.status;
+ });
+ return map;
+ }, [myApplications]);
 
  const filteredJobs = (jobs ?? []).filter((j) => {
  if (selectedFilter === 'internship') return j.type === 'Internship';
@@ -75,6 +90,29 @@ export default function JobsScreen() {
                 <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" weight="semiBold">Campus Network Listings</AppText>
               </View>
+
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setMyApplicationsOpen(true);
+                }}
+                style={{
+                  backgroundColor: colors.background,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 16,
+                  paddingVertical: 9,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name="document-text-outline" size={16} color={colors.textPrimary} />
+                <AppText variant="bodySmall" weight="bold">
+                  My Applications
+                </AppText>
+              </Pressable>
 
               <Pressable
                 onPress={() => {
@@ -194,7 +232,11 @@ export default function JobsScreen() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
               {filteredJobs.map((item) => (
                 <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560, gap: 6 }}>
-                  <JobCard job={item} />
+                  <JobCard
+                    job={item}
+                    myApplicationStatusByJobId={myApplicationStatusByJobId}
+                    onApplied={() => queryClient.invalidateQueries({ queryKey: ['my-applications'] })}
+                  />
                   {item.posterId === user?.id && (
                     <Pressable
                       onPress={() => setApplicantsJob(item)}
@@ -228,29 +270,51 @@ export default function JobsScreen() {
             <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
               Career & Jobs
             </AppText>
-            <Pressable
-              onPress={() => {
-                haptics.light();
-                setCreateModalOpen(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Post a new job opening"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: colors.brandPrimary,
-                borderRadius: radius.pill,
-                paddingHorizontal: spacing.md,
-                paddingVertical: 7,
-                flexShrink: 0,
-              }}
-            >
-              <Ionicons name="add" size={16} color="#FFFFFF" />
-              <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
-                Post Job
-              </AppText>
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 }}>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setMyApplicationsOpen(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="My Applications"
+                hitSlop={8}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="document-text-outline" size={16} color={colors.textPrimary} />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setCreateModalOpen(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Post a new job opening"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  backgroundColor: colors.brandPrimary,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 7,
+                }}
+              >
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+                  Post Job
+                </AppText>
+              </Pressable>
+            </View>
           </View>
           <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
             Community-posted roles, alumni referrals & industry gigs
@@ -319,7 +383,11 @@ export default function JobsScreen() {
  contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
  renderItem={({ item }) => (
    <View style={{ gap: 6 }}>
-     <JobCard job={item} />
+     <JobCard
+       job={item}
+       myApplicationStatusByJobId={myApplicationStatusByJobId}
+       onApplied={() => queryClient.invalidateQueries({ queryKey: ['my-applications'] })}
+     />
      {item.posterId === user?.id && (
        <Pressable
          onPress={() => setApplicantsJob(item)}
@@ -368,6 +436,10 @@ export default function JobsScreen() {
    visible={!!applicantsJob}
    job={applicantsJob}
    onClose={() => setApplicantsJob(null)}
+ />
+ <MyApplicationsModal
+   visible={myApplicationsOpen}
+   onClose={() => setMyApplicationsOpen(false)}
  />
  </ScreenContainer>
  );
