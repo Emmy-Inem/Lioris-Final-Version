@@ -8,32 +8,54 @@ import { AppButton } from './AppButton';
 import { JobApplyModal } from './JobApplyModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
-import { JobListing } from '@/api/types';
+import { JobApplicationStatus, JobListing } from '@/api/types';
 import { hasAppliedToJob } from '@/api/jobApplications';
 import { submitReport } from '@/api/moderation';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
-export function JobCard({ job, onApplied }: { job: JobListing; onApplied?: () => void }) {
+/** Label/tone for each stage of the pipeline, matching JobApplicantsModal's STATUS_FLOW so the same status reads the same way on both sides. */
+export const JOB_APPLICATION_STATUS_META: Record<JobApplicationStatus, { label: string; tone: 'neutral' | 'brand' | 'accent' | 'success' | 'warning' | 'critical' }> = {
+  applied: { label: 'Applied', tone: 'neutral' },
+  reviewed: { label: 'Reviewed', tone: 'accent' },
+  interview: { label: 'Interview', tone: 'warning' },
+  hired: { label: 'Hired', tone: 'success' },
+  rejected: { label: 'Rejected', tone: 'critical' },
+};
+
+export function JobCard({
+  job,
+  onApplied,
+  myApplicationStatusByJobId,
+}: {
+  job: JobListing;
+  onApplied?: () => void;
+  /** The signed-in student's own application status per job id, fetched once by the screen (listMyApplications) and passed down - avoids every card polling hasAppliedToJob itself. When omitted, the card falls back to that per-card check. */
+  myApplicationStatusByJobId?: Record<string, JobApplicationStatus>;
+}) {
   const { colors, spacing, radius } = useTheme();
   const { user } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
-  const [applied, setApplied] = useState(false);
+  const [legacyApplied, setLegacyApplied] = useState(false);
   const [checkingApplied, setCheckingApplied] = useState(false);
+  const [justApplied, setJustApplied] = useState(false);
 
   const canApplyInApp = job.acceptsInAppApplications;
+  const hasStatusMap = !!myApplicationStatusByJobId;
 
   // Reflect whether the signed-in user has already applied, even across
   // sessions - applications are now real, persisted rows (not a fire-and-
   // forget notification), so this state must survive reopening the app.
+  // Only needed as a fallback where the screen doesn't already supply
+  // myApplicationStatusByJobId (e.g. the alumni dashboard's job board).
   useEffect(() => {
-    if (!canApplyInApp) return;
+    if (!canApplyInApp || hasStatusMap) return;
     let cancelled = false;
     setCheckingApplied(true);
     hasAppliedToJob(job.id)
       .then((result) => {
-        if (!cancelled) setApplied(result);
+        if (!cancelled) setLegacyApplied(result);
       })
       .finally(() => {
         if (!cancelled) setCheckingApplied(false);
@@ -41,7 +63,14 @@ export function JobCard({ job, onApplied }: { job: JobListing; onApplied?: () =>
     return () => {
       cancelled = true;
     };
-  }, [job.id, canApplyInApp]);
+  }, [job.id, canApplyInApp, hasStatusMap]);
+
+  const mappedStatus = myApplicationStatusByJobId?.[job.id];
+  const applicationStatus: JobApplicationStatus | undefined = hasStatusMap
+    ? mappedStatus ?? (justApplied ? 'applied' : undefined)
+    : legacyApplied || justApplied
+      ? 'applied'
+      : undefined;
 
   function handleOpenApplyUrl() {
     if (isSafeHttpUrl(job.applyUrl)) {
@@ -50,7 +79,7 @@ export function JobCard({ job, onApplied }: { job: JobListing; onApplied?: () =>
   }
 
   function handleApplied() {
-    setApplied(true);
+    setJustApplied(true);
     setModalOpen(false);
     onApplied?.();
   }
@@ -161,16 +190,20 @@ export function JobCard({ job, onApplied }: { job: JobListing; onApplied?: () =>
             />
           )}
           {canApplyInApp && (
-            <AppButton
-              label={applied ? 'Applied ✓' : 'Apply in Lioris'}
-              variant={applied ? 'secondary' : 'primary'}
-              size="sm"
-              disabled={applied || checkingApplied}
-              onPress={() => {
-                haptics.light();
-                setModalOpen(true);
-              }}
-            />
+            applicationStatus ? (
+              <Badge label={JOB_APPLICATION_STATUS_META[applicationStatus].label} tone={JOB_APPLICATION_STATUS_META[applicationStatus].tone} />
+            ) : (
+              <AppButton
+                label="Apply in Lioris"
+                variant="primary"
+                size="sm"
+                disabled={checkingApplied}
+                onPress={() => {
+                  haptics.light();
+                  setModalOpen(true);
+                }}
+              />
+            )
           )}
         </View>
       </View>
