@@ -17,10 +17,11 @@ import { AppButton } from'./AppButton';
 import { ImageViewerModal } from'./ImageViewerModal';
 import { UserProfileModal } from'./UserProfileModal';
 import { ActionSheetModal } from'./ActionSheetModal';
+import { EditPostModal } from'./EditPostModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, deletePostComment } from '@/api/posts';
+import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, deletePostComment, extractMentionHandles, resolvePostMentions } from '@/api/posts';
 import { canManageCommunityCategory } from '@/api/communities';
 import { getMyProfile } from '@/api/profile';
 import { submitReport } from '@/api/moderation';
@@ -50,6 +51,12 @@ function timeAgo(iso: string) {
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
 }
+
+// Splits body text on @mention/#hashtag tokens so they can be rendered as
+// nested, individually-tappable AppText runs inside the parent Text.
+const CONTENT_TOKEN_SPLIT = /(@[a-zA-Z0-9_.]{2,40}|#[a-zA-Z0-9_]{2,40})/g;
+const MENTION_TOKEN = /^@[a-zA-Z0-9_.]{2,40}$/;
+const HASHTAG_TOKEN = /^#[a-zA-Z0-9_]{2,40}$/;
 
 export function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -102,6 +109,63 @@ export function PostDetailScreen() {
     enabled: !!post?.category && !isPlatformModerator,
   });
   const canModerate = isPlatformModerator || !!canModerateCommunity;
+  const [editOpen, setEditOpen] = useState(false);
+
+  // @mentions found in this post's content, resolved to a profile when one exists
+  // (profiles.username - see resolvePostMentions for why) so they can render as
+  // tappable brand-colored text instead of plain "@handle".
+  const mentionHandles = React.useMemo(() => extractMentionHandles(post?.content ?? ''), [post?.content]);
+  const { data: resolvedMentions } = useQuery({
+    queryKey: ['post-mentions', mentionHandles, post?.institutionCode],
+    queryFn: () => resolvePostMentions(mentionHandles, post?.institutionCode),
+    enabled: mentionHandles.length > 0,
+    staleTime: 5 * 60_000,
+  });
+  const mentionByHandle = React.useMemo(() => {
+    const map = new Map<string, { id: string; fullName: string }>();
+    for (const u of resolvedMentions ?? []) map.set(u.username.toLowerCase(), u);
+    return map;
+  }, [resolvedMentions]);
+
+  function renderContent(content: string) {
+    return content.split(CONTENT_TOKEN_SPLIT).map((part, i) => {
+      if (MENTION_TOKEN.test(part)) {
+        const match = mentionByHandle.get(part.slice(1).toLowerCase());
+        if (!match) return part;
+        return (
+          <AppText
+            key={i}
+            weight="bold"
+            tone="brand"
+            accessibilityLabel={`View ${match.fullName}'s profile`}
+            onPress={() => {
+              haptics.light();
+              setInspectUser({ id: match.id, name: match.fullName, role: 'student' });
+            }}
+          >
+            {part}
+          </AppText>
+        );
+      }
+      if (HASHTAG_TOKEN.test(part)) {
+        return (
+          <AppText
+            key={i}
+            weight="bold"
+            tone="brand"
+            accessibilityLabel={`Search posts tagged ${part}`}
+            onPress={() => {
+              haptics.light();
+              router.push({ pathname: `/${roleGroup}/search` as any, params: { q: part.slice(1) } });
+            }}
+          >
+            {part}
+          </AppText>
+        );
+      }
+      return part;
+    });
+  }
 
  // Discussion reply state
  const [newReply, setNewReply] = useState('');
@@ -360,7 +424,7 @@ export function PostDetailScreen() {
  </AppText>
 
  <AppText variant="body"tone="primary"style={{ lineHeight: 24, marginBottom: spacing.md }}>
- {post.content}
+ {renderContent(post.content)}
  </AppText>
 
  {/* High-Res Media Photo / Video */}
@@ -748,6 +812,22 @@ export function PostDetailScreen() {
  />
  ) : null}
 
+ {/* Author Edit Post Modal */}
+ {editOpen && (
+ <EditPostModal
+ visible={editOpen}
+ post={post}
+ onClose={() => setEditOpen(false)}
+ onSaved={async () => {
+ setEditOpen(false);
+ await queryClient.invalidateQueries({ queryKey: ['feed'] });
+ await queryClient.invalidateQueries({ queryKey: ['post', post.id] });
+ haptics.success();
+ Alert.alert('Post Updated', 'Your changes have been saved.');
+ }}
+ />
+ )}
+
  {/* Lightbox Modal */}
  <ImageViewerModal
  visible={lightboxOpen}
@@ -769,10 +849,20 @@ export function PostDetailScreen() {
  <AppText weight="medium">Copy Discussion Link</AppText>
  </Pressable>
 
- {/* Author Delete Thread Control */}
+ {/* Author Edit / Delete Thread Controls */}
  {isAuthor && !canModerate && (
  <>
  <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: spacing.xs }} />
+ <Pressable
+ onPress={() => {
+ setMenuOpen(false);
+ setEditOpen(true);
+ }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+ >
+ <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
+ <AppText weight="medium">Edit Post</AppText>
+ </Pressable>
  <Pressable
  onPress={() => {
  setMenuOpen(false);
@@ -818,10 +908,15 @@ export function PostDetailScreen() {
  <Pressable
  onPress={async () => {
  setMenuOpen(false);
+ try {
  await updatePost(post.id, { isPinned: !post.isPinned });
  await queryClient.invalidateQueries({ queryKey: ['feed'] });
  await queryClient.invalidateQueries({ queryKey: ['post', post.id] });
  Alert.alert('Moderation Action', post.isPinned ? 'Thread unpinned.' : 'Thread pinned as an official announcement.');
+ } catch (err: any) {
+ haptics.error();
+ Alert.alert('Action failed', getFriendlyErrorMessage(err, 'Could not update this thread. Please try again.'));
+ }
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >

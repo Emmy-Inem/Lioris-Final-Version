@@ -22,7 +22,7 @@ import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listFeedPosts, createPost } from '@/api/posts';
+import { listFeedPosts, createPost, notifyPostMentions } from '@/api/posts';
 import { listMyJoinedCommunityIds, joinCommunity, leaveCommunity, DEFAULT_JOINED_COMMUNITY_IDS, getCommunityStatsMap } from '@/api/forumMemberships';
 import { listCommunities, proposeCommunity, listMyModeratedCommunityIds, ForumCommunityRecord } from '@/api/communities';
 import { getInstitutionByCode } from '@/api/institutions';
@@ -516,7 +516,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  }
  : undefined;
 
- await createPost({
+ const created = await createPost({
  ...rest,
  poll: poll || undefined,
  pollQuestion: pollQuestion || undefined,
@@ -524,6 +524,18 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  });
  queryClient.invalidateQueries({ queryKey: ['feed'] });
  toast.success('Thread published.');
+
+ // Only a live post should ping anyone - a draft or scheduled post isn't
+ // visible to its mentions yet. Best-effort, never awaited on the hot path.
+ if ((created.status ?? 'published') === 'published') {
+ void notifyPostMentions({
+ postId: created.id,
+ content: created.content,
+ campusCode: created.institutionCode,
+ authorId: created.authorId,
+ authorName: created.authorName,
+ });
+ }
  }
 
   const renderHeader = () => (
