@@ -6,6 +6,7 @@ import { assertWithinStorageQuota } from './platformSettings';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
+import { assertUuid } from '../utils/postgrest';
 
 // Content types a resource upload may be stored with.
 const ALLOWED_RESOURCE_MIME_TYPES = new Set([
@@ -413,4 +414,119 @@ export async function toggleResourceUpvote(id: string, increment: boolean): Prom
   } catch (err) {
     console.warn('[Resources] Error toggling upvote:', err);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Ratings & reviews (resource_ratings - see
+// supabase/migrations/20261005020000_resource_ratings.sql). One 1-5 star
+// rating per user per resource, with an optional short review. Unlike likes/
+// downloads above, these throw on a real failure instead of swallowing it:
+// silently dropping a rating would show the submitter a false "saved".
+// ---------------------------------------------------------------------------
+
+export interface ResourceRatingSummary {
+  avgRating: number;
+  ratingCount: number;
+}
+
+export interface ResourceRating {
+  id: string;
+  resourceId: string;
+  raterId: string;
+  raterName?: string;
+  rating: number;
+  review?: string | null;
+  createdAt: string;
+}
+
+async function currentResourceRaterId(): Promise<string | null> {
+  const { data: authData } = await supabase.auth.getUser();
+  if (authData?.user?.id) return authData.user.id;
+  const stored = await getSessionUser();
+  return stored?.id || null;
+}
+
+/**
+ * Upserts the signed-in user's rating (and optional short review) for a
+ * resource. A second call for the same resource updates the existing row
+ * (UNIQUE(resource_id, rater_id) + ON CONFLICT) instead of creating another
+ * one - there is only ever one rating per user per resource.
+ */
+export async function submitResourceRating(resourceId: string, rating: number, review?: string): Promise<void> {
+  assertUuid(resourceId, 'resource id');
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw new Error('Choose a star rating from 1 to 5.');
+  }
+  const raterId = await currentResourceRaterId();
+  if (!raterId) {
+    throw new Error('You need to be signed in to rate this resource.');
+  }
+  const trimmedReview = review?.trim();
+
+  const { error } = await supabase.from('resource_ratings').upsert(
+    {
+      resource_id: resourceId,
+      rater_id: raterId,
+      rating,
+      review: trimmedReview ? trimmedReview.slice(0, 1000) : null,
+    },
+    { onConflict: 'resource_id,rater_id' },
+  );
+  if (error) {
+    console.warn('[Resources] submitResourceRating failed:', error.message);
+    throw new Error('Could not save your rating. Please try again.');
+  }
+}
+
+/** Removes the signed-in user's own rating for a resource, if they left one. */
+export async function deleteMyResourceRating(resourceId: string): Promise<void> {
+  assertUuid(resourceId, 'resource id');
+  const raterId = await currentResourceRaterId();
+  if (!raterId) {
+    throw new Error('You need to be signed in to do that.');
+  }
+  const { error } = await supabase.from('resource_ratings').delete().eq('resource_id', resourceId).eq('rater_id', raterId);
+  if (error) {
+    console.warn('[Resources] deleteMyResourceRating failed:', error.message);
+    throw new Error('Could not remove your rating. Please try again.');
+  }
+}
+
+/** Average rating (rounded to 1 decimal place) and count for a resource. Zero/zero when nobody has rated it yet. */
+export async function getResourceRatingSummary(resourceId: string): Promise<ResourceRatingSummary> {
+  assertUuid(resourceId, 'resource id');
+  const { data, error } = await supabase.rpc('get_resource_rating_summary', { p_resource: resourceId });
+  if (error) {
+    console.warn('[Resources] getResourceRatingSummary failed:', error.message);
+    throw new Error("Could not load this resource's rating. Please try again.");
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    avgRating: row?.avg_rating != null ? Number(row.avg_rating) : 0,
+    ratingCount: row?.rating_count != null ? Number(row.rating_count) : 0,
+  };
+}
+
+/** Most recent ratings/reviews for a resource, newest first. */
+export async function listResourceRatings(resourceId: string, limit = 20): Promise<ResourceRating[]> {
+  assertUuid(resourceId, 'resource id');
+  const { data, error } = await supabase
+    .from('resource_ratings')
+    .select('id, resource_id, rater_id, rating, review, created_at, profiles:rater_id(full_name)')
+    .eq('resource_id', resourceId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.warn('[Resources] listResourceRatings failed:', error.message);
+    throw new Error('Could not load reviews for this resource. Please try again.');
+  }
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    resourceId: row.resource_id,
+    raterId: row.rater_id,
+    raterName: row.profiles?.full_name || undefined,
+    rating: row.rating,
+    review: row.review ?? null,
+    createdAt: row.created_at,
+  }));
 }

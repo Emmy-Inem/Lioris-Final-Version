@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -12,10 +12,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
+import { AppTextField } from './AppTextField';
+import { StarRating } from './common/StarRating';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
 import { Resource } from '@/api/types';
-import { trackResourceDownload } from '@/api/resources';
+import {
+  trackResourceDownload,
+  getResourceRatingSummary,
+  submitResourceRating,
+  ResourceRatingSummary,
+} from '@/api/resources';
 import { useResourceBookmarks } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
@@ -38,6 +46,7 @@ export function ResourceReaderModal({
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { user } = useAuth();
   const { isBookmarked, toggleBookmark } = useResourceBookmarks();
 
   const [downloading, setDownloading] = useState(false);
@@ -45,9 +54,52 @@ export function ResourceReaderModal({
   const [activeTab, setActiveTab] = useState<'preview' | 'notes'>('preview');
   const [reportOpen, setReportOpen] = useState(false);
 
+  const [ratingSummary, setRatingSummary] = useState<ResourceRatingSummary>({ avgRating: 0, ratingCount: 0 });
+  const [myRating, setMyRating] = useState(0);
+  const [myReview, setMyReview] = useState('');
+  const [savingRating, setSavingRating] = useState(false);
+
+  useEffect(() => {
+    if (!resource) return;
+    let cancelled = false;
+    getResourceRatingSummary(resource.id)
+      .then((summary) => {
+        if (!cancelled) setRatingSummary(summary);
+      })
+      .catch(() => {
+        // Read-only display; a failed fetch just leaves the 0/0 placeholder.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resource?.id]);
+
   if (!resource) return null;
 
   const bookmarked = isBookmarked(resource.id);
+
+  async function handleSaveRating() {
+    if (!user) {
+      Alert.alert('Sign in required', 'Sign in to rate this resource.');
+      return;
+    }
+    if (myRating < 1) {
+      toast.error('Choose a star rating first.');
+      return;
+    }
+    haptics.medium();
+    setSavingRating(true);
+    try {
+      await submitResourceRating(resource!.id, myRating, myReview);
+      const next = await getResourceRatingSummary(resource!.id);
+      setRatingSummary(next);
+      toast.success('Thanks for rating this resource.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not save your rating. Please try again.');
+    } finally {
+      setSavingRating(false);
+    }
+  }
 
   async function handleToggleBookmark() {
     haptics.medium();
@@ -387,11 +439,43 @@ export function ResourceReaderModal({
                   <AppText tone="secondary" variant="caption">Total Downloads</AppText>
                   <AppText weight="bold" variant="caption">{resource.downloadsCount + (downloaded ? 1 : 0)}</AppText>
                 </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.divider }}>
+                  <AppText tone="secondary" variant="caption">Rating</AppText>
+                  <StarRating value={ratingSummary.avgRating} size={13} showValue count={ratingSummary.ratingCount} />
+                </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <AppText tone="secondary" variant="caption">File Size</AppText>
                   <AppText weight="semiBold" variant="caption">{resource.fileSize || 'Unknown'}</AppText>
                 </View>
               </View>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: 16,
+                padding: spacing.lg,
+                borderWidth: 1,
+                borderColor: colors.border,
+                gap: spacing.xs,
+              }}
+            >
+              <AppText variant="h3" weight="bold">
+                Rate this resource
+              </AppText>
+              <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 18 }}>
+                Your rating helps other students judge quality at a glance.
+              </AppText>
+              <StarRating value={myRating} onChange={setMyRating} size={26} />
+              <AppTextField
+                label=""
+                value={myReview}
+                onChangeText={(v) => setMyReview(v.slice(0, 1000))}
+                placeholder="What did you think? (optional)"
+                multiline
+                numberOfLines={3}
+              />
+              <AppButton label="Submit rating" variant="primary" size="sm" loading={savingRating} onPress={handleSaveRating} />
             </View>
 
             {resource.description ? (
