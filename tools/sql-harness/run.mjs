@@ -1158,6 +1158,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261003000000_trust_safety_gaps.sql',
   'supabase/migrations/20261003010000_admin_directory_and_analytics_fixes.sql',
   'supabase/migrations/20261003020000_tier3_account_and_notifications.sql',
+  'supabase/migrations/20261005010000_giving_campaign_self_service.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2421,6 +2422,122 @@ console.log('\n== tier 3: notification preferences + account deactivation ==');
       const s3RowUnaffected = await c.q(`SELECT deactivated_at FROM public.profiles WHERE id = $1`, [U.s3]);
       assert(s4Row.rows[0].deactivated_at !== null, 's4 deactivated itself');
       assert(s3RowUnaffected.rows[0].deactivated_at === null, 's3 is untouched by s4 deactivating their own account - there is no target parameter, only auth.uid()');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// giving campaign self-service (20261005010000): the owner's direct
+// confirmed_total/is_closed writes now actually work (the column comment on
+// confirmed_total always said an owner could set it; the trigger silently
+// reverted it); a substantive content edit still resends an approved
+// campaign for review; get_giving_campaign_click_count() is owner-or-admin
+// only. Same imp()/svc() local-helper pattern as the other sections above.
+// ---------------------------------------------------------------------------
+console.log('\n== giving campaign self-service (owner confirmed_total/close, click count) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  /** An approved, open campaign owned by U.alumni. Returns its id. */
+  async function mkApprovedCampaign(c, over = {}) {
+    await svc();
+    const r = await c.q(
+      `INSERT INTO public.giving_campaigns (creator_id, title, description, giving_url, review_status, confirmed_total)
+       VALUES ($1, $2, 'desc', 'https://give.example.com/lioris', 'approved', $3) RETURNING id`,
+      [U.alumni, over.title ?? 'Scholarship Fund', over.confirmedTotal ?? 1000],
+    );
+    return r.rows[0].id;
+  }
+
+  await check('giving campaigns: the owner can now update confirmed_total on their own approved campaign directly, and it does not revert to pending', async () => {
+    await as('postgres', async (c) => {
+      const campaignId = await mkApprovedCampaign(c);
+
+      await imp(U.alumni);
+      await c.q(`UPDATE public.giving_campaigns SET confirmed_total = 7500 WHERE id = $1`, [campaignId]);
+      const row = (await c.q(`SELECT confirmed_total, review_status FROM public.giving_campaigns WHERE id = $1`, [campaignId])).rows[0];
+      eq({ confirmed_total: Number(row.confirmed_total), review_status: row.review_status }, { confirmed_total: 7500, review_status: 'approved' },
+        "the owner's confirmed_total write sticks and does not force the campaign back to pending");
+
+      denied(
+        await c.t(`UPDATE public.giving_campaigns SET confirmed_total = -1 WHERE id = $1`, [campaignId]),
+        /invalid_confirmed_total/,
+        'a negative confirmed_total is still rejected',
+      );
+      denied(
+        await c.t(`UPDATE public.giving_campaigns SET confirmed_total = NULL WHERE id = $1`, [campaignId]),
+        /invalid_confirmed_total|not-null/i,
+        'a NULL confirmed_total is still rejected',
+      );
+    });
+  });
+
+  await check('giving campaigns: the owner can close their own approved campaign without it reverting to pending', async () => {
+    await as('postgres', async (c) => {
+      const campaignId = await mkApprovedCampaign(c);
+
+      await imp(U.alumni);
+      await c.q(`UPDATE public.giving_campaigns SET is_closed = true WHERE id = $1`, [campaignId]);
+      const row = (await c.q(`SELECT is_closed, review_status FROM public.giving_campaigns WHERE id = $1`, [campaignId])).rows[0];
+      eq(row, { is_closed: true, review_status: 'approved' }, 'closing the campaign does not resend it for review');
+    });
+  });
+
+  await check('giving campaigns: editing a substantive field (title) on an approved campaign still reverts it to pending', async () => {
+    await as('postgres', async (c) => {
+      const campaignId = await mkApprovedCampaign(c);
+
+      await imp(U.alumni);
+      await c.q(`UPDATE public.giving_campaigns SET title = 'Scholarship Fund 2027' WHERE id = $1`, [campaignId]);
+      const row = (await c.q(`SELECT title, review_status FROM public.giving_campaigns WHERE id = $1`, [campaignId])).rows[0];
+      eq(row, { title: 'Scholarship Fund 2027', review_status: 'pending' }, "editing the campaign's own pitch still sends it back for review");
+    });
+  });
+
+  await check('giving campaigns: RLS still blocks a non-owner, non-admin from updating someone else\'s confirmed_total', async () => {
+    await as('postgres', async (c) => {
+      const campaignId = await mkApprovedCampaign(c);
+
+      await imp(U.s1);
+      const r = await c.t(`UPDATE public.giving_campaigns SET confirmed_total = 9999 WHERE id = $1`, [campaignId]);
+      assert(r.ok, 'the UPDATE statement itself is not refused (RLS silently matches zero rows)');
+      eq(r.n, 0, 'RLS hides the row from an unrelated user, so the update affects nothing');
+
+      await svc();
+      const row = (await c.q(`SELECT confirmed_total FROM public.giving_campaigns WHERE id = $1`, [campaignId])).rows[0];
+      eq(Number(row.confirmed_total), 1000, "someone else's campaign total is untouched");
+    });
+  });
+
+  await check('get_giving_campaign_click_count: returns the real count to the owner and to an admin, denied to an unrelated user', async () => {
+    await as('postgres', async (c) => {
+      const campaignId = await mkApprovedCampaign(c);
+
+      // Insert clicks directly (rather than through open_giving_page(), which
+      // also requires donations_enabled()) so this check is independent of
+      // that unrelated feature flag.
+      await svc();
+      await c.q(`INSERT INTO public.giving_campaign_clicks (campaign_id, user_id) VALUES ($1, $2), ($1, $3), ($1, $2)`, [campaignId, U.s1, U.s2]);
+
+      await imp(U.alumni);
+      const ownerCount = (await c.q(`SELECT public.get_giving_campaign_click_count($1) n`, [campaignId])).rows[0].n;
+      eq(ownerCount, 3, 'the owner sees the real click count');
+
+      await imp(U.adminA);
+      const adminCount = (await c.q(`SELECT public.get_giving_campaign_click_count($1) n`, [campaignId])).rows[0].n;
+      eq(adminCount, 3, 'an admin sees the real click count too');
+
+      await imp(U.s3);
+      denied(
+        await c.t(`SELECT public.get_giving_campaign_click_count($1)`, [campaignId]),
+        /not_allowed/,
+        'an unrelated, non-owner, non-admin user cannot see the click count',
+      );
     });
   });
 }
