@@ -1163,6 +1163,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261005020000_resource_ratings.sql',
   'supabase/migrations/20261005030000_alumni_profile_extras.sql',
   'supabase/migrations/20261005040000_admin_user_diagnostics.sql',
+  'supabase/migrations/20261006010000_messaging_calling_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -3000,6 +3001,77 @@ console.log('\n== admin user diagnostics ==');
       await imp(U.staffU);
       const data = (await c.q(`SELECT public.admin_get_user_diagnostics($1) AS data`, [U.s1])).rows[0].data;
       eq(data.user_id, U.s1, 'same-campus staff can diagnose the user');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// messaging & calling fixes (20261006010000_messaging_calling_fixes.sql):
+// chat_message_deletes ("delete for me") RLS.
+// ---------------------------------------------------------------------------
+console.log('\n== messaging & calling fixes: chat_message_deletes ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  await check('chat_message_deletes: a channel member can delete a message for themselves; a non-member cannot; it never touches the other participant\'s copy (owner-only RLS)', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [ch] = (await c.q(`INSERT INTO public.chat_channels (name, created_by, is_direct_message) VALUES ('dm', $1, true) RETURNING id`, [U.s1])).rows;
+      // handle_new_chat_channel already auto-enrolled the creator (s1); only s2 needs adding.
+      await c.q(`INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [ch.id, U.s2]);
+      const [msg] = (await c.q(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'hi') RETURNING id`, [ch.id, U.s1])).rows;
+
+      await imp(U.s3); // not a member of this channel
+      denied(
+        await c.t(`INSERT INTO public.chat_message_deletes (message_id, user_id) VALUES ($1, $2)`, [msg.id, U.s3]),
+        /row-level|policy/i,
+        'a non-member cannot hide a message they cannot even see',
+      );
+
+      await imp(U.s1);
+      denied(
+        await c.t(`INSERT INTO public.chat_message_deletes (message_id, user_id) VALUES ($1, $2)`, [msg.id, U.s2]),
+        /row-level|policy/i,
+        'a user cannot delete-for-me on someone else\'s behalf',
+      );
+      await c.q(`INSERT INTO public.chat_message_deletes (message_id, user_id) VALUES ($1, $2)`, [msg.id, U.s1]);
+
+      await imp(U.s2);
+      const peekOther = await c.q(`SELECT * FROM public.chat_message_deletes WHERE message_id = $1 AND user_id = $2`, [msg.id, U.s1]);
+      eq(peekOther.rows.length, 0, 's2 cannot see that s1 deleted the message for themselves (RLS hides the row)');
+      const mine = await c.q(`SELECT count(*)::int n FROM public.chat_message_deletes WHERE message_id = $1 AND user_id = $2`, [msg.id, U.s2]);
+      eq(mine.rows[0].n, 0, 's2 never deleted it - their own copy is untouched');
+
+      // RLS "user_id = auth.uid()" makes s1's row invisible to this DELETE - it
+      // succeeds as a no-op (0 rows), it does not throw.
+      const foreignDelete = await c.t(`DELETE FROM public.chat_message_deletes WHERE message_id = $1 AND user_id = $2`, [msg.id, U.s1]);
+      assert(foreignDelete.ok && foreignDelete.n === 0, 'undoing another user\'s delete-for-me is a silent no-op, not a thrown error');
+
+      await imp(U.s1);
+      await c.q(`DELETE FROM public.chat_message_deletes WHERE message_id = $1 AND user_id = $2`, [msg.id, U.s1]);
+      const afterUndo = await c.q(`SELECT count(*)::int n FROM public.chat_message_deletes WHERE message_id = $1 AND user_id = $2`, [msg.id, U.s1]);
+      eq(afterUndo.rows[0].n, 0, 's1 can undo their own delete-for-me');
+    });
+  });
+
+  await check('chat_message_deletes: ON DELETE CASCADE removes the delete-for-me row when the underlying message is removed', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [ch] = (await c.q(`INSERT INTO public.chat_channels (name, created_by, is_direct_message) VALUES ('dm2', $1, true) RETURNING id`, [U.s1])).rows;
+      const [msg] = (await c.q(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'bye') RETURNING id`, [ch.id, U.s1])).rows;
+
+      await imp(U.s1);
+      await c.q(`INSERT INTO public.chat_message_deletes (message_id, user_id) VALUES ($1, $2)`, [msg.id, U.s1]);
+
+      await svc();
+      await c.q(`DELETE FROM public.chat_messages WHERE id = $1`, [msg.id]);
+      const left = await c.q(`SELECT count(*)::int n FROM public.chat_message_deletes WHERE message_id = $1`, [msg.id]);
+      eq(left.rows[0].n, 0, 'the delete-for-me row was cascaded away with the message');
     });
   });
 }

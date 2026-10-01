@@ -1,15 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import { useRealtimeChannel, RealtimeEvent } from '@/realtime/useRealtimeChannel';
 import { haptics } from '@/utils/haptics';
 import { WebRTCCallSession } from '@/api/webrtc';
+import { CALL_DECLINED_MARKER } from '@/api/calling';
 
 interface CallModalProps {
   visible: boolean;
@@ -17,6 +21,8 @@ interface CallModalProps {
   callType: 'voice' | 'video';
   roomName: string;
   callUrl: string;
+  /** Lets this modal notice a `[CALL_DECLINED]` courtesy message and hang up on its own. Optional - omit where there's no conversation to watch. */
+  conversationId?: string;
   partnerName: string;
   partnerAvatar?: string | null;
   partnerDepartment?: string | null;
@@ -27,7 +33,8 @@ export function CallModal({
   onClose,
   callType,
   roomName,
-  callUrl,
+  callUrl: _callUrl,
+  conversationId,
   partnerName,
   partnerAvatar,
   partnerDepartment,
@@ -36,6 +43,7 @@ export function CallModal({
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [seconds, setSeconds] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -148,11 +156,13 @@ export function CallModal({
 
   const handleCopyLink = async () => {
     haptics.medium();
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(callUrl);
-      } catch {}
-    }
+    // This call runs on native WebRTC over a private Supabase Realtime
+    // channel, not a joinable public URL - there is no safe link to hand out
+    // (see getCallUrl in src/api/calling.ts). Copy honest instructions instead.
+    const message = `${partnerName}, open your Lioris app and go to our conversation to join this ${callType === 'voice' ? 'voice' : 'video'} call.`;
+    try {
+      await Clipboard.setStringAsync(message);
+    } catch {}
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -165,6 +175,36 @@ export function CallModal({
     }
     onClose();
   };
+
+  // Lets the caller's own modal notice the callee declining (IncomingCallListener
+  // sends a `[CALL_DECLINED]` courtesy message) and hang up on its own instead of
+  // sitting on "Connecting..." forever. Stable callback (refs for everything that
+  // changes) so it doesn't tear down and re-open the shared realtime subscription
+  // every time the `seconds` timer ticks.
+  const conversationIdRef = useRef(conversationId);
+  conversationIdRef.current = conversationId;
+  const userIdRef = useRef(user?.id);
+  userIdRef.current = user?.id;
+  const partnerNameRef = useRef(partnerName);
+  partnerNameRef.current = partnerName;
+  const handleHangupRef = useRef(handleHangup);
+  handleHangupRef.current = handleHangup;
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
+  const handleRealtimeEvent = useCallback((event: RealtimeEvent) => {
+    if (event.type !== 'message.created') return;
+    const row: any = event.message;
+    const myId = userIdRef.current;
+    const convId = conversationIdRef.current;
+    if (!convId || !row?.content || row.channel_id !== convId) return;
+    if (myId && row.sender_id === myId) return;
+    if (!String(row.content).includes(CALL_DECLINED_MARKER)) return;
+    toastRef.current.info(`${partnerNameRef.current} declined the call.`);
+    handleHangupRef.current();
+  }, []);
+
+  useRealtimeChannel(handleRealtimeEvent);
 
   if (!visible) return null;
 
