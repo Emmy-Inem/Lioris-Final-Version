@@ -10,7 +10,7 @@ import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
-import { listEvents, createEvent, updateEvent, revokeEventApproval, approveEvent, purgeEvent, listEventAttendees } from '@/api/events';
+import { listEvents, createEvent, updateEvent, revokeEventApproval, approveEvent, purgeEvent, cancelEvent, listEventAttendees } from '@/api/events';
 import { CampusEvent, EventCategory } from '@/api/types';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
@@ -385,6 +385,40 @@ export function EventsModerationTab() {
  );
  }
 
+ function handleCancelConfirm(event: CampusEvent) {
+ haptics.error();
+ const doCancel = async (reason?: string) => {
+ setActingId(event.id);
+ try {
+ await cancelEvent(event.id, reason);
+ await queryClient.invalidateQueries({ queryKey: ['events'] });
+ await refetch();
+ Alert.alert('Event Cancelled', 'Everyone registered has been notified. Registrations were kept, not deleted.');
+ } catch (err: any) {
+ Alert.alert('Could not cancel', err?.message ?? 'Please try again.');
+ } finally {
+ setActingId(null);
+ }
+ };
+ const body = `Everyone registered for"${event.title}"(${event.rsvpCount}) will be notified that it was cancelled. Registrations are kept, not deleted.`;
+ if (Alert.prompt) {
+ Alert.prompt(
+ 'Cancel This Event?',
+ `${body}\n\nOptional reason (shown to attendees):`,
+ [
+ { text: 'Keep Event', style: 'cancel' },
+ { text: 'Cancel Event', style: 'destructive', onPress: (reason?: string) => doCancel(reason) },
+ ],
+ 'plain-text',
+ );
+ } else {
+ Alert.alert('Cancel This Event?', body, [
+ { text: 'Keep Event', style: 'cancel' },
+ { text: 'Cancel Event', style: 'destructive', onPress: () => doCancel() },
+ ]);
+ }
+ }
+
  function handlePurgeConfirm(id: string, title: string) {
  haptics.error();
  Alert.alert(
@@ -601,8 +635,8 @@ export function EventsModerationTab() {
  </AppText>
  </View>
  <Badge
- label={isPending ? 'Pending Review' : isApproved ? 'Live & Approved' : 'Revoked'}
- tone={isPending ? 'warning' : isApproved ? 'success' : 'critical'}
+ label={event.isCancelled ? 'Cancelled' : isPending ? 'Pending Review' : isApproved ? 'Live & Approved' : 'Revoked'}
+ tone={isPending ? 'warning' : isApproved && !event.isCancelled ? 'success' : 'critical'}
  />
  </View>
 
@@ -686,7 +720,17 @@ export function EventsModerationTab() {
  onPress={() => handleToggleApproval(event)}
  />
  </View>
- <Pressable accessibilityRole="button" accessibilityLabel="Delete"
+ {isApproved && !event.isCancelled ? (
+ <View style={{ flex: 1 }}>
+ <AppButton
+ label="Cancel"
+ variant="secondary"
+ loading={actingId === event.id}
+ onPress={() => handleCancelConfirm(event)}
+ />
+ </View>
+ ) : null}
+ <Pressable accessibilityRole="button" accessibilityLabel="Permanently delete"
  onPress={() => handlePurgeConfirm(event.id, event.title)}
  hitSlop={8}
  style={{

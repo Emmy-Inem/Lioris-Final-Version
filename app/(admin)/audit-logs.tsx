@@ -57,6 +57,7 @@ const ACTION_TONE: Partial<Record<AuditLogAction, 'success' | 'critical' | 'warn
   report_dismissed: 'neutral',
   event_approved: 'success',
   event_approval_revoked: 'warning',
+  event_cancelled: 'warning',
   event_purged: 'critical',
   verification_approved: 'success',
   verification_rejected: 'neutral',
