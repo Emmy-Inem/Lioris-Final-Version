@@ -133,10 +133,14 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  text: 'Delete',
  style: 'destructive',
  onPress: async () => {
+ try {
  await deleteResource(resource.id);
  await queryClient.invalidateQueries({ queryKey: ['resources'] });
  await refetch();
  Alert.alert('Deleted', 'Resource removed from library.');
+ } catch (err: any) {
+ Alert.alert('Error', err?.message ?? 'Could not delete this resource.');
+ }
  },
  },
  ]

@@ -309,8 +309,8 @@ export function AICopilotModal({
   /**
    * `initialPrompt` used to be read only by `useState(initialPrompt || '')`, which runs once when
    * the modal first mounts. Because the modal stays mounted and merely toggles `visible`, every
-   * later hand-off (e.g. "Analyze AI" in the research modal) was silently dropped and the copilot
-   * opened empty. Seed it on each open instead, and send it straight away.
+   * later hand-off (e.g. "Summarize with AI" on a paper in ResearchPapersModal) was silently
+   * dropped and the copilot opened empty. Seed it on each open instead, and send it straight away.
    */
   useEffect(() => {
     if (!visible) {

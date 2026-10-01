@@ -1167,6 +1167,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261006020000_forum_fixes.sql',
   'supabase/migrations/20261006030000_events_fixes.sql',
   'supabase/migrations/20261006040000_study_pod_file_sharing.sql',
+  'supabase/migrations/20261007000000_resources_and_copilot_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -3405,6 +3406,154 @@ console.log('\n== study pod file sharing ==');
         [pod, U.s1, 'x'.repeat(501)],
       );
       denied(r, /study_group_posts_file_path_chk|check constraint/i, 'direct insert past the 500-char cap');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// resource download / upvote counters (20261007000000_resources_and_copilot_fixes.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== resource download / upvote counters ==');
+{
+  // Everything here runs inside one `as('postgres', ...)` sandbox (rolled back
+  // at the very end, like the paid-events and study-pod-file-sharing blocks
+  // above) and switches callers with imp(uid) mid-transaction, so writes made
+  // "as" one user are still visible to the next assertion "as" another user -
+  // a top-level as(uid, ...) per user would roll back its own writes before
+  // the next as() call ever saw them.
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const impAnon = async () => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE anon; SELECT set_config('request.jwt.claims', '{"role":"anon"}', true)`);
+  };
+  async function mkResource(c, uploader, campus, approved) {
+    await db.exec('RESET ROLE'); // superuser insert, bypasses the moderation trigger (auth.uid() IS NULL -> RETURN NEW)
+    const r = await c.q(
+      `INSERT INTO public.resources (uploader_id, campus_code, course_code, course_title, title, file_url, is_approved)
+       VALUES ($1, $2, 'CSC 301', 'Operating Systems', 'Week 3 notes', 'https://example.com/notes.pdf', $3)
+       RETURNING id`,
+      [uploader, campus, approved],
+    );
+    return r.rows[0].id;
+  }
+
+  await check('increment_resource_download: a signed-in user with access increments the real counter (not a client-trusted no-op)', async () => {
+    await as('postgres', async (c) => {
+      const resId = await mkResource(c, U.s1, 'UNILAG', true);
+      await imp(U.s2);
+      const r = await c.q(`SELECT public.increment_resource_download($1) AS n`, [resId]);
+      eq(r.rows[0].n, 1, 'RPC return value');
+      await db.exec('RESET ROLE');
+      const row = await c.q(`SELECT downloads_count FROM public.resources WHERE id = $1`, [resId]);
+      eq(row.rows[0].downloads_count, 1, 'downloads_count actually persisted (the old raw .update() silently matched 0 rows for a student)');
+    });
+  });
+
+  await check('increment_resource_download: anon is refused', async () => {
+    await as('postgres', async (c) => {
+      const resId = await mkResource(c, U.s1, 'UNILAG', true);
+      await impAnon();
+      denied(await c.t(`SELECT public.increment_resource_download($1)`, [resId]), /permission denied/i);
+    });
+  });
+
+  await check('increment_resource_download: a student on another campus cannot bump an approved-but-not-theirs resource (access check runs before the write)', async () => {
+    await as('postgres', async (c) => {
+      const resId = await mkResource(c, U.s1, 'UNILAG', true);
+      await imp(U.s3); // s3 is on UI, resource is UNILAG
+      denied(await c.t(`SELECT public.increment_resource_download($1)`, [resId]), /do not have access/i);
+      await db.exec('RESET ROLE');
+      eq((await c.q(`SELECT downloads_count FROM public.resources WHERE id = $1`, [resId])).rows[0].downloads_count, 0, 'no partial increment happened');
+    });
+  });
+
+  await check('increment_resource_download: a GLOBAL resource is downloadable cross-campus; the uploader can download their own pending (not yet approved) upload; another student cannot', async () => {
+    await as('postgres', async (c) => {
+      const globalRes = await mkResource(c, U.s1, 'GLOBAL', true);
+      await imp(U.s3);
+      const r1 = await c.t(`SELECT public.increment_resource_download($1)`, [globalRes]);
+      assert(r1.ok, 'GLOBAL resource should be downloadable by any campus: ' + r1.err?.message);
+
+      const pendingRes = await mkResource(c, U.s1, 'UNILAG', false);
+      await imp(U.s1);
+      const r2 = await c.t(`SELECT public.increment_resource_download($1)`, [pendingRes]);
+      assert(r2.ok, 'uploader should be able to download their own pending resource: ' + r2.err?.message);
+
+      await imp(U.s2);
+      denied(await c.t(`SELECT public.increment_resource_download($1)`, [pendingRes]), /do not have access/i, 'another student cannot download a pending resource');
+    });
+  });
+
+  await check('toggle_resource_upvote: first call upvotes (insert + increment), second call from the same user un-upvotes (delete + decrement) - a real toggle, not an unbounded increment', async () => {
+    await as('postgres', async (c) => {
+      const resId = await mkResource(c, U.s1, 'UNILAG', true);
+      await imp(U.s2);
+      const first = (await c.q(`SELECT * FROM public.toggle_resource_upvote($1)`, [resId])).rows[0];
+      eq(first, { upvoted: true, upvotes_count: 1 }, 'first toggle upvotes');
+
+      const second = (await c.q(`SELECT * FROM public.toggle_resource_upvote($1)`, [resId])).rows[0];
+      eq(second, { upvoted: false, upvotes_count: 0 }, 'second toggle (same user) removes the upvote instead of going to -1 or staying at 1');
+
+      const third = (await c.q(`SELECT * FROM public.toggle_resource_upvote($1)`, [resId])).rows[0];
+      eq(third, { upvoted: true, upvotes_count: 1 }, 'third toggle upvotes again');
+
+      await db.exec('RESET ROLE');
+      eq((await c.q(`SELECT upvotes_count FROM public.resources WHERE id = $1`, [resId])).rows[0].upvotes_count, 1, 'counter matches the junction table');
+      eq((await c.q(`SELECT count(*)::int n FROM public.resource_upvotes WHERE resource_id = $1`, [resId])).rows[0].n, 1, 'exactly one row for one user');
+    });
+  });
+
+  await check('resource_upvotes: repeatedly re-sending increment=true (the old client bug) cannot inflate the count past 1 per user - the RPC ignores client intent and always toggles against real state', async () => {
+    await as('postgres', async (c) => {
+      const resId = await mkResource(c, U.s1, 'UNILAG', true);
+      await imp(U.s2);
+      for (let i = 0; i < 5; i++) {
+        await c.q(`SELECT public.toggle_resource_upvote($1)`, [resId]);
+      }
+      // 5 calls from the same user: upvoted, un-upvoted, upvoted, un-upvoted, upvoted -> ends upvoted, count 1.
+      await db.exec('RESET ROLE');
+      eq((await c.q(`SELECT upvotes_count FROM public.resources WHERE id = $1`, [resId])).rows[0].upvotes_count, 1);
+    });
+  });
+
+  await check('toggle_resource_upvote: two different users upvoting the same resource both count (count reaches 2, two distinct junction rows)', async () => {
+    await as('postgres', async (c) => {
+      const resId = await mkResource(c, U.s1, 'UNILAG', true);
+      await imp(U.s2);
+      await c.q(`SELECT public.toggle_resource_upvote($1)`, [resId]);
+      await imp(U.s4);
+      await c.q(`SELECT public.toggle_resource_upvote($1)`, [resId]);
+
+      await db.exec('RESET ROLE');
+      eq((await c.q(`SELECT upvotes_count FROM public.resources WHERE id = $1`, [resId])).rows[0].upvotes_count, 2);
+      eq((await c.q(`SELECT count(*)::int n FROM public.resource_upvotes WHERE resource_id = $1`, [resId])).rows[0].n, 2);
+    });
+  });
+
+  await check('resource_upvotes RLS: a user can only read their own upvote rows, never another user\'s, and cannot write one directly (only through the RPC)', async () => {
+    await as('postgres', async (c) => {
+      const resId = await mkResource(c, U.s1, 'UNILAG', true);
+      await imp(U.s2);
+      await c.q(`SELECT public.toggle_resource_upvote($1)`, [resId]);
+      eq((await c.q(`SELECT count(*)::int n FROM public.resource_upvotes WHERE resource_id = $1`, [resId])).rows[0].n, 1, 'owner sees their own row');
+
+      await imp(U.s4);
+      eq((await c.q(`SELECT count(*)::int n FROM public.resource_upvotes WHERE resource_id = $1`, [resId])).rows[0].n, 0, 'another user sees none of it');
+
+      await imp(U.s2);
+      denied(await c.t(`INSERT INTO public.resource_upvotes (resource_id, user_id) VALUES ($1, $2)`, [resId, U.s2]), /permission denied|row-level/i, 'no direct INSERT policy - writes only through the RPC');
+      denied(await c.t(`DELETE FROM public.resource_upvotes WHERE resource_id = $1`, [resId]), /permission denied|row-level/i, 'no direct DELETE policy either');
+    });
+  });
+
+  await check('toggle_resource_upvote: anon is refused and a nonexistent resource is refused', async () => {
+    await as('postgres', async (c) => {
+      const resId = await mkResource(c, U.s1, 'UNILAG', true);
+      await impAnon();
+      denied(await c.t(`SELECT public.toggle_resource_upvote($1)`, [resId]), /permission denied/i);
+      await imp(U.s1);
+      denied(await c.t(`SELECT public.toggle_resource_upvote($1)`, [id(9999)]), /no longer exists/i);
     });
   });
 }

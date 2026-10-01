@@ -6,6 +6,7 @@ import { ScreenContainer } from'@/components/ScreenContainer';
 import { AppHeader } from'@/components/AppHeader';
 import { AppText } from'@/components/AppText';
 import { SolidCard } from'@/components/SolidCard';
+import { AppButton } from '@/components/AppButton';
 import { ResourceCard } from '@/components/ResourceCard';
 import { ResourceCardSkeletonGrid } from '@/components/Skeleton';
 import { ErrorStateView } from '@/components/ErrorStateView';
@@ -31,6 +32,7 @@ import { AcademicLibraryModal } from '@/components/AcademicLibraryModal';
 import { ResearchPapersModal } from '@/components/ResearchPapersModal';
 import { ResourceReaderModal } from '@/components/ResourceReaderModal';
 import { ReportResourceModal } from '@/components/ReportResourceModal';
+import { AICopilotModal } from '@/components/AICopilotModal';
 import { useResourceBookmarks } from '@/utils/resourceBookmarks';
 import { Resource } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -70,6 +72,7 @@ export default function ResourcesScreen() {
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
   const [libraryModalOpen, setLibraryModalOpen] = useState(false);
   const [researchModalOpen, setResearchModalOpen] = useState(false);
+  const [copilotModalOpen, setCopilotModalOpen] = useState(false);
   const [readingResource, setReadingResource] = useState<Resource | null>(null);
   const [reportingResource, setReportingResource] = useState<Resource | null>(null);
   const { isFeatureEnabled } = useFeatureFlags();
@@ -116,8 +119,22 @@ export default function ResourcesScreen() {
     queryFn: () => listPortalLinks(activePortalCampus),
   });
 
-  const { data: resources, isLoading, isError, error, refetch, isRefetching } = useQuery({
-    queryKey: ['resources', debouncedQuery, filters, effectiveCampus],
+  // Pagination: listResources used to hardcode .limit(100) with no way to see
+  // anything older. page/pageSize follow the same accumulate-pages-then-"Load
+  // More" pattern as the audit log screen (app/(admin)/audit-logs.tsx).
+  const RESOURCES_PAGE_SIZE = 20;
+  const [resourcesPage, setResourcesPage] = useState(0);
+  const [accumulatedResources, setAccumulatedResources] = useState<Resource[]>([]);
+  const resourcesFilterKey = `${debouncedQuery}|${filters.resourceType}|${filters.department}|${filters.studyLevel}|${effectiveCampus}`;
+
+  // A new search/filter/campus starts a fresh result set at page 0 - it isn't
+  // "more of" whatever was already loaded for the previous filters.
+  useEffect(() => {
+    setResourcesPage(0);
+  }, [resourcesFilterKey]);
+
+  const { data: resourcesPageData, isLoading, isError, error, refetch, isRefetching, isFetching } = useQuery({
+    queryKey: ['resources', debouncedQuery, filters, effectiveCampus, resourcesPage],
     queryFn: () =>
       listResources({
         q: debouncedQuery || undefined,
@@ -128,10 +145,33 @@ export default function ResourcesScreen() {
         department: filters.department === 'All Depts' ? undefined : filters.department,
         academicLevel: filters.studyLevel === 'All Levels' ? undefined : filters.studyLevel,
         campusCode: effectiveCampus,
+        page: resourcesPage,
+        pageSize: RESOURCES_PAGE_SIZE,
       }),
   });
 
-  const displayedResources = (resources ?? []).filter((r) => {
+  useEffect(() => {
+    if (!resourcesPageData) return;
+    setAccumulatedResources((prev) => (resourcesPage === 0 ? resourcesPageData : [...prev, ...resourcesPageData]));
+  }, [resourcesPageData, resourcesPage]);
+
+  // A full page came back, so there may be more past it - an exact total
+  // would need a count() round trip the way audit-logs.tsx does; this
+  // heuristic is enough to show/hide "Load More" without one.
+  const hasMoreResources = (resourcesPageData?.length ?? 0) === RESOURCES_PAGE_SIZE;
+
+  function handleLoadMoreResources() {
+    if (isFetching || !hasMoreResources) return;
+    setResourcesPage((p) => p + 1);
+  }
+
+  function handleRefreshResources() {
+    setResourcesPage(0);
+    setAccumulatedResources([]);
+    refetch();
+  }
+
+  const displayedResources = accumulatedResources.filter((r) => {
     if (filters.resourceType === 'Bookmarked') {
       return bookmarkedIds.includes(r.id);
     }
@@ -285,6 +325,39 @@ export default function ResourcesScreen() {
       </View>
 
       {/* AI Campus Study Copilot (Feature Flagged) */}
+      {isFeatureEnabled('ai_study_copilot') && (
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            setCopilotModalOpen(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Open the AI Study Copilot"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: colors.pastelPrimaryBg,
+            borderWidth: 1,
+            borderColor: `${colors.brandPrimary}40`,
+            borderRadius: radius.lg,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginBottom: spacing.md,
+          }}
+        >
+          <Ionicons name="sparkles" size={18} color={colors.brandPrimary} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppText weight="bold" variant="bodySmall">
+              AI Study Copilot
+            </AppText>
+            <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10.5 }}>
+              Explain concepts, solve past questions, build flashcards
+            </AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+        </Pressable>
+      )}
 
       {/* Section 1: Compact University Portal Shortcuts */}
       <View style={{ marginBottom: spacing.md }}>
@@ -688,6 +761,28 @@ export default function ResourcesScreen() {
                 </AppText>
               </Pressable>
 
+              {isFeatureEnabled('ai_study_copilot') && (
+                <Pressable
+                  onPress={() => setCopilotModalOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open the AI Study Copilot"
+                  style={{
+                    backgroundColor: colors.brandPrimary,
+                    borderRadius: radius.pill,
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 7,
+                  }}
+                >
+                  <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+                  <AppText variant="bodySmall" weight="bold" tone="inverse">
+                    AI Study Copilot
+                  </AppText>
+                </Pressable>
+              )}
+
               <Pressable
                 onPress={() => setUploadModalOpen(true)}
                 accessibilityRole="button"
@@ -1008,7 +1103,7 @@ export default function ResourcesScreen() {
           </View>
 
           {/* Multi-Column Responsive Grid with Non-Stretching Cards & Skeleton / Error States */}
-          {isLoading ? (
+          {isLoading && resourcesPage === 0 ? (
             <ResourceCardSkeletonGrid count={6} />
           ) : isError ? (
             <ErrorStateView
@@ -1047,6 +1142,18 @@ export default function ResourcesScreen() {
               ))}
             </View>
           )}
+
+          {!isLoading && !isError && hasMoreResources && displayedResources.length > 0 && (
+            <View style={{ alignItems: 'center', marginTop: spacing.md }}>
+              <AppButton
+                label="Load More"
+                variant="secondary"
+                size="sm"
+                loading={isFetching && resourcesPage > 0}
+                onPress={handleLoadMoreResources}
+              />
+            </View>
+          )}
         </ScrollView>
       ) : (
         /* Mobile Single Column FlatList */
@@ -1074,10 +1181,10 @@ export default function ResourcesScreen() {
             />
           )}
           showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isRefetching}
+          onRefresh={handleRefreshResources}
+          refreshing={isRefetching && resourcesPage === 0}
           ListEmptyComponent={
-            isLoading ? (
+            isLoading && resourcesPage === 0 ? (
               <ResourceCardSkeletonGrid count={4} />
             ) : isError ? (
               <ErrorStateView
@@ -1099,6 +1206,19 @@ export default function ResourcesScreen() {
               />
             )
           }
+          ListFooterComponent={
+            !isLoading && !isError && hasMoreResources && displayedResources.length > 0 ? (
+              <View style={{ paddingTop: spacing.sm, paddingBottom: spacing.md, alignItems: 'center' }}>
+                <AppButton
+                  label="Load More"
+                  variant="secondary"
+                  size="sm"
+                  loading={isFetching && resourcesPage > 0}
+                  onPress={handleLoadMoreResources}
+                />
+              </View>
+            ) : null
+          }
         />
       )}
 
@@ -1109,6 +1229,10 @@ export default function ResourcesScreen() {
       <ResearchPapersModal
         visible={researchModalOpen}
         onClose={() => setResearchModalOpen(false)}
+      />
+      <AICopilotModal
+        visible={copilotModalOpen}
+        onClose={() => setCopilotModalOpen(false)}
       />
       <ResourceReaderModal
         visible={!!readingResource}

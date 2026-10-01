@@ -35,6 +35,10 @@ export interface ResourcesQuery {
   approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
   campusCode?: string;
   academicLevel?: string;
+  /** 0-based page of results past the first. Defaults to 0 (existing behaviour, unchanged for callers that don't pass it). */
+  page?: number;
+  /** Rows per page. Defaults to 100 (the previous hardcoded `.limit(100)`). */
+  pageSize?: number;
 }
 
 function filterResources(pool: Resource[], query: ResourcesQuery): Resource[] {
@@ -104,11 +108,15 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
 
     const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
+    const pageSize = query.pageSize ?? 100;
+    const page = Math.max(0, query.page ?? 0);
+    const offset = page * pageSize;
+
     const { data, error } = await supabase
       .from('resources')
       .select('*, profiles:uploader_id(full_name, role, avatar_url, department)')
       .order('created_at', { ascending: false })
-      .limit(100);
+      .range(offset, offset + pageSize - 1);
     if (error) throw error;
 
     const dbResources: Resource[] = (data ?? [])
@@ -148,7 +156,9 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
       }));
 
     // Merge unique - local session creations not yet reflected by the query above.
-    const pool = [...locallyCreatedResources];
+    // Only on the first page: these are always the newest resources, so they would
+    // otherwise be re-shown (duplicated) at the top of every later page too.
+    const pool = page === 0 ? [...locallyCreatedResources] : [];
     const merged = [...dbResources];
     for (const r of pool) {
       if (!merged.some((m) => m.id === r.id || (m.title.toLowerCase() === r.title.toLowerCase() && m.courseCode.toLowerCase() === r.courseCode.toLowerCase())) && !isUserBlocked(r.authorId) && !isUserMuted(r.authorId)) {
@@ -259,19 +269,25 @@ export async function createResource(
     likesCount: 0,
     downloadsCount: 0,
     createdAt: new Date().toISOString(),
-    approvalStatus: 'approved',
+    // Set below once the uploader's role is known - see the comment there.
+    approvalStatus: 'pending',
   };
 
-  // Fetch uploader's campus
-  let campusCode = payload.campusCode;
-  if (!campusCode) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('campus_code')
-      .eq('id', uploaderId)
-      .maybeSingle();
-    campusCode = profile?.campus_code || 'GLOBAL';
-  }
+  // Fetch uploader's campus and role. The role also decides what the optimistic
+  // `created` object below reports for approvalStatus: it must match what
+  // enforce_resource_moderation() (supabase/migrations/20260924121000_resource_takedown_requests.sql)
+  // actually does server-side - it forces is_approved/approved_by/approved_at
+  // back to false/NULL on INSERT for anyone whose role is not admin or staff,
+  // no matter what the client sends. Reporting 'approved' here for a student
+  // upload was simply wrong: the row is always created pending for them.
+  const { data: uploaderProfile } = await supabase
+    .from('profiles')
+    .select('campus_code, role')
+    .eq('id', uploaderId)
+    .maybeSingle();
+  const campusCode = payload.campusCode || uploaderProfile?.campus_code || 'GLOBAL';
+  const isPrivilegedUploader = uploaderProfile?.role === 'admin' || uploaderProfile?.role === 'staff';
+  created.approvalStatus = isPrivilegedUploader ? 'approved' : 'pending';
 
  let fileExt = 'pdf';
  let mimeType = 'application/pdf';
@@ -343,76 +359,116 @@ export async function createResource(
 }
 
 /**
- * Persists to Supabase first. The in-memory cache is only used to enrich
- * the returned object for resources this session already knows about
- * (its own uploads); a resource that isn't in that cache (any resource
- * fetched from the database in the normal case) still gets updated for
- * real - this just returns a best-effort merged object for it instead of
- * throwing, since the write already succeeded.
+ * Persists to Supabase and throws when the write did not actually happen -
+ * either a real error, or (since supabase-js resolves `{ error: null }` for
+ * an UPDATE that matched zero rows, e.g. RLS silently excluding a row the
+ * caller cannot touch) zero affected rows. Callers must catch this and show
+ * a real error instead of assuming success; see ManageResourcesModal /
+ * ResourcesModerationTab.
  */
 export async function updateResource(id: string, payload: Partial<Resource>): Promise<Resource> {
- if (payload.fileUrl) assertSafeHttpUrl(payload.fileUrl, 'The file link');
- try {
- const dbPayload: any = {};
- if (payload.title) dbPayload.title = payload.title;
- if (payload.description !== undefined) dbPayload.description = payload.description;
- if (payload.courseCode) dbPayload.course_code = payload.courseCode;
- if (payload.semester) dbPayload.semester = payload.semester;
- if (payload.fileUrl) dbPayload.file_url = payload.fileUrl;
- if (payload.approvalStatus) dbPayload.is_approved = payload.approvalStatus === 'approved';
+  assertUuid(id, 'resource id');
+  if (payload.fileUrl) assertSafeHttpUrl(payload.fileUrl, 'The file link');
 
- if (Object.keys(dbPayload).length > 0) {
- await supabase.from('resources').update(dbPayload).eq('id', id);
- }
- } catch (err) {
- console.warn('[Resources] Supabase updateResource error:', err);
- }
+  const dbPayload: any = {};
+  if (payload.title) dbPayload.title = payload.title;
+  if (payload.description !== undefined) dbPayload.description = payload.description;
+  if (payload.courseCode) dbPayload.course_code = payload.courseCode;
+  if (payload.semester) dbPayload.semester = payload.semester;
+  if (payload.fileUrl) dbPayload.file_url = payload.fileUrl;
+  if (payload.approvalStatus) dbPayload.is_approved = payload.approvalStatus === 'approved';
 
- let updated: Resource | undefined;
- locallyCreatedResources = locallyCreatedResources.map((r) => {
- if (r.id === id) {
- updated = { ...r, ...payload };
- return updated;
- }
- return r;
- });
+  if (Object.keys(dbPayload).length > 0) {
+    const { data, error } = await supabase.from('resources').update(dbPayload).eq('id', id).select('id');
+    if (error) {
+      console.warn('[Resources] Supabase updateResource error:', error.message);
+      throw new Error('Could not save your changes. Please try again.');
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Could not save your changes: this resource was not found, or you do not have permission to edit it.');
+    }
+  }
 
- if (updated) return updated;
+  let updated: Resource | undefined;
+  locallyCreatedResources = locallyCreatedResources.map((r) => {
+    if (r.id === id) {
+      updated = { ...r, ...payload };
+      return updated;
+    }
+    return r;
+  });
 
-  return { id, ...payload } as Resource;
+  return updated ?? ({ id, ...payload } as Resource);
 }
 
 export async function deleteResource(id: string): Promise<boolean> {
-  locallyCreatedResources = locallyCreatedResources.filter((r) => r.id !== id);
-  try {
-    await supabase.from('resources').delete().eq('id', id);
-  } catch {
-    // Fallback
+  assertUuid(id, 'resource id');
+  const { data, error } = await supabase.from('resources').delete().eq('id', id).select('id');
+  if (error) {
+    console.warn('[Resources] Delete resource error:', error.message);
+    throw new Error('Could not delete this resource. Please try again.');
   }
+  if (!data || data.length === 0) {
+    throw new Error('Could not delete this resource: it was not found, or you do not have permission to delete it.');
+  }
+  locallyCreatedResources = locallyCreatedResources.filter((r) => r.id !== id);
   return true;
 }
 
+/**
+ * Increments the download counter through a SECURITY DEFINER RPC
+ * (supabase/migrations/20261007000000_resources_and_copilot_fixes.sql). A raw
+ * `.update()` here would match zero rows for anyone but an admin/staff
+ * member - the only UPDATE policy on `resources` requires that role - so the
+ * counter would never actually persist for the student downloading it. This
+ * is a non-critical side effect (a download still proceeds either way), so
+ * failures are logged, not thrown.
+ */
 export async function trackResourceDownload(id: string): Promise<void> {
   try {
-    const { data } = await supabase.from('resources').select('downloads_count').eq('id', id).maybeSingle();
-    if (data) {
-      await supabase.from('resources').update({ downloads_count: (data.downloads_count || 0) + 1 }).eq('id', id);
-    }
+    assertUuid(id, 'resource id');
+    const { error } = await supabase.rpc('increment_resource_download', { p_resource_id: id });
+    if (error) throw error;
   } catch (err) {
     console.warn('[Resources] Error tracking download:', err);
   }
 }
 
-export async function toggleResourceUpvote(id: string, increment: boolean): Promise<void> {
+export interface ResourceUpvoteResult {
+  upvoted: boolean;
+  upvotesCount: number;
+}
+
+/**
+ * Toggles the signed-in user's upvote through a SECURITY DEFINER RPC that
+ * does a real toggle against `resource_upvotes` (one row per user per
+ * resource) instead of trusting the client's notion of "increment" or
+ * "decrement" - repeatedly calling this can never inflate the count past one
+ * upvote per user, unlike the old raw `.update()` (which also silently
+ * failed to persist at all for non-admin/staff callers). Throws on failure
+ * so the caller can revert its optimistic UI.
+ */
+export async function toggleResourceUpvote(id: string): Promise<ResourceUpvoteResult> {
+  assertUuid(id, 'resource id');
+  const { data, error } = await supabase.rpc('toggle_resource_upvote', { p_resource_id: id });
+  if (error) {
+    console.warn('[Resources] toggleResourceUpvote failed:', error.message);
+    throw new Error('Could not update your upvote. Please try again.');
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return { upvoted: !!row?.upvoted, upvotesCount: row?.upvotes_count ?? 0 };
+}
+
+/** Whether the signed-in user has already upvoted this resource (for the initial button state). */
+export async function isResourceUpvotedByMe(id: string): Promise<boolean> {
+  assertUuid(id, 'resource id');
   try {
-    const { data } = await supabase.from('resources').select('upvotes_count').eq('id', id).maybeSingle();
-    if (data) {
-      const current = data.upvotes_count || 0;
-      const next = increment ? current + 1 : Math.max(0, current - 1);
-      await supabase.from('resources').update({ upvotes_count: next }).eq('id', id);
-    }
+    const { data, error } = await supabase.from('resource_upvotes').select('resource_id').eq('resource_id', id).maybeSingle();
+    if (error) throw error;
+    return !!data;
   } catch (err) {
-    console.warn('[Resources] Error toggling upvote:', err);
+    console.warn('[Resources] isResourceUpvotedByMe failed:', err);
+    return false;
   }
 }
 

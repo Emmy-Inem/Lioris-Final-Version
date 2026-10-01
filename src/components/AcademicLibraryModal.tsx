@@ -27,6 +27,7 @@ import {
   getCuratedLibraryCatalog,
   AcademicBook,
 } from '@/api/academicLibrary';
+import { listSavedItemIds, toggleSavedItem } from '@/api/bookmarks';
 
 interface AcademicLibraryModalProps {
   visible: boolean;
@@ -73,6 +74,28 @@ export function AcademicLibraryModal({
     }
   }, [visible, isEnabled]);
 
+  // Bookmarks route through the same saved_items store as every other bookmark
+  // type (src/api/bookmarks.ts, kind = 'resource' - book ids like "curated-cs-1"
+  // / "ol-..." / "guten-..." never collide with a real resource's UUID, so this
+  // is a safe reuse of the existing generic kind rather than a one-off local
+  // Set that was lost on every reload). Re-check whichever books are currently
+  // on screen whenever the result set changes.
+  useEffect(() => {
+    if (books.length === 0) {
+      setSavedBookIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    listSavedItemIds('resource', books.map((b) => b.id))
+      .then((ids) => {
+        if (!cancelled) setSavedBookIds(ids);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [books]);
+
   if (!isEnabled) return null;
 
   async function handleSearch(searchTerm: string) {
@@ -94,18 +117,24 @@ export function AcademicLibraryModal({
     handleSearch(q);
   }
 
-  function toggleSaveBook(book: AcademicBook) {
+  async function toggleSaveBook(book: AcademicBook) {
+    const wasSaved = savedBookIds.has(book.id);
+    const added = await toggleSavedItem('resource', book.id, !wasSaved, {
+      title: book.title,
+      subtitle: book.authors.join(', ') || undefined,
+      imageUrl: book.coverUrl,
+    });
     setSavedBookIds((prev) => {
       const next = new Set(prev);
-      if (next.has(book.id)) {
-        next.delete(book.id);
-        toast.info(`Removed "${book.title}" from your study list`);
-      } else {
-        next.add(book.id);
-        toast.success(`Saved "${book.title}" to your study list!`);
-      }
+      if (added) next.add(book.id);
+      else next.delete(book.id);
       return next;
     });
+    if (added) {
+      toast.success(`Saved "${book.title}" to your study list!`);
+    } else {
+      toast.info(`Removed "${book.title}" from your study list`);
+    }
   }
 
   function openBookLink(book: AcademicBook) {

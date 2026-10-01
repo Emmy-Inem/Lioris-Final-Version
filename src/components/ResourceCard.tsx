@@ -15,6 +15,7 @@ import { Resource } from '@/api/types';
 import {
   trackResourceDownload,
   toggleResourceUpvote,
+  isResourceUpvotedByMe,
   getResourceRatingSummary,
   submitResourceRating,
   ResourceRatingSummary,
@@ -83,6 +84,21 @@ export const ResourceCard = React.memo(function ResourceCard({
     };
   }, [resource.id]);
 
+  // The button used to always start as "not upvoted" even when the signed-in user
+  // already had - there was no resource_upvotes table to check against. Load the
+  // real state once so a reload/app restart shows the correct icon.
+  useEffect(() => {
+    let cancelled = false;
+    isResourceUpvotedByMe(resource.id)
+      .then((v) => {
+        if (!cancelled) setUpvoted(v);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [resource.id]);
+
   async function handleToggleBookmark() {
     haptics.medium();
     if (externalToggleBookmark) {
@@ -126,11 +142,22 @@ export const ResourceCard = React.memo(function ResourceCard({
     if (upvoting) return;
     setUpvoting(true);
     haptics.light();
+    const prevUpvoted = upvoted;
+    const prevUpvotes = upvotes;
     const nextUpvoted = !upvoted;
     setUpvoted(nextUpvoted);
-    setUpvotes((prev) => prev + (nextUpvoted ? 1 : -1));
-    toggleResourceUpvote(resource.id, nextUpvoted)
-      .catch(() => {})
+    setUpvotes((prev) => Math.max(0, prev + (nextUpvoted ? 1 : -1)));
+    toggleResourceUpvote(resource.id)
+      .then((result) => {
+        setUpvoted(result.upvoted);
+        setUpvotes(result.upvotesCount);
+      })
+      .catch(() => {
+        // Revert the optimistic flip - the server-side toggle never happened.
+        setUpvoted(prevUpvoted);
+        setUpvotes(prevUpvotes);
+        toast.error('Could not update your upvote. Please try again.');
+      })
       .finally(() => {
         setUpvoting(false);
       });
