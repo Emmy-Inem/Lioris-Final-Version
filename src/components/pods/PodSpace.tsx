@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { ScreenContainer } from '../ScreenContainer';
 import { AppHeader } from '../AppHeader';
 import { AppText } from '../AppText';
@@ -47,6 +48,23 @@ import { parseRpcError } from '@/utils/rpcErrors';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { haptics } from '@/utils/haptics';
+import { useSignedUrl } from '@/api/signedUrls';
+
+// Matches BUCKET_ALLOWED_MIMES.resources in src/api/storage.ts, which is what actually gates the upload.
+const RESOURCE_FILE_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'application/pdf', 'application/zip', 'application/x-zip-compressed',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+];
+
+function formatFileSize(bytes?: number): string {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 type TabKey = 'discussion' | 'sessions' | 'members' | 'about';
 
@@ -327,6 +345,7 @@ function PostCard({
   const { colors, spacing } = useTheme();
   const mine = post.authorId === viewerId;
   const [reporting, setReporting] = useState(false);
+  const attachment = useSignedUrl('resources', post.filePath);
   return (
     <SolidCard radius={18} style={{ gap: spacing.xs, borderLeftWidth: post.kind === 'announcement' ? 3 : 0, borderLeftColor: colors.brandPrimary }}>
       <Pressable onPress={onOpen} accessibilityRole="button" style={{ gap: spacing.xs }}>
@@ -370,6 +389,19 @@ function PostCard({
             <Ionicons name="link-outline" size={14} color={colors.brandPrimary} />
             <AppText variant="caption" tone="brand" numberOfLines={1} style={{ flex: 1 }}>
               {post.linkUrl}
+            </AppText>
+          </Pressable>
+        ) : null}
+        {post.filePath ? (
+          <Pressable
+            onPress={() => { if (attachment.url) void openExternalUrl(attachment.url); }}
+            disabled={!attachment.url}
+            accessibilityRole="link"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.divider, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 8, alignSelf: 'flex-start' }}
+          >
+            <Ionicons name="document-attach-outline" size={15} color={colors.brandPrimary} />
+            <AppText variant="caption" tone="brand" weight="semiBold" numberOfLines={1}>
+              {attachment.loading ? 'Opening attachment…' : attachment.error ? 'Attachment unavailable' : 'Open attachment'}
             </AppText>
           </Pressable>
         ) : null}
@@ -493,24 +525,50 @@ function ComposeSheet({ visible, onClose, canAnnounce, podId, onPosted }: { visi
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [link, setLink] = useState('');
+  const [file, setFile] = useState<{ uri: string; name: string; size?: number } | null>(null);
+  const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const kinds: PodPostKind[] = ['discussion', 'question', 'resource', ...(canAnnounce ? (['announcement'] as PodPostKind[]) : [])];
   const needsTitle = kind !== 'discussion';
 
+  async function pickFile() {
+    setPicking(true);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: RESOURCE_FILE_TYPES, copyToCacheDirectory: true });
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        setFile({ uri: asset.uri, name: asset.name, size: asset.size });
+      }
+    } catch {
+      toast.error('Could not select a file. Please try again.');
+    } finally {
+      setPicking(false);
+    }
+  }
+
   async function submit() {
     setError(null);
     if (!body.trim()) return setError('Write something first.');
     if (needsTitle && title.trim().length < 3) return setError('Add a short title (at least 3 characters).');
-    if (kind === 'resource' && !/^https?:\/\//i.test(link.trim())) return setError('Add the link you are sharing (it must start with https://).');
+    if (link.trim() && !/^https?:\/\//i.test(link.trim())) return setError('The link must start with https://.');
+    if (kind === 'resource' && !link.trim() && !file) return setError('Add the link you are sharing, or attach a file.');
     setSaving(true);
     try {
-      await postToPod(podId, { body: body.trim(), kind, title: needsTitle ? title.trim() : undefined, linkUrl: link.trim() || undefined });
+      await postToPod(podId, {
+        body: body.trim(),
+        kind,
+        title: needsTitle ? title.trim() : undefined,
+        linkUrl: link.trim() || undefined,
+        fileUri: file?.uri,
+        fileName: file?.name,
+      });
       haptics.success();
       toast.success(kind === 'announcement' ? 'Announcement sent to every member.' : 'Posted.');
       setBody('');
       setTitle('');
       setLink('');
+      setFile(null);
       onPosted();
       onClose();
     } catch (err) {
@@ -561,6 +619,33 @@ function ComposeSheet({ visible, onClose, canAnnounce, podId, onPosted }: { visi
         numberOfLines={5}
       />
       {kind === 'resource' || link ? <AppTextField label="Link" value={link} onChangeText={setLink} placeholder="https://" autoCapitalize="none" keyboardType="url" /> : null}
+      {kind === 'resource' ? (
+        file ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.divider, borderRadius: radius.md, paddingVertical: 8, paddingHorizontal: 10 }}>
+            <Ionicons name="document-attach-outline" size={18} color={colors.brandPrimary} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <AppText variant="bodySmall" numberOfLines={1}>
+                {file.name}
+              </AppText>
+              {file.size ? (
+                <AppText variant="caption" tone="secondary">
+                  {formatFileSize(file.size)}
+                </AppText>
+              ) : null}
+            </View>
+            <Pressable onPress={() => setFile(null)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Remove file">
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable onPress={pickFile} disabled={picking} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 }}>
+            <Ionicons name="attach-outline" size={18} color={colors.brandPrimary} />
+            <AppText variant="bodySmall" tone="brand" weight="semiBold">
+              {picking ? 'Opening picker…' : link ? 'Attach a file as well' : 'Attach a file instead of a link'}
+            </AppText>
+          </Pressable>
+        )
+      ) : null}
     </FormSheet>
   );
 }

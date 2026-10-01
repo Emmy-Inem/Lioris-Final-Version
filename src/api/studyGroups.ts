@@ -11,6 +11,7 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { isUserBlocked, isUserMuted } from './connections';
 import { assertUuid } from '../utils/postgrest';
 import { RpcError, throwIfRpcError } from '../utils/rpcErrors';
+import { uploadMediaFile } from './storage';
 
 /**
  * Study pods client. Discovery and every change go through database functions (see
@@ -210,6 +211,7 @@ function mapPost(r: any): PodPost {
     title: r.title,
     body: r.body,
     linkUrl: r.link_url,
+    filePath: r.file_path,
     isPinned: !!r.is_pinned,
     isResolved: !!r.is_resolved,
     replyCount: r.reply_count ?? 0,
@@ -236,10 +238,15 @@ export interface PodPostPayload {
   title?: string;
   linkUrl?: string;
   parentId?: string;
+  /** An on-device file picked for a `resource` post. Uploaded to the private `resources` bucket before posting. */
+  fileUri?: string;
+  /** Original file name, used to make the stored path readable. */
+  fileName?: string;
 }
 
 export async function postToPod(groupId: string, payload: PodPostPayload): Promise<void> {
   assertUuid(groupId, 'pod id');
+  const filePath = payload.fileUri ? await uploadMediaFile('resources', payload.fileUri, 'pod_resources', payload.fileName) : null;
   const { error } = await supabase.rpc('post_to_study_group', {
     p_group: groupId,
     p_body: payload.body,
@@ -247,6 +254,7 @@ export async function postToPod(groupId: string, payload: PodPostPayload): Promi
     p_title: payload.title?.trim() || null,
     p_link: payload.linkUrl?.trim() || null,
     p_parent: payload.parentId ?? null,
+    p_file_path: filePath,
   });
   throwIfRpcError(error, 'Could not post this.');
 }

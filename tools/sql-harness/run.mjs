@@ -1163,6 +1163,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261005020000_resource_ratings.sql',
   'supabase/migrations/20261005030000_alumni_profile_extras.sql',
   'supabase/migrations/20261005040000_admin_user_diagnostics.sql',
+  'supabase/migrations/20261006040000_study_pod_file_sharing.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -3000,6 +3001,100 @@ console.log('\n== admin user diagnostics ==');
       await imp(U.staffU);
       const data = (await c.q(`SELECT public.admin_get_user_diagnostics($1) AS data`, [U.s1])).rows[0].data;
       eq(data.user_id, U.s1, 'same-campus staff can diagnose the user');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// study pod file sharing (20261006040000_study_pod_file_sharing.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== study pod file sharing ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  // post_to_study_group() only requires pod membership, not a verified account
+  // (that gate is on create_study_group), so fixtures are wired in directly.
+  async function mkPod(c, name, owner, members = []) {
+    const pod = (await c.q(
+      `INSERT INTO public.study_groups (creator_id, campus_code, name, course_code, is_private) VALUES ($1, 'UNILAG', $2, '', false) RETURNING id`,
+      [owner, name],
+    )).rows[0].id;
+    await c.q(`INSERT INTO public.study_group_members (group_id, user_id, role, status) VALUES ($1, $2, 'owner', 'active')`, [pod, owner]);
+    for (const m of members) {
+      await c.q(`INSERT INTO public.study_group_members (group_id, user_id, role, status) VALUES ($1, $2, 'member', 'active')`, [pod, m]);
+    }
+    return pod;
+  }
+
+  await check('post_to_study_group: a resource post can carry a storage file_path instead of a link, and list_study_group_posts returns it', async () => {
+    await as('postgres', async (c) => {
+      const pod = await mkPod(c, 'File sharing pod', U.s1);
+      await imp(U.s1);
+
+      const post = (await c.q(
+        `SELECT * FROM public.post_to_study_group($1, 'Lecture slides for week 3', 'resource', 'Week 3 slides', NULL, NULL, $2)`,
+        [pod, 's1-uid/pod_resources_slides.pdf'],
+      )).rows[0];
+      eq(post.link_url, null, 'no link was given');
+      eq(post.file_path, 's1-uid/pod_resources_slides.pdf', 'the storage path round-trips on the insert');
+
+      const listed = (await c.q(`SELECT * FROM public.list_study_group_posts($1)`, [pod])).rows[0];
+      eq(listed.file_path, 's1-uid/pod_resources_slides.pdf', 'the storage path round-trips through list_study_group_posts');
+      eq(listed.link_url, null, 'link_url stays null');
+    });
+  });
+
+  await check('post_to_study_group: a resource post still works with only a link (file_path optional, old callers unaffected)', async () => {
+    await as('postgres', async (c) => {
+      const pod = await mkPod(c, 'Link only pod', U.s1);
+      await imp(U.s1);
+      const post = (await c.q(
+        `SELECT * FROM public.post_to_study_group($1, 'Useful notes', 'resource', 'Great notes', 'https://example.com/notes.pdf')`,
+        [pod],
+      )).rows[0];
+      eq(post.link_url, 'https://example.com/notes.pdf');
+      eq(post.file_path, null, 'no file was attached');
+    });
+  });
+
+  await check('post_to_study_group: a resource post needs a link or a file - not neither, and a bogus file_path is capped', async () => {
+    await as('postgres', async (c) => {
+      const pod = await mkPod(c, 'Validation pod', U.s1);
+      await imp(U.s1);
+      denied(
+        await c.t(`SELECT public.post_to_study_group($1, 'Nothing attached', 'resource', 'Empty resource')`, [pod]),
+        /invalid_input: add the link you are sharing, or attach a file/,
+        'resource post with neither a link nor a file',
+      );
+      denied(
+        await c.t(`SELECT public.post_to_study_group($1, 'Too long', 'resource', 'Oversized path', NULL, NULL, $2)`, [pod, 'x'.repeat(501)]),
+        /invalid_input: the attached file reference is too long/,
+        'file_path over 500 chars',
+      );
+    });
+  });
+
+  await check('post_to_study_group: only a pod member can attach a file (same membership gate as the rest of post_to_study_group)', async () => {
+    await as('postgres', async (c) => {
+      const pod = await mkPod(c, 'Members only pod', U.s1);
+      await imp(U.s2);
+      denied(
+        await c.t(`SELECT public.post_to_study_group($1, 'Sneaking in a file', 'resource', 'Not a member', NULL, NULL, $2)`, [pod, 'u2/sneaky.pdf']),
+        /not_allowed: join the pod to take part/,
+        'non-member attaching a file',
+      );
+    });
+  });
+
+  await check('study_group_posts.file_path: the table CHECK rejects an overlong value directly (defence in depth, not just the RPC)', async () => {
+    await as('postgres', async (c) => {
+      const pod = await mkPod(c, 'Constraint pod', U.s1);
+      const r = await c.t(
+        `INSERT INTO public.study_group_posts (group_id, author_id, kind, title, body, file_path) VALUES ($1, $2, 'resource', 'x', 'y', $3)`,
+        [pod, U.s1, 'x'.repeat(501)],
+      );
+      denied(r, /study_group_posts_file_path_chk|check constraint/i, 'direct insert past the 500-char cap');
     });
   });
 }
