@@ -33,7 +33,6 @@ import {
 } from '@/api/auth';
 import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { usePullRefreshHandler } from '@/components/PullToRefresh';
-import { adminDirectVerifyUser } from '@/api/verification';
 import { getUserDiagnostics, UserDiagnostics } from '@/api/adminDiagnostics';
 import { useToast } from '@/context/ToastContext';
 import { AuditLogEntry } from '@/api/types';
@@ -232,6 +231,10 @@ export default function UserDirectoryScreen() {
  const [deleteTarget, setDeleteTarget] = useState<DirectoryUser | null>(null);
  const [deleteReason, setDeleteReason] = useState('');
  const [isDeleting, setIsDeleting] = useState(false);
+
+ // Force-sign-out: revokes a user's refresh tokens everywhere via admin-force-signout.
+ // Tracks which user id is in flight so only that row's menu item shows a loading state.
+ const [forceSigningOutId, setForceSigningOutId] = useState<string | null>(null);
 
   // Edit User Modal State
   const toast = useToast();
@@ -860,6 +863,60 @@ export default function UserDirectoryScreen() {
  }
  }
 
+ // Kills a (possibly compromised) user's session everywhere right now, short of
+ // suspending the account: admin-force-signout revokes their refresh tokens via
+ // the Supabase Admin API, so every device currently signed in is forced to log
+ // back in. This is disruptive for the target, hence the confirmation first.
+ function handleForceSignOut(target: DirectoryUser) {
+ haptics.medium();
+ Alert.alert(
+ 'Force Sign Out?',
+ `This immediately ends ${target.fullName}'s (@${target.username}) session everywhere - every phone, browser and tab currently signed in will be signed out and need to log back in.\n\n` +
+ `Their account is not suspended and they can sign back in right away. Use this if you suspect their session (not their password) is compromised.`,
+ [
+ { text: 'Cancel', style: 'cancel' },
+ {
+ text: 'Sign Out Everywhere',
+ style: 'destructive',
+ onPress: () => confirmForceSignOut(target),
+ },
+ ],
+ );
+ }
+
+ async function confirmForceSignOut(target: DirectoryUser) {
+ if (forceSigningOutId) return;
+ setForceSigningOutId(target.id);
+ try {
+ const { supabase } = await import('@/api/supabase');
+ const { data, error } = await supabase.functions.invoke('admin-force-signout', {
+ body: { targetUserId: target.id },
+ });
+
+ if (error || (data && (data as any).error)) {
+ const failure = error
+ ? await readEdgeFunctionError(error, 'Unknown error')
+ : { code: undefined, message: (data && (data as any).error) || 'Unknown error' };
+ console.warn('[UserDirectory] admin-force-signout error:', failure.message);
+ if (failure.code === MFA_REQUIRED_CODE) {
+ setForceSigningOutId(null);
+ promptForMfa('Verify to Force Sign Out', () => confirmForceSignOut(target));
+ return;
+ }
+ Alert.alert('Could Not Sign Out', `Could not end ${target.fullName}'s session: ${failure.message}`);
+ return;
+ }
+
+ setSelectedUser(null);
+ toast.success(`${target.fullName} has been signed out everywhere.`);
+ } catch (err: any) {
+ console.warn('[UserDirectory] admin-force-signout invoke error:', err);
+ Alert.alert('Could Not Sign Out', `Could not reach the sign-out service: ${err?.message || 'Unknown error'}`);
+ } finally {
+ setForceSigningOutId(null);
+ }
+ }
+
   return (
     <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
@@ -1233,6 +1290,19 @@ export default function UserDirectoryScreen() {
                 {selectedUser.suspended ? 'Revoke Suspension & Reactivate' : 'Shadow-Ban / Suspend User'}
               </AppText>
             </Pressable>
+            )}
+
+            {selectedUser.id !== currentUser?.id && (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+                disabled={forceSigningOutId === selectedUser.id}
+                onPress={() => handleForceSignOut(selectedUser)}
+              >
+                <Ionicons name="log-out-outline" size={18} color={colors.critical} />
+                <AppText tone="critical">
+                  {forceSigningOutId === selectedUser.id ? 'Signing out everywhere…' : 'Force Sign Out (All Devices)'}
+                </AppText>
+              </Pressable>
             )}
 
             {!selectedUser.isVerified && (

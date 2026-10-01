@@ -71,18 +71,6 @@ export const CAMPUS_CENTERS: Record<string, CampusCenter> = {
     latitude: 7.2246,
     longitude: 3.4439,
   },
-  FUTA: {
-    code: 'FUTA',
-    name: 'Federal University of Technology, Akure',
-    latitude: 7.3045,
-    longitude: 5.1384,
-  },
-  ABU: {
-    code: 'ABU',
-    name: 'Ahmadu Bello University',
-    latitude: 11.1558,
-    longitude: 7.6497,
-  },
 };
 
 export const CAMPUS_LANDMARKS: CampusLandmark[] = [
@@ -1779,6 +1767,10 @@ export function getOsmEmbedUrl(lat: number, lon: number, zoom: number = 17): str
 }
 
 export function getDirectionsUrl(toLat: number, toLon: number, name?: string): string {
-  const label = name ? encodeURIComponent(name) : 'Destination';
-  return `https://www.google.com/maps/dir/?api=1&destination=${toLat},${toLon}&destination_place_id=${label}`;
+  // `name` is accepted for callers that want a human-readable label, but
+  // Google Maps' `destination_place_id` expects an actual Google Place ID,
+  // not free text - passing a name there is silently ignored and Maps falls
+  // back to the lat/lon destination below, so we just rely on that directly.
+  void name;
+  return `https://www.google.com/maps/dir/?api=1&destination=${toLat},${toLon}`;
 }

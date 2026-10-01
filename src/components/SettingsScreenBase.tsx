@@ -1811,14 +1811,17 @@ export function SettingsScreen() {
                     onPress={handleSignOutOtherDevices}
                     loading={isSigningOutOthers}
                   />
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: -2 }}>
+                    Ends every other signed-in session everywhere at once. We cannot show you which devices or browsers those are first, so use this if you suspect any session other than this one is compromised.
+                  </AppText>
                 </View>
 
                 {(devicesLoading || devices.length > 0) && (
                   <View style={{ paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
                     <View>
-                      <AppText weight="bold" variant="bodySmall">Your Devices</AppText>
+                      <AppText weight="bold" variant="bodySmall">Notification Devices</AppText>
                       <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                        Devices registered to receive notifications. Remove one you don't recognize or no longer use.
+                        Devices registered to receive push notifications - not a full list of where you are signed in. Removing one only stops notifications there; it does not sign that device out. To end a session, use "Sign Out All Other Active Sessions" above.
                       </AppText>
                     </View>
                     {devicesLoading ? (

@@ -464,6 +464,7 @@ export type AuditLogAction =
  | 'user_unsuspended'
  | 'user_role_changed'
  | 'user_account_deleted'
+ | 'user_force_signed_out'
  | 'feature_flag_toggled'
  | 'portal_link_created'
  | 'portal_link_updated'
