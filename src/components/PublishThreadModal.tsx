@@ -87,6 +87,7 @@ interface PublishThreadModalProps {
     courseTags?: string;
     postFormat: 'Thread' | 'Rapid-Fire Conversation';
     imageUrl?: string;
+    imageUrls?: string[];
     videoUrl?: string;
     pollQuestion?: string;
     pollOptions?: string[];
@@ -114,7 +115,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   useEffect(() => {
     if (!globalWorkspaceEnabled && visibility === 'Global Reach') setVisibility('Campus Only');
   }, [globalWorkspaceEnabled, visibility]);
-  const [customMediaUri, setCustomMediaUri] = useState<string | null>(null);
+  const [customMediaUris, setCustomMediaUris] = useState<string[]>([]);
+  const MAX_IMAGES = 4;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pinToTop, setPinToTop] = useState(false);
@@ -171,7 +173,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   function reset() {
     setTopic('');
     setContent('');
-    setCustomMediaUri(null);
+    setCustomMediaUris([]);
     setAttachPoll(false);
     setPollQuestion('');
     setPollOptions(['Option A', 'Option B']);
@@ -183,44 +185,50 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
     setErrorMessage(null);
   }
 
-  // ─── Image Picker (platform-aware) ───────────────────────────────────────
+  // ─── Image Picker (platform-aware, up to MAX_IMAGES total) ───────────────
   function handlePickImageWeb() {
     if (Platform.OS !== 'web') return;
+    const remaining = MAX_IMAGES - customMediaUris.length;
+    if (remaining <= 0) return;
     // Create a hidden file input if not already created
     let input = fileInputRef.current as HTMLInputElement | null;
     if (!input) {
       input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
+      input.multiple = true;
       input.style.display = 'none';
       document.body.appendChild(input);
       fileInputRef.current = input as any;
     }
     input.onchange = (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      if (file.size > 10 * 1024 * 1024) {
-        setErrorMessage('The selected file is too large. Maximum allowed file size is 10 MB.');
-        haptics.error();
-        (e.target as HTMLInputElement).value = '';
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
-        if (dataUrl) {
-          setCustomMediaUri(dataUrl);
-          haptics.light();
+      const files = Array.from((e.target as HTMLInputElement).files ?? []).slice(0, remaining);
+      if (files.length === 0) return;
+      for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+          setErrorMessage('One of the selected files is too large. Maximum allowed file size is 10 MB.');
+          haptics.error();
+          continue;
         }
-      };
-      reader.readAsDataURL(file);
-      // Reset input so same file can be picked again
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target?.result as string;
+          if (dataUrl) {
+            setCustomMediaUris((prev) => (prev.length >= MAX_IMAGES ? prev : [...prev, dataUrl]));
+            haptics.light();
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+      // Reset input so the same file can be picked again
       (e.target as HTMLInputElement).value = '';
     };
     input.click();
   }
 
   async function handlePickImageNative() {
+    const remaining = MAX_IMAGES - customMediaUris.length;
+    if (remaining <= 0) return;
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -229,17 +237,20 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
+        // Cropping (allowsEditing) is mutually exclusive with multi-select.
+        allowsMultipleSelection: remaining > 1,
+        selectionLimit: remaining,
         quality: 0.85,
       });
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const asset = result.assets[0];
-        if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
-          setErrorMessage('The selected image is too large. Maximum allowed file size is 10 MB.');
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const picked = result.assets.slice(0, remaining);
+        const tooLarge = picked.some((a) => a.fileSize && a.fileSize > 10 * 1024 * 1024);
+        if (tooLarge) {
+          setErrorMessage('One of the selected images is too large. Maximum allowed file size is 10 MB.');
           haptics.error();
           return;
         }
-        setCustomMediaUri(asset.uri);
+        setCustomMediaUris((prev) => [...prev, ...picked.map((a) => a.uri)].slice(0, MAX_IMAGES));
         haptics.light();
       }
     } catch {
@@ -248,11 +259,17 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   }
 
   function handlePickImage() {
+    if (customMediaUris.length >= MAX_IMAGES) return;
     if (Platform.OS === 'web') {
       handlePickImageWeb();
     } else {
       handlePickImageNative();
     }
+  }
+
+  function handleRemoveImage(index: number) {
+    haptics.light();
+    setCustomMediaUris((prev) => prev.filter((_, i) => i !== index));
   }
 
   function handleAddPollOption() {
@@ -327,7 +344,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
         sponsored: false,
         isPinned: isAdmin && pinToTop,
         postFormat: 'Thread',
-        imageUrl: customMediaUri ?? undefined,
+        imageUrl: customMediaUris[0] ?? undefined,
+        imageUrls: customMediaUris.length > 0 ? customMediaUris : undefined,
         pollQuestion: hasPoll ? pollQuestion.trim() : undefined,
         pollOptions: hasPoll ? pollOptions.filter((o) => o.trim().length > 0) : undefined,
         pollDurationHours: hasPoll ? pollDurationHours : undefined,
@@ -462,31 +480,35 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               numberOfLines={5}
             />
 
-            {/* Attached Image Preview */}
-            {customMediaUri ? (
-              <View style={{ marginBottom: spacing.md, position: 'relative' }}>
-                <Image
-                  source={{ uri: customMediaUri }}
-                  style={{ width: '100%', height: 160, borderRadius: radius.md, backgroundColor: '#000' }}
-                  contentFit="cover"
-                />
-                <Pressable accessibilityRole="button" accessibilityLabel="Close"
-                  onPress={() => { setCustomMediaUri(null); haptics.light(); }}
-                  hitSlop={8}
-                  style={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    borderRadius: 14,
-                    width: 28,
-                    height: 28,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons name="close" size={16} color="#FFFFFF" />
-                </Pressable>
+            {/* Attached Image Previews (up to MAX_IMAGES) */}
+            {customMediaUris.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.md }}>
+                {customMediaUris.map((uri, index) => (
+                  <View key={uri + index} style={{ width: customMediaUris.length === 1 ? '100%' : '47%', height: customMediaUris.length === 1 ? 160 : 100, position: 'relative' }}>
+                    <Image
+                      source={{ uri }}
+                      style={{ width: '100%', height: '100%', borderRadius: radius.md, backgroundColor: '#000' }}
+                      contentFit="cover"
+                    />
+                    <Pressable accessibilityRole="button" accessibilityLabel="Remove image"
+                      onPress={() => handleRemoveImage(index)}
+                      hitSlop={8}
+                      style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        borderRadius: 14,
+                        width: 28,
+                        height: 28,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="close" size={16} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                ))}
               </View>
             ) : null}
 
@@ -494,6 +516,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm }}>
               <Pressable
                 onPress={handlePickImage}
+                disabled={customMediaUris.length >= MAX_IMAGES}
                 accessibilityRole="button"
                 accessibilityLabel="Attach a photo"
                 style={{
@@ -507,13 +530,14 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                   paddingHorizontal: 12,
                   borderRadius: radius.md,
                   borderWidth: 1,
-                  borderColor: customMediaUri ? colors.brandPrimary : colors.border,
-                  backgroundColor: customMediaUri ? colors.pastelPrimaryBg : colors.surface,
+                  borderColor: customMediaUris.length > 0 ? colors.brandPrimary : colors.border,
+                  backgroundColor: customMediaUris.length > 0 ? colors.pastelPrimaryBg : colors.surface,
+                  opacity: customMediaUris.length >= MAX_IMAGES ? 0.5 : 1,
                 }}
               >
                 <Ionicons name="image-outline" size={17} color={colors.brandPrimary} />
                 <AppText variant="bodySmall" weight="bold" style={{ flexShrink: 1 }}>
-                  Photo
+                  {customMediaUris.length > 0 ? `Photo (${customMediaUris.length}/${MAX_IMAGES})` : 'Photo'}
                 </AppText>
               </Pressable>
 

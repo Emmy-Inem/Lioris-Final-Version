@@ -2,6 +2,7 @@ import React, { useState } from'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from'expo-image';
+import * as Clipboard from 'expo-clipboard';
 import { router, useSegments } from'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -22,7 +23,7 @@ import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Post } from'@/api/types';
-import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, resolvePostMentions } from'@/api/posts';
+import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, resolvePostMentions, buildPostShareUrl } from'@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY } from'@/api/bookmarks';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
@@ -316,9 +317,19 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  router.push(`/${roleGroup}/post/${post.id}` as any);
  }
 
+ async function handleCopyLink() {
+ setMenuOpen(false);
+ await Clipboard.setStringAsync(buildPostShareUrl(roleGroup, post.id));
+ haptics.light();
+ Alert.alert('Link Copied', 'Thread URL copied to clipboard.');
+ }
+
  const postImageSource = post.imageUrl
  ? STOCK_IMAGES[post.imageUrl] ?? (post.imageUrl.startsWith('http') ? { uri: post.imageUrl } : null)
  : null;
+ // A stock-art key never belongs in a multi-image gallery (it isn't a real
+ // uploaded URL) - only resolvable http(s) images render there.
+ const galleryUrls = (post.imageUrls ?? []).filter((u) => u.startsWith('http'));
 
  const isVideoPost = !!post.videoUrl;
 
@@ -408,7 +419,24 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  </Pressable>
 
  {/* Attached Media / Image / Video (Tap to Expand in Fullscreen Lightbox) */}
- {postImageSource ? (
+ {galleryUrls.length > 1 ? (
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: spacing.sm, borderRadius: 16, overflow: 'hidden' }}>
+ {galleryUrls.slice(0, 4).map((url, index) => (
+ <Pressable
+ key={url + index}
+ onPress={() => {
+ haptics.light();
+ setLightboxMedia(url);
+ setLightboxCaption(post.title);
+ setLightboxOpen(true);
+ }}
+ style={{ width: '49.5%', height: galleryUrls.length <= 2 ? 200 : 99 }}
+ >
+ <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+ </Pressable>
+ ))}
+ </View>
+ ) : postImageSource ? (
  <Pressable
  onPress={() => {
  haptics.light();
@@ -610,10 +638,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
       {menuOpen && (
  <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
  <Pressable
- onPress={() => {
- setMenuOpen(false);
- Alert.alert('Link Copied', 'Thread URL copied to clipboard.');
- }}
+ onPress={handleCopyLink}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
  <Ionicons name="link-outline"size={18} color={colors.textPrimary} />

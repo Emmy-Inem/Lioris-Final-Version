@@ -102,6 +102,8 @@ export interface Post {
  /** Which launch university this post belongs to when scopeVisibility is'campus'. Omitted entirely for'global'posts - that's what makes them visible across every university. */
  institutionCode?: string;
  imageUrl?: string | null;
+ /** Up to 4 images (posts.image_urls). When absent, falls back to a 1-element array from imageUrl for older rows - see mapPostRow. */
+ imageUrls?: string[];
  videoUrl?: string | null;
  pollQuestion?: string | null;
  poll?: PostPoll | null;

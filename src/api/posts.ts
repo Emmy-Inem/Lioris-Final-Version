@@ -1,3 +1,5 @@
+import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 import { Post, PostPoll, PostStatus, PostVisibilityScope } from './types';
 import { supabase } from './supabase';
 import { listSavedItemIds } from './bookmarks';
@@ -205,6 +207,13 @@ async function publishOwnDueScheduledPosts(userId: string): Promise<number> {
 function mapPostRow(row: any, viewerId?: string): Post {
   const isGlobal = row.visibility_scope === 'global' || row.campus_code === 'GLOBAL';
   const poll = decoratePoll(row.poll_data);
+  // image_urls is the new source of truth; older rows (or a deployed table
+  // that predates it, see OPTIONAL_POST_COLUMNS) only ever had image_url.
+  const imageUrls: string[] | undefined = Array.isArray(row.image_urls) && row.image_urls.length > 0
+    ? row.image_urls
+    : row.image_url
+    ? [row.image_url]
+    : undefined;
   return {
     id: row.id,
     authorId: row.author_id,
@@ -227,6 +236,7 @@ function mapPostRow(row: any, viewerId?: string): Post {
     isPinned: !!row.is_pinned,
     createdAt: row.created_at,
     imageUrl: row.image_url,
+    imageUrls,
     videoUrl: row.video_url,
     courseTags: row.course_tags || undefined,
     poll,
@@ -569,6 +579,8 @@ export interface CreatePostPayload {
  courseTags?: string;
  postFormat?: 'Thread' | 'Rapid-Fire Conversation';
  imageUrl?: string;
+ /** Up to 4 images. When set, takes priority over imageUrl - the first entry is also written to imageUrl for backward compat. */
+ imageUrls?: string[];
  videoUrl?: string;
  poll?: any;
  pollQuestion?: string;
@@ -646,6 +658,7 @@ const OPTIONAL_POST_COLUMNS = new Set([
   'category',
   'video_url',
   'image_url',
+  'image_urls',
   'poll_data',
   // Added by supabase_posts_features_2026.sql. Dropping them on an
   // un-migrated database turns a draft into a normal post rather than
@@ -700,11 +713,20 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  const pollData = buildPollData(payload);
 
  let permanentImageUrl: string | undefined = payload.imageUrl;
+ let permanentImageUrls: string[] | undefined;
  let permanentVideoUrl: string | undefined = payload.videoUrl;
 
  // Media references are validated (safe http(s), the bundled `asset:` scheme,
  // or an on-device file that is uploaded). Upload/validation failures throw.
- if (payload.imageUrl) {
+ const rawImageUrls = (payload.imageUrls ?? []).slice(0, 4).filter(Boolean);
+ if (rawImageUrls.length > 0) {
+ const { resolveMediaUrl } = await import('./storage');
+ permanentImageUrls = await Promise.all(rawImageUrls.map((u) => resolveMediaUrl(u, 'feed', { allowAsset: true })));
+ // The first image also goes into the legacy singular column, so older
+ // readers of image_url (and this same row before this feature existed)
+ // never see a gallery post as having no image at all.
+ permanentImageUrl = permanentImageUrls[0];
+ } else if (payload.imageUrl) {
  const { resolveMediaUrl } = await import('./storage');
  permanentImageUrl = await resolveMediaUrl(payload.imageUrl, 'feed', { allowAsset: true });
  }
@@ -769,6 +791,7 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  visibility_scope: finalVisibilityScope,
  audience_scope: payload.visibilityScope || 'global',
  image_url: permanentImageUrl || null,
+ image_urls: permanentImageUrls && permanentImageUrls.length > 0 ? permanentImageUrls : null,
  video_url: permanentVideoUrl || null,
  poll_data: pollData,
  is_pinned: payload.isPinned || false,
@@ -798,6 +821,7 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  institutionCode: isExplicitlyGlobal ? undefined : campusCode,
  ...rest,
  imageUrl: permanentImageUrl,
+ imageUrls: permanentImageUrls,
  videoUrl: permanentVideoUrl,
  status,
  scheduledAt: scheduledAt || undefined,
@@ -914,6 +938,8 @@ export interface PostComment {
  likesCount: number;
  isLikedByMe?: boolean;
  imageUrl?: string | null;
+ /** The comment this one replies to, if any. Mirrors post_comments.parent_comment_id; cleared (not cascaded) when the parent is deleted. */
+ parentCommentId?: string | null;
 }
 
 
@@ -956,6 +982,7 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  createdAt: row.created_at,
  likesCount: row.likes_count || 0,
  isLikedByMe: likedCommentIds.has(row.id),
+ parentCommentId: row.parent_comment_id || null,
  }));
 
   // Merge unique - local pool only ever contributes this session's own
@@ -1001,6 +1028,7 @@ export async function createPostComment(
  authorName = 'You',
  authorRole: 'student' | 'staff' | 'alumni' | 'admin' = 'student',
  imageUrl?: string | null,
+ parentCommentId?: string | null,
 ): Promise<PostComment> {
  const commentId = generateUUID();
 
@@ -1020,6 +1048,7 @@ export async function createPostComment(
  post_id: postId,
  author_id: authorId,
  content,
+ parent_comment_id: parentCommentId || null,
  });
 
  if (error) {
@@ -1039,6 +1068,7 @@ export async function createPostComment(
  likesCount: 0,
  isLikedByMe: false,
  imageUrl: imageUrl || null,
+ parentCommentId: parentCommentId || null,
  };
  locallyCreatedComments[postId] = [...(locallyCreatedComments[postId] ?? []), created];
  locallyCreatedPosts = locallyCreatedPosts.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
@@ -1076,6 +1106,41 @@ export async function deletePostComment(postId: string, commentId: string): Prom
     if (previousComments) locallyCreatedComments[postId] = previousComments;
     throw new Error('Could not delete this comment. Please check your connection and try again.');
   }
+}
+
+/**
+ * Edits a comment's content. Mirrors updatePost's error-handling convention:
+ * throws when the Supabase update() call itself errors, AND when it matches
+ * zero rows - the latter is how the "Authors, admins and staff can update
+ * comments" UPDATE policy's USING clause shows up for someone it doesn't
+ * cover (it filters the row out rather than raising a Postgres error), so a
+ * silently-ignored edit never gets reported back to the caller as saved.
+ */
+export async function updatePostComment(commentId: string, content: string): Promise<PostComment> {
+  const trimmed = content.trim();
+  if (!trimmed) throw new Error('Comment cannot be empty.');
+
+  const { data, error } = await supabase.from('post_comments').update({ content: trimmed }).eq('id', commentId).select('id');
+  if (error) {
+    console.warn('[Posts] updatePostComment error:', error.message);
+    throw new Error('Could not save your changes. Please try again.');
+  }
+  if (!data || data.length === 0) {
+    throw new Error('This comment could not be updated. You may not have permission to edit it.');
+  }
+
+  let updated: PostComment | undefined;
+  for (const postId of Object.keys(locallyCreatedComments)) {
+    locallyCreatedComments[postId] = locallyCreatedComments[postId].map((c) => {
+      if (c.id === commentId) {
+        updated = { ...c, content: trimmed };
+        return updated;
+      }
+      return c;
+    });
+  }
+
+  return updated ?? ({ id: commentId, content: trimmed } as PostComment);
 }
 
 export async function toggleCommentLike(postId: string, commentId: string, liked: boolean): Promise<void> {
@@ -1290,6 +1355,20 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
  if (updated) return updated;
 
   return { id: postId, ...updates } as Post;
+}
+
+/**
+ * The shareable deep link for a thread, built the same way getAuthRedirectUrl
+ * (src/api/auth.ts) builds every other shareable/redirect link in this app:
+ * Linking.createURL on native (resolves to the `lioris://` scheme from
+ * app.config.ts), window.location.origin on web.
+ */
+export function buildPostShareUrl(roleGroup: string, postId: string): string {
+  const path = `${roleGroup.replace(/^\//, '')}/post/${postId}`;
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/${path}`;
+  }
+  return Linking.createURL(path);
 }
 
 const MENTION_REGEX = /@([a-zA-Z0-9_.]{2,40})/g;

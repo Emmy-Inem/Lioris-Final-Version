@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Alert, findNodeHandle, Modal, Platform, Pressable, ScrollView, TextInput, UIManager, View } from 'react-native';
 import { Image } from'expo-image';
+import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams, useSegments } from'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -21,7 +22,8 @@ import { EditPostModal } from'./EditPostModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, deletePostComment, extractMentionHandles, resolvePostMentions } from '@/api/posts';
+import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, updatePostComment, deletePostComment, extractMentionHandles, resolvePostMentions, buildPostShareUrl, PostComment } from '@/api/posts';
+import { toggleSavedItem, SAVED_ITEMS_KEY } from '@/api/bookmarks';
 import { canManageCommunityCategory } from '@/api/communities';
 import { getMyProfile } from '@/api/profile';
 import { submitReport } from '@/api/moderation';
@@ -90,7 +92,8 @@ export function PostDetailScreen() {
 
   const [liked, setLiked] = useState(!!post?.isLikedByMe);
   const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(!!post?.isBookmarkedByMe);
+  const [savingBookmark, setSavingBookmark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isAuthor = Boolean(
@@ -167,11 +170,14 @@ export function PostDetailScreen() {
     });
   }
 
- // Discussion reply state
+ // Discussion reply state. replyingToComment carries the real parent_comment_id
+ // link (see createPostComment below) - the composer's "Replying to" chip and
+ // placeholder just read its authorName/snippet, there is no more @name
+ // text-prefix hack.
  const [newReply, setNewReply] = useState('');
  const [attachedReplyMedia, setAttachedReplyMedia] = useState<string | null>(null);
  const [submittingReply, setSubmittingReply] = useState(false);
- const [replyingToAuthor, setReplyingToAuthor] = useState<string | null>(null);
+ const [replyingToComment, setReplyingToComment] = useState<{ id: string; authorName: string } | null>(null);
 
  // Full screen image lightbox
  const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -185,6 +191,41 @@ export function PostDetailScreen() {
  const [commentLikes, setCommentLikes] = useState<Record<string, number>>({});
  const [commentLikedByMe, setCommentLikedByMe] = useState<Record<string, boolean>>({});
 
+ // Comment edit state (own-comment menu, same visibility rule as delete)
+ const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+ const [editingCommentText, setEditingCommentText] = useState('');
+ const [savingCommentEdit, setSavingCommentEdit] = useState(false);
+
+ // Scroll-to-parent for a reply's "Replying to" chip: each comment row
+ // registers its own View ref, measured against the scroll view on demand.
+ const scrollViewRef = useRef<ScrollView>(null);
+ const commentRefs = useRef<Record<string, View | null>>({});
+ const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
+
+ function scrollToComment(commentId: string) {
+   const target = commentRefs.current[commentId];
+   const scroller = scrollViewRef.current;
+   if (!target || !scroller) return;
+   const targetHandle = findNodeHandle(target);
+   const scrollerHandle = findNodeHandle(scroller);
+   if (!targetHandle || !scrollerHandle) return;
+   UIManager.measureLayout(
+     targetHandle,
+     scrollerHandle,
+     () => {},
+     (_x: number, y: number) => {
+       scroller.scrollTo({ y: Math.max(0, y - 80), animated: true });
+     },
+   );
+ }
+
+ function handleJumpToComment(commentId: string) {
+   haptics.light();
+   scrollToComment(commentId);
+   setHighlightedCommentId(commentId);
+   setTimeout(() => setHighlightedCommentId((cur) => (cur === commentId ? null : cur)), 1600);
+ }
+
  // Poll state
  const [poll, setPoll] = useState(post?.poll ?? null);
 
@@ -193,6 +234,7 @@ export function PostDetailScreen() {
      setLiked(!!post.isLikedByMe);
      setLikesCount(post.likesCount);
      setPoll(post.poll ?? null);
+     setBookmarked(!!post.isBookmarkedByMe);
    }
  }, [post]);
 
@@ -205,6 +247,13 @@ export function PostDetailScreen() {
  queryFn: () => id ? listPostComments(id) : Promise.resolve([]),
  enabled: !!id,
  });
+
+ // Looked up by a reply's "Replying to" chip to show the parent's author/snippet.
+ const commentById = React.useMemo(() => {
+   const map = new Map<string, PostComment>();
+   for (const c of comments ?? []) map.set(c.id, c);
+   return map;
+ }, [comments]);
 
  async function handleToggleLike() {
    if (!post) return;
@@ -246,17 +295,17 @@ export function PostDetailScreen() {
    if (!post || (!newReply.trim() && !attachedReplyMedia)) return;
    setSubmittingReply(true);
    try {
-     const commentPayload = replyingToAuthor ? `@${replyingToAuthor} ${newReply.trim()}` : newReply.trim();
      await createPostComment(
        post.id,
-       commentPayload,
+       newReply.trim(),
        user?.fullName ?? 'You',
        user?.role ?? 'student',
        attachedReplyMedia || undefined,
+       replyingToComment?.id ?? undefined,
      );
      setNewReply('');
      setAttachedReplyMedia(null);
-     setReplyingToAuthor(null);
+     setReplyingToComment(null);
      await refetchComments();
      await queryClient.invalidateQueries({ queryKey: ['post-comments', post.id] });
      await queryClient.invalidateQueries({ queryKey: ['feed'] });
@@ -310,9 +359,72 @@ export function PostDetailScreen() {
     );
   }
 
+  function startEditComment(c: PostComment) {
+    haptics.light();
+    setEditingCommentId(c.id);
+    setEditingCommentText(c.content);
+  }
+
+  function cancelEditComment() {
+    setEditingCommentId(null);
+    setEditingCommentText('');
+  }
+
+  async function handleSaveCommentEdit(commentId: string) {
+    const trimmed = editingCommentText.trim();
+    if (!trimmed) return;
+    setSavingCommentEdit(true);
+    try {
+      await updatePostComment(commentId, trimmed);
+      await refetchComments();
+      setEditingCommentId(null);
+      setEditingCommentText('');
+      haptics.success();
+    } catch (err: any) {
+      haptics.error();
+      Alert.alert('Error', getFriendlyErrorMessage(err, 'Could not save your changes.'));
+    } finally {
+      setSavingCommentEdit(false);
+    }
+  }
+
+  /** Saves/unsaves this post into the one shared saved_items store - mirrors PostCard's handleToggleBookmark. */
+  async function handleToggleBookmark() {
+    if (!post || savingBookmark) return;
+    haptics.light();
+    const next = !bookmarked;
+    setBookmarked(next);
+    setSavingBookmark(true);
+    try {
+      await toggleSavedItem('post', post.id, next, {
+        title: post.title,
+        subtitle: `${post.authorName} • c/${post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}`,
+      });
+      await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
+      await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('post') });
+    } catch (err: any) {
+      setBookmarked(!next);
+      haptics.error();
+      Alert.alert(next ? 'Could not save' : 'Could not remove', getFriendlyErrorMessage(err, 'Please try again.'));
+    } finally {
+      setSavingBookmark(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!post) return;
+    setMenuOpen(false);
+    await Clipboard.setStringAsync(buildPostShareUrl(roleGroup, post.id));
+    haptics.light();
+    Alert.alert('Link Copied', 'Thread URL copied to clipboard.');
+  }
+
   const postImageSource = post?.imageUrl
  ? STOCK_IMAGES[post.imageUrl] ?? (post.imageUrl.startsWith('http') ? { uri: post.imageUrl } : null)
  : null;
+  // A stock-art key never belongs in a multi-image gallery (it isn't a real
+  // uploaded URL) - only resolvable http(s) images render there.
+  const galleryUrls = (post?.imageUrls ?? []).filter((u) => u.startsWith('http'));
 
   if (postLoading) {
     return (
@@ -373,7 +485,7 @@ export function PostDetailScreen() {
  </Pressable>
  </View>
 
- <ScrollView style={{ flex: 1, width: '100%' }}
+ <ScrollView ref={scrollViewRef} style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={false}
  keyboardShouldPersistTaps="handled"
  contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120,
@@ -428,7 +540,26 @@ export function PostDetailScreen() {
  </AppText>
 
  {/* High-Res Media Photo / Video */}
- {postImageSource ? (
+ {galleryUrls.length > 1 ? (
+ <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: spacing.md, borderRadius: 20, overflow: 'hidden' }}>
+ {galleryUrls.slice(0, 4).map((url, index) => (
+ <Pressable
+ key={url + index}
+ onPress={() => {
+ haptics.light();
+ setLightboxMedia(url);
+ setLightboxCaption(post.title);
+ setLightboxOpen(true);
+ }}
+ accessibilityRole="button"
+ accessibilityLabel={`Enlarge post image ${index + 1}`}
+ style={{ width: '49.5%', height: galleryUrls.length <= 2 ? 240 : 119 }}
+ >
+ <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+ </Pressable>
+ ))}
+ </View>
+ ) : postImageSource ? (
  <Pressable
  onPress={() => {
  haptics.light();
@@ -554,11 +685,8 @@ export function PostDetailScreen() {
  </Pressable>
 
  <Pressable
- onPress={() => {
- haptics.light();
- setBookmarked((b) => !b);
- Alert.alert(bookmarked ? 'Bookmark Removed' : 'Saved', 'Added to your bookmarks.');
- }}
+ onPress={handleToggleBookmark}
+ disabled={savingBookmark}
  accessibilityRole="button"
  accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark thread'}
  accessibilityState={{ selected: bookmarked }}
@@ -566,15 +694,12 @@ export function PostDetailScreen() {
  >
  <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
  <AppText variant="caption"weight="bold"tone={bookmarked ? 'brand' : 'secondary'}>
- Save
+ {bookmarked ? 'Saved' : 'Save'}
  </AppText>
  </Pressable>
 
  <Pressable
- onPress={() => {
- haptics.light();
- Alert.alert('Link Copied', 'Discussion link copied to clipboard.');
- }}
+ onPress={handleCopyLink}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
  <Ionicons name="link-outline"size={20} color={colors.textSecondary} />
@@ -614,9 +739,16 @@ export function PostDetailScreen() {
  const isCommentLiked = commentLikedByMe[c.id] ?? !!c.isLikedByMe;
  const cLikes = commentLikes[c.id] ?? c.likesCount;
  const commentImage = c.imageUrl ? (STOCK_IMAGES[c.imageUrl] ?? { uri: c.imageUrl }) : null;
+ const isOwnComment = c.authorId === user?.id || canModerate;
+ const isEditing = editingCommentId === c.id;
+ const parentComment = c.parentCommentId ? commentById.get(c.parentCommentId) : undefined;
 
  return (
- <View key={c.id} style={{ flexDirection: 'row', marginBottom: spacing.md, position: 'relative' }}>
+ <View
+ key={c.id}
+ ref={(node) => { commentRefs.current[c.id] = node; }}
+ style={{ flexDirection: 'row', marginBottom: spacing.md, position: 'relative' }}
+ >
  {/* Vertical Connector Line */}
  {index < comments.length - 1 ? (
  <View
@@ -644,7 +776,16 @@ export function PostDetailScreen() {
  </Pressable>
 
  {/* Comment Bubble */}
- <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)', borderRadius: 16, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
+ <View style={{
+ flex: 1,
+ backgroundColor: highlightedCommentId === c.id
+ ? `${colors.brandPrimary}20`
+ : isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)',
+ borderRadius: 16,
+ padding: spacing.md,
+ borderWidth: 1,
+ borderColor: highlightedCommentId === c.id ? colors.brandPrimary : colors.border,
+ }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
  <AppText weight="bold" variant="bodySmall">{c.authorName}</AppText>
@@ -656,7 +797,18 @@ export function PostDetailScreen() {
  <AppText tone="secondary" variant="caption" style={{ fontSize: 11, flexShrink: 0 }}>
  {timeAgo(c.createdAt)}
  </AppText>
- {(c.authorId === user?.id || canModerate) && (
+ {isOwnComment && !isEditing && (
+ <Pressable
+ accessibilityRole="button"
+ accessibilityLabel="Edit comment"
+ onPress={() => startEditComment(c)}
+ hitSlop={8}
+ style={{ marginLeft: 6 }}
+ >
+ <Ionicons name="create-outline" size={13} color={colors.textSecondary} />
+ </Pressable>
+ )}
+ {isOwnComment && !isEditing && (
  <Pressable
  accessibilityRole="button"
  accessibilityLabel="Delete comment"
@@ -669,9 +821,64 @@ export function PostDetailScreen() {
  )}
  </View>
 
+ {/* "Replying to" back-reference chip - tappable to scroll to/highlight the original comment */}
+ {parentComment ? (
+ <Pressable
+ accessibilityRole="button"
+ accessibilityLabel={`Jump to ${parentComment.authorName}'s comment`}
+ onPress={() => handleJumpToComment(parentComment.id)}
+ style={{
+ flexDirection: 'row',
+ alignItems: 'center',
+ gap: 4,
+ backgroundColor: colors.divider,
+ borderRadius: radius.sm,
+ paddingHorizontal: 8,
+ paddingVertical: 3,
+ marginTop: 4,
+ alignSelf: 'flex-start',
+ maxWidth: '100%',
+ }}
+ >
+ <Ionicons name="arrow-undo-outline" size={11} color={colors.textSecondary} />
+ <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11, flexShrink: 1 }}>
+ Replying to {parentComment.authorName}: {parentComment.content.slice(0, 40)}{parentComment.content.length > 40 ? '…' : ''}
+ </AppText>
+ </Pressable>
+ ) : null}
+
+ {isEditing ? (
+ <View style={{ marginTop: spacing.xs }}>
+ <TextInput
+ accessibilityLabel="Edit comment"
+ value={editingCommentText}
+ onChangeText={setEditingCommentText}
+ multiline
+ style={{
+ color: colors.textPrimary,
+ fontSize: 13,
+ lineHeight: 20,
+ borderWidth: 1,
+ borderColor: colors.border,
+ borderRadius: radius.sm,
+ padding: 8,
+ minHeight: 44,
+ }}
+ />
+ <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: 6 }}>
+ <Pressable accessibilityRole="button" onPress={cancelEditComment} disabled={savingCommentEdit}>
+ <AppText variant="caption" weight="semiBold" tone="secondary">Cancel</AppText>
+ </Pressable>
+ <Pressable accessibilityRole="button" onPress={() => handleSaveCommentEdit(c.id)} disabled={savingCommentEdit || !editingCommentText.trim()}>
+ <AppText variant="caption" weight="bold" tone="brand">{savingCommentEdit ? 'Saving…' : 'Save'}</AppText>
+ </Pressable>
+ </View>
+ </View>
+ ) : (
  <AppText variant="bodySmall" tone="primary" style={{ marginTop: 4, lineHeight: 20 }}>
  {c.content}
  </AppText>
+ )}
 
  {commentImage ? (
  <Pressable accessibilityRole="button" accessibilityLabel="View attached image full screen"
@@ -702,8 +909,7 @@ export function PostDetailScreen() {
  <Pressable
  onPress={() => {
  haptics.light();
- setReplyingToAuthor(c.authorName);
- setNewReply(`@${c.authorName} `);
+ setReplyingToComment({ id: c.id, authorName: c.authorName });
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
  >
@@ -743,10 +949,10 @@ export function PostDetailScreen() {
           }}
         >
           <View style={{ width: '100%', maxWidth: isDesktop ? 800 : undefined }}>
-            {replyingToAuthor ? (
+            {replyingToComment ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
-                <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToAuthor}</AppText>
-                <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReplyingToAuthor(null)} hitSlop={8}>
+                <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToComment.authorName}</AppText>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReplyingToComment(null)} hitSlop={8}>
                   <Ionicons name="close" size={14} color={colors.brandPrimary} />
                 </Pressable>
               </View>
@@ -757,7 +963,7 @@ export function PostDetailScreen() {
 
               <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 4 }}>
                 <TextInput accessibilityLabel="Write a reply"
-                  placeholder={replyingToAuthor ? `Reply to @${replyingToAuthor}...` : "Write a reply..."}
+                  placeholder={replyingToComment ? `Reply to @${replyingToComment.authorName}...` : "Write a reply..."}
                   placeholderTextColor={colors.textSecondary}
                   value={newReply}
                   onChangeText={setNewReply}
@@ -839,10 +1045,7 @@ export function PostDetailScreen() {
  {/* Options Menu Action Sheet */}
  <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
  <Pressable
- onPress={() => {
- setMenuOpen(false);
- Alert.alert('Link Copied', 'Thread URL copied to clipboard.');
- }}
+ onPress={handleCopyLink}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
  <Ionicons name="link-outline"size={18} color={colors.textPrimary} />

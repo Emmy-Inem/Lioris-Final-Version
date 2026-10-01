@@ -44,11 +44,20 @@ export const SAVED_ITEMS_KEY = (kind?: SavedKind): (string | undefined)[] =>
 // ---------------------------------------------------------------------------
 // Offline / signed-out mirror
 // ---------------------------------------------------------------------------
-const LOCAL_KEY = 'lioris_saved_items_v1';
+// Namespaced by user id (see scopedLocalKey) so a shared/handed-down device,
+// or an account switch before the next successful server round-trip, cannot
+// show the previous account's cached saves.
+const LOCAL_KEY_BASE = 'lioris_saved_items_v1';
 const isWeb = Platform.OS === 'web';
+
+function scopedLocalKey(userId: string | null): string {
+  return userId ? `${LOCAL_KEY_BASE}:${userId}` : LOCAL_KEY_BASE;
+}
 
 let localItems: SavedItem[] = [];
 let hydrated = false;
+/** Which account the in-memory mirror currently holds - re-hydrated on a change. */
+let hydratedForUserId: string | null = null;
 
 const listeners = new Set<(items: SavedItem[]) => void>();
 
@@ -65,58 +74,73 @@ function notify() {
   for (const fn of listeners) fn(snapshot);
 }
 
-async function readLocalRaw(): Promise<string | null> {
+async function readLocalRaw(key: string): Promise<string | null> {
   try {
-    if (isWeb) return typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_KEY) : null;
-    return await SecureStore.getItemAsync(LOCAL_KEY);
+    if (isWeb) return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+    return await SecureStore.getItemAsync(key);
   } catch {
     return null;
   }
 }
 
-async function writeLocalRaw(raw: string): Promise<void> {
+async function writeLocalRaw(key: string, raw: string): Promise<void> {
   try {
     if (isWeb) {
-      if (typeof localStorage !== 'undefined') localStorage.setItem(LOCAL_KEY, raw);
+      if (typeof localStorage !== 'undefined') localStorage.setItem(key, raw);
       return;
     }
-    await SecureStore.setItemAsync(LOCAL_KEY, raw);
+    await SecureStore.setItemAsync(key, raw);
   } catch {
     // quota exceeded, private mode, locked keychain - the in-memory copy stands
   }
 }
 
 /**
- * Loads the local mirror once. Also migrates the old resources-only key so a
- * user who bookmarked resources before this change does not lose them.
+ * Loads the local mirror for the CURRENT account once, re-hydrating if the
+ * signed-in account changes (so a device handed to someone else, or an
+ * account switch, never shows the previous account's cached saves). Also
+ * migrates older, un-namespaced local data so nobody loses saves they
+ * already made on this device: first this account's own pre-namespacing
+ * saved_items list, then (only if that is empty too) the legacy
+ * resources-only list from before saved_items existed at all.
  */
 export async function hydrateSavedItems(): Promise<SavedItem[]> {
-  if (hydrated) return [...localItems];
+  const uid = await currentUserId();
+  if (hydrated && hydratedForUserId === uid) return [...localItems];
   hydrated = true;
+  hydratedForUserId = uid;
+
+  const key = scopedLocalKey(uid);
   try {
-    const raw = await readLocalRaw();
+    const raw = await readLocalRaw(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) localItems = parsed.filter((x: any) => x && x.kind && x.itemId);
+      localItems = Array.isArray(parsed) ? parsed.filter((x: any) => x && x.kind && x.itemId) : [];
     } else {
-      const legacyRaw = isWeb
-        ? typeof localStorage !== 'undefined'
-          ? localStorage.getItem('lioris_bookmarked_resources_v1')
-          : null
-        : await SecureStore.getItemAsync('lioris_bookmarked_resources_v1').catch(() => null);
+      const legacyRaw = await readLocalRaw(LOCAL_KEY_BASE);
       const legacy = legacyRaw ? JSON.parse(legacyRaw) : null;
-      if (Array.isArray(legacy)) {
-        localItems = legacy
-          .filter((id: any) => typeof id === 'string')
-          .map((id: string) => ({
-            id: `resource:${id}`,
-            kind: 'resource' as const,
-            itemId: id,
-            savedAt: new Date().toISOString(),
-            title: id,
-          }));
-        await writeLocalRaw(JSON.stringify(localItems));
+      if (Array.isArray(legacy) && legacy.length > 0) {
+        localItems = legacy.filter((x: any) => x && x.kind && x.itemId);
+      } else {
+        const oldResourcesRaw = isWeb
+          ? typeof localStorage !== 'undefined'
+            ? localStorage.getItem('lioris_bookmarked_resources_v1')
+            : null
+          : await SecureStore.getItemAsync('lioris_bookmarked_resources_v1').catch(() => null);
+        const oldResources = oldResourcesRaw ? JSON.parse(oldResourcesRaw) : null;
+        localItems = Array.isArray(oldResources)
+          ? oldResources
+              .filter((id: any) => typeof id === 'string')
+              .map((id: string) => ({
+                id: `resource:${id}`,
+                kind: 'resource' as const,
+                itemId: id,
+                savedAt: new Date().toISOString(),
+                title: id,
+              }))
+          : [];
       }
+      if (localItems.length > 0) await writeLocalRaw(key, JSON.stringify(localItems));
     }
   } catch {
     localItems = [];
@@ -126,10 +150,12 @@ export async function hydrateSavedItems(): Promise<SavedItem[]> {
 }
 
 async function setLocal(next: SavedItem[]): Promise<void> {
+  const uid = await currentUserId();
   localItems = next;
   hydrated = true;
+  hydratedForUserId = uid;
   notify();
-  await writeLocalRaw(JSON.stringify(next));
+  await writeLocalRaw(scopedLocalKey(uid), JSON.stringify(next));
 }
 
 function localUpsert(kind: SavedKind, itemId: string, meta?: SavedItemMeta): SavedItem[] {

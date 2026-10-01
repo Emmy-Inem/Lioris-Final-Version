@@ -1163,6 +1163,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261005020000_resource_ratings.sql',
   'supabase/migrations/20261005030000_alumni_profile_extras.sql',
   'supabase/migrations/20261005040000_admin_user_diagnostics.sql',
+  'supabase/migrations/20261006020000_forum_fixes.sql',
   'supabase/migrations/20261006030000_events_fixes.sql',
   'supabase/migrations/20261006040000_study_pod_file_sharing.sql',
 ];
@@ -3035,6 +3036,87 @@ console.log('\n== admin user diagnostics ==');
       await imp(U.staffU);
       const data = (await c.q(`SELECT public.admin_get_user_diagnostics($1) AS data`, [U.s1])).rows[0].data;
       eq(data.user_id, U.s1, 'same-campus staff can diagnose the user');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// forum fixes (20261006020000_forum_fixes.sql): auto-join on post, reply
+// links, multi-image column
+// ---------------------------------------------------------------------------
+console.log('\n== forum fixes (auto-join, reply links, image_urls) ==');
+{
+  await check('posting into a community the user has not joined auto-adds them to forum_community_members, idempotently', async () => {
+    await as(U.s1, async (c) => {
+      const commId = (await c.q(`SELECT id FROM public.forum_communities WHERE category = 'Academic'`)).rows[0]?.id;
+      assert(commId, 'fixture: the seeded Academic community exists');
+
+      const before = (await c.q(`SELECT count(*)::int n FROM public.forum_community_members WHERE user_id = $1 AND community_id = $2`, [U.s1, commId])).rows[0].n;
+      eq(before, 0, 's1 has not joined Academic yet');
+
+      await c.q(`INSERT INTO public.posts (author_id, campus_code, category, content) VALUES ($1, 'UNILAG', 'Academic', 'first post') RETURNING id`, [U.s1]);
+      const afterFirst = (await c.q(`SELECT count(*)::int n FROM public.forum_community_members WHERE user_id = $1 AND community_id = $2`, [U.s1, commId])).rows[0].n;
+      eq(afterFirst, 1, 'first post into the community auto-joined s1');
+
+      // A second post into the same community must not duplicate the row (or error).
+      await c.q(`INSERT INTO public.posts (author_id, campus_code, category, content) VALUES ($1, 'UNILAG', 'Academic', 'second post') RETURNING id`, [U.s1]);
+      const afterSecond = (await c.q(`SELECT count(*)::int n FROM public.forum_community_members WHERE user_id = $1 AND community_id = $2`, [U.s1, commId])).rows[0].n;
+      eq(afterSecond, 1, 'posting again into the same community does not duplicate the membership');
+
+      // A post into a category with no matching community is a no-op, not an error.
+      const otherBefore = (await c.q(`SELECT count(*)::int n FROM public.forum_community_members WHERE user_id = $1`, [U.s1])).rows[0].n;
+      assert((await c.t(`INSERT INTO public.posts (author_id, campus_code, category, content) VALUES ($1, 'UNILAG', 'Not A Real Category', 'orphan post')`, [U.s1])).ok, 'posting into an unmatched category still succeeds');
+      const otherAfter = (await c.q(`SELECT count(*)::int n FROM public.forum_community_members WHERE user_id = $1`, [U.s1])).rows[0].n;
+      eq(otherAfter, otherBefore, 'an unmatched category adds no membership row');
+    });
+  });
+
+  await check('a reply can link to its parent comment via parent_comment_id, which clears (not deletes the reply) when the parent is removed', async () => {
+    await as(U.s1, async (c) => {
+      const post = (await c.q(`INSERT INTO public.posts (author_id, campus_code, content) VALUES ($1, 'UNILAG', 'thread for replies') RETURNING id`, [U.s1])).rows[0];
+      const parent = (await c.q(`INSERT INTO public.post_comments (post_id, author_id, content) VALUES ($1, $2, 'original comment') RETURNING id`, [post.id, U.s1])).rows[0];
+
+      const reply = (await c.su(`INSERT INTO public.post_comments (post_id, author_id, content, parent_comment_id) VALUES ($1, $2, 'a reply', $3) RETURNING id, parent_comment_id`, [post.id, U.s2, parent.id])).rows[0];
+      eq(reply.parent_comment_id, parent.id, 'the reply stores its parent');
+
+      // The author deletes the parent comment (their own UPDATE/DELETE policy).
+      await c.q(`DELETE FROM public.post_comments WHERE id = $1`, [parent.id]);
+      const after = (await c.q(`SELECT parent_comment_id FROM public.post_comments WHERE id = $1`, [reply.id])).rows[0];
+      eq(after.parent_comment_id, null, 'deleting the parent clears the reply link instead of taking the reply down with it');
+    });
+  });
+
+  await check('a comment author can edit their own comment content via the existing UPDATE policy; a non-author cannot', async () => {
+    await as(U.s1, async (c) => {
+      const post = (await c.q(`INSERT INTO public.posts (author_id, campus_code, content) VALUES ($1, 'UNILAG', 'thread for edits') RETURNING id`, [U.s1])).rows[0];
+      const comment = (await c.q(`INSERT INTO public.post_comments (post_id, author_id, content) VALUES ($1, $2, 'typo verison') RETURNING id`, [post.id, U.s1])).rows[0];
+
+      await c.q(`UPDATE public.post_comments SET content = 'typo version' WHERE id = $1`, [comment.id]);
+      eq((await c.q(`SELECT content FROM public.post_comments WHERE id = $1`, [comment.id])).rows[0].content, 'typo version', 'author can edit their own comment');
+    });
+
+    await as(U.s2, async (c) => {
+      // This block runs as s2, so s1's fixture post/comment are created via
+      // su() (bypasses RLS for setup only - the actual edit attempt below
+      // still runs as s2 through the normal authenticated role).
+      const post = (await c.su(`INSERT INTO public.posts (author_id, campus_code, content) VALUES ($1, 'UNILAG', 'thread for edits 2') RETURNING id`, [U.s1])).rows[0];
+      const comment = (await c.su(`INSERT INTO public.post_comments (post_id, author_id, content) VALUES ($1, $2, 'not yours') RETURNING id`, [post.id, U.s1])).rows[0];
+      // s2 tries to edit s1's comment - the USING clause filters it to zero rows, not an error.
+      await c.q(`UPDATE public.post_comments SET content = 'hacked' WHERE id = $1`, [comment.id]);
+      const stillOriginal = (await c.q(`SELECT content FROM public.post_comments WHERE id = $1`, [comment.id])).rows[0].content;
+      eq(stillOriginal, 'not yours', 'a non-author UPDATE matches zero rows and leaves the comment untouched');
+    });
+  });
+
+  await check('posts.image_urls stores up to 4 image URLs independently of the legacy image_url column', async () => {
+    await as(U.s1, async (c) => {
+      const urls = ['https://cdn.example.test/a.jpg', 'https://cdn.example.test/b.jpg', 'https://cdn.example.test/c.jpg', 'https://cdn.example.test/d.jpg'];
+      const post = (await c.q(
+        `INSERT INTO public.posts (author_id, campus_code, content, image_url, image_urls) VALUES ($1, 'UNILAG', 'gallery post', $2, $3) RETURNING id, image_url, image_urls`,
+        [U.s1, urls[0], urls],
+      )).rows[0];
+      eq(post.image_url, urls[0], 'the legacy singular column still holds the first image');
+      eq(post.image_urls, urls, 'the new array column holds all 4 images');
     });
   });
 }
