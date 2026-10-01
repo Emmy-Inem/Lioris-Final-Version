@@ -1167,6 +1167,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261006020000_forum_fixes.sql',
   'supabase/migrations/20261006030000_events_fixes.sql',
   'supabase/migrations/20261006040000_study_pod_file_sharing.sql',
+  'supabase/migrations/20261007010000_campus_access_and_devices_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -3408,6 +3409,47 @@ console.log('\n== study pod file sharing ==');
     });
   });
 }
+
+// ---------------------------------------------------------------------------
+// campus access & devices fixes (20261007010000_campus_access_and_devices_fixes.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== campus access & devices fixes (admin push_tokens access) ==');
+await check('admin can SELECT another user\'s push_tokens row (support/security investigation)', async () => {
+  await as(U.adminA, async (c) => {
+    await c.su(`INSERT INTO public.push_tokens (user_id, token, platform) VALUES ($1, 'ExponentPushToken[fsout-test-0001]', 'ios')`, [U.s2]);
+    const r = await c.q(`SELECT user_id, platform FROM public.push_tokens WHERE token = 'ExponentPushToken[fsout-test-0001]'`);
+    eq(r.rows.length, 1, 'admin should see another user\'s push token row');
+    eq(r.rows[0].user_id, U.s2);
+  });
+});
+await check('admin can DELETE another user\'s push_tokens row (revoke a device registration)', async () => {
+  await as(U.adminA, async (c) => {
+    await c.su(`INSERT INTO public.push_tokens (user_id, token) VALUES ($1, 'ExponentPushToken[fsout-test-0002]')`, [U.s2]);
+    const del = await c.t(`DELETE FROM public.push_tokens WHERE token = 'ExponentPushToken[fsout-test-0002]'`);
+    assert(del.ok && del.n === 1, 'admin delete failed: ' + (del.err?.message ?? 'no rows affected'));
+    const left = await c.su(`SELECT count(*)::int n FROM public.push_tokens WHERE token = 'ExponentPushToken[fsout-test-0002]'`);
+    eq(left.rows[0].n, 0, 'row should be gone');
+  });
+});
+await check('admin still cannot INSERT or UPDATE another user\'s push_tokens row (only SELECT/DELETE were granted)', async () => {
+  await as(U.adminA, async (c) => {
+    const ins = await c.t(`INSERT INTO public.push_tokens (user_id, token) VALUES ($1, 'ExponentPushToken[fsout-test-0003]')`, [U.s2]);
+    denied(ins, /row-level security/i, 'admin insert for another user');
+
+    await c.su(`INSERT INTO public.push_tokens (user_id, token, platform) VALUES ($1, 'ExponentPushToken[fsout-test-0004]', 'android')`, [U.s2]);
+    const upd = await c.t(`UPDATE public.push_tokens SET platform = 'ios' WHERE token = 'ExponentPushToken[fsout-test-0004]'`);
+    assert(upd.ok && upd.n === 0, 'admin should not be able to update another user\'s push token row (RLS USING should hide it)');
+  });
+});
+await check('a non-admin student still cannot read or delete another user\'s push_tokens row (admin policies are admin-only)', async () => {
+  await as(U.s5, async (c) => {
+    await c.su(`INSERT INTO public.push_tokens (user_id, token) VALUES ($1, 'ExponentPushToken[fsout-test-0005]')`, [U.s2]);
+    const r = await c.q(`SELECT 1 FROM public.push_tokens WHERE token = 'ExponentPushToken[fsout-test-0005]'`);
+    eq(r.rows.length, 0, 'a student must not see another user\'s push token row');
+    const del = await c.t(`DELETE FROM public.push_tokens WHERE token = 'ExponentPushToken[fsout-test-0005]'`);
+    assert(del.ok && del.n === 0, 'a student must not be able to delete another user\'s push token row');
+  });
+});
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n== Summary: ${results.length - failed.length}/${results.length} checks passed ==`);
