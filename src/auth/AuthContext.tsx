@@ -319,6 +319,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           userRef.current = nextUser;
           setUser(nextUser);
           loadBlockedUserIds().catch(() => {});
+        } else if (mounted) {
+          // No active Supabase session (expired/invalid refresh token, or the
+          // failsafe timeout above lost the race) - don't leave the user
+          // optimistically restored from local cache above stuck "logged in".
+          userRef.current = null;
+          setUser(null);
         }
       } catch {
         // OAuth check fallback
@@ -358,10 +364,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (event === 'SIGNED_OUT') {
-        // Only log out if user explicitly clicked the logout button
-        if (isExplicitLogout.current) {
-          userRef.current = null;
-          setUser(null);
+        // Clear local state for the explicit-logout case too (logout() also does this
+        // itself, so this is a no-op there) and for any other SIGNED_OUT we weren't
+        // expecting - an invalidated/expired/revoked session (e.g. "Sign Out All Other
+        // Active Sessions" from another device) must not leave the app looking signed in.
+        // isSwappingSession is already checked above, so an impersonation begin/end swap
+        // never reaches here.
+        userRef.current = null;
+        setUser(null);
+        if (!isExplicitLogout.current) {
+          router.replace('/(auth)/login');
         }
         return;
       }
