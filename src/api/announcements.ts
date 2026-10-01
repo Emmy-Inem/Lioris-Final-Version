@@ -185,3 +185,84 @@ export async function publishAnnouncement(
  locallyCreatedAnnouncements = [created, ...locallyCreatedAnnouncements];
  return created;
 }
+
+export interface UpdateAnnouncementPayload {
+ title?: string;
+ content?: string;
+ audienceScope?: Announcement['audienceScope'];
+ priority?: Announcement['priority'];
+ /** Pass `null` to clear an expiry that was previously set. */
+ expiresAt?: string | null;
+}
+
+/**
+ * Edits an announcement in place. Mirrors updatePost's (src/api/posts.ts) error-handling
+ * convention: throws both when the `update()` call itself errors AND when it matches zero rows -
+ * the latter is how the "Admins and staff can update announcements" UPDATE policy's USING clause
+ * shows up for someone it doesn't cover (it filters the row out rather than raising a Postgres
+ * error), so a silently-ignored edit never gets reported back to the caller as saved.
+ */
+export async function updateAnnouncement(
+ announcementId: string,
+ updates: UpdateAnnouncementPayload,
+): Promise<void> {
+ const dbPayload: Record<string, any> = {};
+ if (updates.title !== undefined) dbPayload.title = updates.title;
+ if (updates.content !== undefined) dbPayload.content = updates.content;
+ if (updates.audienceScope !== undefined) dbPayload.audience_scope = updates.audienceScope;
+ if (updates.priority !== undefined) dbPayload.priority = updates.priority;
+ if (updates.expiresAt !== undefined) dbPayload.expires_at = updates.expiresAt;
+
+ if (Object.keys(dbPayload).length === 0) return;
+
+ const { data, error } = await supabase.from('announcements').update(dbPayload).eq('id', announcementId).select('id');
+ if (error) {
+ console.warn('[Announcements] updateAnnouncement error:', error.message);
+ throw new Error('Could not save this announcement. Please try again.');
+ }
+ if (!data || data.length === 0) {
+ throw new Error('This announcement could not be updated. You may not have permission to edit it.');
+ }
+
+ locallyCreatedAnnouncements = locallyCreatedAnnouncements.map((a) =>
+ a.id === announcementId
+ ? {
+ ...a,
+ ...(updates.title !== undefined ? { title: updates.title } : {}),
+ ...(updates.content !== undefined ? { content: updates.content } : {}),
+ ...(updates.audienceScope !== undefined ? { audienceScope: updates.audienceScope } : {}),
+ ...(updates.priority !== undefined ? { priority: updates.priority } : {}),
+ ...(updates.expiresAt !== undefined ? { expiresAt: updates.expiresAt } : {}),
+ }
+ : a,
+ );
+}
+
+/**
+ * Unpublishes/removes an announcement. Mirrors deletePost's (src/api/posts.ts) RLS-aware
+ * convention: a DELETE that RLS silently filters out reports success with zero rows affected, so
+ * the deleted row is re-selected for - still existing means the caller lacked permission, already
+ * gone means someone else's delete (or this call) already took effect and is not an error.
+ */
+export async function deleteAnnouncement(announcementId: string): Promise<void> {
+ const previous = locallyCreatedAnnouncements;
+ locallyCreatedAnnouncements = locallyCreatedAnnouncements.filter((a) => a.id !== announcementId);
+
+ try {
+ const { data, error } = await supabase.from('announcements').delete().eq('id', announcementId).select('id');
+ if (error) throw error;
+
+ if (!data || data.length === 0) {
+ const { data: still } = await supabase.from('announcements').select('id').eq('id', announcementId).maybeSingle();
+ if (still) {
+ locallyCreatedAnnouncements = previous;
+ throw new Error('This announcement could not be deleted. You may not have permission to remove it.');
+ }
+ }
+ } catch (err) {
+ if (err instanceof Error && /could not be deleted/.test(err.message)) throw err;
+ console.warn('[Announcements] deleteAnnouncement error:', err);
+ locallyCreatedAnnouncements = previous;
+ throw new Error('Could not delete this announcement. Please check your connection and try again.');
+ }
+}

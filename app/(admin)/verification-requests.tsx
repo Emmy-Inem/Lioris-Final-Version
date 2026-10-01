@@ -22,9 +22,6 @@ import {
   VerificationDocument,
   VerificationRequest,
 } from '@/api/verification';
-import { grantVerification, markVerificationRejected } from '@/api/profile';
-import { recordAuditLogEntry } from '@/api/auditLog';
-import { createNotification } from '@/api/notifications';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 
@@ -243,51 +240,21 @@ export default function VerificationRequestsScreen() {
   // flows - throws on failure so callers can decide how to surface it
   // (an Alert for a single item, a tallied summary for a bulk run).
   async function approveRequestCore(req: VerificationRequest) {
+    // respondToVerificationRequest already writes the audit log entry and the applicant
+    // notification (see src/api/verification.ts) - doing it again here used to double-write
+    // both with slightly different copy on every approval. grantVerification() only mutated a
+    // stale in-memory Map (src/api/profile.ts) and touched nothing in the database, so it is
+    // dropped rather than carried along as dead weight.
     await respondToVerificationRequest(req.id, 'approved');
-    grantVerification(req.userId);
-
-    recordAuditLogEntry({
-      action: 'verification_approved',
-      summary: `Approved verified badge for ${req.applicantName} (${req.institutionClaimed} - ${req.documentReference})`,
-      targetType: 'verification_request',
-      targetId: req.id,
-      institutionCode: req.institutionClaimed,
-      reason: 'Document verified against registrar criteria',
-    });
-
-    const targetRole = req.documentType === 'Staff ID' ? 'staff' : req.documentType === 'Alumni Certificate' ? 'alumni' : 'student';
-
-    createNotification({
-      recipientId: req.userId,
-      type: 'system',
-      title: 'Campus Verification Approved',
-      body: 'Congratulations! Your identity has been verified. The official verified badge is now active on your profile.',
-      deepLinkPath: '/profile',
-    });
   }
 
   // Core mutation logic shared by both the single-item and bulk reject
   // flows.
   async function rejectRequestCore(req: VerificationRequest, finalReason: string) {
-    await respondToVerificationRequest(req.id, 'rejected');
-    markVerificationRejected(req.userId);
-
-    recordAuditLogEntry({
-      action: 'verification_rejected',
-      summary: `Rejected verification for ${req.applicantName} (${req.institutionClaimed}): ${finalReason}`,
-      targetType: 'verification_request',
-      targetId: req.id,
-      institutionCode: req.institutionClaimed,
-      reason: finalReason,
-    });
-
-    createNotification({
-      recipientId: req.userId,
-      type: 'system',
-      title: 'Verification Request Update',
-      body: `Your verification submission was not approved: ${finalReason}. You may re-apply with clear documentation.`,
-      deepLinkPath: '/profile',
-    });
+    // Same as above: respondToVerificationRequest already records the audit entry and
+    // notifies the applicant, and already persists the reason into review_notes.
+    // markVerificationRejected() was the same kind of dead in-memory no-op as grantVerification().
+    await respondToVerificationRequest(req.id, 'rejected', { reason: finalReason });
   }
 
   async function handleApprove(req: VerificationRequest) {

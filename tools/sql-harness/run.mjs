@@ -1167,6 +1167,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261006020000_forum_fixes.sql',
   'supabase/migrations/20261006030000_events_fixes.sql',
   'supabase/migrations/20261006040000_study_pod_file_sharing.sql',
+  'supabase/migrations/20261007020000_verification_moderation_announcements_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -3405,6 +3406,136 @@ console.log('\n== study pod file sharing ==');
         [pod, U.s1, 'x'.repeat(501)],
       );
       denied(r, /study_group_posts_file_path_chk|check constraint/i, 'direct insert past the 500-char cap');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// verification / moderation / announcements fixes (20261007020000)
+// ---------------------------------------------------------------------------
+console.log('\n== verification / moderation / announcements fixes ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  // c.su() only restores the role `as()` was entered with, which is a no-op
+  // when (as here) that was already 'postgres' - so after imp() switches the
+  // ACTUAL role to authenticated, c.su() would keep querying as that
+  // impersonated user instead of resetting to superuser. Use this instead.
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  await check('announcements INSERT: a UNILAG staff member cannot publish an announcement tagged with another campus', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU); // staffU is UNILAG staff
+      denied(
+        await c.t(
+          `INSERT INTO public.announcements (author_id, campus_code, title, content) VALUES ($1, 'UI', 'Not my campus', 'body')`,
+          [U.staffU],
+        ),
+        /row-level security|new row violates/i,
+        'UNILAG staff publishing an announcement tagged UI',
+      );
+    });
+  });
+
+  // Not asserted via RETURNING: this policy's WITH CHECK is only about
+  // author_id + role/campus, but an INSERT ... RETURNING also evaluates the
+  // table's SELECT policy against the new row to decide what to hand back -
+  // and that SELECT policy (pre-existing, unrelated to this fix) only shows
+  // an admin/staff member announcements for their OWN campus or GLOBAL ones.
+  // So these checks confirm the write went through with a superuser re-read
+  // instead of relying on RETURNING.
+  await check('announcements INSERT: a UNILAG staff member can still publish to their own campus (and the matching UPDATE/DELETE policies already restrict staff this same way)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU);
+      const own = await c.t(
+        `INSERT INTO public.announcements (author_id, campus_code, title, content) VALUES ($1, 'UNILAG', 'My campus', 'body')`,
+        [U.staffU],
+      );
+      assert(own.ok, `own-campus publish should succeed: ${own.err?.message}`);
+      await svc();
+      const row = await c.q(`SELECT id FROM public.announcements WHERE author_id = $1 AND campus_code = 'UNILAG' AND title = 'My campus'`, [U.staffU]);
+      eq(row.rows.length, 1, 'the own-campus announcement was actually written');
+    });
+  });
+
+  await check('announcements INSERT: a UNILAG staff member cannot publish a GLOBAL announcement (mirrors the UPDATE/DELETE policies, which never special-case GLOBAL for staff either)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU);
+      denied(
+        await c.t(
+          `INSERT INTO public.announcements (author_id, campus_code, title, content) VALUES ($1, 'GLOBAL', 'Everyone', 'body')`,
+          [U.staffU],
+        ),
+        /row-level security|new row violates/i,
+        'UNILAG staff publishing a GLOBAL announcement',
+      );
+    });
+  });
+
+  await check('announcements INSERT: an admin can still publish to any campus', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.adminA);
+      const r = await c.t(
+        `INSERT INTO public.announcements (author_id, campus_code, title, content) VALUES ($1, 'UI', 'Admin cross-campus', 'body')`,
+        [U.adminA],
+      );
+      assert(r.ok, `admin publish to any campus should succeed: ${r.err?.message}`);
+      await svc();
+      const row = await c.q(`SELECT id FROM public.announcements WHERE author_id = $1 AND campus_code = 'UI' AND title = 'Admin cross-campus'`, [U.adminA]);
+      eq(row.rows.length, 1, 'the cross-campus announcement was actually written');
+    });
+  });
+
+  await check('marketplace_listings SELECT: a UI staff member cannot read a UNILAG-only listing', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1); // UNILAG student
+      const listing = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Used textbook', '2,000', 'Books') RETURNING id`,
+        [U.s1],
+      )).rows[0];
+
+      await imp(U.staffI); // staffI is UI staff
+      const seen = (await c.q(`SELECT id FROM public.marketplace_listings WHERE id = $1`, [listing.id])).rows;
+      eq(seen.length, 0, 'UI staff should not see a UNILAG-only listing');
+    });
+  });
+
+  await check('marketplace_listings SELECT: a UNILAG staff member can read a UNILAG listing, and any staff can read a GLOBAL one', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      const unilagListing = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Calculator', '5,000', 'Electronics') RETURNING id`,
+        [U.s1],
+      )).rows[0];
+      const globalListing = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'GLOBAL', 'Campus-wide item', '1,000', 'Other') RETURNING id`,
+        [U.s1],
+      )).rows[0];
+
+      await imp(U.staffU); // UNILAG staff
+      const ownCampus = (await c.q(`SELECT id FROM public.marketplace_listings WHERE id = $1`, [unilagListing.id])).rows;
+      eq(ownCampus.length, 1, 'UNILAG staff sees the UNILAG listing');
+
+      await imp(U.staffI); // UI staff, different campus
+      const global = (await c.q(`SELECT id FROM public.marketplace_listings WHERE id = $1`, [globalListing.id])).rows;
+      eq(global.length, 1, 'any staff sees a GLOBAL listing regardless of their own campus');
+    });
+  });
+
+  await check('marketplace_listings SELECT: an admin can still read a listing from any campus', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      const listing = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Admin-visible item', '3,000', 'Other') RETURNING id`,
+        [U.s1],
+      )).rows[0];
+
+      await imp(U.adminA);
+      const seen = (await c.q(`SELECT id FROM public.marketplace_listings WHERE id = $1`, [listing.id])).rows;
+      eq(seen.length, 1, 'admin sees a listing from any campus');
     });
   });
 }
