@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -14,6 +14,7 @@ import { useRealtimeChannel, RealtimeEvent } from '@/realtime/useRealtimeChannel
 import { haptics } from '@/utils/haptics';
 import { WebRTCCallSession } from '@/api/webrtc';
 import { CALL_DECLINED_MARKER } from '@/api/calling';
+import { CallMediaSurface } from './CallMediaSurface';
 
 interface CallModalProps {
   visible: boolean;
@@ -53,8 +54,8 @@ export function CallModal({
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
 
   const sessionRef = useRef<WebRTCCallSession | null>(null);
-  const localVideoRef = useRef<any>(null);
-  const remoteVideoRef = useRef<any>(null);
+  const [localStream, setLocalStream] = useState<any>(null);
+  const [remoteStream, setRemoteStream] = useState<any>(null);
 
   useEffect(() => {
     if (!visible) {
@@ -64,6 +65,8 @@ export function CallModal({
       }
       setSeconds(0);
       setConnectionState('idle');
+      setLocalStream(null);
+      setRemoteStream(null);
       return;
     }
 
@@ -72,16 +75,8 @@ export function CallModal({
       userId: user?.id || 'guest-' + Math.random().toString(36).substring(2, 7),
       userName: user?.fullName || 'Campus Student',
       isVideo: callType === 'video',
-      onLocalStream: (stream) => {
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-      },
-      onRemoteStream: (stream) => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = stream;
-        }
-      },
+      onLocalStream: (stream) => setLocalStream(stream),
+      onRemoteStream: (stream) => setRemoteStream(stream),
       onConnectionStateChange: (state) => {
         setConnectionState(state);
       },
@@ -110,20 +105,6 @@ export function CallModal({
     };
   }, [visible, roomName, callType]);
 
-  useEffect(() => {
-    if (visible && sessionRef.current) {
-      const t = setTimeout(() => {
-        if (localVideoRef.current && (sessionRef.current as any)?.localStream) {
-          localVideoRef.current.srcObject = (sessionRef.current as any).localStream;
-        }
-        if (remoteVideoRef.current && (sessionRef.current as any)?.remoteStream) {
-          remoteVideoRef.current.srcObject = (sessionRef.current as any).remoteStream;
-        }
-      }, 300);
-      return () => clearTimeout(t);
-    }
-  }, [visible, connectionState]);
-
   const formatTimer = (totalSec: number) => {
     const mins = Math.floor(totalSec / 60);
     const secs = totalSec % 60;
@@ -148,10 +129,9 @@ export function CallModal({
 
   const handleToggleSpeaker = () => {
     haptics.light();
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.muted = !isSpeakerMuted;
-    }
-    setIsSpeakerMuted(!isSpeakerMuted);
+    const next = !isSpeakerMuted;
+    sessionRef.current?.setRemoteAudioMuted(next);
+    setIsSpeakerMuted(next);
   };
 
   const handleCopyLink = async () => {
@@ -207,8 +187,6 @@ export function CallModal({
   useRealtimeChannel(handleRealtimeEvent);
 
   if (!visible) return null;
-
-  const isWeb = Platform.OS === 'web';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleHangup}>
@@ -270,19 +248,7 @@ export function CallModal({
         <View style={styles.viewport}>
           {callType === 'video' ? (
             <View style={StyleSheet.absoluteFill}>
-              {isWeb && (
-                React.createElement('video', {
-                  ref: remoteVideoRef,
-                  autoPlay: true,
-                  playsInline: true,
-                  style: {
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    backgroundColor: '#0F172A',
-                  },
-                })
-              )}
+              <CallMediaSurface kind="remote" stream={remoteStream} isVideo style={StyleSheet.absoluteFill} />
 
               {connectionState !== 'connected' && (
                 <View style={styles.waitingOverlay}>
@@ -299,36 +265,23 @@ export function CallModal({
                 </View>
               )}
 
-              {isWeb && (
-                <View style={[styles.localPipTile, { borderColor: colors.brandPrimary }]}>
-                  {React.createElement('video', {
-                    ref: localVideoRef,
-                    autoPlay: true,
-                    playsInline: true,
-                    muted: true,
-                    style: {
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      transform: 'scaleX(-1)',
-                    },
-                  })}
-                  {isVideoDisabled && (
-                    <View style={styles.camOffTile}>
-                      <Ionicons name="videocam-off" size={20} color="#94A3B8" />
-                    </View>
-                  )}
-                  <View style={styles.pipBadge}>
-                    <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 9 }}>
-                      You
-                    </AppText>
+              <View style={[styles.localPipTile, { borderColor: colors.brandPrimary }]}>
+                <CallMediaSurface kind="local" stream={localStream} isVideo mirrored style={{ width: '100%', height: '100%' }} />
+                {isVideoDisabled && (
+                  <View style={styles.camOffTile}>
+                    <Ionicons name="videocam-off" size={20} color="#94A3B8" />
                   </View>
+                )}
+                <View style={styles.pipBadge}>
+                  <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 9 }}>
+                    You
+                  </AppText>
                 </View>
-              )}
+              </View>
             </View>
           ) : (
             <View style={styles.voiceModeContainer}>
-              {isWeb && React.createElement('audio', { ref: remoteVideoRef, autoPlay: true, playsInline: true })}
+              <CallMediaSurface kind="remote" stream={remoteStream} isVideo={false} />
 
               <View style={styles.voiceAvatarWrapper}>
                 <View style={[styles.outerWaveRing, { borderColor: colors.brandPrimary + '40' }]}>

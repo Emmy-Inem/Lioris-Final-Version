@@ -16,7 +16,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: IS_DEV ? 'Lioris Dev' : 'Lioris',
   slug: 'lioris',
   scheme: 'lioris',
-  version: '1.0.0',
+  // Bumped for react-native-webrtc (native WebRTC calling on iOS/Android) - a new
+  // native module, so OTA cannot carry it; see the native-runtime guard note below.
+  version: '1.1.0',
   // Over-the-air updates (expo-updates). An update is only delivered to installs with the same runtime version, so
   // `version` must change whenever native code does (new/upgraded native module, plugin or permission change);
   // `npm run native-runtime` fails CI until it does. See docs/operations/mobile-releases.md.
@@ -37,7 +39,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'app.lioris.mobile',
     infoPlist: {
       NSCameraUsageDescription:
-        'Lioris uses your camera to take a profile photo and scan event check-in passes.',
+        'Lioris uses your camera to take a profile photo, scan event check-in passes, and for video calls.',
+      NSMicrophoneUsageDescription:
+        'Lioris uses your microphone for voice and video calls with other campus members.',
       NSPhotoLibraryUsageDescription:
         'Lioris uses your photo library so you can choose a profile photo and upload study documents.',
       NSPhotoLibraryAddUsageDescription:
@@ -99,6 +103,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-font',
     'expo-sharing',
     'expo-image',
+    // Native WebRTC calling (iOS/Android). Adds NSMicrophoneUsageDescription (we already
+    // set our own copy above, so this is a no-op there) and the Android permissions
+    // react-native-webrtc needs (RECORD_AUDIO, MODIFY_AUDIO_SETTINGS, BLUETOOTH, etc.) -
+    // except SYSTEM_ALERT_WINDOW, which `blockedPermissions` below strips back out; calling
+    // doesn't need it.
+    '@config-plugins/react-native-webrtc',
     [
       'expo-image-picker',
       {
