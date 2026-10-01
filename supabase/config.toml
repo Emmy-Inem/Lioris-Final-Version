@@ -6,6 +6,24 @@
 
 project_id = "fdtnbluslkabwsmspbem"
 
+# Server-side (GoTrue) rate limits - login/password-reset/OTP all go straight from
+# the client to Supabase Auth with no edge function in front of them, so the
+# app's own client-side rate limiting (src/utils/authRateLimit.ts) is trivially
+# bypassed by clearing localStorage, a private window, or calling the API
+# directly. These limits are enforced by the hosted Supabase project itself.
+# NOTE: this file alone does not change the live project - it must be applied
+# with `supabase config push`, or mirrored by hand in the Supabase Dashboard
+# under Authentication > Rate Limits.
+[auth.rate_limit]
+# Sign-in/sign-up requests per 5-minute window, per IP (Supabase default: 30).
+sign_in_sign_ups = 30
+# All auth emails (incl. password recovery) sent per hour, per IP (Supabase default: 2 - raised here so legitimate retries aren't blocked).
+email_sent = 10
+# OTP/magic-link verifications per 5-minute window, per IP (Supabase default: 30).
+token_verifications = 30
+# Session refreshes per 5-minute window, per IP (Supabase default: 150).
+token_refresh = 150
+
 # --- verify_jwt = true: the Supabase gateway rejects requests without a valid user JWT ---
 
 [functions.gemini-proxy]
