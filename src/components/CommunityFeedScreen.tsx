@@ -501,6 +501,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  courseTags?: string;
  postFormat: 'Thread' | 'Rapid-Fire Conversation';
  imageUrl?: string;
+ imageUrls?: string[];
  videoUrl?: string;
  pollQuestion?: string;
  pollOptions?: string[];

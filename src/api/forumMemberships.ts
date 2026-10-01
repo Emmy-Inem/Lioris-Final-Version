@@ -3,17 +3,37 @@ import * as SecureStore from 'expo-secure-store';
 import { supabase } from '@/api/supabase';
 import { FORUM_COMMUNITIES } from '@/constants/forumCommunities';
 
+// Namespaced by user id (see joinedCommunitiesKey) so a shared/handed-down
+// device, or an account switch before the next successful server round-trip,
+// cannot show the previous account's cached joins.
 const JOINED_COMMUNITIES_KEY = 'lioris_joined_forum_ids';
 const isWeb = Platform.OS === 'web';
 
 // Default initial joined spaces for every campus student
 export const DEFAULT_JOINED_COMMUNITY_IDS = ['tech', 'academic', 'housing', 'social'];
 
-function readLocalJoinedIds(): string[] {
+function joinedCommunitiesKey(userId?: string | null): string {
+  return userId ? `${JOINED_COMMUNITIES_KEY}:${userId}` : JOINED_COMMUNITIES_KEY;
+}
+
+function readLocalJoinedIds(userId?: string | null): string[] {
   try {
     if (isWeb && typeof localStorage !== 'undefined') {
-      const raw = localStorage.getItem(JOINED_COMMUNITIES_KEY);
+      const raw = localStorage.getItem(joinedCommunitiesKey(userId));
       if (raw) return JSON.parse(raw);
+
+      // One-time migration from the pre-namespacing global key, so an
+      // existing user's joins on this device are not lost.
+      if (userId) {
+        const legacy = localStorage.getItem(JOINED_COMMUNITIES_KEY);
+        if (legacy) {
+          const parsed = JSON.parse(legacy);
+          if (Array.isArray(parsed)) {
+            localStorage.setItem(joinedCommunitiesKey(userId), legacy);
+            return parsed;
+          }
+        }
+      }
     }
   } catch {
     // fallback
@@ -21,13 +41,14 @@ function readLocalJoinedIds(): string[] {
   return DEFAULT_JOINED_COMMUNITY_IDS;
 }
 
-function writeLocalJoinedIds(ids: string[]): void {
+function writeLocalJoinedIds(ids: string[], userId?: string | null): void {
   try {
     const raw = JSON.stringify(ids);
+    const key = joinedCommunitiesKey(userId);
     if (isWeb && typeof localStorage !== 'undefined') {
-      localStorage.setItem(JOINED_COMMUNITIES_KEY, raw);
+      localStorage.setItem(key, raw);
     } else {
-      SecureStore.setItemAsync(JOINED_COMMUNITIES_KEY, raw).catch(() => {});
+      SecureStore.setItemAsync(key, raw).catch(() => {});
     }
   } catch {
     // ignore
@@ -38,12 +59,12 @@ function writeLocalJoinedIds(ids: string[]): void {
  * Returns array of community IDs (or slugs/identifiers) the current user has joined.
  */
 export async function listMyJoinedCommunityIds(userId?: string): Promise<string[]> {
-  const local = readLocalJoinedIds();
-
   if (!userId) {
     const { data: authData } = await supabase.auth.getUser();
     userId = authData?.user?.id;
   }
+
+  const local = readLocalJoinedIds(userId);
 
   if (!userId) {
     return local;
@@ -66,7 +87,7 @@ export async function listMyJoinedCommunityIds(userId?: string): Promise<string[
         if (row.community?.slug) ids.add(row.community.slug.replace('c/', ''));
       }
       const combined = Array.from(ids);
-      writeLocalJoinedIds(combined);
+      writeLocalJoinedIds(combined, userId);
       return combined;
     }
   } catch (err) {
@@ -80,16 +101,16 @@ export async function listMyJoinedCommunityIds(userId?: string): Promise<string[
  * Join a discussion space / community.
  */
 export async function joinCommunity(communityIdentifier: string, userId?: string): Promise<void> {
-  const current = new Set(readLocalJoinedIds());
-  current.add(communityIdentifier);
-  current.add(communityIdentifier.toLowerCase());
-  const updated = Array.from(current);
-  writeLocalJoinedIds(updated);
-
   if (!userId) {
     const { data: authData } = await supabase.auth.getUser();
     userId = authData?.user?.id;
   }
+
+  const current = new Set(readLocalJoinedIds(userId));
+  current.add(communityIdentifier);
+  current.add(communityIdentifier.toLowerCase());
+  const updated = Array.from(current);
+  writeLocalJoinedIds(updated, userId);
 
   if (!userId) return;
 
@@ -125,15 +146,15 @@ export async function joinCommunity(communityIdentifier: string, userId?: string
  * Leave a discussion space / community.
  */
 export async function leaveCommunity(communityIdentifier: string, userId?: string): Promise<void> {
-  const current = readLocalJoinedIds().filter(
-    (id) => id.toLowerCase() !== communityIdentifier.toLowerCase()
-  );
-  writeLocalJoinedIds(current);
-
   if (!userId) {
     const { data: authData } = await supabase.auth.getUser();
     userId = authData?.user?.id;
   }
+
+  const current = readLocalJoinedIds(userId).filter(
+    (id) => id.toLowerCase() !== communityIdentifier.toLowerCase()
+  );
+  writeLocalJoinedIds(current, userId);
 
   if (!userId) return;
 
