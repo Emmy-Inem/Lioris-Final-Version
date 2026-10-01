@@ -19,18 +19,24 @@ import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { haptics } from '@/utils/haptics';
 import {
   ResearchPaper,
   searchResearchPapers,
   formatApaCitation,
+  formatMlaCitation,
+  formatBibtexCitation,
 } from '@/api/academicResearch';
+import { AICopilotModal } from '@/components/AICopilotModal';
 
 interface ResearchPapersModalProps {
   visible: boolean;
   onClose: () => void;
   initialTopic?: string;
 }
+
+type CitationFormat = 'apa' | 'mla' | 'bibtex';
 
 const RESEARCH_TOPICS = [
   'All',
@@ -51,6 +57,7 @@ export function ResearchPapersModal({
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { isFeatureEnabled } = useFeatureFlags();
 
   const [query, setQuery] = useState(initialTopic);
   const [activeTopic, setActiveTopic] = useState('All');
@@ -58,6 +65,13 @@ export function ResearchPapersModal({
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const searchSequence = useRef(0);
+
+  // Hand-off to the AI Study Copilot: "Summarize with AI" seeds it with a real
+  // prompt built from the paper, instead of the initialPrompt prop sitting
+  // unused with no caller anywhere in the app.
+  const [copilotPrompt, setCopilotPrompt] = useState('');
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const copilotEnabled = isFeatureEnabled('ai_study_copilot');
 
   useEffect(() => {
     if (visible) {
@@ -90,19 +104,31 @@ export function ResearchPapersModal({
     handleSearch(q);
   }
 
-  async function handleCopyCitation(paper: ResearchPaper) {
+  async function handleCopyCitation(paper: ResearchPaper, format: CitationFormat) {
     haptics.light();
-    const apa = formatApaCitation(paper);
+    const text =
+      format === 'apa' ? formatApaCitation(paper) : format === 'mla' ? formatMlaCitation(paper) : formatBibtexCitation(paper);
+    const label = format === 'apa' ? 'APA 7th' : format === 'mla' ? 'MLA 9th' : 'BibTeX';
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
       try {
-        await navigator.clipboard.writeText(apa);
-        toast.success('Copied APA 7th citation to clipboard!');
+        await navigator.clipboard.writeText(text);
+        toast.success(`Copied ${label} citation to clipboard!`);
         return;
       } catch {
         // fallback
       }
     }
-    toast.success('APA Citation: ' + apa.slice(0, 60) + '...');
+    toast.success(`${label} citation: ` + text.slice(0, 60) + '...');
+  }
+
+  function handleAskCopilot(paper: ResearchPaper) {
+    haptics.light();
+    const authorStr = paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown authors';
+    setCopilotPrompt(
+      `Summarize and explain the key contributions of this research paper for exam revision:\n\n` +
+        `Title: ${paper.title}\nAuthors: ${authorStr}\nYear: ${paper.year}\n\nAbstract: ${paper.abstract}`,
+    );
+    setCopilotOpen(true);
   }
 
   function handleOpenPaper(paper: ResearchPaper) {
@@ -118,6 +144,7 @@ export function ResearchPapersModal({
 
 
   return (
+    <>
     <Modal
       visible={visible}
       animationType="slide"
@@ -351,7 +378,7 @@ export function ResearchPapersModal({
                       }}
                     >
                       <Pressable
-                        onPress={() => handleCopyCitation(paper)}
+                        onPress={() => handleCopyCitation(paper, 'apa')}
                         style={[styles.smallActionBtn, { backgroundColor: colors.divider }]}
                       >
                         <Ionicons name="copy-outline" size={13} color={colors.textSecondary} />
@@ -360,6 +387,37 @@ export function ResearchPapersModal({
                         </AppText>
                       </Pressable>
 
+                      <Pressable
+                        onPress={() => handleCopyCitation(paper, 'mla')}
+                        style={[styles.smallActionBtn, { backgroundColor: colors.divider }]}
+                      >
+                        <Ionicons name="copy-outline" size={13} color={colors.textSecondary} />
+                        <AppText variant="caption" weight="bold" style={{ color: colors.textPrimary, fontSize: 11 }}>
+                          Copy MLA
+                        </AppText>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => handleCopyCitation(paper, 'bibtex')}
+                        style={[styles.smallActionBtn, { backgroundColor: colors.divider }]}
+                      >
+                        <Ionicons name="copy-outline" size={13} color={colors.textSecondary} />
+                        <AppText variant="caption" weight="bold" style={{ color: colors.textPrimary, fontSize: 11 }}>
+                          Copy BibTeX
+                        </AppText>
+                      </Pressable>
+
+                      {copilotEnabled && (
+                        <Pressable
+                          onPress={() => handleAskCopilot(paper)}
+                          style={[styles.smallActionBtn, { backgroundColor: colors.pastelPrimaryBg }]}
+                        >
+                          <Ionicons name="sparkles" size={13} color={colors.brandPrimary} />
+                          <AppText variant="caption" weight="bold" style={{ color: colors.brandPrimary, fontSize: 11 }}>
+                            Summarize with AI
+                          </AppText>
+                        </Pressable>
+                      )}
 
                       <Pressable
                         onPress={() => handleOpenPaper(paper)}
@@ -379,6 +437,14 @@ export function ResearchPapersModal({
         </View>
       </KeyboardAvoidingView>
     </Modal>
+    {copilotEnabled && (
+      <AICopilotModal
+        visible={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+        initialPrompt={copilotPrompt}
+      />
+    )}
+    </>
   );
 }
 
