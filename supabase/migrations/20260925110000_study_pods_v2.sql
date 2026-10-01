@@ -326,6 +326,13 @@ AS $$
   LIMIT 400;
 $$;
 
+-- 20261006040000_study_pod_file_sharing.sql widened this function's return
+-- columns (file_path); CREATE OR REPLACE cannot change a function's return
+-- type, so this file - which must stay safe to re-run on its own - drops it
+-- first. Re-running this file after the later migration is a no-op on the
+-- signature (the later migration's own DROP + CREATE runs right after in
+-- migration order and restores the wider shape).
+DROP FUNCTION IF EXISTS public.list_study_group_posts(uuid, uuid, integer, timestamptz);
 CREATE OR REPLACE FUNCTION public.list_study_group_posts(
   p_group uuid, p_parent uuid DEFAULT NULL, p_limit integer DEFAULT 30, p_before timestamptz DEFAULT NULL
 ) RETURNS TABLE (
@@ -636,6 +643,13 @@ BEGIN
   END IF;
 END $$;
 
+-- 20261006040000_study_pod_file_sharing.sql adds a p_file_path parameter;
+-- Postgres treats a different argument list as a different function, so
+-- without this DROP the two would coexist and any call with fewer than 7
+-- arguments would become ambiguous. Re-running this file after the later
+-- migration is a no-op on the signature (the later migration's own DROP +
+-- CREATE runs right after in migration order and restores the wider shape).
+DROP FUNCTION IF EXISTS public.post_to_study_group(uuid, text, text, text, text, uuid, text);
 CREATE OR REPLACE FUNCTION public.post_to_study_group(
   p_group uuid, p_body text, p_kind text DEFAULT 'discussion', p_title text DEFAULT NULL,
   p_link text DEFAULT NULL, p_parent uuid DEFAULT NULL

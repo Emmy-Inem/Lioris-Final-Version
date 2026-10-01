@@ -654,6 +654,8 @@ export interface PodPost {
   title?: string | null;
   body: string;
   linkUrl?: string | null;
+  /** A storage path in the private `resources` bucket; resolve with useSignedUrl/resolveMediaUrl before rendering. */
+  filePath?: string | null;
   isPinned: boolean;
   isResolved: boolean;
   replyCount: number;
