@@ -1615,14 +1615,18 @@ export function SettingsScreen() {
                   />
                 </View>
 
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, gap: 12 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, gap: 12, opacity: 0.5 }}>
                   <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
-                    <AppText weight="bold" variant="bodySmall">Weekly Academic Digest</AppText>
-                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>Summary of departmental discussions, scholarships & trending campus topics</AppText>
+                    <AppText weight="bold" variant="bodySmall">Weekly Academic Digest (Coming Soon)</AppText>
+                    {/* No email delivery pipeline exists yet for this preference (see
+                        supabase/migrations/20261003020000_tier3_account_and_notifications.sql) - the
+                        switch is disabled so saving it never implies an email will actually be sent. */}
+                    <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>We're not sending this digest yet - toggling it does nothing for now</AppText>
                   </View>
                   <Switch
                     value={emailDigestAlerts}
                     onValueChange={handleToggleEmailDigest}
+                    disabled
                     trackColor={{ false: colors.divider, true: colors.brandPrimary }}
                   />
                 </View>

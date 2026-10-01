@@ -1,6 +1,7 @@
 import React, { useState } from'react';
 import { Alert, Pressable, ScrollView, View } from'react-native';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from'@/components/ScreenContainer';
 import { AppHeader } from'@/components/AppHeader';
 import { AppText } from'@/components/AppText';
@@ -12,9 +13,17 @@ import { ShimmerCardList } from'@/components/ShimmerSkeleton';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listAnnouncements, publishAnnouncement, PublishAnnouncementPayload } from '@/api/announcements';
+import {
+  listAnnouncements,
+  publishAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  PublishAnnouncementPayload,
+} from '@/api/announcements';
+import { Announcement } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
+import { parseLocalDateTime, toDateInput } from '@/utils/dateTime';
 
 const AUDIENCES: PublishAnnouncementPayload['audienceScope'][] = ['student', 'alumni', 'staff', 'global'];
 const PRIORITIES: PublishAnnouncementPayload['priority'][] = ['normal', 'high', 'critical'];
@@ -24,29 +33,99 @@ export default function StaffAnnouncementsScreen() {
   const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
   const [composing, setComposing] = useState(false);
+  // Set while editing an existing announcement instead of composing a new one -
+  // the form above is reused for both.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [audience, setAudience] = useState<PublishAnnouncementPayload['audienceScope']>('student');
   const [priority, setPriority] = useState<PublishAnnouncementPayload['priority']>('normal');
+  // Optional expiry date (YYYY-MM-DD). Blank means "never expires". Was collected nowhere before,
+  // even though Announcement.expiresAt is what AnnouncementsWidget and the dashboards filter on.
+  const [expiresDate, setExpiresDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: announcements, isLoading } = useQuery({ queryKey: ['announcements'], queryFn: listAnnouncements });
+
+  function resetForm() {
+    setEditingId(null);
+    setTitle('');
+    setContent('');
+    setAudience('student');
+    setPriority('normal');
+    setExpiresDate('');
+  }
+
+  function startEdit(a: Announcement) {
+    haptics.light();
+    setEditingId(a.id);
+    setTitle(a.title);
+    setContent(a.content);
+    setAudience(a.audienceScope);
+    setPriority(a.priority);
+    setExpiresDate(a.expiresAt ? toDateInput(new Date(a.expiresAt)) : '');
+    setComposing(true);
+  }
+
+  /** "YYYY-MM-DD" -> end-of-day ISO timestamp, or undefined/null when left blank. */
+  function resolveExpiresAt(): string | null | undefined {
+    const trimmed = expiresDate.trim();
+    if (!trimmed) return editingId ? null : undefined;
+    const parsed = parseLocalDateTime(trimmed, '23:59');
+    return parsed ? parsed.toISOString() : undefined;
+  }
 
   async function handlePublish() {
     haptics.medium();
     setSubmitting(true);
     try {
-      await publishAnnouncement({ title, content, audienceScope: audience, priority });
+      if (editingId) {
+        await updateAnnouncement(editingId, {
+          title,
+          content,
+          audienceScope: audience,
+          priority,
+          expiresAt: resolveExpiresAt(),
+        });
+      } else {
+        await publishAnnouncement({ title, content, audienceScope: audience, priority, expiresAt: resolveExpiresAt() ?? undefined });
+      }
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      setTitle('');
-      setContent('');
+      resetForm();
       setComposing(false);
     } catch (err: any) {
-      Alert.alert('Could not publish', getFriendlyErrorMessage(err, 'Could not publish announcement. Please try again.'));
+      Alert.alert(
+        editingId ? 'Could not save changes' : 'Could not publish',
+        getFriendlyErrorMessage(err, editingId ? 'Could not save this announcement. Please try again.' : 'Could not publish announcement. Please try again.'),
+      );
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleDelete(a: Announcement) {
+    Alert.alert('Delete this announcement?', 'It will be removed for everyone immediately.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          haptics.medium();
+          setDeletingId(a.id);
+          try {
+            await deleteAnnouncement(a.id);
+            queryClient.invalidateQueries({ queryKey: ['announcements'] });
+          } catch (err: any) {
+            haptics.error();
+            Alert.alert('Could not delete', getFriendlyErrorMessage(err, 'Could not delete this announcement. Please try again.'));
+          } finally {
+            setDeletingId(null);
+          }
+        },
+      },
+    ]);
   }
 
   return (
@@ -57,11 +136,24 @@ export default function StaffAnnouncementsScreen() {
           <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
             Announcements
           </AppText>
-          <AppButton label={composing ? 'Cancel' : 'New'} variant={composing ? 'ghost' : 'primary'} size="sm" onPress={() => setComposing((v) => !v)} />
+          <AppButton
+            label={composing ? 'Cancel' : 'New'}
+            variant={composing ? 'ghost' : 'primary'}
+            size="sm"
+            onPress={() => {
+              if (composing) resetForm();
+              setComposing((v) => !v);
+            }}
+          />
         </View>
 
         {composing ? (
           <SolidCard style={{ marginBottom: spacing.lg }}>
+            {editingId ? (
+              <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                EDITING ANNOUNCEMENT
+              </AppText>
+            ) : null}
             <AppTextField label="Title" value={title} onChangeText={setTitle} placeholder="Midterm Advising Week" />
             <AppTextField
               label="Content" value={content}
@@ -80,9 +172,21 @@ export default function StaffAnnouncementsScreen() {
             </AppText>
             <ChipRow options={PRIORITIES} selected={priority} onSelect={setPriority} />
 
-            <View style={{ marginTop: spacing.lg }}>
+            <AppTextField
+              label="Expires on (optional)"
+              value={expiresDate}
+              onChangeText={setExpiresDate}
+              placeholder="2026-12-31"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <AppText variant="caption" tone="secondary" style={{ marginTop: -spacing.xs, marginBottom: spacing.sm }}>
+              Leave blank for an announcement that never expires. Format: YYYY-MM-DD.
+            </AppText>
+
+            <View style={{ marginTop: spacing.sm }}>
               <AppButton
-                label="Publish" onPress={handlePublish}
+                label={editingId ? 'Save changes' : 'Publish'} onPress={handlePublish}
                 loading={submitting}
                 disabled={!title || !content}
                 fullWidth
@@ -98,6 +202,32 @@ export default function StaffAnnouncementsScreen() {
             {announcements.map((a) => (
               <View key={a.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : undefined}>
                 <AnnouncementCard announcement={a} />
+                {a.expiresAt ? (
+                  <AppText variant="caption" tone="secondary" style={{ marginTop: -spacing.sm, marginBottom: spacing.sm, marginLeft: 4 }}>
+                    Expires {new Date(a.expiresAt).toLocaleDateString()}
+                  </AppText>
+                ) : null}
+                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: -spacing.xs, marginBottom: spacing.md }}>
+                  <Pressable
+                    onPress={() => startEdit(a)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit announcement"
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 4 }}
+                  >
+                    <Ionicons name="create-outline" size={15} color={colors.textSecondary} />
+                    <AppText variant="caption" weight="semiBold" tone="secondary">Edit</AppText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleDelete(a)}
+                    disabled={deletingId === a.id}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete announcement"
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 4, opacity: deletingId === a.id ? 0.5 : 1 }}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={colors.critical} />
+                    <AppText variant="caption" weight="semiBold" style={{ color: colors.critical }}>Delete</AppText>
+                  </Pressable>
+                </View>
               </View>
             ))}
           </View>

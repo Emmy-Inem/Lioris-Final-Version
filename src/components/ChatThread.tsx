@@ -16,6 +16,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
 import { listMessages, sendMessage, listConversations, markConversationAsRead, deleteMessageForMe } from '@/api/messaging';
+import { submitReport } from '@/api/moderation';
 import { uploadMediaFile } from '@/api/storage';
 import { useSignedUrl } from '@/api/signedUrls';
 import {
@@ -193,6 +194,41 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       Alert.alert('Could Not Delete', 'This message could not be removed. Please try again.');
     } finally {
       setDeletingMessage(false);
+    }
+  }
+
+  function handleReportMessage() {
+    const target = messageActionTarget;
+    setMessageActionTarget(null);
+    if (!target || target.id.startsWith('pending-')) return;
+    haptics.light();
+    const doReport = async (reason?: string) => {
+      try {
+        await submitReport({
+          targetType: 'message',
+          targetId: target.id,
+          reason: reason?.trim() || 'Reported from a direct message',
+        });
+        Alert.alert('Reported', 'Thanks - campus moderators will review this message.');
+      } catch (err: any) {
+        Alert.alert('Report Failed', err?.message || 'Could not submit your report. Please try again.');
+      }
+    };
+    if (Alert.prompt) {
+      Alert.prompt(
+        'Report this message',
+        'What is wrong with it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Report', style: 'destructive', onPress: (reason?: string) => doReport(reason) },
+        ],
+        'plain-text',
+      );
+    } else {
+      Alert.alert('Report this message?', 'Campus moderators will review it.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Report', style: 'destructive', onPress: () => doReport() },
+      ]);
     }
   }
 
@@ -686,6 +722,16 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           <Ionicons name="arrow-undo-outline" size={18} color={colors.textPrimary} />
           <AppText weight="medium">Reply</AppText>
         </Pressable>
+
+        {messageActionTarget && messageActionTarget.senderId !== user?.id ? (
+          <Pressable
+            onPress={handleReportMessage}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+          >
+            <Ionicons name="flag-outline" size={18} color={colors.textPrimary} />
+            <AppText weight="medium">Report</AppText>
+          </Pressable>
+        ) : null}
 
         <Pressable
           onPress={handleDeleteMessageForMe}

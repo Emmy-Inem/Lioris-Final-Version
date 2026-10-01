@@ -535,7 +535,10 @@ export async function respondToVerificationRequest(
 
 export async function adminDirectVerifyUser(userId: string, isVerified: boolean): Promise<boolean> {
   try {
-    const status = isVerified ? 'verified' : 'none';
+    // 'none' is not a member of verification_status_type ('unverified','pending','verified',
+    // 'rejected') - see the explanation above respondToVerificationRequest. Writing it silently
+    // fails the UPDATE, leaving the profile's status unchanged while the admin UI reports success.
+    const status = isVerified ? 'verified' : 'unverified';
     const { error } = await supabase
       .from('profiles')
       .update({
