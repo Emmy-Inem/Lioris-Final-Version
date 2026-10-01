@@ -28,6 +28,7 @@ import { addBreadcrumb } from '@/monitoring/breadcrumbs';
 
 import { loadBlockedUserIds, loadMutedUserIds } from '@/api/connections';
 import { AppLockOverlay } from '@/components/AppLockOverlay';
+import { IncomingCallListener } from '@/components/IncomingCallListener';
 
 import { FeatureFlagsProvider, useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { ToastProvider } from '@/context/ToastContext';
@@ -306,6 +307,7 @@ function AppShell() {
       <AppLockOverlay />
       <PullToRefresh />
       <PwaInstallPrompt />
+      {user && <IncomingCallListener />}
     </ErrorBoundary>
   );
 }

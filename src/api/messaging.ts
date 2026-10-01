@@ -3,7 +3,8 @@ import { Conversation, Message } from './types';
 import { generateUUID } from '../utils/uuid';
 import { getSessionUser } from '../auth/tokenStorage';
 import { isCallMessage } from './calling';
-import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
+import { assertSafeHttpUrl } from '../utils/safeUrl';
+import { storagePathFor } from './signedUrls';
 import { escapePostgrestLike } from '../utils/postgrest';
 
 function toPreviewText(content: string | undefined | null): string {
@@ -333,21 +334,52 @@ export async function listMessages(
     if (error) throw error;
 
     if (data && data.length > 0) {
-      const dbMsgs: (Message & { mediaUrl?: string })[] = data.map((row: any) => ({
-        id: row.id,
-        conversationId: row.channel_id,
-        senderId: row.sender_id || 'me',
-        content: row.content,
-        messageType: row.message_type || 'text',
-        status: row.is_read ? 'read' : 'sent',
-        sentAt: row.created_at,
-        // `media_url` is a pre-existing column on chat_messages used to reference
-        // real uploaded attachments (photos/documents) sent from ChatThread.
-        mediaUrl: sanitizeHttpUrl(row.media_url),
-      }));
+      const { data: authData } = await supabase.auth.getUser();
+      let currentUserId = authData?.user?.id;
+      if (!currentUserId) {
+        const stored = await getSessionUser();
+        if (stored?.id) currentUserId = stored.id;
+      }
 
-      // Merge with local state
-      const local = localMessages[conversationId] ?? [];
+      // Messages this user chose to "delete for me" (chat_message_deletes) -
+      // a per-user hide, never visible to the other participant.
+      let deletedForMe = new Set<string>();
+      if (currentUserId) {
+        try {
+          const { data: deletedRows } = await supabase
+            .from('chat_message_deletes')
+            .select('message_id')
+            .eq('user_id', currentUserId)
+            .in('message_id', data.map((row: any) => row.id));
+          deletedForMe = new Set((deletedRows ?? []).map((row: any) => row.message_id));
+        } catch (delErr) {
+          console.warn('[Messaging] Failed to load per-message deletes:', delErr);
+        }
+      }
+
+      const dbMsgs: (Message & { mediaUrl?: string })[] = data
+        .filter((row: any) => !deletedForMe.has(row.id))
+        .map((row: any) => ({
+          id: row.id,
+          conversationId: row.channel_id,
+          senderId: row.sender_id || 'me',
+          content: row.content,
+          messageType: row.message_type || 'text',
+          status: row.is_read ? 'read' : 'sent',
+          sentAt: row.created_at,
+          // `media_url` is a pre-existing column on chat_messages used to reference
+          // real uploaded attachments (photos/documents) sent from ChatThread. It
+          // holds either a safe http(s) URL or a bare `resources` bucket storage
+          // path (that bucket is private - see src/api/storage.ts); either way it
+          // was validated when `sendMessage` wrote it, so it's passed through as-is
+          // and resolved to something renderable at display time via
+          // `resolveMediaUrl`/`useSignedUrl` (src/api/signedUrls.ts).
+          mediaUrl: (typeof row.media_url === 'string' && row.media_url.trim()) || undefined,
+        }));
+
+      // Merge with local state, dropping anything deleted-for-me that might
+      // still be sitting in the optimistic local cache.
+      const local = (localMessages[conversationId] ?? []).filter((m) => !deletedForMe.has(m.id));
       const combined = [...dbMsgs];
       for (const m of local) {
         if (!combined.some((c) => c.id === m.id)) {
@@ -364,16 +396,68 @@ export async function listMessages(
   return { items: [...(localMessages[conversationId] ?? [])] };
 }
 
+/**
+ * "Delete for me": hides a single message from only the caller's own view.
+ * The other participant's copy is untouched - mirrors how `archiveConversation`
+ * already works per-user. Backed by the `chat_message_deletes` join table
+ * (migration 20261006010000_messaging_calling_fixes.sql) rather than a column
+ * on the hot `chat_messages` table.
+ */
+export async function deleteMessageForMe(messageId: string): Promise<void> {
+  const { data: authData } = await supabase.auth.getUser();
+  let currentUserId = authData?.user?.id;
+  if (!currentUserId) {
+    const stored = await getSessionUser();
+    if (stored?.id) currentUserId = stored.id;
+  }
+  if (!currentUserId) {
+    throw new Error('You must be signed in to delete a message.');
+  }
+
+  for (const convId of Object.keys(localMessages)) {
+    localMessages[convId] = localMessages[convId].filter((m) => m.id !== messageId);
+  }
+
+  const { error } = await supabase
+    .from('chat_message_deletes')
+    .upsert(
+      { message_id: messageId, user_id: currentUserId },
+      { onConflict: 'message_id,user_id', ignoreDuplicates: true },
+    );
+  if (error) {
+    console.warn('[Messaging] deleteMessageForMe error:', error.message);
+    throw new Error('Could not delete this message. Please try again.');
+  }
+}
+
 export async function sendMessage(
   conversationId: string,
   content: string,
-  // Optional real attachment URL (e.g. a photo or document uploaded to Supabase
-  // Storage via `uploadMediaFile`). Persisted to the pre-existing
+  // Optional real attachment reference: either a safe http(s) URL, or the bare
+  // storage PATH that `uploadMediaFile('resources', ...)` returns (the
+  // `resources` bucket is private - see src/api/storage.ts - so an upload
+  // never yields a URL). Persisted to the pre-existing
   // `chat_messages.media_url` column — additive, no schema change required.
   mediaUrl?: string,
 ): Promise<Message & { mediaUrl?: string }> {
-  // Attachment links must be plain http(s) URLs (they are rendered/opened by other users).
-  if (mediaUrl) mediaUrl = assertSafeHttpUrl(mediaUrl, 'The attachment link');
+  if (mediaUrl) {
+    // A genuinely external link (pasted or otherwise user-supplied) must be a
+    // safe http(s) URL. A bare storage path - what our own upload flow hands
+    // back for the private `resources` bucket - is never a URL at all, so
+    // running it through `assertSafeHttpUrl` always threw. `storagePathFor`
+    // is the same validator `resolveMediaUrl` uses to trust a stored path: it
+    // rejects anything carrying a scheme (`javascript:`, `data:`, ...) and
+    // only lets through a plain `<uid>/<file>`-shaped path.
+    if (/^https?:\/\//i.test(mediaUrl)) {
+      mediaUrl = assertSafeHttpUrl(mediaUrl, 'The attachment link');
+    } else {
+      const path = storagePathFor('resources', mediaUrl);
+      if (!path) {
+        throw new Error('The attachment link must be a valid http(s) URL or an uploaded file path.');
+      }
+      mediaUrl = path;
+    }
+  }
 
   const msgId = generateUUID();
   const now = new Date().toISOString();

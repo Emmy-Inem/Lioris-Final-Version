@@ -15,14 +15,16 @@ import { CallModal } from './CallModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
-import { listMessages, sendMessage, listConversations, markConversationAsRead } from '@/api/messaging';
+import { listMessages, sendMessage, listConversations, markConversationAsRead, deleteMessageForMe } from '@/api/messaging';
 import { uploadMediaFile } from '@/api/storage';
+import { useSignedUrl } from '@/api/signedUrls';
 import {
   startCallInChat,
   isCallMessage,
   extractCallDetails,
   CallDetails,
 } from '@/api/calling';
+import { isUserBlocked } from '@/api/connections';
 import { Message } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
@@ -34,6 +36,67 @@ interface OutgoingMessage extends Message {
 
 function isImageUrl(url: string): boolean {
   return /\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(url);
+}
+
+/**
+ * Resolves a stored chat attachment reference (a safe http(s) URL, or a bare
+ * `resources` storage path - that bucket is private, see src/api/storage.ts)
+ * into something actually renderable, mirroring the `useSignedUrl` pattern
+ * already used by ResumeButton (src/components/JobApplicantsModal.tsx) and
+ * other private-media consumers.
+ */
+function ChatAttachment({ mediaUrl, isMe }: { mediaUrl: string; isMe: boolean }) {
+  const { colors } = useTheme();
+  const { url, loading } = useSignedUrl('resources', mediaUrl);
+
+  if (isImageUrl(mediaUrl)) {
+    if (!url) {
+      return (
+        <View
+          style={{
+            width: 200,
+            height: 150,
+            borderRadius: 12,
+            marginBottom: 6,
+            backgroundColor: colors.divider,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name={loading ? 'hourglass-outline' : 'image-outline'} size={22} color={colors.textSecondary} />
+        </View>
+      );
+    }
+    return (
+      <Image
+        source={{ uri: url }}
+        style={{ width: 200, height: 150, borderRadius: 12, marginBottom: 6, backgroundColor: colors.divider }}
+        resizeMode="cover"
+      />
+    );
+  }
+
+  return (
+    <Pressable
+      disabled={loading || !url}
+      onPress={() => { if (url) void openExternalUrl(url); }}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : colors.background,
+        borderRadius: 10,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+        marginBottom: 6,
+      }}
+    >
+      <Ionicons name="document-text" size={16} color={isMe ? '#FFFFFF' : colors.brandPrimary} />
+      <AppText variant="caption" tone={isMe ? 'inverse' : 'brand'} style={{ textDecorationLine: 'underline' }}>
+        {loading ? 'Opening…' : url ? 'Open attachment' : 'Attachment unavailable'}
+      </AppText>
+    </Pressable>
+  );
 }
 
 export function ChatThread({ conversationId }: { conversationId: string }) {
@@ -75,6 +138,8 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
   const [activeCall, setActiveCall] = useState<CallDetails | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [messageActionTarget, setMessageActionTarget] = useState<OutgoingMessage | null>(null);
+  const [deletingMessage, setDeletingMessage] = useState(false);
 
   const allMessages: OutgoingMessage[] = [...(data?.items ?? []), ...pending];
 
@@ -98,9 +163,37 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   async function handleStartCall(callType: 'voice' | 'video') {
     haptics.medium();
     const callerName = user?.fullName || 'Campus Peer';
-    const details = await startCallInChat(conversationId, callType, callerName);
-    queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-    setActiveCall(details);
+    const recipientId = currentConversation?.participantId;
+    if (recipientId && isUserBlocked(recipientId)) {
+      haptics.error();
+      Alert.alert('Call Blocked', "You can't call a user you've blocked. Unblock them first in Settings.");
+      return;
+    }
+    try {
+      const details = await startCallInChat(conversationId, callType, callerName, recipientId);
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      setActiveCall(details);
+    } catch (err) {
+      haptics.error();
+      Alert.alert('Call Not Started', err instanceof Error ? err.message : 'Could not start the call. Please try again.');
+    }
+  }
+
+  async function handleDeleteMessageForMe() {
+    const target = messageActionTarget;
+    setMessageActionTarget(null);
+    if (!target || target.id.startsWith('pending-')) return;
+    haptics.medium();
+    setDeletingMessage(true);
+    try {
+      await deleteMessageForMe(target.id);
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+    } catch {
+      haptics.error();
+      Alert.alert('Could Not Delete', 'This message could not be removed. Please try again.');
+    } finally {
+      setDeletingMessage(false);
+    }
   }
 
   function handleJoinCallFromMessage(content: string) {
@@ -391,7 +484,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
               <Pressable
                 onLongPress={() => {
                   haptics.medium();
-                  setReplyingTo(item);
+                  setMessageActionTarget(item);
                 }}
                 style={{
                   maxWidth: '82%',
@@ -405,32 +498,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                   borderColor: colors.border,
                 }}
               >
-                {item.mediaUrl && isImageUrl(item.mediaUrl) ? (
-                  <Image
-                    source={{ uri: item.mediaUrl }}
-                    style={{ width: 200, height: 150, borderRadius: 12, marginBottom: 6, backgroundColor: colors.divider }}
-                    resizeMode="cover"
-                  />
-                ) : item.mediaUrl ? (
-                  <Pressable
-                    onPress={() => { void openExternalUrl(item.mediaUrl!); }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : colors.background,
-                      borderRadius: 10,
-                      paddingVertical: 6,
-                      paddingHorizontal: 8,
-                      marginBottom: 6,
-                    }}
-                  >
-                    <Ionicons name="document-text" size={16} color={isMe ? '#FFFFFF' : colors.brandPrimary} />
-                    <AppText variant="caption" tone={isMe ? 'inverse' : 'brand'} style={{ textDecorationLine: 'underline' }}>
-                      Open attachment
-                    </AppText>
-                  </Pressable>
-                ) : null}
+                {item.mediaUrl ? <ChatAttachment mediaUrl={item.mediaUrl} isMe={isMe} /> : null}
                 <AppText
                   variant="bodySmall"
                   tone={isMe ? 'inverse' : 'primary'}
@@ -603,6 +671,32 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         </Pressable>
       </ActionSheetModal>
 
+      {/* Per-message actions: reply or delete-for-me */}
+      <ActionSheetModal
+        visible={!!messageActionTarget}
+        onClose={() => setMessageActionTarget(null)}
+      >
+        <Pressable
+          onPress={() => {
+            setReplyingTo(messageActionTarget);
+            setMessageActionTarget(null);
+          }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+        >
+          <Ionicons name="arrow-undo-outline" size={18} color={colors.textPrimary} />
+          <AppText weight="medium">Reply</AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={handleDeleteMessageForMe}
+          disabled={deletingMessage}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, opacity: deletingMessage ? 0.5 : 1 }}
+        >
+          <Ionicons name="trash-outline" size={18} color={colors.critical} />
+          <AppText weight="medium" style={{ color: colors.critical }}>Delete for me</AppText>
+        </Pressable>
+      </ActionSheetModal>
+
       {/* Live Call Modal */}
       {activeCall && (
         <CallModal
@@ -611,6 +705,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           callType={activeCall.callType}
           roomName={activeCall.roomName}
           callUrl={activeCall.callUrl}
+          conversationId={conversationId}
           partnerName={partnerName}
           partnerAvatar={partnerAvatar}
           partnerDepartment={partnerDepartment}
