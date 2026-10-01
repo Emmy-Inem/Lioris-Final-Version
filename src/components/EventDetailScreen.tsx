@@ -35,6 +35,7 @@ import {
   getEvent,
   updateEvent,
   purgeEvent,
+  cancelEvent,
   approveEvent,
   revokeEventApproval,
   setEventSpotlight,
@@ -439,12 +440,51 @@ export function EventDetailScreen() {
     setDoorOpen(true);
   }
 
-  function handleCancelEvent() {
+  async function doCancelLiveEvent(reason?: string) {
+    if (!event) return;
+    setCancellingEvent(true);
+    try {
+      await cancelEvent(event.id, reason);
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
+      await queryClient.invalidateQueries({ queryKey: ['events', 'detail', event.id] });
+      haptics.success();
+      toast.success('Event cancelled. Everyone registered has been notified.');
+    } catch (err: any) {
+      haptics.error();
+      toast.error(err?.message || 'Could not cancel this event. Please try again.');
+    } finally {
+      setCancellingEvent(false);
+    }
+  }
+
+  function handleCancelLiveEvent() {
+    if (!event) return;
+    haptics.light();
+    const confirmBody = `Everyone registered for "${event.title}" (${currentRsvpCount}) will be notified that it was cancelled. Registrations are kept, not deleted.`;
+    if (Alert.prompt) {
+      Alert.prompt(
+        'Cancel This Event?',
+        `${confirmBody}\n\nOptional reason (shown to attendees):`,
+        [
+          { text: 'Keep Event', style: 'cancel' },
+          { text: 'Cancel Event', style: 'destructive', onPress: (reason?: string) => doCancelLiveEvent(reason) },
+        ],
+        'plain-text',
+      );
+    } else {
+      Alert.alert('Cancel This Event?', confirmBody, [
+        { text: 'Keep Event', style: 'cancel' },
+        { text: 'Cancel Event', style: 'destructive', onPress: () => doCancelLiveEvent() },
+      ]);
+    }
+  }
+
+  function handlePurgeEvent() {
     if (!event) return;
     haptics.light();
     Alert.alert(
-      'Cancel & Purge This Event?',
-      `This will permanently delete "${event.title}" and cancel all registrations. This cannot be undone.`,
+      'Permanently Delete This Event?',
+      `This will wipe "${event.title}" and every registration beyond recovery. To cancel the event and notify attendees instead, use "Cancel Event".`,
       [
         { text: 'Keep Event', style: 'cancel' },
         {
@@ -458,9 +498,9 @@ export function EventDetailScreen() {
               haptics.success();
               toast.success('Event purged.');
               router.back();
-            } catch {
+            } catch (err: any) {
               haptics.error();
-              toast.error('Could not delete this event. Please try again.');
+              toast.error(err?.message || 'Could not delete this event. Please try again.');
             } finally {
               setCancellingEvent(false);
             }
@@ -707,7 +747,9 @@ export function EventDetailScreen() {
                   {event.isSpotlight && <Badge label="FEATURED SPOTLIGHT" tone="neutral" />}
                   <Badge
                     label={
-                      event.approvalStatus === 'pending'
+                      event.isCancelled
+                        ? 'CANCELLED'
+                        : event.approvalStatus === 'pending'
                         ? 'PENDING REVIEW'
                         : event.approvalStatus === 'approved'
                         ? 'APPROVED & LIVE'
@@ -716,7 +758,7 @@ export function EventDetailScreen() {
                     tone={
                       event.approvalStatus === 'pending'
                         ? 'warning'
-                        : event.approvalStatus === 'approved'
+                        : event.approvalStatus === 'approved' && !event.isCancelled
                         ? 'success'
                         : 'critical'
                     }
@@ -768,8 +810,21 @@ export function EventDetailScreen() {
                   />
                 </View>
 
-                <Pressable accessibilityRole="button" accessibilityLabel="Delete"
-                  onPress={handleCancelEvent}
+                {!event.isCancelled ? (
+                  <View style={{ flex: 1, minWidth: 125 }}>
+                    <AppButton
+                      label="Cancel Event"
+                      size="sm"
+                      variant="secondary"
+                      icon="close-circle-outline"
+                      loading={cancellingEvent}
+                      onPress={handleCancelLiveEvent}
+                    />
+                  </View>
+                ) : null}
+
+                <Pressable accessibilityRole="button" accessibilityLabel="Permanently delete"
+                  onPress={handlePurgeEvent}
                   hitSlop={8}
                   style={{
                     width: 38,
@@ -807,7 +862,9 @@ export function EventDetailScreen() {
                 <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                   <Badge
                     label={
-                      event.approvalStatus === 'pending'
+                      event.isCancelled
+                        ? 'CANCELLED'
+                        : event.approvalStatus === 'pending'
                         ? 'PENDING REVIEW'
                         : event.approvalStatus === 'approved'
                         ? 'APPROVED'
@@ -816,7 +873,7 @@ export function EventDetailScreen() {
                     tone={
                       event.approvalStatus === 'pending'
                         ? 'warning'
-                        : event.approvalStatus === 'approved'
+                        : event.approvalStatus === 'approved' && !event.isCancelled
                         ? 'success'
                         : 'critical'
                     }
@@ -844,6 +901,18 @@ export function EventDetailScreen() {
                     onPress={handleOpenRoster}
                   />
                 </View>
+                {event.approvalStatus === 'approved' && !event.isCancelled ? (
+                  <View style={{ flex: 1, minWidth: 125 }}>
+                    <AppButton
+                      label="Cancel Event"
+                      size="sm"
+                      variant="ghost"
+                      icon="close-circle-outline"
+                      loading={cancellingEvent}
+                      onPress={handleCancelLiveEvent}
+                    />
+                  </View>
+                ) : null}
               </View>
             </SolidCard>
           </View>
@@ -1359,7 +1428,9 @@ export function EventDetailScreen() {
                     {event.isSpotlight && <Badge label="FEATURED" tone="neutral" />}
                     <Badge
                       label={
-                        event.approvalStatus === 'pending'
+                        event.isCancelled
+                          ? 'CANCELLED'
+                          : event.approvalStatus === 'pending'
                           ? 'PENDING'
                           : event.approvalStatus === 'approved'
                           ? 'APPROVED'
@@ -1368,7 +1439,7 @@ export function EventDetailScreen() {
                       tone={
                         event.approvalStatus === 'pending'
                           ? 'warning'
-                          : event.approvalStatus === 'approved'
+                          : event.approvalStatus === 'approved' && !event.isCancelled
                           ? 'success'
                           : 'critical'
                       }
@@ -1416,8 +1487,20 @@ export function EventDetailScreen() {
                       onPress={handleOpenRoster}
                     />
                   </View>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Delete"
-                    onPress={handleCancelEvent}
+                  {!event.isCancelled ? (
+                    <View style={{ flex: 1, minWidth: 95 }}>
+                      <AppButton
+                        label="Cancel"
+                        size="sm"
+                        variant="secondary"
+                        icon="close-circle-outline"
+                        loading={cancellingEvent}
+                        onPress={handleCancelLiveEvent}
+                      />
+                    </View>
+                  ) : null}
+                  <Pressable accessibilityRole="button" accessibilityLabel="Permanently delete"
+                    onPress={handlePurgeEvent}
                     hitSlop={8}
                     style={{
                       width: 34,
@@ -1453,7 +1536,9 @@ export function EventDetailScreen() {
                   </View>
                   <Badge
                     label={
-                      event.approvalStatus === 'pending'
+                      event.isCancelled
+                        ? 'CANCELLED'
+                        : event.approvalStatus === 'pending'
                         ? 'PENDING REVIEW'
                         : event.approvalStatus === 'approved'
                         ? 'APPROVED'
@@ -1462,7 +1547,7 @@ export function EventDetailScreen() {
                     tone={
                       event.approvalStatus === 'pending'
                         ? 'warning'
-                        : event.approvalStatus === 'approved'
+                        : event.approvalStatus === 'approved' && !event.isCancelled
                         ? 'success'
                         : 'critical'
                     }
@@ -1489,6 +1574,19 @@ export function EventDetailScreen() {
                     />
                   </View>
                 </View>
+                {event.approvalStatus === 'approved' && !event.isCancelled ? (
+                  <View style={{ marginTop: spacing.xs }}>
+                    <AppButton
+                      label="Cancel Event"
+                      size="sm"
+                      variant="ghost"
+                      icon="close-circle-outline"
+                      loading={cancellingEvent}
+                      onPress={handleCancelLiveEvent}
+                      fullWidth
+                    />
+                  </View>
+                ) : null}
               </SolidCard>
             ) : null}
 

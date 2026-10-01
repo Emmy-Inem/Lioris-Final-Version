@@ -175,6 +175,8 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
           rsvpCount: row.registered_count || 0,
           isRsvpd,
           approvalStatus: mapApprovalStatus(row.status),
+          isCancelled: row.status === 'cancelled',
+          cancellationReason: row.cancellation_reason ?? null,
           visibilityScope: (row.visibility_scope as any) || 'global',
           campusCode: row.campus_code || 'GLOBAL',
           coverImageUrl: row.banner_url,
@@ -239,6 +241,8 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
         rsvpCount: data.registered_count || 0,
         isRsvpd,
         approvalStatus: mapApprovalStatus(data.status),
+        isCancelled: data.status === 'cancelled',
+        cancellationReason: data.cancellation_reason ?? null,
         visibilityScope: data.visibility_scope || 'global',
         campusCode: data.campus_code || 'GLOBAL',
         coverImageUrl: data.banner_url,
@@ -618,6 +622,35 @@ export async function revokeEventApproval(id: string) {
  await recordAuditLogEntry({
  action: 'event_approval_revoked',
  summary: `Revoked approval on event "${target?.title ?? id}"`,
+ targetType: 'event',
+ targetId: id,
+ });
+}
+
+/**
+ * Soft-cancels an event instead of deleting it: sets status = 'cancelled' (trg_events_delete_guard
+ * still blocks a later purgeEvent() once any purchase is confirmed) and the database notifies every
+ * current event_attendees row (trg_notify_event_cancelled). The organiser can cancel only their own
+ * event; the per-column status trigger reverts anyone else's attempt (admins/campus staff excepted).
+ */
+export async function cancelEvent(id: string, reason?: string) {
+ const target = locallyCreatedEvents.find((e) => e.id === id);
+ const { data, error } = await supabase
+ .from('events')
+ .update({ status: 'cancelled', cancellation_reason: reason?.trim() || null })
+ .eq('id', id)
+ .select('id, status')
+ .maybeSingle();
+ if (error) throwReadable(error, 'Could not cancel this event. Please try again.');
+ if (!data || data.status !== 'cancelled') {
+ throw new Error('You do not have permission to cancel this event.');
+ }
+ locallyCreatedEvents = locallyCreatedEvents.map((e) =>
+ e.id === id ? { ...e, approvalStatus: 'rejected', isCancelled: true, cancellationReason: reason?.trim() || null } : e,
+ );
+ await recordAuditLogEntry({
+ action: 'event_cancelled',
+ summary: `Cancelled event "${target?.title ?? id}"${reason ? `: ${reason}` : ''}`,
  targetType: 'event',
  targetId: id,
  });

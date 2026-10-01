@@ -239,8 +239,8 @@ export function EventDoorDesk({
     );
   }, [roster.data, search]);
 
-  function exportCsv() {
-    if (Platform.OS !== 'web' || typeof document === 'undefined' || !roster.data) return;
+  async function exportCsv() {
+    if (!roster.data) return;
     const rows: (string | number | null)[][] = [
       ['Name', 'Reference', 'Registered', 'Checked in', paid ? 'Confirmed bought entry' : '', 'Matric number', 'Department'],
       ...roster.data.map((a) => [
@@ -253,13 +253,36 @@ export function EventDoorDesk({
         a.department ?? '',
       ]),
     ];
-    const blob = new Blob([`﻿${toCsv(rows)}`], { type: 'text/csv;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${(event?.title ?? 'event').replace(/[^a-z0-9]+/gi, '_')}_attendance.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const csvContent = `﻿${toCsv(rows)}`;
+    const filename = `${(event?.title ?? 'event').replace(/[^a-z0-9]+/gi, '_')}_attendance.csv`;
+
+    if (Platform.OS === 'web') {
+      if (typeof document === 'undefined') return;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    try {
+      const { File, Paths } = await import('expo-file-system');
+      const Sharing = await import('expo-sharing');
+      if (!(await Sharing.isAvailableAsync())) {
+        toast.show('Sharing is not available on this device.');
+        return;
+      }
+      const file = new File(Paths.cache, filename);
+      file.create({ overwrite: true });
+      file.write(csvContent);
+      await Sharing.shareAsync(file.uri, { mimeType: 'text/csv' });
+    } catch {
+      haptics.error();
+      toast.error('Could not export the attendance list.');
+    }
   }
 
   const r = report.data;
@@ -479,7 +502,7 @@ export function EventDoorDesk({
                   )}
                 </View>
               ) : null}
-              {Platform.OS === 'web' ? <AppButton label="Download attendance (CSV)" icon="download-outline" variant="secondary" onPress={exportCsv} /> : null}
+              <AppButton label="Download attendance (CSV)" icon="download-outline" variant="secondary" onPress={() => void exportCsv()} />
             </View>
           ) : (
             <AppText tone="secondary" variant="bodySmall">The report could not be loaded.</AppText>

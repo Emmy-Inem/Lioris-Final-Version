@@ -1163,6 +1163,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261005020000_resource_ratings.sql',
   'supabase/migrations/20261005030000_alumni_profile_extras.sql',
   'supabase/migrations/20261005040000_admin_user_diagnostics.sql',
+  'supabase/migrations/20261006030000_events_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -1503,6 +1504,39 @@ console.log('\n== paid events ==');
       await c.q(`SELECT public.confirm_event_purchase($1, $2, true)`, [ev, U.s2]);
       denied(await c.t(`UPDATE public.events SET ticket_type = 'free', ticket_price = 0 WHERE id = $1`, [ev]), /has_confirmed_purchases/, 'free after purchases');
       denied(await c.t(`UPDATE public.events SET ticket_price = 9000 WHERE id = $1`, [ev]), /has_confirmed_purchases/, 'price change after purchases');
+    });
+  });
+
+  // 20261006030000_events_fixes.sql: trg_events_delete_guard blocks DELETE on
+  // events the same way trg_events_paid_guard already blocks a price/free
+  // change - once a purchase is confirmed. Regression guard: an event with
+  // no confirmed purchase must still purge cleanly (the pre-existing path).
+  await check('events delete guard: purging an event is blocked once a purchase is confirmed, for organiser and admin alike', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { method: 'at_venue' });
+      await goLive(c, ev, { url: null });
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1, false, true)`, [ev]);
+      await imp(U.s1);
+      await c.q(`SELECT public.checkin_event_attendee($1, NULL, $2)`, [ev, U.s2]);
+      await c.q(`SELECT public.confirm_event_purchase($1, $2, true)`, [ev, U.s2]);
+      denied(await c.t(`DELETE FROM public.events WHERE id = $1`, [ev]), /has_confirmed_purchases/, 'organiser purging after a confirmed purchase');
+      await imp(U.adminA);
+      denied(await c.t(`DELETE FROM public.events WHERE id = $1`, [ev]), /has_confirmed_purchases/, 'admin purging after a confirmed purchase');
+    });
+  });
+
+  await check('events delete guard: purging a free/unpurchased event still works (no regression on the existing purge path)', async () => {
+    await as('postgres', async (c) => {
+      await flag(true);
+      const ev = await submit(c, { type: 'free' });
+      await svc(); await c.q(`UPDATE public.events SET status = 'upcoming' WHERE id = $1`, [ev]);
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1)`, [ev]);
+      await imp(U.s1);
+      const ok = await c.t(`DELETE FROM public.events WHERE id = $1`, [ev]);
+      assert(ok.ok, `purge of an unpurchased event should still succeed: ${ok.err?.message}`);
+      await svc();
+      eq((await c.q(`SELECT count(*)::int n FROM public.event_attendees WHERE event_id = $1`, [ev])).rows[0].n, 0, 'RSVPs cascade away with the event');
     });
   });
 }
@@ -3000,6 +3034,128 @@ console.log('\n== admin user diagnostics ==');
       await imp(U.staffU);
       const data = (await c.q(`SELECT public.admin_get_user_diagnostics($1) AS data`, [U.s1])).rows[0].data;
       eq(data.user_id, U.s1, 'same-campus staff can diagnose the user');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// events fixes (20261006030000_events_fixes.sql): soft-cancel, waitlist
+// promotion on a capacity raise, attendee notifications on cancel/material
+// edit. The DELETE guard (trg_events_delete_guard) is covered above, next to
+// the rest of the paid-events behavioural tests it shares fixtures with.
+// ---------------------------------------------------------------------------
+console.log('\n== events fixes (soft-cancel, capacity-raise promotion, edit notifications) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+  const STARTS = "now() + interval '2 hours'";
+  const ENDS = "now() + interval '4 hours'";
+
+  /** A live (status='upcoming'), free, not-yet-full event created by s1. */
+  async function mkFreeEvent(c, capacity) {
+    await svc();
+    const r = await c.q(
+      `INSERT INTO public.events (creator_id, campus_code, title, description, venue, start_time, end_time, category, status, ticket_type, capacity)
+       VALUES ($1, 'GLOBAL', 'Events-fixes test event', 'desc', 'Hall', ${STARTS}, ${ENDS}, 'Academic', 'upcoming', 'free', $2) RETURNING id`,
+      [U.s1, capacity],
+    );
+    return r.rows[0].id;
+  }
+
+  await check('soft-cancel: organiser can cancel (and only cancel) their own live event; attendees are notified, not deleted', async () => {
+    await as('postgres', async (c) => {
+      const ev = await mkFreeEvent(c, null);
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1)`, [ev]);
+      await imp(U.s3); await c.q(`SELECT public.rsvp_event($1)`, [ev]);
+
+      // a stranger cannot flip the status - enforce_event_status_authority still reverts it.
+      await imp(U.s4);
+      await c.q(`UPDATE public.events SET status = 'cancelled' WHERE id = $1`, [ev]);
+      await svc();
+      eq((await c.q(`SELECT status::text s FROM public.events WHERE id = $1`, [ev])).rows[0].s, 'upcoming', "a stranger's status change is still reverted");
+
+      // the organiser soft-cancels their own event.
+      await imp(U.s1);
+      await c.q(`UPDATE public.events SET status = 'cancelled', cancellation_reason = 'Venue double-booked' WHERE id = $1`, [ev]);
+      await svc();
+      eq((await c.q(`SELECT status::text s FROM public.events WHERE id = $1`, [ev])).rows[0].s, 'cancelled', 'organiser self-cancel took effect');
+      eq((await c.q(`SELECT count(*)::int n FROM public.event_attendees WHERE event_id = $1`, [ev])).rows[0].n, 2, 'RSVPs are NOT deleted by a soft-cancel');
+
+      const notifs = (await c.q(`SELECT recipient_id FROM public.notifications WHERE action_url = $1 AND title = 'Event cancelled'`, ['/event/' + ev])).rows;
+      eq(notifs.map((n) => n.recipient_id).sort(), [U.s2, U.s3].sort(), 'both attendees were notified of the cancellation');
+      const body = (await c.q(`SELECT body FROM public.notifications WHERE action_url = $1 AND title = 'Event cancelled' AND recipient_id = $2`, ['/event/' + ev, U.s2])).rows[0].body;
+      assert(body.includes('Venue double-booked'), 'the cancellation reason is included in the notification');
+
+      // the organiser cannot un-cancel it themselves - only the cancel transition is self-service.
+      await imp(U.s1);
+      await c.q(`UPDATE public.events SET status = 'upcoming' WHERE id = $1`, [ev]);
+      await svc();
+      eq((await c.q(`SELECT status::text s FROM public.events WHERE id = $1`, [ev])).rows[0].s, 'cancelled', 'organiser cannot self-revive a cancelled event');
+
+      // an admin can cancel someone else's event too, same notification.
+      const ev2 = await mkFreeEvent(c, null);
+      await imp(U.s4); await c.q(`SELECT public.rsvp_event($1)`, [ev2]);
+      await imp(U.adminA);
+      await c.q(`UPDATE public.events SET status = 'cancelled' WHERE id = $1`, [ev2]);
+      await svc();
+      eq((await c.q(`SELECT status::text s FROM public.events WHERE id = $1`, [ev2])).rows[0].s, 'cancelled', 'admin can cancel any event');
+      eq((await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1 AND title = 'Event cancelled'`, [U.s4])).rows[0].n, 1, 'attendee notified when an admin cancels');
+    });
+  });
+
+  await check('capacity raise promotes exactly the right number of waitlisted people, in join order', async () => {
+    await as('postgres', async (c) => {
+      const ev = await mkFreeEvent(c, 1);
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1)`, [ev]); // fills the only seat
+
+      await imp(U.s3); await c.q(`SELECT public.join_event_waitlist($1)`, [ev]); // position 1
+      await imp(U.s4); await c.q(`SELECT public.join_event_waitlist($1)`, [ev]); // position 2
+      await imp(U.s5); await c.q(`SELECT public.join_event_waitlist($1)`, [ev]); // position 3
+
+      // raising capacity 1 -> 3 (two new seats) should promote exactly s3 and s4, leaving s5 waiting.
+      await imp(U.s1);
+      await c.q(`UPDATE public.events SET capacity = 3 WHERE id = $1`, [ev]);
+
+      await svc();
+      const attendees = (await c.q(`SELECT user_id FROM public.event_attendees WHERE event_id = $1`, [ev])).rows.map((r) => r.user_id).sort();
+      eq(attendees, [U.s2, U.s3, U.s4].sort(), 'the two longest-waiting people were promoted, s5 was not');
+      const waitlist = (await c.q(`SELECT user_id, (promoted_at IS NOT NULL) AS promoted FROM public.event_waitlist WHERE event_id = $1 ORDER BY created_at`, [ev])).rows;
+      eq(waitlist, [
+        { user_id: U.s3, promoted: true },
+        { user_id: U.s4, promoted: true },
+        { user_id: U.s5, promoted: false },
+      ], 'waitlist promotion order');
+      const promoNotifs = (await c.q(`SELECT count(*)::int n FROM public.notifications WHERE title = 'A place opened up!' AND recipient_id IN ($1, $2)`, [U.s3, U.s4])).rows[0].n;
+      eq(promoNotifs, 2, 'both promoted people were notified');
+      eq((await c.q(`SELECT count(*)::int n FROM public.notifications WHERE title = 'A place opened up!' AND recipient_id = $1`, [U.s5])).rows[0].n, 0, 's5 (still waiting) was not notified');
+    });
+  });
+
+  await check('editing a material field (venue) notifies attendees; a non-material edit (description) does not', async () => {
+    await as('postgres', async (c) => {
+      const ev = await mkFreeEvent(c, null);
+      await imp(U.s2); await c.q(`SELECT public.rsvp_event($1)`, [ev]);
+
+      await imp(U.s1);
+      await c.q(`UPDATE public.events SET venue = 'New Hall B' WHERE id = $1`, [ev]);
+      await svc();
+      eq((await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1 AND title = 'Event details changed'`, [U.s2])).rows[0].n, 1, 'venue change notifies the attendee');
+
+      await imp(U.s1);
+      await c.q(`UPDATE public.events SET description = 'Fixed a typo' WHERE id = $1`, [ev]);
+      await svc();
+      eq((await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1 AND title = 'Event details changed'`, [U.s2])).rows[0].n, 1, 'a non-material edit (description) does not notify again');
+
+      // cancelling (even bundled with a date change in the same statement) must fire only the cancellation notice.
+      await imp(U.s1);
+      await c.q(`UPDATE public.events SET status = 'cancelled', start_time = start_time + interval '1 hour' WHERE id = $1`, [ev]);
+      await svc();
+      eq((await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1 AND title = 'Event details changed'`, [U.s2])).rows[0].n, 1, 'cancelling does not also fire the details-changed notice');
+      eq((await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1 AND title = 'Event cancelled'`, [U.s2])).rows[0].n, 1, 'cancellation notice fires');
     });
   });
 }

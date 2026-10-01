@@ -176,6 +176,9 @@ export interface CampusEvent {
  rsvpCount: number;
  isRsvpd?: boolean;
  approvalStatus?: 'pending' | 'approved' | 'rejected';
+ /** True once the event's own status (not approval) is 'cancelled' - distinct from approvalStatus, which also maps a never-approved submission to 'rejected'. */
+ isCancelled?: boolean;
+ cancellationReason?: string | null;
  attendeeNames?: string[];
  sponsored?: boolean;
  isSpotlight?: boolean;
@@ -434,6 +437,7 @@ export type AuditLogAction =
  | 'report_dismissed'
  | 'event_approved'
  | 'event_approval_revoked'
+ | 'event_cancelled'
  | 'event_purged'
  | 'event_updated'
  | 'institution_updated'
