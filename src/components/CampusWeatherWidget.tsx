@@ -148,12 +148,21 @@ export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeathe
               </Pressable>
             </View>
 
-            <View style={[styles.liveBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.10)', borderColor: isDark ? 'rgba(34, 197, 94, 0.35)' : 'rgba(34, 197, 94, 0.25)', flexShrink: 0 }]}>
-              <View style={styles.liveDot} />
-              <AppText variant="caption" weight="bold" style={{ color: colors.success, fontSize: 11, letterSpacing: 0.5 }}>
-                LIVE METEO
-              </AppText>
-            </View>
+            {weather.isLive ? (
+              <View style={[styles.liveBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.10)', borderColor: isDark ? 'rgba(34, 197, 94, 0.35)' : 'rgba(34, 197, 94, 0.25)', flexShrink: 0 }]}>
+                <View style={styles.liveDot} />
+                <AppText variant="caption" weight="bold" style={{ color: colors.success, fontSize: 11, letterSpacing: 0.5 }}>
+                  LIVE METEO
+                </AppText>
+              </View>
+            ) : (
+              <View style={[styles.liveBadge, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.10)', borderColor: isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.25)', flexShrink: 0 }]}>
+                <Ionicons name="alert-circle-outline" size={11} color={colors.warning} />
+                <AppText variant="caption" weight="bold" style={{ color: colors.warning, fontSize: 11, letterSpacing: 0.5 }}>
+                  ESTIMATED
+                </AppText>
+              </View>
+            )}
           </View>
 
           {/* Main Weather Metric Row */}

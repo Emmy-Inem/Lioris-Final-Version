@@ -199,12 +199,37 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
               </AppText>
             </SolidCard>
 
-            {/* Live Data Attribution */}
+            {/* Data Provenance Attribution - honest about whether this session's fetch actually succeeded */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Ionicons name="shield-checkmark" size={13} color="#10B981" />
-              <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
-                Live global FX rates • Updated daily from central interbank feeds
-              </AppText>
+              {loading && !rateData ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                    Checking current exchange rates...
+                  </AppText>
+                </>
+              ) : rateData?.source === 'live' ? (
+                <>
+                  <Ionicons name="shield-checkmark" size={13} color="#10B981" />
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                    Live global FX rates • Updated daily from central interbank feeds
+                  </AppText>
+                </>
+              ) : rateData?.source === 'cached' ? (
+                <>
+                  <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                  <AppText variant="caption" tone="secondary" style={{ fontSize: 10 }}>
+                    Showing cached rates from your last successful update
+                  </AppText>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="cloud-offline-outline" size={13} color={colors.warning} />
+                  <AppText variant="caption" style={{ fontSize: 10, color: colors.warning }}>
+                    Showing offline rates — connect to refresh
+                  </AppText>
+                </>
+              )}
             </View>
           </ScrollView>
         </View>

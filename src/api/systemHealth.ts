@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
 import { recordAuditLogEntry } from './auditLog';
 
 export interface IntegrityIssue {
@@ -8,6 +8,14 @@ export interface IntegrityIssue {
   count: number;
   severity: 'high' | 'medium' | 'low';
   remediation: string;
+}
+
+export interface EdgeFunctionHealth {
+  name: string;
+  label: string;
+  reachable: boolean;
+  latencyMs: number;
+  error?: string;
 }
 
 export interface SystemHealthReport {
@@ -25,6 +33,35 @@ export interface SystemHealthReport {
     activeSessions: number;
   };
   integrityIssues: IntegrityIssue[];
+  edgeFunctions: EdgeFunctionHealth[];
+}
+
+/**
+ * Confirms an edge function is deployed and reachable without running its real logic.
+ * Every function in supabase/functions answers its CORS preflight (`handlePreflight` in
+ * `_shared/cors.ts`) before any auth, rate-limiting, or upstream API call happens, so an
+ * OPTIONS request is a free, honest connectivity probe - unlike a POST, which would trigger
+ * a real (and billable) Gemini/Overpass call every time an admin loads this screen.
+ */
+async function probeEdgeFunction(name: string, label: string): Promise<EdgeFunctionHealth> {
+  const startTime = Date.now();
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: 'OPTIONS',
+      headers: { apikey: SUPABASE_ANON_KEY },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    const latencyMs = Date.now() - startTime;
+    if (res.status === 204 || res.ok) {
+      return { name, label, reachable: true, latencyMs };
+    }
+    return { name, label, reachable: false, latencyMs, error: `Unexpected status ${res.status}` };
+  } catch (err: any) {
+    return { name, label, reachable: false, latencyMs: Date.now() - startTime, error: err?.message ?? 'Request failed' };
+  }
 }
 
 export async function fetchSystemHealth(): Promise<SystemHealthReport> {
@@ -136,12 +173,18 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
     // Non-blocking
   }
 
+  const edgeFunctions = await Promise.all([
+    probeEdgeFunction('gemini-proxy', 'AI Study Copilot (Gemini)'),
+    probeEdgeFunction('overpass-proxy', 'Campus Map (Overpass)'),
+  ]);
+
   return {
     latencyMs: Math.max(0, latencyMs),
     status,
     timestamp: new Date().toISOString(),
     counts,
     integrityIssues,
+    edgeFunctions,
   };
 }
 

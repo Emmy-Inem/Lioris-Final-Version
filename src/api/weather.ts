@@ -92,6 +92,8 @@ export interface CampusWeather {
   tempMax: number;
   tempMin: number;
   fetchedAt: string;
+  /** false when Open-Meteo could not be reached and this is the fixed fallback reading, not a real observation. */
+  isLive: boolean;
 }
 
 function decodeWmoCode(code: number): { condition: string; iconName: CampusWeather['iconName'] } {
@@ -147,7 +149,10 @@ export async function fetchCampusWeather(campusQuery?: string | null): Promise<C
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${campus.latitude}&longitude=${campus.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Africa%2FLagos`;
 
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!res.ok) {
       throw new Error(`Open-Meteo status ${res.status}`);
     }
@@ -177,6 +182,7 @@ export async function fetchCampusWeather(campusQuery?: string | null): Promise<C
       tempMax: Math.round(daily.temperature_2m_max?.[0] ?? temp + 3),
       tempMin: Math.round(daily.temperature_2m_min?.[0] ?? temp - 4),
       fetchedAt: new Date().toISOString(),
+      isLive: true,
     };
 
     weatherCache.set(cacheKey, { data: weatherData, timestamp: Date.now() });
@@ -198,6 +204,7 @@ export async function fetchCampusWeather(campusQuery?: string | null): Promise<C
       tempMax: 31,
       tempMin: 23,
       fetchedAt: new Date().toISOString(),
+      isLive: false,
     };
   }
 }

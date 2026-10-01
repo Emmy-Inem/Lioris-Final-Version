@@ -6,11 +6,15 @@
 
 export type CurrencyCode = 'NGN' | 'USD' | 'EUR' | 'GBP' | 'CAD' | 'GHS' | 'KES';
 
+export type CurrencyRateSource = 'live' | 'cached' | 'fallback';
+
 export interface CurrencyRateInfo {
   base: string;
   date: string;
   rates: Record<string, number>;
   fetchedAt: string;
+  /** 'live': this session fetched real rates successfully. 'cached': reusing a prior live fetch from this session. 'fallback': the static table baked into source, never backed by a real fetch. */
+  source: CurrencyRateSource;
 }
 
 export interface CurrencyMetadata {
@@ -45,6 +49,7 @@ let cachedRateData: CurrencyRateInfo = {
   date: new Date().toISOString().split('T')[0],
   rates: FALLBACK_RATES,
   fetchedAt: new Date().toISOString(),
+  source: 'fallback',
 };
 
 let lastFetchTime = 0;
@@ -52,12 +57,15 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export async function fetchExchangeRates(): Promise<CurrencyRateInfo> {
   const now = Date.now();
-  if (now - lastFetchTime < CACHE_TTL_MS && Object.keys(cachedRateData.rates).length > 2) {
-    return cachedRateData;
+  if (cachedRateData.source === 'live' && now - lastFetchTime < CACHE_TTL_MS) {
+    return { ...cachedRateData, source: 'cached' };
   }
 
   try {
-    const res = await fetch('https://open.er-api.com/v6/latest/NGN');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch('https://open.er-api.com/v6/latest/NGN', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!res.ok) {
       throw new Error(`Currency API status ${res.status}`);
     }
@@ -77,6 +85,7 @@ export async function fetchExchangeRates(): Promise<CurrencyRateInfo> {
           KES: json.rates.KES || FALLBACK_RATES.KES,
         },
         fetchedAt: new Date().toISOString(),
+        source: 'live',
       };
       lastFetchTime = now;
       return cachedRateData;
@@ -85,7 +94,7 @@ export async function fetchExchangeRates(): Promise<CurrencyRateInfo> {
     console.warn('[CurrencyAPI] Live rates fetch failed, using fallback exchange rates:', err?.message ?? err);
   }
 
-  return cachedRateData;
+  return { ...cachedRateData, source: cachedRateData.source === 'live' ? 'cached' : 'fallback' };
 }
 
 export function convertFromNgn(amountInNgn: number, target: CurrencyCode): number {
