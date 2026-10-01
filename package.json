@@ -29,6 +29,7 @@
     "@tanstack/react-query": "^5.101.3",
     "cross-env": "^10.1.0",
     "expo": "~57.0.25",
+    "expo-audio": "^57.0.5",
     "expo-blur": "~57.0.3",
     "expo-constants": "~57.0.19",
     "expo-device": "~57.0.2",

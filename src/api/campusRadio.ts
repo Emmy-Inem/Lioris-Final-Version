@@ -5,6 +5,8 @@
  */
 
 import { Platform } from 'react-native';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import type { AudioPlayer, AudioStatus } from 'expo-audio';
 
 export interface RadioStation {
   id: string;
@@ -221,6 +223,8 @@ class CampusRadioManager {
   private static instance: CampusRadioManager;
   private listeners = new Set<RadioListener>();
   private audioElement: any = null;
+  private nativePlayer: AudioPlayer | null = null;
+  private nativeTriedBackup = false;
   private state: RadioPlaybackState = {
     currentStation: VERIFIED_STATIONS[0],
     isPlaying: false,
@@ -262,6 +266,49 @@ class CampusRadioManager {
           });
         }
       });
+    } else {
+      this.setupNativePlayer();
+    }
+  }
+
+  private setupNativePlayer() {
+    try {
+      this.nativePlayer = createAudioPlayer(null, { updateInterval: 500 });
+      this.nativePlayer.volume = this.state.volume;
+      setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+
+      this.nativePlayer.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+        if (status.error) {
+          console.warn('[CampusRadio] Native playback error on station:', this.state.currentStation.name, status.error);
+          this.handleNativePlaybackError();
+          return;
+        }
+        this.updateState({
+          isPlaying: status.playing,
+          isLoading: status.isBuffering && !status.playing,
+          errorMessage: status.playing ? null : this.state.errorMessage,
+        });
+      });
+    } catch (err: any) {
+      console.warn('[CampusRadio] Failed to initialize native audio player:', err?.message ?? err);
+      this.nativePlayer = null;
+    }
+  }
+
+  private handleNativePlaybackError() {
+    const station = this.state.currentStation;
+    if (!this.nativeTriedBackup && station.backupStreamUrl && this.nativePlayer) {
+      this.nativeTriedBackup = true;
+      if (__DEV__) console.log('[CampusRadio] Switching to backup stream URL...');
+      try {
+        this.nativePlayer.replace(station.backupStreamUrl);
+        this.nativePlayer.play();
+        this.updateState({ isLoading: true, errorMessage: null });
+      } catch {
+        this.updateState({ isPlaying: false, isLoading: false, errorMessage: 'Station currently buffering or offline' });
+      }
+    } else {
+      this.updateState({ isPlaying: false, isLoading: false, errorMessage: 'Station currently buffering or offline' });
     }
   }
 
@@ -297,8 +344,23 @@ class CampusRadioManager {
         console.warn('[CampusRadio] Play promise rejected:', err?.message || err);
         this.updateState({ isPlaying: false, isLoading: false });
       });
+    } else if (this.nativePlayer) {
+      this.nativeTriedBackup = false;
+      this.updateState({ currentStation: station, isPlaying: false, isLoading: true, errorMessage: null });
+      try {
+        this.nativePlayer.replace(station.streamUrl);
+        this.nativePlayer.play();
+      } catch (err: any) {
+        console.warn('[CampusRadio] Native play failed:', err?.message || err);
+        this.updateState({ isPlaying: false, isLoading: false, errorMessage: 'Unable to start this station. Please try another.' });
+      }
     } else {
-      this.updateState({ currentStation: station, isPlaying: true, errorMessage: null });
+      this.updateState({
+        currentStation: station,
+        isPlaying: false,
+        isLoading: false,
+        errorMessage: 'Audio playback is not available on this device.',
+      });
     }
   }
 
@@ -313,6 +375,8 @@ class CampusRadioManager {
   public pause() {
     if (this.audioElement) {
       this.audioElement.pause();
+    } else if (this.nativePlayer) {
+      this.nativePlayer.pause();
     }
     this.updateState({ isPlaying: false, isLoading: false });
   }
@@ -321,6 +385,8 @@ class CampusRadioManager {
     const clamped = Math.max(0, Math.min(1, vol));
     if (this.audioElement) {
       this.audioElement.volume = clamped;
+    } else if (this.nativePlayer) {
+      this.nativePlayer.volume = clamped;
     }
     this.updateState({ volume: clamped, isMuted: clamped === 0 });
   }
@@ -331,6 +397,7 @@ class CampusRadioManager {
       this.updateState({ isMuted: false });
     } else {
       if (this.audioElement) this.audioElement.volume = 0;
+      else if (this.nativePlayer) this.nativePlayer.volume = 0;
       this.updateState({ isMuted: true });
     }
   }
