@@ -276,7 +276,7 @@ export function TicketSettingsFields({ value, onChange, eventStartAt, reviewNote
           />
 
           <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.xs }}>
-            Students who register share their name with you. They can choose to also share their matric number and
+            Students who register share their name with you. They can choose to also share their student ID and
             department. Check people in at the door from the event page, and confirm who actually bought entry.
           </AppText>
         </View>

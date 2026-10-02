@@ -242,7 +242,7 @@ export function EventDoorDesk({
   async function exportCsv() {
     if (!roster.data) return;
     const rows: (string | number | null)[][] = [
-      ['Name', 'Reference', 'Registered', 'Checked in', paid ? 'Confirmed bought entry' : '', 'Matric number', 'Department'],
+      ['Name', 'Reference', 'Registered', 'Checked in', paid ? 'Confirmed bought entry' : '', 'Student ID', 'Department'],
       ...roster.data.map((a) => [
         a.fullName,
         formatTicketCode(a.ticketCode),
@@ -413,7 +413,7 @@ export function EventDoorDesk({
 
       {tab === 'roster' ? (
         <View>
-          <AppTextField label="" placeholder="Search by name, code, matric or department" value={search} onChangeText={setSearch} />
+          <AppTextField label="" placeholder="Search by name, code, ID or department" value={search} onChangeText={setSearch} />
           {roster.isLoading ? (
             <ActivityIndicator color={colors.brandPrimary} style={{ marginVertical: spacing.lg }} />
           ) : people.length === 0 ? (

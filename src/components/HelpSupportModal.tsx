@@ -25,7 +25,6 @@ import { haptics } from '@/utils/haptics';
 
 const TICKET_CATEGORIES: { key: SupportTicketCategory; label: string }[] = [
   { key: 'account_issue', label: 'Account Issue' },
-  { key: 'matric_id_correction', label: 'Matric / ID Fix' },
   { key: 'campus_transfer', label: 'Campus Transfer' },
   { key: 'verification_appeal', label: 'Verification Appeal' },
   { key: 'suspension_appeal', label: 'Suspension Appeal' },
@@ -380,10 +379,10 @@ export function HelpSupportModal({ visible, onClose }: { visible: boolean; onClo
                   Subject / Summary
                 </AppText>
                 <TextInput
-                  accessibilityLabel="e.g., Request to update matriculation number"
+                  accessibilityLabel="e.g., Request to update my profile information"
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="e.g., Request to update matriculation number"
+                  placeholder="e.g., Request to update my profile information"
                   placeholderTextColor={colors.textSecondary}
                   style={{
                     backgroundColor: colors.background,

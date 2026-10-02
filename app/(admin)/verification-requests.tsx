@@ -27,7 +27,7 @@ import { openExternalUrl } from '@/utils/openExternalUrl';
 
 const REJECTION_REASONS = [
   'Document photo is blurry / unreadable',
-  'Matriculation number does not match university database',
+  'Student ID number does not match university database',
   'Expired student identity card',
   'Name does not match academic registrar records',
   'Invalid document type submitted',
@@ -389,7 +389,7 @@ export default function VerificationRequestsScreen() {
             <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
               Verify Credentials
             </AppText>
-            <AppText tone="secondary" variant="caption">Review student matriculation records & IDs</AppText>
+            <AppText tone="secondary" variant="caption">Review student ID records & verification</AppText>
           </View>
           <View style={{ flexShrink: 0 }}>
             <Badge label={`${requests?.length ?? 0} Pending`} tone="neutral" />
@@ -458,7 +458,7 @@ export default function VerificationRequestsScreen() {
                 {/* Document Reference Box */}
                 <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 14, marginVertical: spacing.sm, borderWidth: 1, borderColor: colors.border, gap: 4 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' }}>
-                    <AppText variant="caption" tone="secondary">Matric / Certificate Ref</AppText>
+                    <AppText variant="caption" tone="secondary">Student ID / Certificate Ref</AppText>
                     <AppText variant="caption" weight="bold" style={{ flexShrink: 1, textAlign: 'right' }}>
                       {req.documentReference || 'Not provided'}
                     </AppText>
@@ -717,7 +717,7 @@ export default function VerificationRequestsScreen() {
  })}
 
  <AppTextField
- label="Additional Guidance Note (Optional)"placeholder="e.g. Please take a clear photo showing matric number and expiration year."value={customRejectNote}
+ label="Additional Guidance Note (Optional)"placeholder="e.g. Please take a clear photo showing your ID number and expiration year."value={customRejectNote}
  onChangeText={setCustomRejectNote}
  />
 
@@ -786,7 +786,7 @@ export default function VerificationRequestsScreen() {
 
             <AppTextField
               label="Additional Guidance Note (Optional)"
-              placeholder="e.g. Please take a clear photo showing matric number and expiration year."
+              placeholder="e.g. Please take a clear photo showing your ID number and expiration year."
               value={customRejectNote}
               onChangeText={setCustomRejectNote}
             />

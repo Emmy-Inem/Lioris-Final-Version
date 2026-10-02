@@ -45,7 +45,7 @@ const ADMIN_FEATURES: NavFeature[] = [
     route: '/(admin)/verification-requests',
     icon: 'checkmark-circle-outline',
     category: 'People',
-    keywords: ['id', 'verify', 'verification', 'matric', 'student id', 'staff id', 'pending'],
+    keywords: ['id', 'verify', 'verification', 'student id', 'staff id', 'pending'],
   },
   {
     title: 'User & Member Directory',

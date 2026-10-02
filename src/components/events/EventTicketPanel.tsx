@@ -397,9 +397,9 @@ export function EventTicketPanel({
         </AppText>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: spacing.md }}>
-          <Switch value={shareDetails} onValueChange={setShareDetails} accessibilityLabel="Also share my matric number and department" />
+          <Switch value={shareDetails} onValueChange={setShareDetails} accessibilityLabel="Also share my student ID and department" />
           <AppText variant="bodySmall" style={{ flex: 1, lineHeight: 19 }}>
-            Also share my matric number and department (helps the organiser find me at the door).
+            Also share my student ID and department (helps the organiser find me at the door).
           </AppText>
         </View>
 
