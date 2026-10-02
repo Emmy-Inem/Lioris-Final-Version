@@ -86,7 +86,6 @@ export default function StudentLayout() {
  <Tabs.Screen name="search"options={{ href: null }} />
  <Tabs.Screen name="marketplace"options={{ href: null }} />
  <Tabs.Screen name="marketplace-mine"options={{ href: null }} />
- <Tabs.Screen name="jobs"options={{ href: null }} />
  <Tabs.Screen name="study-groups"options={{ href: null }} />
  <Tabs.Screen name="calendar"options={{ href: null }} />
  <Tabs.Screen name="settings"options={{ href: null }} />

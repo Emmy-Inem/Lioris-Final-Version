@@ -84,8 +84,6 @@ export default function AlumniLayout() {
  <Tabs.Screen name="notifications" options={{ href: null }} />
  <Tabs.Screen name="search" options={{ href: null }} />
  <Tabs.Screen name="connection-requests" options={{ href: null }} />
- <Tabs.Screen name="marketplace" options={{ href: null }} />
- <Tabs.Screen name="marketplace-mine" options={{ href: null }} />
  <Tabs.Screen name="settings" options={{ href: null }} />
  <Tabs.Screen name="messages" options={{ href: null }} />
  <Tabs.Screen name="post/[id]" options={{ href: null }} />

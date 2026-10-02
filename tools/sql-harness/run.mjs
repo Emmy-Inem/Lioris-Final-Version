@@ -1173,6 +1173,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261008000000_marketplace_fixes.sql',
   'supabase/migrations/20261008010000_jobs_fixes.sql',
   'supabase/migrations/20261008020000_connections_and_blocking_security.sql',
+  'supabase/migrations/20261009000000_role_exclusive_jobs_marketplace.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2288,10 +2289,11 @@ console.log('\n== trust & safety gaps (reportable listings/jobs, admin mentorshi
          VALUES ($1, 'UNILAG', 'Used calculator', 'Works fine', 500000, '₦5,000', 'Electronics') RETURNING id`,
         [U.s1],
       );
+      await imp(U.alumni);
       const job = await c.q(
         `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url)
          VALUES ($1, 'UNILAG', 'Frontend Intern', 'Acme', 'Lagos', 'https://example.test/apply') RETURNING id`,
-        [U.s1],
+        [U.alumni],
       );
 
       await imp(U.s2);
@@ -2568,16 +2570,18 @@ console.log('\n== discovery & polish: mute, job alerts, directory privacy ==');
       // s5: matches everything but is inactive -> must not fire.
       await imp(U.s5);
       await c.q(`INSERT INTO public.job_alerts (user_id, keywords, job_type, remote_only, campus_code, is_active) VALUES ($1, NULL, NULL, false, NULL, false)`, [U.s5]);
-      // s4 is the poster below and also saves a matching alert on themself -> must never self-notify.
-      await imp(U.s4);
+      // alumni is the poster below (jobs are alumni/staff/admin-only since
+      // 20261009000000_role_exclusive_jobs_marketplace.sql) and also saves a
+      // matching alert on themself -> must never self-notify.
+      await imp(U.alumni);
       const jobIns = await c.q(
         `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, type, is_remote, apply_url)
          VALUES ($1, 'UNILAG', 'Senior Engineer', 'Acme Corp', 'Lagos', 'Full-time', false, 'https://example.com/apply') RETURNING id, is_approved`,
-        [U.s4],
+        [U.alumni],
       );
       const jobId = jobIns.rows[0].id;
       eq(jobIns.rows[0].is_approved, false, 'enforce_job_moderation forces a non-staff poster\'s new job into pending');
-      await c.q(`INSERT INTO public.job_alerts (user_id, keywords) VALUES ($1, 'Engineer')`, [U.s4]);
+      await c.q(`INSERT INTO public.job_alerts (user_id, keywords) VALUES ($1, 'Engineer')`, [U.alumni]);
 
       await svc();
       const beforeApproval = await c.q(`SELECT count(*)::int n FROM public.notifications WHERE type = 'system' AND action_url = '/jobs'`);
@@ -2599,7 +2603,7 @@ console.log('\n== discovery & polish: mute, job alerts, directory privacy ==');
       assert(lastNotified.rows[0].stamped, 'the matched alert has last_notified_at stamped');
 
       // An unrelated edit while already approved must not refire the trigger.
-      await imp(U.s4);
+      await imp(U.alumni);
       await c.q(`UPDATE public.jobs SET description = 'now with more detail' WHERE id = $1`, [jobId]);
       await svc();
       const afterUnrelatedEdit = await c.q(`SELECT count(*)::int n FROM public.notifications WHERE type = 'system' AND action_url = '/jobs'`);
@@ -4357,6 +4361,115 @@ console.log('\n== connections & blocking security fixes ==');
   await check('get_suggested_connections: anon has no EXECUTE grant', async () => {
     await as('anon', async (c) => {
       denied(await c.t(`SELECT * FROM public.get_suggested_connections()`), /permission denied/i);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// role-exclusive jobs & marketplace posting (20261009000000): Jobs/Career is
+// alumni-only and Marketplace is student-only - a student can no longer
+// INSERT into jobs and an alumni can no longer INSERT into
+// marketplace_listings, while staff/admin keep posting both (unchanged from
+// before this migration).
+// ---------------------------------------------------------------------------
+console.log('\n== role-exclusive jobs & marketplace posting (20261009000000) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  await check('jobs INSERT: a student cannot post a job (jobs/career is alumni-only)', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await imp(U.s1);
+      denied(
+        await c.t(
+          `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url) VALUES ($1, 'UNILAG', 'Student-posted role', 'Acme', 'Lagos', 'https://acme.example/careers')`,
+          [U.s1],
+        ),
+        /row-level security|new row violates/i,
+        'a student posting a job',
+      );
+    });
+  });
+
+  await check('jobs INSERT: an alumni CAN post a job', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await imp(U.alumni);
+      const r = await c.t(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url) VALUES ($1, 'UNILAG', 'Alumni-posted role', 'Acme', 'Lagos', 'https://acme.example/careers') RETURNING id`,
+        [U.alumni],
+      );
+      assert(r.ok, 'alumni should be able to post a job: ' + (r.err?.message ?? ''));
+    });
+  });
+
+  await check('jobs INSERT: staff and admin retain their existing posting ability', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await imp(U.staffU);
+      const staffR = await c.t(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url) VALUES ($1, 'UNILAG', 'Staff-posted role', 'Acme', 'Lagos', 'https://acme.example/careers') RETURNING id`,
+        [U.staffU],
+      );
+      assert(staffR.ok, 'staff should still be able to post a job: ' + (staffR.err?.message ?? ''));
+
+      await imp(U.adminA);
+      const adminR = await c.t(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url) VALUES ($1, 'GLOBAL', 'Admin-posted role', 'Acme', 'Lagos', 'https://acme.example/careers') RETURNING id`,
+        [U.adminA],
+      );
+      assert(adminR.ok, 'admin should still be able to post a job: ' + (adminR.err?.message ?? ''));
+    });
+  });
+
+  await check('marketplace_listings INSERT: an alumni cannot post a listing (marketplace is student-only)', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await imp(U.alumni);
+      denied(
+        await c.t(
+          `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Alumni-posted item', '2,000', 'Books')`,
+          [U.alumni],
+        ),
+        /row-level security|new row violates/i,
+        'an alumni posting a marketplace listing',
+      );
+    });
+  });
+
+  await check('marketplace_listings INSERT: a student CAN post a listing', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await imp(U.s1);
+      const r = await c.t(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Student-posted item', '2,000', 'Books') RETURNING id`,
+        [U.s1],
+      );
+      assert(r.ok, 'student should be able to post a marketplace listing: ' + (r.err?.message ?? ''));
+    });
+  });
+
+  await check('marketplace_listings INSERT: staff and admin retain their existing posting ability', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await imp(U.staffU);
+      const staffR = await c.t(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Staff-posted item', '5,000', 'Electronics') RETURNING id`,
+        [U.staffU],
+      );
+      assert(staffR.ok, 'staff should still be able to post a marketplace listing: ' + (staffR.err?.message ?? ''));
+
+      await imp(U.adminA);
+      const adminR = await c.t(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'GLOBAL', 'Admin-posted item', '5,000', 'Electronics') RETURNING id`,
+        [U.adminA],
+      );
+      assert(adminR.ok, 'admin should still be able to post a marketplace listing: ' + (adminR.err?.message ?? ''));
     });
   });
 }

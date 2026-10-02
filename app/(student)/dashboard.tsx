@@ -500,6 +500,36 @@ export default function StudentDashboard() {
                 </GlassCard>
               </Pressable>
             )}
+
+            {isFeatureEnabled('marketplace') && (
+              <Pressable
+                onPress={() => router.push('/(student)/marketplace')}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
+              >
+                <GlassCard radius={16} padded={false} contentStyle={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Ionicons name="cart-outline" size={20} color="#F59E0B" />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>Marketplace</AppText>
+                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>Buy & sell with classmates</AppText>
+                  </View>
+                </GlassCard>
+              </Pressable>
+            )}
+
+            {isFeatureEnabled('alumni_mentorship') && (
+              <Pressable
+                onPress={() => router.push('/(student)/mentorship')}
+                style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
+              >
+                <GlassCard radius={16} padded={false} contentStyle={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Ionicons name="people-outline" size={20} color="#8B5CF6" />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>Mentorship Hub</AppText>
+                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>Alumni mentors & guidance</AppText>
+                  </View>
+                </GlassCard>
+              </Pressable>
+            )}
           </View>
         </View>
 
