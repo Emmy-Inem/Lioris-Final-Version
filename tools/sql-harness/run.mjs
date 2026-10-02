@@ -1175,6 +1175,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261008020000_connections_and_blocking_security.sql',
   'supabase/migrations/20261009000000_role_exclusive_jobs_marketplace.sql',
   'supabase/migrations/20261009010000_suspension_enforcement_fixes.sql',
+  'supabase/migrations/20261009020000_admin_moderation_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -4593,6 +4594,69 @@ console.log('\n== suspension enforcement fixes (posts/jobs/marketplace_listings 
       await imp(U.s5);
       const r = await c.t(`UPDATE public.posts SET content = 'hijacked' WHERE id = $1`, [post.id]);
       assert(r.ok && r.n === 0, 'a non-owner, non-suspended, non-admin/staff student should not be able to edit another student\'s post');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// admin moderation fixes (20261009020000_admin_moderation_fixes.sql):
+// admin_delete_chat_message - the one new DB object this migration adds.
+// ---------------------------------------------------------------------------
+console.log('\n== admin moderation fixes ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  /** Superuser-mode setup helper: a DM channel between a/b with one message sent by `sender`. */
+  async function mkDmMessage(c, a, b, sender) {
+    await svc();
+    const [ch] = (await c.q(`INSERT INTO public.chat_channels (name, created_by, is_direct_message) VALUES ('dm', $1, true) RETURNING id`, [a])).rows;
+    await c.q(`INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [ch.id, a]);
+    await c.q(`INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [ch.id, b]);
+    const [msg] = (await c.q(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'hi') RETURNING id`, [ch.id, sender])).rows;
+    return { channelId: ch.id, messageId: msg.id };
+  }
+
+  await check('admin_delete_chat_message: a non-admin (not even the sender) is refused with not_allowed, and the message survives', async () => {
+    await as('postgres', async (c) => {
+      const { messageId } = await mkDmMessage(c, U.s1, U.s2, U.s1);
+      await imp(U.s2);
+      denied(await c.t(`SELECT public.admin_delete_chat_message($1)`, [messageId]), /not_allowed/i, 'student calling the admin-only delete RPC');
+      await svc();
+      const still = (await c.q(`SELECT id FROM public.chat_messages WHERE id = $1`, [messageId])).rows;
+      assert(still.length === 1, 'message must still exist after the refused call');
+    });
+  });
+
+  await check('admin_delete_chat_message: an admin can hard-delete any message, including one they never sent', async () => {
+    await as('postgres', async (c) => {
+      const { messageId } = await mkDmMessage(c, U.s1, U.s2, U.s1);
+      await imp(U.adminA);
+      const r = await c.t(`SELECT public.admin_delete_chat_message($1)`, [messageId]);
+      assert(r.ok, 'admin delete should succeed: ' + (r.err?.message ?? ''));
+      await svc();
+      const gone = (await c.q(`SELECT id FROM public.chat_messages WHERE id = $1`, [messageId])).rows;
+      assert(gone.length === 0, 'message should be hard-deleted, not soft-flagged');
+    });
+  });
+
+  await check('admin_delete_chat_message: deleting an already-removed message raises not_found', async () => {
+    await as('postgres', async (c) => {
+      const { messageId } = await mkDmMessage(c, U.s1, U.s2, U.s1);
+      await imp(U.adminA);
+      const first = await c.t(`SELECT public.admin_delete_chat_message($1)`, [messageId]);
+      assert(first.ok, 'first delete should succeed: ' + (first.err?.message ?? ''));
+      denied(await c.t(`SELECT public.admin_delete_chat_message($1)`, [messageId]), /not_found/i, 'deleting the same message a second time');
+    });
+  });
+
+  await check('admin_delete_chat_message: anon has no EXECUTE grant', async () => {
+    await as('anon', async (c) => {
+      denied(await c.t(`SELECT public.admin_delete_chat_message('00000000-0000-4000-8000-000000000001'::uuid)`), /permission denied/i);
     });
   });
 }

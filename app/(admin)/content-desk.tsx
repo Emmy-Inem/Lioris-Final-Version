@@ -10,6 +10,8 @@ import { ResourcesModerationTab } from '@/components/admin/ResourcesModerationTa
 import { JobsModerationTab } from '@/components/admin/JobsModerationTab';
 import { DonationsModerationTab } from '@/components/admin/DonationsModerationTab';
 import { MentorshipModerationTab } from '@/components/admin/MentorshipModerationTab';
+import { MarketplaceModerationTab } from '@/components/admin/MarketplaceModerationTab';
+import { StudyPodsModerationTab } from '@/components/admin/StudyPodsModerationTab';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
@@ -24,6 +26,8 @@ const TABS = [
   { key: 'events', label: 'Events', icon: 'calendar-outline' as const },
   { key: 'resources', label: 'Resources', icon: 'folder-open-outline' as const },
   { key: 'jobs', label: 'Jobs', icon: 'briefcase-outline' as const },
+  { key: 'marketplace', label: 'Marketplace', icon: 'pricetag-outline' as const },
+  { key: 'studypods', label: 'Study Pods', icon: 'school-outline' as const },
   { key: 'donations', label: 'Donations', icon: 'heart-outline' as const },
   { key: 'mentorship', label: 'Mentorship', icon: 'people-outline' as const },
 ] as const;
@@ -96,6 +100,8 @@ export default function ContentDeskScreen() {
         {tab === 'events' ? <EventsModerationTab /> : null}
         {tab === 'resources' ? <ResourcesModerationTab /> : null}
         {tab === 'jobs' ? <JobsModerationTab /> : null}
+        {tab === 'marketplace' ? <MarketplaceModerationTab /> : null}
+        {tab === 'studypods' ? <StudyPodsModerationTab /> : null}
         {tab === 'donations' ? <DonationsModerationTab /> : null}
         {tab === 'mentorship' ? <MentorshipModerationTab /> : null}
       </ScrollView>

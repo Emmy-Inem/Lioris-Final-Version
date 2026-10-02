@@ -12,7 +12,7 @@ import { ChipSelect } from'./ChipSelect';
 import { EmptyState } from'./EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listReports, resolveReport } from '@/api/moderation';
+import { listReports, resolveReport, ReportAlreadyHandledError } from '@/api/moderation';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { deletePost } from '@/api/posts';
 import { deletePodPost } from '@/api/studyGroups';
@@ -20,6 +20,7 @@ import { ReportedContentPreview } from './ReportedContentPreview';
 import { purgeEvent } from '@/api/events';
 import { deleteListing } from '@/api/marketplace';
 import { rejectJob } from '@/api/jobs';
+import { deleteMessageAsAdmin } from '@/api/messaging';
 import { Report } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { buildCsv, downloadCsv, CsvColumn } from '@/utils/csvExport';
@@ -59,6 +60,8 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  const queryClient = useQueryClient();
  const [submittingId, setSubmittingId] = useState<string | null>(null);
  const [filterType, setFilterType] = useState('All Flags');
+ const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+ const [bulkProcessing, setBulkProcessing] = useState(false);
  const canPermaban = role === 'admin';
 
  // Takedown & Action Modal State
@@ -70,6 +73,10 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  const { data: reports, isLoading } = useQuery({
  queryKey: ['reports', 'open', institutionCode ?? 'all'],
  queryFn: () => listReports({ status: 'open', institutionCode }),
+ // A screen left open otherwise never sees a new report land, or notices
+ // another admin already took one off the pending queue - keeps this in
+ // sync with its own optimistic-concurrency guard in resolveReport().
+ refetchInterval: 30_000,
  });
 
  const filteredReports = (reports ?? []).filter((r) => {
@@ -82,6 +89,20 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  if (filterType === 'Users') return r.targetType === 'user';
  return true;
  });
+
+ function toggleSelected(id: string) {
+ haptics.light();
+ setSelectedIds((prev) => {
+ const next = new Set(prev);
+ if (next.has(id)) next.delete(id);
+ else next.add(id);
+ return next;
+ });
+ }
+
+ function clearSelection() {
+ setSelectedIds(new Set());
+ }
 
  async function handleExportCsv() {
  haptics.medium();
@@ -108,9 +129,62 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  });
  queryClient.invalidateQueries({ queryKey: ['reports'] });
  queryClient.invalidateQueries({ queryKey: ['notifications'] });
+ } catch (err) {
+ if (err instanceof ReportAlreadyHandledError) {
+ // Nothing left for us to do - refresh so it drops off this pending
+ // list, same as a normal dismiss would have.
+ queryClient.invalidateQueries({ queryKey: ['reports'] });
+ Alert.alert('Already Handled', 'Another admin already made a decision on this report. The list has been refreshed.');
+ } else {
+ haptics.error();
+ Alert.alert('Could Not Dismiss', (err as Error)?.message || 'Please check your connection and try again.');
+ }
  } finally {
  setSubmittingId(null);
  }
+ }
+
+ function getSelectedReports(): Report[] {
+ return filteredReports.filter((r) => selectedIds.has(r.id));
+ }
+
+ /** Lowest-risk bulk action for this queue: mark every selected report as not a violation. */
+ async function handleBulkDismiss() {
+ const targets = getSelectedReports();
+ if (targets.length === 0 || bulkProcessing) return;
+ haptics.medium();
+ setBulkProcessing(true);
+ let succeeded = 0;
+ let alreadyHandled = 0;
+ let failed = 0;
+ for (const report of targets) {
+ try {
+ await resolveReport(report.id, 'dismissed');
+ recordAuditLogEntry({
+ action: 'report_dismissed',
+ summary: `Dismissed report #${report.id.substring(0, 8)} (${report.targetType}) - Marked as false positive (bulk action)`,
+ targetType: 'report',
+ targetId: report.id,
+ institutionCode: report.institutionCode,
+ reason: 'Content complies with university community guidelines',
+ });
+ succeeded += 1;
+ } catch (err) {
+ if (err instanceof ReportAlreadyHandledError) alreadyHandled += 1;
+ else failed += 1;
+ }
+ }
+ queryClient.invalidateQueries({ queryKey: ['reports'] });
+ queryClient.invalidateQueries({ queryKey: ['notifications'] });
+ setBulkProcessing(false);
+ clearSelection();
+ if (failed > 0) haptics.error();
+ else haptics.success();
+ const parts: string[] = [];
+ if (succeeded > 0) parts.push(`${succeeded} dismissed`);
+ if (alreadyHandled > 0) parts.push(`${alreadyHandled} already handled by another admin`);
+ if (failed > 0) parts.push(`${failed} failed - retry individually`);
+ Alert.alert('Bulk Dismiss Complete', parts.join(', ') || 'No reports were processed.');
  }
 
  async function handleConfirmTakedown() {
@@ -184,6 +258,23 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
       }
 
+      // A reported chat message: the sender is the violator; taking it down hard-deletes the message.
+      if (report.targetType === 'message' && report.targetId) {
+        try {
+          const { data: messageRow } = await supabase.from('chat_messages').select('sender_id').eq('id', report.targetId).maybeSingle();
+          if (messageRow?.sender_id) {
+            targetUserId = messageRow.sender_id;
+          }
+        } catch {
+          // ignore
+        }
+
+        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+          await deleteMessageAsAdmin(report.targetId);
+          actionLabel = 'Message removed from the conversation';
+        }
+      }
+
       // A reported marketplace listing: the seller is the violator; taking it down deletes the listing.
       if (report.targetType === 'marketplace_listing' && report.targetId) {
         try {
@@ -253,7 +344,14 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  Alert.alert('Moderation Action Applied', `${actionLabel}. Decision logged to the public campus audit ledger.`);
  } catch (err) {
  console.warn('[ModerationQueue] Failed to apply enforcement action:', err);
+ if (err instanceof ReportAlreadyHandledError) {
+ queryClient.invalidateQueries({ queryKey: ['reports'] });
+ setActionModalReport(null);
+ setAdminModNote('');
+ Alert.alert('Already Handled', 'Another admin already made a decision on this report. The list has been refreshed.');
+ } else {
  Alert.alert('Action Failed', 'We could not apply this moderation action. Please check your connection and try again.');
+ }
  } finally {
  setApplyingPenalty(false);
  }
@@ -277,6 +375,22 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         </View>
       </View>
 
+      {selectedIds.size > 0 && (
+        <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: colors.pastelPrimaryBg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <View style={{ flex: 1, minWidth: 120 }}>
+              <AppText weight="bold" variant="bodySmall">{selectedIds.size} selected</AppText>
+            </View>
+            <View style={{ flexShrink: 0 }}>
+              <AppButton label="Clear" variant="ghost" size="sm" onPress={clearSelection} disabled={bulkProcessing} />
+            </View>
+            <View style={{ flexShrink: 0, minWidth: 130 }}>
+              <AppButton label="Bulk Dismiss" variant="secondary" size="sm" loading={bulkProcessing} onPress={handleBulkDismiss} />
+            </View>
+          </View>
+        </SolidCard>
+      )}
+
       {isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
@@ -285,6 +399,19 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                 <SolidCard radius={20} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}40` }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
                     <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+                      <Pressable
+                        onPress={() => toggleSelected(item.id)}
+                        hitSlop={8}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selectedIds.has(item.id) }}
+                        accessibilityLabel={`Select report ${item.id}`}
+                      >
+                        <Ionicons
+                          name={selectedIds.has(item.id) ? 'checkbox' : 'square-outline'}
+                          size={18}
+                          color={selectedIds.has(item.id) ? colors.brandPrimary : colors.textSecondary}
+                        />
+                      </Pressable>
                       <Badge label={item.targetType.toUpperCase()} tone="critical" />
                       {item.institutionCode ? <Badge label={item.institutionCode} tone="neutral" /> : null}
                     </View>
@@ -346,6 +473,19 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
             <SolidCard radius={20} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}40` }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
                 <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
+                  <Pressable
+                    onPress={() => toggleSelected(item.id)}
+                    hitSlop={8}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selectedIds.has(item.id) }}
+                    accessibilityLabel={`Select report ${item.id}`}
+                  >
+                    <Ionicons
+                      name={selectedIds.has(item.id) ? 'checkbox' : 'square-outline'}
+                      size={18}
+                      color={selectedIds.has(item.id) ? colors.brandPrimary : colors.textSecondary}
+                    />
+                  </Pressable>
                   <Badge label={item.targetType.toUpperCase()} tone="critical" />
                   {item.institutionCode ? <Badge label={item.institutionCode} tone="neutral" /> : null}
                 </View>
