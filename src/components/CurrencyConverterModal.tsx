@@ -226,7 +226,7 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
                 <>
                   <Ionicons name="cloud-offline-outline" size={13} color={colors.warning} />
                   <AppText variant="caption" style={{ fontSize: 10, color: colors.warning }}>
-                    Showing offline rates — connect to refresh
+                    Showing offline rates, connect to refresh
                   </AppText>
                 </>
               )}
