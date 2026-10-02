@@ -545,6 +545,9 @@ export interface MarketplaceListing {
  createdAt: string;
  /** ISO timestamp. Listings past this are excluded from the default browse/search. */
  expiresAt?: string | null;
+ /** Soft takedown by an admin/staff moderator (takedownListing) - excluded from the public browse feed but still visible, with its reason, in the seller's own "My Listings". */
+ isRemoved?: boolean;
+ takedownReason?: string | null;
 }
 
 export interface JobListing {
@@ -562,6 +565,8 @@ export interface JobListing {
   applicationsCount: number;
   /** False while a non-staff/admin posting awaits moderation - only the poster (and staff/admin) can see it at all. */
   isApproved: boolean;
+  /** Set by an admin/staff rejectJob() call; null once approved or never reviewed. Lets "My Postings" show the poster *why* it was rejected, not just "not approved". */
+  rejectionReason?: string | null;
   postedByName: string;
   posterId?: string;
   createdAt: string;

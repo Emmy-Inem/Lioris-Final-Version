@@ -84,6 +84,42 @@ function mapCategoryToResourceType(category?: Resource['category']): string {
  return 'lecture_note';
 }
 
+/**
+ * Shared row->Resource mapping, used by listResources/listMyResources so the
+ * approval/rejection shape never drifts between the general browse feed and
+ * a student's own "My Uploads" view.
+ */
+function mapResourceRow(row: any): Resource {
+  return {
+    id: row.id,
+    title: row.title,
+    courseCode: row.course_code || 'GEN 101',
+    department: row.profiles?.department || row.course_title || 'Academic Repository',
+    category: mapResourceTypeToCategory(row.resource_type),
+    description: row.description || '',
+    // Undefined when the upload recorded no size - ResourceCard omits the
+    // chip rather than showing an invented "2.5 MB".
+    fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : undefined,
+    fileUrl: sanitizeHttpUrl(row.file_url) ?? null,
+    authorName: row.profiles?.full_name || 'Campus Student',
+    authorId: row.uploader_id,
+    authorRole: (row.profiles?.role || 'student') as any,
+    likesCount: row.upvotes_count || 0,
+    downloadsCount: row.downloads_count || 0,
+    createdAt: row.created_at,
+    // A row carrying a rejection_reason was explicitly rejected, not merely
+    // "not yet approved" - without this, a rejected upload and a pending one
+    // were indistinguishable to the student who submitted it.
+    approvalStatus: row.rejection_reason ? 'rejected' : row.is_approved ? 'approved' : 'pending',
+    rejectionReason: row.rejection_reason ?? null,
+    fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
+    campusCode: row.campus_code || 'GLOBAL',
+    academicLevel: row.academic_level,
+    semester: row.semester,
+    syllabusTopic: row.syllabus_topic,
+  } as Resource;
+}
+
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
  try {
  const { data: authData } = await supabase.auth.getUser();
@@ -130,30 +166,7 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         }
         return rowCampus === targetCampus || rowCampus === 'GLOBAL';
       })
-      .map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        courseCode: row.course_code || 'GEN 101',
-        department: row.profiles?.department || row.course_title || 'Academic Repository',
-        category: mapResourceTypeToCategory(row.resource_type),
-        description: row.description || '',
-        // Undefined when the upload recorded no size - ResourceCard omits the
-        // chip rather than showing an invented "2.5 MB".
-        fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : undefined,
-        fileUrl: sanitizeHttpUrl(row.file_url) ?? null,
-        authorName: row.profiles?.full_name || 'Campus Student',
-        authorId: row.uploader_id,
-        authorRole: (row.profiles?.role || 'student') as any,
-        likesCount: row.upvotes_count || 0,
-        downloadsCount: row.downloads_count || 0,
-        createdAt: row.created_at,
-        approvalStatus: row.is_approved ? 'approved' : 'pending',
-        fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
-        campusCode: row.campus_code || 'GLOBAL',
-        academicLevel: row.academic_level,
-        semester: row.semester,
-        syllabusTopic: row.syllabus_topic,
-      }));
+      .map(mapResourceRow);
 
     // Merge unique - local session creations not yet reflected by the query above.
     // Only on the first page: these are always the newest resources, so they would
@@ -211,7 +224,67 @@ export async function rejectResource(id: string, reason?: string): Promise<Resou
  console.warn('[Resources] Reject error:', err);
  throw new Error('Could not reject this resource. Please try again.');
  }
- return updateResource(id, { approvalStatus: 'rejected', rejectionReason: reason || 'File did not meet quality or syllabus standards.' });
+ const cleanReason = reason || 'File did not meet quality or syllabus standards.';
+ const updated = await updateResource(id, { approvalStatus: 'rejected', rejectionReason: cleanReason });
+
+ // Tell the uploader why - previously the reason was written to the
+ // database (once updateResource's mapping above actually persists it) but
+ // never surfaced: no notification, and no "my uploads" view to see it in.
+ // Best-effort: the rejection itself must not fail just because this did.
+ try {
+ const { data: row } = await supabase.from('resources').select('uploader_id, title').eq('id', id).maybeSingle();
+ if (row?.uploader_id) {
+ const { createNotification } = await import('./notifications');
+ await createNotification({
+ recipientId: row.uploader_id,
+ type: 'moderation',
+ title: 'Resource upload rejected',
+ body: `Your upload "${row.title || updated.title || 'your resource'}" was not approved. Reason: ${cleanReason}`,
+ deepLinkPath: '/resources',
+ });
+ }
+ } catch (err) {
+ console.warn('[Resources] rejectResource notification failed:', err);
+ }
+
+ return updated;
+}
+
+/**
+ * The signed-in uploader's own resources - every status (pending, approved,
+ * rejected), unlike listResources()'s browse feed which hides rejected
+ * uploads from everyone by default. Backs the "My Uploads" filter on the
+ * Resources screen (app/(student)/resources.tsx), the student-facing
+ * counterpart to listMyJobs()/listMyMarketplaceListings().
+ */
+export async function listMyResources(): Promise<Resource[]> {
+  const { data: authData } = await supabase.auth.getUser();
+  let uploaderId = authData?.user?.id;
+  if (!uploaderId) {
+    const stored = await getSessionUser();
+    uploaderId = stored?.id;
+  }
+  if (!uploaderId) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('resources')
+      .select('*, profiles:uploader_id(full_name, role, avatar_url, department)')
+      .eq('uploader_id', uploaderId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const dbResources = (data ?? []).map(mapResourceRow);
+    const localMine = locallyCreatedResources.filter((r) => r.authorId === uploaderId);
+    const merged = [...dbResources];
+    for (const r of localMine) {
+      if (!merged.some((m) => m.id === r.id)) merged.push(r);
+    }
+    return merged;
+  } catch (err) {
+    console.warn('[Resources] listMyResources failed, showing local pool only:', err);
+    return locallyCreatedResources.filter((r) => r.authorId === uploaderId);
+  }
 }
 
 export interface CreateResourcePayload {
@@ -377,6 +450,11 @@ export async function updateResource(id: string, payload: Partial<Resource>): Pr
   if (payload.semester) dbPayload.semester = payload.semester;
   if (payload.fileUrl) dbPayload.file_url = payload.fileUrl;
   if (payload.approvalStatus) dbPayload.is_approved = payload.approvalStatus === 'approved';
+  // rejectionReason is explicitly checked against undefined (not truthiness) so that
+  // approveResource's `rejectionReason: null` call actually clears a stale reason in
+  // the DB instead of being silently dropped - the same gap that previously left
+  // rejectResource()'s reason written only to the in-memory cache, never to Postgres.
+  if (payload.rejectionReason !== undefined) dbPayload.rejection_reason = payload.rejectionReason;
 
   if (Object.keys(dbPayload).length > 0) {
     const { data, error } = await supabase.from('resources').update(dbPayload).eq('id', id).select('id');

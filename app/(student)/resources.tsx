@@ -6,6 +6,7 @@ import { ScreenContainer } from'@/components/ScreenContainer';
 import { AppHeader } from'@/components/AppHeader';
 import { AppText } from'@/components/AppText';
 import { SolidCard } from'@/components/SolidCard';
+import { Badge } from'@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { ResourceCard } from '@/components/ResourceCard';
 import { ResourceCardSkeletonGrid } from '@/components/Skeleton';
@@ -18,7 +19,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
-import { listResources, createResource } from '@/api/resources';
+import { listResources, createResource, listMyResources } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
 import { getMyProfile } from '@/api/profile';
 import { getInstitutionByCode } from '@/api/institutions';
@@ -43,7 +44,43 @@ const RESOURCE_CATEGORIES = [
   { id: 'notes', label: 'Course Notes', filter: 'Notes', icon: 'book-outline' as const },
   { id: 'projects', label: 'Projects & Code', filter: 'Projects', icon: 'code-slash-outline' as const },
   { id: 'bookmarked', label: 'Bookmarked', filter: 'Bookmarked', icon: 'bookmark' as const },
+  { id: 'mine', label: 'My Uploads', filter: 'Mine', icon: 'cloud-upload-outline' as const },
 ];
+
+/** Badge tone for a resource's own approval status, used only in the "My Uploads" view below. */
+const RESOURCE_STATUS_TONE: Record<string, 'neutral' | 'success' | 'warning' | 'critical'> = {
+  approved: 'success',
+  pending: 'warning',
+  rejected: 'critical',
+};
+
+/**
+ * Status badge + rejection reason shown above a card in "My Uploads" only -
+ * ResourceCard itself stays untouched (it's shared with the general browse
+ * feed, where approval status is never shown). Closes the gap where a
+ * rejected upload wrote a reason nobody - including its own uploader - ever
+ * saw.
+ */
+function MyUploadStatusBanner({ resource }: { resource: Resource }) {
+  const { colors, spacing, radius } = useTheme();
+  const status = resource.approvalStatus || 'pending';
+  const label = status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Pending Review';
+  return (
+    <View style={{ marginBottom: 6, gap: 4 }}>
+      <Badge label={label} tone={RESOURCE_STATUS_TONE[status] || 'neutral'} />
+      {status === 'rejected' && resource.rejectionReason ? (
+        <View style={{ backgroundColor: `${colors.critical}15`, padding: spacing.sm, borderRadius: radius.sm }}>
+          <AppText variant="caption" weight="bold" tone="critical" style={{ marginBottom: 2 }}>
+            Why this was rejected:
+          </AppText>
+          <AppText variant="caption" tone="secondary">
+            {resource.rejectionReason}
+          </AppText>
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 const UNIVERSITY_PORTAL_FILTERS = [
   { code: 'CURRENT', label: 'My Campus' },
@@ -171,12 +208,34 @@ export default function ResourcesScreen() {
     refetch();
   }
 
-  const displayedResources = accumulatedResources.filter((r) => {
-    if (filters.resourceType === 'Bookmarked') {
-      return bookmarkedIds.includes(r.id);
-    }
-    return true;
+  // "My Uploads" needs the uploader's own rejected/pending resources too,
+  // which the general browse feed above deliberately hides from everyone
+  // (listResources excludes 'rejected' by default, and pagination here is
+  // keyed to filters that don't include status) - so it reads from a
+  // dedicated, unpaginated, status-agnostic query instead of the campus feed.
+  const { data: myResources = [], isLoading: isMyResourcesLoading, isError: isMyResourcesError, error: myResourcesError, refetch: refetchMyResources } = useQuery({
+    queryKey: ['resources', 'mine', user?.id],
+    queryFn: listMyResources,
+    enabled: !!user,
   });
+
+  const isMineView = filters.resourceType === 'Mine';
+
+  const displayedResources = isMineView
+    ? myResources
+    : accumulatedResources.filter((r) => {
+        if (filters.resourceType === 'Bookmarked') {
+          return bookmarkedIds.includes(r.id);
+        }
+        return true;
+      });
+
+  // One set of loading/error/retry/pagination signals the render below reads,
+  // regardless of which of the two queries is actually backing this view.
+  const showResourcesSkeleton = isMineView ? isMyResourcesLoading : isLoading && resourcesPage === 0;
+  const resourcesLoadError = isMineView ? (isMyResourcesError ? myResourcesError : null) : isError ? error : null;
+  const retryResources = isMineView ? refetchMyResources : refetch;
+  const canLoadMoreResources = !isMineView && hasMoreResources;
 
   async function handleUpload(payload: UploadAcademicPayload) {
     try {
@@ -1098,24 +1157,26 @@ export default function ResourcesScreen() {
           {/* Academic Files Count */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <AppText variant="h3" weight="bold">
-              {filters.resourceType === 'Bookmarked' ? 'Bookmarked Notes' : 'Academic Files'} ({displayedResources.length})
+              {isMineView ? 'My Uploads' : filters.resourceType === 'Bookmarked' ? 'Bookmarked Notes' : 'Academic Files'} ({displayedResources.length})
             </AppText>
           </View>
 
           {/* Multi-Column Responsive Grid with Non-Stretching Cards & Skeleton / Error States */}
-          {isLoading && resourcesPage === 0 ? (
+          {showResourcesSkeleton ? (
             <ResourceCardSkeletonGrid count={6} />
-          ) : isError ? (
+          ) : resourcesLoadError ? (
             <ErrorStateView
               title="Could not load campus resources"
-              error={error}
-              onRetry={refetch}
+              error={resourcesLoadError}
+              onRetry={retryResources}
             />
           ) : displayedResources.length === 0 ? (
             <EmptyState
-              title={filters.resourceType === 'Bookmarked' ? 'No Bookmarked Notes' : 'No resources found'}
+              title={isMineView ? 'No uploads yet' : filters.resourceType === 'Bookmarked' ? 'No Bookmarked Notes' : 'No resources found'}
               description={
-                filters.resourceType === 'Bookmarked'
+                isMineView
+                  ? 'Files you share with the campus show up here, along with their review status.'
+                  : filters.resourceType === 'Bookmarked'
                   ? 'Tap the bookmark icon on any course note or paper to save it here for fast revision.'
                   : 'Try a different search query or upload a file for your department.'
               }
@@ -1124,6 +1185,7 @@ export default function ResourcesScreen() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
               {displayedResources.map((res) => (
                 <View key={res.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
+                  {isMineView ? <MyUploadStatusBanner resource={res} /> : null}
                   <ResourceCard
                     resource={res}
                     onPreview={setReadingResource}
@@ -1143,7 +1205,7 @@ export default function ResourcesScreen() {
             </View>
           )}
 
-          {!isLoading && !isError && hasMoreResources && displayedResources.length > 0 && (
+          {!showResourcesSkeleton && !resourcesLoadError && canLoadMoreResources && displayedResources.length > 0 && (
             <View style={{ alignItems: 'center', marginTop: spacing.md }}>
               <AppButton
                 label="Load More"
@@ -1165,49 +1227,54 @@ export default function ResourcesScreen() {
           maxToRenderPerBatch={8}
           contentContainerStyle={{ paddingBottom: 130 }}
           renderItem={({ item }) => (
-            <ResourceCard
-              resource={item}
-              onPreview={setReadingResource}
-              isBookmarked={bookmarkedIds.includes(item.id)}
-              onToggleBookmark={async () => {
-                const added = await toggleBookmark(item.id);
-                if (added) {
-                  toast.success(`Bookmarked "${item.title}"`);
-                } else {
-                  toast.info(`Removed "${item.title}" from bookmarks`);
-                }
-              }}
-              onReport={setReportingResource}
-            />
+            <View>
+              {isMineView ? <MyUploadStatusBanner resource={item} /> : null}
+              <ResourceCard
+                resource={item}
+                onPreview={setReadingResource}
+                isBookmarked={bookmarkedIds.includes(item.id)}
+                onToggleBookmark={async () => {
+                  const added = await toggleBookmark(item.id);
+                  if (added) {
+                    toast.success(`Bookmarked "${item.title}"`);
+                  } else {
+                    toast.info(`Removed "${item.title}" from bookmarks`);
+                  }
+                }}
+                onReport={setReportingResource}
+              />
+            </View>
           )}
           showsVerticalScrollIndicator={false}
-          onRefresh={handleRefreshResources}
-          refreshing={isRefetching && resourcesPage === 0}
+          onRefresh={() => { if (isMineView) { void retryResources(); } else { handleRefreshResources(); } }}
+          refreshing={isMineView ? isMyResourcesLoading : isRefetching && resourcesPage === 0}
           ListEmptyComponent={
-            isLoading && resourcesPage === 0 ? (
+            showResourcesSkeleton ? (
               <ResourceCardSkeletonGrid count={4} />
-            ) : isError ? (
+            ) : resourcesLoadError ? (
               <ErrorStateView
                 title="Could not load academic resources"
-                error={error}
-                onRetry={refetch}
+                error={resourcesLoadError}
+                onRetry={retryResources}
               />
             ) : (
               <EmptyState
-                icon={filters.resourceType === 'Bookmarked' ? 'bookmark-outline' : 'book-outline'}
-                title={filters.resourceType === 'Bookmarked' ? 'No Bookmarked Notes' : 'No Academic Resources Found'}
+                icon={isMineView ? 'cloud-upload-outline' : filters.resourceType === 'Bookmarked' ? 'bookmark-outline' : 'book-outline'}
+                title={isMineView ? 'No uploads yet' : filters.resourceType === 'Bookmarked' ? 'No Bookmarked Notes' : 'No Academic Resources Found'}
                 description={
-                  filters.resourceType === 'Bookmarked'
+                  isMineView
+                    ? 'Files you share with the campus show up here, along with their review status.'
+                    : filters.resourceType === 'Bookmarked'
                     ? 'Tap the bookmark icon on any course note to keep it handy for quick reading.'
                     : 'Try searching for another course code or upload study materials for your peers.'
                 }
-                actionLabel={filters.resourceType === 'Bookmarked' ? undefined : 'Upload Study Material'}
-                onAction={filters.resourceType === 'Bookmarked' ? undefined : () => setUploadModalOpen(true)}
+                actionLabel={isMineView || filters.resourceType === 'Bookmarked' ? undefined : 'Upload Study Material'}
+                onAction={isMineView || filters.resourceType === 'Bookmarked' ? undefined : () => setUploadModalOpen(true)}
               />
             )
           }
           ListFooterComponent={
-            !isLoading && !isError && hasMoreResources && displayedResources.length > 0 ? (
+            !showResourcesSkeleton && !resourcesLoadError && canLoadMoreResources && displayedResources.length > 0 ? (
               <View style={{ paddingTop: spacing.sm, paddingBottom: spacing.md, alignItems: 'center' }}>
                 <AppButton
                   label="Load More"

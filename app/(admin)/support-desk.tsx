@@ -68,6 +68,7 @@ const CATEGORY_LABELS: Record<SupportTicketCategory, string> = {
   matric_id_correction: 'Matric / ID Correction',
   campus_transfer: 'Campus Transfer',
   verification_appeal: 'Verification Appeal',
+  suspension_appeal: 'Suspension Appeal',
   content_issue: 'Content Flag',
   bug_report: 'Bug Report',
   feedback: 'Feedback / Suggestion',

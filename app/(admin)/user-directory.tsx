@@ -36,6 +36,7 @@ import { usePullRefreshHandler } from '@/components/PullToRefresh';
 import { getUserDiagnostics, UserDiagnostics } from '@/api/adminDiagnostics';
 import { useToast } from '@/context/ToastContext';
 import { AuditLogEntry } from '@/api/types';
+import { getReportCountForUser } from '@/api/moderation';
 import { haptics } from '@/utils/haptics';
 import { useAuth } from '@/auth/AuthContext';
 
@@ -182,10 +183,16 @@ export default function UserDirectoryScreen() {
  const [detailModalUser, setDetailModalUser] = useState<DirectoryUser | null>(null);
  const [userAuditEntries, setUserAuditEntries] = useState<AuditLogEntry[]>([]);
  const [userAuditLoading, setUserAuditLoading] = useState(false);
+ // Repeat-offender visibility: how many OTHER reports (any content type)
+ // target something this person authored - lets an admin spot a pattern
+ // instead of reviewing this identity in isolation. Best-effort; see
+ // getReportCountForUser (src/api/moderation.ts).
+ const [userReportCount, setUserReportCount] = useState(0);
 
  React.useEffect(() => {
  if (!detailModalUser) {
  setUserAuditEntries([]);
+ setUserReportCount(0);
  return;
  }
  let cancelled = false;
@@ -200,6 +207,13 @@ export default function UserDirectoryScreen() {
  })
  .finally(() => {
  if (!cancelled) setUserAuditLoading(false);
+ });
+ getReportCountForUser(detailModalUser.id)
+ .then((count) => {
+ if (!cancelled) setUserReportCount(count);
+ })
+ .catch(() => {
+ if (!cancelled) setUserReportCount(0);
  });
  return () => {
  cancelled = true;
@@ -1359,9 +1373,15 @@ export default function UserDirectoryScreen() {
  <AppText variant="h3"weight="bold"style={{ marginTop: spacing.xs }}>
  {detailModalUser.fullName}
  </AppText>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
  <UserTypeBadge role={detailModalUser.role.toLowerCase() as any} />
  <Badge label={`Trust ${detailModalUser.trustScore}/100`} tone="neutral" />
+ {userReportCount > 0 ? (
+ <Badge
+ label={`⚠ ${userReportCount} other report${userReportCount === 1 ? '' : 's'} against this user`}
+ tone="warning"
+ />
+ ) : null}
  </View>
  </View>
 

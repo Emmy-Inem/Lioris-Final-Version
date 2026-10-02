@@ -28,6 +28,7 @@ const TICKET_CATEGORIES: { key: SupportTicketCategory; label: string }[] = [
   { key: 'matric_id_correction', label: 'Matric / ID Fix' },
   { key: 'campus_transfer', label: 'Campus Transfer' },
   { key: 'verification_appeal', label: 'Verification Appeal' },
+  { key: 'suspension_appeal', label: 'Suspension Appeal' },
   { key: 'bug_report', label: 'Report a Bug' },
   { key: 'feedback', label: 'Feedback / Suggestion' },
   { key: 'general', label: 'General Inquiry' },

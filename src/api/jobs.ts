@@ -46,6 +46,7 @@ function mapJobRow(row: any): JobListing {
     acceptsInAppApplications: row.accepts_in_app_applications ?? false,
     applicationsCount: row.applications_count ?? 0,
     isApproved: row.is_approved ?? true,
+    rejectionReason: row.rejection_reason ?? null,
     postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
     posterId: row.poster_id,
     createdAt: row.created_at,
@@ -426,9 +427,33 @@ export async function approveJob(id: string): Promise<void> {
 }
 
 export async function rejectJob(id: string, reason?: string): Promise<void> {
-  const { error } = await supabase.from('jobs').update({ is_approved: false, rejection_reason: reason || 'Did not meet posting standards.' }).eq('id', id);
+  const cleanReason = reason || 'Did not meet posting standards.';
+  const { data, error } = await supabase
+    .from('jobs')
+    .update({ is_approved: false, rejection_reason: cleanReason })
+    .eq('id', id)
+    .select('poster_id, title')
+    .maybeSingle();
   if (error) {
     console.warn('[Jobs] rejectJob error:', error.message);
     throw new Error('Could not reject this posting. Please try again.');
+  }
+
+  // Tell the poster why - a bare "not approved" with no reason and no
+  // notification left them with zero visibility into what to fix. Best-effort:
+  // the rejection itself must not fail just because the notification write did.
+  if (data?.poster_id) {
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        recipientId: data.poster_id,
+        type: 'moderation',
+        title: 'Job posting rejected',
+        body: `Your posting "${data.title || 'your job listing'}" was not approved. Reason: ${cleanReason}`,
+        deepLinkPath: '/jobs',
+      });
+    } catch (err) {
+      console.warn('[Jobs] rejectJob notification failed:', err);
+    }
   }
 }

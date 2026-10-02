@@ -12,13 +12,13 @@ import { ChipSelect } from'./ChipSelect';
 import { EmptyState } from'./EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listReports, resolveReport, ReportAlreadyHandledError } from '@/api/moderation';
+import { listReports, resolveReport, ReportAlreadyHandledError, getOtherReportCountForAuthor } from '@/api/moderation';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { deletePost } from '@/api/posts';
 import { deletePodPost } from '@/api/studyGroups';
 import { ReportedContentPreview } from './ReportedContentPreview';
 import { purgeEvent } from '@/api/events';
-import { deleteListing } from '@/api/marketplace';
+import { takedownListing } from '@/api/marketplace';
 import { rejectJob } from '@/api/jobs';
 import { deleteMessageAsAdmin } from '@/api/messaging';
 import { Report } from '@/api/types';
@@ -52,6 +52,26 @@ interface ModerationQueueProps {
 }
 
 type PunishmentType = 'warn' | 'takedown' | 'mute' | 'escalate' | 'shadowban' | 'permaban';
+
+/**
+ * "N other reports against this user" - lets an admin spot a repeat
+ * offender instead of reviewing every report in isolation. Best-effort: a
+ * failed/zero lookup renders nothing, never a loading flicker on every card.
+ */
+function RepeatOffenderChip({ report }: { report: Report }) {
+  const { data: otherCount } = useQuery({
+    queryKey: ['report-author-count', report.id],
+    queryFn: () => getOtherReportCountForAuthor(report),
+    staleTime: 60_000,
+  });
+  if (!otherCount) return null;
+  return (
+    <Badge
+      label={`⚠ ${otherCount} other report${otherCount === 1 ? '' : 's'} against this user`}
+      tone="warning"
+    />
+  );
+}
 
 export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear', role = 'admin' }: ModerationQueueProps) {
  const { colors, spacing, radius } = useTheme();
@@ -287,7 +307,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
 
         if (punishmentType === 'takedown' || punishmentType === 'permaban') {
-          await deleteListing(report.targetId);
+          await takedownListing(report.targetId, adminModNote.trim() || `Removed following a user report: ${report.reason}`);
           actionLabel = 'Listing removed from the marketplace';
         }
       }
@@ -418,6 +438,10 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                     <Badge label={item.status.replace('_', ' ')} tone={STATUS_TONE[item.status]} />
                   </View>
 
+                  <View style={{ flexDirection: 'row', marginBottom: spacing.xs }}>
+                    <RepeatOffenderChip report={item} />
+                  </View>
+
                   {/* Violation Reason Box */}
                   <View style={{ backgroundColor: `${colors.critical}15`, padding: spacing.md, borderRadius: 14, marginVertical: spacing.xs }}>
                     <AppText variant="caption" weight="bold" tone="critical" style={{ marginBottom: 2 }}>
@@ -490,6 +514,10 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                   {item.institutionCode ? <Badge label={item.institutionCode} tone="neutral" /> : null}
                 </View>
                 <Badge label={item.status.replace('_', ' ')} tone={STATUS_TONE[item.status]} />
+              </View>
+
+              <View style={{ flexDirection: 'row', marginBottom: spacing.xs }}>
+                <RepeatOffenderChip report={item} />
               </View>
 
               {/* Violation Reason Box */}
