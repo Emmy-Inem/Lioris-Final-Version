@@ -66,6 +66,13 @@ export function parseRpcError(err: unknown, fallback = 'Something went wrong. Pl
   if (/could not find the function|schema cache/i.test(text)) {
     return { code: 'not_deployed', message: 'This feature is being updated on the server. Please try again in a few minutes.' };
   }
+  // A raw CHECK/NOT NULL/FK violation the caller didn't already validate for (e.g. a stale app
+  // version, or a value shape the database no longer accepts). Not actionable by name, but at least
+  // tells the person it was their input and not just "something broke" - see console.error at the
+  // call site for the real constraint name while diagnosing one of these.
+  if (/violates (check|not-null|foreign key|unique) constraint/i.test(text)) {
+    return { code: 'invalid_input', message: 'Some of those details could not be saved. Please check them and try again.' };
+  }
   return { code: 'unknown', message: fallback };
 }
 

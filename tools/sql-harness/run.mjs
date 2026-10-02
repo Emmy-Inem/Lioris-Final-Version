@@ -1177,6 +1177,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261009010000_suspension_enforcement_fixes.sql',
   'supabase/migrations/20261009020000_admin_moderation_fixes.sql',
   'supabase/migrations/20261009030000_student_transparency_and_appeals.sql',
+  'supabase/migrations/20261010000000_event_creation_fix.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -4830,6 +4831,65 @@ console.log('\n== student transparency & appeals (resources.rejection_reason, ma
   await check('resolve_moderation_item_author: no EXECUTE grant to anon/authenticated (only reachable through get_report_count_for_author)', async () => {
     await as(U.s1, async (c) => {
       denied(await c.t(`SELECT public.resolve_moderation_item_author('post', $1)`, [U.s1]), /permission denied/i);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Regression: creating an event through the exact flow createEvent() (src/api/events.ts) uses used
+// to fail with a generic "Could not publish this event" whenever the organiser attached a cover
+// photo. Root cause: campus-media is a PRIVATE bucket, so persistMediaReference() correctly returns
+// a bare storage path ("<uid>/<file>"), not a URL - but events.banner_url's CHECK constraint
+// (chk_events_banner_url_url_scheme, from supabase_security_hardening_2026.sql) demanded an http(s)
+// URL, so every such insert was rejected by a raw constraint violation that parseRpcError() doesn't
+// recognise. Fixed by 20261010000000_event_creation_fix.sql (relaxes the CHECK to also accept that
+// path shape) plus events.ts resolving it to a signed URL on read.
+// ---------------------------------------------------------------------------
+console.log('\n== event creation (20261010000000_event_creation_fix.sql) ==');
+{
+  const STARTS = "now() + interval '2 hours'";
+  const ENDS = "now() + interval '4 hours'";
+  const insertEvent = (title, bannerUrl) => [
+    `INSERT INTO public.events (id, creator_id, campus_code, title, description, category, venue, visibility_scope, start_time, end_time, banner_url, registered_count, status, venue_type, virtual_link, capacity, is_spotlight, sponsored, ticket_price, target_cohort, ticket_type, payment_method, reservation_held, booking_deadline)
+     VALUES (gen_random_uuid(), $1, 'UNILAG', $2, 'desc', 'Academic', 'Campus Auditorium', 'global', ${STARTS}, ${ENDS}, $3, 0, 'pending_approval', 'physical', NULL, NULL, false, false, 0, NULL, 'free', NULL, false, NULL) RETURNING id`,
+    [U.s1, title, bannerUrl],
+  ];
+
+  await check('createEvent(): a free event with no cover photo still publishes (unaffected baseline)', async () => {
+    await as(U.s1, async (c) => {
+      const r = await c.t(...insertEvent('Regression - no photo', null));
+      assert(r.ok, 'insert refused: ' + r.err?.message);
+    });
+  });
+
+  await check('createEvent(): a cover photo stored as the private campus-media storage path now publishes', async () => {
+    await as(U.s1, async (c) => {
+      // Exactly what persistMediaReference() (src/api/storage.ts) returns for a PRIVATE bucket
+      // upload: "${auth.uid()}/${fileName}", never a URL.
+      const r = await c.t(...insertEvent('Regression - with photo', `${U.s1}/events_1696000000000_ab12cd34.jpg`));
+      assert(r.ok, 'insert with a private-bucket storage path as banner_url was refused: ' + r.err?.message);
+    });
+  });
+
+  await check('createEvent(): banner_url still rejects a value that is neither a URL nor that storage-path shape', async () => {
+    await as(U.s1, async (c) => {
+      denied(await c.t(...insertEvent('Regression - bad banner', 'javascript:alert(1)')), /chk_events_banner_url_url_scheme/, 'unsafe banner_url value');
+    });
+  });
+
+  await check('createEvent(): a paid event still needs a real price (events_paid_shape_chk, unaffected by this fix)', async () => {
+    await admin(`INSERT INTO public.platform_settings (key, value) VALUES ('feature_flags', '{"paid_events": true}'::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`);
+    await as(U.s1, async (c) => {
+      const zeroPrice = await c.t(
+        `INSERT INTO public.events (id, creator_id, campus_code, title, description, category, venue, visibility_scope, start_time, end_time, registered_count, status, venue_type, capacity, is_spotlight, sponsored, ticket_price, ticket_type, payment_method, reservation_held)
+         VALUES (gen_random_uuid(), $1, 'GLOBAL', 'Regression - paid no price', 'd', 'Academic', 'v', 'global', ${STARTS}, ${ENDS}, 0, 'pending_approval', 'physical', NULL, false, false, 0, 'paid', 'online', false)`,
+        [U.s1]);
+      denied(zeroPrice, /events_paid_shape_chk/, 'paid event with ticket_price 0');
+      const realPrice = await c.t(
+        `INSERT INTO public.events (id, creator_id, campus_code, title, description, category, venue, visibility_scope, start_time, end_time, registered_count, status, venue_type, capacity, is_spotlight, sponsored, ticket_price, ticket_type, payment_method, reservation_held)
+         VALUES (gen_random_uuid(), $1, 'GLOBAL', 'Regression - paid with price', 'd', 'Academic', 'v', 'global', ${STARTS}, ${ENDS}, 0, 'pending_approval', 'physical', NULL, false, false, 1500, 'paid', 'online', false)`,
+        [U.s1]);
+      assert(realPrice.ok, 'paid event with a real price refused: ' + realPrice.err?.message);
     });
   });
 }
