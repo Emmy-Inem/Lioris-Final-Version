@@ -569,6 +569,10 @@ export interface JobListing {
   experienceLevel?: 'Entry level' | 'Mid-Senior level' | 'Executive';
   industry?: string;
   isSaved?: boolean;
+  /** ISO date the posting stops showing in the main browse feed. Defaults to 45 days after posting. */
+  expiresAt?: string;
+  /** Soft-closed by the poster (closeJob) - hidden from the browse feed regardless of expiresAt, but still visible in "My Postings". */
+  isClosed?: boolean;
 }
 
 /** A poster-defined screening question attached to a job posting. */

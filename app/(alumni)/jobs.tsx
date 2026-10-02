@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
+  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -10,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -22,6 +24,7 @@ import { Badge } from '@/components/Badge';
 import { Avatar } from '@/components/Avatar';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { JobAlertsModal } from '@/components/JobAlertsModal';
 import { JobApplyModal } from '@/components/JobApplyModal';
@@ -32,9 +35,10 @@ import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { listJobs, JobsQuery } from '@/api/jobs';
+import { listJobs, listMyJobs, closeJob, reopenJob, deleteJob, JobsQuery } from '@/api/jobs';
 import { toggleSavedItem, SAVED_ITEMS_KEY } from '@/api/bookmarks';
 import { hasAppliedToJob } from '@/api/jobApplications';
+import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { JobListing } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
@@ -77,6 +81,9 @@ export default function AlumniJobsScreen() {
   const [applicantsJob, setApplicantsJob] = useState<JobListing | null>(null);
   const [appliedJobIds, setAppliedJobIds] = useState<Record<string, boolean>>({});
   const [checkingApplied, setCheckingApplied] = useState(false);
+  const [messagingPosterId, setMessagingPosterId] = useState<string | null>(null);
+  const [myPostingsOpen, setMyPostingsOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<JobListing | null>(null);
 
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
@@ -153,6 +160,22 @@ export default function AlumniJobsScreen() {
     }
   }
 
+  async function handleMessagePoster(job: JobListing) {
+    if (!job.posterId || messagingPosterId) return;
+    haptics.light();
+    setMessagingPosterId(job.posterId);
+    try {
+      const conv = await getOrCreateConversationWithUser(job.posterId, job.postedByName);
+      setSelectedJob(null);
+      router.push(`/(alumni)/messages/${conv.id}` as any);
+    } catch (err: any) {
+      haptics.error();
+      toast.show({ message: err?.message || 'Could not open this conversation. Please try again.', tone: 'error' });
+    } finally {
+      setMessagingPosterId(null);
+    }
+  }
+
   function handleOpenJobDetail(job: JobListing) {
     haptics.light();
     setSelectedJob(job);
@@ -207,6 +230,16 @@ export default function AlumniJobsScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <AppButton
+              label="My Postings"
+              icon="briefcase-outline"
+              variant="secondary"
+              size="sm"
+              onPress={() => {
+                haptics.light();
+                setMyPostingsOpen(true);
+              }}
+            />
             <AppButton
               label="Job Alerts"
               icon="notifications-outline"
@@ -694,16 +727,15 @@ export default function AlumniJobsScreen() {
                       Alumni Network Recruiter
                     </AppText>
                   </View>
-                  {selectedJob.posterId && (
+                  {selectedJob.posterId && selectedJob.posterId !== user?.id && (
                     <AppButton
                       label="Message"
                       size="sm"
                       variant="secondary"
                       icon="chatbubble-outline"
-                      onPress={() => {
-                        setSelectedJob(null);
-                        router.push('/(alumni)/messages');
-                      }}
+                      loading={messagingPosterId === selectedJob.posterId}
+                      disabled={!!messagingPosterId}
+                      onPress={() => handleMessagePoster(selectedJob)}
                     />
                   )}
                 </SolidCard>
@@ -791,20 +823,42 @@ export default function AlumniJobsScreen() {
         initialKeywords={searchQuery}
       />
 
-      {/* Post Opportunity Modal */}
+      {/* Post Opportunity / Edit Posting Modal */}
       <CreateJobModal
-        visible={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onCreated={() => {
+        visible={createModalOpen || !!editingJob}
+        job={editingJob}
+        onClose={() => {
           setCreateModalOpen(false);
+          setEditingJob(null);
+        }}
+        onCreated={() => {
+          const wasEdit = !!editingJob;
+          setCreateModalOpen(false);
+          setEditingJob(null);
           void refetch();
-          const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff';
-          toast.show({
-            message: isStaffOrAdmin
-              ? 'Opportunity successfully posted to the Alumni Career Portal'
-              : 'Opportunity submitted for review - it will appear once approved.',
-            tone: 'success',
-          });
+          void queryClient.invalidateQueries({ queryKey: ['my-jobs'] });
+          if (!wasEdit) {
+            const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff';
+            toast.show({
+              message: isStaffOrAdmin
+                ? 'Opportunity successfully posted to the Alumni Career Portal'
+                : 'Opportunity submitted for review - it will appear once approved.',
+              tone: 'success',
+            });
+          }
+        }}
+      />
+
+      <MyPostingsModal
+        visible={myPostingsOpen}
+        onClose={() => setMyPostingsOpen(false)}
+        onEdit={(job) => {
+          setMyPostingsOpen(false);
+          setEditingJob(job);
+        }}
+        onViewApplicants={(job) => {
+          setMyPostingsOpen(false);
+          setApplicantsJob(job);
         }}
       />
 
@@ -856,3 +910,184 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
 });
+
+/** A poster's own postings, any status - edit, close/reopen, or delete. Backed by listMyJobs() (src/api/jobs.ts). */
+function MyPostingsModal({
+  visible,
+  onClose,
+  onEdit,
+  onViewApplicants,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onEdit: (job: JobListing) => void;
+  onViewApplicants: (job: JobListing) => void;
+}) {
+  const { colors, spacing, radius, isDark } = useTheme();
+  const { isDesktop } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+  const [actingId, setActingId] = useState<string | null>(null);
+
+  const { data: myJobs = [], isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['my-jobs'],
+    queryFn: listMyJobs,
+    enabled: visible,
+  });
+
+  function refresh() {
+    void queryClient.invalidateQueries({ queryKey: ['my-jobs'] });
+    void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+  }
+
+  function statusOf(job: JobListing): { label: string; tone: 'neutral' | 'success' | 'warning' | 'critical' } {
+    if (job.isClosed) return { label: 'Closed', tone: 'neutral' };
+    if (!job.isApproved) return { label: 'Pending Review', tone: 'warning' };
+    if (job.expiresAt && new Date(job.expiresAt).getTime() < Date.now()) return { label: 'Expired', tone: 'critical' };
+    return { label: 'Live', tone: 'success' };
+  }
+
+  async function handleToggleClosed(job: JobListing) {
+    haptics.light();
+    setActingId(job.id);
+    try {
+      if (job.isClosed) await reopenJob(job.id);
+      else await closeJob(job.id);
+      refresh();
+    } catch (err: any) {
+      haptics.error();
+      Alert.alert('Could Not Update Posting', err?.message || 'Please try again.');
+    } finally {
+      setActingId(null);
+    }
+  }
+
+  function confirmDelete(job: JobListing) {
+    haptics.error();
+    Alert.alert(
+      'Delete this posting?',
+      `"${job.title}" and its applications will be permanently removed. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setActingId(job.id);
+            try {
+              await deleteJob(job.id);
+              refresh();
+            } catch (err: any) {
+              haptics.error();
+              Alert.alert('Could Not Delete Posting', err?.message || 'Please try again.');
+            } finally {
+              setActingId(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.6)' }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View
+          style={[
+            styles.detailCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              width: isDesktop ? 640 : '92%',
+              maxHeight: isDesktop ? '85%' : '88%',
+              marginBottom: Math.max(insets.bottom, 12),
+            },
+          ]}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.sm }}>
+              <AppText variant="h3" weight="bold">
+                My Postings
+              </AppText>
+              <AppText tone="secondary" variant="bodySmall">
+                {myJobs.length} posting{myJobs.length === 1 ? '' : 's'} - edit, close, or delete
+              </AppText>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }} showsVerticalScrollIndicator={false}>
+            {isLoading ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <ActivityIndicator color={colors.brandPrimary} />
+              </View>
+            ) : isError ? (
+              <ErrorStateView title="Could not load your postings" error={error} onRetry={refetch} />
+            ) : myJobs.length === 0 ? (
+              <EmptyState
+                icon="briefcase-outline"
+                title="No postings yet"
+                description="Jobs and internships you post show up here so you can edit, close, or delete them."
+              />
+            ) : (
+              myJobs.map((job) => {
+                const status = statusOf(job);
+                return (
+                  <View key={job.id} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, gap: spacing.sm }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm }}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <AppText weight="bold" variant="bodySmall" numberOfLines={1}>
+                          {job.title}
+                        </AppText>
+                        <AppText tone="secondary" variant="caption" numberOfLines={1}>
+                          {job.company} • {job.location}
+                        </AppText>
+                      </View>
+                      <Badge label={status.label} tone={status.tone} />
+                    </View>
+                    <AppText tone="secondary" variant="caption">
+                      {job.applicationsCount} applicant{job.applicationsCount === 1 ? '' : 's'} • Posted{' '}
+                      {new Date(job.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </AppText>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      <AppButton label="Edit" size="sm" variant="secondary" onPress={() => onEdit(job)} />
+                      <AppButton
+                        label={`Applicants${job.applicationsCount ? ` (${job.applicationsCount})` : ''}`}
+                        size="sm"
+                        variant="secondary"
+                        onPress={() => onViewApplicants(job)}
+                      />
+                      <AppButton
+                        label={job.isClosed ? 'Reopen' : 'Close'}
+                        size="sm"
+                        variant="secondary"
+                        loading={actingId === job.id}
+                        disabled={!!actingId && actingId !== job.id}
+                        onPress={() => handleToggleClosed(job)}
+                      />
+                      <AppButton
+                        label="Delete"
+                        size="sm"
+                        variant="ghost"
+                        loading={actingId === job.id}
+                        disabled={!!actingId && actingId !== job.id}
+                        onPress={() => confirmDelete(job)}
+                      />
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </ScrollView>
+
+          <View style={{ padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <AppButton label="Close" variant="secondary" fullWidth onPress={onClose} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}

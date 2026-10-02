@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, View, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,8 @@ import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { createJob, CreateJobQuestionInput } from '@/api/jobs';
+import { createJob, updateJob, CreateJobQuestionInput } from '@/api/jobs';
+import { JobListing } from '@/api/types';
 import { generateUUID } from '@/utils/uuid';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
@@ -16,15 +17,19 @@ import { getFriendlyErrorMessage } from '@/utils/errors';
 interface CreateJobModalProps {
   visible: boolean;
   onClose: () => void;
+  /** Called after a successful create OR edit, so callers don't need two separate handlers. */
   onCreated: () => void;
+  /** When set, the modal edits this posting in place instead of creating a new one - see "My Postings". */
+  job?: JobListing | null;
 }
 
 const JOB_TYPES = ['Full-time', 'Internship', 'Part-time', 'Contract'] as const;
 
-export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalProps) {
+export function CreateJobModal({ visible, onClose, onCreated, job }: CreateJobModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
+  const isEditMode = !!job;
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
   const [location, setLocation] = useState('');
@@ -38,6 +43,28 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Prefill from the posting being edited every time the modal opens for it.
+  // Screening questions aren't editable here (they're a separate table with
+  // their own insert path in createJob) - existing ones are left untouched.
+  useEffect(() => {
+    if (!visible) return;
+    if (job) {
+      setTitle(job.title);
+      setCompany(job.company);
+      setLocation(job.location);
+      setJobType((JOB_TYPES as readonly string[]).includes(job.type) ? (job.type as (typeof JOB_TYPES)[number]) : 'Full-time');
+      setIsRemote(job.remote);
+      setSalary(job.salary || '');
+      setApplyUrl(job.applyUrl || '');
+      setDescription(job.description || '');
+      setAcceptsInApp(job.acceptsInAppApplications);
+      setQuestions([]);
+      setErrorMessage(null);
+    } else {
+      reset();
+    }
+  }, [visible, job?.id]);
 
   function addQuestion() {
     haptics.light();
@@ -109,31 +136,47 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
     haptics.medium();
 
     try {
-      const cleanQuestions: CreateJobQuestionInput[] = questions
-        .filter((q) => q.text.trim())
-        .map((q) => ({ text: q.text.trim(), type: q.type, required: q.required }));
+      if (isEditMode && job) {
+        await updateJob(job.id, {
+          title: title.trim(),
+          company: company.trim(),
+          location: location.trim(),
+          type: jobType,
+          remote: isRemote,
+          salary: salary.trim() || undefined,
+          applyUrl: applyUrl.trim() || undefined,
+          acceptsInAppApplications: acceptsInApp,
+          description: description.trim() || undefined,
+        });
+        haptics.success();
+        Alert.alert('Posting Updated', `"${title.trim()}" has been updated.`);
+      } else {
+        const cleanQuestions: CreateJobQuestionInput[] = questions
+          .filter((q) => q.text.trim())
+          .map((q) => ({ text: q.text.trim(), type: q.type, required: q.required }));
 
-      await createJob({
-        title: title.trim(),
-        company: company.trim(),
-        location: location.trim(),
-        type: jobType,
-        remote: isRemote,
-        salary: salary.trim() || undefined,
-        applyUrl: applyUrl.trim() || undefined,
-        acceptsInAppApplications: acceptsInApp,
-        questions: cleanQuestions,
-        description: description.trim() || undefined,
-      });
+        await createJob({
+          title: title.trim(),
+          company: company.trim(),
+          location: location.trim(),
+          type: jobType,
+          remote: isRemote,
+          salary: salary.trim() || undefined,
+          applyUrl: applyUrl.trim() || undefined,
+          acceptsInAppApplications: acceptsInApp,
+          questions: cleanQuestions,
+          description: description.trim() || undefined,
+        });
 
-      haptics.success();
-      Alert.alert('Opening Published', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
-      reset();
+        haptics.success();
+        Alert.alert('Opening Published', `"${title.trim()}" at ${company.trim()} is now visible on the campus careers board.`);
+        reset();
+      }
       onCreated();
       onClose();
     } catch (err: any) {
       haptics.error();
-      showError(getFriendlyErrorMessage(err, 'Failed to publish job opening. Please try again.'));
+      showError(getFriendlyErrorMessage(err, isEditMode ? 'Failed to update this posting. Please try again.' : 'Failed to publish job opening. Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -177,10 +220,10 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
               <View>
                 <AppText variant="h1" weight="bold">
-                  Post Opportunity
+                  {isEditMode ? 'Edit Posting' : 'Post Opportunity'}
                 </AppText>
  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
- Share internships, graduate roles & referrals
+ {isEditMode ? 'Update the details of this posting' : 'Share internships, graduate roles & referrals'}
  </AppText>
  </View>
  <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
@@ -340,7 +383,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
  autoCapitalize="none"
  />
 
- {acceptsInApp && (
+ {acceptsInApp && !isEditMode && (
  <View style={{ marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs, marginTop: spacing.sm }}>
  <AppText weight="bold" variant="caption">
@@ -441,7 +484,7 @@ export function CreateJobModal({ visible, onClose, onCreated }: CreateJobModalPr
 
  <View style={{ marginTop: spacing.lg }}>
  <AppButton
- label={submitting ? 'Publishing...' : 'Publish Opening '}
+ label={isEditMode ? (submitting ? 'Saving...' : 'Save Changes') : (submitting ? 'Publishing...' : 'Publish Opening ')}
  onPress={handleSubmit}
  disabled={submitting}
  />

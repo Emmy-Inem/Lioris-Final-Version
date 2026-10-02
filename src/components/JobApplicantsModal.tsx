@@ -8,6 +8,7 @@ import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
 import { EmptyState } from './EmptyState';
+import { ErrorStateView } from './ErrorStateView';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
@@ -204,7 +205,7 @@ export function JobApplicantsModal({
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
-  const { data: applicants = [], isLoading } = useQuery({
+  const { data: applicants = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['job-applicants', job?.id],
     queryFn: () => listJobApplicants(job!.id),
     enabled: visible && !!job,
@@ -260,6 +261,12 @@ export function JobApplicantsModal({
               <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                 <ActivityIndicator color={colors.brandPrimary} />
               </View>
+            ) : isError ? (
+              <ErrorStateView
+                title="Could not load applicants"
+                error={error}
+                onRetry={refetch}
+              />
             ) : applicants.length === 0 ? (
               <EmptyState
                 icon="people-outline"

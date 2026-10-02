@@ -30,6 +30,33 @@ function getLocalPool(): JobListing[] {
   return [...locallyCreatedJobs];
 }
 
+/** Shared row->JobListing mapping, used by listJobs/listMyJobs/listPendingJobs so the shape never drifts between them. */
+function mapJobRow(row: any): JobListing {
+  return {
+    id: row.id,
+    title: row.title,
+    company: row.company,
+    location: row.location,
+    type: row.type as JobListing['type'],
+    remote: row.is_remote ?? false,
+    workplaceType: inferWorkplaceType(row),
+    experienceLevel: inferExperienceLevel(row),
+    // A bad stored link (e.g. javascript:) must never reach an opener.
+    applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
+    acceptsInAppApplications: row.accepts_in_app_applications ?? false,
+    applicationsCount: row.applications_count ?? 0,
+    isApproved: row.is_approved ?? true,
+    postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
+    posterId: row.poster_id,
+    createdAt: row.created_at,
+    description: row.description || '',
+    salary: row.salary || undefined,
+    campusCode: row.campus_code || 'GLOBAL',
+    expiresAt: row.expires_at || undefined,
+    isClosed: row.is_closed ?? false,
+  };
+}
+
 function filterJobs(pool: JobListing[], query: JobsQuery): JobListing[] {
   let results = pool.filter((j) => !isUserBlocked((j as any).posterId) && !isUserMuted((j as any).posterId));
   if (query.type) results = results.filter((j) => j.type === query.type);
@@ -107,6 +134,10 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  // posting only belongs here for its own poster, checking on its review status -
  // never mixed into anyone else's feed just because they happen to be staff/admin.
  .filter((row: any) => row.is_approved === true || row.poster_id === authData?.user?.id)
+ // A closed or expired posting is stale - it never belongs in the main
+ // browse feed, even for its own poster (they manage it from "My Postings"
+ // instead). closeJob() always hides it regardless of expires_at.
+ .filter((row: any) => row.is_closed !== true && (!row.expires_at || new Date(row.expires_at).getTime() > Date.now()))
     .filter((row: any) => {
       if (isStaffOrAdmin && !query.campusCode) return true;
       const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
@@ -116,27 +147,7 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
       }
       return rowCampus === targetCampus || rowCampus === 'GLOBAL' || !!row.is_remote;
     })
- .map((row: any) => ({
- id: row.id,
- title: row.title,
- company: row.company,
- location: row.location,
- type: row.type as JobListing['type'],
- remote: row.is_remote ?? false,
- workplaceType: inferWorkplaceType(row),
- experienceLevel: inferExperienceLevel(row),
- // A bad stored link (e.g. javascript:) must never reach an opener.
- applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
- acceptsInAppApplications: row.accepts_in_app_applications ?? false,
- applicationsCount: row.applications_count ?? 0,
- isApproved: row.is_approved ?? true,
- postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
- posterId: row.poster_id,
- createdAt: row.created_at,
- description: row.description || '',
- salary: row.salary || undefined,
- campusCode: row.campus_code || 'GLOBAL',
- }));
+ .map(mapJobRow);
 
  // Merge unique - local pool only ever contributes this session's own
  // just-created jobs (always) plus seed fixtures (only when the admin
@@ -280,7 +291,12 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
   return created;
 }
 
-/** Every job the signed-in user has posted, any review status - backs a "My Postings" view. */
+/**
+ * Every job the signed-in user has posted, any review/closed/expiry status -
+ * backs the "My Postings" view. Throws on a real Supabase error instead of
+ * quietly returning [] - a poster with postings that failed to load must not
+ * see the same "nothing here" empty state as a poster with none at all.
+ */
 export async function listMyJobs(): Promise<JobListing[]> {
   const { data: authData } = await supabase.auth.getUser();
   const uid = authData?.user?.id;
@@ -290,59 +306,111 @@ export async function listMyJobs(): Promise<JobListing[]> {
     .select('*, poster:profiles!jobs_poster_id_fkey(full_name)')
     .eq('poster_id', uid)
     .order('created_at', { ascending: false });
-  if (error) return [];
-  return (data ?? []).map((row: any) => ({
-    id: row.id,
-    title: row.title,
-    company: row.company,
-    location: row.location,
-    type: row.type as JobListing['type'],
-    remote: row.is_remote ?? false,
-    workplaceType: inferWorkplaceType(row),
-    experienceLevel: inferExperienceLevel(row),
-    applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
-    acceptsInAppApplications: row.accepts_in_app_applications ?? false,
-    applicationsCount: row.applications_count ?? 0,
-    isApproved: row.is_approved ?? true,
-    postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
-    posterId: row.poster_id,
-    createdAt: row.created_at,
-    description: row.description || '',
-    salary: row.salary || undefined,
-    campusCode: row.campus_code || 'GLOBAL',
-  }));
+  if (error) {
+    console.warn('[Jobs] listMyJobs error:', error.message);
+    throw new Error('Could not load your postings. Please try again.');
+  }
+  return (data ?? []).map(mapJobRow);
+}
+
+export interface UpdateJobPayload {
+  title?: string;
+  company?: string;
+  location?: string;
+  type?: JobListing['type'];
+  remote?: boolean;
+  applyUrl?: string;
+  acceptsInAppApplications?: boolean;
+  salary?: string;
+  description?: string;
+}
+
+/**
+ * Edits an existing posting in place. RLS already restricts this to the
+ * poster (and staff/admin) - see "Posters, admins and staff can update jobs"
+ * in supabase_schema.sql. Moderation fields (is_approved/approved_by/
+ * approved_at/rejection_reason) are untouched here and cannot be forged by a
+ * non-staff poster anyway - enforce_job_moderation() pins them to their
+ * previous value on any UPDATE from a non-admin/staff caller.
+ */
+export async function updateJob(jobId: string, payload: UpdateJobPayload): Promise<void> {
+  const patch: Record<string, unknown> = {};
+  if (payload.title !== undefined) patch.title = payload.title;
+  if (payload.company !== undefined) patch.company = payload.company;
+  if (payload.location !== undefined) patch.location = payload.location;
+  if (payload.type !== undefined) patch.type = payload.type;
+  if (payload.remote !== undefined) patch.is_remote = payload.remote;
+  if (payload.acceptsInAppApplications !== undefined) patch.accepts_in_app_applications = payload.acceptsInAppApplications;
+  if (payload.salary !== undefined) patch.salary = payload.salary || null;
+  if (payload.description !== undefined) patch.description = payload.description || null;
+  if (payload.applyUrl !== undefined) {
+    const applyUrl = payload.applyUrl.trim() ? assertSafeHttpUrl(payload.applyUrl, 'The apply link') : '';
+    patch.apply_url = applyUrl || null;
+  }
+
+  // Caller (CreateJobModal's edit mode) always sends the full current state,
+  // not a sparse patch, so this mirrors createJob's own guard rather than
+  // trying to reconstruct "what would the row look like after this partial
+  // update" - the DB's jobs_has_an_apply_path CHECK is the final backstop.
+  if (payload.acceptsInAppApplications === false && !payload.applyUrl?.trim()) {
+    throw new Error('Add an external apply link, or turn on in-app applications.');
+  }
+
+  const { error } = await supabase.from('jobs').update(patch).eq('id', jobId);
+  if (error) {
+    if (/jobs_has_an_apply_path/i.test(error.message)) {
+      throw new Error('Add an external apply link, or turn on in-app applications.');
+    }
+    console.warn('[Jobs] updateJob error:', error.message);
+    throw new Error('Could not update this posting. Please try again.');
+  }
+}
+
+/** Soft-closes a posting: hides it from the browse feed immediately, regardless of expires_at, without deleting its history (applicants, applications_count). */
+export async function closeJob(jobId: string): Promise<void> {
+  const { error } = await supabase.from('jobs').update({ is_closed: true }).eq('id', jobId);
+  if (error) {
+    console.warn('[Jobs] closeJob error:', error.message);
+    throw new Error('Could not close this posting. Please try again.');
+  }
+}
+
+/** Reopens a previously closed posting (does not touch expires_at). */
+export async function reopenJob(jobId: string): Promise<void> {
+  const { error } = await supabase.from('jobs').update({ is_closed: false }).eq('id', jobId);
+  if (error) {
+    console.warn('[Jobs] reopenJob error:', error.message);
+    throw new Error('Could not reopen this posting. Please try again.');
+  }
+}
+
+/** Permanently deletes a posting (and, via ON DELETE CASCADE, its questions and applications). RLS-enforced to the poster (and staff/admin). */
+export async function deleteJob(jobId: string): Promise<void> {
+  const { error } = await supabase.from('jobs').delete().eq('id', jobId);
+  if (error) {
+    console.warn('[Jobs] deleteJob error:', error.message);
+    throw new Error('Could not delete this posting. Please try again.');
+  }
 }
 
 // --- Admin moderation ---
 
-/** Every job awaiting review - admin/staff only (RLS-enforced). */
+/**
+ * Every job awaiting review - admin/staff only (RLS-enforced). Throws on a
+ * real Supabase error instead of quietly returning [] - the moderation queue
+ * must never render "all caught up" when the fetch itself actually failed.
+ */
 export async function listPendingJobs(): Promise<JobListing[]> {
   const { data, error } = await supabase
     .from('jobs')
     .select('*, poster:profiles!jobs_poster_id_fkey(full_name)')
     .eq('is_approved', false)
     .order('created_at', { ascending: true });
-  if (error) return [];
-  return (data ?? []).map((row: any) => ({
-    id: row.id,
-    title: row.title,
-    company: row.company,
-    location: row.location,
-    type: row.type as JobListing['type'],
-    remote: row.is_remote ?? false,
-    workplaceType: inferWorkplaceType(row),
-    experienceLevel: inferExperienceLevel(row),
-    applyUrl: sanitizeHttpUrl(row.apply_url) ?? '',
-    acceptsInAppApplications: row.accepts_in_app_applications ?? false,
-    applicationsCount: row.applications_count ?? 0,
-    isApproved: row.is_approved ?? false,
-    postedByName: row.poster?.full_name || row.posted_by_name || 'Alumni Network',
-    posterId: row.poster_id,
-    createdAt: row.created_at,
-    description: row.description || '',
-    salary: row.salary || undefined,
-    campusCode: row.campus_code || 'GLOBAL',
-  }));
+  if (error) {
+    console.warn('[Jobs] listPendingJobs error:', error.message);
+    throw new Error('Could not load pending postings. Please try again.');
+  }
+  return (data ?? []).map(mapJobRow);
 }
 
 export async function approveJob(id: string): Promise<void> {

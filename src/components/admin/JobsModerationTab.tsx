@@ -7,6 +7,7 @@ import { AppText } from '@/components/AppText';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { useTheme } from '@/theme/ThemeProvider';
 import { listPendingJobs, approveJob, rejectJob } from '@/api/jobs';
 import { JobListing } from '@/api/types';
@@ -20,7 +21,7 @@ export function JobsModerationTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  const { data: pendingJobs = [], isLoading, refetch } = useQuery({
+  const { data: pendingJobs = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['jobs', 'admin-pending'],
     queryFn: listPendingJobs,
   });
@@ -253,7 +254,13 @@ export function JobsModerationTab() {
         </SolidCard>
       ))}
 
-      {!isLoading && pendingJobs.length === 0 ? (
+      {isError ? (
+        <ErrorStateView
+          title="Could not load pending postings"
+          error={error}
+          onRetry={refetch}
+        />
+      ) : !isLoading && pendingJobs.length === 0 ? (
         <EmptyState
           icon="briefcase-outline"
           title="No pending job postings"

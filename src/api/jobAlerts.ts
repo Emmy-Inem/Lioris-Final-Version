@@ -31,11 +31,12 @@ function mapAlert(row: any): JobAlert {
   };
 }
 
+/** Throws on a real Supabase error instead of quietly returning [] - JobAlertsModal must not show "No alerts yet" when the fetch itself actually failed. */
 export async function listMyJobAlerts(): Promise<JobAlert[]> {
   const { data, error } = await supabase.from('job_alerts').select('*').order('created_at', { ascending: false });
   if (error) {
     console.warn('[JobAlerts] listMyJobAlerts failed:', error.message);
-    return [];
+    throw new Error('Could not load your job alerts. Please try again.');
   }
   return (data ?? []).map(mapAlert);
 }

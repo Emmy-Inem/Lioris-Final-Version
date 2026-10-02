@@ -114,7 +114,11 @@ export async function applyToJob(jobId: string, payload: ApplyToJobPayload = {})
   return mapApplication(data);
 }
 
-/** The signed-in student's own application history, newest first. */
+/**
+ * The signed-in student's own application history, newest first. Throws on a
+ * real Supabase error instead of quietly returning [] - MyApplicationsModal
+ * must not show "No applications yet" when the fetch itself actually failed.
+ */
 export async function listMyApplications(): Promise<JobApplication[]> {
   const { data: authData } = await supabase.auth.getUser();
   const applicantId = authData?.user?.id;
@@ -126,8 +130,7 @@ export async function listMyApplications(): Promise<JobApplication[]> {
     .eq('applicant_id', applicantId)
     .order('created_at', { ascending: false });
   if (error) {
-    console.warn('[JobApplications] listMyApplications error:', error.message);
-    return [];
+    throw new Error(getFriendlyErrorMessage(error, 'Could not load your applications. Please try again.'));
   }
   return (data ?? []).map(mapApplication);
 }
@@ -135,7 +138,9 @@ export async function listMyApplications(): Promise<JobApplication[]> {
 /**
  * A job's applicants, ranked by automatic match score (highest first). Only
  * returns rows for jobs the caller posted (or for admins) - enforced by RLS,
- * this is just an empty list otherwise.
+ * this is just an empty list otherwise (not an error). A real fetch failure
+ * throws instead, so JobApplicantsModal can distinguish "no applicants yet"
+ * from "could not load applicants".
  */
 export async function listJobApplicants(jobId: string): Promise<JobApplication[]> {
   const { data, error } = await supabase
@@ -144,8 +149,7 @@ export async function listJobApplicants(jobId: string): Promise<JobApplication[]
     .eq('job_id', jobId)
     .order('match_score', { ascending: false, nullsFirst: false });
   if (error) {
-    console.warn('[JobApplications] listJobApplicants error:', error.message);
-    return [];
+    throw new Error(getFriendlyErrorMessage(error, 'Could not load applicants. Please try again.'));
   }
   return (data ?? []).map(mapApplication);
 }
