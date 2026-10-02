@@ -17,6 +17,7 @@ import { DirectoryCard } from './DirectoryCard';
 import { MarketplaceItemCard } from './MarketplaceItemCard';
 import { Resource } from '@/api/types';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listFeedPosts } from '@/api/posts';
 import { listEvents } from '@/api/events';
@@ -51,6 +52,7 @@ const TAB_EMPTY_TITLE: Record<SearchTab, string> = {
 export function SearchScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
   const { campusCode } = useCampusScope();
   const { scope: forumScope } = useForumScope();
   // Carries a prefilled query in from callers like DesktopTopBar's search submit
@@ -64,6 +66,15 @@ export function SearchScreen() {
   const trimmed = query.trim();
   const debouncedTrimmed = useDebouncedValue(trimmed);
   const active = debouncedTrimmed.length > 0;
+
+  // Jobs/Career is alumni-only and Marketplace is student-only (staff/admin can
+  // still search either, matching their broader cross-role visibility
+  // elsewhere) - this shared search screen must not offer the other role's tab.
+  const visibleTabs = (Object.keys(TAB_LABEL) as SearchTab[]).filter((t) => {
+    if (t === 'jobs' && user?.role === 'student') return false;
+    if (t === 'marketplace' && user?.role === 'alumni') return false;
+    return true;
+  });
 
   const { data: posts, isLoading: postsLoading } = useQuery({
     queryKey: ['search', 'posts', debouncedTrimmed, campusCode, forumScope],
@@ -142,7 +153,7 @@ export function SearchScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.md }} style={{ flexGrow: 0, marginBottom: spacing.md }}>
-        {(Object.keys(TAB_LABEL) as SearchTab[]).map((t) => {
+        {visibleTabs.map((t) => {
           const selected = tab === t;
           return (
             <Pressable

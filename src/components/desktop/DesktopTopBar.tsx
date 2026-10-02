@@ -24,7 +24,6 @@ const RAW_QUICK_COMMANDS: { id: string; title: string; subtitle: string; icon: a
   { id: 'resources', title: 'Past Questions & Notes Library', subtitle: 'Search and download academic course materials', icon: 'folder-open-outline', href: '/(student)/resources', flagKey: 'academic_resources' },
   { id: 'marketplace', title: 'Campus Marketplace', subtitle: 'Buy/sell textbooks, electronics & lab coats', icon: 'cart-outline', href: '/(student)/marketplace', flagKey: 'marketplace' },
   { id: 'events', title: 'Events & Tech Hackathons', subtitle: 'Upcoming campus workshops, live streams & meetups', icon: 'calendar-outline', href: '/(student)/events-list', flagKey: 'campus_events' },
-  { id: 'jobs', title: 'Job Opportunities & Internships', subtitle: 'Graduate roles and company referrals', icon: 'briefcase-outline', href: '/(student)/jobs', flagKey: 'career_page' },
   { id: 'mentorship', title: 'Mentorship & Class Reps', subtitle: 'Connect with alumni mentors & leaders', icon: 'people-outline', href: '/(student)/mentorship', flagKey: 'alumni_mentorship' },
   { id: 'study-groups', title: 'Study Pods & Circles', subtitle: 'Join exam revision groups for your cohort', icon: 'school-outline', href: '/(student)/study-groups', flagKey: 'study_groups' },
   { id: 'settings', title: 'Settings & Security', subtitle: 'Configure 2FA, campus theme & privacy', icon: 'settings-outline', href: '/(student)/settings' },
