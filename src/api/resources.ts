@@ -35,6 +35,19 @@ export interface ResourcesQuery {
   approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
   campusCode?: string;
   academicLevel?: string;
+  /**
+   * Minimum average rating (e.g. 4.5 for the filter modal's "4.5+ Stars").
+   * Resources with no ratings at all (avg_rating is null/0 with zero votes)
+   * are excluded once a minimum is set, same as a "4.5+ Stars" chip would
+   * imply on any other reviews UI.
+   */
+  minRating?: number;
+  /**
+   * Mirrors LibraryFilterModal's SORT_OPTIONS values ('Newest Shared' |
+   * 'Highest Quality Rated'). Defaults to newest-first (the existing,
+   * unchanged behaviour) for any other/omitted value.
+   */
+  sortBy?: string;
   /** 0-based page of results past the first. Defaults to 0 (existing behaviour, unchanged for callers that don't pass it). */
   page?: number;
   /** Rows per page. Defaults to 100 (the previous hardcoded `.limit(100)`). */
@@ -69,7 +82,61 @@ function filterResources(pool: Resource[], query: ResourcesQuery): Resource[] {
         (r.syllabusTopic && r.syllabusTopic.toLowerCase().includes(q)),
     );
   }
+  // Rating/sort both need each row's live avgRating, which the `resources`
+  // table itself does not store (ratings live in resource_ratings, summarised
+  // on demand by get_resource_rating_summary()) - applied here, after the
+  // rows/ratings are both in hand, rather than as a query predicate.
+  if (query.minRating && query.minRating > 0) {
+    results = results.filter((r) => ((r as any).avgRating ?? 0) >= query.minRating!);
+  }
+  if (query.sortBy === 'Highest Quality Rated') {
+    results = [...results].sort((a, b) => {
+      const diff = ((b as any).avgRating ?? 0) - ((a as any).avgRating ?? 0);
+      if (diff !== 0) return diff;
+      // Tie-break by rating count, then recency, so "Highest Quality Rated"
+      // never looks like an arbitrary shuffle among unrated/equally-rated items.
+      const countDiff = ((b as any).ratingCount ?? 0) - ((a as any).ratingCount ?? 0);
+      if (countDiff !== 0) return countDiff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }
+  // 'Newest Shared' (the default) is already the order the query/local pool
+  // produce, so there is nothing further to do for it here.
   return results;
+}
+
+/**
+ * Attaches `avgRating`/`ratingCount` to each resource so filterResources()
+ * can apply `minRating`/`sortBy` ("Highest Quality Rated") - both of which
+ * need a real rating, not something derivable from the `resources` row
+ * alone. One bulk query for every resource on the page/pool (not one RPC
+ * call per resource) - RLS on resource_ratings already limits the rows
+ * returned to whatever this caller could see anyway. Best-effort: a failed
+ * fetch just leaves every resource at 0/0 (treated as unrated) rather than
+ * failing the whole list.
+ */
+async function withRatingSummaries(resources: Resource[]): Promise<Resource[]> {
+  if (resources.length === 0) return resources;
+  try {
+    const ids = resources.map((r) => r.id);
+    const { data, error } = await supabase.from('resource_ratings').select('resource_id, rating').in('resource_id', ids);
+    if (error) throw error;
+    const byResource = new Map<string, { sum: number; count: number }>();
+    for (const row of data ?? []) {
+      const entry = byResource.get(row.resource_id) || { sum: 0, count: 0 };
+      entry.sum += Number(row.rating) || 0;
+      entry.count += 1;
+      byResource.set(row.resource_id, entry);
+    }
+    return resources.map((r) => {
+      const entry = byResource.get(r.id);
+      const avgRating = entry && entry.count > 0 ? Math.round((entry.sum / entry.count) * 10) / 10 : 0;
+      return { ...r, avgRating, ratingCount: entry?.count ?? 0 } as Resource;
+    });
+  } catch (err) {
+    console.warn('[Resources] withRatingSummaries failed, treating all as unrated:', err);
+    return resources.map((r) => ({ ...r, avgRating: 0, ratingCount: 0 } as Resource));
+  }
 }
 
 function mapResourceTypeToCategory(type?: string): Resource['category'] {
@@ -242,7 +309,11 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
         }
       }
     }
-    return filterResources(merged, query);
+    // Only fetch ratings when a rating-aware filter/sort actually needs them -
+    // every other call keeps the previous (cheaper, no extra query) behaviour.
+    const needsRatings = (query.minRating && query.minRating > 0) || query.sortBy === 'Highest Quality Rated';
+    const withRatings = needsRatings ? await withRatingSummaries(merged) : merged;
+    return filterResources(withRatings, query);
   } catch (err) {
     console.warn('[Resources] listResources failed, showing local pool:', err);
     const targetCampus = ((query as any).campusCode || 'GLOBAL').toUpperCase();
@@ -662,6 +733,24 @@ export async function submitResourceRating(resourceId: string, rating: number, r
   if (!raterId) {
     throw new Error('You need to be signed in to rate this resource.');
   }
+
+  // Defense-in-depth against rating your own upload - the client (see
+  // ResourceReaderModal) already hides the rating card for the uploader, and
+  // the DB trigger (20261010000000_resource_ratings_self_rating_guard.sql)
+  // rejects it regardless, but checking here gives a clear message instead
+  // of a raw Postgres error reaching the UI. Mirrors endorseSkill()'s
+  // self-endorsement guard in src/api/profile.ts.
+  const { data: resourceRow, error: resourceErr } = await supabase
+    .from('resources')
+    .select('uploader_id')
+    .eq('id', resourceId)
+    .maybeSingle();
+  if (resourceErr) {
+    console.warn('[Resources] submitResourceRating uploader lookup failed:', resourceErr.message);
+  } else if (resourceRow?.uploader_id === raterId) {
+    throw new Error('You cannot rate your own upload.');
+  }
+
   const trimmedReview = review?.trim();
 
   const { error } = await supabase.from('resource_ratings').upsert(
@@ -676,6 +765,32 @@ export async function submitResourceRating(resourceId: string, rating: number, r
   if (error) {
     console.warn('[Resources] submitResourceRating failed:', error.message);
     throw new Error('Could not save your rating. Please try again.');
+  }
+}
+
+/**
+ * The signed-in user's own rating/review for a resource, if they left one -
+ * `null` when they have not rated it yet. Lets ResourceReaderModal prefill
+ * the stars/review text when editing an existing rating instead of always
+ * starting from 0/''.
+ */
+export async function getMyResourceRating(resourceId: string): Promise<{ rating: number; review: string } | null> {
+  assertUuid(resourceId, 'resource id');
+  const raterId = await currentResourceRaterId();
+  if (!raterId) return null;
+  try {
+    const { data, error } = await supabase
+      .from('resource_ratings')
+      .select('rating, review')
+      .eq('resource_id', resourceId)
+      .eq('rater_id', raterId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return { rating: data.rating, review: data.review ?? '' };
+  } catch (err) {
+    console.warn('[Resources] getMyResourceRating failed:', err);
+    return null;
   }
 }
 
