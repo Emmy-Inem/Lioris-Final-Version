@@ -29,7 +29,11 @@ const CATEGORIES: Array<{ label: string; match?: (action: AuditLogAction) => boo
   {
     label: 'Moderation',
     match: (a) =>
-      a.startsWith('report_') || a.startsWith('community_') || a.startsWith('event_') || a === 'item_moderated',
+      a.startsWith('report_') ||
+      a.startsWith('community_') ||
+      a.startsWith('event_') ||
+      a.startsWith('giving_campaign_') ||
+      a === 'item_moderated',
   },
   { label: 'Verification', match: (a) => a.startsWith('verification_') },
   {
@@ -94,6 +98,9 @@ const ACTION_TONE: Partial<Record<AuditLogAction, 'success' | 'critical' | 'warn
   event_payment_rejected: 'warning',
   event_link_checked: 'brand',
   event_partnership_updated: 'brand',
+  giving_campaign_approved: 'success',
+  giving_campaign_rejected: 'neutral',
+  giving_campaign_total_updated: 'brand',
 };
 
 const PAGE_SIZE = 100;
@@ -275,7 +282,9 @@ export default function AuditLogsScreen() {
         <ChipSelect options={CATEGORIES.map((c) => c.label)} selected={[filter]} onToggle={setFilter} />
         {data ? (
           <AppText tone="secondary" variant="caption">
-            Showing {filtered.length} of {data.total} matching {data.total === 1 ? 'entry' : 'entries'}
+            {category.match
+              ? `Showing ${filtered.length} loaded (${data.total} total, unfiltered)`
+              : `Showing ${filtered.length} of ${data.total} matching ${data.total === 1 ? 'entry' : 'entries'}`}
           </AppText>
         ) : null}
       </View>
