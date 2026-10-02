@@ -115,7 +115,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
     const locLower = (e.location || '').toLowerCase();
     const isVirtual = locLower.includes('online') || locLower.includes('virtual') || locLower.includes('zoom') || locLower.includes('meet');
     
-    if (filter === 'on-campus') return e.venueType === 'physical' || !isVirtual;
+    if (filter === 'on-campus') return e.venueType === 'physical';
     if (filter === 'off-campus') return e.venueType === 'external';
     if (filter === 'virtual') return e.venueType === 'virtual' || isVirtual;
     if (filter === 'free') return e.ticketType !== 'paid';

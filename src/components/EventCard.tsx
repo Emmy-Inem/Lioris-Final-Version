@@ -19,6 +19,7 @@ import { rsvpToEvent } from'@/api/events';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
 import { formatNaira } from '@/utils/paidEvents';
+import { useEventReminder } from '@/utils/eventReminders';
 
 const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
 const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
@@ -38,8 +39,7 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  const roleGroup = segments[0] ?? '(student)';
  const [rsvpd, setRsvpd] = useState(!!event.isRsvpd);
  const [rsvpCount, setRsvpCount] = useState(event.rsvpCount);
- const [reminderOn, setReminderOn] = useState(false);
- const [reminderNotificationId, setReminderNotificationId] = useState<string | null>(null);
+ const { reminderOn, notificationId: reminderNotificationId, setReminder, clearReminder } = useEventReminder(event.id);
  const [submitting, setSubmitting] = useState(false);
  const [menuOpen, setMenuOpen] = useState(false);
  const cardScale = useSharedValue(1);
@@ -68,15 +68,13 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  if (reminderNotificationId) {
  await Notifications.cancelScheduledNotificationAsync(reminderNotificationId).catch(() => {});
  }
- setReminderOn(false);
- setReminderNotificationId(null);
+ await clearReminder();
  return;
  }
 
  const triggerDate = new Date(new Date(event.startAt).getTime() - 60 * 60 * 1000);
  if (triggerDate.getTime() <= Date.now()) {
  Alert.alert('Reminder Set', `You will receive a notification before ${event.title} begins.`);
- setReminderOn(true);
  return;
  }
 
@@ -89,10 +87,10 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  },
  trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
  });
- setReminderNotificationId(id);
- setReminderOn(true);
+ await setReminder(id);
  } catch {
- setReminderOn(true);
+ // Scheduling failed - leave the persisted state as "off" rather than
+ // claiming a reminder exists when nothing was scheduled.
  }
  }
 
