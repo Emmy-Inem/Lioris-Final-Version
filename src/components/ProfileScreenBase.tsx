@@ -33,7 +33,7 @@ import type { CroppedImage } from '@/utils/cropImage';
 /* Short labels so the segmented control fits a 375px phone on one line with no
    ragged wrapping and no ellipsis. The control also scrolls horizontally so it
    still reads in full at any width / font scale. */
-const PROFILE_TABS = ['Posts', 'Drafts & Scheduled', 'Academic'] as const;
+const PROFILE_TABS = ['Posts', 'Drafts & Scheduled'] as const;
 type ProfileTab = (typeof PROFILE_TABS)[number];
 
 /** Turns an ISO timestamp into plain words, e.g. "Tuesday, 3 June at 14:30". */
@@ -721,7 +721,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  onPress={() => setActiveTab(tab)}
  accessibilityRole="button"
  accessibilityState={{ selected }}
- accessibilityLabel={tab === 'Academic' ? 'Academic and credentials' : `${tab}, ${count}`}
+ accessibilityLabel={`${tab}, ${count}`}
  style={{
  flexGrow: 1,
  flexDirection: 'row',
@@ -737,7 +737,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
  {tab}
  </AppText>
- {tab !== 'Academic' && count > 0 ? (
+ {count > 0 ? (
  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
  {count}
  </AppText>
@@ -858,22 +858,6 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             )}
           </View>
         ) : null}
-
- {/* Tab Content 4: Academic & Credentials */}
- {activeTab === 'Academic' ? (
- <View style={{ gap: spacing.sm }}>
- <SolidCard radius={20}>
- <AppText weight="bold" variant="h3" tone="brand" style={{ marginBottom: spacing.sm }}>
- Academic Identity & Cohort
- </AppText>
- <View style={{ flexDirection: 'row', gap: spacing.md, flexWrap: 'wrap' }}>
-          <DetailColumn label="Department" value={profile.department || 'Not specified'} icon="book-outline" />
-          <DetailColumn label="Grad Class" value={profile.graduationYear ? String(profile.graduationYear) : 'Not specified'} icon="school-outline" />
-          <DetailColumn label="Campus Node" value={profile.institutionName || 'Campus Node'} icon="business-outline" />
- </View>
- </SolidCard>
- </View>
- ) : null}
 
  {extraRows}
  </View>
@@ -1250,19 +1234,3 @@ function StatChip({ label, value }: { label: string; value: number }) {
  );
 }
 
-function DetailColumn({ label, value, icon }: { label: string; value: string; icon?: keyof typeof Ionicons.glyphMap }) {
- const { colors, spacing } = useTheme();
- return (
- <View style={{ flex: 1 }}>
- <AppText variant="caption"weight="bold"tone="secondary"style={{ letterSpacing: 1 }}>
- {label.toUpperCase()}
- </AppText>
- <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
- {icon ? <Ionicons name={icon} size={12} color={colors.textSecondary} /> : null}
- <AppText variant="bodySmall"weight="semiBold">
- {value}
- </AppText>
- </View>
- </View>
- );
-}
