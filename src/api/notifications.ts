@@ -10,7 +10,45 @@ import { isViewedNotificationExpired, VIEWED_NOTIFICATION_RETENTION_MS } from '.
 // below, and only while the admin's "Mock Data Visibility" toggle is on.
 let localNotificationsCache: AppNotification[] = [];
 
+/**
+ * Clears this session's local notification cache. Call on sign-out so a
+ * second account signing in on the same device/session (notably on web,
+ * where the module stays loaded across accounts) never sees the previous
+ * user's just-created notifications merged into their own list.
+ */
+export function clearLocalNotificationsCache(): void {
+  localNotificationsCache = [];
+}
 
+/**
+ * Notification types gated by notification_preferences, and the column each
+ * one checks. Mirrors the send-push edge function's own preference check
+ * (supabase/functions/send-push/index.ts), which only gates the push ping -
+ * this gates the in-app row itself so a muted category doesn't clutter the
+ * list or inflate the unread badge either.
+ */
+const PREFERENCE_GATED_TYPES: Record<string, 'announcements_enabled' | 'events_enabled'> = {
+  announcement: 'announcements_enabled',
+  system_announcement: 'announcements_enabled',
+  event: 'events_enabled',
+};
+
+/** True when the recipient has explicitly muted this notification's category. No row yet means every category defaults on. */
+async function isCategoryMuted(recipientId: string, type: string): Promise<boolean> {
+  const column = PREFERENCE_GATED_TYPES[type];
+  if (!column) return false;
+  try {
+    const { data, error } = await supabase
+      .from('notification_preferences')
+      .select(column)
+      .eq('user_id', recipientId)
+      .maybeSingle();
+    if (error || !data) return false;
+    return (data as Record<string, unknown>)[column] === false;
+  } catch {
+    return false;
+  }
+}
 
 export interface CreateNotificationPayload {
  type: AppNotification['type'];
@@ -56,8 +94,16 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  deepLinkPath: payload.deepLinkPath,
  };
 
+ let skippedByPreference = false;
+
  try {
  if (targetRecipientId) {
+ if (await isCategoryMuted(targetRecipientId, payload.type)) {
+ // Recipient turned this category off in Settings - skip the insert
+ // entirely (not just the push) so it never reaches their in-app
+ // list or unread badge. Mirrors send-push's own preference check.
+ skippedByPreference = true;
+ } else {
  const { error } = await supabase.from('notifications').insert({
  id: notifId,
  recipient_id: targetRecipientId,
@@ -70,6 +116,7 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  });
  if (error) {
  console.warn('[Notifications] Supabase persistence error:', error.message);
+ }
  }
  } else {
  // Broadcast to all active profiles - paginate through every page of
@@ -94,8 +141,36 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  offset += pageSize;
  }
 
- if (allProfileIds.length > 0) {
- const rows = allProfileIds.map((id) => ({
+ // Drop anyone who has muted this category before building rows, so a
+ // broadcast respects notification_preferences the same way a direct,
+ // single-recipient call now does.
+ const broadcastColumn = PREFERENCE_GATED_TYPES[payload.type || 'system_announcement'];
+ let recipientIds = allProfileIds;
+ if (broadcastColumn && allProfileIds.length > 0) {
+ const mutedIds = new Set<string>();
+ const lookupChunkSize = 500;
+ for (let i = 0; i < allProfileIds.length; i += lookupChunkSize) {
+ const chunk = allProfileIds.slice(i, i + lookupChunkSize);
+ const { data: mutedRows, error: mutedError } = await supabase
+ .from('notification_preferences')
+ .select(`user_id, ${broadcastColumn}`)
+ .in('user_id', chunk)
+ .eq(broadcastColumn, false);
+ if (mutedError) {
+ console.warn('[Notifications] Broadcast preference lookup error:', mutedError.message);
+ continue;
+ }
+ for (const row of mutedRows ?? []) {
+ mutedIds.add((row as { user_id: string }).user_id);
+ }
+ }
+ if (mutedIds.size > 0) {
+ recipientIds = allProfileIds.filter((id) => !mutedIds.has(id));
+ }
+ }
+
+ if (recipientIds.length > 0) {
+ const rows = recipientIds.map((id) => ({
  recipient_id: id,
  sender_id: notificationSenderId,
  title: payload.title,
@@ -126,7 +201,7 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  // errors - it intentionally never throws so a failed "notify people"
  // side-effect can't sink an otherwise-successful primary action. Only
  // cache it locally when it's actually for the current viewer.
- if (targetRecipientId && targetRecipientId === currentUserId) {
+ if (targetRecipientId && targetRecipientId === currentUserId && !skippedByPreference) {
  localNotificationsCache = [notification, ...localNotificationsCache];
  }
 

@@ -19,6 +19,7 @@ import { registerForPushNotificationsAsync } from'@/notifications/push';
 import { supabase } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
 import { loadBlockedUserIds } from '@/api/connections';
+import { clearLocalNotificationsCache } from '@/api/notifications';
 import { resetToDefaultCampusScope, persistCampus } from '@/hooks/useViewScope';
 
 // ---------------------------------------------------------------------------
@@ -372,6 +373,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // never reaches here.
         userRef.current = null;
         setUser(null);
+        // A device/session that signs a second account in without a full
+        // reload (notably on web) must never see the previous user's
+        // just-created notifications merged back into their list.
+        clearLocalNotificationsCache();
         if (!isExplicitLogout.current) {
           router.replace('/(auth)/login');
         }
@@ -557,6 +562,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         persistCampus(undefined);
         resetToDefaultCampusScope();
+        clearLocalNotificationsCache();
         try {
           queryClient.clear();
         } catch {
