@@ -34,10 +34,67 @@ export async function consumeRateLimit(
       console.error('[rate-limit] RPC error:', error.message);
       return 'error';
     }
-    return data === true ? 'allowed' : 'limited';
+    if (data === true) return 'allowed';
+
+    // Deny path only (never on an allowed call, so this adds no overhead to normal
+    // traffic): leave a trail an admin can later search so a pattern of repeated
+    // rate-limit hits by one user/IP is traceable, not just a line in server logs
+    // that nobody is watching in real time.
+    await recordRateLimitAudit(admin, key, limit, windowSeconds);
+    return 'limited';
   } catch (err) {
     console.error('[rate-limit] RPC failure:', err instanceof Error ? err.message : 'unknown');
     return 'error';
+  }
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Best-effort audit trail for a tripped rate limit. `key` is always
+ * `<action>:<identifier>` (a user id or an IP - see call sites across
+ * supabase/functions), so it is split back into the two for the log.
+ *
+ * Awaited (matches the rest of this file, and the admin-force-signout /
+ * admin-delete-user audit writes this mirrors) rather than fired detached,
+ * since an un-awaited promise is not guaranteed to finish before a Supabase
+ * Edge Function's isolate is torn down after the response is sent. It is a
+ * single small insert on the rare deny path, so it stays low-overhead. Its
+ * own failure is logged, never thrown - the 429/503 the caller already
+ * decided on must not turn into a 500.
+ */
+async function recordRateLimitAudit(
+  admin: SupabaseClient,
+  key: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<void> {
+  try {
+    const separatorIndex = key.indexOf(':');
+    const action = separatorIndex === -1 ? key : key.slice(0, separatorIndex);
+    const identifier = separatorIndex === -1 ? null : key.slice(separatorIndex + 1);
+    const actorId = identifier && UUID_RE.test(identifier) ? identifier : null;
+
+    const { error } = await admin.from('audit_logs').insert({
+      actor_id: actorId,
+      action: 'rate_limit_exceeded',
+      entity_type: 'system',
+      entity_id: null,
+      metadata: {
+        summary: `Rate limit exceeded for "${action}"${actorId ? '' : identifier ? ` (identifier: ${identifier})` : ''}`,
+        limitKey: key,
+        limitAction: action,
+        identifier,
+        limit,
+        windowSeconds,
+      },
+      created_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error('[rate-limit] Failed to write audit log entry:', error.message);
+    }
+  } catch (err) {
+    console.error('[rate-limit] Audit log write failed:', err instanceof Error ? err.message : 'unknown');
   }
 }
 

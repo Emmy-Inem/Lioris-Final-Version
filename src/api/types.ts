@@ -489,7 +489,8 @@ export type AuditLogAction =
  | 'profile_updated'
  | 'giving_campaign_approved'
  | 'giving_campaign_rejected'
- | 'giving_campaign_total_updated';
+ | 'giving_campaign_total_updated'
+ | 'rate_limit_exceeded';
 
 export interface AuditLogEntry {
  id: string;
