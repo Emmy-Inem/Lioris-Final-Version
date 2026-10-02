@@ -818,7 +818,7 @@ export default function UserDirectoryScreen() {
  haptics.error();
  Alert.alert(
  'Permanently Delete Account?',
- `This will PERMANENTLY delete ${target.fullName}'s (@${target.username}) login credentials and all profile data (name, matric record, department, trust score, etc.).\n\n` +
+ `This will PERMANENTLY delete ${target.fullName}'s (@${target.username}) login credentials and all profile data (name, student ID record, department, trust score, etc.).\n\n` +
  `${target.fullName} will be immediately signed out and will NO LONGER be able to log in - this action cannot be undone and cannot be reversed by re-provisioning a profile.\n\n` +
  `To confirm you understand this is irreversible, tap "Delete Forever" below.`,
  [
@@ -944,7 +944,7 @@ export default function UserDirectoryScreen() {
           <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
             User Directory
           </AppText>
-          <AppText tone="secondary" variant="caption">Manage identities, matric records & role privileges</AppText>
+          <AppText tone="secondary" variant="caption">Manage identities, student ID records & role privileges</AppText>
         </View>
         <View style={{ flexShrink: 0 }}>
           <AppButton
@@ -1000,7 +1000,7 @@ export default function UserDirectoryScreen() {
               </AppText>
               <AppTextField
                 label=""
-                placeholder="Name, @handle, matric..."
+                placeholder="Name, @handle, ID..."
                 value={query}
                 onChangeText={setQuery}
               />
@@ -1260,7 +1260,7 @@ export default function UserDirectoryScreen() {
               }}
             >
               <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
-              <AppText weight="bold">Edit Profile & Credentials (Matric, Role, Campus)</AppText>
+              <AppText weight="bold">Edit Profile & Credentials (Student ID, Role, Campus)</AppText>
             </Pressable>
 
             <Pressable
@@ -1387,7 +1387,7 @@ export default function UserDirectoryScreen() {
 
  <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: 16, marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
- <AppText tone="secondary"variant="caption">Matriculation / Staff ID</AppText>
+ <AppText tone="secondary"variant="caption">Student / Staff ID</AppText>
  <AppText weight="bold"variant="caption">{detailModalUser.matricNo}</AppText>
  </View>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -1598,7 +1598,7 @@ export default function UserDirectoryScreen() {
  />
 
  <AppTextField
- label="Matric / Staff ID (Optional)"placeholder="e.g. UI/2024/8892"value={newMatric}
+ label="Student / Staff ID (Optional)"placeholder="e.g. UI/2024/8892"value={newMatric}
  onChangeText={setNewMatric}
  />
 
@@ -1691,7 +1691,7 @@ export default function UserDirectoryScreen() {
                 />
 
                 <AppTextField
-                  label="Matriculation / Student ID"
+                  label="Student ID"
                   placeholder="e.g. UI/2024/001"
                   value={editMatric}
                   onChangeText={setEditMatric}

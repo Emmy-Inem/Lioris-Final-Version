@@ -39,10 +39,10 @@ const FAQS: FaqEntry[] = [
     answer: 'Yes - go to Settings > Security & Credentials > Change Email. You will need to confirm the new address with a code before it takes effect.',
   },
   {
-    id: 'matric-wrong',
+    id: 'student-id-wrong',
     category: 'Account',
-    question: 'My matric/staff ID number is wrong. How do I fix it?',
-    answer: 'Open Settings > Help & Support and choose "Matric / ID Fix" as the category. Include your correct ID number and, if you have one, a photo of your ID card - this speeds up the review.',
+    question: 'My student/staff ID number is wrong. How do I fix it?',
+    answer: 'Open Settings > Help & Support and choose "Account Issue" as the category. Include your correct ID number and, if you have one, a photo of your ID card - this speeds up the review.',
   },
   {
     id: 'deactivate-vs-delete',

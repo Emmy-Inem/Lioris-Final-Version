@@ -65,7 +65,6 @@ async function fetchUserErrorReports(userId: string): Promise<UserErrorReport[]>
 
 const CATEGORY_LABELS: Record<SupportTicketCategory, string> = {
   account_issue: 'Account / Login',
-  matric_id_correction: 'Matric / ID Correction',
   campus_transfer: 'Campus Transfer',
   verification_appeal: 'Verification Appeal',
   suspension_appeal: 'Suspension Appeal',
@@ -153,7 +152,7 @@ export default function SupportDeskScreen() {
 
   async function handleReassignMatric() {
     if (!selectedTicket || !newMatricInput.trim()) {
-      Alert.alert('Validation', 'Please enter a valid Matric Number.');
+      Alert.alert('Validation', 'Please enter a valid Student ID.');
       return;
     }
     haptics.medium();
@@ -163,10 +162,10 @@ export default function SupportDeskScreen() {
         student_id_number: newMatricInput.trim(),
       });
       if (res.success) {
-        toast.success(`Matric number updated to "${newMatricInput.trim()}" for ${selectedTicket.userName}.`);
+        toast.success(`Student ID updated to "${newMatricInput.trim()}" for ${selectedTicket.userName}.`);
         await updateSupportTicket(selectedTicket.id, {
           status: 'resolved',
-          adminNotes: (adminNotes ? adminNotes + '\n' : '') + `[Remediation] Matric reassigned to ${newMatricInput.trim()}.`,
+          adminNotes: (adminNotes ? adminNotes + '\n' : '') + `[Remediation] Student ID reassigned to ${newMatricInput.trim()}.`,
         });
         queryClient.invalidateQueries({ queryKey: ['support_tickets'] });
         setSelectedTicket(null);
@@ -495,7 +494,7 @@ export default function SupportDeskScreen() {
                     <View style={{ flex: 1 }}>
                       <AppText weight="bold" style={{ fontSize: 15 }}>{selectedTicket.userName}</AppText>
                       <AppText tone="secondary" variant="caption">Email: {selectedTicket.userEmail || 'N/A'}</AppText>
-                      <AppText tone="secondary" variant="caption">Current Matric: {selectedTicket.userMatric || 'None'}</AppText>
+                      <AppText tone="secondary" variant="caption">Current Student ID: {selectedTicket.userMatric || 'None'}</AppText>
                       <AppText tone="secondary" variant="caption">Campus: {selectedTicket.userCampus || 'GLOBAL'}</AppText>
                     </View>
                   </View>
@@ -568,14 +567,14 @@ export default function SupportDeskScreen() {
                     ⚡ 1-Click Remediation Actions
                   </AppText>
 
-                  {/* Remediation 1: Reassign Matric */}
+                  {/* Remediation 1: Reassign Student ID */}
                   <View style={{ marginBottom: 10 }}>
-                    <AppText variant="caption" weight="bold" tone="secondary">Reassign Matric / Student ID:</AppText>
+                    <AppText variant="caption" weight="bold" tone="secondary">Reassign Student ID:</AppText>
                     <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
                       <TextInput
                         value={newMatricInput}
                         onChangeText={setNewMatricInput}
-                        placeholder="Enter corrected Matric No..."
+                        placeholder="Enter corrected Student ID..."
                         placeholderTextColor={colors.textSecondary}
                         style={{
                           flex: 1,
@@ -590,7 +589,7 @@ export default function SupportDeskScreen() {
                         }}
                       />
                       <AppButton
-                        label="Apply Matric"
+                        label="Apply"
                         size="sm"
                         onPress={handleReassignMatric}
                         loading={actionLoading}

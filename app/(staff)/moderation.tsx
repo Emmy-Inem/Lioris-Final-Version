@@ -34,7 +34,7 @@ export default function StaffModerationScreen() {
         {profile?.institutionCode ? <Badge label={`${profile.institutionCode} Node`} tone="neutral" /> : null}
       </View>
       <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
-        Faculty moderation covers reports, student matric verifications, and resource catalog approvals.
+        Faculty moderation covers reports, student ID verifications, and resource catalog approvals.
       </AppText>
 
       {/* Tab Switcher */}
