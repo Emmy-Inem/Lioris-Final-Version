@@ -207,9 +207,11 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  setLikesCount((prev) => prev + (next ? 1 : -1));
  try {
  await togglePostLike(post.id, next);
- } catch {
+ } catch (err: any) {
  setLiked(!next);
  setLikesCount((prev) => prev + (next ? -1 : 1));
+ haptics.error();
+ Alert.alert('Could not update', getFriendlyErrorMessage(err, 'Could not mark this thread as helpful. Please try again.'));
  }
  }
 

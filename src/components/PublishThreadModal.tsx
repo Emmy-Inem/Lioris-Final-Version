@@ -28,6 +28,13 @@ const POLL_DURATIONS = [
 const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
 const MAX_SCHEDULE_AHEAD_MS = 90 * 24 * 60 * 60 * 1000;
 
+// Client-side guards matching the composer's existing 10MB image-size-style
+// limits: there is no DB length CHECK on posts.title/posts.content (see
+// supabase_schema.sql), so these are deliberately generous rather than tight
+// against a server-side constraint that doesn't exist.
+const TITLE_MAX_LENGTH = 150;
+const CONTENT_MAX_LENGTH = 5000;
+
 function pad2(n: number) {
   return n < 10 ? `0${n}` : `${n}`;
 }
@@ -301,6 +308,17 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
       return;
     }
 
+    if (topic.length > TITLE_MAX_LENGTH) {
+      setErrorMessage(`Headline must be ${TITLE_MAX_LENGTH} characters or fewer.`);
+      haptics.error();
+      return;
+    }
+    if (content.length > CONTENT_MAX_LENGTH) {
+      setErrorMessage(`Post body must be ${CONTENT_MAX_LENGTH} characters or fewer.`);
+      haptics.error();
+      return;
+    }
+
     if (attachPoll && !pollQuestion.trim()) {
       setErrorMessage('Please enter your poll question or remove the poll.');
       haptics.error();
@@ -468,6 +486,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               value={topic}
               onChangeText={setTopic}
               placeholder="Give your post a catchy title..."
+              maxLength={TITLE_MAX_LENGTH}
+              helperText={`${topic.length}/${TITLE_MAX_LENGTH}`}
             />
 
             {/* Body Content — required */}
@@ -478,6 +498,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               placeholder="Ask a question, share an idea, or start a discussion..."
               multiline
               numberOfLines={5}
+              maxLength={CONTENT_MAX_LENGTH}
+              helperText={`${content.length}/${CONTENT_MAX_LENGTH}`}
             />
 
             {/* Attached Image Previews (up to MAX_IMAGES) */}

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
@@ -101,9 +101,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const [newCommunityName, setNewCommunityName] = useState('');
   const [newCommunityDescription, setNewCommunityDescription] = useState('');
   const [submittingCommunity, setSubmittingCommunity] = useState(false);
-  const [forumViewMode, setForumViewMode] = useState<'joined' | 'explore'>('joined');
-  const [exploreCategory, setExploreCategory] = useState<string>('All');
-  const [exploreSearch, setExploreSearch] = useState<string>('');
 
   const { data: myJoinedCommunityIds = DEFAULT_JOINED_COMMUNITY_IDS, refetch: refetchJoinedCommunities } = useQuery({
     queryKey: ['my-joined-community-ids', user?.id],
@@ -180,32 +177,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     () => [ALL_THREADS_CHANNEL, ...(fetchedCommunities ?? [])],
     [fetchedCommunities],
   );
-
-  const filteredExploreCommunities = React.useMemo(() => {
-    return CHANNELS.filter((ch) => {
-      if (ch.id === 'all') return false;
-      const q = exploreSearch.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        ch.label.toLowerCase().includes(q) ||
-        ch.description.toLowerCase().includes(q) ||
-        (ch.category ? ch.category.toLowerCase().includes(q) : false) ||
-        ch.slug.toLowerCase().includes(q);
-
-      if (!matchesSearch) return false;
-
-      if (exploreCategory === 'Academic & Tech') {
-        return ['tech', 'academic'].includes(ch.id) || ch.category === 'Academic' || ch.category === 'Tech Hub';
-      }
-      if (exploreCategory === 'Campus Life') {
-        return ['housing', 'social', 'lost'].includes(ch.id);
-      }
-      if (exploreCategory === 'Union & Polls') {
-        return ['polls'].includes(ch.id);
-      }
-      return true;
-    });
-  }, [CHANNELS, exploreSearch, exploreCategory]);
 
   const joinedChannels = React.useMemo(() => {
     return CHANNELS.filter((ch) => ch.id === 'all' || isJoined(ch));
@@ -298,7 +269,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     : null;
 
   function renderEmptyForumState() {
-    if (forumViewMode === 'explore') return null;
     if (joinedChannels.length <= 1) {
       return (
         <SolidCard radius={18} style={{ padding: spacing.xl, alignItems: 'center', marginTop: spacing.md }}>
@@ -313,7 +283,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             label="Explore & Join Spaces"
             variant="primary"
             icon="compass-outline"
-            onPress={() => setForumViewMode('explore')}
+            onPress={() => {
+              haptics.light();
+              router.push('/(student)/forum/explore' as any);
+            }}
           />
         </SolidCard>
       );
@@ -408,9 +381,25 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     }
   }
 
-  const { data: rawPosts, isLoading, isError, error, refetch, isRefetching } = useQuery({
+  // Feed is paginated 20 posts at a time (see listFeedPosts' page/pageSize,
+  // following the same convention as src/api/resources.ts). Filtering
+  // (bots, campus scope, status, etc.) happens client-side per page inside
+  // listFeedPosts, so "more to load" is only a heuristic: a page that came
+  // back full-size (FEED_PAGE_SIZE) might still have more behind it.
+  const FEED_PAGE_SIZE = 20;
+  const {
+    data: feedPages,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel, showBots],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       listFeedPosts({
         scope,
         q: debouncedQuery || undefined,
@@ -418,8 +407,19 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         viewerInstitutionCode,
         category: selectedChannel === 'Polls' ? undefined : selectedChannel ?? undefined,
         showBots,
+        page: pageParam,
+        pageSize: FEED_PAGE_SIZE,
       }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < FEED_PAGE_SIZE ? undefined : allPages.length,
   });
+
+  const rawPosts = React.useMemo(() => feedPages?.pages.flat() ?? [], [feedPages]);
+
+  const handleLoadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  };
 
  const handleRefresh = async () => {
    if (manualRefreshing) return;
@@ -947,6 +947,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 <Pressable
                   onPress={() => setManageCommunityOpen(true)}
                   hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Manage ${activeSubForum.label}`}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
                 >
                   <Ionicons name="settings-outline" size={12} color={colors.textSecondary} />
@@ -958,6 +960,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <Pressable
                 onPress={() => setRulesModalOpen(true)}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${activeSubForum.label} rules`}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
               >
                 <Ionicons name="document-text-outline" size={12} color={colors.brandPrimary} />
@@ -1173,6 +1177,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               {/* Sort Pill */}
               <Pressable
                 onPress={() => setSortBy(sortBy === 'latest' ? 'popular' : 'latest')}
+                accessibilityRole="button"
+                accessibilityLabel={`Sort: ${sortBy === 'latest' ? 'Latest' : 'Top Upvoted'}`}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -1317,6 +1323,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   <Pressable
                     onPress={() => setRulesModalOpen(true)}
                     hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${activeSubForum.label} rules`}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                   >
                     <Ionicons name="document-text-outline" size={13} color={colors.brandPrimary} />
@@ -1377,24 +1385,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 <View style={{ flexDirection: 'row', gap: spacing.md }}>
                   <Pressable
                     onPress={handleOpenComposer}
+                    accessibilityRole="button"
+                    accessibilityLabel="Attach photo or media"
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                   >
                     <Ionicons name="image-outline" size={16} color={colors.brandPrimary} />
                     <AppText variant="caption" weight="semiBold" tone="secondary">Photo / Media</AppText>
-                  </Pressable>
-                  <Pressable
-                    onPress={handleOpenComposer}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                  >
-                    <Ionicons name="stats-chart-outline" size={16} color="#10B981" />
-                    <AppText variant="caption" weight="semiBold" tone="secondary">Create Poll</AppText>
-                  </Pressable>
-                  <Pressable
-                    onPress={handleOpenComposer}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                  >
-                    <Ionicons name="pricetag-outline" size={16} color="#F59E0B" />
-                    <AppText variant="caption" weight="semiBold" tone="secondary">Topic Hub</AppText>
                   </Pressable>
                 </View>
 
@@ -1418,7 +1414,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
             {/* Posts Feed Stream */}
             <FlatList
-              data={forumViewMode === 'explore' ? [] : posts}
+              data={posts}
               keyExtractor={(item) => item.id}
               initialNumToRender={8}
               maxToRenderPerBatch={8}
@@ -1432,6 +1428,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               refreshing={isRefetching || manualRefreshing}
               alwaysBounceVertical
               overScrollMode="always"
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.4}
+              ListFooterComponent={
+                isFetchingNextPage ? (
+                  <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.brandPrimary} />
+                ) : null
+              }
               ListEmptyComponent={
                 isLoading ? (
                   <PostCardSkeletonList count={4} />
@@ -1499,6 +1502,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
                 <Pressable
                   onPress={() => setRulesModalOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${activeSubForum.label} rules`}
                   style={{
                     paddingVertical: 7,
                     borderRadius: radius.pill,
@@ -1513,6 +1518,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 {canManageActiveCommunity && (
                   <Pressable
                     onPress={() => setManageCommunityOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Manage ${activeSubForum.label}`}
                     style={{
                       flexDirection: 'row',
                       gap: 6,
@@ -1618,6 +1625,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         refreshing={isRefetching || manualRefreshing}
         alwaysBounceVertical
         overScrollMode="always"
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.brandPrimary} />
+          ) : null
+        }
         ListEmptyComponent={
           isLoading ? (
             <PostCardSkeletonList count={4} />
