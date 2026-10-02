@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -41,6 +41,7 @@ import {
   setEventSpotlight,
 } from '@/api/events';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
+import { isItemSaved, toggleSavedItem, SAVED_ITEMS_KEY } from '@/api/bookmarks';
 import { CAMPUS_LANDMARKS, CAMPUS_CENTERS, CampusLandmark } from '@/api/campusMap';
 import { EventCategory, EventAgendaItem } from '@/api/types';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
@@ -79,6 +80,7 @@ export function EventDetailScreen() {
   const queryClient = useQueryClient();
 
   const [bookmarked, setBookmarked] = useState(false);
+  const [savingBookmark, setSavingBookmark] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'agenda' | 'map'>('overview');
 
   // Fullscreen Image Lightbox
@@ -93,6 +95,40 @@ export function EventDetailScreen() {
     queryFn: () => getEvent(id),
     enabled: !!id,
   });
+
+  const { data: isEventBookmarked } = useQuery({
+    queryKey: [...SAVED_ITEMS_KEY('event'), 'detail', id],
+    queryFn: () => isItemSaved('event', id as string),
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (isEventBookmarked !== undefined) setBookmarked(isEventBookmarked);
+  }, [isEventBookmarked]);
+
+  async function handleToggleBookmark() {
+    if (!event || savingBookmark) return;
+    haptics.light();
+    const next = !bookmarked;
+    setBookmarked(next);
+    setSavingBookmark(true);
+    try {
+      await toggleSavedItem('event', event.id, next, {
+        title: event.title,
+        subtitle: event.startAt ? new Date(event.startAt).toLocaleDateString() : undefined,
+        imageUrl: event.coverImageUrl ?? undefined,
+      });
+      await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
+      await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('event') });
+      toast.success(next ? 'Event saved to your bookmarks.' : 'Bookmark removed.');
+    } catch {
+      setBookmarked(!next);
+      haptics.error();
+      toast.error('Could not update bookmark. Please try again.');
+    } finally {
+      setSavingBookmark(false);
+    }
+  }
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -529,8 +565,8 @@ export function EventDetailScreen() {
     haptics.light();
     const startIso = event.startAt ? new Date(event.startAt) : new Date(Date.now() + 86400000);
     const endIso = event.endAt ? new Date(event.endAt) : new Date(Date.now() + 93600000);
-    const startTime = startIso.toISOString().replace(/-|:|.ddd/g, '');
-    const endTime = endIso.toISOString().replace(/-|:|.ddd/g, '');
+    const startTime = startIso.toISOString().replace(/[-:]|\.\d{3}/g, '');
+    const endTime = endIso.toISOString().replace(/[-:]|\.\d{3}/g, '');
     const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
       event.title
     )}&dates=${startTime}/${endTime}&details=${encodeURIComponent(event.description ?? '')}&location=${encodeURIComponent(
@@ -544,12 +580,25 @@ export function EventDetailScreen() {
   async function handleExportIcs() {
     if (!event) return;
     haptics.light();
+    const toIcsUtc = (iso?: string | null, fallback?: Date) => {
+      const d = iso ? new Date(iso) : fallback ?? new Date();
+      const base = isNaN(d.getTime()) ? (fallback ?? new Date()) : d;
+      return base.toISOString().replace(/[-:]|\.\d{3}/g, '');
+    };
+    const now = new Date();
+    const dtStamp = toIcsUtc(now.toISOString());
+    const dtStart = toIcsUtc(event.startAt, new Date(Date.now() + 86400000));
+    const dtEnd = toIcsUtc(event.endAt, new Date(Date.now() + 93600000));
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//Lioris Campus Platform//EN',
       'CALSCALE:GREGORIAN',
       'BEGIN:VEVENT',
+      `UID:${event.id}@lioris.app`,
+      `DTSTAMP:${dtStamp}`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd}`,
       `SUMMARY:${event.title}`,
       `DESCRIPTION:${event.description?.replace(/\n/g, ' ') ?? ''}`,
       `LOCATION:${event.location}`,
@@ -670,11 +719,11 @@ export function EventDetailScreen() {
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Pressable
-              onPress={() => {
-                haptics.light();
-                setBookmarked((b) => !b);
-                Alert.alert(bookmarked ? 'Bookmark Removed' : 'Event Saved', 'Added to your calendar bookmarks.');
-              }}
+              onPress={handleToggleBookmark}
+              disabled={savingBookmark}
+              accessibilityRole="button"
+              accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Save event'}
+              accessibilityState={{ selected: bookmarked }}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -1362,11 +1411,9 @@ export function EventDetailScreen() {
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <Pressable accessibilityRole="button" accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark event'}
-                  onPress={() => {
-                    haptics.light();
-                    setBookmarked((b) => !b);
-                    Alert.alert(bookmarked ? 'Bookmark Removed' : 'Event Saved', 'Added to your calendar bookmarks.');
-                  }}
+                  accessibilityState={{ selected: bookmarked }}
+                  disabled={savingBookmark}
+                  onPress={handleToggleBookmark}
                   style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : '#FFFFFF'} />
