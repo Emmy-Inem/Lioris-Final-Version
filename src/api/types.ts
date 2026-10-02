@@ -498,7 +498,7 @@ export interface AuditLogEntry {
  actorRole: UserRole;
  action: AuditLogAction;
  summary: string;
- targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'community' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system' | 'job' | 'giving_campaign';
+ targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'community' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system' | 'job' | 'giving_campaign' | 'marketplace_listing' | 'pod_post';
  targetId: string;
  reason?: string;
  institutionCode?: string;

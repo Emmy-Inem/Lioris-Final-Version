@@ -430,6 +430,29 @@ export async function deleteMessageForMe(messageId: string): Promise<void> {
   }
 }
 
+/**
+ * Admin-only hard delete of a reported chat message - the "message" branch
+ * of the moderation takedown flow (ModerationQueue.tsx handleConfirmTakedown),
+ * which previously had no way to actually remove a reported message. Goes
+ * through the `admin_delete_chat_message` RPC (migration
+ * 20261009020000_admin_moderation_fixes.sql) rather than a bare
+ * `.delete()`, so a non-admin caller always gets back a clear "not allowed"
+ * error instead of a silent, RLS-refused no-op; it hard-deletes the row,
+ * matching the real-DELETE convention the same takedown flow already uses
+ * for posts/pod posts/listings rather than a soft "removed" flag.
+ */
+export async function deleteMessageAsAdmin(messageId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_chat_message', { p_message_id: messageId });
+  if (error) {
+    console.warn('[Messaging] deleteMessageAsAdmin error:', error.message);
+    throw new Error('Could not remove this message. Please try again.');
+  }
+
+  for (const convId of Object.keys(localMessages)) {
+    localMessages[convId] = localMessages[convId].filter((m) => m.id !== messageId);
+  }
+}
+
 export async function sendMessage(
   conversationId: string,
   content: string,

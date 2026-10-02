@@ -63,6 +63,9 @@ export default function AdminOverviewScreen() {
       return count ?? 0;
     },
     staleTime: 60_000,
+    // A screen left open otherwise never sees this count change - same gap
+    // MaintenanceGate's own refetchInterval already closes for its query.
+    refetchInterval: 60_000,
   });
 
   const { data: activeRealUsers = 0 } = useQuery({
@@ -78,6 +81,7 @@ export default function AdminOverviewScreen() {
       return count ?? 0;
     },
     staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 
   const attention = [

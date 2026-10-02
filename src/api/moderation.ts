@@ -119,6 +119,21 @@ const TARGET_TYPE_LABEL: Record<Report['targetType'], string> = {
  job: 'job posting',
 };
 
+/**
+ * Thrown by resolveReport() when the report's `status` is no longer
+ * `pending` by the time this admin's update reaches the database - i.e.
+ * another admin already resolved or dismissed it first. Lets callers (e.g.
+ * ModerationQueue) show a friendly "someone else already handled this"
+ * message and refresh, instead of either silently double-processing the
+ * report or surfacing a generic save failure.
+ */
+export class ReportAlreadyHandledError extends Error {
+ constructor(message = 'This report was already handled by another admin.') {
+ super(message);
+ this.name = 'ReportAlreadyHandledError';
+ }
+}
+
 // PATCH /reports/{id}
 export async function resolveReport(
  id: string,
@@ -189,14 +204,30 @@ export async function resolveReport(
  const { data: authData } = await supabase.auth.getUser();
  const adminId = authData?.user?.id || (await getSessionUser())?.id;
 
- const { error } = await supabase.from('moderation_queue').update({
+ // The `.eq('status', 'pending')` guard makes this update a single atomic
+ // check-and-set: it only ever touches the row if it is still awaiting a
+ // decision. Without it, two admins opening the same report at once could
+ // both "successfully" resolve/dismiss it - the second write would just
+ // silently overwrite the first admin's decision. `.select('id')` lets us
+ // tell the two outcomes apart: 0 rows back means some other write already
+ // moved this report off `pending` between our fetch above and this update.
+ const { data: updatedRows, error } = await supabase
+ .from('moderation_queue')
+ .update({
  status: dbStatus,
  assigned_admin_id: adminId || null,
  action_taken: notes || action,
  resolved_at: new Date().toISOString(),
- }).eq('id', id);
+ })
+ .eq('id', id)
+ .eq('status', 'pending')
+ .select('id');
  if (error) throw error;
+ if (!updatedRows || updatedRows.length === 0) {
+ throw new ReportAlreadyHandledError();
+ }
  } catch (err) {
+ if (err instanceof ReportAlreadyHandledError) throw err;
  console.warn('[Moderation] Failed to update supabase report:', err);
  throw new Error('Could not save this moderation decision. Please try again.');
  }

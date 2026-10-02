@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SolidCard } from '@/components/SolidCard';
 import { AppText } from '@/components/AppText';
@@ -74,10 +75,12 @@ function TotalEditor({ campaign, onSaved }: { campaign: GivingCampaign; onSaved:
 }
 
 export function DonationsModerationTab() {
-  const { spacing } = useTheme();
+  const { colors, spacing } = useTheme();
   const queryClient = useQueryClient();
   const [section, setSection] = useState<'pending' | 'approved'>('pending');
   const [actingId, setActingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   const { data: pending = [], isLoading: pendingLoading, refetch: refetchPending } = useQuery({
     queryKey: ['giving-campaigns', 'admin-pending'],
@@ -164,6 +167,112 @@ export function DonationsModerationTab() {
   const list = section === 'pending' ? pending : approved;
   const isLoading = section === 'pending' ? pendingLoading : approvedLoading;
 
+  function toggleSelected(id: string) {
+    haptics.light();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function changeSection(next: 'pending' | 'approved') {
+    clearSelection();
+    setSection(next);
+  }
+
+  function getSelectedCampaigns(): GivingCampaign[] {
+    return pending.filter((c) => selectedIds.has(c.id));
+  }
+
+  async function handleBulkApprove() {
+    const targets = getSelectedCampaigns();
+    if (targets.length === 0 || bulkProcessing) return;
+    haptics.medium();
+    setBulkProcessing(true);
+    let succeeded = 0;
+    let failed = 0;
+    for (const campaign of targets) {
+      try {
+        await reviewGivingCampaign(campaign.id, 'approve');
+        recordAuditLogEntry({
+          action: 'giving_campaign_approved',
+          summary: `Approved giving campaign: "${campaign.title}" (bulk action)`,
+          targetType: 'giving_campaign',
+          targetId: campaign.id,
+          reason: 'Giving page reviewed and approved',
+        });
+        succeeded += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    refreshAll();
+    setBulkProcessing(false);
+    clearSelection();
+    if (failed > 0) haptics.error();
+    else haptics.success();
+    Alert.alert('Bulk Approve Complete', failed > 0 ? `${succeeded} approved, ${failed} failed. Retry the failed ones individually.` : `${succeeded} campaign${succeeded === 1 ? '' : 's'} approved.`);
+  }
+
+  function handleBulkReject() {
+    const targets = getSelectedCampaigns();
+    if (targets.length === 0 || bulkProcessing) return;
+    haptics.error();
+    const doReject = async (reason?: string) => {
+      if (!reason || reason.trim().length < 5) {
+        Alert.alert('Reason required', 'Please provide a reason of at least 5 characters.');
+        return;
+      }
+      setBulkProcessing(true);
+      let succeeded = 0;
+      let failed = 0;
+      for (const campaign of targets) {
+        try {
+          await reviewGivingCampaign(campaign.id, 'reject', reason);
+          recordAuditLogEntry({
+            action: 'giving_campaign_rejected',
+            summary: `Rejected giving campaign: "${campaign.title}" (bulk action)`,
+            targetType: 'giving_campaign',
+            targetId: campaign.id,
+            reason,
+          });
+          succeeded += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+      refreshAll();
+      setBulkProcessing(false);
+      clearSelection();
+      if (failed > 0) haptics.error();
+      else haptics.success();
+      Alert.alert('Bulk Reject Complete', failed > 0 ? `${succeeded} rejected, ${failed} failed. Retry the failed ones individually.` : `${succeeded} campaign${succeeded === 1 ? '' : 's'} rejected.`);
+    };
+    if (Alert.prompt) {
+      Alert.prompt(
+        'Reject Campaigns',
+        `Provide a reason for declining ${targets.length} campaign${targets.length === 1 ? '' : 's'}:`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Reject', style: 'destructive', onPress: (reason?: string) => doReject(reason) },
+        ],
+        'plain-text',
+        'The giving link does not look legitimate.',
+      );
+    } else {
+      Alert.alert('Reject Campaigns?', `Decline ${targets.length} campaign${targets.length === 1 ? '' : 's'}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reject', style: 'destructive', onPress: () => doReject('Did not meet campaign standards.') },
+      ]);
+    }
+  }
+
   return (
     <View>
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -173,7 +282,7 @@ export function DonationsModerationTab() {
             variant={section === 'pending' ? 'primary' : 'secondary'}
             size="sm"
             fullWidth
-            onPress={() => setSection('pending')}
+            onPress={() => changeSection('pending')}
           />
         </View>
         <View style={{ flex: 1 }}>
@@ -182,26 +291,63 @@ export function DonationsModerationTab() {
             variant={section === 'approved' ? 'primary' : 'secondary'}
             size="sm"
             fullWidth
-            onPress={() => setSection('approved')}
+            onPress={() => changeSection('approved')}
           />
         </View>
       </View>
 
+      {section === 'pending' && selectedIds.size > 0 && (
+        <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: colors.pastelPrimaryBg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <View style={{ flex: 1, minWidth: 120 }}>
+              <AppText weight="bold" variant="bodySmall">{selectedIds.size} selected</AppText>
+            </View>
+            <View style={{ flexShrink: 0 }}>
+              <AppButton label="Clear" variant="ghost" size="sm" onPress={clearSelection} disabled={bulkProcessing} />
+            </View>
+            <View style={{ flexShrink: 0, minWidth: 110 }}>
+              <AppButton label="Bulk Reject" variant="secondary" size="sm" loading={bulkProcessing} onPress={handleBulkReject} />
+            </View>
+            <View style={{ flexShrink: 0, minWidth: 130 }}>
+              <AppButton label="Bulk Approve" size="sm" loading={bulkProcessing} onPress={handleBulkApprove} />
+            </View>
+          </View>
+        </SolidCard>
+      )}
+
       {list.map((c) => (
         <SolidCard key={c.id} radius={18} style={{ padding: spacing.md, marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <AppText variant="body" weight="bold">
-                {c.title}
-              </AppText>
-              {c.creatorName && (
-                <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
-                  Started by {c.creatorName}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, flex: 1, minWidth: 0 }}>
+              {section === 'pending' ? (
+                <Pressable
+                  onPress={() => toggleSelected(c.id)}
+                  hitSlop={8}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selectedIds.has(c.id) }}
+                  accessibilityLabel={`Select ${c.title}`}
+                  style={{ paddingTop: 2 }}
+                >
+                  <Ionicons
+                    name={selectedIds.has(c.id) ? 'checkbox' : 'square-outline'}
+                    size={18}
+                    color={selectedIds.has(c.id) ? colors.brandPrimary : colors.textSecondary}
+                  />
+                </Pressable>
+              ) : null}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText variant="body" weight="bold">
+                  {c.title}
                 </AppText>
-              )}
-              <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
-                {c.givingUrl}
-              </AppText>
+                {c.creatorName && (
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                    Started by {c.creatorName}
+                  </AppText>
+                )}
+                <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ marginTop: 2 }}>
+                  {c.givingUrl}
+                </AppText>
+              </View>
             </View>
             <Badge label={section === 'pending' ? 'Pending' : 'Live'} tone={section === 'pending' ? 'warning' : 'success'} />
           </View>

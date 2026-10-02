@@ -8,15 +8,34 @@ import { listTakedownRequests } from '@/api/takedown';
  * How many things are waiting in each admin area. One place, shared by the Overview cards and the
  * section pills, so the same number is never fetched (or shown) two different ways.
  */
+// How often these badge counts refresh on their own. A screen left open (the
+// Overview hub, any of the safety screens) would otherwise only ever see
+// these numbers at the moment it mounted - the same staleness gap
+// MaintenanceGate's own 60s refetchInterval exists to avoid.
+const BADGE_REFETCH_INTERVAL_MS = 30_000;
+
 export function useAdminBadges() {
-  const reports = useQuery({ queryKey: ['reports', 'open'], queryFn: () => listReports({ status: 'open' }) });
-  const verification = useQuery({ queryKey: ['verifications', 'pending'], queryFn: listVerificationRequests });
-  const support = useQuery({ queryKey: ['support-tickets', 'open-count'], queryFn: () => getAllSupportTickets({ status: 'open' }) });
+  const reports = useQuery({
+    queryKey: ['reports', 'open'],
+    queryFn: () => listReports({ status: 'open' }),
+    refetchInterval: BADGE_REFETCH_INTERVAL_MS,
+  });
+  const verification = useQuery({
+    queryKey: ['verifications', 'pending'],
+    queryFn: listVerificationRequests,
+    refetchInterval: BADGE_REFETCH_INTERVAL_MS,
+  });
+  const support = useQuery({
+    queryKey: ['support-tickets', 'open-count'],
+    queryFn: () => getAllSupportTickets({ status: 'open' }),
+    refetchInterval: BADGE_REFETCH_INTERVAL_MS,
+  });
   const takedowns = useQuery({
     queryKey: ['takedown-requests', 'pending'],
     queryFn: () => listTakedownRequests('pending'),
     // The table may not exist on a project that has not applied the migration yet; a count of 0 is fine.
     retry: false,
+    refetchInterval: BADGE_REFETCH_INTERVAL_MS,
   });
 
   return {
