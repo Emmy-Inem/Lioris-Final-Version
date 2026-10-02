@@ -56,13 +56,17 @@ export function resolveNotificationRoute(
         return `/(${role})/dashboard`;
       }
       if (subPath === '/jobs') {
-        return (role === 'student' || role === 'alumni') ? `/(${role})/jobs` : `/(${role})/dashboard`;
+        // Jobs/Career is alumni-only (see 20261009000000_role_exclusive_jobs_marketplace.sql) -
+        // a student has no jobs screen to deep-link into.
+        return role === 'alumni' ? '/(alumni)/jobs' : `/(${role})/dashboard`;
       }
       if (subPath === '/mentorship') {
         return (role === 'student' || role === 'alumni') ? `/(${role})/mentorship` : `/(${role})/dashboard`;
       }
       if (subPath === '/marketplace') {
-        return (role === 'student' || role === 'alumni') ? `/(${role})/marketplace` : `/(${role})/dashboard`;
+        // Marketplace is student-only (see 20261009000000_role_exclusive_jobs_marketplace.sql) -
+        // an alumni has no marketplace screen to deep-link into.
+        return role === 'student' ? '/(student)/marketplace' : `/(${role})/dashboard`;
       }
       if (subPath.startsWith('/events')) {
         return `/(${role})${subPath}`;
