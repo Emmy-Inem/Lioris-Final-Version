@@ -1170,6 +1170,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261007000000_resources_and_copilot_fixes.sql',
   'supabase/migrations/20261007010000_campus_access_and_devices_fixes.sql',
   'supabase/migrations/20261007020000_verification_moderation_announcements_fixes.sql',
+  'supabase/migrations/20261008020000_connections_and_blocking_security.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -3730,6 +3731,380 @@ await check('a non-admin student still cannot read or delete another user\'s pus
     assert(del.ok && del.n === 0, 'a student must not be able to delete another user\'s push token row');
   });
 });
+
+// ---------------------------------------------------------------------------
+// connections & blocking security fixes (20261008020000_connections_and_blocking_security.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== connections & blocking security fixes ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  /** creates a 1:1 DM channel (a is the creator/auto-enrolled member, b is added explicitly). Must run as a superuser (RLS bypass) setup step. */
+  async function mkDm(c, a, b) {
+    const [ch] = (await c.q(`INSERT INTO public.chat_channels (name, created_by, is_direct_message) VALUES ('dm', $1, true) RETURNING id`, [a])).rows;
+    await c.q(`INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [ch.id, b]);
+    return ch.id;
+  }
+
+  // -------------------------------------------------------------------------
+  // Fix 1: only the recipient can accept/decline - closes the self-accept
+  // bypass (the requester could update either requester_id or recipient_id
+  // row under the old "Participants can update connection status" policy).
+  // -------------------------------------------------------------------------
+  await check('connections UPDATE: the requester cannot self-accept (or self-decline) their own pending request - the bypass this migration closes', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [row] = (await c.q(
+        `INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending') RETURNING id`,
+        [U.s1, U.s2],
+      )).rows;
+
+      await imp(U.s1); // the requester, attacking their own request
+      const selfAccept = await c.t(`UPDATE public.connections SET status = 'accepted' WHERE id = $1`, [row.id]);
+      assert(selfAccept.ok && selfAccept.n === 0, 'requester self-accept should silently affect 0 rows (RLS USING excludes it), not succeed');
+      const selfDecline = await c.t(`UPDATE public.connections SET status = 'declined' WHERE id = $1`, [row.id]);
+      assert(selfDecline.ok && selfDecline.n === 0, 'requester self-decline should also affect 0 rows');
+
+      await svc();
+      const still = (await c.q(`SELECT status FROM public.connections WHERE id = $1`, [row.id])).rows[0];
+      eq(still.status, 'pending', 'the request must still be pending - neither self-accept nor self-decline took effect');
+    });
+  });
+
+  await check('connections UPDATE: the recipient CAN accept a pending request addressed to them', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [row] = (await c.q(
+        `INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending') RETURNING id`,
+        [U.s1, U.s2],
+      )).rows;
+
+      await imp(U.s2); // the actual recipient
+      const accept = await c.t(`UPDATE public.connections SET status = 'accepted' WHERE id = $1`, [row.id]);
+      assert(accept.ok && accept.n === 1, 'recipient accept should succeed: ' + (accept.err?.message ?? ''));
+
+      await svc();
+      eq((await c.q(`SELECT status FROM public.connections WHERE id = $1`, [row.id])).rows[0].status, 'accepted');
+    });
+  });
+
+  await check('connections UPDATE: the recipient CAN decline a pending request addressed to them', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [row] = (await c.q(
+        `INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending') RETURNING id`,
+        [U.s1, U.s3],
+      )).rows;
+
+      await imp(U.s3); // the actual recipient
+      const decline = await c.t(`UPDATE public.connections SET status = 'declined' WHERE id = $1`, [row.id]);
+      assert(decline.ok && decline.n === 1, 'recipient decline should succeed: ' + (decline.err?.message ?? ''));
+    });
+  });
+
+  await check('connections UPDATE: an uninvolved third party cannot touch someone else\'s pending request', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [row] = (await c.q(
+        `INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending') RETURNING id`,
+        [U.s1, U.s2],
+      )).rows;
+
+      await imp(U.s4); // neither requester nor recipient
+      const r = await c.t(`UPDATE public.connections SET status = 'accepted' WHERE id = $1`, [row.id]);
+      assert(r.ok && r.n === 0, 'a third party should not be able to update someone else\'s connection row');
+    });
+  });
+
+  await check('connections UPDATE: the recipient cannot revert a row back to pending, or set an arbitrary status, via WITH CHECK', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [row] = (await c.q(
+        `INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending') RETURNING id`,
+        [U.s1, U.s2],
+      )).rows;
+
+      await imp(U.s2);
+      denied(
+        await c.t(`UPDATE public.connections SET status = 'pending' WHERE id = $1`, [row.id]),
+        /row-level security|new row violates/i,
+        'recipient setting status back to pending',
+      );
+      denied(
+        await c.t(`UPDATE public.connections SET status = 'bogus-status' WHERE id = $1`, [row.id]),
+        /row-level security|new row violates/i,
+        'recipient setting an arbitrary status value',
+      );
+    });
+  });
+
+  await check('connections UPDATE: an admin can still moderate any connection row', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [row] = (await c.q(
+        `INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending') RETURNING id`,
+        [U.s1, U.s2],
+      )).rows;
+
+      await imp(U.adminA);
+      const r = await c.t(`UPDATE public.connections SET status = 'declined' WHERE id = $1`, [row.id]);
+      assert(r.ok && r.n === 1, 'admin should be able to moderate any connection: ' + (r.err?.message ?? ''));
+    });
+  });
+
+  await check('connections: the requester can still withdraw their own pending request via DELETE (unaffected by the UPDATE tightening)', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [row] = (await c.q(
+        `INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending') RETURNING id`,
+        [U.s1, U.s2],
+      )).rows;
+
+      await imp(U.s1);
+      const del = await c.t(`DELETE FROM public.connections WHERE id = $1`, [row.id]);
+      assert(del.ok && del.n === 1, 'requester should still be able to withdraw their own pending request by deleting it');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Fix 3: a block (either direction) prevents a new connection request.
+  // -------------------------------------------------------------------------
+  await check('connections INSERT: a blocked relationship (either direction) prevents a new connection request', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(`DELETE FROM public.user_blocks WHERE (blocker_id = $1 AND blocked_id = $2) OR (blocker_id = $2 AND blocked_id = $1)`, [U.s1, U.s2]);
+      await c.q(`DELETE FROM public.connections WHERE (requester_id = $1 AND recipient_id = $2) OR (requester_id = $2 AND recipient_id = $1)`, [U.s1, U.s2]);
+
+      await imp(U.s1);
+      await c.q(`INSERT INTO public.user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, [U.s1, U.s2]); // s1 blocks s2
+
+      denied(
+        await c.t(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending')`, [U.s1, U.s2]),
+        /row-level security|new row violates/i,
+        'blocker sending a connection request to the person they blocked',
+      );
+
+      await imp(U.s2);
+      denied(
+        await c.t(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending')`, [U.s2, U.s1]),
+        /row-level security|new row violates/i,
+        'the blocked person sending a connection request to their blocker',
+      );
+    });
+  });
+
+  await check('connections INSERT: unblocking restores the ability to connect; an unrelated pair is never affected', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(`DELETE FROM public.connections WHERE (requester_id = $1 AND recipient_id = $2) OR (requester_id = $2 AND recipient_id = $1)`, [U.s1, U.s2]);
+      await c.q(`DELETE FROM public.connections WHERE (requester_id = $1 AND recipient_id = $2) OR (requester_id = $2 AND recipient_id = $1)`, [U.s3, U.s4]);
+
+      await imp(U.s1);
+      await c.q(`DELETE FROM public.user_blocks WHERE blocker_id = $1 AND blocked_id = $2`, [U.s1, U.s2]); // lift the block from the previous check
+      const ok = await c.t(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending')`, [U.s1, U.s2]);
+      assert(ok.ok, 'an unblocked pair should be able to connect again: ' + (ok.err?.message ?? ''));
+
+      await imp(U.s3);
+      const unrelated = await c.t(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending')`, [U.s3, U.s4]);
+      assert(unrelated.ok, 'an unrelated, never-blocked pair must still be able to connect: ' + (unrelated.err?.message ?? ''));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Fix 5: no two independent pending rows for the same unordered pair.
+  // -------------------------------------------------------------------------
+  await check('connections: a second, reverse-direction pending request for the same pair is rejected outright by the DB (partial unique index)', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(`DELETE FROM public.connections WHERE (requester_id = $1 AND recipient_id = $2) OR (requester_id = $2 AND recipient_id = $1)`, [U.s1, U.s5]);
+
+      await c.q(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending')`, [U.s1, U.s5]);
+      const reverse = await c.t(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending')`, [U.s5, U.s1]);
+      assert(!reverse.ok, 'a reverse-direction pending row for the same pair must be rejected');
+      assert(/unique|duplicate/i.test(reverse.err.message), 'expected a unique-violation error, got: ' + reverse.err.message);
+    });
+  });
+
+  await check('connections: once the first request is resolved (no longer pending), a fresh request between the same pair is allowed again', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(`DELETE FROM public.connections WHERE (requester_id = $1 AND recipient_id = $2) OR (requester_id = $2 AND recipient_id = $1)`, [U.s1, U.s4]);
+      await c.q(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'declined')`, [U.s1, U.s4]);
+
+      const freshReverse = await c.t(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending')`, [U.s4, U.s1]);
+      assert(freshReverse.ok, 'a new pending request should be allowed once the earlier row is no longer pending: ' + (freshReverse.err?.message ?? ''));
+    });
+  });
+
+  await check('connections: the sendConnectionRequest "auto-accept the reverse pending row" flow leaves exactly one (now accepted) row for the pair', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(`DELETE FROM public.connections WHERE (requester_id = $1 AND recipient_id = $2) OR (requester_id = $2 AND recipient_id = $1)`, [U.s2, U.s5]);
+
+      // s2 requests s5 first.
+      const [fwd] = (await c.q(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending') RETURNING id`, [U.s2, U.s5])).rows;
+
+      // s5 now tries to request s2 back. sendConnectionRequest() detects the reverse pending row and accepts it
+      // directly (as the legitimate recipient) instead of inserting a duplicate that the unique index would reject.
+      await imp(U.s5);
+      const accept = await c.t(`UPDATE public.connections SET status = 'accepted' WHERE id = $1`, [fwd.id]);
+      assert(accept.ok && accept.n === 1, 'the recipient-side accept this app-level flow relies on should succeed: ' + (accept.err?.message ?? ''));
+
+      await svc();
+      const count = (await c.q(`SELECT count(*)::int n FROM public.connections WHERE (requester_id = $1 AND recipient_id = $2) OR (requester_id = $2 AND recipient_id = $1)`, [U.s2, U.s5])).rows[0].n;
+      eq(count, 1, 'exactly one row should exist for the pair, now accepted - never two independent pending rows');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Fix 2: blocking is enforced server-side for 1:1 DM messaging.
+  // -------------------------------------------------------------------------
+  await check('chat_messages INSERT: a member can message in a 1:1 DM with no block between them (legitimate flow keeps working)', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const ch = await mkDm(c, U.s1, U.s2);
+      await imp(U.s1);
+      const r = await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'hello')`, [ch, U.s1]);
+      assert(r.ok, 'an ordinary DM message should succeed: ' + (r.err?.message ?? ''));
+    });
+  });
+
+  await check('chat_messages INSERT: a 1:1 DM is rejected server-side for BOTH participants once either has blocked the other - not just gated client-side', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const ch1 = await mkDm(c, U.s1, U.s2);
+      await imp(U.s1);
+      await c.q(`INSERT INTO public.user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, [U.s1, U.s2]); // s1 blocks s2
+
+      denied(
+        await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'x')`, [ch1, U.s1]),
+        /row-level security|new row violates/i,
+        'the blocker sending a message in the DM with the person they blocked',
+      );
+
+      await imp(U.s2);
+      denied(
+        await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'y')`, [ch1, U.s2]),
+        /row-level security|new row violates/i,
+        'the blocked person sending a message - the "bypassed client / did not know they were blocked" case this fix closes',
+      );
+
+      // Reverse direction: the OTHER participant is the one who placed the block.
+      await svc();
+      const ch2 = await mkDm(c, U.s3, U.s4);
+      await imp(U.s4);
+      await c.q(`INSERT INTO public.user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, [U.s4, U.s3]); // s4 blocks s3
+      await imp(U.s3);
+      denied(
+        await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'z')`, [ch2, U.s3]),
+        /row-level security|new row violates/i,
+        'sender blocked by the OTHER participant (reverse direction)',
+      );
+    });
+  });
+
+  await check('chat_messages INSERT: unblocking restores messaging in that DM', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const ch = await mkDm(c, U.s1, U.s5);
+      await imp(U.s1);
+      await c.q(`INSERT INTO public.user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, [U.s1, U.s5]);
+      denied(await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'x')`, [ch, U.s1]), /row-level security|new row violates/i);
+
+      await c.q(`DELETE FROM public.user_blocks WHERE blocker_id = $1 AND blocked_id = $2`, [U.s1, U.s5]);
+      const r = await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'ok now')`, [ch, U.s1]);
+      assert(r.ok, 'messaging should resume once the block is lifted: ' + (r.err?.message ?? ''));
+    });
+  });
+
+  await check('chat_messages INSERT: a block between two members of a GROUP channel does not block messaging there (group chat is out of scope by design)', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const [ch] = (await c.q(`INSERT INTO public.chat_channels (name, created_by, is_direct_message) VALUES ('group', $1, false) RETURNING id`, [U.s1])).rows;
+      await c.q(`INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [ch.id, U.s2]);
+      await c.q(`INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [ch.id, U.s3]);
+
+      await imp(U.s1);
+      await c.q(`INSERT INTO public.user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, [U.s1, U.s2]);
+      const r = await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'group hi')`, [ch.id, U.s1]);
+      assert(r.ok, 'group messaging must not be affected by a 1:1 block between two of its members: ' + (r.err?.message ?? ''));
+    });
+  });
+
+  await check('chat_messages INSERT: pre-existing membership and sender-identity checks still work alongside the new block check', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const ch = await mkDm(c, U.s1, U.s2);
+      await imp(U.s3); // not a member of this channel
+      denied(await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'x')`, [ch, U.s3]), /row-level security|new row violates/i, 'non-member sending into a DM');
+      await imp(U.s1);
+      denied(await c.t(`INSERT INTO public.chat_messages (channel_id, sender_id, content) VALUES ($1, $2, 'x')`, [ch, U.s2]), /row-level security|new row violates/i, 'sender spoofing someone else\'s sender_id');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Fix 4: get_suggested_connections() excludes blocked (either direction),
+  // muted, already-connected/pending, suspended and self.
+  // -------------------------------------------------------------------------
+  await check('get_suggested_connections: excludes a user who blocked the caller - the direction the caller could never see through user_blocks\' own RLS', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(`DELETE FROM public.user_blocks WHERE blocker_id = $1 AND blocked_id = $2`, [U.s3, U.legacy]);
+      await c.q(`INSERT INTO public.user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, [U.s3, U.legacy]); // s3 blocks legacy
+
+      await imp(U.legacy);
+      const r = await c.q(`SELECT id FROM public.get_suggested_connections(50)`);
+      assert(!r.rows.some((row) => row.id === U.s3), 'legacy must not be suggested s3, who blocked them, even though legacy cannot see that block directly via user_blocks');
+    });
+  });
+
+  await check('get_suggested_connections: excludes a blocked user, a muted user, an already-connected/pending user, and self; still returns an unrelated profile', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(`DELETE FROM public.user_blocks WHERE blocker_id = $1`, [U.s4]);
+      await c.q(`DELETE FROM public.user_mutes WHERE muter_id = $1`, [U.s4]);
+      await c.q(`DELETE FROM public.connections WHERE requester_id = $1 OR recipient_id = $1`, [U.s4]);
+
+      await c.q(`INSERT INTO public.user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, [U.s4, U.s1]); // s4 blocks s1
+      await c.q(`INSERT INTO public.user_mutes (muter_id, muted_id) VALUES ($1, $2)`, [U.s4, U.s2]); // s4 mutes s2
+      await c.q(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'accepted')`, [U.s4, U.s3]); // already connected to s3
+      await c.q(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'pending')`, [U.staffU, U.s4]); // pending, reverse direction
+
+      await imp(U.s4);
+      const r = await c.q(`SELECT id FROM public.get_suggested_connections(50)`);
+      const ids = r.rows.map((row) => row.id);
+      assert(!ids.includes(U.s1), 'blocked user must be excluded');
+      assert(!ids.includes(U.s2), 'muted user must be excluded');
+      assert(!ids.includes(U.s3), 'already-accepted connection must be excluded');
+      assert(!ids.includes(U.staffU), 'already-pending connection (either direction) must be excluded');
+      assert(!ids.includes(U.s4), 'the caller must never suggest themselves');
+      assert(ids.includes(U.s5), 'an unrelated profile with none of the above should still be suggested');
+    });
+  });
+
+  await check('get_suggested_connections: a previously-DECLINED connection does not permanently exclude that profile', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(`DELETE FROM public.connections WHERE (requester_id = $1 AND recipient_id = $2) OR (requester_id = $2 AND recipient_id = $1)`, [U.s5, U.staffI]);
+      await c.q(`INSERT INTO public.connections (requester_id, recipient_id, status) VALUES ($1, $2, 'declined')`, [U.s5, U.staffI]);
+
+      await imp(U.s5);
+      const r = await c.q(`SELECT id FROM public.get_suggested_connections(50)`);
+      assert(r.rows.some((row) => row.id === U.staffI), 'a declined connection should not permanently exclude that profile from future suggestions');
+    });
+  });
+
+  await check('get_suggested_connections: anon has no EXECUTE grant', async () => {
+    await as('anon', async (c) => {
+      denied(await c.t(`SELECT * FROM public.get_suggested_connections()`), /permission denied/i);
+    });
+  });
+}
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n== Summary: ${results.length - failed.length}/${results.length} checks passed ==`);
