@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import * as authApi from'@/api/auth';
@@ -474,6 +474,117 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authListener?.subscription?.unsubscribe();
     };
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Realtime enforcement of suspension/deletion on an already-open session.
+  //
+  // login() (src/api/auth.ts) only checks profiles.is_suspended once, at
+  // sign-in time, and handleAuthChange above deliberately skips re-reading the
+  // profile on TOKEN_REFRESHED ("DO NOT overwrite active role or profile").
+  // Nothing watched the signed-in user's OWN profile row after that, so an
+  // admin flipping is_suspended = true (or hard-deleting the account) on an
+  // already-open session had no visible effect until some individual
+  // RLS-gated write happened to start failing - the UI itself kept working.
+  //
+  // This subscribes to a realtime channel scoped to the signed-in user's own
+  // profile row only (filter: id=eq.<own id>, the same scoping shape
+  // src/hooks/useLiveRefresh.ts uses) and is torn down whenever that id
+  // changes (sign-out, switching which account is live, or unmount) - one
+  // channel per signed-in account, same lifecycle convention as
+  // useLiveRefresh. It is a best-effort fast path on top of the server-side
+  // RLS checks that already enforce suspension on every write, so a failure
+  // to connect is harmless.
+  useEffect(() => {
+    const watchedUserId = user?.id;
+    if (!watchedUserId) return undefined;
+
+    // Scoped to this one subscription's lifetime, so a stale/duplicate event
+    // delivered after the sign-out has already been kicked off can never
+    // trigger a second Alert + signOut for the same account.
+    let handledRevocation = false;
+
+    const forceSignOutForRevokedAccess = (reason: 'suspended' | 'deleted') => {
+      if (handledRevocation) return;
+      handledRevocation = true;
+      try {
+        // Same user-facing copy login() shows for a suspended sign-in
+        // attempt (src/api/auth.ts), so the message is consistent whether
+        // suspension is discovered at login or mid-session.
+        Alert.alert(
+          'Account Access Revoked',
+          reason === 'suspended'
+            ? 'Your campus account has been suspended by administration. Access to this campus network has been revoked.'
+            : 'Your account no longer exists on this campus network. Access has been revoked.',
+        );
+      } catch {
+        // Alert is best-effort only - never block the sign-out on it.
+      }
+      // onAuthStateChange's SIGNED_OUT branch above does the rest (clears
+      // user state, clears the notifications cache, and - since this is not
+      // an explicit logout - redirects to login) once this resolves.
+      supabase.auth.signOut().catch(() => {});
+    };
+
+    const applyLiveRoleChange = (newRole: UserRole) => {
+      const current = userRef.current;
+      // Ignore a stale event for an account that is no longer the live
+      // session (e.g. delivered just as the user signed out or an
+      // impersonation swap moved the session to someone else), and ignore a
+      // no-op re-delivery of a role that was already applied.
+      if (!current || current.id !== watchedUserId || newRole === current.actualRole) return;
+      // A real, database-verified role change always wins over a Root
+      // Admin's local "View As" preview (see switchRole above) - collapsing
+      // role to match rather than risk a preview going stale against a role
+      // that just changed for real.
+      const nextUser: SessionUser = {
+        ...current,
+        actualRole: newRole,
+        role: newRole,
+        mfaVerified: newRole === current.role ? current.mfaVerified : !roleRequiresMfa(newRole),
+      };
+      persist(nextUser).catch(() => {});
+      userRef.current = nextUser;
+      setUser(nextUser);
+      try {
+        queryClient.clear();
+      } catch {
+        // Non-blocking
+      }
+    };
+
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`auth-profile-guard:${watchedUserId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${watchedUserId}` },
+          (payload: any) => {
+            const row = payload?.new;
+            if (row?.is_suspended === true) {
+              forceSignOutForRevokedAccess('suspended');
+              return;
+            }
+            if (row?.role) {
+              applyLiveRoleChange(row.role as UserRole);
+            }
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'profiles', filter: `id=eq.${watchedUserId}` },
+          () => forceSignOutForRevokedAccess('deleted'),
+        );
+      channel.subscribe();
+    } catch {
+      // Realtime is a best-effort fast path - every RLS-gated write already
+      // enforces suspension server-side even if this channel never connects.
+    }
+
+    return () => {
+      if (channel) supabase.removeChannel(channel).catch(() => {});
+    };
+  }, [user?.id]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
