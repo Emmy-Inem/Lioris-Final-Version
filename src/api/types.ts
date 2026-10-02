@@ -524,13 +524,24 @@ export interface MarketplaceListing {
  price: string;
  condition: 'New' | 'Like New' | 'Fair';
  category: 'Electronics' | 'Books/Academic' | 'Furniture/Room Accessories';
+ /**
+  * A bare Supabase Storage path in the private `campus-media` bucket (or,
+  * for a legacy/external link, a plain http(s) URL) - never render this
+  * directly. Resolve it to a real URL at render time with
+  * `useSignedUrl('campus-media', imageUrl)` from src/api/signedUrls.ts, the
+  * same pattern ChatThread.tsx/PodSpace.tsx use for their private media.
+  */
  imageUrl?: string | null;
+ /** Up to 4 photos; imageUrl mirrors the first entry for back-compat readers. */
+ imageUrls?: string[] | null;
  sellerName: string;
  sellerAvatarUrl?: string | null;
  sellerId: string;
  sellerTrustLevel: number;
  sellerVerified?: boolean;
  createdAt: string;
+ /** ISO timestamp. Listings past this are excluded from the default browse/search. */
+ expiresAt?: string | null;
 }
 
 export interface JobListing {

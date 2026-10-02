@@ -80,16 +80,20 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
 
  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
- // Sold listings are excluded from the default browse/search results, the
- // same way blocked sellers and off-campus listings already are below -
- // except for the viewer's own, so a seller can still find and manage a
- // listing they just marked sold.
+ // Sold AND expired listings are excluded from the default browse/search
+ // results, the same way blocked sellers and off-campus listings already are
+ // below - except for the viewer's own, so a seller can still find and
+ // manage a listing they just marked sold or that has aged out (or use the
+ // dedicated, unfiltered listMyMarketplaceListings "My Listings" view below).
  const viewerId = authData?.user?.id;
+ const nowIso = new Date().toISOString();
  let req = supabase
  .from('marketplace_listings')
  .select('*, seller:profiles(full_name, avatar_url, trust_score, campus_code, role, verification_status)')
  .order('created_at', { ascending: false });
- req = viewerId ? req.or(`is_sold.eq.false,seller_id.eq.${viewerId}`) : req.eq('is_sold', false);
+ req = viewerId
+ ? req.or(`and(is_sold.eq.false,expires_at.gt.${nowIso}),seller_id.eq.${viewerId}`)
+ : req.eq('is_sold', false).gt('expires_at', nowIso);
 
  if (query.category && query.category !== 'All Categories' && query.category !== 'Wishlist') {
  req = req.eq('category', query.category);
@@ -110,23 +114,7 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
     }
     return rowCampus === targetCampus || rowCampus === 'GLOBAL';
   })
- .map((row: any) => ({
- id: row.id,
- sellerId: row.seller_id,
- sellerName: row.seller?.full_name || 'Campus Student',
- sellerAvatarUrl: row.seller?.avatar_url || null,
- sellerTrustLevel: Math.max(1, Math.round((row.seller?.trust_score || 80) / 20)),
- sellerVerified: row.seller?.verification_status === 'verified' || row.seller?.role === 'admin',
- title: row.title,
- description: row.description || '',
- price: row.price_display || `₦${(row.price_kobo / 100).toLocaleString()}`,
- condition: row.condition as any,
- category: row.category as any,
- imageUrl: row.image_url,
- campusCode: row.campus_code || 'GLOBAL',
- createdAt: row.created_at,
- isSold: !!row.is_sold,
- }));
+ .map(mapListingRow);
 
  // Merge unique - the local pool only ever contributes this session's own
  // just-created listings (always) plus seed fixtures (only when the admin
@@ -146,6 +134,114 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  // the admin has mock data turned on.
  return filterListings(getLocalPool(), query);
  }
+}
+
+/**
+ * The signed-in seller's own listings - active, sold AND expired, with none
+ * of listMarketplaceListings' browse-time filtering. Backs the "My Listings"
+ * screen (src/components/MyListingsScreen.tsx), where a seller needs to find
+ * and manage every listing they ever published, not just what a stranger
+ * would currently see in the shared feed.
+ */
+export async function listMyMarketplaceListings(): Promise<MarketplaceListing[]> {
+ const { data: authData } = await supabase.auth.getUser();
+ let viewerId = authData?.user?.id;
+ if (!viewerId) {
+ const stored = await getSessionUser();
+ viewerId = stored?.id;
+ }
+ if (!viewerId) return [];
+
+ try {
+ const { data, error } = await supabase
+ .from('marketplace_listings')
+ .select('*, seller:profiles(full_name, avatar_url, trust_score, campus_code, role, verification_status)')
+ .eq('seller_id', viewerId)
+ .order('created_at', { ascending: false });
+
+ if (error) throw error;
+
+ const dbListings = (data ?? []).map(mapListingRow);
+ const localMine = getLocalPool().filter((item) => item.sellerId === viewerId);
+ const merged = [...dbListings];
+ for (const item of localMine) {
+ if (!merged.some((m) => m.id === item.id)) merged.push(item);
+ }
+ return merged;
+ } catch (err) {
+ console.warn('[Marketplace] listMyMarketplaceListings failed, showing local pool only:', err);
+ return getLocalPool().filter((item) => item.sellerId === viewerId);
+ }
+}
+
+/**
+ * Turns a DB row (plus its joined `seller` profile) into the shape the app
+ * uses everywhere. Shared by listMarketplaceListings, listMyMarketplaceListings
+ * and updateListing so the mapping only lives in one place.
+ */
+function mapListingRow(row: any): MarketplaceListing {
+ const imagePaths: string[] | undefined =
+ Array.isArray(row.image_paths) && row.image_paths.length > 0
+ ? row.image_paths
+ : row.image_path
+ ? [row.image_path]
+ : row.image_url
+ ? [row.image_url]
+ : undefined;
+
+ return {
+ id: row.id,
+ sellerId: row.seller_id,
+ sellerName: row.seller?.full_name || 'Campus Student',
+ sellerAvatarUrl: row.seller?.avatar_url || null,
+ sellerTrustLevel: Math.max(1, Math.round((row.seller?.trust_score || 80) / 20)),
+ sellerVerified: row.seller?.verification_status === 'verified' || row.seller?.role === 'admin',
+ title: row.title,
+ description: row.description || '',
+ price: row.price_display || `₦${(row.price_kobo / 100).toLocaleString()}`,
+ condition: row.condition as any,
+ category: row.category as any,
+ // image_path/image_paths (bare storage paths) are the source of truth now;
+ // image_url only still has a value for rows created before this fix or a
+ // genuinely external link, and resolveMediaUrl/useSignedUrl pass a plain
+ // http(s) value straight through unchanged either way.
+ imageUrl: row.image_path || row.image_url || null,
+ imageUrls: imagePaths,
+ campusCode: row.campus_code || 'GLOBAL',
+ createdAt: row.created_at,
+ isSold: !!row.is_sold,
+ expiresAt: row.expires_at || null,
+ } as MarketplaceListing;
+}
+
+/**
+ * Resolves one listing photo reference to what should be WRITTEN to the DB:
+ *  - a value with no URI scheme at all is already a bare storage path - an
+ *    existing photo kept unchanged through an edit - and is passed through
+ *    untouched (it must never be re-uploaded, and persistMediaReference would
+ *    reject it outright since it only understands http(s)/asset:/on-device
+ *    URIs, not an already-stored path);
+ *  - anything else (a fresh on-device pick, or a pasted http(s) link) goes
+ *    through storage.ts's resolveMediaUrl (persistMediaReference), which
+ *    uploads it to the private `campus-media` bucket and hands back the new
+ *    bare path (or returns a safe http(s) link unchanged).
+ */
+async function persistListingImage(value: string): Promise<string> {
+ const trimmed = value.trim();
+ if (!/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+ return trimmed;
+ }
+ const { resolveMediaUrl } = await import('./storage');
+ return resolveMediaUrl(trimmed, 'marketplace');
+}
+
+/** Parses a free-typed price into whole Naira, or throws instead of silently publishing a fake price. */
+function parsePriceOrThrow(price: string): number {
+ const clean = Number(price.replace(/[^0-9]/g, ''));
+ if (!Number.isFinite(clean) || clean <= 0) {
+ throw new Error('Please enter a valid asking price greater than ₦0.');
+ }
+ return clean;
 }
 
 export function isWishlisted(id: string): boolean {
@@ -174,6 +270,8 @@ export interface CreateListingPayload {
  condition: MarketplaceListing['condition'];
  category: MarketplaceListing['category'];
  imageUrl?: string | null;
+ /** Up to 4 photos. When set, takes priority over imageUrl - the first entry also becomes imageUrl, for back-compat. */
+ imageUrls?: string[] | null;
 }
 
 /**
@@ -186,13 +284,15 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  const listingId = generateUUID();
  let sellerId: string | null = null;
  let sellerName = 'You';
- let permanentImageUrl: string | null = payload.imageUrl || null;
 
- // Upload local device photo to Supabase Storage if present
- if (payload.imageUrl) {
- const { resolveMediaUrl } = await import('./storage');
- permanentImageUrl = await resolveMediaUrl(payload.imageUrl, 'marketplace');
- }
+ // Upload local device photo/photos to Supabase Storage if present. Each
+ // becomes a bare storage path (persistListingImage), never a URL - see the
+ // module header on resolveMediaUrl/persistMediaReference vs. useSignedUrl.
+ const rawImages = (payload.imageUrls && payload.imageUrls.length > 0 ? payload.imageUrls : payload.imageUrl ? [payload.imageUrl] : [])
+ .slice(0, 4)
+ .filter((v): v is string => !!v);
+ const permanentImagePaths = rawImages.length > 0 ? await Promise.all(rawImages.map(persistListingImage)) : [];
+ const permanentImagePath = permanentImagePaths[0] ?? null;
 
  const { data: authData } = await supabase.auth.getUser();
  if (authData?.user?.id) {
@@ -221,7 +321,7 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  }
  if (!campusCode) campusCode = 'GLOBAL';
 
- const priceClean = Number(payload.price.replace(/[^0-9]/g, '')) || 5000;
+ const priceClean = parsePriceOrThrow(payload.price);
  const { error } = await supabase.from('marketplace_listings').insert({
  id: listingId,
  seller_id: sellerId,
@@ -233,7 +333,8 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  currency: 'NGN',
  condition: payload.condition,
  category: payload.category,
- image_url: permanentImageUrl,
+ image_path: permanentImagePath,
+ image_paths: permanentImagePaths.length > 0 ? permanentImagePaths : null,
  is_sold: false,
  });
 
@@ -249,8 +350,10 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  sellerId,
  sellerTrustLevel: 1,
  createdAt: new Date().toISOString(),
+ expiresAt: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString(),
  ...payload,
- imageUrl: permanentImageUrl,
+ imageUrl: permanentImagePath,
+ imageUrls: permanentImagePaths.length > 0 ? permanentImagePaths : undefined,
  };
 
  locallyCreatedListings = [created, ...locallyCreatedListings];
@@ -264,6 +367,8 @@ export interface UpdateListingPayload {
  condition?: MarketplaceListing['condition'];
  category?: MarketplaceListing['category'];
  imageUrl?: string | null;
+ /** Up to 4 photos. When set (including an empty array, which clears every photo), takes priority over imageUrl. */
+ imageUrls?: string[] | null;
 }
 
 /**
@@ -280,16 +385,23 @@ export async function updateListing(listingId: string, updates: UpdateListingPay
  if (updates.condition !== undefined) dbUpdates.condition = updates.condition;
  if (updates.category !== undefined) dbUpdates.category = updates.category;
  if (updates.price !== undefined) {
- const priceClean = Number(updates.price.replace(/[^0-9]/g, '')) || 5000;
+ const priceClean = parsePriceOrThrow(updates.price);
  dbUpdates.price_kobo = priceClean * 100;
  dbUpdates.price_display = updates.price.startsWith('₦') ? updates.price : `₦${updates.price}`;
  }
- if (updates.imageUrl !== undefined) {
+ if (updates.imageUrls !== undefined) {
+ const raw = (updates.imageUrls ?? []).slice(0, 4).filter((v): v is string => !!v);
+ const paths = raw.length > 0 ? await Promise.all(raw.map(persistListingImage)) : [];
+ dbUpdates.image_path = paths[0] ?? null;
+ dbUpdates.image_paths = paths.length > 0 ? paths : null;
+ } else if (updates.imageUrl !== undefined) {
  if (updates.imageUrl) {
- const { resolveMediaUrl } = await import('./storage');
- dbUpdates.image_url = await resolveMediaUrl(updates.imageUrl, 'marketplace');
+ const path = await persistListingImage(updates.imageUrl);
+ dbUpdates.image_path = path;
+ dbUpdates.image_paths = [path];
  } else {
- dbUpdates.image_url = null;
+ dbUpdates.image_path = null;
+ dbUpdates.image_paths = null;
  }
  }
 
@@ -305,23 +417,7 @@ export async function updateListing(listingId: string, updates: UpdateListingPay
  throw new Error('Could not update your listing. Please try again.');
  }
 
- const updated = {
- id: data.id,
- sellerId: data.seller_id,
- sellerName: data.seller?.full_name || 'Campus Student',
- sellerAvatarUrl: data.seller?.avatar_url || null,
- sellerTrustLevel: Math.max(1, Math.round((data.seller?.trust_score || 80) / 20)),
- sellerVerified: data.seller?.verification_status === 'verified' || data.seller?.role === 'admin',
- title: data.title,
- description: data.description || '',
- price: data.price_display || `₦${(data.price_kobo / 100).toLocaleString()}`,
- condition: data.condition,
- category: data.category,
- imageUrl: data.image_url,
- campusCode: data.campus_code || 'GLOBAL',
- createdAt: data.created_at,
- isSold: !!data.is_sold,
- };
+ const updated = mapListingRow(data);
 
  locallyCreatedListings = locallyCreatedListings.map((item) => (item.id === listingId ? { ...item, ...updated } : item));
 

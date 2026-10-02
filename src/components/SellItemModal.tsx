@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,10 +11,70 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { MarketplaceListing } from '@/api/types';
 import { updateListing } from '@/api/marketplace';
+import { useSignedUrl } from '@/api/signedUrls';
 import { haptics } from '@/utils/haptics';
 
 const CATEGORIES: MarketplaceListing['category'][] = ['Electronics', 'Books/Academic', 'Furniture/Room Accessories'];
 const CONDITIONS: MarketplaceListing['condition'][] = ['New', 'Like New', 'Fair'];
+/** A seller can attach up to this many photos per listing. */
+const MAX_PHOTOS = 4;
+
+/** True for a value with no URI scheme at all - an already-uploaded bare storage path, as opposed to a fresh on-device pick (file://, content://, data:...) or a pasted http(s) link. Mirrors src/api/marketplace.ts's persistListingImage. */
+function isStoredPath(value: string): boolean {
+  return !/^[a-z][a-z0-9+.-]*:/i.test(value.trim());
+}
+
+/**
+ * One photo preview tile. A freshly picked on-device photo renders directly;
+ * an existing listing photo is a bare storage path in the private
+ * `campus-media` bucket and needs a signed URL first - the same
+ * useSignedUrl pattern ChatThread.tsx/PodSpace.tsx use for their own media.
+ */
+function PhotoThumb({ value, radius, onRemove }: { value: string; radius: number; onRemove: () => void }) {
+  const stored = isStoredPath(value);
+  const { url, loading } = useSignedUrl('campus-media', stored ? value : null);
+  const uri = stored ? url : value;
+
+  return (
+    <View style={{ width: '47%', height: 100, position: 'relative' }}>
+      {uri ? (
+        <Image source={{ uri }} style={{ width: '100%', height: '100%', borderRadius: radius, backgroundColor: '#000' }} contentFit="cover" transition={200} />
+      ) : (
+        <View
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: radius,
+            backgroundColor: 'rgba(0,0,0,0.08)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {loading ? <ActivityIndicator size="small" /> : <Ionicons name="image-outline" size={20} color="#888" />}
+        </View>
+      )}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Remove photo"
+        onPress={onRemove}
+        hitSlop={8}
+        style={{
+          position: 'absolute',
+          top: 6,
+          right: 6,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          borderRadius: 13,
+          width: 26,
+          height: 26,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Ionicons name="close" size={15} color="#FFFFFF" />
+      </Pressable>
+    </View>
+  );
+}
 
 interface SellItemModalProps {
   visible: boolean;
@@ -26,6 +86,7 @@ interface SellItemModalProps {
     condition: MarketplaceListing['condition'];
     category: MarketplaceListing['category'];
     imageUrl?: string | null;
+    imageUrls?: string[] | null;
   }) => Promise<void>;
   /** When set, the modal edits this listing (via updateListing) instead of publishing a new one. */
   listing?: MarketplaceListing | null;
@@ -42,30 +103,37 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState<MarketplaceListing['condition']>('Like New');
   const [category, setCategory] = useState<MarketplaceListing['category']>('Electronics');
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  /** Up to MAX_PHOTOS entries - either a bare storage path (kept from an existing listing) or a fresh on-device uri/data url, submitted as-is to createListing/updateListing. */
+  const [photos, setPhotos] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function pickPhoto() {
+  async function pickPhotos() {
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) return;
+
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
+      input.multiple = remaining > 1;
       input.style.display = 'none';
       document.body.appendChild(input);
       input.onchange = (e: Event) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
+        const files = Array.from((e.target as HTMLInputElement).files ?? []).slice(0, remaining);
         document.body.removeChild(input);
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const dataUrl = ev.target?.result as string;
-          if (dataUrl) {
-            setPhotoUri(dataUrl);
-            haptics.light();
-          }
-        };
-        reader.readAsDataURL(file);
+        if (files.length === 0) return;
+        files.forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUrl = ev.target?.result as string;
+            if (dataUrl) {
+              setPhotos((prev) => (prev.length >= MAX_PHOTOS ? prev : [...prev, dataUrl]));
+              haptics.light();
+            }
+          };
+          reader.readAsDataURL(file);
+        });
       };
       input.click();
       return;
@@ -75,21 +143,28 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
     if (!permission.granted) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
+      // Cropping (allowsEditing) is mutually exclusive with multi-select.
+      allowsMultipleSelection: remaining > 1,
+      selectionLimit: remaining,
       quality: 0.8,
     });
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+    if (!result.canceled && result.assets.length > 0) {
+      const picked = result.assets.slice(0, remaining).map((a) => a.uri);
+      setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
       haptics.light();
     }
+  }
+
+  function removePhoto(index: number) {
+    haptics.light();
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   }
 
   function reset() {
     setTitle('');
     setDescription('');
     setPrice('');
-    setPhotoUri(null);
+    setPhotos([]);
     setErrorMessage(null);
   }
 
@@ -103,7 +178,8 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
     setPrice(listing.price);
     setCondition(listing.condition);
     setCategory(listing.category);
-    setPhotoUri(listing.imageUrl ?? null);
+    const existing = listing.imageUrls && listing.imageUrls.length > 0 ? listing.imageUrls : listing.imageUrl ? [listing.imageUrl] : [];
+    setPhotos(existing.slice(0, MAX_PHOTOS));
     setErrorMessage(null);
   }, [visible, listing]);
 
@@ -128,7 +204,8 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
         price: price.trim(),
         condition,
         category,
-        imageUrl: photoUri,
+        imageUrl: photos[0] ?? null,
+        imageUrls: photos.length > 0 ? photos : null,
       };
       if (listing) {
         const updated = await updateListing(listing.id, payload);
@@ -189,31 +266,34 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
               </Pressable>
             </View>
 
+            {photos.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.sm }}>
+                {photos.map((p, i) => (
+                  <PhotoThumb key={p + i} value={p} radius={radius.md} onRemove={() => removePhoto(i)} />
+                ))}
+              </View>
+            ) : null}
+
             <Pressable
-              onPress={pickPhoto}
+              onPress={pickPhotos}
+              disabled={photos.length >= MAX_PHOTOS}
               accessibilityRole="button"
-              accessibilityLabel={photoUri ? 'Change item photo' : 'Add item photo'}
+              accessibilityLabel={photos.length > 0 ? 'Add another photo' : 'Add a photo'}
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderStyle: photoUri ? 'solid' : 'dashed',
+                borderStyle: 'dashed',
                 borderRadius: radius.md,
                 alignItems: 'center',
-                paddingVertical: photoUri ? 0 : spacing.lg,
+                paddingVertical: spacing.md,
                 marginBottom: spacing.lg,
-                overflow: 'hidden',
+                opacity: photos.length >= MAX_PHOTOS ? 0.5 : 1,
               }}
             >
-              {photoUri ? (
-                <Image source={{ uri: photoUri }} style={{ width: '100%', height: 180 }} contentFit="cover" transition={200} />
-              ) : (
-                <>
-                  <Ionicons name="camera" size={22} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
-                  <AppText tone="secondary" variant="bodySmall">
-                    Add a photo
-                  </AppText>
-                </>
-              )}
+              <Ionicons name="camera" size={22} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
+              <AppText tone="secondary" variant="bodySmall">
+                {photos.length > 0 ? `Add another photo (${photos.length}/${MAX_PHOTOS})` : 'Add photos (up to 4)'}
+              </AppText>
             </Pressable>
 
             <AppTextField label="What are you selling?" placeholder="e.g. TI-84 Graphing Calculator" value={title} onChangeText={setTitle} />

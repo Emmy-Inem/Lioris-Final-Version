@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { MarketplaceListing } from'@/api/types';
 import { isWishlisted, toggleWishlist, markListingSold, deleteListing } from '@/api/marketplace';
+import { useSignedUrl } from '@/api/signedUrls';
 import { submitReport } from '@/api/moderation';
 import { getOrCreateConversationWithUser, sendMessage } from '@/api/messaging';
 import { useAuth } from '@/auth/AuthContext';
@@ -68,6 +69,13 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   const displayPrice = overrides.price ?? item.price;
   const displayCondition = overrides.condition ?? item.condition;
   const displayImageUrl = overrides.imageUrl !== undefined ? overrides.imageUrl : item.imageUrl;
+  // displayImageUrl is a bare storage path in the private `campus-media`
+  // bucket (or, for a legacy/external row, a plain http(s) URL) - never
+  // renderable directly. Resolve it to a real, short-lived signed URL here,
+  // the same useSignedUrl pattern ChatThread.tsx/PodSpace.tsx use for their
+  // own private media; resolveMediaUrl passes a plain http(s) value straight
+  // through unchanged, so this is correct either way.
+  const { url: resolvedImageUrl, loading: imageResolving } = useSignedUrl('campus-media', displayImageUrl);
   const isSold = overrides.isSold ?? !!(item as any).isSold;
 
   const trust = trustLabel(item.sellerTrustLevel);
@@ -213,20 +221,24 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   return (
     <SolidCard radius={18} padded={false} style={{ flex: 1 }}>
       <View style={{ height: 100, backgroundColor: colors.divider, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden', opacity: isSold ? 0.5 : 1 }}>
-        {displayImageUrl ? (
+        {resolvedImageUrl ? (
           <Image
-            source={{ uri: displayImageUrl }}
+            source={{ uri: resolvedImageUrl }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             transition={200}
           />
+        ) : imageResolving ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.divider }}>
+            <ActivityIndicator size="small" color={colors.textSecondary} />
+          </View>
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.divider }}>
             <Ionicons name="pricetag-outline" size={28} color={colors.textSecondary} />
           </View>
         )}
         <View style={{ position: 'absolute', top: 6, left: 6, zIndex: 2 }}>
-          {displayImageUrl ? (
+          {resolvedImageUrl ? (
             <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11 }, heroTextShadowStyle]}>
               {displayCondition}
             </AppText>
