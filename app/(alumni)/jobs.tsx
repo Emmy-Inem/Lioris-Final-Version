@@ -942,6 +942,11 @@ function MyPostingsModal({
 
   function statusOf(job: JobListing): { label: string; tone: 'neutral' | 'success' | 'warning' | 'critical' } {
     if (job.isClosed) return { label: 'Closed', tone: 'neutral' };
+    // A rejection_reason distinguishes "actively turned down" from merely
+    // "not reviewed yet" - both previously showed as the same "Pending
+    // Review" chip, leaving a rejected poster with no idea anything had
+    // actually happened to their posting.
+    if (!job.isApproved && job.rejectionReason) return { label: 'Rejected', tone: 'critical' };
     if (!job.isApproved) return { label: 'Pending Review', tone: 'warning' };
     if (job.expiresAt && new Date(job.expiresAt).getTime() < Date.now()) return { label: 'Expired', tone: 'critical' };
     return { label: 'Live', tone: 'success' };
@@ -1048,6 +1053,16 @@ function MyPostingsModal({
                       </View>
                       <Badge label={status.label} tone={status.tone} />
                     </View>
+                    {status.label === 'Rejected' && job.rejectionReason ? (
+                      <View style={{ backgroundColor: `${colors.critical}15`, padding: spacing.sm, borderRadius: radius.sm }}>
+                        <AppText variant="caption" weight="bold" tone="critical" style={{ marginBottom: 2 }}>
+                          Why this was rejected:
+                        </AppText>
+                        <AppText variant="caption" tone="secondary">
+                          {job.rejectionReason}
+                        </AppText>
+                      </View>
+                    ) : null}
                     <AppText tone="secondary" variant="caption">
                       {job.applicationsCount} applicant{job.applicationsCount === 1 ? '' : 's'} • Posted{' '}
                       {new Date(job.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}

@@ -29,6 +29,22 @@ export const COPYRIGHT_TAKEDOWN = {
   reviewTargetDays: 5,
 } as const;
 
+/**
+ * Suspension appeal contact - shown directly in the suspended-login error
+ * message (src/api/auth.ts login()), which fires BEFORE the user has a
+ * session, so "Settings → Support" (DATA_CONTROLLER.supportChannel below)
+ * is unreachable to them at that point. This must stay something a signed-out
+ * person can actually use (an email address or public web contact), never a
+ * path that requires being authenticated.
+ *
+ * TODO(ops): this is a placeholder address - no real operator support inbox
+ * was found anywhere else in the codebase (.env.example, app config, or
+ * src/constants/legal.ts's own COPYRIGHT_TAKEDOWN, which is deliberately
+ * null for the same reason). Confirm/replace with the operator's real
+ * support address before launch.
+ */
+export const SUSPENSION_APPEAL_EMAIL = 'support@lioris.app';
+
 /** Minimum eligible age. Users aged 16–17 must have a parent/guardian's authorisation. */
 export const MIN_AGE = 16;
 export const INDEPENDENT_AGE = 18;

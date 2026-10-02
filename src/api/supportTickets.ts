@@ -7,6 +7,8 @@ export type SupportTicketCategory =
   | 'matric_id_correction'
   | 'campus_transfer'
   | 'verification_appeal'
+  /** A signed-in user in a restricted state (e.g. a suspension that was lifted enough to let them sign back in) appealing that decision. The primary appeal path for a still-locked-out suspension is the unauthenticated email in the suspended-login error itself (src/api/auth.ts, SUSPENSION_APPEAL_EMAIL) - this category exists so that IF a ticket can be filed, it is triaged correctly rather than falling into 'general'. */
+  | 'suspension_appeal'
   | 'content_issue'
   | 'bug_report'
   | 'feedback'

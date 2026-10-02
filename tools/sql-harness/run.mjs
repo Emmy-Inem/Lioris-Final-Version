@@ -1173,6 +1173,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261008000000_marketplace_fixes.sql',
   'supabase/migrations/20261008010000_jobs_fixes.sql',
   'supabase/migrations/20261008020000_connections_and_blocking_security.sql',
+  'supabase/migrations/20261009030000_student_transparency_and_appeals.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -4357,6 +4358,178 @@ console.log('\n== connections & blocking security fixes ==');
   await check('get_suggested_connections: anon has no EXECUTE grant', async () => {
     await as('anon', async (c) => {
       denied(await c.t(`SELECT * FROM public.get_suggested_connections()`), /permission denied/i);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// student transparency & appeals (20261009030000_student_transparency_and_appeals.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== student transparency & appeals (resources.rejection_reason, marketplace takedown, repeat-offender RPC) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+  const svc = async () => {
+    await db.exec(`RESET ROLE; SELECT set_config('request.jwt.claims', '', true); SELECT set_config('request.jwt.claim.sub', '', true)`);
+  };
+
+  await check('support_tickets: suspension_appeal is an allowed category', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const r = await c.t(
+        `INSERT INTO public.support_tickets (user_id, category, title, description) VALUES ($1, 'suspension_appeal', 'Appeal', 'please review') RETURNING category`,
+        [U.s1],
+      );
+      assert(r.ok, 'suspension_appeal insert refused: ' + (r.err?.message ?? ''));
+      eq(r.rows[0].category, 'suspension_appeal', 'category should round-trip');
+    });
+  });
+
+  await check('resources: rejection_reason column exists and round-trips', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const row = (await c.q(
+        `INSERT INTO public.resources (uploader_id, campus_code, course_code, course_title, title, file_url, is_approved, rejection_reason)
+         VALUES ($1, 'UNILAG', 'CSC101', 'Intro', 'Notes', 'https://example.com/a.pdf', false, 'Low quality scan') RETURNING rejection_reason`,
+        [U.s1],
+      )).rows[0];
+      eq(row.rejection_reason, 'Low quality scan', 'rejection_reason should round-trip');
+    });
+  });
+
+  await check('marketplace_listings: takedown_reason/is_removed default to NULL/false and are writable', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      const created = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category)
+         VALUES ($1, 'UNILAG', 'Takedown Test Item', '₦1,000', 'Books/Academic') RETURNING id, is_removed, takedown_reason`,
+        [U.s1],
+      )).rows[0];
+      eq(created.is_removed, false, 'is_removed should default to false');
+      eq(created.takedown_reason, null, 'takedown_reason should default to null');
+
+      const updated = (await c.q(
+        `UPDATE public.marketplace_listings SET is_removed = true, takedown_reason = 'Prohibited item' WHERE id = $1 RETURNING is_removed, takedown_reason`,
+        [created.id],
+      )).rows[0];
+      eq(updated.is_removed, true, 'is_removed should be settable');
+      eq(updated.takedown_reason, 'Prohibited item', 'takedown_reason should be settable');
+    });
+  });
+
+  await check(
+    'resolve_moderation_item_author: resolves post/marketplace_listing/job/user_profile authors, and leaves an unmapped type (comment) unresolved - matching resolveActionedUserId in moderation.ts',
+    async () => {
+      await as('postgres', async (c) => {
+        await svc();
+        const post = (await c.q(`INSERT INTO public.posts (author_id, campus_code, content) VALUES ($1, 'UNILAG', 'hi') RETURNING id`, [U.s1])).rows[0];
+        eq((await c.q(`SELECT public.resolve_moderation_item_author('post', $1) v`, [post.id])).rows[0].v, U.s1, 'post -> author_id');
+
+        const listing = (await c.q(
+          `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Chair', '₦500', 'Furniture/Room Accessories') RETURNING id`,
+          [U.s2],
+        )).rows[0];
+        eq((await c.q(`SELECT public.resolve_moderation_item_author('marketplace_listing', $1) v`, [listing.id])).rows[0].v, U.s2, 'marketplace_listing -> seller_id');
+
+        const job = (await c.q(
+          `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url) VALUES ($1, 'UNILAG', 'Intern', 'Acme', 'Lagos', 'https://acme.test/apply') RETURNING id`,
+          [U.s3],
+        )).rows[0];
+        eq((await c.q(`SELECT public.resolve_moderation_item_author('job', $1) v`, [job.id])).rows[0].v, U.s3, 'job -> poster_id');
+
+        eq((await c.q(`SELECT public.resolve_moderation_item_author('user_profile', $1) v`, [U.s4])).rows[0].v, U.s4, 'user_profile -> itself');
+
+        const comment = (await c.q(`INSERT INTO public.post_comments (post_id, author_id, content) VALUES ($1, $2, 'x') RETURNING id`, [post.id, U.s1])).rows[0];
+        eq(
+          (await c.q(`SELECT public.resolve_moderation_item_author('comment', $1) v`, [comment.id])).rows[0].v,
+          null,
+          'comment is intentionally unresolved',
+        );
+      });
+    },
+  );
+
+  await check('get_report_count_for_author: counts OTHER reports against the same author across content types, excluding the current report', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      // Two listings and a job, all authored by s1; one unrelated listing by s2.
+      const listingA = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Laptop', '₦50,000', 'Electronics') RETURNING id`,
+        [U.s1],
+      )).rows[0];
+      const listingB = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Phone', '₦30,000', 'Electronics') RETURNING id`,
+        [U.s1],
+      )).rows[0];
+      const jobA = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url) VALUES ($1, 'UNILAG', 'Role', 'Acme', 'Lagos', 'https://acme.test/apply') RETURNING id`,
+        [U.s1],
+      )).rows[0];
+      const unrelated = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Desk', '₦10,000', 'Furniture/Room Accessories') RETURNING id`,
+        [U.s2],
+      )).rows[0];
+
+      const report1 = (await c.q(
+        `INSERT INTO public.moderation_queue (item_type, item_id, reporter_id, campus_code, reason, status) VALUES ('marketplace_listing', $1, $2, 'UNILAG', 'scam', 'pending') RETURNING id`,
+        [listingA.id, U.s3],
+      )).rows[0];
+      const report2 = (await c.q(
+        `INSERT INTO public.moderation_queue (item_type, item_id, reporter_id, campus_code, reason, status) VALUES ('marketplace_listing', $1, $2, 'UNILAG', 'fake', 'pending') RETURNING id`,
+        [listingB.id, U.s4],
+      )).rows[0];
+      const report3 = (await c.q(
+        `INSERT INTO public.moderation_queue (item_type, item_id, reporter_id, campus_code, reason, status) VALUES ('job', $1, $2, 'UNILAG', 'spam', 'pending') RETURNING id`,
+        [jobA.id, U.s5],
+      )).rows[0];
+      const reportUnrelated = (await c.q(
+        `INSERT INTO public.moderation_queue (item_type, item_id, reporter_id, campus_code, reason, status) VALUES ('marketplace_listing', $1, $2, 'UNILAG', 'x', 'pending') RETURNING id`,
+        [unrelated.id, U.s3],
+      )).rows[0];
+
+      await imp(U.adminA);
+      eq(
+        (await c.q(`SELECT public.get_report_count_for_author('marketplace_listing', $1, $2) v`, [listingA.id, report1.id])).rows[0].v,
+        2,
+        'report1 excluded -> the other 2 (report2 on listingB, report3 on jobA) against s1 should count',
+      );
+      eq(
+        (await c.q(`SELECT public.get_report_count_for_author('job', $1, $2) v`, [jobA.id, report3.id])).rows[0].v,
+        2,
+        'same author, different content type, report3 excluded -> 2 others',
+      );
+      eq(
+        (await c.q(`SELECT public.get_report_count_for_author('marketplace_listing', $1, $2) v`, [unrelated.id, reportUnrelated.id])).rows[0].v,
+        0,
+        'unrelated author (s2) has no other reports',
+      );
+    });
+  });
+
+  await check('get_report_count_for_author: a non-admin/staff caller is refused', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      denied(await c.t(`SELECT public.get_report_count_for_author('user_profile', $1)`, [U.s2]), /admin_required/);
+    });
+  });
+
+  await check('get_report_count_for_author: staff can call it too', async () => {
+    await as('postgres', async (c) => {
+      await svc();
+      await c.q(
+        `INSERT INTO public.moderation_queue (item_type, item_id, reporter_id, campus_code, reason, status) VALUES ('user_profile', $1, $2, 'UNILAG', 'harassment', 'pending')`,
+        [U.legacy, U.s3],
+      );
+      await imp(U.staffU);
+      const r = await c.t(`SELECT public.get_report_count_for_author('user_profile', $1) v`, [U.legacy]);
+      assert(r.ok, 'staff should be able to call get_report_count_for_author: ' + (r.err?.message ?? ''));
+    });
+  });
+
+  await check('resolve_moderation_item_author: no EXECUTE grant to anon/authenticated (only reachable through get_report_count_for_author)', async () => {
+    await as(U.s1, async (c) => {
+      denied(await c.t(`SELECT public.resolve_moderation_item_author('post', $1)`, [U.s1]), /permission denied/i);
     });
   });
 }

@@ -7,6 +7,7 @@ import { recordAuditLogEntry } from './auditLog';
 import { unregisterDevicePushToken } from './notifications';
 import { checkPassword, isPasswordValid, isValidEmailFormat } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errors';
+import { SUSPENSION_APPEAL_EMAIL } from '../constants/legal';
 import {
   checkLoginRateLimit,
   recordLoginFailure,
@@ -270,7 +271,16 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   // Enforce server-side account suspension check
   if (profile?.is_suspended) {
     await supabase.auth.signOut();
-    throw new Error('Your campus account has been suspended by administration. Access to this workspace has been revoked.');
+    // A suspended profile is signed out above, before this message ever
+    // reaches the screen - so "Settings → Support" (the normal appeal path
+    // community-rules.tsx points to) is unreachable: it requires a live
+    // session. This message must carry its own appeal path that works with
+    // no session at all - see SUSPENSION_APPEAL_EMAIL's own comment in
+    // src/constants/legal.ts for why it's a placeholder pending confirmation.
+    throw new Error(
+      `Your campus account has been suspended by administration. Access to this workspace has been revoked. ` +
+        `To appeal this decision, email ${SUSPENSION_APPEAL_EMAIL} from the address on your account (or any address) with your full name and campus - you do not need to sign in to do this.`,
+    );
   }
 
   // Authorization role must come from the server-verified `profiles` row

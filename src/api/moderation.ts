@@ -109,6 +109,63 @@ async function resolveActionedUserId(target: Report): Promise<string | null> {
  return null;
 }
 
+/** Report['targetType'] -> the moderation_queue.item_type enum value it was actually filed under (mirrors submitReport's own mapping). */
+const TARGET_TYPE_TO_DB_ITEM_TYPE: Record<Report['targetType'], string> = {
+ post: 'post',
+ pod_post: 'pod_post',
+ message: 'comment',
+ event: 'event',
+ user: 'user_profile',
+ marketplace_listing: 'marketplace_listing',
+ job: 'job',
+};
+
+/**
+ * How many OTHER reports (across any content type - a post, a listing, a job...)
+ * target content authored by the same person as this one, so the moderation
+ * queue can flag a repeat offender instead of reviewing every report in
+ * isolation. Resolves the content's author server-side (get_report_count_for_author
+ * RPC, admin/staff-only) - never guesses from client data. Best-effort: a
+ * failed lookup renders no chip rather than blocking the report card.
+ */
+export async function getOtherReportCountForAuthor(report: Report): Promise<number> {
+ try {
+ const dbItemType = TARGET_TYPE_TO_DB_ITEM_TYPE[report.targetType] ?? report.targetType;
+ const { data, error } = await supabase.rpc('get_report_count_for_author', {
+ p_item_type: dbItemType,
+ p_item_id: report.targetId,
+ p_exclude_report_id: report.id,
+ });
+ if (error) throw error;
+ return typeof data === 'number' ? data : 0;
+ } catch (err) {
+ console.warn('[Moderation] getOtherReportCountForAuthor failed:', err);
+ return 0;
+ }
+}
+
+/**
+ * Same repeat-offender count as getOtherReportCountForAuthor above, but
+ * keyed directly by user id for callers that already have one (the admin
+ * user directory's identity panel) instead of a Report row. 'user_profile'
+ * matches the moderation_queue.item_type a user-targeted report is filed
+ * under (see submitReport/TARGET_TYPE_TO_DB_ITEM_TYPE above) - the RPC then
+ * resolves it straight back to p_item_id, no author lookup needed.
+ */
+export async function getReportCountForUser(userId: string): Promise<number> {
+ try {
+ const { data, error } = await supabase.rpc('get_report_count_for_author', {
+ p_item_type: 'user_profile',
+ p_item_id: userId,
+ });
+ if (error) throw error;
+ return typeof data === 'number' ? data : 0;
+ } catch (err) {
+ console.warn('[Moderation] getReportCountForUser failed:', err);
+ return 0;
+ }
+}
+
 const TARGET_TYPE_LABEL: Record<Report['targetType'], string> = {
  post: 'post',
  pod_post: 'study pod post',

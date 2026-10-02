@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from './ScreenContainer';
 import { AppText } from './AppText';
+import { Badge } from './Badge';
 import { EmptyState } from './EmptyState';
 import { MarketplaceItemCard } from './MarketplaceItemCard';
 import { MarketplaceCardSkeletonGrid } from './Skeleton';
@@ -12,12 +13,13 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listMyMarketplaceListings } from '@/api/marketplace';
 
-type FilterKey = 'all' | 'active' | 'sold';
+type FilterKey = 'all' | 'active' | 'sold' | 'removed';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'active', label: 'Active' },
   { key: 'sold', label: 'Sold' },
+  { key: 'removed', label: 'Removed' },
 ];
 
 /**
@@ -43,8 +45,11 @@ export function MyListingsScreen() {
   });
 
   const visible = (listings ?? []).filter((item) => {
-    if (filter === 'active') return !(item as any).isSold;
-    if (filter === 'sold') return !!(item as any).isSold;
+    if (filter === 'removed') return !!(item as any).isRemoved;
+    // A removed listing is moderation history, not an active/sold one - keep
+    // it out of those two tabs so it only ever shows under "Removed".
+    if (filter === 'active') return !(item as any).isSold && !(item as any).isRemoved;
+    if (filter === 'sold') return !!(item as any).isSold && !(item as any).isRemoved;
     return true;
   });
 
@@ -75,7 +80,11 @@ export function MyListingsScreen() {
           const count =
             f.key === 'all'
               ? (listings ?? []).length
-              : (listings ?? []).filter((item) => (f.key === 'sold') === !!(item as any).isSold).length;
+              : f.key === 'removed'
+              ? (listings ?? []).filter((item) => !!(item as any).isRemoved).length
+              : (listings ?? []).filter(
+                  (item) => (f.key === 'sold') === !!(item as any).isSold && !(item as any).isRemoved,
+                ).length;
           return (
             <Pressable
               key={f.key}
@@ -131,7 +140,29 @@ export function MyListingsScreen() {
           numColumns={2}
           columnWrapperStyle={{ gap: spacing.md }}
           contentContainerStyle={{ gap: spacing.md, paddingBottom: isDesktop ? 40 : 130 }}
-          renderItem={({ item }) => <MarketplaceItemCard item={item} />}
+          renderItem={({ item }) => (
+            <View>
+              {(item as any).isRemoved ? (
+                <View
+                  style={{
+                    backgroundColor: `${colors.critical}15`,
+                    borderRadius: 12,
+                    padding: spacing.sm,
+                    marginBottom: 6,
+                    gap: 4,
+                  }}
+                >
+                  <Badge label="Removed by moderation" tone="critical" />
+                  {(item as any).takedownReason ? (
+                    <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                      Reason: {(item as any).takedownReason}
+                    </AppText>
+                  ) : null}
+                </View>
+              ) : null}
+              <MarketplaceItemCard item={item} />
+            </View>
+          )}
           showsVerticalScrollIndicator={false}
           refreshing={isLoading}
           onRefresh={refetch}

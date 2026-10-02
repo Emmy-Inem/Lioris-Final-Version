@@ -91,9 +91,12 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  .from('marketplace_listings')
  .select('*, seller:profiles(full_name, avatar_url, trust_score, campus_code, role, verification_status)')
  .order('created_at', { ascending: false });
+ // is_removed=true is an admin/staff takedown (takedownListing) - it must drop
+ // out of the public browse feed exactly like a sold/expired listing does,
+ // but still show up (with its reason) in the seller's own My Listings below.
  req = viewerId
- ? req.or(`and(is_sold.eq.false,expires_at.gt.${nowIso}),seller_id.eq.${viewerId}`)
- : req.eq('is_sold', false).gt('expires_at', nowIso);
+ ? req.or(`and(is_sold.eq.false,expires_at.gt.${nowIso},is_removed.eq.false),seller_id.eq.${viewerId}`)
+ : req.eq('is_sold', false).gt('expires_at', nowIso).eq('is_removed', false);
 
  if (query.category && query.category !== 'All Categories' && query.category !== 'Wishlist') {
  req = req.eq('category', query.category);
@@ -211,6 +214,8 @@ function mapListingRow(row: any): MarketplaceListing {
  createdAt: row.created_at,
  isSold: !!row.is_sold,
  expiresAt: row.expires_at || null,
+ isRemoved: !!row.is_removed,
+ takedownReason: row.takedown_reason ?? null,
  } as MarketplaceListing;
 }
 
@@ -441,7 +446,7 @@ export async function markListingSold(listingId: string, sold: boolean): Promise
  locallyCreatedListings = locallyCreatedListings.map((item) => (item.id === listingId ? { ...item, isSold: sold } : item));
 }
 
-/** Admin/staff/seller takedown - RLS already grants sellers, admins and same-campus staff DELETE. */
+/** Seller's own self-service removal, or a caller who genuinely wants it gone forever - RLS already grants sellers, admins and same-campus staff DELETE. For admin/staff-initiated moderation takedowns, prefer takedownListing() below: a hard delete with no reason and no notification left a seller's listing just vanishing with zero trace. */
 export async function deleteListing(id: string): Promise<void> {
  const { error } = await supabase.from('marketplace_listings').delete().eq('id', id);
  if (error) {
@@ -449,4 +454,47 @@ export async function deleteListing(id: string): Promise<void> {
  throw new Error('Could not remove this listing. Please try again.');
  }
  locallyCreatedListings = locallyCreatedListings.filter((item) => item.id !== id);
+}
+
+/**
+ * Admin/staff moderation takedown - a soft removal, not a DELETE. Sets
+ * is_removed + takedown_reason (so the listing drops out of the public
+ * browse feed but still shows, with its reason, in the seller's own My
+ * Listings - see the is_removed filtering in listMarketplaceListings above)
+ * and notifies the seller why. RLS-enforced to the seller, admins and
+ * same-campus staff, same as deleteListing/updateListing.
+ */
+export async function takedownListing(id: string, reason: string): Promise<void> {
+ const cleanReason = reason?.trim();
+ if (!cleanReason) {
+ throw new Error('A reason is required to take down a listing.');
+ }
+ const { data, error } = await supabase
+ .from('marketplace_listings')
+ .update({ is_removed: true, takedown_reason: cleanReason })
+ .eq('id', id)
+ .select('seller_id, title')
+ .maybeSingle();
+ if (error || !data) {
+ console.warn('[Marketplace] takedownListing error:', error?.message);
+ throw new Error('Could not remove this listing. Please try again.');
+ }
+
+ locallyCreatedListings = locallyCreatedListings.map((item) =>
+ item.id === id ? { ...item, isRemoved: true, takedownReason: cleanReason } : item,
+ );
+
+ // Best-effort: the takedown itself must not fail just because the notification did.
+ try {
+ const { createNotification } = await import('./notifications');
+ await createNotification({
+ recipientId: data.seller_id,
+ type: 'moderation',
+ title: 'Marketplace listing removed',
+ body: `Your listing "${data.title || 'your listing'}" was removed by campus moderation. Reason: ${cleanReason}. Contact support if you believe this was a mistake.`,
+ deepLinkPath: '/marketplace',
+ });
+ } catch (err) {
+ console.warn('[Marketplace] takedownListing notification failed:', err);
+ }
 }
