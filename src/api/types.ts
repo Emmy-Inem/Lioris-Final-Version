@@ -486,7 +486,10 @@ export type AuditLogAction =
  | 'support_ticket_updated'
  | 'support_ticket_resolved'
  | 'system_cleanup_executed'
- | 'profile_updated';
+ | 'profile_updated'
+ | 'giving_campaign_approved'
+ | 'giving_campaign_rejected'
+ | 'giving_campaign_total_updated';
 
 export interface AuditLogEntry {
  id: string;

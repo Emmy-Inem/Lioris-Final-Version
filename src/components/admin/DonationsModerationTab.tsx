@@ -46,7 +46,15 @@ function TotalEditor({ campaign, onSaved }: { campaign: GivingCampaign; onSaved:
     if (!Number.isFinite(num) || num < 0) return;
     setSaving(true);
     try {
+      const previousTotal = campaign.confirmedTotal;
       await updateGivingCampaignTotal(campaign.id, num);
+      recordAuditLogEntry({
+        action: 'giving_campaign_total_updated',
+        summary: `Updated confirmed total for giving campaign: "${campaign.title}" (${formatNaira(previousTotal)} -> ${formatNaira(num)})`,
+        targetType: 'giving_campaign',
+        targetId: campaign.id,
+        reason: `Confirmed total changed from ${formatNaira(previousTotal)} to ${formatNaira(num)}`,
+      });
       onSaved();
     } catch (err: any) {
       Alert.alert('Could not update total', err?.message || 'Please try again.');
@@ -94,7 +102,7 @@ export function DonationsModerationTab() {
     try {
       await reviewGivingCampaign(c.id, 'approve');
       recordAuditLogEntry({
-        action: 'report_resolved',
+        action: 'giving_campaign_approved',
         summary: `Approved giving campaign: "${c.title}"`,
         targetType: 'giving_campaign',
         targetId: c.id,
@@ -119,6 +127,13 @@ export function DonationsModerationTab() {
       setActingId(c.id);
       try {
         await reviewGivingCampaign(c.id, 'reject', reason);
+        recordAuditLogEntry({
+          action: 'giving_campaign_rejected',
+          summary: `Rejected giving campaign: "${c.title}"`,
+          targetType: 'giving_campaign',
+          targetId: c.id,
+          reason,
+        });
         refreshAll();
         Alert.alert('Campaign Rejected', 'The creator will see this was declined.');
       } catch (err: any) {

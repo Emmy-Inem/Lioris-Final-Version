@@ -5,8 +5,18 @@ export interface CsvColumn<T> {
   value: (row: T) => string | number | null | undefined;
 }
 
+// Spreadsheet apps (Excel, Google Sheets, LibreOffice) treat a cell that starts
+// with one of these characters as a formula - a leading apostrophe forces it to
+// be read as literal text instead, which neutralizes CSV formula-injection from
+// free-text fields (e.g. an admin-entered rejection reason) without changing
+// what the value visibly reads as.
+const FORMULA_INJECTION_RE = /^[=+\-@]/;
+
 function escapeCsvValue(value: string | number | null | undefined): string {
-  const str = value === null || value === undefined ? '' : String(value);
+  let str = value === null || value === undefined ? '' : String(value);
+  if (FORMULA_INJECTION_RE.test(str)) {
+    str = `'${str}`;
+  }
   return `"${str.replace(/"/g, '""')}"`;
 }
 
