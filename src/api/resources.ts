@@ -148,24 +148,78 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     const page = Math.max(0, query.page ?? 0);
     const offset = page * pageSize;
 
-    const { data, error } = await supabase
+    // Every narrowing filter below (campus, approval status, category,
+    // department, search) used to be applied with filterResources() only
+    // *after* `.range()` had already sliced off a `pageSize` window of raw,
+    // unfiltered rows. That meant a filter never actually filtered the full
+    // matching set - it filtered whatever few rows happened to survive in
+    // that one small window, which could legitimately be none even when
+    // plenty of matches existed further down the (campus-ordered-by-date)
+    // table. The symptoms matched the report exactly: picking a category,
+    // department or campus could show far fewer results than expected (or
+    // none), and "Load More" would disappear immediately because the
+    // already-filtered page came back shorter than `pageSize`. Pushing these
+    // down to the query itself, before `.range()`, makes a "page" mean a
+    // page of matching rows again, so filtering and pagination compose.
+    let dbQuery = supabase
       .from('resources')
       .select('*, profiles:uploader_id(full_name, role, avatar_url, department)')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + pageSize - 1);
+      .order('created_at', { ascending: false });
+
+    if (!(isStaffOrAdmin && !(query as any).campusCode)) {
+      const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
+      dbQuery = targetCampus === 'GLOBAL'
+        ? dbQuery.eq('campus_code', 'GLOBAL')
+        : dbQuery.in('campus_code', [targetCampus, 'GLOBAL']);
+    }
+
+    if (query.approvalStatus && query.approvalStatus !== 'all') {
+      if (query.approvalStatus === 'approved') {
+        dbQuery = dbQuery.eq('is_approved', true).is('rejection_reason', null);
+      } else if (query.approvalStatus === 'pending') {
+        dbQuery = dbQuery.eq('is_approved', false).is('rejection_reason', null);
+      } else if (query.approvalStatus === 'rejected') {
+        dbQuery = dbQuery.not('rejection_reason', 'is', null);
+      }
+    } else {
+      // Default (unset): hide rejected uploads from the general browse feed,
+      // same as filterResources()'s `r.approvalStatus !== 'rejected'` below.
+      dbQuery = dbQuery.is('rejection_reason', null);
+    }
+
+    // Category chips (All Files / Past Questions / Notes / Projects). Mirrors
+    // mapResourceTypeToCategory()'s mapping, including that 'Projects' covers
+    // both the 'project' and legacy 'summary' resource_type values.
+    if (query.category === 'Past Questions') {
+      dbQuery = dbQuery.eq('resource_type', 'past_question');
+    } else if (query.category === 'Projects') {
+      dbQuery = dbQuery.in('resource_type', ['project', 'summary']);
+    } else if (query.category === 'Notes') {
+      dbQuery = dbQuery.not('resource_type', 'in', '(past_question,project,summary)');
+    }
+
+    // Department: approximate match on the column that actually backs it
+    // (course_title - see mapResourceRow/updateResource). filterResources()
+    // below still does the exact, final match (and also covers the
+    // profiles.department fallback), so this is only a pre-filter to keep
+    // pagination correct, never the last word on whether a resource matches.
+    if (query.department) {
+      dbQuery = dbQuery.ilike('course_title', `%${query.department}%`);
+    }
+
+    // Free-text search: narrows the same fields filterResources() checks
+    // (except author name, which needs the joined profile and is left to the
+    // final client-side pass below).
+    if (query.q) {
+      const like = `%${query.q.replace(/[%,()]/g, ' ').trim()}%`;
+      dbQuery = dbQuery.or(`title.ilike.${like},course_code.ilike.${like},course_title.ilike.${like},description.ilike.${like}`);
+    }
+
+    const { data, error } = await dbQuery.range(offset, offset + pageSize - 1);
     if (error) throw error;
 
     const dbResources: Resource[] = (data ?? [])
       .filter((row: any) => !isUserBlocked(row.uploader_id) && !isUserMuted(row.uploader_id))
-      .filter((row: any) => {
-        if (isStaffOrAdmin && !(query as any).campusCode) return true;
-        const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
-        const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
-        if (targetCampus === 'GLOBAL') {
-          return rowCampus === 'GLOBAL';
-        }
-        return rowCampus === targetCampus || rowCampus === 'GLOBAL';
-      })
       .map(mapResourceRow);
 
     // Merge unique - local session creations not yet reflected by the query above.
@@ -447,6 +501,19 @@ export async function updateResource(id: string, payload: Partial<Resource>): Pr
   if (payload.title) dbPayload.title = payload.title;
   if (payload.description !== undefined) dbPayload.description = payload.description;
   if (payload.courseCode) dbPayload.course_code = payload.courseCode;
+  // `resources` has no dedicated department column - mapResourceRow falls back
+  // to `course_title` for department (see its comment), so that is what an
+  // edited department has to be written to. Previously dropped entirely here:
+  // ManageResourcesModal's "Manage Library" edit let an admin type a new
+  // department, showed "Resource Updated", and silently never persisted it -
+  // the Department filter on the Resources screen could then never match
+  // that resource under its new department, only its old one.
+  if (payload.department) dbPayload.course_title = payload.department;
+  // Same silent drop for category: edited in the same modal, mapped to the
+  // `resource_type` column everywhere else (mapCategoryToResourceType), but
+  // never written on update - so changing a resource's category here never
+  // changed what the category/resource-type filter chips actually matched.
+  if (payload.category) dbPayload.resource_type = mapCategoryToResourceType(payload.category);
   if (payload.semester) dbPayload.semester = payload.semester;
   if (payload.fileUrl) dbPayload.file_url = payload.fileUrl;
   if (payload.approvalStatus) dbPayload.is_approved = payload.approvalStatus === 'approved';

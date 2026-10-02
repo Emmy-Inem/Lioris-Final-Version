@@ -1177,6 +1177,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261009010000_suspension_enforcement_fixes.sql',
   'supabase/migrations/20261009020000_admin_moderation_fixes.sql',
   'supabase/migrations/20261009030000_student_transparency_and_appeals.sql',
+  'supabase/migrations/20261009040000_resource_seed_stats_reset.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -4830,6 +4831,45 @@ console.log('\n== student transparency & appeals (resources.rejection_reason, ma
   await check('resolve_moderation_item_author: no EXECUTE grant to anon/authenticated (only reachable through get_report_count_for_author)', async () => {
     await as(U.s1, async (c) => {
       denied(await c.t(`SELECT public.resolve_moderation_item_author('post', $1)`, [U.s1]), /permission denied/i);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// resource seed stats reset (20261009040000_resource_seed_stats_reset.sql):
+// the old seed migration shipped fake, hardcoded downloads_count/upvotes_count
+// for its 50 FUNAAB/NOUN rows - this zeroes those back out, and leaves
+// everything else alone.
+// ---------------------------------------------------------------------------
+console.log('\n== resource seed stats reset ==');
+{
+  await check('resource seed stats reset: zeroes out a fake-stat seeded row (identified by file_url host)', async () => {
+    await as('postgres', async (c) => {
+      const row = (await c.q(
+        `INSERT INTO public.resources (uploader_id, campus_code, course_code, course_title, title, file_url, is_approved, downloads_count, upvotes_count)
+         VALUES ($1, 'GLOBAL', 'CSC201', 'Computer Science', 'Seeded Handout', 'https://funaab.edu.ng/wp-content/uploads/handout.pdf', true, 62, 29)
+         RETURNING id`,
+        [U.adminA],
+      )).rows[0];
+      await c.q(`UPDATE public.resources SET downloads_count = 0, upvotes_count = 0 WHERE (file_url ILIKE '%funaab.edu.ng%' OR file_url ILIKE '%nou.edu.ng%') AND (downloads_count <> 0 OR upvotes_count <> 0)`);
+      const after = (await c.q(`SELECT downloads_count, upvotes_count FROM public.resources WHERE id = $1`, [row.id])).rows[0];
+      eq(after.downloads_count, 0, 'downloads_count should be reset to 0');
+      eq(after.upvotes_count, 0, 'upvotes_count should be reset to 0');
+    });
+  });
+
+  await check('resource seed stats reset: never touches a real resource with the same stats but a different host', async () => {
+    await as('postgres', async (c) => {
+      const row = (await c.q(
+        `INSERT INTO public.resources (uploader_id, campus_code, course_code, course_title, title, file_url, is_approved, downloads_count, upvotes_count)
+         VALUES ($1, 'UNILAG', 'CSC301', 'Computer Science', 'Real Student Upload', 'https://storage.example.test/resources/real.pdf', true, 62, 29)
+         RETURNING id`,
+        [U.s1],
+      )).rows[0];
+      await c.q(`UPDATE public.resources SET downloads_count = 0, upvotes_count = 0 WHERE (file_url ILIKE '%funaab.edu.ng%' OR file_url ILIKE '%nou.edu.ng%') AND (downloads_count <> 0 OR upvotes_count <> 0)`);
+      const after = (await c.q(`SELECT downloads_count, upvotes_count FROM public.resources WHERE id = $1`, [row.id])).rows[0];
+      eq(after.downloads_count, 62, 'a real upload with organic stats must not be reset just because the numbers match');
+      eq(after.upvotes_count, 29, 'a real upload with organic stats must not be reset just because the numbers match');
     });
   });
 }
