@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FlatList, Pressable, ScrollView, TextInput, View, Platform } from 'react-native';
+import { router, useSegments } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -40,6 +41,8 @@ export default function MarketplaceScreen() {
  const [condition, setCondition] = useState('All Conditions');
  const [sellModalOpen, setSellModalOpen] = useState(false);
  const { campusCode } = useCampusScope();
+ const segments = useSegments();
+ const roleGroup = segments[0];
 
  const categoriesScrollRef = useRef<ScrollView>(null);
 
@@ -79,6 +82,27 @@ export default function MarketplaceScreen() {
                 <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" weight="semiBold">Meet on Campus for a Safe Exchange</AppText>
               </View>
+
+              <Pressable
+                onPress={() => router.push(`/${roleGroup}/marketplace-mine` as any)}
+                accessibilityRole="button"
+                accessibilityLabel="My Listings"
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: radius.pill,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Ionicons name="pricetags-outline" size={16} color={colors.textPrimary} />
+                <AppText variant="bodySmall" weight="bold">
+                  My Listings
+                </AppText>
+              </Pressable>
 
               <Pressable
                 onPress={() => setSellModalOpen(true)}
@@ -220,26 +244,47 @@ export default function MarketplaceScreen() {
           <AppText weight="bold" style={{ fontSize: isDesktop ? 22 : 18, lineHeight: isDesktop ? 28 : 24 }}>
             Marketplace
           </AppText>
-          <Pressable
-            onPress={() => setSellModalOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Sell an item"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              backgroundColor: colors.brandPrimary,
-              borderRadius: radius.pill,
-              paddingHorizontal: spacing.md,
-              paddingVertical: 7,
-              flexShrink: 0,
-            }}
-          >
-            <Ionicons name="add" size={16} color="#FFFFFF" />
-            <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
-              List Item
-            </AppText>
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <Pressable
+              onPress={() => router.push(`/${roleGroup}/marketplace-mine` as any)}
+              accessibilityRole="button"
+              accessibilityLabel="My Listings"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: 7,
+              }}
+            >
+              <Ionicons name="pricetags-outline" size={14} color={colors.textPrimary} />
+              <AppText weight="bold" variant="caption" style={{ fontSize: 11 }}>
+                My Listings
+              </AppText>
+            </Pressable>
+            <Pressable
+              onPress={() => setSellModalOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Sell an item"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                backgroundColor: colors.brandPrimary,
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 7,
+              }}
+            >
+              <Ionicons name="add" size={16} color="#FFFFFF" />
+              <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+                List Item
+              </AppText>
+            </Pressable>
+          </View>
         </View>
         <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
           Buy & sell books, gadgets, and campus gear - meet on campus for a safe exchange

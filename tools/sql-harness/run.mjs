@@ -1170,6 +1170,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261007000000_resources_and_copilot_fixes.sql',
   'supabase/migrations/20261007010000_campus_access_and_devices_fixes.sql',
   'supabase/migrations/20261007020000_verification_moderation_announcements_fixes.sql',
+  'supabase/migrations/20261008000000_marketplace_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -3729,6 +3730,102 @@ await check('a non-admin student still cannot read or delete another user\'s pus
     const del = await c.t(`DELETE FROM public.push_tokens WHERE token = 'ExponentPushToken[fsout-test-0005]'`);
     assert(del.ok && del.n === 0, 'a student must not be able to delete another user\'s push token row');
   });
+});
+
+// ---------------------------------------------------------------------------
+// marketplace fixes (20261008000000_marketplace_fixes.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== marketplace fixes (image_path/image_paths, expires_at) ==');
+
+await check('marketplace fixes: image_path/image_paths accept a bare storage path (the critical photo-upload bug) while image_url\'s https-only CHECK is left completely untouched', async () => {
+  await as('postgres', async (c) => {
+    const ok = await c.t(
+      `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category, image_path, image_paths)
+       VALUES ($1, 'UNILAG', 'Bare path photo', '2,000', 'Electronics', $2, $3) RETURNING id`,
+      [U.s1, `${U.s1}/marketplace_abc123.jpg`, [`${U.s1}/marketplace_abc123.jpg`, `${U.s1}/marketplace_def456.jpg`]],
+    );
+    assert(ok.ok, `a bare storage path in image_path/image_paths should be accepted: ${ok.err?.message}`);
+
+    // Regression guard: the generic url-scheme CHECK on image_url itself
+    // must still refuse exactly the bare path that used to break every
+    // listing photo upload - proving this fix added new columns rather than
+    // weakening that shared CHECK.
+    const stillGuarded = await c.t(
+      `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category, image_url)
+       VALUES ($1, 'UNILAG', 'Legacy column still https-only', '2,000', 'Electronics', $2)`,
+      [U.s1, `${U.s1}/marketplace_abc123.jpg`],
+    );
+    denied(stillGuarded, /chk_marketplace_listings_image_url_url_scheme|violates check constraint/, 'bare path written to the legacy image_url column');
+  });
+});
+
+await check('marketplace fixes: image_paths is capped at 4 photos and each path at 500 characters', async () => {
+  await as('postgres', async (c) => {
+    const tooMany = await c.t(
+      `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category, image_paths)
+       VALUES ($1, 'UNILAG', 'Five photos', '2,000', 'Electronics', $2)`,
+      [U.s1, Array.from({ length: 5 }, (_, i) => `${U.s1}/photo-${i}.jpg`)],
+    );
+    denied(tooMany, /marketplace_listings_image_paths_chk|violates check constraint/, 'a 5th photo should be refused');
+
+    const tooLong = await c.t(
+      `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category, image_path)
+       VALUES ($1, 'UNILAG', 'Absurdly long path', '2,000', 'Electronics', $2)`,
+      [U.s1, 'x'.repeat(501)],
+    );
+    denied(tooLong, /marketplace_listings_image_path_chk|violates check constraint/, 'an over-long path should be refused');
+
+    const fine = await c.t(
+      `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category, image_paths)
+       VALUES ($1, 'UNILAG', 'Four photos', '2,000', 'Electronics', $2)`,
+      [U.s1, Array.from({ length: 4 }, (_, i) => `${U.s1}/photo-${i}.jpg`)],
+    );
+    assert(fine.ok, `exactly 4 photos should be accepted: ${fine.err?.message}`);
+  });
+});
+
+await check('marketplace fixes: expires_at defaults to ~75 days out, is backfilled/required (NOT NULL), and is indexed for the active-listings browse query', async () => {
+  await as('postgres', async (c) => {
+    const row = (await c.q(
+      `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category)
+       VALUES ($1, 'UNILAG', 'No explicit expiry', '2,000', 'Electronics') RETURNING expires_at, created_at`,
+      [U.s1],
+    )).rows[0];
+    const days = (new Date(row.expires_at).getTime() - new Date(row.created_at).getTime()) / 86400000;
+    assert(days > 70 && days < 80, `expected ~75 days between created_at and expires_at, got ${days}`);
+
+    const cannotNull = await c.t(`UPDATE public.marketplace_listings SET expires_at = NULL WHERE seller_id = $1`, [U.s1]);
+    denied(cannotNull, /null value in column "expires_at"|violates not-null constraint/, 'expires_at should never be settable back to NULL');
+
+    const idx = await c.q(
+      `SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'marketplace_listings' AND indexname = 'idx_marketplace_listings_active_expiry'`,
+    );
+    eq(idx.rows.length, 1, 'idx_marketplace_listings_active_expiry should exist');
+  });
+});
+
+await check('marketplace fixes: re-running the migration is a true no-op for a row whose expires_at was already set by hand (the backfill UPDATE only ever targets rows where expires_at IS NULL)', async () => {
+  // Deliberately NOT wrapped in as(...): the migration file itself is
+  // BEGIN/COMMIT, and nesting that inside the harness's own
+  // BEGIN/...ROLLBACK transaction wrapper would commit (or otherwise
+  // disturb) the outer transaction. This runs directly against the shared
+  // `db`, exactly like the currentProductMigrations loop above - and cleans
+  // up its own row at the end since nothing will roll it back.
+  const row = (await db.query(
+    `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, price_display, category) VALUES ($1, 'UNILAG', 'Idempotency probe', '2,000', 'Electronics') RETURNING id`,
+    [U.s1],
+  )).rows[0];
+  try {
+    const customExpiry = new Date(Date.now() + 10 * 86400000).toISOString();
+    await db.query(`UPDATE public.marketplace_listings SET expires_at = $1 WHERE id = $2`, [customExpiry, row.id]);
+
+    await applyFile(db, 'supabase/migrations/20261008000000_marketplace_fixes.sql', true, () => {});
+
+    const after = (await db.query(`SELECT expires_at FROM public.marketplace_listings WHERE id = $1`, [row.id])).rows[0];
+    eq(new Date(after.expires_at).toISOString(), new Date(customExpiry).toISOString(), 're-running the migration must not clobber an already-set expires_at');
+  } finally {
+    await db.query(`DELETE FROM public.marketplace_listings WHERE id = $1`, [row.id]);
+  }
 });
 
 const failed = results.filter((r) => !r.ok);
