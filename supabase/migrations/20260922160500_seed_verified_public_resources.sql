@@ -3,6 +3,12 @@
 -- 50 authentic, verified PDF lecture notes, handouts, and past questions from
 -- official university repositories (FUNAAB & NOUN OpenCourseWare).
 -- All URLs verified to return HTTP 200 OK with application/pdf.
+--
+-- downloads_count/upvotes_count below are seeded at 0, not an invented number
+-- (they previously shipped with hardcoded values like 62/29, 71/19, etc. -
+-- fabricated stats displayed on the Resources page as if they were real
+-- engagement. See supabase/migrations/20261009040000_resource_seed_stats_reset.sql,
+-- which zeroes these out for rows already seeded with the old fake numbers).
 -- ============================================================================
 
 DO $$
@@ -48,8 +54,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        62,
-        29
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -80,8 +86,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        71,
-        19
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -112,8 +118,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        46,
-        25
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -144,8 +150,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        41,
-        17
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -176,8 +182,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        54,
-        25
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -208,8 +214,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        35,
-        28
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -240,8 +246,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        67,
-        19
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -272,8 +278,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        64,
-        25
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -304,8 +310,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        37,
-        22
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -336,8 +342,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        74,
-        12
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -368,8 +374,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        38,
-        20
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -400,8 +406,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        73,
-        28
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -432,8 +438,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        32,
-        16
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -464,8 +470,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        42,
-        24
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -496,8 +502,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        58,
-        11
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -528,8 +534,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        53,
-        16
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -560,8 +566,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        64,
-        10
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -592,8 +598,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        63,
-        10
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -624,8 +630,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        65,
-        21
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -656,8 +662,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        30,
-        20
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -688,8 +694,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        61,
-        25
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -720,8 +726,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        53,
-        16
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -752,8 +758,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        31,
-        17
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -784,8 +790,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        38,
-        26
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -816,8 +822,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        73,
-        22
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -848,8 +854,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        58,
-        19
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -880,8 +886,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        73,
-        18
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -912,8 +918,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        79,
-        29
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -944,8 +950,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        45,
-        21
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -976,8 +982,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        42,
-        13
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1008,8 +1014,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        35,
-        25
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1040,8 +1046,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        44,
-        25
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1072,8 +1078,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        69,
-        12
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1104,8 +1110,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        33,
-        17
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1136,8 +1142,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        50,
-        11
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1168,8 +1174,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        62,
-        12
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1200,8 +1206,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        54,
-        18
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1232,8 +1238,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        42,
-        21
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1264,8 +1270,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        45,
-        11
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1296,8 +1302,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        71,
-        14
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1328,8 +1334,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        57,
-        23
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1360,8 +1366,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        54,
-        20
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1392,8 +1398,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        67,
-        27
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1424,8 +1430,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        74,
-        11
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1456,8 +1462,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        57,
-        27
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1488,8 +1494,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        73,
-        13
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1520,8 +1526,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        48,
-        20
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1552,8 +1558,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        54,
-        29
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1584,8 +1590,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        43,
-        16
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     INSERT INTO public.resources (
@@ -1616,8 +1622,8 @@ BEGIN
         'First Semester',
         '2025/2026',
         TRUE,
-        59,
-        12
+        0,
+        0
     ) ON CONFLICT DO NOTHING;
 
     RAISE NOTICE 'Successfully seeded 50 verified public university academic resources.';
