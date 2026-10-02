@@ -733,4 +733,7 @@ export interface Resource {
  academicLevel?: '100L' | '200L' | '300L' | '400L' | '500L' | 'Postgraduate';
  syllabusTopic?: string;
  campusCode?: string;
+ /** Set by listResources() when a rating-aware filter/sort is active (minRating/sortBy); absent otherwise. */
+ avgRating?: number;
+ ratingCount?: number;
 }

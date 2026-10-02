@@ -9,6 +9,7 @@ import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { router } from 'expo-router';
+import { getStorageQuotas } from '@/api/platformSettings';
 
 const CATEGORIES = ['Notes', 'Past Questions', 'Projects'] as const;
 
@@ -46,6 +47,25 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  const [isUploading, setIsUploading] = useState(false);
  const [rightsConfirmed, setRightsConfirmed] = useState(false);
 
+ /** image vs document - mirrors createResource()'s `ft === 'IMG' ? 'image' : 'document'` split, since that is the same quota the server enforces. */
+ function kindOf(name: string, mimeType?: string): 'image' | 'document' {
+   if (mimeType?.startsWith('image/')) return 'image';
+   const lower = name.toLowerCase();
+   return /\.(png|jpe?g|gif|webp)$/.test(lower) ? 'image' : 'document';
+ }
+
+ /** Returns an error message if too large for the admin-configured quota, or null if it's fine. */
+ async function checkFileSize(name: string, size?: number, mimeType?: string): Promise<string | null> {
+   if (!size) return null;
+   const quotas = await getStorageQuotas();
+   const kind = kindOf(name, mimeType);
+   const limitMb = kind === 'image' ? quotas.maxImageMb : quotas.maxPdfMb;
+   if (size > limitMb * 1024 * 1024) {
+     return `This file is too large. Maximum allowed ${kind === 'image' ? 'image' : 'document'} size is ${limitMb} MB.`;
+   }
+   return null;
+ }
+
  const translateY = useSharedValue(80);
  const backdropOpacity = useSharedValue(0);
 
@@ -70,10 +90,15 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  input.accept = '.pdf,.zip,.rar,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,image/*';
  input.style.display = 'none';
  document.body.appendChild(input);
- input.onchange = (e: Event) => {
+ input.onchange = async (e: Event) => {
  const file = (e.target as HTMLInputElement).files?.[0];
  document.body.removeChild(input);
  if (!file) return;
+ const sizeError = await checkFileSize(file.name, file.size, file.type);
+ if (sizeError) {
+ setErrorMessage(sizeError);
+ return;
+ }
  setSelectedFile({
  name: file.name,
  size: file.size,
@@ -115,10 +140,17 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  // fallback
  }
  }
+ const resolvedSize = asset.size || fileBlob?.size;
+ const resolvedMime = asset.mimeType || fileBlob?.type;
+ const sizeError = await checkFileSize(asset.name, resolvedSize, resolvedMime);
+ if (sizeError) {
+ setErrorMessage(sizeError);
+ return;
+ }
  setSelectedFile({
  name: asset.name,
- size: asset.size || fileBlob?.size,
- mimeType: asset.mimeType || fileBlob?.type,
+ size: resolvedSize,
+ mimeType: resolvedMime,
  file: fileBlob,
  });
  if (errorMessage) setErrorMessage(null);

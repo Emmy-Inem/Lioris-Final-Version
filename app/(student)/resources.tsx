@@ -162,7 +162,11 @@ export default function ResourcesScreen() {
   const RESOURCES_PAGE_SIZE = 20;
   const [resourcesPage, setResourcesPage] = useState(0);
   const [accumulatedResources, setAccumulatedResources] = useState<Resource[]>([]);
-  const resourcesFilterKey = `${debouncedQuery}|${filters.resourceType}|${filters.department}|${filters.studyLevel}|${effectiveCampus}`;
+  const resourcesFilterKey = `${debouncedQuery}|${filters.resourceType}|${filters.department}|${filters.studyLevel}|${filters.minRating}|${filters.sortBy}|${effectiveCampus}`;
+
+  // Mirrors LibraryFilterModal's RATINGS options ('All Ratings' | '3.0+ Stars' | ...) -
+  // parsed to the plain number listResources()'s minRating expects.
+  const minRatingValue = filters.minRating === 'All Ratings' ? undefined : parseFloat(filters.minRating);
 
   // A new search/filter/campus starts a fresh result set at page 0 - it isn't
   // "more of" whatever was already loaded for the previous filters.
@@ -181,6 +185,8 @@ export default function ResourcesScreen() {
             : (filters.resourceType as any),
         department: filters.department === 'All Depts' ? undefined : filters.department,
         academicLevel: filters.studyLevel === 'All Levels' ? undefined : filters.studyLevel,
+        minRating: minRatingValue,
+        sortBy: filters.sortBy,
         campusCode: effectiveCampus,
         page: resourcesPage,
         pageSize: RESOURCES_PAGE_SIZE,

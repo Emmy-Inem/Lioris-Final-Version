@@ -1177,6 +1177,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261009010000_suspension_enforcement_fixes.sql',
   'supabase/migrations/20261009020000_admin_moderation_fixes.sql',
   'supabase/migrations/20261009030000_student_transparency_and_appeals.sql',
+  'supabase/migrations/20261010000000_resource_ratings_self_rating_guard.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -2932,17 +2933,19 @@ console.log('\n== resource ratings (star ratings + reviews) ==');
 
   await check('anyone who can see the resource can read every rating on it, not just their own', async () => {
     await as('postgres', async (c) => {
-      await imp(U.s1);
+      // Neither rater here is the uploader (U.s1) - rating one's own upload is blocked
+      // by the self-rating guard (20261010000000_resource_ratings_self_rating_guard.sql).
+      await imp(U.alumni);
       await c.q(
         `INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 4) ON CONFLICT (resource_id, rater_id) DO UPDATE SET rating = EXCLUDED.rating`,
-        [resourceId, U.s1],
+        [resourceId, U.alumni],
       );
       await imp(U.s2);
       await c.q(
         `INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 2) ON CONFLICT (resource_id, rater_id) DO UPDATE SET rating = EXCLUDED.rating`,
         [resourceId, U.s2],
       );
-      // The uploader can read both their own rating and s2's, not only their own.
+      // The uploader can read every rating on their own resource, not only ratings they left themselves.
       await imp(U.s1);
       const rows = await c.q(`SELECT rater_id FROM public.resource_ratings WHERE resource_id = $1 ORDER BY rater_id`, [resourceId]);
       eq(rows.rows.length, 2, 'the uploader sees every rating on their own resource');
@@ -2951,7 +2954,8 @@ console.log('\n== resource ratings (star ratings + reviews) ==');
 
   await check('get_resource_rating_summary returns a correct average and count across multiple raters', async () => {
     await as('postgres', async (c) => {
-      for (const [uid, rating] of [[U.s1, 4], [U.s2, 2], [U.s4, 3], [U.s5, 5]]) {
+      // U.s1 (the uploader) is deliberately excluded - rating one's own upload is blocked.
+      for (const [uid, rating] of [[U.alumni, 4], [U.s2, 2], [U.s4, 3], [U.s5, 5]]) {
         await imp(uid);
         await c.q(
           `INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, $3)
@@ -2976,6 +2980,40 @@ console.log('\n== resource ratings (star ratings + reviews) ==');
         await c.t(`INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 5)`, [resourceId, U.s3]),
         /row-level|policy/i,
         'rating a resource on a campus this student cannot see',
+      );
+    });
+  });
+
+  // 20261010000000_resource_ratings_self_rating_guard.sql
+  await check('the resource\'s own uploader cannot rate (or review) their own upload', async () => {
+    await as(U.s1, async (c) => {
+      // U.s1 is the uploader of the fixture resource above.
+      denied(
+        await c.t(`INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 5)`, [resourceId, U.s1]),
+        /cannot rate your own upload/i,
+        'uploader rating their own resource',
+      );
+    });
+  });
+
+  await check('the self-rating guard also blocks an UPDATE that would turn someone else\'s row into a self-rating', async () => {
+    await as('postgres', async (c) => {
+      // A second resource uploaded by s4, rated by s1 - then try to "reassign" that
+      // rating row to s4 (the uploader) via UPDATE, which the trigger must also catch.
+      const otherResource = await admin(
+        `INSERT INTO public.resources (uploader_id, campus_code, course_code, course_title, title, file_url, is_approved)
+         VALUES ($1, 'UNILAG', 'CSC202', 'Algorithms', 'Algo Notes', 'https://example.com/algo.pdf', true) RETURNING id`,
+        [U.s4],
+      );
+      const otherId = otherResource.rows[0].id;
+      await imp(U.s1);
+      await c.q(`INSERT INTO public.resource_ratings (resource_id, rater_id, rating) VALUES ($1, $2, 3)`, [otherId, U.s1]);
+
+      await svc();
+      denied(
+        await c.t(`UPDATE public.resource_ratings SET rater_id = $2 WHERE resource_id = $1 AND rater_id = $3`, [otherId, U.s4, U.s1]),
+        /cannot rate your own upload/i,
+        'updating a rating row to make its rater the resource uploader',
       );
     });
   });

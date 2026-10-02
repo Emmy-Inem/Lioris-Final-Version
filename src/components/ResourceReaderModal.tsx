@@ -21,6 +21,7 @@ import { Resource } from '@/api/types';
 import {
   trackResourceDownload,
   getResourceRatingSummary,
+  getMyResourceRating,
   submitResourceRating,
   ResourceRatingSummary,
 } from '@/api/resources';
@@ -74,6 +75,32 @@ export function ResourceReaderModal({
     };
   }, [resource?.id]);
 
+  const isOwnUpload = !!user && !!resource && resource.authorId === user.id;
+
+  // Prefill from whatever the signed-in user already rated/reviewed this
+  // resource, instead of always starting editing from a blank 0/''. Skipped
+  // entirely for the uploader's own upload - they can't rate it anyway.
+  useEffect(() => {
+    if (!resource || isOwnUpload) {
+      setMyRating(0);
+      setMyReview('');
+      return;
+    }
+    let cancelled = false;
+    getMyResourceRating(resource.id)
+      .then((mine) => {
+        if (cancelled) return;
+        setMyRating(mine?.rating ?? 0);
+        setMyReview(mine?.review ?? '');
+      })
+      .catch(() => {
+        // Leaves the 0/'' defaults - same as never having rated it.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resource?.id, isOwnUpload]);
+
   if (!resource) return null;
 
   const bookmarked = isBookmarked(resource.id);
@@ -81,6 +108,10 @@ export function ResourceReaderModal({
   async function handleSaveRating() {
     if (!user) {
       Alert.alert('Sign in required', 'Sign in to rate this resource.');
+      return;
+    }
+    if (isOwnUpload) {
+      toast.error("You can't rate your own upload.");
       return;
     }
     if (myRating < 1) {
@@ -463,19 +494,27 @@ export function ResourceReaderModal({
               <AppText variant="h3" weight="bold">
                 Rate this resource
               </AppText>
-              <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 18 }}>
-                Your rating helps other students judge quality at a glance.
-              </AppText>
-              <StarRating value={myRating} onChange={setMyRating} size={26} />
-              <AppTextField
-                label=""
-                value={myReview}
-                onChangeText={(v) => setMyReview(v.slice(0, 1000))}
-                placeholder="What did you think? (optional)"
-                multiline
-                numberOfLines={3}
-              />
-              <AppButton label="Submit rating" variant="primary" size="sm" loading={savingRating} onPress={handleSaveRating} />
+              {isOwnUpload ? (
+                <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 18 }}>
+                  You can't rate your own upload. Other students will see their own rating option here.
+                </AppText>
+              ) : (
+                <>
+                  <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 18 }}>
+                    Your rating helps other students judge quality at a glance.
+                  </AppText>
+                  <StarRating value={myRating} onChange={setMyRating} size={26} />
+                  <AppTextField
+                    label=""
+                    value={myReview}
+                    onChangeText={(v) => setMyReview(v.slice(0, 1000))}
+                    placeholder="What did you think? (optional)"
+                    multiline
+                    numberOfLines={3}
+                  />
+                  <AppButton label="Submit rating" variant="primary" size="sm" loading={savingRating} onPress={handleSaveRating} />
+                </>
+              )}
             </View>
 
             {resource.description ? (
