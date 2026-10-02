@@ -157,7 +157,7 @@ export default function StudentDashboard() {
     .filter((a) => !isRead(a.id))
     .filter((a) => {
       const target = (a.campusCode || 'GLOBAL').toUpperCase();
-      if (target === 'GLOBAL' || effectiveCampus === 'GLOBAL') return true;
+      if (target === 'GLOBAL') return true;
       return !!effectiveCampus && target === effectiveCampus.toUpperCase();
     })
     .filter((a) => !a.expiresAt || new Date(a.expiresAt).getTime() > Date.now());

@@ -260,6 +260,15 @@ export interface FeedQuery {
   */
  viewScope?: 'campus' | 'global';
   showBots?: boolean;
+  /**
+   * 0-based page past the first. Only takes effect when `pageSize` is also
+   * given - omitting both preserves the previous unbounded fetch for callers
+   * that aren't paginating (e.g. the community-stats pool), matching the
+   * `page`/`pageSize` convention in `src/api/resources.ts`.
+   */
+  page?: number;
+  /** Rows per page from the database, before client-side filtering. Omit for an unbounded fetch. */
+  pageSize?: number;
 }
 
 function filterPosts(pool: Post[], query: FeedQuery): Post[] {
@@ -340,6 +349,12 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
       if (query.category) {
         dbQuery = dbQuery.ilike('category', `%${escapePostgrestLike(query.category)}%`);
       }
+      if (query.pageSize != null) {
+        const pageSize = query.pageSize;
+        const page = Math.max(0, query.page ?? 0);
+        const offset = page * pageSize;
+        dbQuery = dbQuery.range(offset, offset + pageSize - 1);
+      }
       return dbQuery;
     });
 
@@ -347,11 +362,16 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
 
     // Merge unique - local pool only ever contributes this session's own
     // just-created posts (always) plus seed fixtures (only when the admin
-    // mock-data toggle is on).
+    // mock-data toggle is on). Only on the first page: they're always the
+    // newest posts, so they would otherwise be re-shown at the top of every
+    // later page too.
+    const isFirstPage = (query.page ?? 0) === 0;
     const merged = [...dbPosts];
-    for (const p of [...locallyCreatedPosts, ...SEED_FORUM_POSTS]) {
-      if (!merged.some((m) => m.id === p.id)) {
-        merged.push(p);
+    if (isFirstPage) {
+      for (const p of [...locallyCreatedPosts, ...SEED_FORUM_POSTS]) {
+        if (!merged.some((m) => m.id === p.id)) {
+          merged.push(p);
+        }
       }
     }
     // Drafts/scheduled rows are dropped by filterPosts (the author's own come
@@ -360,7 +380,8 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     return await decorateViewerState(visible, viewerId);
   } catch (err) {
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
-    return filterPosts([...locallyCreatedPosts, ...SEED_FORUM_POSTS], { ...query, viewerInstitutionCode });
+    const isFirstPage = (query.page ?? 0) === 0;
+    return filterPosts(isFirstPage ? [...locallyCreatedPosts, ...SEED_FORUM_POSTS] : [], { ...query, viewerInstitutionCode });
   }
 }
 
