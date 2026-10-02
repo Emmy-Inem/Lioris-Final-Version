@@ -7,6 +7,7 @@ import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
 import { EmptyState } from './EmptyState';
+import { ErrorStateView } from './ErrorStateView';
 import { JOB_APPLICATION_STATUS_META } from './JobCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -98,7 +99,7 @@ export function MyApplicationsModal({ visible, onClose }: { visible: boolean; on
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
-  const { data: applications = [], isLoading } = useQuery({
+  const { data: applications = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['my-applications'],
     queryFn: () => listMyApplications(),
     enabled: visible,
@@ -153,6 +154,12 @@ export function MyApplicationsModal({ visible, onClose }: { visible: boolean; on
               <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                 <ActivityIndicator color={colors.brandPrimary} />
               </View>
+            ) : isError ? (
+              <ErrorStateView
+                title="Could not load your applications"
+                error={error}
+                onRetry={refetch}
+              />
             ) : applications.length === 0 ? (
               <EmptyState
                 icon="document-text-outline"

@@ -1170,6 +1170,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261007000000_resources_and_copilot_fixes.sql',
   'supabase/migrations/20261007010000_campus_access_and_devices_fixes.sql',
   'supabase/migrations/20261007020000_verification_moderation_announcements_fixes.sql',
+  'supabase/migrations/20261008010000_jobs_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -3730,6 +3731,163 @@ await check('a non-admin student still cannot read or delete another user\'s pus
     assert(del.ok && del.n === 0, 'a student must not be able to delete another user\'s push token row');
   });
 });
+
+// ---------------------------------------------------------------------------
+// jobs fixes (20261008010000_jobs_fixes.sql): expiry/closed hide stale
+// postings from new applications, and a status change notifies the applicant.
+// ---------------------------------------------------------------------------
+console.log('\n== jobs fixes (expires_at/is_closed, applicant status-change notifications) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+
+  await check('jobs: expires_at defaults to 45 days after posting, is_closed defaults to false', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU);
+      const row = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url)
+         VALUES ($1, 'UNILAG', 'Backend Intern', 'Acme Corp', 'Lagos', 'https://acme.test/apply')
+         RETURNING is_closed, EXTRACT(DAY FROM (expires_at - created_at))::int AS days_to_expiry`,
+        [U.staffU],
+      )).rows[0];
+      eq(row.is_closed, false, 'is_closed should default to false');
+      eq(row.days_to_expiry, 45, 'expires_at should default to 45 days after posting');
+    });
+  });
+
+  await check('job_applications INSERT: a closed job rejects a new application even though it is approved and accepts in-app applications', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU);
+      const job = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url, is_closed)
+         VALUES ($1, 'UNILAG', 'Closed Role', 'Acme Corp', 'Lagos', 'https://acme.test/apply', true) RETURNING id`,
+        [U.staffU],
+      )).rows[0];
+      await imp(U.s1);
+      denied(
+        await c.t(`INSERT INTO public.job_applications (job_id, applicant_id) VALUES ($1, $2)`, [job.id, U.s1]),
+        /row-level security/i,
+        'applying to a closed job',
+      );
+    });
+  });
+
+  await check('job_applications INSERT: an expired job rejects a new application', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU);
+      const job = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url, expires_at)
+         VALUES ($1, 'UNILAG', 'Expired Role', 'Acme Corp', 'Lagos', 'https://acme.test/apply', NOW() - INTERVAL '1 day') RETURNING id`,
+        [U.staffU],
+      )).rows[0];
+      await imp(U.s1);
+      denied(
+        await c.t(`INSERT INTO public.job_applications (job_id, applicant_id) VALUES ($1, $2)`, [job.id, U.s1]),
+        /row-level security/i,
+        'applying to an expired job',
+      );
+    });
+  });
+
+  await check('job_applications INSERT: a live, unexpired, approved job still accepts a new application', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU);
+      const job = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url)
+         VALUES ($1, 'UNILAG', 'Open Role', 'Acme Corp', 'Lagos', 'https://acme.test/apply') RETURNING id`,
+        [U.staffU],
+      )).rows[0];
+      await imp(U.s1);
+      const ins = await c.t(`INSERT INTO public.job_applications (job_id, applicant_id) VALUES ($1, $2)`, [job.id, U.s1]);
+      assert(ins.ok, 'applying to a live, unexpired job should succeed: ' + (ins.err?.message ?? ''));
+    });
+  });
+
+  await check('jobs UPDATE: the poster can close their own posting; a different student cannot', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.alumni);
+      const job = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url)
+         VALUES ($1, 'UNILAG', 'Alumni Referral Role', 'Acme Corp', 'Lagos', 'https://acme.test/apply') RETURNING id`,
+        [U.alumni],
+      )).rows[0];
+
+      const close = await c.t(`UPDATE public.jobs SET is_closed = true WHERE id = $1`, [job.id]);
+      assert(close.ok && close.n === 1, 'poster should be able to close their own posting: ' + (close.err?.message ?? ''));
+
+      await imp(U.s3); // a different student, different campus
+      const otherClose = await c.t(`UPDATE public.jobs SET is_closed = true WHERE id = $1`, [job.id]);
+      assert(otherClose.ok && otherClose.n === 0, "a non-poster must not be able to close someone else's posting");
+    });
+  });
+
+  await check('job_applications: moving an application to a new status notifies the applicant (mirrors notify_post_like/notify_post_comment)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU);
+      const job = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url)
+         VALUES ($1, 'UNILAG', 'Data Analyst Intern', 'Acme Corp', 'Lagos', 'https://acme.test/apply') RETURNING id`,
+        [U.staffU],
+      )).rows[0];
+
+      await imp(U.s1);
+      const app = (await c.q(`INSERT INTO public.job_applications (job_id, applicant_id) VALUES ($1, $2) RETURNING id`, [job.id, U.s1])).rows[0];
+      // Read as the recipient themself (RLS: "Users can view own notifications") -
+      // note ctx.su() is a no-op under as('postgres', ...) (its superuser-reset
+      // path only triggers when the outer as() role is a real authenticated
+      // user), so verification here goes through imp() + the recipient's own
+      // read policy rather than relying on it.
+      const before = (await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1`, [U.s1])).rows[0].n;
+
+      await imp(U.staffU);
+      await c.q(`UPDATE public.job_applications SET status = 'interview' WHERE id = $1`, [app.id]);
+
+      await imp(U.s1);
+      const notif = await c.q(
+        `SELECT title, body, type, recipient_id FROM public.notifications WHERE recipient_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        [U.s1],
+      );
+      eq(notif.rows.length, 1, 'a notification row should exist for the applicant');
+      eq(notif.rows[0].recipient_id, U.s1);
+      eq(notif.rows[0].type, 'job');
+      assert(/interview/i.test(notif.rows[0].title), `title should mention the new status: ${notif.rows[0].title}`);
+      assert(notif.rows[0].body.includes('Data Analyst Intern'), `body should name the job: ${notif.rows[0].body}`);
+      const after = (await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1`, [U.s1])).rows[0].n;
+      eq(after, before + 1, 'exactly one new notification should be inserted');
+    });
+  });
+
+  await check('job_applications: re-saving the same status (no real change) does not fire a duplicate notification', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.staffU);
+      const job = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url)
+         VALUES ($1, 'UNILAG', 'QA Intern', 'Acme Corp', 'Lagos', 'https://acme.test/apply') RETURNING id`,
+        [U.staffU],
+      )).rows[0];
+      await imp(U.s2);
+      const app = (await c.q(`INSERT INTO public.job_applications (job_id, applicant_id) VALUES ($1, $2) RETURNING id`, [job.id, U.s2])).rows[0];
+
+      await imp(U.staffU);
+      await c.q(`UPDATE public.job_applications SET status = 'applied' WHERE id = $1`, [app.id]); // same status - no real change
+
+      await imp(U.s2);
+      const n = await c.q(`SELECT count(*)::int n FROM public.notifications WHERE recipient_id = $1`, [U.s2]);
+      eq(n.rows[0].n, 0, 'no notification should be created when the status does not actually change');
+    });
+  });
+
+  await check('notify_job_application_status_changed: SECURITY DEFINER, pinned search_path, not directly callable by anon or authenticated', async () => {
+    const r = await admin(`SELECT p.prosecdef,
+        EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig, '{}')) c WHERE c LIKE 'search_path=%pg_temp%') AS pinned,
+        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_x,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS auth_x
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = 'notify_job_application_status_changed'`);
+    eq(r.rows.map((x) => [x.prosecdef, x.pinned, x.anon_x, x.auth_x]), [[true, true, false, false]]);
+  });
+}
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n== Summary: ${results.length - failed.length}/${results.length} checks passed ==`);

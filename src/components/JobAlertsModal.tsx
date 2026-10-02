@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { AppButton } from './AppButton';
+import { ErrorStateView } from './ErrorStateView';
 import { useTheme } from '@/theme/ThemeProvider';
 import { listMyJobAlerts, createJobAlert, deleteJobAlert, setJobAlertActive, JobAlert } from '@/api/jobAlerts';
 import { haptics } from '@/utils/haptics';
@@ -24,6 +25,7 @@ export function JobAlertsModal({ visible, onClose, initialKeywords }: { visible:
   const insets = useSafeAreaInsets();
   const [alerts, setAlerts] = useState<JobAlert[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<Error | null>(null);
   const [keywords, setKeywords] = useState('');
   const [jobType, setJobType] = useState<string | null>(null);
   const [remoteOnly, setRemoteOnly] = useState(false);
@@ -37,8 +39,10 @@ export function JobAlertsModal({ visible, onClose, initialKeywords }: { visible:
 
   function refresh() {
     setLoading(true);
+    setLoadError(null);
     listMyJobAlerts()
       .then(setAlerts)
+      .catch((err) => setLoadError(err instanceof Error ? err : new Error('Could not load your job alerts.')))
       .finally(() => setLoading(false));
   }
 
@@ -178,6 +182,13 @@ export function JobAlertsModal({ visible, onClose, initialKeywords }: { visible:
                 <AppText tone="secondary" variant="caption">
                   Loading…
                 </AppText>
+              ) : loadError ? (
+                <ErrorStateView
+                  compact
+                  title="Could not load your alerts"
+                  error={loadError}
+                  onRetry={refresh}
+                />
               ) : alerts.length === 0 ? (
                 <AppText tone="secondary" variant="caption">
                   No alerts yet - create one above.
