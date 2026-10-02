@@ -753,23 +753,37 @@ export function SettingsScreen() {
     }
   }
 
-  function handleToggleDirectoryDiscovery(next: boolean) {
+  async function handleToggleDirectoryDiscovery(next: boolean) {
     haptics.light();
     setDirectoryDiscovery(next);
     if (user?.id) {
-      supabase.from('profiles').update({ directory_discoverable: next }).eq('id', user.id).then(() => {});
+      try {
+        const { error } = await supabase.from('profiles').update({ directory_discoverable: next }).eq('id', user.id);
+        if (error) throw error;
+      } catch (err: any) {
+        setDirectoryDiscovery(!next);
+        haptics.error();
+        toast.error(err?.message || 'Could not update your directory visibility. Please try again.');
+        return;
+      }
     }
     toast.info(next ? 'Profile discovery in campus directory enabled' : 'Profile hidden from public campus directory');
   }
 
-  function handleToggleHideField(field: 'company' | 'location' | 'jobTitle', next: boolean) {
+  async function handleToggleHideField(field: 'company' | 'location' | 'jobTitle', next: boolean) {
     haptics.light();
     const column = field === 'company' ? 'directory_hide_company' : field === 'location' ? 'directory_hide_location' : 'directory_hide_job_title';
-    if (field === 'company') setHideCompany(next);
-    else if (field === 'location') setHideLocation(next);
-    else setHideJobTitle(next);
+    const setField = field === 'company' ? setHideCompany : field === 'location' ? setHideLocation : setHideJobTitle;
+    setField(next);
     if (user?.id) {
-      supabase.from('profiles').update({ [column]: next }).eq('id', user.id).then(() => {});
+      try {
+        const { error } = await supabase.from('profiles').update({ [column]: next }).eq('id', user.id);
+        if (error) throw error;
+      } catch (err: any) {
+        setField(!next);
+        haptics.error();
+        toast.error(err?.message || 'Could not update that directory setting. Please try again.');
+      }
     }
   }
 

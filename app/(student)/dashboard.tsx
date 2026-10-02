@@ -50,6 +50,7 @@ export default function StudentDashboard() {
 
   const [campusMapOpen, setCampusMapOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [profileNudgeDismissed, setProfileNudgeDismissed] = useState(false);
 
   // Read / Dismissed Tracker for Home broadcasts & discussions
   const { isRead, markAsRead } = useReadHomeAlerts();
@@ -115,6 +116,12 @@ export default function StudentDashboard() {
     queryKey: ['portal-links', 'dashboard', effectiveCampus],
     queryFn: () => listPortalLinks(effectiveCampus || undefined),
   });
+
+  // Mirrors exactly what public.mentor_directory (src/api/mentorship.ts's
+  // mentor search) actually scores a student against: department and
+  // interests (campus_code is set at signup, so it is never "missing").
+  // Bio isn't part of that match score, so it isn't nudged for here.
+  const missingMentorshipFields = !!profile && (!profile.department?.trim() || !(profile.interests && profile.interests.length > 0));
 
   const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Student';
   const { url: resolvedCoverUrl } = useSignedUrl('campus-media', profile?.coverUrl);
@@ -363,6 +370,74 @@ export default function StudentDashboard() {
 
         {/* Verification Notice for unverified personal email accounts */}
         <UnverifiedAccountNotice />
+
+        {/* Nudge toward a fuller profile - the fields it names are exactly what mentor matching uses */}
+        {isFeatureEnabled('alumni_mentorship') && missingMentorshipFields && !profileNudgeDismissed ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              width: '100%',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              borderRadius: radius.lg,
+              backgroundColor: colors.pastelPrimaryBg,
+              borderWidth: 1,
+              borderColor: colors.border,
+              gap: 10,
+            }}
+          >
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: colors.surface,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Ionicons name="person-circle-outline" size={18} color={colors.brandPrimary} />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <AppText weight="bold" style={{ fontSize: 13, lineHeight: 16 }}>
+                Complete Your Profile
+              </AppText>
+              <AppText tone="secondary" style={{ fontSize: 11.5, lineHeight: 15, marginTop: 2 }}>
+                Add your department and interests to get better alumni mentor matches.
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+                onPress={() => {
+                  haptics.light();
+                  router.push('/(student)/profile');
+                }}
+                style={{ alignSelf: 'flex-start', marginTop: 3 }}
+              >
+                <AppText variant="caption" style={{ fontSize: 11, color: colors.brandPrimary, textDecorationLine: 'underline' }}>
+                  Edit profile →
+                </AppText>
+              </Pressable>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss profile completion reminder"
+              onPress={() => {
+                haptics.light();
+                setProfileNudgeDismissed(true);
+              }}
+              style={{ padding: 4, flexShrink: 0 }}
+            >
+              <Ionicons name="close" size={16} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+        ) : null}
 
         {/* 2. Important Campus Broadcasts (Disappears once clicked or dismissed) */}
         {urgentBroadcasts.length > 0 && (

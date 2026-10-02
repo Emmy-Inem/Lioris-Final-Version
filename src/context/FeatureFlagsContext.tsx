@@ -391,6 +391,13 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
       setTimeout(fetchRemoteFlags, 0);
     });
 
+    // onAuthStateChange only fires around sign-in/out and foreground transitions,
+    // so a flag other than maintenance_mode (which MaintenanceGate polls itself)
+    // toggled by an admin mid-session would otherwise never reach an already-open,
+    // continuously-foregrounded tab until the next auth event. Poll on the same
+    // interval as MaintenanceGate's refetchInterval so every flag stays in sync.
+    const pollInterval = setInterval(fetchRemoteFlags, 60_000);
+
     if (isWeb && typeof window !== 'undefined') {
       const handleSync = (e: any) => {
         try {
@@ -409,6 +416,7 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
       return () => {
         mounted = false;
         clearTimeout(failsafe);
+        clearInterval(pollInterval);
         authListener?.subscription?.unsubscribe();
         window.removeEventListener('lioris_feature_flags_sync', handleSync);
         window.removeEventListener('storage', handleSync);
@@ -418,6 +426,7 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
     return () => {
       mounted = false;
       clearTimeout(failsafe);
+      clearInterval(pollInterval);
       authListener?.subscription?.unsubscribe();
     };
   }, []);
