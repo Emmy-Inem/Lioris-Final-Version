@@ -23,6 +23,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { deactivateMyAccount, deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from '@/api/profile';
+import { PROFILE_ACADEMIC_LEVELS } from './ProfileScreenBase';
 import { getMyNotificationPreferences, updateMyNotificationPreferences } from '@/api/notificationPreferences';
 import { listMyDevices, removeMyDevice, MyDevice } from '@/api/devices';
 import { registerForPushNotificationsAsync } from '@/notifications/push';
@@ -333,6 +334,7 @@ export function SettingsScreen() {
   const [editDepartment, setEditDepartment] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editGraduationYear, setEditGraduationYear] = useState('');
+  const [editAcademicLevel, setEditAcademicLevel] = useState<string>('100L');
   const [editIndustry, setEditIndustry] = useState('');
   const [editCompany, setEditCompany] = useState('');
   const [editJobTitle, setEditJobTitle] = useState('');
@@ -820,6 +822,7 @@ export function SettingsScreen() {
     setEditDepartment(profile.department || '');
     setEditBio(profile.bio || '');
     setEditGraduationYear(profile.graduationYear ? String(profile.graduationYear) : '');
+    setEditAcademicLevel(profile.academicLevel || '100L');
     setEditIndustry(profile.industry || '');
     setEditCompany(profile.company || '');
     setEditJobTitle(profile.jobTitle || '');
@@ -851,6 +854,14 @@ export function SettingsScreen() {
         username: cleanUsername,
         department: editDepartment.trim(),
         bio: editBio.trim(),
+        // Academic progression (level & graduation year) is the student's own to edit here, not
+        // just from the main Profile screen - mirrors the same picker/field ProfileScreenBase uses.
+        ...(user?.role === 'student'
+          ? {
+              academicLevel: editAcademicLevel,
+              graduationYear: parsedYear,
+            }
+          : {}),
         ...(isSuperAdmin || user?.role === 'alumni'
           ? {
               graduationYear: parsedYear,
@@ -927,7 +938,11 @@ export function SettingsScreen() {
 
   const academicStandingDisplay =
     user?.role === 'student'
-      ? `Level ${profile?.level || 400} Undergraduate`
+      ? profile?.academicLevel
+        ? /^\d+L$/i.test(profile.academicLevel)
+          ? `${profile.academicLevel} Undergraduate`
+          : profile.academicLevel
+        : 'Undergraduate'
       : user?.role === 'staff'
       ? 'Senior Faculty Lecturer'
       : user?.role === 'alumni'
@@ -2413,6 +2428,55 @@ export function SettingsScreen() {
                   numberOfLines={3}
                   placeholder="Tell classmates about your academic focus or projects..."
                 />
+                {user?.role === 'student' && (
+                  <>
+                    <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginTop: spacing.xs }}>
+                      ACADEMIC PROGRESSION
+                    </AppText>
+                    <View style={{ marginBottom: spacing.xs }}>
+                      <AppText variant="caption" weight="medium" tone="secondary" style={{ marginBottom: 6 }}>
+                        Programme & Academic Standing
+                      </AppText>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+                        {PROFILE_ACADEMIC_LEVELS.map((lvl) => {
+                          const isSelected = editAcademicLevel === lvl;
+                          return (
+                            <Pressable
+                              key={lvl}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Set academic level to ${lvl}`}
+                              accessibilityState={{ selected: isSelected }}
+                              onPress={() => setEditAcademicLevel(lvl)}
+                              style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: radius.pill,
+                                borderWidth: 1,
+                                borderColor: isSelected ? colors.brandPrimary : colors.border,
+                                backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface,
+                              }}
+                            >
+                              <AppText
+                                variant="caption"
+                                weight={isSelected ? 'bold' : 'regular'}
+                                tone={isSelected ? 'brand' : 'secondary'}
+                              >
+                                {lvl}
+                              </AppText>
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                    <AppTextField
+                      label="Graduation Year"
+                      value={editGraduationYear}
+                      onChangeText={(t) => setEditGraduationYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
+                      placeholder="e.g. 2026"
+                      keyboardType="numeric"
+                    />
+                  </>
+                )}
                 {(isSuperAdmin || user?.role === 'alumni') && (
                   <>
                     <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginTop: spacing.xs }}>

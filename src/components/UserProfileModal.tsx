@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,16 +9,20 @@ import { UserTypeBadge } from './UserTypeBadge';
 import { VerifiedBadge } from './VerifiedBadge';
 import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
+import { AppTextField } from './AppTextField';
+import { ActionSheetModal } from './ActionSheetModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { sendConnectionRequest, checkConnectionStatus, deleteConnection } from '@/api/connections';
+import { sendConnectionRequest, checkConnectionStatus, deleteConnection, blockUser } from '@/api/connections';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { getPublicProfile } from '@/api/profile';
+import { submitReport } from '@/api/moderation';
 import { useSignedUrl } from '@/api/signedUrls';
 import { UserProfile, UserRole } from '@/api/types';
 import { haptics } from '@/utils/haptics';
+import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useAuth } from '@/auth/AuthContext';
 
 const STOCK_IMAGES: Record<string, any> = {
@@ -63,6 +67,12 @@ export function UserProfileModal({
  const [connecting, setConnecting] = useState(false);
  const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
  const [profileLoading, setProfileLoading] = useState(false);
+
+ // Overflow menu (Block / Report) for inspecting someone else's profile
+ const [menuOpen, setMenuOpen] = useState(false);
+ const [reportOpen, setReportOpen] = useState(false);
+ const [reportReason, setReportReason] = useState('');
+ const [submittingReport, setSubmittingReport] = useState(false);
 
  useEffect(() => {
  if (visible && userId) {
@@ -130,6 +140,27 @@ export function UserProfileModal({
  } finally {
  setConnecting(false);
  }
+ }
+
+ function confirmBlock() {
+ setMenuOpen(false);
+ Alert.alert(
+ `Block ${effectiveName}?`,
+ `You will no longer see posts, comments, or events from ${effectiveName}. This decision is saved to your account.`,
+ [
+ { text: 'Cancel', style: 'cancel' },
+ {
+ text: 'Block User',
+ style: 'destructive',
+ onPress: async () => {
+ haptics.medium();
+ await blockUser(userId, effectiveName);
+ Alert.alert('User Blocked', `Content from ${effectiveName} has been hidden from your feed.`);
+ onClose();
+ },
+ },
+ ],
+ );
  }
 
  async function handleStartChat() {
@@ -206,6 +237,30 @@ export function UserProfileModal({
  >
  <Ionicons name="close" size={20} color="#FFFFFF" />
  </Pressable>
+
+ {/* Overflow Menu (Block / Report) - only when inspecting someone else's profile */}
+ {!isOwnProfile ? (
+ <Pressable accessibilityRole="button" accessibilityLabel="More options"
+ onPress={() => { haptics.light(); setMenuOpen(true); }}
+ hitSlop={12}
+ style={{
+ position: 'absolute',
+ top: 14,
+ right: 58,
+ width: 36,
+ height: 36,
+ borderRadius: 18,
+ backgroundColor: 'rgba(0,0,0,0.65)',
+ alignItems: 'center',
+ justifyContent: 'center',
+ borderWidth: 1,
+ borderColor: 'rgba(255,255,255,0.25)',
+ zIndex: 20,
+ }}
+ >
+ <Ionicons name="ellipsis-horizontal" size={20} color="#FFFFFF" />
+ </Pressable>
+ ) : null}
 
  <ScrollView
  style={{ flex: 1, width: '100%' }}
@@ -389,6 +444,93 @@ export function UserProfileModal({
  </ScrollView>
  </View>
  </View>
+
+ {/* Overflow Action Sheet: Block / Report */}
+ {menuOpen && (
+ <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
+ <Pressable
+ onPress={() => {
+ setMenuOpen(false);
+ setReportOpen(true);
+ }}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 }}
+ >
+ <Ionicons name="flag-outline" size={18} color={colors.critical} />
+ <AppText style={{ color: colors.critical }} weight="medium">Report user</AppText>
+ </Pressable>
+ <Pressable
+ onPress={confirmBlock}
+ style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 }}
+ >
+ <Ionicons name="ban-outline" size={18} color={colors.critical} />
+ <AppText style={{ color: colors.critical }} weight="medium">Block {effectiveName}</AppText>
+ </Pressable>
+ </ActionSheetModal>
+ )}
+
+ {/* Report User Modal */}
+ {reportOpen && (
+ <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>
+ <KeyboardAvoidingView accessibilityViewIsModal
+ behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+ style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg, paddingBottom: Math.max(insets.bottom, 16) }}
+ >
+ <Pressable style={StyleSheet.absoluteFill} onPress={() => setReportOpen(false)} />
+ <SolidCard style={{ width: '100%', maxWidth: 420 }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+ <Ionicons name="shield-outline" size={20} color={colors.critical} />
+ <AppText variant="h3" weight="bold" style={{ color: colors.critical }}>
+ Report User
+ </AppText>
+ </View>
+ <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setReportOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+ <Ionicons name="close" size={20} color={colors.textSecondary} />
+ </Pressable>
+ </View>
+ <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+ Describe how {effectiveName} has violated the Campus Honor Code or Community Guidelines.
+ </AppText>
+ <AppTextField
+ label="Reason for Flag"
+ placeholder="e.g. Harassment, impersonation, spam..."
+ value={reportReason}
+ onChangeText={setReportReason}
+ multiline
+ numberOfLines={3}
+ />
+ <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
+ <AppButton label="Cancel" variant="ghost" onPress={() => setReportOpen(false)} />
+ <AppButton
+ label="Submit Report"
+ variant="accent"
+ loading={submittingReport}
+ onPress={async () => {
+ if (!reportReason.trim()) return;
+ setSubmittingReport(true);
+ try {
+ await submitReport({
+ targetType: 'user',
+ targetId: userId,
+ reason: reportReason.trim(),
+ });
+ setReportOpen(false);
+ setReportReason('');
+ haptics.success();
+ Alert.alert('Report Dispatched', 'Campus moderators have been notified.');
+ } catch (err: any) {
+ haptics.error();
+ Alert.alert('Report Failed', getFriendlyErrorMessage(err, 'Could not submit your report. Please try again.'));
+ } finally {
+ setSubmittingReport(false);
+ }
+ }}
+ />
+ </View>
+ </SolidCard>
+ </KeyboardAvoidingView>
+ </Modal>
+ )}
  </Modal>
  );
 }

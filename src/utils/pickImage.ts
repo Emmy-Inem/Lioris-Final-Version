@@ -1,9 +1,10 @@
-import { Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 /**
  * Lets the user choose one photo. Returns a URI (a data URL on web), or null when they cancel or
- * decline the permission prompt.
+ * decline the permission prompt. A denied permission also surfaces an Alert pointing the user at
+ * device Settings, so declining doesn't look like a silent no-op to every caller of this util.
  */
 export async function pickImageFromLibrary(): Promise<string | null> {
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -32,7 +33,17 @@ export async function pickImageFromLibrary(): Promise<string | null> {
   }
 
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) return null;
+  if (!permission.granted) {
+    Alert.alert(
+      'Photo Access Needed',
+      'Lioris needs permission to access your photos to do this. Please enable photo access for this app in your device Settings.',
+      [
+        { text: 'Not Now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => { Linking.openSettings().catch(() => {}); } },
+      ],
+    );
+    return null;
+  }
   const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
   return !result.canceled && result.assets[0] ? result.assets[0].uri : null;
 }

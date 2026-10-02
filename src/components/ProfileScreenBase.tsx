@@ -51,7 +51,7 @@ function scheduledLabel(iso?: string): string {
   return date.getTime() > Date.now() ? `Goes live ${when}` : `Was due ${when}`;
 }
 
-const PROFILE_ACADEMIC_LEVELS = [
+export const PROFILE_ACADEMIC_LEVELS = [
   '100L',
   '200L',
   '300L',
@@ -236,6 +236,12 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
       Alert.alert('Invalid LinkedIn URL', 'Please enter a full LinkedIn profile URL, e.g. https://www.linkedin.com/in/yourname');
       return;
     }
+    const trimmedGradYear = editGradYear.trim();
+    const parsedGradYear = trimmedGradYear ? Number(trimmedGradYear) : null;
+    if (trimmedGradYear && (!Number.isInteger(parsedGradYear) || parsedGradYear! < 1950 || parsedGradYear! > 2100)) {
+      Alert.alert('Invalid Graduation Year', 'Please enter a valid 4-digit year between 1950 and 2100.');
+      return;
+    }
     setSavingProfile(true);
     try {
       const interestsArray = editInterests
@@ -248,7 +254,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         username: cleanUsername,
         department: editDepartment.trim(),
         academicLevel: editLevel,
-        graduationYear: parseInt(editGradYear, 10) || null,
+        graduationYear: parsedGradYear,
         bio: editBio.trim(),
         interests: interestsArray,
         linkedinUrl: trimmedLinkedin || null,
@@ -434,6 +440,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
  {/* Change Photo Trigger */}
  <Pressable
+ accessibilityRole="button"
+ accessibilityLabel="Change cover photo"
  onPress={() => setPhotoPickerOpen(true)}
  style={{
  position: 'absolute',
@@ -612,7 +620,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                   Verification Pending Review
                 </AppText>
                 <AppText tone="secondary" variant="caption">
-                  Your student ID is being verified by campus moderators.
+                  Your verification request is being reviewed by campus moderators.
                 </AppText>
               </View>
             </View>
@@ -640,7 +648,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  </AppText>
  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
  {profile.interests.map((interest) => {
-   const endorsement = skillEndorsements?.find((e) => e.skill === interest);
+   const endorsement = skillEndorsements?.find(
+     (e) => e.skill.trim().toLowerCase() === interest.trim().toLowerCase(),
+   );
    const endorseCount = endorsement?.count ?? 0;
    const endorsedByMe = endorsement?.endorsedByMe ?? false;
    return (
