@@ -296,6 +296,47 @@ export default function SystemHealthScreen() {
           </View>
         </View>
 
+        {/* Edge Function Reachability */}
+        <SolidCard frosted style={{ padding: spacing.lg }}>
+          <AppText variant="h3" weight="bold" style={{ marginBottom: 4 }}>
+            Edge Functions
+          </AppText>
+          <AppText tone="secondary" variant="caption" style={{ marginBottom: spacing.md }}>
+            CORS-preflight connectivity probes for each deployed edge function.
+          </AppText>
+          <View style={{ gap: spacing.sm }}>
+            {(health?.edgeFunctions ?? []).map((fn) => (
+              <View
+                key={fn.name}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: spacing.md,
+                  borderRadius: radius.md,
+                  backgroundColor: isDark ? '#27272A' : '#F4F4F5',
+                  borderWidth: 1,
+                  borderColor: isDark ? '#3F3F46' : '#E4E4E7',
+                  gap: 10,
+                }}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText weight="bold" style={{ fontSize: 14 }}>
+                    {fn.label}
+                  </AppText>
+                  <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+                    {fn.reachable ? `${fn.latencyMs} ms` : fn.error || 'Unreachable'}
+                  </AppText>
+                </View>
+                <Badge
+                  label={fn.reachable ? 'REACHABLE' : 'UNREACHABLE'}
+                  tone={fn.reachable ? 'success' : 'critical'}
+                />
+              </View>
+            ))}
+          </View>
+        </SolidCard>
+
         {/* Database Sync Integrity & Orphan Scanner */}
         <SolidCard frosted style={{ padding: spacing.lg }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>

@@ -1442,7 +1442,11 @@ export async function notifyPostMentions(params: {
     if (handles.length === 0) return;
 
     const matched = await resolvePostMentions(handles, params.campusCode);
-    const recipients = matched.filter((u) => u.id !== params.authorId);
+    // Skip mentioning yourself, and skip anyone the mentioning user has
+    // blocked - matches the same isUserBlocked filter every content feed
+    // already applies (see getPostFeed above), so a block can't be
+    // sidestepped just by @mentioning the blocked person instead.
+    const recipients = matched.filter((u) => u.id !== params.authorId && !isUserBlocked(u.id));
     if (recipients.length === 0) return;
 
     await Promise.all(

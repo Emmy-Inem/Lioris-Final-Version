@@ -86,6 +86,17 @@ export function resolveNotificationRoute(
       return `/(${role})${subPath}`;
     }
 
+    // Bare, un-prefixed paths written by callers that don't know the
+    // viewer's role (e.g. createNotification({ deepLinkPath: '/profile' })
+    // from moderation.ts, connections.ts, verification.ts, supportTickets.ts).
+    // These map 1:1 onto a route that exists under every role group, so
+    // prepend the viewer's own role prefix instead of falling through to a
+    // route that doesn't exist (bare '/profile', '/dashboard', etc).
+    const bareRoleRoutes = new Set(['/profile', '/dashboard', '/messages', '/settings', '/notifications']);
+    if (bareRoleRoutes.has(trimmed)) {
+      return `/(${role})${trimmed}`;
+    }
+
     // Root paths like '/privacy', '/terms', '/(auth)/login'
     if (trimmed.startsWith('/')) {
       return trimmed;
