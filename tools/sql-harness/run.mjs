@@ -1174,6 +1174,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261008010000_jobs_fixes.sql',
   'supabase/migrations/20261008020000_connections_and_blocking_security.sql',
   'supabase/migrations/20261009000000_role_exclusive_jobs_marketplace.sql',
+  'supabase/migrations/20261009010000_suspension_enforcement_fixes.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -4470,6 +4471,128 @@ console.log('\n== role-exclusive jobs & marketplace posting (20261009000000) =='
         [U.adminA],
       );
       assert(adminR.ok, 'admin should still be able to post a marketplace listing: ' + (adminR.err?.message ?? ''));
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// suspension enforcement fixes (20261009010000_suspension_enforcement_fixes.sql):
+// posts / jobs / marketplace_listings UPDATE policies now carry the same
+// is_suspended check their matching INSERT policies already had. Note that an
+// RLS USING-clause mismatch on UPDATE is not an error - Postgres just selects
+// 0 rows to update - so these assert `ok && n === 0` (matching the existing
+// "a suspended user cannot vote or change a vote" precedent above), not
+// `denied()`.
+// ---------------------------------------------------------------------------
+console.log('\n== suspension enforcement fixes (posts/jobs/marketplace_listings UPDATE) ==');
+{
+  const imp = async (uid) => {
+    await db.exec(`RESET ROLE; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub', '${uid}', true)`);
+  };
+
+  await check('posts UPDATE: a suspended author cannot edit their own post (0 rows); admin and same-campus staff still can while suspended; a non-suspended owner is restored', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      const [post] = (await c.q(`INSERT INTO public.posts (author_id, campus_code, content) VALUES ($1, 'UNILAG', 'before') RETURNING id`, [U.s1])).rows;
+
+      await imp(U.adminA);
+      await c.q(`UPDATE public.profiles SET is_suspended = true WHERE id = $1`, [U.s1]);
+
+      await imp(U.s1);
+      const ownEdit = await c.t(`UPDATE public.posts SET content = 'edited by suspended author' WHERE id = $1`, [post.id]);
+      assert(ownEdit.ok && ownEdit.n === 0, 'a suspended author should not be able to edit their own post');
+
+      await imp(U.adminA);
+      const adminEdit = await c.t(`UPDATE public.posts SET content = 'admin edit' WHERE id = $1`, [post.id]);
+      assert(adminEdit.ok && adminEdit.n === 1, 'admin editing a suspended user\'s post should still succeed: ' + (adminEdit.err?.message ?? ''));
+
+      await imp(U.staffU); // same campus (UNILAG) as the post
+      const staffEdit = await c.t(`UPDATE public.posts SET content = 'staff edit' WHERE id = $1`, [post.id]);
+      assert(staffEdit.ok && staffEdit.n === 1, 'same-campus staff editing a suspended user\'s post should still succeed: ' + (staffEdit.err?.message ?? ''));
+
+      await imp(U.adminA);
+      await c.q(`UPDATE public.profiles SET is_suspended = false WHERE id = $1`, [U.s1]);
+
+      await imp(U.s1);
+      const restored = await c.t(`UPDATE public.posts SET content = 'edited after unsuspension' WHERE id = $1`, [post.id]);
+      assert(restored.ok && restored.n === 1, 'a non-suspended owner should be able to edit their own post again: ' + (restored.err?.message ?? ''));
+    });
+  });
+
+  await check('jobs UPDATE: a suspended poster cannot edit their own job (0 rows); admin and same-campus staff still can while suspended; a non-suspended poster is restored', async () => {
+    await as('postgres', async (c) => {
+      // Poster must be alumni (not a student) - jobs/career became alumni-only
+      // via 20261009000000_role_exclusive_jobs_marketplace.sql, applied earlier
+      // in currentProductMigrations than this migration.
+      await imp(U.alumni);
+      const [job] = (await c.q(
+        `INSERT INTO public.jobs (poster_id, campus_code, title, company, location, apply_url) VALUES ($1, 'UNILAG', 'Frontend Intern', 'Acme', 'Lagos', 'https://example.test/apply') RETURNING id`,
+        [U.alumni],
+      )).rows;
+
+      await imp(U.adminA);
+      await c.q(`UPDATE public.profiles SET is_suspended = true WHERE id = $1`, [U.alumni]);
+
+      await imp(U.alumni);
+      const ownEdit = await c.t(`UPDATE public.jobs SET title = 'edited by suspended poster' WHERE id = $1`, [job.id]);
+      assert(ownEdit.ok && ownEdit.n === 0, 'a suspended poster should not be able to edit their own job');
+
+      await imp(U.adminA);
+      const adminEdit = await c.t(`UPDATE public.jobs SET title = 'admin edit' WHERE id = $1`, [job.id]);
+      assert(adminEdit.ok && adminEdit.n === 1, 'admin editing a suspended user\'s job should still succeed: ' + (adminEdit.err?.message ?? ''));
+
+      await imp(U.staffU); // same campus (UNILAG) as the job
+      const staffEdit = await c.t(`UPDATE public.jobs SET title = 'staff edit' WHERE id = $1`, [job.id]);
+      assert(staffEdit.ok && staffEdit.n === 1, 'same-campus staff editing a suspended user\'s job should still succeed: ' + (staffEdit.err?.message ?? ''));
+
+      await imp(U.adminA);
+      await c.q(`UPDATE public.profiles SET is_suspended = false WHERE id = $1`, [U.alumni]);
+
+      await imp(U.alumni);
+      const restored = await c.t(`UPDATE public.jobs SET title = 'edited after unsuspension' WHERE id = $1`, [job.id]);
+      assert(restored.ok && restored.n === 1, 'a non-suspended poster should be able to edit their own job again: ' + (restored.err?.message ?? ''));
+    });
+  });
+
+  await check('marketplace_listings UPDATE: a suspended seller cannot edit their own listing (0 rows); admin and same-campus staff still can while suspended; a non-suspended seller is restored', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s4);
+      const [listing] = (await c.q(
+        `INSERT INTO public.marketplace_listings (seller_id, campus_code, title, description, price_kobo, price_display, category) VALUES ($1, 'UNILAG', 'Used calculator', 'Works fine', 500000, '₦5,000', 'Electronics') RETURNING id`,
+        [U.s4],
+      )).rows;
+
+      await imp(U.adminA);
+      await c.q(`UPDATE public.profiles SET is_suspended = true WHERE id = $1`, [U.s4]);
+
+      await imp(U.s4);
+      const ownEdit = await c.t(`UPDATE public.marketplace_listings SET title = 'edited by suspended seller' WHERE id = $1`, [listing.id]);
+      assert(ownEdit.ok && ownEdit.n === 0, 'a suspended seller should not be able to edit their own listing');
+
+      await imp(U.adminA);
+      const adminEdit = await c.t(`UPDATE public.marketplace_listings SET title = 'admin edit' WHERE id = $1`, [listing.id]);
+      assert(adminEdit.ok && adminEdit.n === 1, 'admin editing a suspended user\'s listing should still succeed: ' + (adminEdit.err?.message ?? ''));
+
+      await imp(U.staffU); // same campus (UNILAG) as the listing
+      const staffEdit = await c.t(`UPDATE public.marketplace_listings SET title = 'staff edit' WHERE id = $1`, [listing.id]);
+      assert(staffEdit.ok && staffEdit.n === 1, 'same-campus staff editing a suspended user\'s listing should still succeed: ' + (staffEdit.err?.message ?? ''));
+
+      await imp(U.adminA);
+      await c.q(`UPDATE public.profiles SET is_suspended = false WHERE id = $1`, [U.s4]);
+
+      await imp(U.s4);
+      const restored = await c.t(`UPDATE public.marketplace_listings SET title = 'edited after unsuspension' WHERE id = $1`, [listing.id]);
+      assert(restored.ok && restored.n === 1, 'a non-suspended seller should be able to edit their own listing again: ' + (restored.err?.message ?? ''));
+    });
+  });
+
+  await check('posts UPDATE: an unrelated non-suspended student cannot edit someone else\'s post (ownership check unaffected by this fix)', async () => {
+    await as('postgres', async (c) => {
+      await imp(U.s1);
+      const [post] = (await c.q(`INSERT INTO public.posts (author_id, campus_code, content) VALUES ($1, 'UNILAG', 'owned by s1, not suspended') RETURNING id`, [U.s1])).rows;
+      await imp(U.s5);
+      const r = await c.t(`UPDATE public.posts SET content = 'hijacked' WHERE id = $1`, [post.id]);
+      assert(r.ok && r.n === 0, 'a non-owner, non-suspended, non-admin/staff student should not be able to edit another student\'s post');
     });
   });
 }
