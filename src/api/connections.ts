@@ -103,10 +103,68 @@ export async function sendConnectionRequest(recipientId: string): Promise<Connec
  if (!senderId || senderId === 'me') {
  throw new Error('Could not identify the current user to send this connection request.');
  }
+ if (senderId === recipientId) {
+ throw new Error('You cannot send a connection request to yourself.');
+ }
 
  const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', senderId).maybeSingle();
  if (profile?.full_name) {
  senderName = profile.full_name;
+ }
+
+ // If the other person already sent *us* a pending request, accept it
+ // directly rather than creating a second, independent pending row for the
+ // same pair - the DB also enforces this as a backstop (a partial unique
+ // index on the unordered pair, see the connections_and_blocking_security
+ // migration), but auto-accepting here gives a much better result than
+ // surfacing that constraint violation to the user.
+ const { data: reverseRow } = await supabase
+ .from('connections')
+ .select('id, status')
+ .eq('requester_id', recipientId)
+ .eq('recipient_id', senderId)
+ .maybeSingle();
+
+ if (reverseRow?.status === 'pending') {
+ const { data: updated, error: updateError } = await supabase
+ .from('connections')
+ .update({ status: 'accepted', updated_at: new Date().toISOString() })
+ .eq('id', reverseRow.id)
+ .select('id, requester_id, recipient_id, status, created_at')
+ .maybeSingle();
+
+ if (updateError || !updated) {
+ console.warn('[Connections] Auto-accept reverse request error:', updateError?.message);
+ throw updateError || new Error('Could not accept the existing connection request.');
+ }
+
+ createNotification({
+ recipientId,
+ type: 'system',
+ title: 'Connection accepted',
+ body: `${senderName} accepted your connection request - start a conversation!`,
+ deepLinkPath: '/messages',
+ });
+
+ return {
+ id: updated.id,
+ requesterId: updated.requester_id,
+ recipientId: updated.recipient_id,
+ status: 'accepted',
+ createdAt: updated.created_at,
+ respondedAt: new Date().toISOString(),
+ };
+ }
+
+ if (reverseRow?.status === 'accepted') {
+ // Already connected - nothing to do.
+ return {
+ id: reverseRow.id,
+ requesterId: recipientId,
+ recipientId: senderId,
+ status: 'accepted',
+ createdAt: new Date().toISOString(),
+ };
  }
 
  const { error } = await supabase.from('connections').upsert({
@@ -167,7 +225,11 @@ export async function respondToConnectionRequest(
  throw error;
  }
  if (!connRow?.requester_id) {
- throw new Error('Could not find that connection request to update.');
+ // RLS ("Recipient can respond to connection requests") silently drops the
+ // UPDATE instead of erroring when the caller isn't the pending request's
+ // recipient - that includes the requester trying to self-accept/decline
+ // their own request. Either way, nothing was changed.
+ throw new Error('Could not find a pending connection request you can respond to.');
  }
  const realRequesterId = connRow.requester_id;
 
@@ -237,13 +299,13 @@ export interface SuggestedConnection {
 
 export async function listSuggestedConnections(): Promise<SuggestedConnection[]> {
  try {
- const { data: authData } = await supabase.auth.getUser();
- const currentUserId = authData?.user?.id;
- let query = supabase.from('profiles').select('id, full_name, role, department, level, avatar_url').limit(10);
- if (currentUserId) {
- query = query.neq('id', currentUserId);
- }
- const { data, error } = await query;
+ // get_suggested_connections() is a SECURITY DEFINER RPC (see the
+ // connections_and_blocking_security migration) - it excludes anyone
+ // blocked in EITHER direction, muted by the current user, or already
+ // connected/pending with them. A plain client-side `profiles.select()`
+ // cannot do the "blocked by them" half of that: user_blocks' RLS only
+ // lets a user see their own outgoing blocks, never an incoming one.
+ const { data, error } = await supabase.rpc('get_suggested_connections', { p_limit: 10 });
  if (!error && data && data.length > 0) {
  return data.map((p: any) => ({
  id: p.id,
@@ -253,6 +315,9 @@ export async function listSuggestedConnections(): Promise<SuggestedConnection[]>
  department: p.department || 'Academic Department',
  level: p.level || 300,
  }));
+ }
+ if (error) {
+ console.warn('[Connections] Supabase suggestions error:', error.message);
  }
  } catch (err) {
  console.warn('[Connections] Supabase suggestions error:', err);

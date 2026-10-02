@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Alert, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppText } from './AppText';
@@ -34,6 +34,8 @@ export function SuggestedConnectionCard({ person, index }: { person: SuggestedPe
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['connections'] });
+    } catch {
+      Alert.alert('Error', 'Could not send connection request.');
     } finally {
       setSubmitting(false);
     }
