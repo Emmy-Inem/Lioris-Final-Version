@@ -6,6 +6,7 @@ import { isUserBlocked, isUserMuted } from './connections';
 import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { parseRpcError, RpcError } from '../utils/rpcErrors';
+import { resolveMediaUrl as resolveSignedMediaUrl, resolveMediaUrls as resolveSignedMediaUrls } from './signedUrls';
 
 
 let locallyCreatedEvents: CampusEvent[] = [];
@@ -147,7 +148,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
 
     if (error) throw error;
 
-    const dbEvents: CampusEvent[] = (data ?? [])
+    const filteredRows = (data ?? [])
       .filter((row: any) => !isUserBlocked(row.creator_id) && !isUserMuted(row.creator_id))
       .filter((row: any) => {
         // Strict university workspace isolation:
@@ -158,8 +159,14 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
           return rowCampus === 'GLOBAL';
         }
         return rowCampus === activeCampus || rowCampus === 'GLOBAL';
-      })
-      .map((row: any) => {
+      });
+
+    // `campus-media` is a private bucket: banner_url holds either a signed-on-demand
+    // storage path ("<uid>/<file>") or (for older/external links) a plain http(s) URL.
+    // Resolve the whole page in one batched request instead of one per row.
+    const resolvedBanners = await resolveSignedMediaUrls('campus-media', filteredRows.map((row: any) => row.banner_url));
+
+    const dbEvents: CampusEvent[] = filteredRows.map((row: any, i: number) => {
         const isRsvpd = currentUserId ? (row.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
         return {
           id: row.id,
@@ -179,7 +186,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
           cancellationReason: row.cancellation_reason ?? null,
           visibilityScope: (row.visibility_scope as any) || 'global',
           campusCode: row.campus_code || 'GLOBAL',
-          coverImageUrl: row.banner_url,
+          coverImageUrl: resolvedBanners[i] ?? undefined,
           venueType: row.venue_type || 'physical',
           virtualLink: row.virtual_link ?? null,
           isSpotlight: !!row.is_spotlight,
@@ -227,6 +234,8 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
     const { data, error } = await detailQuery.single();
     if (!error && data) {
       const isRsvpd = currentUserId ? (data.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
+      // See listEvents(): banner_url may be a private `campus-media` storage path, not a URL.
+      const coverImageUrl = await resolveSignedMediaUrl('campus-media', data.banner_url);
       const freshEvent: CampusEvent = {
         id: data.id,
         organizerId: data.creator_id,
@@ -245,7 +254,7 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
         cancellationReason: data.cancellation_reason ?? null,
         visibilityScope: data.visibility_scope || 'global',
         campusCode: data.campus_code || 'GLOBAL',
-        coverImageUrl: data.banner_url,
+        coverImageUrl: coverImageUrl ?? undefined,
         venueType: data.venue_type || 'physical',
         virtualLink: data.virtual_link ?? null,
         isSpotlight: !!data.is_spotlight,
@@ -362,6 +371,15 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
   const initialStatus = 'pending_approval';
   const isPaid = payload.ticketType === 'paid';
 
+  // The database's events_paid_shape_chk requires a real price for a paid event (and none for a
+  // free one). The modal already enforces this before calling here (src/utils/paidEvents.ts's
+  // validateTicketForm), but failing loudly here too - instead of silently sending ticket_price: 0
+  // and letting Postgres reject it with an opaque constraint-violation error - keeps this function
+  // safe for any other caller.
+  if (isPaid && !(typeof payload.ticketPrice === 'number' && payload.ticketPrice > 0)) {
+    throw new Error('Enter the ticket price in naira (more than 0), or choose Free.');
+  }
+
   const dbVisibilityScope = payload.visibilityScope === 'campus' ? 'campus' : 'global';
 
   const { error } = await supabase.from('events').insert({
@@ -392,7 +410,9 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
   });
 
   if (error) {
-    console.warn('[Events] Supabase create event error:', error.message);
+    // Logged in full (not just .message) - a raw constraint/RLS violation carries its name/detail
+    // only on the error object, and the message the user sees is deliberately generic.
+    console.error('[Events] Supabase create event error:', error);
     throwReadable(error, 'Could not publish this event. Please try again.');
   }
 
@@ -405,7 +425,7 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
     if (detailsError) {
       // Never leave a paid event behind without its payment details.
       await supabase.from('events').delete().eq('id', eventId);
-      console.warn('[Events] Saving payment details failed:', detailsError.message);
+      console.error('[Events] Saving payment details failed:', detailsError);
       throwReadable(detailsError, 'Could not save the payment details. Please try again.');
     }
   }
