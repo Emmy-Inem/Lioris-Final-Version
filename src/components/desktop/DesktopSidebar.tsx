@@ -113,21 +113,23 @@ export function DesktopSidebar() {
 
   const staffNavItems = rawStaffNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
 
-  // Same five groups as the mobile bottom bar (src/components/admin/adminNav.ts); the pages inside a group
-  // are reached from the pills at the top of each page.
-  const rawAdminNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
+  const isSuperAdmin = user?.isSuperAdmin ?? true;
+  const rawAdminNavItems: (NavItem & { flagKey?: FeatureKey; superAdminOnly?: boolean })[] = [
     { id: 'home', label: 'Overview', href: '/(admin)/dashboard', icon: 'grid', match: ['/dashboard'] },
     { id: 'people', label: 'People', href: '/(admin)/user-directory', icon: 'people', match: ['/user-directory', '/verification-requests', '/support-desk'] },
     { id: 'content', label: 'Content', href: '/(admin)/content-desk', icon: 'layers', match: ['/content-desk', '/forum', '/events-list', '/events'] },
     { id: 'safety', label: 'Safety', href: '/(admin)/moderation-queue', icon: 'shield-checkmark', match: ['/moderation-queue', '/takedown-requests', '/audit-logs'] },
-    { id: 'platform', label: 'Platform', href: '/(admin)/platform-config', icon: 'settings', match: ['/platform-config', '/feature-controls', '/super-admin-config', '/system-health'] },
+    { id: 'platform', label: 'Platform', href: '/(admin)/platform-config', icon: 'settings', match: ['/platform-config', '/feature-controls', '/super-admin-config', '/system-health'], superAdminOnly: true },
     { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Alerts', href: '/(admin)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
     { id: 'saved', label: 'Saved Items', href: '/(admin)/saved', icon: 'bookmark' },
     { id: 'settings', label: 'Settings', href: '/(admin)/settings', icon: 'settings-outline', match: ['/settings', '/profile'] },
   ];
 
-  const adminNavItems = rawAdminNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
+  const adminNavItems = rawAdminNavItems.filter((item) => {
+    if (item.superAdminOnly && !isSuperAdmin) return false;
+    return item.flagKey ? isFeatureEnabled(item.flagKey) : true;
+  });
 
   const navItems: (NavItem & { flagKey?: FeatureKey })[] =
     role === 'admin'

@@ -9,6 +9,7 @@ import { AppTextField } from '@/components/AppTextField';
 import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
+import { SuperAdminGate } from '@/auth/SuperAdminGate';
 import { ManagePortalLinksModal } from '@/components/admin/ManagePortalLinksModal';
 import { LiquidGlassCustomizerModal } from '@/components/admin/LiquidGlassCustomizerModal';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -91,11 +92,12 @@ export default function PlatformConsoleScreen() {
   }
 
   return (
-    <ScreenContainer glow={false}>
-      {!isDesktop && <AppHeader />}
-      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
-        <AdminSectionTabs group="platform" />
-      </View>
+    <SuperAdminGate>
+      <ScreenContainer glow={false}>
+        {!isDesktop && <AppHeader />}
+        <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+          <AdminSectionTabs group="platform" />
+        </View>
       <ScrollView
         style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={false}
@@ -201,5 +203,6 @@ export default function PlatformConsoleScreen() {
       <ManagePortalLinksModal visible={portalLinksOpen} onClose={() => setPortalLinksOpen(false)} />
       <LiquidGlassCustomizerModal visible={glassStudioOpen} onClose={() => setGlassStudioOpen(false)} />
     </ScreenContainer>
+  </SuperAdminGate>
   );
 }

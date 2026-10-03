@@ -3,7 +3,7 @@ import { Alert, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import * as authApi from'@/api/auth';
-import { UserRole } from'@/api/types';
+import { UserRole, AdminRoleType } from'@/api/types';
 import {
  setTokens,
  clearTokens,
@@ -91,7 +91,7 @@ function dashboardPathForRole(role: UserRole): string {
  return role === 'admin' ? '/(admin)/dashboard' : `/(${role})/dashboard`;
 }
 
-interface SessionUser {
+export interface SessionUser {
  id: string;
  fullName: string;
  email?: string;
@@ -99,6 +99,10 @@ interface SessionUser {
  role: UserRole;
  /** The real, database-verified role. Never changed by switchRole - this is what gates who can use the Role Switcher. */
  actualRole: UserRole;
+ adminRole?: AdminRoleType | null;
+ campusCode?: string | null;
+ isSuperAdmin: boolean;
+ isCampusAdmin: boolean;
  onboardingComplete: boolean;
  onboardingStep?: string;
  /** See src/auth/mfaPolicy.ts - only meaningful when the role requires MFA. */
@@ -173,6 +177,8 @@ async function persist(user: SessionUser) {
  email: user.email,
  role: user.role,
  actualRole: user.actualRole,
+ adminRole: user.adminRole,
+ campusCode: user.campusCode,
  onboardingComplete: user.onboardingComplete,
  onboardingStep: user.onboardingStep,
  mfaVerified: user.mfaVerified,
@@ -190,11 +196,15 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
  const userEmail = session.user.email ?? '';
  const { data: profile } = await supabase
  .from('profiles')
- .select('role, full_name')
+ .select('role, full_name, admin_role, campus_code')
  .eq('id', session.user.id)
  .maybeSingle();
 
  const role = (profile?.role || 'student') as UserRole;
+ const adminRole = profile?.admin_role as AdminRoleType | null | undefined;
+ const isSuperAdmin = role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (profile?.campus_code === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com')));
+ const isCampusAdmin = role === 'admin' && !isSuperAdmin;
+ const campusCode = profile?.campus_code || null;
  const fullName =
  profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
 
@@ -204,6 +214,10 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
  email: userEmail,
  role,
  actualRole: role,
+ adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+ campusCode,
+ isSuperAdmin,
+ isCampusAdmin,
  onboardingComplete: true,
  mfaVerified: !roleRequiresMfa(role),
  };
@@ -217,13 +231,19 @@ function generateUUID() {
   });
 }
 
-function defaultSessionUser(userEmail: string, role: UserRole, fullName: string): SessionUser {
+function defaultSessionUser(userEmail: string, role: UserRole, fullName: string, adminRole?: AdminRoleType | null, campusCode?: string | null): SessionUser {
+  const isSuperAdmin = role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com')));
+  const isCampusAdmin = role === 'admin' && !isSuperAdmin;
   return {
     id: generateUUID(),
     fullName,
     email: userEmail,
     role,
     actualRole: role,
+    adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+    campusCode: campusCode || (isSuperAdmin ? 'GLOBAL' : null),
+    isSuperAdmin,
+    isCampusAdmin,
     onboardingComplete: false,
     mfaVerified: !roleRequiresMfa(role),
   };
@@ -252,14 +272,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const stored = await getSessionUser();
         if (mounted && stored) {
           const isComplete = Boolean(stored.onboardingComplete);
-          const initialUser = {
+          const role = stored.role as UserRole;
+          const actualRole = (stored.actualRole ?? stored.role) as UserRole;
+          const adminRole = stored.adminRole as AdminRoleType | null | undefined;
+          const isSuperAdmin = actualRole === 'admin' && (adminRole === 'super_admin' || (!adminRole && (stored.campusCode === 'GLOBAL' || stored.email === 'inememmanuel@gmail.com')));
+          const isCampusAdmin = actualRole === 'admin' && !isSuperAdmin;
+          const initialUser: SessionUser = {
             ...stored,
-            role: stored.role as UserRole,
-            actualRole: (stored.actualRole ?? stored.role) as UserRole,
+            role,
+            actualRole,
+            adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+            campusCode: stored.campusCode || (isSuperAdmin ? 'GLOBAL' : null),
+            isSuperAdmin,
+            isCampusAdmin,
             onboardingComplete: isComplete,
-            onboardingStep: isComplete ? undefined : (stored.onboardingStep || firstOnboardingStep(stored.role as UserRole)),
-            mfaVerified: stored.mfaVerified ?? !roleRequiresMfa(stored.role as UserRole),
-          } as SessionUser;
+            onboardingStep: isComplete ? undefined : (stored.onboardingStep || firstOnboardingStep(role)),
+            mfaVerified: stored.mfaVerified ?? !roleRequiresMfa(role),
+          };
           userRef.current = initialUser;
           setUser(initialUser);
           loadBlockedUserIds().catch(() => {});
@@ -279,7 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Securely query verified database profile for role with 3s timeout
           const profilePromise = supabase
             .from('profiles')
-            .select('role, full_name, onboarding_complete, department')
+            .select('role, full_name, onboarding_complete, department, admin_role, campus_code')
             .eq('id', session.user.id)
             .maybeSingle();
           const profileTimeout = new Promise<{ data: null }>((resolve) =>
@@ -290,6 +319,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const storedUser = await getSessionUser();
           const fallbackRole = (storedUser?.actualRole || userRef.current?.actualRole || 'student') as UserRole;
           const role = (profile?.role || fallbackRole) as UserRole;
+          const adminRole = (profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined;
+          const campusCode = profile?.campus_code || storedUser?.campusCode || null;
+          const isSuperAdmin = role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com')));
+          const isCampusAdmin = role === 'admin' && !isSuperAdmin;
           const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || storedUser?.fullName || userRef.current?.fullName || userEmail.split('@')[0] || 'Campus Member';
           
           const activeRole =
@@ -312,6 +345,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: userEmail,
             role: activeRole,
             actualRole: role,
+            adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+            campusCode,
+            isSuperAdmin,
+            isCampusAdmin,
             onboardingComplete: isOnboarded,
             mfaVerified: !roleRequiresMfa(activeRole),
           };
@@ -391,7 +428,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const profileFetch = supabase
             .from('profiles')
-            .select('role, full_name')
+            .select('role, full_name, admin_role, campus_code')
             .eq('id', session.user.id)
             .maybeSingle();
           const timeout = new Promise<any>((_, reject) =>
@@ -407,6 +444,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedUser = await getSessionUser();
         const fallbackRole = (userRef.current?.actualRole || storedUser?.actualRole || 'student') as UserRole;
         const role = (profile?.role || fallbackRole) as UserRole;
+        const adminRole = (profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined;
+        const campusCode = profile?.campus_code || storedUser?.campusCode || null;
+        const isSuperAdmin = role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com')));
+        const isCampusAdmin = role === 'admin' && !isSuperAdmin;
         const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userRef.current?.fullName || storedUser?.fullName || userEmail.split('@')[0] || 'Campus Member';
 
         const activeRole =
@@ -435,6 +476,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: userEmail,
           role: activeRole,
           actualRole: role,
+          adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+          campusCode,
+          isSuperAdmin,
+          isCampusAdmin,
           onboardingComplete: isOnboarded,
           onboardingStep: sameAccount && !isOnboarded ? current?.onboardingStep : undefined,
           mfaVerified:
@@ -447,6 +492,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           current.email === nextUser.email &&
           current.role === nextUser.role &&
           current.actualRole === nextUser.actualRole &&
+          current.adminRole === nextUser.adminRole &&
+          current.campusCode === nextUser.campusCode &&
           current.onboardingComplete === nextUser.onboardingComplete &&
           current.mfaVerified === nextUser.mfaVerified
         ) {
@@ -536,10 +583,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Admin's local "View As" preview (see switchRole above) - collapsing
       // role to match rather than risk a preview going stale against a role
       // that just changed for real.
+      const isSuperAdmin = newRole === 'admin' && (current.adminRole === 'super_admin' || (!current.adminRole && (current.campusCode === 'GLOBAL' || current.email === 'inememmanuel@gmail.com')));
+      const isCampusAdmin = newRole === 'admin' && !isSuperAdmin;
       const nextUser: SessionUser = {
         ...current,
         actualRole: newRole,
         role: newRole,
+        adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+        isSuperAdmin,
+        isCampusAdmin,
         mfaVerified: newRole === current.role ? current.mfaVerified : !roleRequiresMfa(newRole),
       };
       persist(nextUser).catch(() => {});
@@ -597,7 +649,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { data: prof } = await supabase
           .from('profiles')
-          .select('department, is_suspended, deactivated_at, onboarding_complete')
+          .select('department, is_suspended, deactivated_at, onboarding_complete, admin_role, campus_code')
           .eq('id', session.user.id)
           .maybeSingle();
 
@@ -625,9 +677,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           session.user.role === 'admin' ||
           session.user.role === 'staff';
 
+        const adminRole = prof?.admin_role as AdminRoleType | null | undefined;
+        const campusCode = prof?.campus_code || null;
+        const isSuperAdmin = session.user.role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || email === 'inememmanuel@gmail.com')));
+        const isCampusAdmin = session.user.role === 'admin' && !isSuperAdmin;
+
         const nextUser: SessionUser = {
           ...session.user,
           actualRole: session.user.role,
+          adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+          campusCode,
+          isSuperAdmin,
+          isCampusAdmin,
           onboardingComplete: isOnboarded,
           onboardingStep: isOnboarded ? undefined : firstOnboardingStep(session.user.role),
           mfaVerified: !roleRequiresMfa(session.user.role),
@@ -650,6 +711,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const nextUser: SessionUser = {
           ...session.user,
           actualRole: session.user.role,
+          adminRole: null,
+          campusCode: payload.campusCode || null,
+          isSuperAdmin: false,
+          isCampusAdmin: false,
           onboardingComplete: false,
           onboardingStep: firstOnboardingStep(session.user.role),
           mfaVerified: !roleRequiresMfa(session.user.role),
@@ -724,8 +789,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Student can still switch straight back to Admin, and nobody who
         // isn't really an admin can ever reach any role through this at
         // all, in any build. See the SessionUser.actualRole comment above.
-        if (!user || user.actualRole !== 'admin') {
-          throw new Error('Role switching is only available to Root Admins.');
+        if (!user || user.actualRole !== 'admin' || !user.isSuperAdmin) {
+          throw new Error('Role switching is only available to Super Administrators.');
         }
 
         // Only the *displayed* role changes - id/email/fullName/actualRole
@@ -785,8 +850,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function runBeginImpersonation(targetUserId: string, reason: string) {
         // Gated on actualRole, same rationale as switchRole above - never
         // trust the currently-*displayed* role for a privileged action.
-        if (!user || user.actualRole !== 'admin') {
-          throw new Error('Impersonation is only available to Root Admins.');
+        if (!user || user.actualRole !== 'admin' || !user.isSuperAdmin) {
+          throw new Error('Impersonation is only available to Super Administrators.');
         }
 
         const { data: { session: adminSession } } = await supabase.auth.getSession();

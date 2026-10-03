@@ -3,6 +3,7 @@ import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
+import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
@@ -12,6 +13,8 @@ import { BlurredTabsHost } from '@/components/BlurredTabsHost';
 export default function AdminLayout() {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.isSuperAdmin ?? true;
 
   const tabsContent = (
     <BlurredTabsHost renderTabBar={(p, t) => <FloatingLiquidGlassTabBarView {...p} blurTarget={t} />}>
@@ -78,6 +81,7 @@ export default function AdminLayout() {
           tabBarIcon: ({ focused, size }) => (
             <TabIcon name={focused ? 'settings' : 'settings-outline'} focused={focused} size={size} />
           ),
+          href: isSuperAdmin ? undefined : null,
         }}
       />
 

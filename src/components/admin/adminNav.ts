@@ -85,11 +85,20 @@ export function stripGroups(path: string): string {
   return path.replace(/\/\([^)]+\)/g, '') || '/';
 }
 
+/** Returns the admin groups visible to the current administrator. Campus Admins cannot see the Platform group. */
+export function getVisibleAdminGroups(isSuperAdmin: boolean = true): AdminGroup[] {
+  if (isSuperAdmin) {
+    return ADMIN_GROUPS;
+  }
+  return ADMIN_GROUPS.filter((group) => group.key !== 'platform');
+}
+
 /** Which group a pathname belongs to, or null (profile, settings, messages, ...). */
-export function adminGroupForPath(pathname: string): AdminGroup | null {
+export function adminGroupForPath(pathname: string, isSuperAdmin: boolean = true): AdminGroup | null {
   const path = stripGroups(pathname);
+  const groups = getVisibleAdminGroups(isSuperAdmin);
   return (
-    ADMIN_GROUPS.find((group) =>
+    groups.find((group) =>
       group.sections.some((section) => path === section.path || path.startsWith(`${section.path}/`)),
     ) ?? null
   );

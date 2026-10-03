@@ -125,7 +125,7 @@ export async function getMyProfile(user?: {
  try {
  const { data, error } = await supabase
  .from('profiles')
- .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, is_suspended, graduation_year, industry, company, job_title, location, linkedin_url')
+ .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, admin_role, is_suspended, graduation_year, industry, company, job_title, location, linkedin_url')
  .eq('id', resolvedUser.id)
  .single();
    if (!error && data) {
@@ -183,6 +183,7 @@ export async function getMyProfile(user?: {
 
      const merged: UserProfile = {
        ...fallback,
+       adminRole: (data.admin_role as any) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null),
        fullName: data.full_name || fallback.fullName,
        username: data.username || fallback.username,
        bio: data.bio || fallback.bio,
@@ -509,7 +510,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title, linkedin_url')
+      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, admin_role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title, linkedin_url')
       .eq('id', userId)
       .single();
 
@@ -525,6 +526,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         username: data.username || data.full_name?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user',
         email: '',
         userType: dbRole,
+        adminRole: (data.admin_role as any) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null),
         graduationYear: data.graduation_year ?? null,
         bio: data.bio || '',
         department: data.department || 'Academic',

@@ -19,7 +19,8 @@ test('a code with a sentence keeps the sentence, capitalised', () => {
 });
 
 test('unknown text falls back instead of leaking database internals', () => {
-  assert.equal(parseRpcError({ message: 'duplicate key value violates unique constraint "x"' }, 'Nope').message, 'Nope');
+  assert.equal(parseRpcError({ message: 'unexpected internal error: 0x80004005' }, 'Nope').message, 'Nope');
+  assert.equal(parseRpcError({ message: 'duplicate key value violates unique constraint "x"' }).code, 'invalid_input');
   assert.equal(parseRpcError(undefined).code, 'unknown');
 });
 

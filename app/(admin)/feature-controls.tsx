@@ -1,5 +1,6 @@
 import React from 'react';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
+import { SuperAdminGate } from '@/auth/SuperAdminGate';
 import { ScrollView, Switch, View } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
@@ -42,70 +43,72 @@ export default function AdminFeatureControlsScreen() {
   }
 
   return (
-    <ScreenContainer glow={true}>
-      {!isDesktop && <AppHeader />}
-      <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
-        <AdminSectionTabs group="platform" />
-      </View>
-      <ScrollView style={{ flex: 1, width: '100%', minHeight: 0 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
-          <View style={{ flex: 1, paddingRight: spacing.sm }}>
-            <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
-              Feature Controls
-            </AppText>
-            <AppText tone="secondary" variant="caption">
-              Enable or remove optional modules across the entire platform
-            </AppText>
+    <SuperAdminGate>
+      <ScreenContainer glow={true}>
+        {!isDesktop && <AppHeader />}
+        <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
+          <AdminSectionTabs group="platform" />
+        </View>
+        <ScrollView style={{ flex: 1, width: '100%', minHeight: 0 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: isDesktop ? spacing.xs : spacing.md, marginBottom: spacing.xs }}>
+            <View style={{ flex: 1, paddingRight: spacing.sm }}>
+              <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
+                Feature Controls
+              </AppText>
+              <AppText tone="secondary" variant="caption">
+                Enable or remove optional modules across the entire platform
+              </AppText>
+            </View>
+            <AppButton label="Reset All" variant="ghost" size={isDesktop ? 'md' : 'sm'} onPress={handleResetDefaults} />
           </View>
-          <AppButton label="Reset All" variant="ghost" size={isDesktop ? 'md' : 'sm'} onPress={handleResetDefaults} />
-        </View>
 
-        <View style={{ height: spacing.md }} />
+          <View style={{ height: spacing.md }} />
 
-        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
-          {FEATURE_CATALOG.map((flag) => {
-            const isEnabled = isFeatureEnabled(flag.key);
-            return (
-              <View key={flag.key} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 260 } : undefined}>
-                <SolidCard
-                  radius={18}
-                  style={{
-                    marginBottom: spacing.sm,
-                    borderWidth: 1,
-                    borderColor: isEnabled ? colors.border : `${colors.critical}40`,
-                    backgroundColor: isEnabled ? colors.surface : `${colors.critical}08`,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ flex: 1, paddingRight: spacing.sm }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 }}>
-                        <AppText weight="bold" variant="bodySmall">
-                          {flag.label}
+          <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+            {FEATURE_CATALOG.map((flag) => {
+              const isEnabled = isFeatureEnabled(flag.key);
+              return (
+                <View key={flag.key} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 260 } : undefined}>
+                  <SolidCard
+                    radius={18}
+                    style={{
+                      marginBottom: spacing.sm,
+                      borderWidth: 1,
+                      borderColor: isEnabled ? colors.border : `${colors.critical}40`,
+                      backgroundColor: isEnabled ? colors.surface : `${colors.critical}08`,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 }}>
+                          <AppText weight="bold" variant="bodySmall">
+                            {flag.label}
+                          </AppText>
+                          <Badge label={isEnabled ? 'Active' : 'Disabled'} tone={isEnabled ? 'success' : 'critical'} />
+                        </View>
+                        <AppText tone="secondary" variant="caption" style={{ lineHeight: 16 }}>
+                          {flag.description}
                         </AppText>
-                        <Badge label={isEnabled ? 'Active' : 'Disabled'} tone={isEnabled ? 'success' : 'critical'} />
                       </View>
-                      <AppText tone="secondary" variant="caption" style={{ lineHeight: 16 }}>
-                        {flag.description}
-                      </AppText>
-                    </View>
 
-                    <Switch
-                      value={isEnabled}
-                      onValueChange={(next) => handleToggleFlag(flag.key, next, flag.label)}
-                      trackColor={{ false: colors.divider, true: colors.brandPrimary }}
-                    />
-                  </View>
-                </SolidCard>
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
-    </ScreenContainer>
+                      <Switch
+                        value={isEnabled}
+                        onValueChange={(next) => handleToggleFlag(flag.key, next, flag.label)}
+                        trackColor={{ false: colors.divider, true: colors.brandPrimary }}
+                      />
+                    </View>
+                  </SolidCard>
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </ScreenContainer>
+    </SuperAdminGate>
   );
 }

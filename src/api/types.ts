@@ -2,6 +2,7 @@
 // server shapes so API responses can be typed without a mapping layer.
 
 export type UserRole = 'student' | 'alumni' | 'staff' | 'admin';
+export type AdminRoleType = 'super_admin' | 'campus_admin';
 
 export interface UserProfile {
  id: string;
@@ -9,6 +10,7 @@ export interface UserProfile {
  username: string;
  email: string;
  userType: UserRole;
+ adminRole?: AdminRoleType | null;
  graduationYear?: number | null;
  connectionsCount?: number;
  bio?: string | null;

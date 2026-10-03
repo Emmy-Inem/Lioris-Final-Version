@@ -67,6 +67,7 @@ interface DirectoryUser {
   lastActiveAt?: string | null;
   lastLoginAt?: string | null;
   isBot?: boolean;
+  adminRole?: 'super_admin' | 'campus_admin' | null;
 }
 
 /**
@@ -120,7 +121,7 @@ export default function UserDirectoryScreen() {
  const [isImpersonating, setIsImpersonating] = useState(false);
  const [query, setQuery] = useState('');
  const [role, setRole] = useState('All Roles');
- const [campus, setCampus] = useState(ALL_CAMPUSES);
+  const [campus, setCampus] = useState(currentUser?.isCampusAdmin && currentUser?.campusCode ? currentUser.campusCode : ALL_CAMPUSES);
   const [botFilter, setBotFilter] = useState<'all' | 'real_only' | 'bots_only'>('all');
  const [users, setUsers] = useState<DirectoryUser[]>([]);
  const [loading, setLoading] = useState(true);
@@ -134,7 +135,8 @@ export default function UserDirectoryScreen() {
  // profiles has no direct table-level SELECT grant for authenticated users any more
  // (20260929000000_close_open_security_findings.sql); this admin-only SECURITY
  // DEFINER RPC is the sanctioned way to read every column, admins included.
- const { data, error } = await supabase.rpc('admin_get_user_profiles', { p_campus_code: null, p_limit: 5000 });
+  const targetCampus = currentUser?.isCampusAdmin && currentUser?.campusCode ? currentUser.campusCode : null;
+  const { data, error } = await supabase.rpc('admin_get_user_profiles', { p_campus_code: targetCampus, p_limit: 5000 });
  if (error) throw error;
  if (data) {
  const mapped: DirectoryUser[] = data.map((p: any) => ({
@@ -152,7 +154,8 @@ export default function UserDirectoryScreen() {
  joinedDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2024',
  lastActiveAt: p.last_active_at,
  lastLoginAt: p.last_login_at,
- isBot: !!p.is_bot,
+  isBot: !!p.is_bot,
+  adminRole: p.admin_role || null,
  }));
  setUsers(mapped);
  }
@@ -162,21 +165,30 @@ export default function UserDirectoryScreen() {
  } finally {
  setLoading(false);
  }
- }, []);
+  }, [currentUser?.isCampusAdmin, currentUser?.campusCode]);
 
- React.useEffect(() => {
- loadProfiles();
- }, [loadProfiles]);
+  React.useEffect(() => {
+    loadProfiles();
+  }, [loadProfiles]);
 
- // Drag-down-to-refresh on the installed web app reloads this list instead of the whole page.
- usePullRefreshHandler(loadProfiles);
+  React.useEffect(() => {
+    if (currentUser?.isCampusAdmin && currentUser?.campusCode) {
+      setCampus(currentUser.campusCode);
+    }
+  }, [currentUser?.isCampusAdmin, currentUser?.campusCode]);
 
- // Every campus that exists (launch list) plus any code a profile actually carries.
- const campusFilters = React.useMemo(() => {
- const codes = new Set<string>(LAUNCH_INSTITUTIONS.map((i) => i.code));
- users.forEach((u) => codes.add(u.campus));
- return [ALL_CAMPUSES, ...Array.from(codes)];
- }, [users]);
+  // Drag-down-to-refresh on the installed web app reloads this list instead of the whole page.
+  usePullRefreshHandler(loadProfiles);
+
+  // Every campus that exists (launch list) plus any code a profile actually carries.
+  const campusFilters = React.useMemo(() => {
+    if (currentUser?.isCampusAdmin && currentUser?.campusCode) {
+      return [currentUser.campusCode];
+    }
+    const codes = new Set<string>(LAUNCH_INSTITUTIONS.map((i) => i.code));
+    users.forEach((u) => codes.add(u.campus));
+    return [ALL_CAMPUSES, ...Array.from(codes)];
+  }, [users, currentUser?.isCampusAdmin, currentUser?.campusCode]);
 
  // Selected User Actions & Details Drawer
  const [selectedUser, setSelectedUser] = useState<DirectoryUser | null>(null);
@@ -228,6 +240,7 @@ export default function UserDirectoryScreen() {
  const [newDepartment, setNewDepartment] = useState('Computer Science');
  const [newRole, setNewRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
  const [newCampus, setNewCampus] = useState('UI');
+ const [newAdminRole, setNewAdminRole] = useState<'super_admin' | 'campus_admin'>('campus_admin');
  const [isProvisioning, setIsProvisioning] = useState(false);
 
  // Impersonation reason prompt (Alert.prompt is iOS-only, so use an inline modal)
@@ -258,6 +271,7 @@ export default function UserDirectoryScreen() {
   const [editCampus, setEditCampus] = useState('UI');
   const [editDepartment, setEditDepartment] = useState('');
   const [editRole, setEditRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
+  const [editAdminRole, setEditAdminRole] = useState<'super_admin' | 'campus_admin'>('campus_admin');
   const [editVerified, setEditVerified] = useState(false);
   const [editSuspended, setEditSuspended] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
@@ -286,12 +300,17 @@ export default function UserDirectoryScreen() {
   }
 
   function openEditModal(target: DirectoryUser) {
+    if (currentUser?.isCampusAdmin && target.role === 'Admin') {
+      Alert.alert('Permission Denied', 'Campus Admins cannot edit administrator accounts. Only a Super Admin can manage admin profiles.');
+      return;
+    }
     setEditModalUser(target);
     setEditFullName(target.fullName);
     setEditMatric(target.matricNo === 'Not Assigned' ? '' : target.matricNo);
     setEditCampus(target.campus || 'UI');
     setEditDepartment(target.department);
     setEditRole(target.role);
+    setEditAdminRole(target.adminRole || 'campus_admin');
     setEditVerified(target.isVerified);
     setEditSuspended(target.suspended);
     setDiagnosticsExpanded(false);
@@ -305,18 +324,27 @@ export default function UserDirectoryScreen() {
       Alert.alert('Validation Error', 'Full Name cannot be empty.');
       return;
     }
+    if (editRole === 'Admin' && editModalUser.role !== 'Admin' && !currentUser?.isSuperAdmin) {
+      Alert.alert('Permission Denied', 'Only a Super Admin can promote a user to an Admin role.');
+      return;
+    }
     haptics.medium();
     setEditSaving(true);
     try {
-      const res = await adminUpdateUserProfile(editModalUser.id, {
+      const targetCampus = currentUser?.isCampusAdmin ? editModalUser.campus : editCampus;
+      const updates: Record<string, any> = {
         full_name: editFullName.trim(),
         student_id_number: editMatric.trim() || null,
-        campus_code: editCampus,
+        campus_code: targetCampus,
         department: editDepartment.trim() || 'General Studies',
         role: editRole.toLowerCase(),
         is_suspended: editSuspended,
         verification_status: editVerified ? 'verified' : 'unverified',
-      });
+      };
+      if (currentUser?.isSuperAdmin) {
+        updates.admin_role = editRole === 'Admin' ? editAdminRole : null;
+      }
+      const res = await adminUpdateUserProfile(editModalUser.id, updates);
 
       if (res.success) {
         setUsers((prev) =>
@@ -326,11 +354,12 @@ export default function UserDirectoryScreen() {
                   ...u,
                   fullName: editFullName.trim(),
                   matricNo: editMatric.trim() || 'Not Assigned',
-                  campus: editCampus,
+                  campus: targetCampus,
                   department: editDepartment.trim() || 'General Studies',
                   role: editRole,
                   isVerified: editVerified,
                   suspended: editSuspended,
+                  adminRole: editRole === 'Admin' ? (currentUser?.isSuperAdmin ? editAdminRole : u.adminRole) : null,
                 }
               : u,
           ),
@@ -377,19 +406,24 @@ export default function UserDirectoryScreen() {
   return matchesRole && matchesCampus && matchesBot && matchesQuery;
  });
 
- async function handleCreateUser() {
- if (!newFullName.trim() || !newEmail.trim()) {
- Alert.alert('Validation Error', 'Full Name and University Email are required.');
- return;
- }
- haptics.medium();
+  async function handleCreateUser() {
+  if (!newFullName.trim() || !newEmail.trim()) {
+  Alert.alert('Validation Error', 'Full Name and University Email are required.');
+  return;
+  }
+  if (newRole === 'Admin' && !currentUser?.isSuperAdmin) {
+    Alert.alert('Permission Denied', 'Only a Super Admin can provision Admin accounts.');
+    return;
+  }
+  haptics.medium();
 
- const username = newEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
- const matricNo = newMatric.trim() || `${newCampus}/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
- if (isProvisioning) return;
- setIsProvisioning(true);
- const email = newEmail.trim();
- let userId: string | null = null;
+  const targetCampus = currentUser?.isCampusAdmin && currentUser?.campusCode ? currentUser.campusCode : newCampus;
+  const username = newEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+  const matricNo = newMatric.trim() || `${targetCampus}/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+  if (isProvisioning) return;
+  setIsProvisioning(true);
+  const email = newEmail.trim();
+  let userId: string | null = null;
 
  try {
  const tempPassword = generateSecureTempPassword();
@@ -405,71 +439,76 @@ export default function UserDirectoryScreen() {
  },
  });
 
- const { data, error } = await isolatedAuthClient.auth.signUp({
- email,
- password: tempPassword,
- options: {
- data: {
- full_name: newFullName.trim(),
- username,
- role: newRole.toLowerCase(),
- campus_code: newCampus,
- department: newDepartment.trim() || 'General Studies',
- },
- },
- });
+  const { data, error } = await isolatedAuthClient.auth.signUp({
+  email,
+  password: tempPassword,
+  options: {
+  data: {
+  full_name: newFullName.trim(),
+  username,
+  role: newRole.toLowerCase(),
+  campus_code: targetCampus,
+  department: newDepartment.trim() || 'General Studies',
+  },
+  },
+  });
 
- if (error || !data?.user?.id) {
- throw new Error(error?.message || 'The account could not be created.');
- }
- userId = data.user.id;
+  if (error || !data?.user?.id) {
+  throw new Error(error?.message || 'The account could not be created.');
+  }
+  userId = data.user.id;
 
- // Admins have full profile access under RLS; a failure here means the
- // account exists but its profile fields are incomplete - say so.
- const { error: profileError } = await supabase.from('profiles').upsert({
- id: userId,
- email,
- full_name: newFullName.trim(),
- username,
- role: newRole.toLowerCase(),
- campus_code: newCampus,
- department: newDepartment.trim() || 'General Studies',
- student_id_number: matricNo,
- verification_status: 'verified',
- is_suspended: false,
- });
- if (profileError) {
- throw new Error(`The login was created but its profile could not be completed (${profileError.message}). Review it in the directory.`);
- }
+  // Admins have full profile access under RLS; a failure here means the
+  // account exists but its profile fields are incomplete - say so.
+  const profilePayload: Record<string, any> = {
+    id: userId,
+    email,
+    full_name: newFullName.trim(),
+    username,
+    role: newRole.toLowerCase(),
+    campus_code: targetCampus,
+    department: newDepartment.trim() || 'General Studies',
+    student_id_number: matricNo,
+    verification_status: 'verified',
+    is_suspended: false,
+  };
+  if (currentUser?.isSuperAdmin && newRole === 'Admin') {
+    profilePayload.admin_role = newAdminRole;
+  }
+  const { error: profileError } = await supabase.from('profiles').upsert(profilePayload);
+  if (profileError) {
+  throw new Error(`The login was created but its profile could not be completed (${profileError.message}). Review it in the directory.`);
+  }
 
- // The temporary password is never displayed: the user receives a
- // password-reset / invitation email and chooses their own.
- const invite = await adminTriggerPasswordReset(email);
+  // The temporary password is never displayed: the user receives a
+  // password-reset / invitation email and chooses their own.
+  const invite = await adminTriggerPasswordReset(email);
 
- const newUser: DirectoryUser = {
- id: userId,
- fullName: newFullName.trim(),
- username,
- email,
- role: newRole,
- campus: newCampus,
- department: newDepartment.trim() || 'General Studies',
- matricNo,
- suspended: false,
- isVerified: true,
- trustScore: 85,
- joinedDate: 'Just now',
- };
- setUsers((prev) => [newUser, ...prev]);
+  const newUser: DirectoryUser = {
+  id: userId,
+  fullName: newFullName.trim(),
+  username,
+  email,
+  role: newRole,
+  campus: targetCampus,
+  department: newDepartment.trim() || 'General Studies',
+  matricNo,
+  suspended: false,
+  isVerified: true,
+  trustScore: 85,
+  joinedDate: 'Just now',
+  adminRole: newRole === 'Admin' ? (currentUser?.isSuperAdmin ? newAdminRole : null) : null,
+  };
+  setUsers((prev) => [newUser, ...prev]);
 
- recordAuditLogEntry({
- action: 'verification_approved',
- summary: `Created new ${newRole} account for ${newUser.fullName} (${newUser.matricNo}) on ${newCampus}`,
- targetType: 'user',
- targetId: newUser.id,
- institutionCode: newCampus,
- reason: 'Admin provisioned university account',
- });
+  recordAuditLogEntry({
+  action: 'verification_approved',
+  summary: `Created new ${newRole} account for ${newUser.fullName} (${newUser.matricNo}) on ${targetCampus}`,
+  targetType: 'user',
+  targetId: newUser.id,
+  institutionCode: targetCampus,
+  reason: 'Admin provisioned university account',
+  });
 
  setCreateModalOpen(false);
  setNewFullName('');
@@ -694,7 +733,15 @@ export default function UserDirectoryScreen() {
  );
  }
 
- function handleMutateRole(target: DirectoryUser, targetRole: DirectoryUser['role']) {
+  function handleMutateRole(target: DirectoryUser, targetRole: DirectoryUser['role']) {
+    if (currentUser?.isCampusAdmin && target.role === 'Admin') {
+      Alert.alert('Permission Denied', 'Campus Admins cannot modify administrator accounts.');
+      return;
+    }
+    if (targetRole === 'Admin' && !currentUser?.isSuperAdmin) {
+      Alert.alert('Permission Denied', 'Only a Super Admin can promote a member to an Admin role.');
+      return;
+    }
  const isGrantingAdmin = targetRole === 'Admin';
  Alert.alert(
  isGrantingAdmin ? 'Grant FULL Admin Access?' : `Change Role to ${targetRole}?`,
@@ -712,13 +759,25 @@ export default function UserDirectoryScreen() {
  );
  }
 
- async function performRoleMutation(target: DirectoryUser, targetRole: DirectoryUser['role']) {
- haptics.medium();
- try {
- const result = await adminUpdateUserProfile(target.id, { role: targetRole.toLowerCase() });
- if (!result.success) throw new Error(result.error || 'The role change was not saved.');
+  async function performRoleMutation(target: DirectoryUser, targetRole: DirectoryUser['role']) {
+    if (currentUser?.isCampusAdmin && target.role === 'Admin') {
+      Alert.alert('Permission Denied', 'Campus Admins cannot modify administrator accounts.');
+      return;
+    }
+    if (targetRole === 'Admin' && !currentUser?.isSuperAdmin) {
+      Alert.alert('Permission Denied', 'Only a Super Admin can promote a member to an Admin role.');
+      return;
+    }
+    haptics.medium();
+    try {
+      const updates: Record<string, any> = { role: targetRole.toLowerCase() };
+      if (currentUser?.isSuperAdmin) {
+        updates.admin_role = targetRole === 'Admin' ? 'campus_admin' : null;
+      }
+      const result = await adminUpdateUserProfile(target.id, updates);
+      if (!result.success) throw new Error(result.error || 'The role change was not saved.');
 
- setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, role: targetRole } : u)));
+      setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, role: targetRole, adminRole: targetRole === 'Admin' ? 'campus_admin' : null } : u)));
 
  await recordAuditLogEntry({
  action: 'user_role_changed',
@@ -1110,6 +1169,12 @@ export default function UserDirectoryScreen() {
                               {item.fullName}
                             </AppText>
                             <UserTypeBadge role={item.role.toLowerCase() as any} />
+                            {item.role === 'Admin' && item.adminRole ? (
+                              <Badge
+                                label={item.adminRole === 'super_admin' ? 'Super Admin' : 'Campus Admin'}
+                                tone={item.adminRole === 'super_admin' ? 'critical' : 'brand'}
+                              />
+                            ) : null}
                             {item.isVerified && (
                               <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
                             )}
@@ -1196,6 +1261,12 @@ export default function UserDirectoryScreen() {
                           {item.fullName}
                         </AppText>
                         <UserTypeBadge role={item.role.toLowerCase() as any} />
+                        {item.role === 'Admin' && item.adminRole ? (
+                          <Badge
+                            label={item.adminRole === 'super_admin' ? 'Super Admin' : 'Campus Admin'}
+                            tone={item.adminRole === 'super_admin' ? 'critical' : 'brand'}
+                          />
+                        ) : null}
                         {item.isVerified && (
                           <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
                         )}
@@ -1252,16 +1323,18 @@ export default function UserDirectoryScreen() {
               </View>
             </View>
 
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
-              onPress={() => {
-                openEditModal(selectedUser);
-                setSelectedUser(null);
-              }}
-            >
-              <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
-              <AppText weight="bold">Edit Profile & Credentials (Student ID, Role, Campus)</AppText>
-            </Pressable>
+            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+                onPress={() => {
+                  openEditModal(selectedUser);
+                  setSelectedUser(null);
+                }}
+              >
+                <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
+                <AppText weight="bold">Edit Profile & Credentials (Student ID, Role, Campus)</AppText>
+              </Pressable>
+            )}
 
             <Pressable
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
@@ -1274,7 +1347,16 @@ export default function UserDirectoryScreen() {
               <AppText weight="bold">View Full Profile & Identity Record</AppText>
             </Pressable>
 
-            {selectedUser.id !== currentUser?.id && selectedUser.role !== 'Alumni' && (
+            {currentUser?.isCampusAdmin && selectedUser.role === 'Admin' && (
+              <View style={{ padding: spacing.sm, backgroundColor: colors.divider, borderRadius: radius.md, marginVertical: spacing.xs, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="lock-closed" size={14} color={colors.textSecondary} />
+                <AppText variant="caption" tone="secondary" style={{ flex: 1 }}>
+                  Administrator accounts can only be edited, suspended, or managed by a Super Admin.
+                </AppText>
+              </View>
+            )}
+
+            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && selectedUser.role !== 'Alumni' && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleMutateRole(selectedUser, 'Alumni')}
@@ -1284,7 +1366,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {selectedUser.id !== currentUser?.id && selectedUser.role !== 'Staff' && (
+            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && selectedUser.role !== 'Staff' && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleMutateRole(selectedUser, 'Staff')}
@@ -1294,7 +1376,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {selectedUser.id !== currentUser?.id && (
+            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && (
             <Pressable
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
               onPress={() => handleToggleSuspend(selectedUser)}
@@ -1306,7 +1388,7 @@ export default function UserDirectoryScreen() {
             </Pressable>
             )}
 
-            {selectedUser.id !== currentUser?.id && (
+            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 disabled={forceSigningOutId === selectedUser.id}
@@ -1319,7 +1401,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {!selectedUser.isVerified && (
+            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && !selectedUser.isVerified && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleVerifyUser(selectedUser)}
@@ -1339,7 +1421,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {selectedUser.id !== currentUser?.id && (
+            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleWipeAccount(selectedUser)}
@@ -1374,7 +1456,13 @@ export default function UserDirectoryScreen() {
  {detailModalUser.fullName}
  </AppText>
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
- <UserTypeBadge role={detailModalUser.role.toLowerCase() as any} />
+  <UserTypeBadge role={detailModalUser.role.toLowerCase() as any} />
+  {detailModalUser.role === 'Admin' && detailModalUser.adminRole ? (
+    <Badge
+      label={detailModalUser.adminRole === 'super_admin' ? 'Super Admin' : 'Campus Admin'}
+      tone={detailModalUser.adminRole === 'super_admin' ? 'critical' : 'brand'}
+    />
+  ) : null}
  <Badge label={`Trust ${detailModalUser.trustScore}/100`} tone="neutral" />
  {userReportCount > 0 ? (
  <Badge
@@ -1443,15 +1531,17 @@ export default function UserDirectoryScreen() {
  </View>
 
                 <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-                  <View style={{ flex: 1 }}>
-                    <AppButton
-                      label="Edit Profile"
-                      onPress={() => {
-                        openEditModal(detailModalUser);
-                        setDetailModalUser(null);
-                      }}
-                    />
-                  </View>
+                  {!(currentUser?.isCampusAdmin && detailModalUser.role === 'Admin') && (
+                    <View style={{ flex: 1 }}>
+                      <AppButton
+                        label="Edit Profile"
+                        onPress={() => {
+                          openEditModal(detailModalUser);
+                          setDetailModalUser(null);
+                        }}
+                      />
+                    </View>
+                  )}
                   <View style={{ flex: 1 }}>
                     <AppButton
                       label="Close Record"
@@ -1612,48 +1702,97 @@ export default function UserDirectoryScreen() {
  ASSIGN USER ROLE
  </AppText>
  <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
- {(['Student', 'Alumni', 'Staff', 'Admin'] as const).map((r) => (
+ {(['Student', 'Alumni', 'Staff', 'Admin'] as const).map((r) => {
+   const isAdminChoice = r === 'Admin';
+   const isAllowed = currentUser?.isSuperAdmin || !isAdminChoice;
+   return (
  <Pressable
  key={r}
- onPress={() => setNewRole(r)}
+ disabled={!isAllowed}
+ onPress={() => isAllowed && setNewRole(r)}
  style={{
  flex: 1,
  paddingVertical: 10,
  borderRadius: radius.md,
  backgroundColor: newRole === r ? colors.brandPrimary : colors.divider,
+ opacity: isAllowed ? 1 : 0.4,
  alignItems: 'center',
  }}
  >
- <AppText weight="bold"tone={newRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+ <AppText weight="bold" tone={newRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
  {r}
  </AppText>
  </Pressable>
- ))}
+ );
+ })}
  </View>
+ {!currentUser?.isSuperAdmin && (
+   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm, paddingHorizontal: 4 }}>
+     <Ionicons name="lock-closed" size={13} color={colors.textSecondary} />
+     <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+       Only a Super Admin can promote members to Admin roles.
+     </AppText>
+   </View>
+ )}
+ {currentUser?.isSuperAdmin && newRole === 'Admin' && (
+   <View style={{ marginBottom: spacing.md, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.divider }}>
+     <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs }}>
+       ADMIN PRIVILEGE TIER
+     </AppText>
+     <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+       {(['campus_admin', 'super_admin'] as const).map((tier) => (
+         <Pressable
+           key={tier}
+           onPress={() => setNewAdminRole(tier)}
+           style={{
+             flex: 1,
+             paddingVertical: 8,
+             borderRadius: radius.sm,
+             backgroundColor: newAdminRole === tier ? colors.brandPrimary : colors.surface,
+             alignItems: 'center',
+           }}
+         >
+           <AppText weight="bold" tone={newAdminRole === tier ? 'inverse' : 'primary'} style={{ fontSize: 11 }}>
+             {tier === 'super_admin' ? 'Super Admin (Global)' : 'Campus Admin'}
+           </AppText>
+         </Pressable>
+       ))}
+     </View>
+   </View>
+ )}
 
  {/* Campus Instance Selection */}
  <AppText variant="caption"weight="bold"tone="secondary"style={{ marginBottom: spacing.xs }}>
  TARGET UNIVERSITY CAMPUS NODE
  </AppText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.lg }}>
-                  {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
-                    <Pressable
-                      key={c}
-                      onPress={() => setNewCampus(c)}
-                      style={{
-                        width: '31%',
-                        paddingVertical: 10,
-                        borderRadius: radius.md,
-                        backgroundColor: newCampus === c ? colors.brandPrimary : colors.divider,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <AppText weight="bold" tone={newCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
-                        {c}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </View>
+                {currentUser?.isCampusAdmin ? (
+                  <View style={{ padding: spacing.sm, backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.lg }}>
+                    <AppText weight="bold">{newCampus}</AppText>
+                    <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                      Locked to your assigned university campus.
+                    </AppText>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.lg }}>
+                    {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
+                      <Pressable
+                        key={c}
+                        onPress={() => setNewCampus(c)}
+                        style={{
+                          width: '31%',
+                          paddingVertical: 10,
+                          borderRadius: radius.md,
+                          backgroundColor: newCampus === c ? colors.brandPrimary : colors.divider,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <AppText weight="bold" tone={newCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+                          {c}
+                        </AppText>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
 
  <AppButton
  label={isProvisioning ? 'Provisioning...' : 'Provision & Send Invitation'}onPress={handleCreateUser}
@@ -1708,48 +1847,97 @@ export default function UserDirectoryScreen() {
                   ASSIGNED ROLE & PERMISSIONS
                 </AppText>
                 <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
-                  {(['Student', 'Alumni', 'Staff', 'Admin'] as const).map((r) => (
-                    <Pressable
-                      key={r}
-                      onPress={() => setEditRole(r)}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 10,
-                        borderRadius: radius.md,
-                        backgroundColor: editRole === r ? colors.brandPrimary : colors.divider,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <AppText weight="bold" tone={editRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
-                        {r}
-                      </AppText>
-                    </Pressable>
-                  ))}
+                  {(['Student', 'Alumni', 'Staff', 'Admin'] as const).map((r) => {
+                    const isAdminChoice = r === 'Admin';
+                    const isAllowed = currentUser?.isSuperAdmin || !isAdminChoice;
+                    return (
+                      <Pressable
+                        key={r}
+                        disabled={!isAllowed}
+                        onPress={() => isAllowed && setEditRole(r)}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: radius.md,
+                          backgroundColor: editRole === r ? colors.brandPrimary : colors.divider,
+                          opacity: isAllowed ? 1 : 0.4,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <AppText weight="bold" tone={editRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+                          {r}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
                 </View>
+                {!currentUser?.isSuperAdmin && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm, paddingHorizontal: 4 }}>
+                    <Ionicons name="lock-closed" size={13} color={colors.textSecondary} />
+                    <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                      Only a Super Admin can promote members to Admin roles.
+                    </AppText>
+                  </View>
+                )}
+                {currentUser?.isSuperAdmin && editRole === 'Admin' && (
+                  <View style={{ marginBottom: spacing.md, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.divider }}>
+                    <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs }}>
+                      ADMIN PRIVILEGE TIER
+                    </AppText>
+                    <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                      {(['campus_admin', 'super_admin'] as const).map((tier) => (
+                        <Pressable
+                          key={tier}
+                          onPress={() => setEditAdminRole(tier)}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 8,
+                            borderRadius: radius.sm,
+                            backgroundColor: editAdminRole === tier ? colors.brandPrimary : colors.surface,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <AppText weight="bold" tone={editAdminRole === tier ? 'inverse' : 'primary'} style={{ fontSize: 11 }}>
+                            {tier === 'super_admin' ? 'Super Admin (Global)' : 'Campus Admin'}
+                          </AppText>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
 
                 {/* Campus Instance Selection */}
                 <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs }}>
                   CAMPUS NODE
                 </AppText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
-                  {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
-                    <Pressable
-                      key={c}
-                      onPress={() => setEditCampus(c)}
-                      style={{
-                        width: '31%',
-                        paddingVertical: 8,
-                        borderRadius: radius.md,
-                        backgroundColor: editCampus === c ? colors.brandPrimary : colors.divider,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <AppText weight="bold" tone={editCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 11 }}>
-                        {c}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </View>
+                {currentUser?.isCampusAdmin ? (
+                  <View style={{ padding: spacing.sm, backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.md }}>
+                    <AppText weight="bold">{editCampus}</AppText>
+                    <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                      Campus Admins cannot reassign a user's campus node.
+                    </AppText>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
+                    {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
+                      <Pressable
+                        key={c}
+                        onPress={() => setEditCampus(c)}
+                        style={{
+                          width: '31%',
+                          paddingVertical: 8,
+                          borderRadius: radius.md,
+                          backgroundColor: editCampus === c ? colors.brandPrimary : colors.divider,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <AppText weight="bold" tone={editCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 11 }}>
+                          {c}
+                        </AppText>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
 
                 {/* Verification Badge Toggle & Password Reset */}
                 <View style={{ padding: spacing.md, backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.md, gap: 10 }}>

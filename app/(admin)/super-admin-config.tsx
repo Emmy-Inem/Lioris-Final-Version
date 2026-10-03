@@ -9,6 +9,7 @@ import { AppTextField } from '@/components/AppTextField';
 import { SolidCard } from '@/components/SolidCard';
 import { AdminConfigModal } from '@/components/AdminConfigModal';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
+import { SuperAdminGate } from '@/auth/SuperAdminGate';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { CampusManager } from '@/components/admin/CampusManager';
 import { supabase } from '@/api/supabase';
@@ -132,7 +133,8 @@ export default function CampusesAndSecurityScreen() {
   }
 
   return (
-    <ScreenContainer glow={true}>
+    <SuperAdminGate>
+      <ScreenContainer glow={true}>
       {!isDesktop && <AppHeader />}
       <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
         <AdminSectionTabs group="platform" />
@@ -209,5 +211,6 @@ export default function CampusesAndSecurityScreen() {
         <AppTextField label="Documents (MB)" value={docMb} onChangeText={setDocMb} keyboardType="numeric" />
       </AdminConfigModal>
     </ScreenContainer>
+  </SuperAdminGate>
   );
 }

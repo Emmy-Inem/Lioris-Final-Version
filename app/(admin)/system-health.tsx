@@ -15,6 +15,7 @@ import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
+import { SuperAdminGate } from '@/auth/SuperAdminGate';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { fetchSystemHealth, cleanupOrphanedRecords, SystemHealthReport } from '@/api/systemHealth';
@@ -163,7 +164,8 @@ export default function SystemHealthScreen() {
   const isOptimal = health?.status === 'optimal';
 
   return (
-    <ScreenContainer glow={false}>
+    <SuperAdminGate>
+      <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
       <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
         <AdminSectionTabs group="platform" />
@@ -518,5 +520,6 @@ export default function SystemHealthScreen() {
         </SolidCard>
       </ScrollView>
     </ScreenContainer>
+  </SuperAdminGate>
   );
 }

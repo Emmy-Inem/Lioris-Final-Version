@@ -12,7 +12,7 @@ import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { useAdminBadges } from '@/components/admin/useAdminBadges';
-import { ADMIN_GROUPS } from '@/components/admin/adminNav';
+import { getVisibleAdminGroups } from '@/components/admin/adminNav';
 import { AdminUniversalSearchModal } from '@/components/admin/AdminUniversalSearchModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
@@ -56,9 +56,13 @@ export default function AdminOverviewScreen() {
 
   const { data: profile } = useQuery({ queryKey: ['profile', 'me', user?.id], queryFn: () => getMyProfile(user!), enabled: !!user });
   const { data: memberCount } = useQuery({
-    queryKey: ['admin', 'member-count'],
+    queryKey: ['admin', 'member-count', user?.campusCode, user?.isCampusAdmin],
     queryFn: async () => {
-      const { count, error } = await supabase.from('profiles').select('id', { count: 'exact', head: true });
+      let query = supabase.from('profiles').select('id', { count: 'exact', head: true });
+      if (user?.isCampusAdmin && user?.campusCode) {
+        query = query.eq('campus_code', user.campusCode);
+      }
+      const { count, error } = await query;
       if (error) throw error;
       return count ?? 0;
     },
@@ -69,14 +73,18 @@ export default function AdminOverviewScreen() {
   });
 
   const { data: activeRealUsers = 0 } = useQuery({
-    queryKey: ['admin', 'active-real-users-count'],
+    queryKey: ['admin', 'active-real-users-count', user?.campusCode, user?.isCampusAdmin],
     queryFn: async () => {
       const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-      const { count, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select('id', { count: 'exact', head: true })
         .gte('last_active_at', fifteenMinsAgo)
         .eq('is_bot', false);
+      if (user?.isCampusAdmin && user?.campusCode) {
+        query = query.eq('campus_code', user.campusCode);
+      }
+      const { count, error } = await query;
       if (error) return 0;
       return count ?? 0;
     },
@@ -91,7 +99,7 @@ export default function AdminOverviewScreen() {
     { key: 'support', label: 'Open support tickets', count: badges.support, icon: 'help-buoy-outline' as const, tint: '#06B6D4', route: '/(admin)/support-desk' },
   ].filter((row) => row.count > 0);
 
-  const hubs = ADMIN_GROUPS.filter((group) => group.key !== 'overview');
+  const hubs = getVisibleAdminGroups(user?.isSuperAdmin).filter((group) => group.key !== 'overview');
 
   return (
     <ScreenContainer glow={false}>
@@ -118,17 +126,19 @@ export default function AdminOverviewScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="shield" size={13} color="#FCA5A5" style={heroTextShadowStyle} />
                   <AppText variant="caption" weight="bold" style={[{ fontSize: 11, letterSpacing: 0.5, color: '#FCA5A5' }, heroTextShadowStyle]}>
-                    ROOT ADMIN
+                    {user?.isSuperAdmin ? 'SUPER ADMIN' : user?.isCampusAdmin ? `CAMPUS ADMIN • ${user?.campusCode ?? 'CAMPUS'}` : 'ADMIN'}
                   </AppText>
                 </View>
                 <AppText variant="h1" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 22, marginTop: 4 }}>
                   Welcome, {user?.fullName?.split(' ')[0] ?? 'Admin'}
                 </AppText>
                 <AppText variant="caption" tone="inverse" style={[{ opacity: 0.9, marginTop: 2 }, heroTextShadowStyle]}>
-                  {memberCount != null ? `${memberCount.toLocaleString()} members across all campuses` : 'Multi-campus hub'}
+                  {user?.isCampusAdmin && user?.campusCode
+                    ? (memberCount != null ? `${memberCount.toLocaleString()} members in ${user.campusCode}` : `${user.campusCode} campus hub`)
+                    : (memberCount != null ? `${memberCount.toLocaleString()} members across all campuses` : 'Multi-campus hub')}
                 </AppText>
               </View>
-              <Avatar name={user?.fullName ?? 'Root Administrator'} uri={profile?.avatarUrl} size={56} role="admin" />
+              <Avatar name={user?.fullName ?? (user?.isSuperAdmin ? 'Super Administrator' : 'Campus Administrator')} uri={profile?.avatarUrl} size={56} role="admin" />
             </View>
           </View>
         </GlassCard>
@@ -220,7 +230,11 @@ export default function AdminOverviewScreen() {
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
                 </View>
                 <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                  {activeRealUsers > 0 ? `${activeRealUsers} real student${activeRealUsers === 1 ? '' : 's'} active now` : 'Live activity, page traffic & feature metrics'}
+                  {activeRealUsers > 0
+                    ? `${activeRealUsers} real student${activeRealUsers === 1 ? '' : 's'} active now`
+                    : user?.isCampusAdmin && user?.campusCode
+                    ? `${user.campusCode} live activity & metrics`
+                    : 'Live activity, page traffic & feature metrics'}
                 </AppText>
               </View>
             </View>

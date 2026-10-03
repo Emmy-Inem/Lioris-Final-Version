@@ -1180,6 +1180,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261009040000_resource_seed_stats_reset.sql',
   'supabase/migrations/20261010000000_event_creation_fix.sql',
   'supabase/migrations/20261010000000_resource_ratings_self_rating_guard.sql',
+  'supabase/migrations/20261011000000_super_admin_and_campus_admin_hierarchy.sql',
 ];
 for (const file of currentProductMigrations) {
   await check(`${file} applies cleanly`, async () => {
@@ -4968,6 +4969,95 @@ console.log('\n== event creation (20261010000000_event_creation_fix.sql) ==');
          VALUES (gen_random_uuid(), $1, 'GLOBAL', 'Regression - paid with price', 'd', 'Academic', 'v', 'global', ${STARTS}, ${ENDS}, 0, 'pending_approval', 'physical', NULL, false, false, 1500, 'paid', 'online', false)`,
         [U.s1]);
       assert(realPrice.ok, 'paid event with a real price refused: ' + realPrice.err?.message);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// super admin & campus admin hierarchy (20261011000000_super_admin_and_campus_admin_hierarchy.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== super admin & campus admin hierarchy ==');
+{
+  // Designate adminA as Super Admin (GLOBAL) and adminB as Campus Admin (UNILAG)
+  await admin(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+  await admin(`UPDATE public.profiles SET role = 'admin', admin_role = 'super_admin', campus_code = 'GLOBAL' WHERE id = $1`, [U.adminA]);
+  await admin(`UPDATE public.profiles SET role = 'admin', admin_role = 'campus_admin', campus_code = 'UNILAG' WHERE id = $1`, [U.adminB]);
+  await admin(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+
+  await check('only a Super Admin can promote a user to admin; Campus Admin cannot promote', async () => {
+    // Campus Admin (adminB) attempts to promote s1 (on UNILAG) to admin: trigger must revert role
+    await as(U.adminB, async (c) => {
+      await c.q(`UPDATE public.profiles SET role = 'admin' WHERE id = $1`, [U.s1]);
+      const r = await c.q(`SELECT role::text FROM public.profiles WHERE id = $1`, [U.s1]);
+      eq(r.rows[0].role, 'student', 'Campus Admin promotion to admin must be reverted to student');
+    });
+
+    // Super Admin (adminA) promotes s1 to admin: trigger allows and sets admin_role
+    await as(U.adminA, async (c) => {
+      await c.q(`UPDATE public.profiles SET role = 'admin', admin_role = 'campus_admin' WHERE id = $1`, [U.s1]);
+      const r = await c.q(`SELECT role::text, admin_role FROM public.profiles WHERE id = $1`, [U.s1]);
+      eq(r.rows[0].role, 'admin', 'Super Admin promotion to admin must succeed');
+      eq(r.rows[0].admin_role, 'campus_admin', 'admin_role set to campus_admin');
+    });
+  });
+
+  await check('Campus Admin cannot modify an existing admin profile', async () => {
+    // Campus Admin (adminB) attempts to suspend Super Admin (adminA): trigger reverts
+    await as(U.adminB, async (c) => {
+      await c.q(`UPDATE public.profiles SET is_suspended = true WHERE id = $1`, [U.adminA]);
+      const r = await c.q(`SELECT is_suspended FROM public.profiles WHERE id = $1`, [U.adminA]);
+      eq(r.rows[0].is_suspended, false, 'Campus Admin modification of admin must be reverted');
+    });
+  });
+
+  await check('Campus Admin cannot modify users outside their assigned campus node', async () => {
+    // s3 is at 'UI', adminB is at 'UNILAG'
+    await as(U.adminB, async (c) => {
+      await c.q(`UPDATE public.profiles SET verification_status = 'verified' WHERE id = $1`, [U.s3]);
+      const r = await c.q(`SELECT verification_status::text FROM public.profiles WHERE id = $1`, [U.s3]);
+      assert(r.rows[0].verification_status !== 'verified', 'Campus Admin cannot verify users outside their campus');
+    });
+
+    // But adminB CAN verify users on their own campus (s2 at UNILAG)
+    await as(U.adminB, async (c) => {
+      await c.q(`UPDATE public.profiles SET verification_status = 'verified' WHERE id = $1`, [U.s2]);
+      const r = await c.q(`SELECT verification_status::text FROM public.profiles WHERE id = $1`, [U.s2]);
+      eq(r.rows[0].verification_status, 'verified', 'Campus Admin can verify users on their own campus');
+    });
+  });
+
+  await check('platform_settings RLS allows Super Admin but refuses Campus Admin', async () => {
+    // Campus Admin is refused by RLS
+    await as(U.adminB, async (c) => {
+      const r = await c.t(
+        `INSERT INTO public.platform_settings (key, value) VALUES ('hierarchy_test', '"denied"'::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
+      );
+      denied(r, null, 'Campus Admin denied on platform_settings');
+    });
+
+    // Super Admin is permitted by RLS
+    await as(U.adminA, async (c) => {
+      const r = await c.t(
+        `INSERT INTO public.platform_settings (key, value) VALUES ('hierarchy_test', '"allowed"'::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
+      );
+      assert(r.ok, 'Super Admin permitted on platform_settings: ' + r.err?.message);
+    });
+  });
+
+  await check('admin_get_user_profiles scopes to campus for Campus Admin and returns admin_role', async () => {
+    // Campus Admin (adminB, UNILAG) calls admin_get_user_profiles
+    await as(U.adminB, async (c) => {
+      const res = (await c.q(`SELECT * FROM public.admin_get_user_profiles()`)).rows;
+      assert(res.length > 0, 'profiles returned for Campus Admin');
+      assert(res.every((p) => p.campus_code === 'UNILAG'), 'Campus Admin only receives their own campus profiles');
+      assert('admin_role' in res[0], 'admin_role column is included in results');
+    });
+
+    // Super Admin (adminA) calls admin_get_user_profiles
+    await as(U.adminA, async (c) => {
+      const res = (await c.q(`SELECT * FROM public.admin_get_user_profiles()`)).rows;
+      assert(res.length > 0, 'profiles returned for Super Admin');
+      assert(res.some((p) => p.campus_code !== 'UNILAG'), 'Super Admin receives profiles across multiple campuses');
     });
   });
 }

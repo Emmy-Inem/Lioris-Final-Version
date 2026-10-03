@@ -111,6 +111,8 @@ export interface StoredSessionUser {
    * (treat a missing value as equal to `role`).
    */
   actualRole?: string;
+  adminRole?: string | null;
+  campusCode?: string | null;
 }
 
 export async function setSessionUser(user: StoredSessionUser) {
