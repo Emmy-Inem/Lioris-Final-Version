@@ -10,8 +10,7 @@ import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { CampusEvent } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 
-const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
-const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
+
 
 interface SpotlightEventsCarouselProps {
  events: CampusEvent[];
@@ -166,11 +165,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  {...({ 'data-horizontal-scroll': 'true' } as any)}
  >
  {displayEvents.map((item) => {
- const imageSource = item.coverImageUrl
- ? { uri: item.coverImageUrl }
- : item.category.toLowerCase().includes('career') || item.category.toLowerCase().includes('tech')
- ? EVENT_TECH_IMG
- : EVENT_ACADEMIC_IMG;
+ const hasValidCover = !!item.coverImageUrl && (item.coverImageUrl.startsWith('http://') || item.coverImageUrl.startsWith('https://') || item.coverImageUrl.startsWith('data:'));
 
  return (
  <Pressable
@@ -188,8 +183,10 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  position: 'relative',
  }}
  >
- {/* Cover Image */}
- <Image source={imageSource} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
+ {/* Cover Image if valid */}
+ {hasValidCover ? (
+ <Image source={{ uri: item.coverImageUrl! }} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
+ ) : null}
 
  {/* Dark Overlay */}
  <View

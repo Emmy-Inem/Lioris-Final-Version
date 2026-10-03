@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { openGoogleCalendar } from '@/utils/calendar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -68,6 +69,12 @@ const EVENT_MEDIA_MAP: Record<string, any> = {
 
 const CATEGORIES = ['Academic', 'Career', 'Workshop', 'Seminar', 'Social', 'Alumni'] as const;
 const VENUE_FORMATS = ['Physical Event', 'Lioris Live Event (In-App)', 'External Event'] as const;
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export function EventDetailScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -562,18 +569,13 @@ export function EventDetailScreen() {
 
   function handleGoogleCalendar() {
     if (!event) return;
-    haptics.light();
-    const startIso = event.startAt ? new Date(event.startAt) : new Date(Date.now() + 86400000);
-    const endIso = event.endAt ? new Date(event.endAt) : new Date(Date.now() + 93600000);
-    const startTime = startIso.toISOString().replace(/[-:]|\.\d{3}/g, '');
-    const endTime = endIso.toISOString().replace(/[-:]|\.\d{3}/g, '');
-    const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
-      event.title
-    )}&dates=${startTime}/${endTime}&details=${encodeURIComponent(event.description ?? '')}&location=${encodeURIComponent(
-      event.location
-    )}`;
-    openExternalUrl(gcalUrl).then((opened) => {
-      if (!opened) Alert.alert('Calendar', 'Could not open Google Calendar link.');
+    void openGoogleCalendar({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      location: event.location,
+      startAt: event.startAt,
+      endAt: event.endAt,
     });
   }
 
@@ -653,11 +655,8 @@ export function EventDetailScreen() {
     );
   }
 
-  const heroImageSource = event.coverImageUrl
-    ? EVENT_MEDIA_MAP[event.coverImageUrl] ?? { uri: event.coverImageUrl }
-    : event.category === 'academic'
-    ? EVENT_MEDIA_MAP.event_academic_symposium
-    : EVENT_MEDIA_MAP.event_tech_hackathon;
+  const hasValidCover = !!event.coverImageUrl && (event.coverImageUrl.startsWith('http://') || event.coverImageUrl.startsWith('https://') || event.coverImageUrl.startsWith('data:'));
+  const heroImageSource: { uri: string } | null = hasValidCover && event.coverImageUrl ? { uri: event.coverImageUrl } : null;
 
   const reviewLabel =
     event.paymentReviewStatus === 'approved'
@@ -976,15 +975,25 @@ export function EventDetailScreen() {
           {/* Left / Main Column */}
           <View style={{ flex: 1, minWidth: 0 }}>
             {/* Hero Cover Media Banner */}
-            <View style={{ width: '100%', height: 320, borderRadius: 24, overflow: 'hidden', position: 'relative', marginBottom: spacing.lg, backgroundColor: colors.surface }}>
-              <Image source={heroImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
-              <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
-
-              <View style={{ position: 'absolute', top: 16, right: 16, flexDirection: 'row', gap: 8 }}>
-                <Pressable accessibilityRole="button" accessibilityLabel="View full size" onPress={() => setLightboxOpen(true)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="expand-outline" size={18} color="#FFFFFF" />
-                </Pressable>
-              </View>
+            <View style={{ width: '100%', height: 320, borderRadius: 24, overflow: 'hidden', position: 'relative', marginBottom: spacing.lg, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+              {heroImageSource ? (
+                <>
+                  <Image source={heroImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
+                  <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+                  <View style={{ position: 'absolute', top: 16, right: 16, flexDirection: 'row', gap: 8 }}>
+                    <Pressable accessibilityRole="button" accessibilityLabel="View full size" onPress={() => setLightboxOpen(true)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="expand-outline" size={18} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                </>
+              ) : (
+                <View style={{ alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: 10 }}>
+                  <Ionicons name="calendar-outline" size={64} color={colors.brandPrimary} />
+                  <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 1, textTransform: 'uppercase' }}>
+                    {event.category} • {formatDate(event.startAt)}
+                  </AppText>
+                </View>
+              )}
 
               <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1394,11 +1403,20 @@ export function EventDetailScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Top Hero Banner */}
-          <View style={{ width: '100%', height: 260, position: 'relative', backgroundColor: colors.surface }}>
-            <Pressable accessibilityRole="button" accessibilityLabel="View event image full screen" onPress={() => setLightboxOpen(true)} style={{ width: '100%', height: '100%' }}>
-              <Image source={heroImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
-              <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.38)' }} />
-            </Pressable>
+          <View style={{ width: '100%', height: 260, position: 'relative', backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+            {heroImageSource ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="View event image full screen" onPress={() => setLightboxOpen(true)} style={{ width: '100%', height: '100%' }}>
+                <Image source={heroImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
+                <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.38)' }} />
+              </Pressable>
+            ) : (
+              <View style={{ alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: 8 }}>
+                <Ionicons name="calendar-outline" size={54} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                  {event.category} • {formatDate(event.startAt)}
+                </AppText>
+              </View>
+            )}
 
             {/* Floating Navigation Controls */}
             <View style={{ position: 'absolute', top: 44, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

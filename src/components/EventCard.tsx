@@ -1,5 +1,5 @@
-﻿import React, { useState } from'react';
-import { Alert, Pressable, View } from'react-native';
+import React, { useState } from'react';
+import { Alert, Platform, Pressable, View } from'react-native';
 import { Image } from'expo-image';
 import { router, useSegments } from'expo-router';
 import { useQueryClient } from'@tanstack/react-query';
@@ -20,9 +20,7 @@ import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
 import { formatNaira } from '@/utils/paidEvents';
 import { useEventReminder } from '@/utils/eventReminders';
-
-const EVENT_TECH_IMG = require('../../assets/images/event_tech_hackathon.jpg');
-const EVENT_ACADEMIC_IMG = require('../../assets/images/event_academic_symposium.jpg');
+import { openGoogleCalendar } from '@/utils/calendar';
 
 function parseEventDate(startAt: string) {
  const d = new Date(startAt);
@@ -39,60 +37,74 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  const roleGroup = segments[0] ?? '(student)';
  const [rsvpd, setRsvpd] = useState(!!event.isRsvpd);
  const [rsvpCount, setRsvpCount] = useState(event.rsvpCount);
- const { reminderOn, notificationId: reminderNotificationId, setReminder, clearReminder } = useEventReminder(event.id);
- const [submitting, setSubmitting] = useState(false);
- const [menuOpen, setMenuOpen] = useState(false);
- const cardScale = useSharedValue(1);
- const cardAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
+  const { reminderOn, notificationId: reminderNotificationId, toggleReminder } = useEventReminder(event.id);
+  const [submitting, setSubmitting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const cardScale = useSharedValue(1);
+  const cardAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
 
- const { month, day, time } = parseEventDate(event.startAt);
- const isFull = !!event.capacity && rsvpCount >= event.capacity && !rsvpd;
+  const { month, day, time } = parseEventDate(event.startAt);
+  const isFull = !!event.capacity && rsvpCount >= event.capacity && !rsvpd;
 
- const eventImage =
- event.coverImageUrl
- ? { uri: event.coverImageUrl }
- : event.category.toLowerCase().includes('career') || event.category.toLowerCase().includes('tech')
- ? EVENT_TECH_IMG
- : EVENT_ACADEMIC_IMG;
+  const hasRealImage = !!event.coverImageUrl && (event.coverImageUrl.startsWith('http') || event.coverImageUrl.startsWith('data:'));
 
- function handleOpenEvent() {
- haptics.light();
- if (['(student)', '(alumni)', '(staff)', '(admin)'].includes(roleGroup)) {
- router.push(`/${roleGroup}/events/${event.id}` as any);
- }
- }
+  function handleOpenEvent() {
+    haptics.light();
+    if (['(student)', '(alumni)', '(staff)', '(admin)'].includes(roleGroup)) {
+      router.push(`/${roleGroup}/events/${event.id}` as any);
+    }
+  }
 
- async function handleToggleReminder() {
- haptics.light();
- if (reminderOn) {
- if (reminderNotificationId) {
- await Notifications.cancelScheduledNotificationAsync(reminderNotificationId).catch(() => {});
- }
- await clearReminder();
- return;
- }
+  async function handleToggleReminder() {
+    haptics.light();
+    if (reminderOn) {
+      if (reminderNotificationId && Platform.OS !== 'web') {
+        await Notifications.cancelScheduledNotificationAsync(reminderNotificationId).catch(() => {});
+      }
+      await toggleReminder();
+      Alert.alert('Reminder Removed', `You will no longer receive alerts for "${event.title}".`);
+      return;
+    }
 
- const triggerDate = new Date(new Date(event.startAt).getTime() - 60 * 60 * 1000);
- if (triggerDate.getTime() <= Date.now()) {
- Alert.alert('Reminder Set', `You will receive a notification before ${event.title} begins.`);
- return;
- }
+    let notifId: string | undefined;
+    const triggerDate = new Date(new Date(event.startAt).getTime() - 60 * 60 * 1000);
+    if (Platform.OS !== 'web' && triggerDate.getTime() > Date.now()) {
+      try {
+        notifId = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `${event.title} starts soon`,
+            body: event.location,
+            data: { deepLinkPath: `/${roleGroup}/events/${event.id}` },
+          },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+        });
+      } catch {
+        // Fallback to backend toggle
+      }
+    }
 
- try {
- const id = await Notifications.scheduleNotificationAsync({
- content: {
- title: `${event.title} starts soon`,
- body: event.location,
- data: { deepLinkPath: `/${roleGroup}/events/${event.id}` },
- },
- trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
- });
- await setReminder(id);
- } catch {
- // Scheduling failed - leave the persisted state as "off" rather than
- // claiming a reminder exists when nothing was scheduled.
- }
- }
+    await toggleReminder(notifId);
+    Alert.alert(
+      'Reminder Set!',
+      `You will be reminded before "${event.title}" begins. Would you like to add it to your Google Calendar?`,
+      [
+        { text: 'Later', style: 'cancel' },
+        {
+          text: 'Add to Google Calendar',
+          onPress: () => {
+            void openGoogleCalendar({
+              id: event.id,
+              title: event.title,
+              description: event.description,
+              location: event.location,
+              startAt: event.startAt,
+              endAt: event.endAt,
+            });
+          },
+        },
+      ]
+    );
+  }
 
  async function handleRsvp() {
  // Paid events need the ticket details (price, how to pay, what the organiser sees), so they open the event page.
@@ -141,9 +153,33 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  onPress={handleOpenEvent}
  onPressIn={() => (cardScale.value = withTiming(0.985, { duration: 80 }))}
  onPressOut={() => (cardScale.value = withTiming(1, { duration: 120 }))}
- style={{ width: '100%', height: 130, position: 'relative' }}
+ style={{ width: '100%', height: 130, position: 'relative', overflow: 'hidden' }}
  >
-        <Image source={eventImage} style={{ width: '100%', height: 130 }} contentFit="cover" />
+        {hasRealImage ? (
+          <Image source={{ uri: event.coverImageUrl! }} style={{ width: '100%', height: 130 }} contentFit="cover" />
+        ) : (
+          <View
+            style={{
+              width: '100%',
+              height: 130,
+              backgroundColor: colors.pastelPrimaryBg,
+              justifyContent: 'center',
+              alignItems: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <View style={{ opacity: 0.08, position: 'absolute', right: -15, bottom: -15 }}>
+              <Ionicons name="calendar" size={130} color={colors.brandPrimary} />
+            </View>
+            <View style={{ alignItems: 'center', gap: 4 }}>
+              <Ionicons name="calendar-outline" size={26} color={colors.brandPrimary} />
+              <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.5 }}>
+                {event.campusCode ? `${event.campusCode} CAMPUS EVENT` : 'CAMPUS EVENT'}
+              </AppText>
+            </View>
+          </View>
+        )}
         <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm, flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
           <VisibilityBadge
             visibility={event.visibilityScope || 'campus'}
@@ -292,6 +328,24 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
 
  {menuOpen && (
   <ActionSheetModal visible={menuOpen} onClose={() => setMenuOpen(false)}>
+    <Pressable
+      onPress={() => {
+        setMenuOpen(false);
+        void openGoogleCalendar({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          location: event.location,
+          startAt: event.startAt,
+          endAt: event.endAt,
+        });
+      }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+    >
+      <Ionicons name="calendar-outline" size={18} color={colors.brandPrimary} />
+      <AppText weight="medium">Add to Google Calendar</AppText>
+    </Pressable>
+
  <Pressable
  onPress={handleReport}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}

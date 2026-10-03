@@ -1,16 +1,18 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 // @ts-ignore TS5097
 import { resolveAllowedPortalFilters, resolveActivePortalTarget } from './campusPortalScope.ts';
 
-test('resolveAllowedPortalFilters returns 9 options for admin and staff', () => {
+test('resolveAllowedPortalFilters returns 11 options for admin and staff', () => {
   const adminFilters = resolveAllowedPortalFilters('admin', 'UNILAG');
-  assert.equal(adminFilters.length, 9);
+  assert.equal(adminFilters.length, 11);
   assert.ok(adminFilters.some((f) => f.code === 'ALL'));
   assert.ok(adminFilters.some((f) => f.code === 'UI'));
+  assert.ok(adminFilters.some((f) => f.code === 'KDU'));
+  assert.ok(adminFilters.some((f) => f.code === 'NOUN'));
 
   const staffFilters = resolveAllowedPortalFilters('staff', 'FUNAAB');
-  assert.equal(staffFilters.length, 9);
+  assert.equal(staffFilters.length, 11);
   assert.ok(staffFilters.some((f) => f.code === 'UNILAG'));
 });
 
@@ -29,6 +31,8 @@ test('resolveAllowedPortalFilters restricts regular students to only their campu
   assert.ok(!studentFilters.some((f) => f.code === 'UNN'));
   assert.ok(!studentFilters.some((f) => f.code === 'OAU'));
   assert.ok(!studentFilters.some((f) => f.code === 'CU'));
+  assert.ok(!studentFilters.some((f) => f.code === 'KDU'));
+  assert.ok(!studentFilters.some((f) => f.code === 'NOUN'));
 });
 
 test('resolveActivePortalTarget prevents regular students from querying other campuses or ALL', () => {

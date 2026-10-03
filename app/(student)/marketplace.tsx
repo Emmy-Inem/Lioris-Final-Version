@@ -19,6 +19,7 @@ import { useToast } from '@/context/ToastContext';
 import { listMarketplaceListings, createListing } from '@/api/marketplace';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
 const CATEGORIES = [
  { id: 'All Categories', label: 'All Categories', icon: 'grid-outline' as const },
@@ -48,15 +49,34 @@ export default function MarketplaceScreen() {
 
 
 
+ const { isFeatureEnabled } = useFeatureFlags();
+ const isEnabled = isFeatureEnabled('marketplace');
+
  const { data: listings, isLoading, isError, error, refetch } = useQuery({
  queryKey: ['marketplace', debouncedQuery, category, condition, campusCode],
  queryFn: () => listMarketplaceListings({ q: debouncedQuery || undefined, category: category as any, condition: condition as any, campusCode }),
+ enabled: isEnabled,
  });
 
  async function handlePublish(payload: Parameters<typeof createListing>[0]) {
  await createListing(payload);
  queryClient.invalidateQueries({ queryKey: ['marketplace'] });
  toast.success('Your listing is live on the campus marketplace!');
+ }
+
+ if (!isEnabled) {
+   return (
+     <ScreenContainer glow={false}>
+       {!isDesktop && <AppHeader />}
+       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+         <EmptyState
+           icon="pricetag-outline"
+           title="Marketplace Unavailable"
+           description="The campus marketplace is currently disabled by university administration."
+         />
+       </View>
+     </ScreenContainer>
+   );
  }
 
  return (

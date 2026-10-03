@@ -21,6 +21,7 @@ import { Badge } from '@/components/Badge';
 import { Avatar } from '@/components/Avatar';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { EmptyState } from '@/components/EmptyState';
+import { QueueItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import {
@@ -368,9 +369,7 @@ export default function SupportDeskScreen() {
 
       {/* Tickets List */}
       {isLoading ? (
-        <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={colors.brandPrimary} />
-        </View>
+        <QueueItemSkeletonList count={4} />
       ) : (
         <FlatList
           style={{ flex: 1, minHeight: 0 }}

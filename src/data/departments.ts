@@ -931,6 +931,162 @@ export const GLOBAL_STRUCTURE: AcademicStructure = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// KDU: KolaDaisi University, Ibadan
+// ---------------------------------------------------------------------------
+export const KDU_STRUCTURE: AcademicStructure = {
+  campusCode: 'KDU',
+  groupType: 'Faculty',
+  groups: [
+    {
+      faculty: 'Faculty of Applied Sciences',
+      code: 'FAS',
+      departments: [
+        'Computer Science',
+        'Software Engineering',
+        'Cyber Security',
+        'Information Technology',
+        'Biochemistry',
+        'Microbiology',
+        'Industrial Chemistry',
+        'Physics with Electronics',
+        'Mathematics',
+      ],
+    },
+    {
+      faculty: 'Faculty of Arts, Management & Social Sciences',
+      code: 'FAMSS',
+      departments: [
+        'Accounting',
+        'Banking & Finance',
+        'Business Administration',
+        'Economics',
+        'Mass Communication',
+        'Political Science',
+        'English & Literary Studies',
+        'International Relations',
+      ],
+    },
+    {
+      faculty: 'Faculty of Law',
+      code: 'LAW',
+      departments: [
+        'Commercial Law',
+        'Private and Public Law',
+      ],
+    },
+    {
+      faculty: 'Faculty of Basic Medical Sciences',
+      code: 'FBMS',
+      departments: [
+        'Medical Laboratory Science',
+        'Nursing Science',
+        'Public Health',
+      ],
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// NOUN: National Open University of Nigeria
+// ---------------------------------------------------------------------------
+export const NOUN_STRUCTURE: AcademicStructure = {
+  campusCode: 'NOUN',
+  groupType: 'Faculty',
+  groups: [
+    {
+      faculty: 'Faculty of Agricultural Sciences',
+      code: 'AGR',
+      departments: [
+        'Agricultural Economics & Extension',
+        'Animal Science',
+        'Crop Science',
+        'Soil Science',
+        'Fisheries & Aquaculture',
+      ],
+    },
+    {
+      faculty: 'Faculty of Arts',
+      code: 'ART',
+      departments: [
+        'English',
+        'Linguistics, Foreign & Nigerian Languages',
+        'Religious Studies',
+        'Philosophy',
+        'History & International Studies',
+      ],
+    },
+    {
+      faculty: 'Faculty of Education',
+      code: 'EDU',
+      departments: [
+        'Educational Foundations',
+        'Arts & Social Sciences Education',
+        'Science Education',
+        'Early Childhood Education',
+        'Educational Management',
+      ],
+    },
+    {
+      faculty: 'Faculty of Health Sciences',
+      code: 'FHS',
+      departments: [
+        'Nursing Science',
+        'Public Health',
+        'Environmental Health Science',
+      ],
+    },
+    {
+      faculty: 'Faculty of Law',
+      code: 'LAW',
+      departments: [
+        'Commercial Law',
+        'Jurisprudence & International Law',
+        'Private & Property Law',
+        'Public Law',
+      ],
+    },
+    {
+      faculty: 'Faculty of Management Sciences',
+      code: 'FMS',
+      departments: [
+        'Accounting',
+        'Banking & Finance',
+        'Business Administration',
+        'Public Administration',
+        'Entrepreneurship',
+        'Marketing',
+      ],
+    },
+    {
+      faculty: 'Faculty of Sciences',
+      code: 'SCI',
+      departments: [
+        'Computer Science',
+        'Information Technology',
+        'Data Management',
+        'Environmental Science',
+        'Mathematics',
+        'Physics',
+        'Chemistry',
+        'Biological Sciences',
+      ],
+    },
+    {
+      faculty: 'Faculty of Social Sciences',
+      code: 'FSS',
+      departments: [
+        'Criminology & Security Studies',
+        'Economics',
+        'Mass Communication',
+        'Political Science',
+        'Peace Studies & Conflict Resolution',
+        'Tourism Studies',
+      ],
+    },
+  ],
+};
+
 // Map of all academic structures by campus code
 const STRUCTURE_MAP: Record<string, AcademicStructure> = {
   FUNAAB: FUNAAB_STRUCTURE,
@@ -939,6 +1095,8 @@ const STRUCTURE_MAP: Record<string, AcademicStructure> = {
   UNN: UNN_STRUCTURE,
   OAU: OAU_STRUCTURE,
   CU: CU_STRUCTURE,
+  KDU: KDU_STRUCTURE,
+  NOUN: NOUN_STRUCTURE,
   GLOBAL: GLOBAL_STRUCTURE,
 };
 

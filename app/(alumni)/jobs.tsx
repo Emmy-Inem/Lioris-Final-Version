@@ -25,6 +25,7 @@ import { Avatar } from '@/components/Avatar';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorStateView } from '@/components/ErrorStateView';
+import { JobCardSkeletonList } from '@/components/Skeleton';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { JobAlertsModal } from '@/components/JobAlertsModal';
 import { JobApplyModal } from '@/components/JobApplyModal';
@@ -473,12 +474,7 @@ export default function AlumniJobsScreen() {
 
         {/* Job Listings List */}
         {isLoading ? (
-          <View style={{ paddingVertical: 60, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator size="large" color={colors.brandPrimary} />
-            <AppText tone="secondary" variant="caption" style={{ marginTop: spacing.sm }}>
-              Loading senior career opportunities...
-            </AppText>
-          </View>
+          <JobCardSkeletonList count={4} />
         ) : jobs.length === 0 ? (
           <EmptyState
             icon="briefcase-outline"
@@ -1026,9 +1022,7 @@ function MyPostingsModal({
 
           <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }} showsVerticalScrollIndicator={false}>
             {isLoading ? (
-              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                <ActivityIndicator color={colors.brandPrimary} />
-              </View>
+              <JobCardSkeletonList count={2} />
             ) : isError ? (
               <ErrorStateView title="Could not load your postings" error={error} onRetry={refetch} />
             ) : myJobs.length === 0 ? (

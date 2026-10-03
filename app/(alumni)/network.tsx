@@ -10,6 +10,7 @@ import { Badge } from '@/components/Badge';
 import { DirectoryCard } from '@/components/DirectoryCard';
 import { EmptyState } from '@/components/EmptyState';
 import { SolidCard } from '@/components/SolidCard';
+import { ListItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { searchAlumniDirectory } from '@/api/connections';
@@ -371,9 +372,7 @@ export default function AlumniNetworkScreen() {
       </ScrollView>
 
       {isLoading ? (
-        <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={colors.brandPrimary} />
-        </View>
+        <ListItemSkeletonList count={6} />
       ) : (
         <FlatList
           data={alumniList ?? []}

@@ -233,6 +233,8 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
           else if (upper.includes('UNN') || upper.includes('NSUKKA')) campusCode = 'UNN';
           else if (upper.includes('FUNAAB') || upper.includes('ABEOKUTA')) campusCode = 'FUNAAB';
           else if (upper.includes('CU') || upper.includes('COVENANT')) campusCode = 'CU';
+          else if (upper.includes('KDU') || upper.includes('KOLADAISI')) campusCode = 'KDU';
+          else if (upper.includes('NOUN') || upper.includes('NATIONAL OPEN')) campusCode = 'NOUN';
         }
 
         const { error } = await supabase.from('verifications').insert({

@@ -10,6 +10,7 @@ import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
+import { Skeleton, MentorshipCardSkeletonList } from '@/components/Skeleton';
 import { SegmentedTabs } from '@/components/common/SegmentedTabs';
 import { StarRating } from '@/components/common/StarRating';
 import { MentorshipListCard } from '@/components/mentorship/MentorshipListCard';
@@ -174,7 +175,13 @@ export default function AlumniMentorshipScreen() {
         </View>
 
         {/* Mentor profile */}
-        {profileQuery.isLoading ? null : !profile ? (
+        {profileQuery.isLoading ? (
+          <SolidCard radius={20} style={{ gap: spacing.sm }}>
+            <Skeleton width="40%" height={20} radius={6} />
+            <Skeleton width="70%" height={14} radius={4} />
+            <Skeleton width="50%" height={14} radius={4} />
+          </SolidCard>
+        ) : !profile ? (
           <SolidCard radius={20} style={{ gap: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="sparkles-outline" size={20} color={colors.brandPrimary} />
@@ -272,7 +279,9 @@ export default function AlumniMentorshipScreen() {
         ) : null}
 
         {tab === 'requests' ? (
-          pending.length === 0 ? (
+          mentorships.isLoading ? (
+            <MentorshipCardSkeletonList count={3} />
+          ) : pending.length === 0 ? (
             <EmptyState
               icon="mail-open-outline"
               title="No requests waiting"
@@ -307,7 +316,9 @@ export default function AlumniMentorshipScreen() {
         ) : null}
 
         {tab === 'active' ? (
-          activeOnes.length === 0 ? (
+          mentorships.isLoading ? (
+            <MentorshipCardSkeletonList count={3} />
+          ) : activeOnes.length === 0 ? (
             <EmptyState icon="people-outline" title="No active mentees" description="Accept a request and the mentee's space opens here." />
           ) : (
             <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.md }}>
@@ -321,7 +332,9 @@ export default function AlumniMentorshipScreen() {
         ) : null}
 
         {tab === 'history' ? (
-          history.length === 0 ? (
+          mentorships.isLoading ? (
+            <MentorshipCardSkeletonList count={3} />
+          ) : history.length === 0 ? (
             <EmptyState icon="time-outline" title="No history yet" description="Completed, ended and declined mentorships are kept here." />
           ) : (
             <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.md }}>
@@ -335,7 +348,9 @@ export default function AlumniMentorshipScreen() {
         ) : null}
 
         {tab === 'reviews' ? (
-          (reviews.data?.length ?? 0) === 0 ? (
+          reviews.isLoading ? (
+            <MentorshipCardSkeletonList count={2} />
+          ) : (reviews.data?.length ?? 0) === 0 ? (
             <EmptyState icon="star-outline" title="No reviews yet" description="When a mentee finishes and rates the mentorship, their review shows here and on your mentor profile." />
           ) : (
             <View style={{ gap: spacing.sm }}>

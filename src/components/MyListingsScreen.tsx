@@ -11,6 +11,7 @@ import { MarketplaceItemCard } from './MarketplaceItemCard';
 import { MarketplaceCardSkeletonGrid } from './Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { listMyMarketplaceListings } from '@/api/marketplace';
 
 type FilterKey = 'all' | 'active' | 'sold' | 'removed';
@@ -33,6 +34,8 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 export function MyListingsScreen() {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
+  const { isFeatureEnabled } = useFeatureFlags();
+  const isEnabled = isFeatureEnabled('marketplace');
   const [filter, setFilter] = useState<FilterKey>('all');
 
   // 'marketplace' as the key's first segment so the existing
@@ -42,6 +45,7 @@ export function MyListingsScreen() {
   const { data: listings, isLoading, isError, refetch } = useQuery({
     queryKey: ['marketplace', 'mine'],
     queryFn: () => listMyMarketplaceListings(),
+    enabled: isEnabled,
   });
 
   const visible = (listings ?? []).filter((item) => {
@@ -52,6 +56,20 @@ export function MyListingsScreen() {
     if (filter === 'sold') return !!(item as any).isSold && !(item as any).isRemoved;
     return true;
   });
+
+  if (!isEnabled) {
+    return (
+      <ScreenContainer glow={false}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+          <EmptyState
+            icon="pricetag-outline"
+            title="Marketplace Unavailable"
+            description="The campus marketplace is currently disabled by university administration."
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer glow={false}>

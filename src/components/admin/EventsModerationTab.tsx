@@ -37,12 +37,7 @@ function addMinutesToDateTime(dtStr: string, minutes: number) {
   return toLocalInputValue(d.toISOString());
 }
 
-const EVENT_COVER_PRESETS = [
- { id: 'event_tech_hackathon', label: 'Hackathon & Tech', src: require('../../../assets/images/event_tech_hackathon.jpg') },
- { id: 'event_academic_symposium', label: 'Academic Symposium', src: require('../../../assets/images/event_academic_symposium.jpg') },
- { id: 'campus_students_photo', label: 'Quad & Social', src: require('../../../assets/images/campus_students_photo.jpg') },
- { id: 'campus_library_study', label: 'Library & Research', src: require('../../../assets/images/campus_library_study.jpg') },
-];
+
 
 const EVENT_CATEGORIES: EventCategory[] = ['academic', 'career', 'alumni', 'student', 'seminar', 'workshop'];
 const VENUE_TYPES: NonNullable<CampusEvent['venueType']>[] = ['physical', 'virtual', 'external'];
@@ -76,7 +71,7 @@ export function EventsModerationTab() {
  const [formVirtualLink, setFormVirtualLink] = useState('');
  const [formCapacity, setFormCapacity] = useState('150');
  const [formTicket, setFormTicket] = useState<TicketFormValues>(EMPTY_TICKET_FORM);
- const [formCover, setFormCover] = useState('event_tech_hackathon');
+ const [formCover, setFormCover] = useState('');
  const [formSponsored, setFormSponsored] = useState(false);
  const [formSpotlight, setFormSpotlight] = useState(true);
  const [formTargetCohort, setFormTargetCohort] = useState('All Levels (100L - 500L)');
@@ -122,7 +117,7 @@ export function EventsModerationTab() {
  setFormVirtualLink('');
  setFormCapacity('200');
  setFormTicket(EMPTY_TICKET_FORM);
- setFormCover('event_tech_hackathon');
+ setFormCover('');
  setFormSponsored(true);
  setFormSpotlight(true);
  setFormTargetCohort('All Levels (100L - 500L)');
@@ -158,7 +153,7 @@ export function EventsModerationTab() {
  })
  .catch(() => {});
  }
- setFormCover(event.coverImageUrl || 'event_tech_hackathon');
+ setFormCover(event.coverImageUrl || '');
  setFormSponsored(!!event.sponsored);
  setFormSpotlight(!!event.isSpotlight);
  setFormTargetCohort(event.targetCohort || 'All Levels');
@@ -590,9 +585,9 @@ export function EventsModerationTab() {
 
  {/* Events List */}
  {displayedEvents.map((event) => {
- const isApproved = event.approvalStatus === 'approved';
- const isPending = event.approvalStatus === 'pending';
- const coverPreset = EVENT_COVER_PRESETS.find((p) => p.id === event.coverImageUrl) || EVENT_COVER_PRESETS[0];
+ const isPending = section === 'pending';
+ const isApproved = section === 'approved';
+ const hasValidImage = !!event.coverImageUrl && (event.coverImageUrl.startsWith('http://') || event.coverImageUrl.startsWith('https://') || event.coverImageUrl.startsWith('data:'));
 
  return (
  <SolidCard
@@ -606,11 +601,32 @@ export function EventsModerationTab() {
  }}
  >
  <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm }}>
+ {hasValidImage ? (
  <Image
- source={coverPreset.src}
+ source={{ uri: event.coverImageUrl! }}
  style={{ width: 85, height: 85, borderRadius: radius.md }}
  contentFit="cover"
  />
+ ) : (
+ <View
+ style={{
+ width: 85,
+ height: 85,
+ borderRadius: radius.md,
+ backgroundColor: colors.pastelPrimaryBg,
+ alignItems: 'center',
+ justifyContent: 'center',
+ borderWidth: 1,
+ borderColor: `${colors.brandPrimary}25`,
+ padding: spacing.xs,
+ }}
+ >
+ <Ionicons name="calendar-outline" size={28} color={colors.brandPrimary} />
+ <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10, marginTop: 4, textTransform: 'uppercase' }}>
+ {event.category}
+ </AppText>
+ </View>
+ )}
  <View style={{ flex: 1 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, flex: 1, marginRight: 6 }}>
@@ -968,35 +984,14 @@ export function EventsModerationTab() {
  onChangeText={setFormTargetCohort}
  />
 
- {/* Cover Photo Preset Selector */}
- <AppText variant="caption"weight="bold"tone="brand"style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
- EVENT BANNER PHOTO
- </AppText>
- <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.md }}>
- {EVENT_COVER_PRESETS.map((preset) => {
- const isSelected = formCover === preset.id;
- return (
- <Pressable
- key={preset.id}
- onPress={() => setFormCover(preset.id)}
- style={{
- width: 110,
- borderRadius: radius.md,
- overflow: 'hidden',
- borderWidth: isSelected ? 2 : 1,
- borderColor: isSelected ? colors.brandPrimary : colors.border,
- }}
- >
- <Image source={preset.src} style={{ width: '100%', height: 60 }} contentFit="cover" />
- <View style={{ padding: 4, backgroundColor: colors.surface }}>
- <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} numberOfLines={1}>
- {preset.label}
- </AppText>
- </View>
- </Pressable>
- );
- })}
- </ScrollView>
+ <AppTextField
+ label="Cover Image URL (Optional)"
+ placeholder="https://... (leave blank for clean campus badge)"
+ value={formCover}
+ onChangeText={setFormCover}
+ autoCapitalize="none"
+ autoCorrect={false}
+ />
 
  <AppTextField
  label="Event Description & Agenda"placeholder="Detail keynotes, panel discussions, prerequisites..."value={formDesc}

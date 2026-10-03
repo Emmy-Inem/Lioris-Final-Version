@@ -1,28 +1,20 @@
-import React, { useState } from'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import React, { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from'expo-image';
-import { Ionicons } from'@expo/vector-icons';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
-import { SolidCard } from'@/components/SolidCard';
-import { AppText } from'@/components/AppText';
-import { AppTextField } from'@/components/AppTextField';
-import { Badge } from'@/components/Badge';
-import { AppButton } from'@/components/AppButton';
-import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { SolidCard } from '@/components/SolidCard';
+import { AppText } from '@/components/AppText';
+import { AppTextField } from '@/components/AppTextField';
+import { Badge } from '@/components/Badge';
+import { AppButton } from '@/components/AppButton';
+import { EmptyState } from '@/components/EmptyState';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listResources, createResource, updateResource, approveResource, rejectResource, deleteResource } from'@/api/resources';
-import { Resource } from'@/api/types';
-import { recordAuditLogEntry } from'@/api/auditLog';
-import { haptics } from'@/utils/haptics';
-
-const RESOURCE_COVER_PRESETS = [
- { id: 'campus_library_study', label: 'Study Archive', src: require('../../../assets/images/campus_library_study.jpg') },
- { id: 'event_tech_hackathon', label: 'Code & Systems', src: require('../../../assets/images/event_tech_hackathon.jpg') },
- { id: 'student_rep_group', label: 'Faculty Notes', src: require('../../../assets/images/student_rep_group.jpg') },
- { id: 'campus_students_photo', label: 'Quad Guides', src: require('../../../assets/images/campus_students_photo.jpg') },
-];
+import { listResources, createResource, updateResource, approveResource, rejectResource, deleteResource } from '@/api/resources';
+import { Resource } from '@/api/types';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import { haptics } from '@/utils/haptics';
 
 const CATEGORIES: Resource['category'][] = ['Past Questions', 'Notes', 'Projects'];
 const LEVELS: Resource['academicLevel'][] = ['100L', '200L', '300L', '400L', '500L', 'Postgraduate'];
@@ -467,11 +459,24 @@ export function ResourcesModerationTab() {
  }}
  >
  <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm }}>
- <Image
- source={RESOURCE_COVER_PRESETS[0].src}
- style={{ width: 75, height: 75, borderRadius: radius.md }}
- contentFit="cover"
- />
+ <View
+ style={{
+ width: 68,
+ height: 76,
+ borderRadius: radius.md,
+ backgroundColor: colors.pastelPrimaryBg,
+ borderWidth: 1,
+ borderColor: `${colors.brandPrimary}25`,
+ alignItems: 'center',
+ justifyContent: 'center',
+ padding: spacing.xs,
+ }}
+ >
+ <Ionicons name="document-text" size={28} color={colors.brandPrimary} />
+ <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10, marginTop: 2 }}>
+ {resource.fileType || 'PDF'}
+ </AppText>
+ </View>
  <View style={{ flex: 1 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, flex: 1, marginRight: 6 }}>

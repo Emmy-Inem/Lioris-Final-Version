@@ -25,13 +25,15 @@ export interface CampusOverview extends Institution {
 }
 
 export const LAUNCH_INSTITUTIONS: Institution[] = [
- { code: 'GLOBAL', name: 'Lioris Global Network', domain: 'lioris.app', shortName: 'Global', location: 'Worldwide', primaryColor: '#2563EB' },
- { code: 'UNILAG', name: 'University of Lagos', domain: 'unilag.edu.ng', shortName: 'UNILAG', location: 'Akoka, Lagos', primaryColor: '#1E40AF' },
- { code: 'UI', name: 'University of Ibadan', domain: 'ui.edu.ng', shortName: 'UI', location: 'Ibadan, Oyo', primaryColor: '#047857' },
- { code: 'FUNAAB', name: 'Federal University of Agriculture, Abeokuta', domain: 'funaab.edu.ng', shortName: 'FUNAAB', location: 'Abeokuta, Ogun', primaryColor: '#059669' },
- { code: 'UNN', name: 'University of Nigeria Nsukka', domain: 'unn.edu.ng', shortName: 'UNN', location: 'Nsukka, Enugu', primaryColor: '#B45309' },
- { code: 'OAU', name: 'Obafemi Awolowo University', domain: 'oauife.edu.ng', shortName: 'OAU', location: 'Ile-Ife, Osun', primaryColor: '#7C3AED' },
- { code: 'CU', name: 'Covenant University', domain: 'covenantuniversity.edu.ng', shortName: 'CU', location: 'Ota, Ogun', primaryColor: '#DC2626' },
+  { code: 'GLOBAL', name: 'Lioris Global Network', domain: 'lioris.app', shortName: 'Global', location: 'Worldwide', primaryColor: '#2563EB' },
+  { code: 'UNILAG', name: 'University of Lagos', domain: 'unilag.edu.ng', shortName: 'UNILAG', location: 'Akoka, Lagos', primaryColor: '#1E40AF' },
+  { code: 'UI', name: 'University of Ibadan', domain: 'ui.edu.ng', shortName: 'UI', location: 'Ibadan, Oyo', primaryColor: '#047857' },
+  { code: 'FUNAAB', name: 'Federal University of Agriculture, Abeokuta', domain: 'funaab.edu.ng', shortName: 'FUNAAB', location: 'Abeokuta, Ogun', primaryColor: '#059669' },
+  { code: 'UNN', name: 'University of Nigeria, Nsukka', domain: 'unn.edu.ng', shortName: 'UNN', location: 'Nsukka, Enugu', primaryColor: '#047857' },
+  { code: 'OAU', name: 'Obafemi Awolowo University', domain: 'oauife.edu.ng', shortName: 'OAU', location: 'Ile-Ife, Osun', primaryColor: '#7C3AED' },
+  { code: 'CU', name: 'Covenant University', domain: 'covenantuniversity.edu.ng', shortName: 'CU', location: 'Ota, Ogun', primaryColor: '#DC2626' },
+  { code: 'KDU', name: 'KolaDaisi University', domain: 'koladaisiuniversity.edu.ng', shortName: 'KDU', location: 'Ibadan, Oyo', primaryColor: '#1E3A8A' },
+  { code: 'NOUN', name: 'National Open University of Nigeria', domain: 'noun.edu.ng', shortName: 'NOUN', location: 'Abuja (National)', primaryColor: '#0284C7' },
 ];
 
 function rowToInstitution(row: any): Institution {

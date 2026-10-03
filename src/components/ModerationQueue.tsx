@@ -10,6 +10,7 @@ import { AppButton } from'./AppButton';
 import { AppTextField } from'./AppTextField';
 import { ChipSelect } from'./ChipSelect';
 import { EmptyState } from'./EmptyState';
+import { QueueItemSkeletonList } from './Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listReports, resolveReport, ReportAlreadyHandledError, getOtherReportCountForAuthor } from '@/api/moderation';
@@ -411,7 +412,9 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         </SolidCard>
       )}
 
-      {isDesktop ? (
+      {isLoading ? (
+        <QueueItemSkeletonList count={4} />
+      ) : isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {filteredReports.map((item) => (

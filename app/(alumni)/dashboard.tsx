@@ -165,11 +165,11 @@ export default function AlumniDashboard() {
           }}
         >
           <View style={{ height: isDesktop ? 175 : 148, position: 'relative', width: '100%', overflow: 'hidden' }}>
-            <Image
-              source={require('../../assets/images/campus_library_study.jpg')}
+            <LinearGradient
+              colors={isDark ? ['#0F172A', '#1E293B', '#0F172A'] : ['#1E3A8A', '#2563EB', '#1D4ED8']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-              accessibilityLabel="Campus library banner"
             />
             {/* Ambient Multi-Stop Gradient Overlay */}
             <LinearGradient

@@ -29,6 +29,13 @@ try {
   // Node.js test runner or environment without expo-secure-store/react-native
 }
 
+let eventsApi: any = null;
+try {
+  eventsApi = require('../api/events');
+} catch {
+  // Safe fallback for tests
+}
+
 async function currentUserId(): Promise<string | null> {
   try {
     const stored = await authTokenStorage?.getSessionUser?.();
@@ -103,6 +110,28 @@ export async function hydrateEventReminders(): Promise<Record<string, string>> {
   isHydrated = true;
   hydratedForUserId = uid;
   notify();
+
+  // Reconcile with remote database reminders if signed in
+  if (uid && eventsApi?.listUserEventReminders) {
+    eventsApi.listUserEventReminders()
+      .then((remoteEventIds: string[]) => {
+        if (Array.isArray(remoteEventIds) && remoteEventIds.length > 0) {
+          let updated = false;
+          for (const evId of remoteEventIds) {
+            if (!memoryCache[evId]) {
+              memoryCache[evId] = `backend-${evId}`;
+              updated = true;
+            }
+          }
+          if (updated) {
+            notify();
+            void writeRaw(scopedKey(uid), JSON.stringify(memoryCache));
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
   return memoryCache;
 }
 
@@ -170,5 +199,26 @@ export function useEventReminder(eventId: string) {
     void clearEventReminder(eventId);
   }, [eventId]);
 
-  return { reminderOn, notificationId, setReminder, clearReminder };
+  const toggleReminder = useCallback(
+    async (notifId?: string): Promise<boolean> => {
+      const isCurrentlyOn = !!getEventReminderNotificationIdSync(eventId);
+      if (isCurrentlyOn) {
+        await clearEventReminder(eventId);
+        if (eventsApi?.toggleEventReminder) {
+          await eventsApi.toggleEventReminder(eventId).catch(() => {});
+        }
+        return false;
+      } else {
+        const idToStore = notifId || `backend-${eventId}`;
+        await setEventReminder(eventId, idToStore);
+        if (eventsApi?.toggleEventReminder) {
+          await eventsApi.toggleEventReminder(eventId).catch(() => {});
+        }
+        return true;
+      }
+    },
+    [eventId],
+  );
+
+  return { reminderOn, notificationId, setReminder, clearReminder, toggleReminder };
 }

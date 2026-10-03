@@ -1,4 +1,4 @@
-﻿export interface CampusPortalFilterOption {
+export interface CampusPortalFilterOption {
   code: string;
   label: string;
 }
@@ -24,6 +24,8 @@ export function resolveAllowedPortalFilters(
       { code: 'UNN', label: 'UNN' },
       { code: 'OAU', label: 'OAU' },
       { code: 'CU', label: 'Covenant (CU)' },
+      { code: 'KDU', label: 'KDU' },
+      { code: 'NOUN', label: 'NOUN' },
       { code: 'GLOBAL', label: 'National Portals' },
     ];
   }

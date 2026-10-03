@@ -91,6 +91,8 @@ const UNIVERSITY_PORTAL_FILTERS = [
   { code: 'UNN', label: 'UNN' },
   { code: 'OAU', label: 'OAU' },
   { code: 'CU', label: 'Covenant (CU)' },
+  { code: 'KDU', label: 'KDU' },
+  { code: 'NOUN', label: 'NOUN' },
   { code: 'GLOBAL', label: 'National Portals' },
 ];
 

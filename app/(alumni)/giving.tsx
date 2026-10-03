@@ -10,6 +10,7 @@ import { SolidCard } from '@/components/SolidCard';
 import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
+import { CampaignCardSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
@@ -314,9 +315,7 @@ export default function AlumniGivingScreen() {
       </View>
 
       {loading ? (
-        <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.brandPrimary} />
-        </View>
+        <CampaignCardSkeletonList count={3} />
       ) : list.length === 0 ? (
         <EmptyState
           icon="heart-outline"

@@ -12,7 +12,7 @@ import { AppTextField } from '@/components/AppTextField';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
-import { ShimmerCardList } from '@/components/ShimmerSkeleton';
+import { QueueItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
@@ -203,7 +203,7 @@ export default function TakedownRequestsScreen() {
       )}
 
       {isLoading ? (
-        <ShimmerCardList count={3} />
+        <QueueItemSkeletonList count={4} />
       ) : error ? (
         <SolidCard radius={16} style={{ borderWidth: 1, borderColor: `${colors.critical}55` }}>
           <AppText weight="bold" variant="bodySmall">Could not load requests</AppText>

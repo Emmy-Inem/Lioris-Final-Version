@@ -1,49 +1,40 @@
 import React, { useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { Image } from'expo-image';
-import { Ionicons } from'@expo/vector-icons';
-import { useQuery, useQueryClient } from'@tanstack/react-query';
-import { AppText } from'../AppText';
-import { AppTextField } from'../AppTextField';
-import { AppButton } from'../AppButton';
-import { Badge } from'../Badge';
-import { SolidCard } from'../SolidCard';
-import { useTheme } from'@/theme/ThemeProvider';
-import { listResources, createResource, updateResource, deleteResource } from'@/api/resources';
-import { Resource } from'@/api/types';
-import { haptics } from'@/utils/haptics';
-
-const RESOURCE_COVER_PRESETS = [
- { id: 'campus_library_study', label: 'Study Archive', src: require('../../../assets/images/campus_library_study.jpg') },
- { id: 'event_tech_hackathon', label: 'Code & Systems', src: require('../../../assets/images/event_tech_hackathon.jpg') },
- { id: 'student_rep_group', label: 'Faculty Notes', src: require('../../../assets/images/student_rep_group.jpg') },
- { id: 'campus_students_photo', label: 'Quad Guides', src: require('../../../assets/images/campus_students_photo.jpg') },
-];
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AppText } from '../AppText';
+import { AppTextField } from '../AppTextField';
+import { AppButton } from '../AppButton';
+import { Badge } from '../Badge';
+import { SolidCard } from '../SolidCard';
+import { useTheme } from '@/theme/ThemeProvider';
+import { listResources, createResource, updateResource, deleteResource } from '@/api/resources';
+import { Resource } from '@/api/types';
+import { haptics } from '@/utils/haptics';
 
 const CATEGORIES: Resource['category'][] = ['Past Questions', 'Notes', 'Projects'];
 
 interface ManageResourcesModalProps {
- visible: boolean;
- onClose: () => void;
+  visible: boolean;
+  onClose: () => void;
 }
 
 export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalProps) {
- const { colors, spacing, radius, isDark } = useTheme();
- const queryClient = useQueryClient();
- const [searchQuery, setSearchQuery] = useState('');
- const [selectedCategory, setSelectedCategory] = useState<Resource['category'] | 'all'>('all');
- const [editingResource, setEditingResource] = useState<Resource | null>(null);
- const [isCreating, setIsCreating] = useState(false);
+  const { colors, spacing, radius, isDark } = useTheme();
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<Resource['category'] | 'all'>('all');
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
- // Form state
- const [formTitle, setFormTitle] = useState('');
- const [formCode, setFormCode] = useState('');
- const [formDept, setFormDept] = useState('');
- const [formCategory, setFormCategory] = useState<Resource['category']>('Notes');
- const [formDescription, setFormDescription] = useState('');
- const [formFileSize, setFormFileSize] = useState('2.4 MB');
- const [formCover, setFormCover] = useState('campus_library_study');
- const [saving, setSaving] = useState(false);
+  // Form state
+  const [formTitle, setFormTitle] = useState('');
+  const [formCode, setFormCode] = useState('');
+  const [formDept, setFormDept] = useState('');
+  const [formCategory, setFormCategory] = useState<Resource['category']>('Notes');
+  const [formDescription, setFormDescription] = useState('');
+  const [formFileSize, setFormFileSize] = useState('2.4 MB');
+  const [saving, setSaving] = useState(false);
 
  const { data: resources = [], refetch } = useQuery({
  queryKey: ['resources', selectedCategory],
@@ -65,7 +56,6 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  setFormCategory('Notes');
  setFormDescription('');
  setFormFileSize('3.2 MB');
- setFormCover('campus_library_study');
  setIsCreating(true);
  }
 
@@ -78,7 +68,6 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  setFormCategory(resource.category);
  setFormDescription(resource.description);
  setFormFileSize(resource.fileSize ?? '');
- setFormCover('campus_library_study');
  setIsCreating(false);
  }
 
@@ -259,35 +248,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
 
  <AppTextField label="Description & Notes"placeholder="Key topics covered, semester year, solutions guide..."value={formDescription} onChangeText={setFormDescription} multiline numberOfLines={3} />
 
- {/* Cover Image Selector */}
- <AppText variant="bodySmall"weight="bold"style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
- Select Resource Thumbnail / Cover
- </AppText>
- <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: spacing.sm, marginBottom: spacing.lg }}>
- {RESOURCE_COVER_PRESETS.map((preset) => {
- const isSelected = formCover === preset.id;
- return (
- <Pressable
- key={preset.id}
- onPress={() => setFormCover(preset.id)}
- style={{
- width: 95,
- borderRadius: 12,
- overflow: 'hidden',
- borderWidth: 2,
- borderColor: isSelected ? colors.brandPrimary : colors.border,
- }}
- >
- <Image source={preset.src} style={{ width: '100%', height: 60 }} contentFit="cover" />
- <View style={{ padding: 4, backgroundColor: isSelected ? colors.pastelPrimaryBg : colors.surface }}>
- <AppText variant="caption"weight={isSelected ? 'bold' : 'regular'} style={{ fontSize: 9 }}>
- {preset.label}
- </AppText>
- </View>
- </Pressable>
- );
- })}
- </ScrollView>
+
 
  <AppButton
  label={saving ? 'Saving...' : editingResource ? 'Save Resource Changes' : 'Publish Resource'}
@@ -407,7 +368,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  >
  <Ionicons name="pencil"size={13} color={colors.brandPrimary} />
  <AppText variant="caption"tone="brand"weight="bold">
- Edit Resource & Cover
+ Edit Resource
  </AppText>
  </Pressable>
 

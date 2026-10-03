@@ -75,6 +75,20 @@ export const CAMPUS_COORDINATES: Record<string, CampusCoordinates> = {
     longitude: 5.6037,
     city: 'Benin City, Edo State',
   },
+  KDU: {
+    name: 'KolaDaisi University',
+    shortName: 'KDU',
+    latitude: 7.5300,
+    longitude: 3.8800,
+    city: 'Ibadan, Oyo State',
+  },
+  NOUN: {
+    name: 'National Open University of Nigeria',
+    shortName: 'NOUN',
+    latitude: 9.0600,
+    longitude: 7.4200,
+    city: 'Abuja (National)',
+  },
 };
 
 export interface CampusWeather {

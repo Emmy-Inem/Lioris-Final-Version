@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -14,29 +14,49 @@ import { MarketplaceModerationTab } from '@/components/admin/MarketplaceModerati
 import { StudyPodsModerationTab } from '@/components/admin/StudyPodsModerationTab';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import { haptics } from '@/utils/haptics';
 
 /**
  * Everything members publish, in one place. Each tab is the full management surface for that kind of
- * content (create / edit / approve / pin / delete), replacing the copies that used to live on the
- * Command Desk, the Overview dashboard and a separate delete-only list.
+ * content (create / edit / approve / pin / delete). Tabs are strictly gated by their respective feature
+ * flags so that disabled features (such as Donations, Marketplace, Study Pods) never appear.
  */
-const TABS = [
-  { key: 'threads', label: 'Threads & Communities', icon: 'chatbubbles-outline' as const },
-  { key: 'events', label: 'Events', icon: 'calendar-outline' as const },
-  { key: 'resources', label: 'Resources', icon: 'folder-open-outline' as const },
-  { key: 'jobs', label: 'Jobs', icon: 'briefcase-outline' as const },
-  { key: 'marketplace', label: 'Marketplace', icon: 'pricetag-outline' as const },
-  { key: 'studypods', label: 'Study Pods', icon: 'school-outline' as const },
-  { key: 'donations', label: 'Donations', icon: 'heart-outline' as const },
-  { key: 'mentorship', label: 'Mentorship', icon: 'people-outline' as const },
-] as const;
-type TabKey = (typeof TABS)[number]['key'];
+interface ContentTabDef {
+  key: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  featureKey: FeatureKey;
+}
+
+const ALL_CONTENT_TABS: ContentTabDef[] = [
+  { key: 'threads', label: 'Communities & Spaces', icon: 'chatbubbles-outline', featureKey: 'discussion_workspaces' },
+  { key: 'events', label: 'Events', icon: 'calendar-outline', featureKey: 'campus_events' },
+  { key: 'resources', label: 'Resources', icon: 'folder-open-outline', featureKey: 'academic_resources' },
+  { key: 'jobs', label: 'Jobs', icon: 'briefcase-outline', featureKey: 'career_page' },
+  { key: 'marketplace', label: 'Marketplace', icon: 'pricetag-outline', featureKey: 'marketplace' },
+  { key: 'studypods', label: 'Study Pods', icon: 'school-outline', featureKey: 'study_groups' },
+  { key: 'donations', label: 'Donations', icon: 'heart-outline', featureKey: 'donations' },
+  { key: 'mentorship', label: 'Mentorship', icon: 'people-outline', featureKey: 'alumni_mentorship' },
+];
 
 export default function ContentDeskScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
-  const [tab, setTab] = useState<TabKey>('threads');
+  const { isFeatureEnabled } = useFeatureFlags();
+
+  const visibleTabs = useMemo(() => {
+    return ALL_CONTENT_TABS.filter((t) => isFeatureEnabled(t.featureKey));
+  }, [isFeatureEnabled]);
+
+  const [tab, setTab] = useState<string>('threads');
+
+  // Auto-switch to first available tab if active tab's feature flag is turned off
+  useEffect(() => {
+    if (visibleTabs.length > 0 && !visibleTabs.some((t) => t.key === tab)) {
+      setTab(visibleTabs[0].key);
+    }
+  }, [visibleTabs, tab]);
 
   return (
     <ScreenContainer glow={false}>
@@ -50,10 +70,10 @@ export default function ContentDeskScreen() {
       >
         <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>
           <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
-            Content
+            Content Moderation Desk
           </AppText>
           <AppText tone="secondary" variant="caption">
-            Manage what members publish: threads, events and resources
+            Manage what members publish: communities, events, academic archives and opportunities
           </AppText>
         </View>
 
@@ -64,7 +84,7 @@ export default function ContentDeskScreen() {
           style={{ marginBottom: spacing.md, flexGrow: 0 }}
           {...({ 'data-horizontal-scroll': 'true' } as any)}
         >
-          {TABS.map((t) => {
+          {visibleTabs.map((t) => {
             const selected = tab === t.key;
             return (
               <Pressable
@@ -87,7 +107,7 @@ export default function ContentDeskScreen() {
                   borderColor: selected ? colors.brandPrimary : colors.border,
                 }}
               >
-                <Ionicons name={t.icon} size={15} color={selected ? '#FFFFFF' : colors.textSecondary} />
+                <Ionicons name={t.icon as any} size={15} color={selected ? '#FFFFFF' : colors.textSecondary} />
                 <AppText variant="bodySmall" weight={selected ? 'bold' : 'semiBold'} tone={selected ? 'inverse' : 'secondary'}>
                   {t.label}
                 </AppText>
@@ -96,16 +116,15 @@ export default function ContentDeskScreen() {
           })}
         </ScrollView>
 
-        {tab === 'threads' ? <ForumsModerationTab /> : null}
-        {tab === 'events' ? <EventsModerationTab /> : null}
-        {tab === 'resources' ? <ResourcesModerationTab /> : null}
-        {tab === 'jobs' ? <JobsModerationTab /> : null}
-        {tab === 'marketplace' ? <MarketplaceModerationTab /> : null}
-        {tab === 'studypods' ? <StudyPodsModerationTab /> : null}
-        {tab === 'donations' ? <DonationsModerationTab /> : null}
-        {tab === 'mentorship' ? <MentorshipModerationTab /> : null}
+        {tab === 'threads' && isFeatureEnabled('discussion_workspaces') ? <ForumsModerationTab /> : null}
+        {tab === 'events' && isFeatureEnabled('campus_events') ? <EventsModerationTab /> : null}
+        {tab === 'resources' && isFeatureEnabled('academic_resources') ? <ResourcesModerationTab /> : null}
+        {tab === 'jobs' && isFeatureEnabled('career_page') ? <JobsModerationTab /> : null}
+        {tab === 'marketplace' && isFeatureEnabled('marketplace') ? <MarketplaceModerationTab /> : null}
+        {tab === 'studypods' && isFeatureEnabled('study_groups') ? <StudyPodsModerationTab /> : null}
+        {tab === 'donations' && isFeatureEnabled('donations') ? <DonationsModerationTab /> : null}
+        {tab === 'mentorship' && isFeatureEnabled('alumni_mentorship') ? <MentorshipModerationTab /> : null}
       </ScrollView>
     </ScreenContainer>
   );
 }
-

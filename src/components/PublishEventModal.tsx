@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, View, KeyboardAvoidingView, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,6 +91,47 @@ function addMinutesToTime(time: string, minutes: number): string {
   const newH = Math.floor(total / 60) % 24;
   const newM = total % 60;
   return `${pad2(newH)}:${pad2(newM)}`;
+}
+
+function formatHumanEventSchedule(dateStr: string, startStr: string, endStr: string): string | null {
+  if (!dateStr || !DATE_RE.test(dateStr)) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  if (isNaN(dateObj.getTime())) return null;
+
+  const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+  const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+  const day = dateObj.getDate();
+  const year = dateObj.getFullYear();
+  const dateFormatted = `${weekday}, ${month} ${day}, ${year}`;
+
+  if (!startStr || !TIME_RE.test(startStr)) {
+    return dateFormatted;
+  }
+
+  const formatTimeStr = (t: string) => {
+    const [h, min] = t.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${pad2(min)} ${period}`;
+  };
+
+  const startTimeFormatted = formatTimeStr(startStr);
+  if (!endStr || !TIME_RE.test(endStr)) {
+    return `${dateFormatted} • Starts at ${startTimeFormatted}`;
+  }
+
+  const endTimeFormatted = formatTimeStr(endStr);
+  const [sh, sm] = startStr.split(':').map(Number);
+  const [eh, em] = endStr.split(':').map(Number);
+  const diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+  const durationLabel = diffMinutes > 0
+    ? diffMinutes % 60 === 0
+      ? ` (${diffMinutes / 60} hr${diffMinutes / 60 > 1 ? 's' : ''})`
+      : ` (${(diffMinutes / 60).toFixed(1)} hrs)`
+    : '';
+
+  return `${dateFormatted} • ${startTimeFormatted} – ${endTimeFormatted}${durationLabel}`;
 }
 
 export function PublishEventModal({
@@ -540,26 +581,29 @@ export function PublishEventModal({
               />
             )}
 
-            {/* Date & Time */}
+            {/* Date & Time Picker Setup */}
             <AppText weight="bold" variant="bodySmall" style={{ marginBottom: spacing.xs, marginTop: spacing.sm }}>
-              Date & Timing:
+              Event Date & Schedule:
             </AppText>
+
+            {/* Quick Date Presets */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.xs }}>
               {[
                 { label: 'Today', date: new Date() },
                 { label: 'Tomorrow', date: new Date(Date.now() + 86400000) },
                 { label: 'This Weekend', date: nextWeekendDate() },
+                { label: 'Next Week', date: new Date(Date.now() + 7 * 86400000) },
               ].map((pick) => (
                 <Pressable
                   key={pick.label}
                   onPress={() => applyQuickDate(pick.date)}
                   style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
                     borderRadius: radius.pill,
                     borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: eventDate === toDateInput(pick.date) ? colors.pastelPrimaryBg : 'transparent',
+                    borderColor: eventDate === toDateInput(pick.date) ? colors.brandPrimary : colors.border,
+                    backgroundColor: eventDate === toDateInput(pick.date) ? colors.pastelPrimaryBg : colors.surface,
                   }}
                 >
                   <AppText variant="caption" weight="semiBold" tone={eventDate === toDateInput(pick.date) ? 'brand' : 'secondary'}>
@@ -569,37 +613,211 @@ export function PublishEventModal({
               ))}
             </View>
 
-            <AppTextField
-              label="Date (YYYY-MM-DD)"
-              placeholder="2026-09-20"
-              value={eventDate}
-              onChangeText={setEventDate}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <View style={{ flex: 1 }}>
-                <AppTextField
-                  label="Start Time (HH:MM)"
-                  placeholder="14:00"
-                  value={startTime}
-                  onChangeText={setStartTime}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppTextField
-                  label="End Time (HH:MM)"
-                  placeholder="16:00"
-                  value={endTime}
-                  onChangeText={setEndTime}
-                  autoCapitalize="none"
-                  autoCorrect={false}
+            {/* Interactive Date Picker Input */}
+            <View style={{ marginBottom: spacing.sm }}>
+              <AppText variant="caption" weight="semiBold" tone="secondary" style={{ marginBottom: 4 }}>
+                Selected Date
+              </AppText>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: radius.md,
+                  paddingHorizontal: spacing.sm,
+                  height: 44,
+                  gap: spacing.xs,
+                }}
+              >
+                <Ionicons name="calendar-outline" size={18} color={colors.brandPrimary} />
+                <TextInput
+                  value={eventDate}
+                  onChangeText={setEventDate}
+                  placeholder="YYYY-MM-DD (e.g. 2026-10-24)"
+                  placeholderTextColor={colors.textSecondary}
+                  style={{
+                    flex: 1,
+                    color: colors.textPrimary,
+                    fontSize: 14,
+                    paddingVertical: Platform.OS === 'web' ? 8 : 4,
+                  }}
+                  {...(Platform.OS === 'web' ? ({ type: 'date', min: toDateInput(new Date()) } as any) : {})}
                 />
               </View>
             </View>
+
+            {/* Suggested Start Times */}
+            <View style={{ marginBottom: spacing.xs }}>
+              <AppText variant="caption" weight="medium" tone="secondary" style={{ marginBottom: 4 }}>
+                Common Start Times:
+              </AppText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {START_TIME_PICKS.map((tp) => {
+                  const selected = startTime === tp.value;
+                  return (
+                    <Pressable
+                      key={tp.label}
+                      onPress={() => applyQuickStartTime(tp.value)}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: radius.pill,
+                        borderWidth: 1,
+                        borderColor: selected ? colors.brandPrimary : colors.border,
+                        backgroundColor: selected ? colors.pastelPrimaryBg : colors.surface,
+                      }}
+                    >
+                      <AppText
+                        variant="caption"
+                        weight={selected ? 'bold' : 'medium'}
+                        tone={selected ? 'brand' : 'secondary'}
+                      >
+                        {tp.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Start Time & End Time Interactive Pickers */}
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xs }}>
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" weight="semiBold" tone="secondary" style={{ marginBottom: 4 }}>
+                  Start Time (HH:MM)
+                </AppText>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: radius.md,
+                    paddingHorizontal: spacing.sm,
+                    height: 44,
+                    gap: spacing.xs,
+                  }}
+                >
+                  <Ionicons name="time-outline" size={18} color={colors.brandPrimary} />
+                  <TextInput
+                    value={startTime}
+                    onChangeText={setStartTime}
+                    placeholder="10:00"
+                    placeholderTextColor={colors.textSecondary}
+                    style={{
+                      flex: 1,
+                      color: colors.textPrimary,
+                      fontSize: 14,
+                      paddingVertical: Platform.OS === 'web' ? 8 : 4,
+                    }}
+                    {...(Platform.OS === 'web' ? ({ type: 'time' } as any) : {})}
+                  />
+                </View>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" weight="semiBold" tone="secondary" style={{ marginBottom: 4 }}>
+                  End Time (HH:MM)
+                </AppText>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: radius.md,
+                    paddingHorizontal: spacing.sm,
+                    height: 44,
+                    gap: spacing.xs,
+                  }}
+                >
+                  <Ionicons name="time-outline" size={18} color={colors.brandPrimary} />
+                  <TextInput
+                    value={endTime}
+                    onChangeText={setEndTime}
+                    placeholder="12:00"
+                    placeholderTextColor={colors.textSecondary}
+                    style={{
+                      flex: 1,
+                      color: colors.textPrimary,
+                      fontSize: 14,
+                      paddingVertical: Platform.OS === 'web' ? 8 : 4,
+                    }}
+                    {...(Platform.OS === 'web' ? ({ type: 'time' } as any) : {})}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Quick Duration Preset Chips */}
+            <View style={{ marginTop: 2, marginBottom: spacing.xs }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <AppText variant="caption" weight="medium" tone="secondary">
+                  Quick Duration (auto-calculates end time):
+                </AppText>
+                {startTime && endTime && (
+                  <Pressable
+                    onPress={() => {
+                      setStartTime('');
+                      setEndTime('');
+                      haptics.light();
+                    }}
+                    hitSlop={8}
+                  >
+                    <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                      Clear Times
+                    </AppText>
+                  </Pressable>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {DURATION_PICKS.map((pick) => (
+                  <Pressable
+                    key={pick.label}
+                    onPress={() => applyQuickDuration(pick.minutes)}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: radius.pill,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                    }}
+                  >
+                    <AppText variant="caption" weight="medium" tone="secondary">
+                      +{pick.label}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Live Formatted Schedule Summary Box */}
+            {formatHumanEventSchedule(eventDate, startTime, endTime) ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: colors.pastelPrimaryBg,
+                  borderRadius: radius.md,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: spacing.xs + 2,
+                  marginTop: spacing.xs,
+                  borderWidth: 1,
+                  borderColor: `${colors.brandPrimary}40`,
+                }}
+              >
+                <Ionicons name="calendar" size={16} color={colors.brandPrimary} />
+                <AppText variant="caption" weight="semiBold" tone="brand" style={{ flex: 1 }}>
+                  {formatHumanEventSchedule(eventDate, startTime, endTime)}
+                </AppText>
+              </View>
+            ) : null}
 
             {/* Capacity */}
             <View style={{ marginTop: spacing.xs }}>

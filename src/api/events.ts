@@ -677,17 +677,42 @@ export async function cancelEvent(id: string, reason?: string) {
 }
 
 export async function purgeEvent(id: string) {
- const target = locallyCreatedEvents.find((e) => e.id === id);
- locallyCreatedEvents = locallyCreatedEvents.filter((e) => e.id !== id);
- try {
- await supabase.from('events').delete().eq('id', id);
- } catch (err) {
- console.warn('[Events] Supabase purgeEvent error:', err);
- }
- await recordAuditLogEntry({
- action: 'event_purged',
- summary: `Purged event "${target?.title ?? id}"`,
- targetType: 'event',
- targetId: id,
- });
+  const target = locallyCreatedEvents.find((e) => e.id === id);
+  locallyCreatedEvents = locallyCreatedEvents.filter((e) => e.id !== id);
+  try {
+    await supabase.from('events').delete().eq('id', id);
+  } catch (err) {
+    console.warn('[Events] Supabase purgeEvent error:', err);
+  }
+  await recordAuditLogEntry({
+    action: 'event_purged',
+    summary: `Purged event "${target?.title ?? id}"`,
+    targetType: 'event',
+    targetId: id,
+  });
+}
+
+/**
+ * Toggles a user's reminder for an event on the backend database (public.event_reminders).
+ * Returns true if reminder is now active, false if removed.
+ */
+export async function toggleEventReminder(eventId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('toggle_event_reminder', { p_event_id: eventId });
+  if (error) {
+    throwReadable(error, 'Could not update event reminder');
+  }
+  return !!data?.reminder_on;
+}
+
+/**
+ * Lists the IDs of all events the current user has an active reminder set for.
+ */
+export async function listUserEventReminders(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_my_event_reminders');
+    if (error || !data) return [];
+    return data.map((r: any) => r.event_id);
+  } catch {
+    return [];
+  }
 }

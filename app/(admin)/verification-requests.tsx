@@ -13,6 +13,7 @@ import { AppButton } from'@/components/AppButton';
 import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { EmptyState } from'@/components/EmptyState';
+import { QueueItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import {
@@ -418,7 +419,10 @@ export default function VerificationRequestsScreen() {
           </SolidCard>
         )}
 
-        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+        {isLoading ? (
+          <QueueItemSkeletonList count={4} />
+        ) : (
+          <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
           {requests?.map((req) => (
             <View key={req.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : undefined}>
               <SolidCard radius={20} style={{ marginBottom: spacing.md }}>
@@ -513,6 +517,7 @@ export default function VerificationRequestsScreen() {
             </View>
           ))}
         </View>
+        )}
 
         {!isLoading && (requests?.length ?? 0) === 0 ? (
           <EmptyState title="All applications reviewed" description="There are no pending identity verification requests right now." />

@@ -54,7 +54,7 @@ const CATEGORY_FILTERS = [
   'Hostel',
 ];
 
-const AVAILABLE_CAMPUSES = ['FUNAAB', 'UI', 'UNILAG', 'OAU', 'UNN', 'CU'];
+const AVAILABLE_CAMPUSES = ['FUNAAB', 'UI', 'UNILAG', 'OAU', 'UNN', 'CU', 'KDU', 'NOUN'];
 
 export function CampusMapModal({
   visible,
