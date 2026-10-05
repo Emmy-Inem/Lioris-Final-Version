@@ -480,9 +480,20 @@ export async function createResource(
   // upload was simply wrong: the row is always created pending for them.
   const { data: uploaderProfile } = await supabase
     .from('profiles')
-    .select('campus_code, role')
+    .select('campus_code, role, verification_status, email, is_suspended')
     .eq('id', uploaderId)
     .maybeSingle();
+
+  if (uploaderProfile?.is_suspended) {
+    throw new Error('Your account is currently suspended from uploading resources.');
+  }
+
+  const isEdu = !!(uploaderProfile?.email && uploaderProfile.email.toLowerCase().endsWith('.edu.ng') && uploaderProfile.verification_status !== 'rejected');
+  const isVerified = uploaderProfile?.role === 'admin' || uploaderProfile?.role === 'staff' || uploaderProfile?.verification_status === 'verified' || isEdu;
+  if (!isVerified) {
+    throw new Error('Only verified student accounts can upload academic resources. Please verify your student status.');
+  }
+
   const campusCode = payload.campusCode || uploaderProfile?.campus_code || 'GLOBAL';
   const isPrivilegedUploader = uploaderProfile?.role === 'admin' || uploaderProfile?.role === 'staff';
   created.approvalStatus = isPrivilegedUploader ? 'approved' : 'pending';

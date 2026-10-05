@@ -32,6 +32,7 @@ export interface UserProfile {
  /** Storage path in the private `resumes` bucket; resolve with signedUrls.ts before rendering/opening. */
  resumeUrl?: string | null;
  isVerified: boolean;
+ isCampusAmbassador?: boolean;
  /**
  * 'verified' = blue tick shown on profile. Auto-set at registration
  * for matching university emails; otherwise starts'none'and only
@@ -465,6 +466,7 @@ export type AuditLogAction =
  | 'user_suspended'
  | 'user_unsuspended'
  | 'user_role_changed'
+ | 'campus_ambassador_updated'
  | 'user_account_deleted'
  | 'user_force_signed_out'
  | 'feature_flag_toggled'

@@ -22,7 +22,7 @@ import { ShimmerCardList } from'@/components/ShimmerSkeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { recordAuditLogEntry, listAuditLogEntries } from '@/api/auditLog';
-import { grantVerification } from '@/api/profile';
+import { grantVerification, setCampusAmbassadorStatus } from '@/api/profile';
 import {
  adminTriggerPasswordReset,
  adminUpdateUserProfile,
@@ -62,6 +62,7 @@ interface DirectoryUser {
  matricNo: string;
  suspended: boolean;
  isVerified: boolean;
+ isCampusAmbassador?: boolean;
  trustScore: number;
  joinedDate: string;
   lastActiveAt?: string | null;
@@ -150,6 +151,7 @@ export default function UserDirectoryScreen() {
  matricNo: p.student_id_number || 'Not Assigned',
  suspended: p.is_suspended ?? false,
  isVerified: p.verification_status === 'verified',
+ isCampusAmbassador: !!p.is_campus_ambassador,
  trustScore: p.trust_score ? Math.round(Number(p.trust_score)) : 85,
  joinedDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2024',
  lastActiveAt: p.last_active_at,
@@ -495,6 +497,7 @@ export default function UserDirectoryScreen() {
   matricNo,
   suspended: false,
   isVerified: true,
+  isCampusAmbassador: false,
   trustScore: 85,
   joinedDate: 'Just now',
   adminRole: newRole === 'Admin' ? (currentUser?.isSuperAdmin ? newAdminRole : null) : null,
@@ -621,6 +624,39 @@ export default function UserDirectoryScreen() {
 
  setSelectedUser(null);
  Alert.alert('User Verified', `${target.fullName}'s verified badge has been activated.`);
+ }
+
+ async function handleToggleAmbassador(target: DirectoryUser) {
+   haptics.medium();
+   const nextStatus = !target.isCampusAmbassador;
+   try {
+     await setCampusAmbassadorStatus(target.id, nextStatus);
+     setUsers((prev) =>
+       prev.map((u) => (u.id === target.id ? { ...u, isCampusAmbassador: nextStatus } : u))
+     );
+     if (selectedUser?.id === target.id) {
+       setSelectedUser((prev) => (prev ? { ...prev, isCampusAmbassador: nextStatus } : null));
+     }
+     if (detailModalUser?.id === target.id) {
+       setDetailModalUser((prev) => (prev ? { ...prev, isCampusAmbassador: nextStatus } : null));
+     }
+     recordAuditLogEntry({
+       action: 'campus_ambassador_updated',
+       summary: `${nextStatus ? 'Appointed' : 'Revoked'} @${target.username} (${target.fullName}) as Campus Ambassador for ${target.campus}`,
+       targetType: 'user',
+       targetId: target.id,
+       institutionCode: target.campus,
+       reason: 'Administrative ambassador assignment',
+     });
+     if (nextStatus) {
+       toast.success(`${target.fullName} is now a Campus Ambassador.`);
+     } else {
+       toast.success(`Campus Ambassador status revoked for ${target.fullName}.`);
+     }
+   } catch (err: any) {
+     haptics.error();
+     toast.error(err?.message || 'Could not update ambassador status.');
+   }
  }
 
  // Bulk selection state - lets an admin suspend or verify many directory
@@ -1178,6 +1214,9 @@ export default function UserDirectoryScreen() {
                             {item.isVerified && (
                               <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
                             )}
+                            {item.isCampusAmbassador && (
+                              <Badge label="Ambassador" tone="brand" />
+                            )}
                           </View>
                           <AppText tone="secondary" variant="caption">
                             @{item.username} • {item.matricNo}
@@ -1269,6 +1308,9 @@ export default function UserDirectoryScreen() {
                         ) : null}
                         {item.isVerified && (
                           <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
+                        )}
+                        {item.isCampusAmbassador && (
+                          <Badge label="Ambassador" tone="brand" />
                         )}
                       </View>
                       <AppText tone="secondary" variant="caption">
@@ -1411,6 +1453,18 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
+            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && (
+              <Pressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
+                onPress={() => handleToggleAmbassador(selectedUser)}
+              >
+                <Ionicons name={selectedUser.isCampusAmbassador ? 'star' : 'star-outline'} size={18} color="#D97706" />
+                <AppText weight="bold" style={{ color: '#D97706' }}>
+                  {selectedUser.isCampusAmbassador ? 'Revoke Campus Ambassador' : 'Appoint Campus Ambassador'}
+                </AppText>
+              </Pressable>
+            )}
+
             {selectedUser.role !== 'Admin' && selectedUser.id !== currentUser?.id && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
@@ -1464,6 +1518,9 @@ export default function UserDirectoryScreen() {
     />
   ) : null}
  <Badge label={`Trust ${detailModalUser.trustScore}/100`} tone="neutral" />
+ {detailModalUser.isCampusAmbassador ? (
+   <Badge label="Campus Ambassador" tone="brand" />
+ ) : null}
  {userReportCount > 0 ? (
  <Badge
  label={`⚠ ${userReportCount} other report${userReportCount === 1 ? '' : 's'} against this user`}

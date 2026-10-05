@@ -19,7 +19,11 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { createStudyGroup, listStudyGroups } from '@/api/studyGroups';
-import { getMyProfile } from '@/api/profile';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
+import { submitVerificationRequest } from '@/api/verification';
+import { haptics } from '@/utils/haptics';
 import { parseRpcError } from '@/utils/rpcErrors';
 
 type Tab = 'mine' | 'discover';
@@ -33,6 +37,7 @@ export default function StudyGroupsScreen() {
   const { campusCode } = useCampusScope();
   const [tab, setTab] = useState<Tab | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
   const [course, setCourse] = useState('All');
@@ -59,7 +64,24 @@ export default function StudyGroupsScreen() {
   const requestsWaiting = mine.reduce((sum, g) => sum + (g.pendingCount ?? 0), 0);
   const unread = mine.reduce((sum, g) => sum + (g.unreadCount ?? 0), 0);
 
+  function handlePressCreate() {
+    haptics.light();
+    if (isUnverifiedPersonalUser(me)) {
+      toast.error('Student verification is required to create study pods.');
+      haptics.error();
+      setVerificationModalOpen(true);
+      return;
+    }
+    setCreateOpen(true);
+  }
+
   async function handleCreate(payload: PodFormValues) {
+    if (isUnverifiedPersonalUser(me)) {
+      toast.error('Student verification is required to create study pods.');
+      haptics.error();
+      setVerificationModalOpen(true);
+      return;
+    }
     const created = await createStudyGroup({ ...payload, campusCode: undefined });
     await queryClient.invalidateQueries({ queryKey: ['study-groups'] });
     toast.success('Study pod created.');
@@ -96,7 +118,7 @@ export default function StudyGroupsScreen() {
             </AppText>
           </View>
           <View style={{ alignSelf: isDesktop ? 'center' : 'flex-start' }}>
-            <AppButton label="Create a pod" icon="add" size={isDesktop ? 'md' : 'sm'} onPress={() => setCreateOpen(true)} />
+            <AppButton label="Create a pod" icon="add" size={isDesktop ? 'md' : 'sm'} onPress={handlePressCreate} />
           </View>
         </View>
 
@@ -171,7 +193,7 @@ export default function StudyGroupsScreen() {
               title="You are not in a study pod yet"
               description="Join one on the Discover tab, or start your own and invite classmates."
               actionLabel={discover.length > 0 ? 'Discover pods' : 'Create a pod'}
-              onAction={() => (discover.length > 0 ? setTab('discover') : setCreateOpen(true))}
+              onAction={() => (discover.length > 0 ? setTab('discover') : handlePressCreate())}
             />
           ) : (
             <EmptyState
@@ -179,13 +201,38 @@ export default function StudyGroupsScreen() {
               title={debouncedSearch || course !== 'All' ? 'No pods match' : 'No pods to join yet'}
               description={debouncedSearch || course !== 'All' ? 'Try a different search or course.' : 'Be the first: start a pod for your course and invite classmates.'}
               actionLabel="Create a pod"
-              onAction={() => setCreateOpen(true)}
+              onAction={handlePressCreate}
             />
           )
         ) : null}
       </ScrollView>
 
       <CreateStudyGroupModal visible={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} defaultDepartment={me?.department ?? undefined} />
+      <ApplyForVerificationModal
+        visible={verificationModalOpen}
+        onClose={() => setVerificationModalOpen(false)}
+        defaultInstitution={campusCode}
+        onSubmit={async (data) => {
+          if (!user) return;
+          try {
+            await submitVerificationRequest({
+              userId: user.id,
+              applicantName: me?.fullName ?? user.fullName,
+              documentType: data.documentType,
+              documentReference: data.documentReference,
+              institutionClaimed: data.institutionClaimed,
+              documentPhotoUri: data.documentPhotoUri,
+              photoBlob: data.photoBlob,
+            });
+            markVerificationPending(user.id);
+            await queryClient.invalidateQueries({ queryKey: ['profile'] });
+            setVerificationModalOpen(false);
+            toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+          } catch (err: any) {
+            toast.error(err?.message || 'Could not submit verification request. Please try again.');
+          }
+        }}
+      />
     </ScreenContainer>
   );
 }

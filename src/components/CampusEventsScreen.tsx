@@ -24,6 +24,10 @@ import { CampusEvent } from '@/api/types';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useAuth } from '@/auth/AuthContext';
 import { getInstitutionByCode } from '@/api/institutions';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { ApplyForVerificationModal } from './ApplyForVerificationModal';
+import { submitVerificationRequest } from '@/api/verification';
 import { haptics } from '@/utils/haptics';
 
 const STUDENT_EVENT_FILTERS = [
@@ -62,7 +66,25 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const [filter, setFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const { campusCode, homeInstitutionCode } = useCampusScope();
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: () => (user ? getMyProfile(user) : null),
+    enabled: !!user?.id,
+  });
+
+  function handlePressHost() {
+    haptics.light();
+    if (isUnverifiedPersonalUser(profile)) {
+      toast.error('Student verification is required to host campus events.');
+      haptics.error();
+      setVerificationModalOpen(true);
+      return;
+    }
+    setPublishModalOpen(true);
+  }
 
   // Strictly bind to the current workspace's university institution
   const currentCampus = (campusCode && campusCode !== 'GLOBAL') ? campusCode : homeInstitutionCode;
@@ -162,10 +184,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           </AppText>
 
           <Pressable
-            onPress={() => {
-              haptics.light();
-              setPublishModalOpen(true);
-            }}
+            onPress={handlePressHost}
             accessibilityRole="button"
             accessibilityLabel={isAlumniScope ? 'Host Alumni Event' : 'Host Event'}
             style={{
@@ -325,10 +344,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
             </View>
 
             <Pressable
-              onPress={() => {
-                haptics.light();
-                setPublishModalOpen(true);
-              }}
+              onPress={handlePressHost}
               style={{
                 backgroundColor: colors.brandPrimary,
                 borderRadius: radius.pill,
@@ -539,6 +555,32 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           queryClient.invalidateQueries({ queryKey: ['events'] });
           refetch();
           toast.success('Event published successfully!');
+        }}
+      />
+
+      <ApplyForVerificationModal
+        visible={verificationModalOpen}
+        onClose={() => setVerificationModalOpen(false)}
+        defaultInstitution={currentCampus}
+        onSubmit={async (data) => {
+          if (!user) return;
+          try {
+            await submitVerificationRequest({
+              userId: user.id,
+              applicantName: profile?.fullName ?? user.fullName,
+              documentType: data.documentType,
+              documentReference: data.documentReference,
+              institutionClaimed: data.institutionClaimed,
+              documentPhotoUri: data.documentPhotoUri,
+              photoBlob: data.photoBlob,
+            });
+            markVerificationPending(user.id);
+            await queryClient.invalidateQueries({ queryKey: ['profile'] });
+            setVerificationModalOpen(false);
+            toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+          } catch (err: any) {
+            toast.error(err?.message || 'Could not submit verification request. Please try again.');
+          }
         }}
       />
     </ScreenContainer>

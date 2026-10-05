@@ -13,6 +13,8 @@ const KNOWN_INSTITUTION_DOMAINS = [
   'unn.edu.ng',
   'oauife.edu.ng',
   'covenantuniversity.edu.ng',
+  'kdu.edu.ng',
+  'noun.edu.ng',
 ];
 
 const INSTITUTION_NAMES: Record<string, string> = {
@@ -23,6 +25,8 @@ const INSTITUTION_NAMES: Record<string, string> = {
   UNN: 'University of Nigeria Nsukka',
   OAU: 'Obafemi Awolowo University',
   CU: 'Covenant University',
+  KDU: 'Koladaisi University',
+  NOUN: 'National Open University of Nigeria',
 };
 
 /**
@@ -59,8 +63,8 @@ export function isUnverifiedPersonalUser(
     return false;
   }
 
-  // Check if the email belongs to an official university domain
-  if (profile.email && isOfficialInstitutionalEmail(profile.email)) {
+  // Check if the email belongs to an official university domain (unless explicitly rejected)
+  if (profile.verificationStatus !== 'rejected' && profile.email && isOfficialInstitutionalEmail(profile.email)) {
     return false;
   }
 

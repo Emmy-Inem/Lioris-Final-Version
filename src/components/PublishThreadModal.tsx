@@ -16,6 +16,13 @@ import { haptics } from '@/utils/haptics';
 import { listCommunities } from '@/api/communities';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { useCampusScope } from '@/hooks/useCampusScope';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { ApplyForVerificationModal } from './ApplyForVerificationModal';
+import { submitVerificationRequest } from '@/api/verification';
+import { useToast } from '@/context/ToastContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 const POLL_DURATIONS = [
   { label: '1 hour', hours: 1 },
@@ -113,11 +120,33 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const globalWorkspaceEnabled =
     isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope');
   const isAdmin = user?.role === 'admin';
-  const { data: communities = [] } = useQuery({ queryKey: ['communities'], queryFn: listCommunities });
+  const { campusCode, homeInstitutionCode } = useCampusScope();
+  const effectiveCampus = (campusCode && campusCode !== 'GLOBAL') ? campusCode : homeInstitutionCode;
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const [verificationModalVisible, setVerificationModalVisible] = useState(false);
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: () => (user ? getMyProfile(user) : null),
+    enabled: !!user?.id,
+  });
+
+  const { data: communities = [] } = useQuery({
+    queryKey: ['communities', globalWorkspaceEnabled ? undefined : effectiveCampus],
+    queryFn: () => listCommunities(globalWorkspaceEnabled ? undefined : effectiveCampus),
+  });
+
   const [topic, setTopic] = useState('');
   const [content, setContent] = useState('');
   const [channel, setChannel] = useState('Academic');
   const [visibility, setVisibility] = useState<'Campus Only' | 'Global Reach'>('Campus Only');
+
+  useEffect(() => {
+    if (communities.length > 0 && !communities.some((c) => c.category === channel)) {
+      setChannel(communities[0].category);
+    }
+  }, [communities, channel]);
 
   useEffect(() => {
     if (!globalWorkspaceEnabled && visibility === 'Global Reach') setVisibility('Campus Only');
@@ -296,6 +325,13 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   async function handleSubmit(status: 'published' | 'draft' | 'scheduled') {
     setErrorMessage(null);
 
+    if (isUnverifiedPersonalUser(profile)) {
+      setErrorMessage('Student verification is required to create posts and upload content.');
+      haptics.error();
+      setVerificationModalVisible(true);
+      return;
+    }
+
     if (status === 'draft') {
       if (!topic.trim() && !content.trim()) {
         setErrorMessage('Add a headline or some text before saving a draft.');
@@ -437,6 +473,46 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
+
+            {/* Verification Warning for Unverified Users */}
+            {isUnverifiedPersonalUser(profile) && (
+              <View
+                style={{
+                  backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : '#FEF9C3',
+                  borderRadius: radius.md,
+                  padding: spacing.md,
+                  marginBottom: spacing.md,
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : '#FACC15',
+                  gap: 8,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="shield-outline" size={18} color="#D97706" />
+                  <AppText weight="bold" variant="caption" style={{ color: '#D97706', letterSpacing: 0.5, textTransform: 'uppercase', fontSize: 11 }}>
+                    Student Verification Required
+                  </AppText>
+                </View>
+                <AppText variant="caption" tone="secondary" style={{ fontSize: 11.5, lineHeight: 16 }}>
+                  Unverified accounts cannot upload posts or academic content. Apply for verification to participate.
+                </AppText>
+                <Pressable
+                  onPress={() => setVerificationModalVisible(true)}
+                  style={{
+                    backgroundColor: colors.brandPrimary,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: radius.pill,
+                    alignSelf: 'flex-start',
+                    marginTop: 2,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11.5 }}>
+                    Verify Student Profile
+                  </AppText>
+                </Pressable>
+              </View>
+            )}
 
             {/* Admin Broadcast Badge & Controls */}
             {isAdmin && (
@@ -945,6 +1021,32 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <ApplyForVerificationModal
+        visible={verificationModalVisible}
+        onClose={() => setVerificationModalVisible(false)}
+        defaultInstitution={effectiveCampus}
+        onSubmit={async (data) => {
+          if (!user) return;
+          try {
+            await submitVerificationRequest({
+              userId: user.id,
+              applicantName: profile?.fullName ?? user.fullName,
+              documentType: data.documentType,
+              documentReference: data.documentReference,
+              institutionClaimed: data.institutionClaimed,
+              documentPhotoUri: data.documentPhotoUri,
+              photoBlob: data.photoBlob,
+            });
+            markVerificationPending(user.id);
+            await queryClient.invalidateQueries({ queryKey: ['profile'] });
+            setVerificationModalVisible(false);
+            toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+          } catch (err: any) {
+            toast.error(err?.message || 'Could not submit verification request.');
+          }
+        }}
+      />
     </Modal>
   );
 }

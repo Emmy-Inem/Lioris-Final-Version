@@ -315,15 +315,23 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  throw new Error('You need to be signed in to publish a listing.');
  }
 
- let campusCode = (payload as any).campusCode;
- if (!campusCode) {
  const { data: profile } = await supabase
  .from('profiles')
- .select('campus_code')
+ .select('campus_code, role, verification_status, email, is_suspended')
  .eq('id', sellerId)
  .maybeSingle();
- campusCode = profile?.campus_code || 'GLOBAL';
+
+ if (profile?.is_suspended) {
+   throw new Error('Your account is currently suspended from creating marketplace listings.');
  }
+
+ const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
+ const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || profile?.verification_status === 'verified' || isEdu;
+ if (!isVerified) {
+   throw new Error('Only verified students can create listings on the campus marketplace. Please verify your student status.');
+ }
+
+ let campusCode = (payload as any).campusCode || profile?.campus_code || 'GLOBAL';
  if (!campusCode) campusCode = 'GLOBAL';
 
  const priceClean = parsePriceOrThrow(payload.price);

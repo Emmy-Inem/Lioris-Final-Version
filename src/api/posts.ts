@@ -782,9 +782,20 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
   let authorAvatarUrl: string | null = authData?.user?.user_metadata?.avatar_url || null;
   const { data: profile } = await supabase
     .from('profiles')
-    .select('campus_code, avatar_url, role')
+    .select('campus_code, avatar_url, role, verification_status, email, is_suspended')
     .eq('id', authorId)
     .maybeSingle();
+
+  if (profile?.is_suspended) {
+    throw new Error('Your account is currently suspended from posting content.');
+  }
+
+  const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
+  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || profile?.verification_status === 'verified' || isEdu;
+  if (!isVerified) {
+    throw new Error('Only verified student accounts can publish forum posts and threads. Please verify your student status.');
+  }
+
   if (profile?.avatar_url) authorAvatarUrl = profile.avatar_url;
   if (!authorCampus) {
     authorCampus = profile?.campus_code || 'GLOBAL';

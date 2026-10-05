@@ -13,10 +13,16 @@ import { MarketplaceCardSkeletonGrid } from '@/components/Skeleton';
 import { ErrorStateView } from '@/components/ErrorStateView';
 import { EmptyState } from '@/components/EmptyState';
 import { SellItemModal } from '@/components/SellItemModal';
+import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/auth/AuthContext';
 import { listMarketplaceListings, createListing } from '@/api/marketplace';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { submitVerificationRequest } from '@/api/verification';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { haptics } from '@/utils/haptics';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -36,14 +42,33 @@ export default function MarketplaceScreen() {
  const { isDesktop } = useResponsive();
  const toast = useToast();
  const queryClient = useQueryClient();
+ const { user } = useAuth();
  const [query, setQuery] = useState('');
  const debouncedQuery = useDebouncedValue(query);
  const [category, setCategory] = useState('All Categories');
  const [condition, setCondition] = useState('All Conditions');
  const [sellModalOpen, setSellModalOpen] = useState(false);
+ const [verificationModalOpen, setVerificationModalOpen] = useState(false);
  const { campusCode } = useCampusScope();
  const segments = useSegments();
  const roleGroup = segments[0];
+
+ const { data: profile } = useQuery({
+   queryKey: ['profile', user?.id],
+   queryFn: () => (user ? getMyProfile(user) : null),
+   enabled: !!user?.id,
+ });
+
+ function handlePressSell() {
+   haptics.light();
+   if (isUnverifiedPersonalUser(profile)) {
+     toast.error('Student verification is required to post listings on the marketplace.');
+     haptics.error();
+     setVerificationModalOpen(true);
+     return;
+   }
+   setSellModalOpen(true);
+ }
 
  const categoriesScrollRef = useRef<ScrollView>(null);
 
@@ -58,11 +83,17 @@ export default function MarketplaceScreen() {
  enabled: isEnabled,
  });
 
- async function handlePublish(payload: Parameters<typeof createListing>[0]) {
- await createListing(payload);
- queryClient.invalidateQueries({ queryKey: ['marketplace'] });
- toast.success('Your listing is live on the campus marketplace!');
- }
+  async function handlePublish(payload: Parameters<typeof createListing>[0]) {
+    if (isUnverifiedPersonalUser(profile)) {
+      toast.error('Student verification is required to post listings on the marketplace.');
+      haptics.error();
+      setVerificationModalOpen(true);
+      return;
+    }
+    await createListing(payload);
+    queryClient.invalidateQueries({ queryKey: ['marketplace'] });
+    toast.success('Your listing is live on the campus marketplace!');
+  }
 
  if (!isEnabled) {
    return (
@@ -125,7 +156,7 @@ export default function MarketplaceScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => setSellModalOpen(true)}
+                onPress={handlePressSell}
                 style={{
                   backgroundColor: colors.brandPrimary,
                   borderRadius: radius.pill,
@@ -286,7 +317,7 @@ export default function MarketplaceScreen() {
               </AppText>
             </Pressable>
             <Pressable
-              onPress={() => setSellModalOpen(true)}
+              onPress={handlePressSell}
               accessibilityRole="button"
               accessibilityLabel="Sell an item"
               style={{
@@ -372,6 +403,31 @@ export default function MarketplaceScreen() {
  )}
 
  <SellItemModal visible={sellModalOpen} onClose={() => setSellModalOpen(false)} onPublish={handlePublish} />
+ <ApplyForVerificationModal
+   visible={verificationModalOpen}
+   onClose={() => setVerificationModalOpen(false)}
+   defaultInstitution={campusCode}
+   onSubmit={async (data) => {
+     if (!user) return;
+     try {
+       await submitVerificationRequest({
+         userId: user.id,
+         applicantName: profile?.fullName ?? user.fullName,
+         documentType: data.documentType,
+         documentReference: data.documentReference,
+         institutionClaimed: data.institutionClaimed,
+         documentPhotoUri: data.documentPhotoUri,
+         photoBlob: data.photoBlob,
+       });
+       markVerificationPending(user.id);
+       await queryClient.invalidateQueries({ queryKey: ['profile'] });
+       setVerificationModalOpen(false);
+       toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+     } catch (err: any) {
+       toast.error(err?.message || 'Could not submit verification request. Please try again.');
+     }
+   }}
+ />
  </ScreenContainer>
  );
 }

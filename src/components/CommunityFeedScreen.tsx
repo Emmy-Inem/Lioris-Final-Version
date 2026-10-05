@@ -83,6 +83,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // The Forum's own campus/global toggle. With the admin's Global toggle off it is always
   // 'campus' (never even a stale 'global' on first render) and the Global controls are hidden.
   const { scope: viewScope, setScope: setViewScope, globalEnabled: globalWorkspaceEnabled } = useForumScope();
+  const { activeCampusCode, homeInstitutionCode, setActiveCampusCode } = useCampusScope();
   const { showBots } = useBotVisibility();
 
   const params = useLocalSearchParams<{ category?: string }>();
@@ -169,9 +170,14 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     }
   }
 
+  const isGlobalForum = globalWorkspaceEnabled && viewScope === 'global';
+  const effectiveCampusCode = (activeCampusCode && activeCampusCode !== 'GLOBAL')
+    ? activeCampusCode
+    : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL' ? homeInstitutionCode : undefined);
+
   const { data: fetchedCommunities } = useQuery({
-    queryKey: ['communities'],
-    queryFn: listCommunities,
+    queryKey: ['communities', isGlobalForum ? 'global' : effectiveCampusCode],
+    queryFn: () => listCommunities(isGlobalForum ? undefined : effectiveCampusCode),
   });
   const CHANNELS = React.useMemo(
     () => [ALL_THREADS_CHANNEL, ...(fetchedCommunities ?? [])],
@@ -211,18 +217,28 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
   async function handleProposeCommunity() {
     if (!newCommunityName.trim()) return;
+    if (isRestrictedGuest) {
+      setVerificationModalOpen(true);
+      return;
+    }
+    const isAmbassadorOrAdmin = !!(profile?.isCampusAmbassador || isAdmin || user?.role === 'staff');
+    if (!isAmbassadorOrAdmin) {
+      toast.info('Discussion spaces are curated by official Campus Ambassadors.');
+      return;
+    }
     haptics.medium();
     setSubmittingCommunity(true);
     try {
       const created = await proposeCommunity({
         label: newCommunityName.trim(),
         description: newCommunityDescription.trim(),
+        campusCode: isGlobalForum ? undefined : effectiveCampusCode,
       });
       await queryClient.invalidateQueries({ queryKey: ['communities'] });
       setProposeCommunityOpen(false);
       setNewCommunityName('');
       setNewCommunityDescription('');
-      toast.info(`"${created.label}" submitted! It will appear once a root admin approves it.`);
+      toast.info(`"${created.label}" submitted! It will appear once approved.`);
     } catch (err: any) {
       toast.error(getFriendlyErrorMessage(err, 'Could not submit this community. Please try again.'));
     } finally {
@@ -255,7 +271,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // activeCampusCode lets an admin's "Explore Other Campus Workspaces" pick
   // (Settings/Workdesk -> Change Workspace Scope) actually change which
   // campus's threads show here too, not just their own home campus.
-  const { activeCampusCode, homeInstitutionCode, setActiveCampusCode } = useCampusScope();
 
   // An admin who picked a campus under "Explore Other Campus Workspaces"
   // (ChangeWorkspaceScopeModal) stays scoped to it - persisted across app

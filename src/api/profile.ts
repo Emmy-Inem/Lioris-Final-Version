@@ -70,6 +70,7 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
    avatarUrl: undefined,
    coverUrl: undefined,
    isVerified,
+   isCampusAmbassador: false,
    verificationStatus,
    postsCount: 0,
    resourcesCount: 0,
@@ -125,7 +126,7 @@ export async function getMyProfile(user?: {
  try {
  const { data, error } = await supabase
  .from('profiles')
- .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, admin_role, is_suspended, graduation_year, industry, company, job_title, location, linkedin_url')
+ .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, admin_role, is_suspended, is_campus_ambassador, graduation_year, industry, company, job_title, location, linkedin_url')
  .eq('id', resolvedUser.id)
  .single();
    if (!error && data) {
@@ -204,6 +205,7 @@ export async function getMyProfile(user?: {
        linkedinUrl: data.linkedin_url || null,
        userType: dbRole,
        isVerified,
+       isCampusAmbassador: !!data.is_campus_ambassador,
        verificationStatus,
      };
      profileState.set(resolvedUser.id, merged);
@@ -510,7 +512,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, role, admin_role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title, linkedin_url')
+      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, is_campus_ambassador, role, admin_role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title, linkedin_url')
       .eq('id', userId)
       .single();
 
@@ -540,6 +542,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         avatarUrl: data.avatar_url || undefined,
         coverUrl: data.banner_url || undefined,
         isVerified,
+        isCampusAmbassador: !!data.is_campus_ambassador,
         verificationStatus: isVerified ? 'verified' : (data.verification_status === 'pending' ? 'pending' : 'none'),
         postsCount: 0,
         resourcesCount: 0,
@@ -646,5 +649,31 @@ export async function removeEndorsement(profileId: string, skill: string): Promi
     .eq('endorser_id', userId);
   if (error) {
     throw new Error(getFriendlyErrorMessage(error, 'Could not remove your endorsement.'));
+  }
+}
+
+/**
+ * Admin action: designates or revokes Campus Ambassador status for a student.
+ */
+export async function setCampusAmbassadorStatus(userId: string, isAmbassador: boolean): Promise<void> {
+  const { error: rpcError } = await supabase.rpc('set_campus_ambassador_status', {
+    p_user_id: userId,
+    p_is_ambassador: isAmbassador,
+  });
+
+  if (rpcError) {
+    // Fallback to direct update if RPC is pending migration
+    const { error: directError } = await supabase
+      .from('profiles')
+      .update({ is_campus_ambassador: isAmbassador })
+      .eq('id', userId);
+    if (directError) {
+      throw new Error(getFriendlyErrorMessage(directError, 'Could not update campus ambassador status.'));
+    }
+  }
+
+  const cached = profileState.get(userId);
+  if (cached) {
+    profileState.set(userId, { ...cached, isCampusAmbassador: isAmbassador });
   }
 }

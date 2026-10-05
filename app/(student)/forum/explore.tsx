@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, Pressable, TextInput, View, Alert } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,12 @@ import { haptics } from '@/utils/haptics';
 import { useToast } from '@/context/ToastContext';
 import { listCommunities, ForumCommunityRecord, proposeCommunity } from '@/api/communities';
 import { listMyJoinedCommunityIds, joinCommunity, leaveCommunity, DEFAULT_JOINED_COMMUNITY_IDS, getCommunityStatsMap } from '@/api/forumMemberships';
+import { useForumScope } from '@/hooks/useForumScope';
+import { useCampusScope } from '@/hooks/useCampusScope';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
+import { submitVerificationRequest } from '@/api/verification';
 
 const CATEGORIES = ['All', 'Academic & Tech', 'Campus Life', 'Union & Polls'] as const;
 type CategoryFilter = typeof CATEGORIES[number];
@@ -29,16 +35,32 @@ export default function ExploreForumsScreen() {
   const segments = useSegments();
   const roleGroup = segments[0] ?? '(student)';
 
+  const { scope: forumScope, globalEnabled } = useForumScope();
+  const { campusCode: activeCampus, homeInstitutionCode } = useCampusScope();
+  const effectiveCampus = (activeCampus && activeCampus !== 'GLOBAL') ? activeCampus : (homeInstitutionCode || 'UNILAG');
+  const isGlobalActive = globalEnabled && forumScope === 'global';
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+
+  const isAmbassadorOrAdmin = !!(profile?.isCampusAmbassador || user?.role === 'admin' || user?.role === 'staff');
+  const isUnverified = isUnverifiedPersonalUser(profile);
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('All');
   const [proposingOpen, setProposingOpen] = useState(false);
+  const [ambassadorInfoOpen, setAmbassadorInfoOpen] = useState(false);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const { data: communities = [] } = useQuery({
-    queryKey: ['communities'],
-    queryFn: listCommunities,
+    queryKey: ['communities', isGlobalActive ? 'global' : effectiveCampus],
+    queryFn: () => listCommunities(isGlobalActive ? undefined : effectiveCampus),
   });
 
   const { data: joinedIds = DEFAULT_JOINED_COMMUNITY_IDS, refetch: refetchJoined } = useQuery({
@@ -163,16 +185,28 @@ export default function ExploreForumsScreen() {
             </Pressable>
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText weight="bold" variant={isDesktop ? 'h1' : 'h3'}>
-                Explore Discussion Spaces
+                {isGlobalActive ? 'Global Discussion Spaces' : `${effectiveCampus} Discussion Spaces`}
               </AppText>
               <AppText tone="secondary" variant="caption">
-                Discover, join, or leave campus communities ({communities.length > 1 ? communities.length - 1 : communities.length} available)
+                {isGlobalActive
+                  ? `Discover and join student communities across all campuses (${communities.length > 1 ? communities.length - 1 : communities.length} available)`
+                  : `Curated campus communities for ${effectiveCampus} (${communities.length > 1 ? communities.length - 1 : communities.length} available)`}
               </AppText>
             </View>
           </View>
 
           <Pressable
-            onPress={() => setProposingOpen(true)}
+            onPress={() => {
+              if (isUnverified) {
+                setVerificationModalOpen(true);
+                return;
+              }
+              if (!isAmbassadorOrAdmin) {
+                setAmbassadorInfoOpen(true);
+                return;
+              }
+              setProposingOpen(true);
+            }}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -180,15 +214,77 @@ export default function ExploreForumsScreen() {
               paddingHorizontal: 14,
               paddingVertical: 8,
               borderRadius: radius.pill,
-              backgroundColor: colors.brandPrimary,
+              backgroundColor: isAmbassadorOrAdmin ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'),
             }}
           >
-            <Ionicons name="add" size={16} color="#FFFFFF" />
-            <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF' }}>
-              Propose Space
+            <Ionicons name={isAmbassadorOrAdmin ? 'add' : 'sparkles'} size={16} color={isAmbassadorOrAdmin ? '#FFFFFF' : colors.textPrimary} />
+            <AppText variant="caption" weight="bold" style={{ color: isAmbassadorOrAdmin ? '#FFFFFF' : colors.textPrimary }}>
+              {isAmbassadorOrAdmin ? 'Create Space' : 'Ambassador Spaces'}
             </AppText>
           </Pressable>
         </View>
+
+        {/* Campus Ambassador Callout Banner */}
+        {!isGlobalActive && (
+          <SolidCard
+            frosted
+            radius={16}
+            style={{
+              padding: spacing.md,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              borderLeftWidth: 4,
+              borderLeftColor: isAmbassadorOrAdmin ? '#10B981' : colors.brandPrimary,
+            }}
+          >
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                backgroundColor: isAmbassadorOrAdmin ? 'rgba(16,185,129,0.15)' : colors.brandPrimary + '15',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons
+                name={isAmbassadorOrAdmin ? 'ribbon' : 'sparkles'}
+                size={20}
+                color={isAmbassadorOrAdmin ? '#10B981' : colors.brandPrimary}
+              />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <AppText weight="bold" variant="bodySmall">
+                  {isAmbassadorOrAdmin ? `Official ${effectiveCampus} Campus Ambassador` : `${effectiveCampus} Discussion Spaces`}
+                </AppText>
+                {isAmbassadorOrAdmin && <Badge label="Ambassador Active" tone="success" />}
+              </View>
+              <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11.5 }}>
+                {isAmbassadorOrAdmin
+                  ? `As a verified Campus Ambassador, you have authority to create and manage discussion spaces for ${effectiveCampus}.`
+                  : `Discussion spaces are specific to ${effectiveCampus} and curated by designated Campus Ambassadors.`}
+              </AppText>
+            </View>
+            {!isAmbassadorOrAdmin && (
+              <Pressable
+                onPress={() => setAmbassadorInfoOpen(true)}
+                hitSlop={8}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: radius.pill,
+                  backgroundColor: colors.brandPrimary + '18',
+                }}
+              >
+                <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+                  Learn More
+                </AppText>
+              </Pressable>
+            )}
+          </SolidCard>
+        )}
 
         {/* Search Input Bar */}
         <View
@@ -473,9 +569,13 @@ export default function ExploreForumsScreen() {
                     if (!newName.trim()) return;
                     setSubmitting(true);
                     try {
-                      await proposeCommunity({ label: newName.trim(), description: newDesc.trim() });
+                      await proposeCommunity({
+                        label: newName.trim(),
+                        description: newDesc.trim(),
+                        campusCode: isGlobalActive ? undefined : effectiveCampus,
+                      });
                       await queryClient.invalidateQueries({ queryKey: ['communities'] });
-                      toast.success('Your space proposal has been submitted for review!');
+                      toast.success(`Space proposal submitted for ${effectiveCampus} review!`);
                       setProposingOpen(false);
                       setNewName('');
                       setNewDesc('');
@@ -501,6 +601,141 @@ export default function ExploreForumsScreen() {
             </SolidCard>
           </View>
         )}
+
+        {/* Campus Ambassador Info Modal */}
+        {ambassadorInfoOpen && (
+          <View
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 24,
+              zIndex: 99,
+            }}
+          >
+            <SolidCard frosted radius={20} style={{ width: '100%', maxWidth: 480, padding: spacing.lg }}>
+              <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
+                <View
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 26,
+                    backgroundColor: colors.brandPrimary + '15',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: spacing.xs,
+                  }}
+                >
+                  <Ionicons name="ribbon" size={28} color={colors.brandPrimary} />
+                </View>
+                <AppText variant="h3" weight="bold" style={{ textAlign: 'center' }}>
+                  {effectiveCampus} Campus Ambassadors
+                </AppText>
+                <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2 }}>
+                  Leading Student Voice & Discussion Spaces
+                </AppText>
+              </View>
+
+              <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 21, marginBottom: spacing.md }}>
+                To maintain high quality, prevent spam, and ensure relevant campus dialogue, specific discussion spaces for {effectiveCampus} are proposed and curated by official Campus Ambassadors.
+              </AppText>
+
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  padding: spacing.md,
+                  marginBottom: spacing.lg,
+                  gap: 8,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                  <AppText variant="caption" weight="semiBold">Curate exclusive discussion spaces for your university</AppText>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                  <AppText variant="caption" weight="semiBold">Help new students navigate campus life & academics</AppText>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                  <AppText variant="caption" weight="semiBold">Direct communication channel with university moderation</AppText>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Pressable
+                  onPress={() => setAmbassadorInfoOpen(false)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    borderRadius: radius.pill,
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    alignItems: 'center',
+                  }}
+                >
+                  <AppText weight="semiBold" tone="secondary">
+                    Close
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setAmbassadorInfoOpen(false);
+                    if (isUnverified) {
+                      setVerificationModalOpen(true);
+                    } else {
+                      toast.info('Your interest has been noted. Campus admins review ambassador applicants regularly.');
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    borderRadius: radius.pill,
+                    backgroundColor: colors.brandPrimary,
+                    alignItems: 'center',
+                  }}
+                >
+                  <AppText weight="bold" tone="inverse">
+                    {isUnverified ? 'Verify Account First' : 'Express Interest'}
+                  </AppText>
+                </Pressable>
+              </View>
+            </SolidCard>
+          </View>
+        )}
+
+        {/* Verification Modal for Unverified Students */}
+        <ApplyForVerificationModal
+          visible={verificationModalOpen}
+          onClose={() => setVerificationModalOpen(false)}
+          defaultInstitution={effectiveCampus}
+          onSubmit={async (data) => {
+            if (!user) return;
+            try {
+              await submitVerificationRequest({
+                userId: user.id,
+                applicantName: profile?.fullName ?? user.fullName,
+                documentType: data.documentType,
+                documentReference: data.documentReference,
+                institutionClaimed: data.institutionClaimed,
+                documentPhotoUri: data.documentPhotoUri,
+                photoBlob: data.photoBlob,
+              });
+              markVerificationPending(user.id);
+              await queryClient.invalidateQueries({ queryKey: ['profile'] });
+              setVerificationModalOpen(false);
+              toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+            } catch (err: any) {
+              toast.error(err?.message || 'Could not submit verification request. Please try again.');
+            }
+          }}
+        />
       </ScrollView>
     </ScreenContainer>
   );

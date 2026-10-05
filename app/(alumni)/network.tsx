@@ -82,7 +82,7 @@ export default function AlumniNetworkScreen() {
 
   const { data: allCommunities = [] } = useQuery({
     queryKey: ['communities', 'all'],
-    queryFn: listCommunities,
+    queryFn: () => listCommunities(),
     enabled: isEnabled,
   });
 

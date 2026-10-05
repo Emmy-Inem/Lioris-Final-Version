@@ -20,10 +20,11 @@ import { uploadMediaFile } from './storage';
  * always a real, readable error - nothing is faked locally.
  */
 
-async function requireSession(): Promise<void> {
+async function requireSession(): Promise<{ userId: string }> {
   const { data } = await supabase.auth.getUser();
   const id = data?.user?.id ?? (await getSessionUser())?.id;
   if (!id) throw new RpcError({ code: 'not_authenticated', message: 'Please sign in again to continue.' });
+  return { userId: id };
 }
 
 function mapGroup(row: any): StudyGroup {
@@ -124,7 +125,23 @@ function podArgs(p: CreateStudyGroupPayload) {
 }
 
 export async function createStudyGroup(payload: CreateStudyGroupPayload): Promise<StudyGroup> {
-  await requireSession();
+  const session = await requireSession();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, verification_status, email, is_suspended')
+    .eq('id', session.userId)
+    .maybeSingle();
+
+  if (profile?.is_suspended) {
+    throw new Error('Your account is currently suspended from creating study pods.');
+  }
+
+  const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
+  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || profile?.verification_status === 'verified' || isEdu;
+  if (!isVerified) {
+    throw new Error('Only verified student accounts can create study pods. Please verify your student status.');
+  }
+
   const { data, error } = await supabase.rpc('create_study_group', {
     ...podArgs(payload),
     p_campus: payload.campusCode && payload.campusCode !== 'GLOBAL' ? payload.campusCode : null,

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useQuery } from '@tanstack/react-query';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
@@ -14,6 +15,8 @@ import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { createEvent } from '@/api/events';
+import { getMyProfile } from '@/api/profile';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { EventCategory } from '@/api/types';
 import { getInstitutionByCode } from '@/api/institutions';
 import { VerifiedCampusLocationPicker } from './VerifiedCampusLocationPicker';
@@ -148,6 +151,11 @@ export function PublishEventModal({
   const { user } = useAuth();
   const { campusCode: defaultCampus, homeInstitutionCode } = useCampusScope();
   const { isFeatureEnabled } = useFeatureFlags();
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: () => (user ? getMyProfile(user) : null),
+    enabled: !!user?.id,
+  });
   // The admin's Global toggle: while it is off there is no "Global network" to publish to.
   const globalAllowed = isFeatureEnabled('global_workspace');
 
@@ -251,6 +259,13 @@ export function PublishEventModal({
 
   async function handleHost() {
     setErrorMessage(null);
+
+    if (isUnverifiedPersonalUser(profile)) {
+      setErrorMessage('Student verification is required to host campus events.');
+      haptics.error();
+      return;
+    }
+
     if (!title.trim()) {
       setErrorMessage('Please enter an event title.');
       haptics.error();

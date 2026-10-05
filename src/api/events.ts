@@ -345,9 +345,19 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
 
  const { data: profile } = await supabase
  .from('profiles')
- .select('campus_code, role')
+ .select('campus_code, role, verification_status, email, is_suspended')
  .eq('id', organizerId)
  .maybeSingle();
+
+ if (profile?.is_suspended) {
+   throw new Error('Your account is currently suspended from publishing events.');
+ }
+
+ const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
+ const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || profile?.verification_status === 'verified' || isEdu;
+ if (!isVerified) {
+   throw new Error('Only verified student accounts can create and host campus events. Please verify your student status.');
+ }
 
   let campusCode = payload.campusCode;
   if (!campusCode) campusCode = profile?.campus_code || 'GLOBAL';

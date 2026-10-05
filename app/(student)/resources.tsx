@@ -21,13 +21,16 @@ import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { listResources, createResource, listMyResources } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
-import { getMyProfile } from '@/api/profile';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { getInstitutionByCode } from '@/api/institutions';
 import { useToast } from '@/context/ToastContext';
 import { resolveActivePortalTarget } from '@/utils/campusPortalScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
+import { submitVerificationRequest } from '@/api/verification';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
 import { AcademicLibraryModal } from '@/components/AcademicLibraryModal';
 import { ResearchPapersModal } from '@/components/ResearchPapersModal';
@@ -106,6 +109,7 @@ export default function ResourcesScreen() {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [adminManageOpen, setAdminManageOpen] = useState(false);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
@@ -245,7 +249,23 @@ export default function ResourcesScreen() {
   const retryResources = isMineView ? refetchMyResources : refetch;
   const canLoadMoreResources = !isMineView && hasMoreResources;
 
+  function handlePressUpload() {
+    if (isUnverifiedPersonalUser(profile)) {
+      toast.error('Student verification is required to upload academic resources.');
+      haptics.error();
+      setVerificationModalOpen(true);
+      return;
+    }
+    setUploadModalOpen(true);
+  }
+
   async function handleUpload(payload: UploadAcademicPayload) {
+    if (isUnverifiedPersonalUser(profile)) {
+      toast.error('Student verification is required to upload academic resources.');
+      haptics.error();
+      setVerificationModalOpen(true);
+      return;
+    }
     try {
       const { fileBlob, ...rest } = payload;
       await createResource({ ...rest, campusCode: effectiveCampus }, fileBlob);
@@ -366,7 +386,7 @@ export default function ResourcesScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => setUploadModalOpen(true)}
+            onPress={handlePressUpload}
             accessibilityRole="button"
             accessibilityLabel="Upload resource"
             style={{
@@ -851,7 +871,7 @@ export default function ResourcesScreen() {
               )}
 
               <Pressable
-                onPress={() => setUploadModalOpen(true)}
+                onPress={handlePressUpload}
                 accessibilityRole="button"
                 accessibilityLabel="Upload resource"
                 style={{
@@ -1277,7 +1297,7 @@ export default function ResourcesScreen() {
                     : 'Try searching for another course code or upload study materials for your peers.'
                 }
                 actionLabel={isMineView || filters.resourceType === 'Bookmarked' ? undefined : 'Upload Study Material'}
-                onAction={isMineView || filters.resourceType === 'Bookmarked' ? undefined : () => setUploadModalOpen(true)}
+                onAction={isMineView || filters.resourceType === 'Bookmarked' ? undefined : handlePressUpload}
               />
             )
           }
@@ -1321,6 +1341,31 @@ export default function ResourcesScreen() {
           onClose={() => setReportingResource(null)}
         />
       )}
+      <ApplyForVerificationModal
+        visible={verificationModalOpen}
+        onClose={() => setVerificationModalOpen(false)}
+        defaultInstitution={effectiveCampus}
+        onSubmit={async (data) => {
+          if (!user) return;
+          try {
+            await submitVerificationRequest({
+              userId: user.id,
+              applicantName: profile?.fullName ?? user.fullName,
+              documentType: data.documentType,
+              documentReference: data.documentReference,
+              institutionClaimed: data.institutionClaimed,
+              documentPhotoUri: data.documentPhotoUri,
+              photoBlob: data.photoBlob,
+            });
+            markVerificationPending(user.id);
+            await queryClient.invalidateQueries({ queryKey: ['profile'] });
+            setVerificationModalOpen(false);
+            toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+          } catch (err: any) {
+            toast.error(err?.message || 'Could not submit verification request. Please try again.');
+          }
+        }}
+      />
     </ScreenContainer>
   );
 }

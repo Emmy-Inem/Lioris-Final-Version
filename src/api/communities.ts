@@ -9,6 +9,7 @@ export interface ForumCommunityRecord {
   slug: string;
   label: string;
   category: string;
+  campusCode?: string | null;
   icon: keyof typeof Ionicons.glyphMap;
   description: string;
   moderatorBadge: string;
@@ -38,6 +39,7 @@ function fallbackCommunities(): ForumCommunityRecord[] {
     rules: c.rules,
     bannerColor: c.bannerColor,
     accentColor: c.accentColor,
+    campusCode: 'GLOBAL',
     approvalStatus: 'approved',
   }));
 }
@@ -48,6 +50,7 @@ function mapRow(row: any): ForumCommunityRecord {
     slug: row.slug,
     label: row.label,
     category: row.category,
+    campusCode: row.campus_code || null,
     icon: (row.icon || 'chatbubbles-outline') as any,
     description: row.description || '',
     moderatorBadge: row.moderator_badge || 'Community Lead',
@@ -62,12 +65,17 @@ function mapRow(row: any): ForumCommunityRecord {
 }
 
 /** Approved communities, plus the caller's own pending/rejected proposals so they can track status. */
-export async function listCommunities(): Promise<ForumCommunityRecord[]> {
+export async function listCommunities(campusCode?: string): Promise<ForumCommunityRecord[]> {
   try {
     const { data, error } = await supabase.from('forum_communities').select('*').order('created_at', { ascending: true });
     if (error) throw error;
     if (!data || data.length === 0) return fallbackCommunities();
-    return data.map(mapRow);
+    const mapped = data.map(mapRow);
+    if (campusCode && campusCode !== 'GLOBAL' && campusCode !== 'ALL') {
+      const campusSpecific = mapped.filter((c) => c.campusCode === campusCode);
+      return campusSpecific.length > 0 ? campusSpecific : mapped;
+    }
+    return mapped;
   } catch (err) {
     console.warn('[Communities] listCommunities failed, showing launch defaults only:', err);
     return fallbackCommunities();
@@ -92,6 +100,7 @@ export async function listPendingCommunities(): Promise<ForumCommunityRecord[]> 
 export interface ProposeCommunityPayload {
   label: string;
   description: string;
+  campusCode?: string;
   icon?: keyof typeof Ionicons.glyphMap;
   accentColor?: string;
 }
@@ -102,23 +111,8 @@ function slugify(label: string): string {
 }
 
 /**
- * Throws if there's no identifiable proposer or the insert fails, instead of
- * quietly reporting a community as proposed when it was never saved.
- *
- * Every proposal - including a root admin's own - starts 'pending' and must
- * go through ForumsModerationTab's approval queue. This used to auto-approve
- * when the proposer's `profiles.role` was 'admin', which sounds right in
- * isolation but breaks the moment "Preview Workspace As Role" is in play:
- * that feature only changes which portal UI renders (see
- * AuthContext.tsx's `role` vs `actualRole`) - the underlying Supabase auth
- * session, and therefore `profiles.role` for that session, is always the
- * real admin account. So an admin previewing the Student portal would have
- * every "student" proposal instantly published, with no way to tell from
- * the UI that approval was silently skipped. Removing the bypass here means
- * this can never again depend on who happens to be signed in - the RLS
- * INSERT policy on forum_communities enforces the same rule server-side
- * (approval_status must be 'pending' unless the request is an admin's), so
- * a non-pending value sent by a modified/malicious client is rejected too.
+ * Proposes a new campus discussion space. Gated to verified Campus Ambassadors
+ * and university administrators. Saves the community with the proposer's campus_code.
  */
 export async function proposeCommunity(payload: ProposeCommunityPayload): Promise<ForumCommunityRecord> {
   const { data: authData } = await supabase.auth.getUser();
@@ -131,11 +125,34 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
     throw new Error('You need to be signed in to propose a community.');
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, campus_code, is_campus_ambassador, verification_status, email')
+    .eq('id', userId)
+    .single();
+
+  const isEduEmail = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
+  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || profile?.verification_status === 'verified' || isEduEmail;
+  const isAmbassadorOrAdmin = profile?.is_campus_ambassador || profile?.role === 'admin' || profile?.role === 'staff';
+
+  if (!isVerified) {
+    throw new Error('You need a verified student account to propose a discussion space.');
+  }
+
+  if (!isAmbassadorOrAdmin) {
+    throw new Error('Campus discussion spaces are curated by official Campus Ambassadors. Apply to become an ambassador to create new spaces.');
+  }
+
+  const effectiveCampus = (payload.campusCode && payload.campusCode !== 'GLOBAL' && payload.campusCode !== 'ALL')
+    ? payload.campusCode
+    : (profile?.campus_code && profile.campus_code !== 'GLOBAL' ? profile.campus_code : null);
+
   const slug = slugify(payload.label);
   const row = {
     slug,
     label: payload.label.trim(),
     category: payload.label.trim(),
+    campus_code: effectiveCampus,
     description: payload.description.trim() || 'A new community space for students to connect.',
     icon: payload.icon || 'chatbubbles-outline',
     accent_color: payload.accentColor || '#2563EB',
