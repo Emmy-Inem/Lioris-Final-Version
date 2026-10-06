@@ -134,7 +134,11 @@ export function ResourceReaderModal({
 
   async function handleToggleBookmark() {
     haptics.medium();
-    const added = await toggleBookmark(resource!.id);
+    const cleanTitle = resource?.courseTitle || resource?.title || resource?.courseCode;
+    const added = await toggleBookmark(resource!.id, {
+      title: cleanTitle,
+      subtitle: resource?.courseCode || 'Course Material',
+    });
     if (added) {
       toast.success(`Bookmarked "${resource!.title}" for quick revision.`);
     } else {

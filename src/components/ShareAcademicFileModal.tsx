@@ -69,16 +69,19 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  const translateY = useSharedValue(80);
  const backdropOpacity = useSharedValue(0);
 
- useEffect(() => {
- if (visible) {
- translateY.value = withSpring(0, { damping: 18, stiffness: 260 });
- backdropOpacity.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) });
- setErrorMessage(null);
- } else {
- translateY.value = 80;
- backdropOpacity.value = 0;
- }
- }, [visible, translateY, backdropOpacity]);
+  useEffect(() => {
+    if (visible) {
+      translateY.value = withTiming(0, {
+        duration: 220,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      });
+      backdropOpacity.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.quad) });
+      setErrorMessage(null);
+    } else {
+      translateY.value = withTiming(80, { duration: 160, easing: Easing.in(Easing.quad) });
+      backdropOpacity.value = withTiming(0, { duration: 150 });
+    }
+  }, [visible, translateY, backdropOpacity]);
 
  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));

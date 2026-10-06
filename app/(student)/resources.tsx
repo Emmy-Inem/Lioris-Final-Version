@@ -19,6 +19,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { recordPortalLinkVisit } from '@/utils/portalVisits';
 import { listResources, createResource, listMyResources } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
@@ -291,7 +292,11 @@ export default function ResourcesScreen() {
  text: 'Open Portal ↗',
  onPress: () => {
  openExternalUrl(portal.url).then((opened: boolean) => {
- if (!opened) Alert.alert('Link Blocked', 'This portal link is not a valid http(s) address and was not opened.');
+ if (!opened) {
+ Alert.alert('Link Blocked', 'This portal link is not a valid http(s) address and was not opened.');
+ } else {
+ void recordPortalLinkVisit(portal.id, portal.url, user?.id);
+ }
  });
  },
  },
@@ -1224,7 +1229,11 @@ export default function ResourcesScreen() {
                     onPreview={setReadingResource}
                     isBookmarked={bookmarkedIds.includes(res.id)}
                     onToggleBookmark={async () => {
-                      const added = await toggleBookmark(res.id);
+                      const cleanTitle = res.courseTitle || res.title || res.courseCode;
+                      const added = await toggleBookmark(res.id, {
+                        title: cleanTitle,
+                        subtitle: res.courseCode || 'Course Material',
+                      });
                       if (added) {
                         toast.success(`Bookmarked "${res.title}"`);
                       } else {
@@ -1267,7 +1276,11 @@ export default function ResourcesScreen() {
                 onPreview={setReadingResource}
                 isBookmarked={bookmarkedIds.includes(item.id)}
                 onToggleBookmark={async () => {
-                  const added = await toggleBookmark(item.id);
+                  const cleanTitle = item.courseTitle || item.title || item.courseCode;
+                  const added = await toggleBookmark(item.id, {
+                    title: cleanTitle,
+                    subtitle: item.courseCode || 'Course Material',
+                  });
                   if (added) {
                     toast.success(`Bookmarked "${item.title}"`);
                   } else {

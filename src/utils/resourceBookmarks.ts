@@ -19,6 +19,7 @@ import {
   subscribeSavedItems,
   toggleSavedItem,
   type SavedItem,
+  type SavedItemMeta,
 } from '../api/bookmarks';
 
 function idsOf(items: SavedItem[]): string[] {
@@ -53,10 +54,10 @@ export async function saveResourceBookmarks(ids: string[]): Promise<void> {
 }
 
 /** Returns the state the bookmark ended in (true = now bookmarked). */
-export async function toggleResourceBookmark(id: string): Promise<boolean> {
+export async function toggleResourceBookmark(id: string, meta?: SavedItemMeta): Promise<boolean> {
   await hydrateSavedItems();
   const exists = isItemSavedSync('resource', id);
-  return await toggleSavedItem('resource', id, !exists);
+  return await toggleSavedItem('resource', id, !exists, meta);
 }
 
 export function isResourceBookmarked(id: string): boolean {
@@ -82,8 +83,8 @@ export function useResourceBookmarks() {
     };
   }, []);
 
-  const toggle = async (id: string) => {
-    return await toggleResourceBookmark(id);
+  const toggle = async (id: string, meta?: SavedItemMeta) => {
+    return await toggleResourceBookmark(id, meta);
   };
 
   const isBookmarked = (id: string) => bookmarkedIds.includes(id);

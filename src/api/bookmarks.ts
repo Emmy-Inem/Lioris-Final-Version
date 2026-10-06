@@ -235,6 +235,37 @@ export async function listSavedItems(kind?: SavedKind): Promise<SavedItem[]> {
     if (error) throw error;
 
     const items = (data ?? []).map(rowToItem);
+
+    // If there are saved resources, enrich any that hold raw UUIDs or technical IDs with the human course name
+    const resourceItems = items.filter((x) => x.kind === 'resource');
+    if (resourceItems.length > 0) {
+      try {
+        const resourceIds = resourceItems.map((x) => x.itemId);
+        const { data: resRows } = await supabase
+          .from('resources')
+          .select('id, title, course_title, course_code')
+          .in('id', resourceIds);
+        if (resRows && resRows.length > 0) {
+          const resMap = new Map<string, any>(resRows.map((r: any) => [r.id, r]));
+          for (const item of resourceItems) {
+            const r = resMap.get(item.itemId);
+            if (r) {
+              const humanCourseName = r.course_title || r.title || r.course_code;
+              const isTechnicalCode = !item.title || item.title === item.itemId || /^[0-9a-f-]{36}$/i.test(item.title);
+              if (isTechnicalCode && humanCourseName) {
+                item.title = humanCourseName;
+              }
+              if (!item.subtitle || /^[0-9a-f-]{36}$/i.test(item.subtitle)) {
+                item.subtitle = r.course_code || 'Course Material';
+              }
+            }
+          }
+        }
+      } catch {
+        // Non-blocking enrichment
+      }
+    }
+
     // Keep the mirror in step so the sync helpers stay truthful offline. A
     // per-kind fetch only replaces that kind's slice of the mirror.
     const others = kind ? localItems.filter((x) => x.kind !== kind) : [];

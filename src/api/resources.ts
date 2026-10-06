@@ -167,6 +167,7 @@ function mapResourceRow(row: any): Resource {
   return {
     id: row.id,
     title: row.title,
+    courseTitle: row.course_title || undefined,
     courseCode: row.course_code || 'GEN 101',
     department: row.profiles?.department || row.course_title || 'Academic Repository',
     category: mapResourceTypeToCategory(row.resource_type),

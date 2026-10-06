@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, View, Pressable, RefreshControl, Modal, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { haptics } from '@/utils/haptics';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -36,8 +37,13 @@ import { listAnnouncements } from '@/api/announcements';
 import { Announcement } from '@/api/types';
 import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
-import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import {
+  getVisitedPortalLinks,
+  recordPortalLinkVisit,
+  isPortalVisitedInLast3Months,
+  subscribePortalVisits,
+} from '@/utils/portalVisits';
 
 export default function StudentDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -117,6 +123,22 @@ export default function StudentDashboard() {
     queryFn: () => listPortalLinks(effectiveCampus || undefined),
   });
 
+  const [portalVisits, setPortalVisits] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    getVisitedPortalLinks(user?.id).then(setPortalVisits);
+    return subscribePortalVisits(setPortalVisits);
+  }, [user?.id]);
+
+  // Requirement: The official portal links on the homepage should only be the portal link that has been visited in the last 3 months by the users, rather than random or all portal links in the resource directory.
+  const recentlyVisitedPortals = (portalLinks ?? [])
+    .filter((portal: any) => isPortalVisitedInLast3Months(portal, portalVisits))
+    .sort((a: any, b: any) => {
+      const aTime = portalVisits[a.id] || portalVisits[a.url] || 0;
+      const bTime = portalVisits[b.id] || portalVisits[b.url] || 0;
+      return bTime - aTime;
+    });
+
   // Mirrors exactly what public.mentor_directory (src/api/mentorship.ts's
   // mentor search) actually scores a student against: department and
   // interests (campus_code is set at signup, so it is never "missing").
@@ -127,8 +149,11 @@ export default function StudentDashboard() {
   const { url: resolvedCoverUrl } = useSignedUrl('campus-media', profile?.coverUrl);
   const activeCover = resolvedCoverUrl ? { uri: resolvedCoverUrl } : null;
 
-  function handleOpenPortal(url: string) {
+  function handleOpenPortal(url: string, id?: string) {
     haptics.light();
+    if (id) {
+      void recordPortalLinkVisit(id, url, user?.id);
+    }
     void openExternalUrl(url);
   }
 
@@ -691,30 +716,53 @@ export default function StudentDashboard() {
 
             {savedResources.length > 0 ? (
               <View style={{ gap: spacing.sm }}>
-                {savedResources.slice(0, 3).map((item) => (
-                  <Pressable key={item.id} onPress={() => router.push('/(student)/resources')}>
-                    <SolidCard radius={16} style={{ padding: 13 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                          <Badge label={item.subtitle || 'Study Note'} tone="brand" />
-                          <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                            Saved on {new Date(item.savedAt).toLocaleDateString()}
+                {savedResources.slice(0, 3).map((item) => {
+                  const isUuid = /^[0-9a-f-]{36}$/i.test(item.title);
+                  let cleanCourseName = isUuid ? (item.subtitle || 'Course Material') : item.title;
+                  let cleanCourseCode = item.subtitle && !/^[0-9a-f-]{36}$/i.test(item.subtitle) ? item.subtitle : 'Study Note';
+
+                  // If title has format "ENG 201: Engineering Mathematics I — ..."
+                  if (cleanCourseName.includes(':')) {
+                    const parts = cleanCourseName.split(':');
+                    const prefix = parts[0].trim();
+                    const after = parts.slice(1).join(':').trim();
+                    if (/^[A-Z]{2,4}\s*\d{3}/i.test(prefix)) {
+                      cleanCourseCode = prefix;
+                      cleanCourseName = after.split('—')[0].split('-')[0].trim();
+                    }
+                  } else if (cleanCourseName.includes('—')) {
+                    cleanCourseName = cleanCourseName.split('—')[0].trim();
+                  }
+
+                  if (cleanCourseName.includes('_')) {
+                    cleanCourseName = cleanCourseName.replace(/_/g, ' ');
+                  }
+
+                  return (
+                    <Pressable key={item.id} onPress={() => router.push('/(student)/resources')}>
+                      <SolidCard radius={16} style={{ padding: 13 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                            <Badge label={cleanCourseCode} tone="brand" />
+                            <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                              Saved on {new Date(item.savedAt).toLocaleDateString()}
+                            </AppText>
+                          </View>
+                          <Ionicons name="bookmark" size={16} color={colors.brandPrimary} />
+                        </View>
+                        <AppText variant="bodySmall" weight="bold" style={{ lineHeight: 18, marginTop: 2 }}>
+                          {cleanCourseName}
+                        </AppText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                          <Ionicons name="document-text-outline" size={13} color={colors.brandPrimary} />
+                          <AppText variant="caption" weight="bold" tone="brand">
+                            Open in Resources
                           </AppText>
                         </View>
-                        <Ionicons name="bookmark" size={16} color={colors.brandPrimary} />
-                      </View>
-                      <AppText variant="bodySmall" weight="bold" style={{ lineHeight: 18, marginTop: 2 }}>
-                        {item.title}
-                      </AppText>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                        <Ionicons name="document-text-outline" size={13} color={colors.brandPrimary} />
-                        <AppText variant="caption" weight="bold" tone="brand">
-                          Open in Resources
-                        </AppText>
-                      </View>
-                    </SolidCard>
-                  </Pressable>
-                ))}
+                      </SolidCard>
+                    </Pressable>
+                  );
+                })}
               </View>
             ) : (
               <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
@@ -789,20 +837,20 @@ export default function StudentDashboard() {
           </View>
         )}
 
-        {/* 7. Institutional Direct Portal Shortcuts */}
-        {(portalLinks ?? []).length > 0 && (
+        {/* 7. Institutional Direct Portal Shortcuts (Only portals visited in last 3 months) */}
+        {recentlyVisitedPortals.length > 0 && (
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
               <Ionicons name="link-outline" size={17} color={colors.textSecondary} />
               <AppText weight="bold" style={{ fontSize: isDesktop ? 17 : 14.5, letterSpacing: -0.2 }}>
-                Official University Portals
+                Recently Visited Portals
               </AppText>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {(portalLinks ?? []).slice(0, 4).map((portal: any) => (
+              {recentlyVisitedPortals.slice(0, 4).map((portal: any) => (
                 <Pressable
                   key={portal.id}
-                  onPress={() => handleOpenPortal(portal.url)}
+                  onPress={() => handleOpenPortal(portal.url, portal.id)}
                   style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
                 >
                   <GlassCard radius={14} padded={false} contentStyle={{ paddingHorizontal: 12, paddingVertical: 10 }}>
@@ -810,7 +858,7 @@ export default function StudentDashboard() {
                       {portal.title}
                     </AppText>
                     <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 1 }}>
-                      {portal.category} • Official Portal
+                      {portal.category} • Visited Recently
                     </AppText>
                   </GlassCard>
                 </Pressable>

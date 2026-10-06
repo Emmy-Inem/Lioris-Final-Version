@@ -39,6 +39,16 @@ function throwReadable(error: unknown, fallback: string): never {
   throw new RpcError(parseRpcError(error, fallback));
 }
 
+/** Returns true if an event has ended more than 5 days ago. */
+export function isEventEndedPast5Days(event: { endAt?: string | null; startAt?: string | null }): boolean {
+  const endStr = event.endAt || event.startAt;
+  if (!endStr) return false;
+  const endMs = new Date(endStr).getTime();
+  if (isNaN(endMs)) return false;
+  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+  return (Date.now() - endMs) > FIVE_DAYS_MS;
+}
+
 export interface EventsQuery {
   scope?: 'student' | 'alumni' | 'global' | 'campus' | 'all';
   category?: string;
@@ -51,7 +61,7 @@ export interface EventsQuery {
 function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: string, isStaffOrAdmin: boolean = false): CampusEvent[] {
   let results = pool.filter((e) => !isUserBlocked(e.organizerId) && !isUserMuted(e.organizerId));
 
-  if (query.approvalStatus && query.approvalStatus !== 'all') {
+    if (query.approvalStatus && query.approvalStatus !== 'all') {
     results = results.filter((e) => e.approvalStatus === query.approvalStatus);
   } else if (!query.approvalStatus) {
     // If no specific approval status was requested:
@@ -63,6 +73,17 @@ function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: s
       results = results.filter((e) => e.approvalStatus === 'approved' || (currentUserId && e.organizerId === currentUserId));
     }
   }
+
+  // Events that have ended automatically disappear after 5 days
+  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  results = results.filter((e) => {
+    const endStr = e.endAt || e.startAt;
+    if (!endStr) return true;
+    const endMs = new Date(endStr).getTime();
+    if (isNaN(endMs)) return true;
+    return (now - endMs) <= FIVE_DAYS_MS;
+  });
 
   if (query.campusCode && query.campusCode !== 'GLOBAL' && query.campusCode !== 'ALL' && query.campusCode !== 'all') {
     const targetCampus = query.campusCode.toUpperCase();
@@ -150,6 +171,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
 
     const filteredRows = (data ?? [])
       .filter((row: any) => !isUserBlocked(row.creator_id) && !isUserMuted(row.creator_id))
+      .filter((row: any) => !isEventEndedPast5Days({ endAt: row.end_time, startAt: row.start_time }))
       .filter((row: any) => {
         // Strict university workspace isolation:
         // Only members of that university see that university's events.

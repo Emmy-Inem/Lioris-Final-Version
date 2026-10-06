@@ -717,6 +717,7 @@ export interface PodSession {
 export interface Resource {
  id: string;
  title: string;
+ courseTitle?: string;
  description: string;
  category: 'Notes' | 'Past Questions' | 'Projects';
  department: string;

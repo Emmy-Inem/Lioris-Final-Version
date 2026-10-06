@@ -28,15 +28,20 @@ export function ActionSheetModal({ visible, onClose, children }: ActionSheetModa
  const translateY = useSharedValue(80);
  const backdropOpacity = useSharedValue(0);
 
- useEffect(() => {
- if (visible) {
- translateY.value = reduceMotion ? 0 : withSpring(0, { damping: 18, stiffness: 260 });
- backdropOpacity.value = withTiming(1, { duration: reduceMotion ? 0 : 150, easing: Easing.out(Easing.quad) });
- } else {
- translateY.value = 80;
- backdropOpacity.value = 0;
- }
- }, [visible, reduceMotion, translateY, backdropOpacity]);
+  useEffect(() => {
+    if (visible) {
+      translateY.value = reduceMotion
+        ? 0
+        : withTiming(0, {
+            duration: 220,
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
+          });
+      backdropOpacity.value = withTiming(1, { duration: reduceMotion ? 0 : 180, easing: Easing.out(Easing.quad) });
+    } else {
+      translateY.value = withTiming(80, { duration: reduceMotion ? 0 : 160, easing: Easing.in(Easing.quad) });
+      backdropOpacity.value = withTiming(0, { duration: reduceMotion ? 0 : 150 });
+    }
+  }, [visible, reduceMotion, translateY, backdropOpacity]);
 
  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
