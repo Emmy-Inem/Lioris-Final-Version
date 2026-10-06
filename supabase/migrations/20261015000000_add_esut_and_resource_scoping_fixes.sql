@@ -66,7 +66,7 @@ VALUES
     'Official engineering, software, robotics, and innovation space for ESUT Agbani scholars.',
     'Engineering Faculty Lead',
     'Faculty of Engineering Representatives',
-    ARRAY['Share code snippets and project documentation.', 'Respect fellow engineering colleagues.', 'No unauthorized test solution leaks.'],
+    '["Share code snippets and project documentation.", "Respect fellow engineering colleagues.", "No unauthorized test solution leaks."]'::jsonb,
     '#0D9488',
     '#0F766E',
     'approved'
@@ -80,7 +80,7 @@ VALUES
     'Academic discussions, course syllabus reviews, seminar schedules, and peer study groups.',
     'Academic Moderator',
     'Faculty Senate & Student Representatives',
-    ARRAY['Strictly academic discussions.', 'Cite sources for papers and notes.', 'Be constructive and supportive.'],
+    '["Strictly academic discussions.", "Cite sources for papers and notes.", "Be constructive and supportive."]'::jsonb,
     '#0369A1',
     '#0284C7',
     'approved'
@@ -94,7 +94,7 @@ VALUES
     'Hostel life in Agbani, campus transport, matriculation events, and student social gatherings.',
     'Campus Life Council',
     'Student Union Government ESUT',
-    ARRAY['Keep discussions civil.', 'No unverified rumors or misinformation.', 'Promote campus community unity.'],
+    '["Keep discussions civil.", "No unverified rumors or misinformation.", "Promote campus community unity."]'::jsonb,
     '#7C3AED',
     '#6D28D9',
     'approved'
