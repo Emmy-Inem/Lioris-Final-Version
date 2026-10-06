@@ -116,7 +116,7 @@ export default function AlumniJobsScreen() {
     };
   }, [debouncedQuery, campusCode, selectedWorkplace, selectedJobType, selectedExperience, selectedDatePosted, savedOnly]);
 
-  const { data: jobs = [], isLoading, isError, refetch } = useQuery({
+  const { data: jobs = [], isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['jobs', 'alumni-portal', queryParams],
     queryFn: () => listJobs(queryParams),
   });
@@ -473,7 +473,7 @@ export default function AlumniJobsScreen() {
         </View>
 
         {/* Job Listings List */}
-        {isLoading ? (
+        {isLoading || (isFetching && jobs.length === 0) ? (
           <JobCardSkeletonList count={4} />
         ) : jobs.length === 0 ? (
           <EmptyState

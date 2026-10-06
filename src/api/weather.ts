@@ -89,6 +89,13 @@ export const CAMPUS_COORDINATES: Record<string, CampusCoordinates> = {
     longitude: 7.4200,
     city: 'Abuja (National)',
   },
+  ESUT: {
+    name: 'Enugu State University of Science and Technology',
+    shortName: 'ESUT',
+    latitude: 6.3072,
+    longitude: 7.5457,
+    city: 'Agbani, Enugu State',
+  },
 };
 
 export interface CampusWeather {

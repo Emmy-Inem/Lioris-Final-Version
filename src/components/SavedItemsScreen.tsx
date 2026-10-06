@@ -93,6 +93,9 @@ export function SavedItemsScreen() {
       case 'job':
         router.push(`/${roleGroup}/jobs` as any);
         break;
+      case 'marketplace':
+        router.push(`/${roleGroup}/marketplace` as any);
+        break;
     }
   }
 

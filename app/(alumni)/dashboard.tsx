@@ -21,6 +21,7 @@ import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
 import { AppTutorialModal } from '@/components/AppTutorialModal';
 import { JobCard } from '@/components/JobCard';
+import { JobCardSkeletonList } from '@/components/Skeleton';
 import { EventCard } from '@/components/EventCard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -72,7 +73,7 @@ export default function AlumniDashboard() {
     queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus || undefined, viewScope: effectiveCampus ? 'campus' : 'global', showBots }),
   });
 
-  const { data: jobs } = useQuery({
+  const { data: jobs, isLoading: jobsLoading } = useQuery({
     queryKey: ['jobs', 'alumni-dash', effectiveCampus],
     queryFn: () => listJobs({ campusCode: effectiveCampus || undefined }),
     enabled: isFeatureEnabled('career_page'),
@@ -512,7 +513,9 @@ export default function AlumniDashboard() {
               </Pressable>
             </View>
 
-            {activeJobs.length === 0 ? (
+            {jobsLoading ? (
+              <JobCardSkeletonList count={2} />
+            ) : activeJobs.length === 0 ? (
               <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
                 <Ionicons name="briefcase-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
                 <AppText weight="bold" variant="bodySmall">No active job openings yet</AppText>

@@ -56,6 +56,13 @@ export interface ResourcesQuery {
 
 function filterResources(pool: Resource[], query: ResourcesQuery): Resource[] {
   let results = [...pool];
+  if (query.campusCode && query.campusCode !== 'ALL') {
+    const target = query.campusCode.toUpperCase();
+    results = results.filter((r) => {
+      const c = (r.campusCode || 'GLOBAL').toUpperCase();
+      return target === 'GLOBAL' ? c === 'GLOBAL' : (c === target || c === 'GLOBAL');
+    });
+  }
   if (query.approvalStatus && query.approvalStatus !== 'all') {
     results = results.filter((r) => r.approvalStatus === query.approvalStatus);
   } else if (!query.approvalStatus) {
@@ -188,28 +195,32 @@ function mapResourceRow(row: any): Resource {
 }
 
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
- try {
- const { data: authData } = await supabase.auth.getUser();
- let userCampus = (query as any).campusCode;
- let userRole = 'student';
- if (authData?.user?.id) {
- const { data: prof } = await supabase.from('profiles').select('campus_code, role').eq('id', authData.user.id).maybeSingle();
- if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
- if (prof?.role) userRole = prof.role;
- if (!userCampus && authData.user.user_metadata?.campus_code) {
- userCampus = authData.user.user_metadata.campus_code;
- }
- }
+  let userCampus = (query as any).campusCode;
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    let userRole = 'student';
+    let prof: any = null;
+    if (authData?.user?.id) {
+      const { data } = await supabase.from('profiles').select('campus_code, role, admin_role').eq('id', authData.user.id).maybeSingle();
+      prof = data;
+      if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
+      if (prof?.role) userRole = prof.role;
+      if (!userCampus && authData.user.user_metadata?.campus_code) {
+        userCampus = authData.user.user_metadata.campus_code;
+      }
+    }
 
- if (!userCampus && authData?.user?.email) {
-      // Domain match, not substring. The previous chain mis-assigned campuses
-      // (`includes('oau')` claimed joaustin@unilag.edu.ng for OAU) and hardcoded
-      // demo names above the real domain. Every demo account is @ui.edu.ng, so
-      // plain domain matching already covers them.
+    if (!userCampus && authData?.user?.email) {
       userCampus = getInstitutionForEmail(authData.user.email)?.code;
     }
 
-    const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
+    const userEmail = authData?.user?.email?.toLowerCase().trim();
+    const isSuperAdmin =
+      userEmail === 'inememmanuel@gmail.com' ||
+      prof?.admin_role === 'super_admin' ||
+      prof?.role === 'super_admin' ||
+      authData?.user?.user_metadata?.role === 'super_admin' ||
+      authData?.user?.user_metadata?.admin_role === 'super_admin';
 
     const pageSize = query.pageSize ?? 100;
     const page = Math.max(0, query.page ?? 0);
@@ -233,8 +244,15 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
       .select('*, profiles:uploader_id(full_name, role, avatar_url, department)')
       .order('created_at', { ascending: false });
 
-    if (!(isStaffOrAdmin && !(query as any).campusCode)) {
+    // Non-super-admins (students, staff, campus admins) are strictly isolated to their own campus and true GLOBAL.
+    // Only super admin can see across all campuses or query any campus.
+    if (!isSuperAdmin) {
       const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
+      dbQuery = targetCampus === 'GLOBAL'
+        ? dbQuery.eq('campus_code', 'GLOBAL')
+        : dbQuery.in('campus_code', [targetCampus, 'GLOBAL']);
+    } else if ((query as any).campusCode && (query as any).campusCode !== 'ALL') {
+      const targetCampus = (query as any).campusCode.toUpperCase();
       dbQuery = targetCampus === 'GLOBAL'
         ? dbQuery.eq('campus_code', 'GLOBAL')
         : dbQuery.in('campus_code', [targetCampus, 'GLOBAL']);
@@ -296,13 +314,13 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     const merged = [...dbResources];
     for (const r of pool) {
       if (!merged.some((m) => m.id === r.id || (m.title.toLowerCase() === r.title.toLowerCase() && m.courseCode.toLowerCase() === r.courseCode.toLowerCase())) && !isUserBlocked(r.authorId) && !isUserMuted(r.authorId)) {
-        if (isStaffOrAdmin && !(query as any).campusCode) {
+        if (isSuperAdmin && (!(query as any).campusCode || (query as any).campusCode === 'ALL')) {
           merged.push(r);
         } else {
-          const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
+          const targetCampus = (isSuperAdmin && (query as any).campusCode ? (query as any).campusCode : (userCampus || 'GLOBAL')).toUpperCase();
           const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
           if (targetCampus === 'GLOBAL') {
-            merged.push(r);
+            if (rCampus === 'GLOBAL') merged.push(r);
           } else if (rCampus === targetCampus || rCampus === 'GLOBAL') {
             merged.push(r);
           }
@@ -316,10 +334,11 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     return filterResources(withRatings, query);
   } catch (err) {
     console.warn('[Resources] listResources failed, showing local pool:', err);
-    const targetCampus = ((query as any).campusCode || 'GLOBAL').toUpperCase();
+    const targetCampus = ((query as any).campusCode || (userCampus || 'GLOBAL')).toUpperCase();
     const fallbackPool = [...locallyCreatedResources].filter((r) => {
       const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
-      if (targetCampus === 'GLOBAL') return true;
+      if (targetCampus === 'ALL') return true;
+      if (targetCampus === 'GLOBAL') return rCampus === 'GLOBAL';
       return rCampus === targetCampus || rCampus === 'GLOBAL';
     });
     return filterResources(fallbackPool, query);

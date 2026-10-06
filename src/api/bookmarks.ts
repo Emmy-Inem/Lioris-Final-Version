@@ -61,6 +61,14 @@ let hydratedForUserId: string | null = null;
 
 const listeners = new Set<(items: SavedItem[]) => void>();
 
+/** Clears the in-memory mirror and hydration flags on logout to prevent cross-account state leakage. */
+export function clearSavedItemsMemoryCache(): void {
+  localItems = [];
+  hydrated = false;
+  hydratedForUserId = null;
+  notify();
+}
+
 /** Subscribe to local-mirror changes (used by useResourceBookmarks). */
 export function subscribeSavedItems(fn: (items: SavedItem[]) => void): () => void {
   listeners.add(fn);

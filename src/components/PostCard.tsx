@@ -24,7 +24,7 @@ import { useAuth } from'@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Post } from'@/api/types';
 import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, resolvePostMentions, buildPostShareUrl } from'@/api/posts';
-import { toggleSavedItem, SAVED_ITEMS_KEY } from'@/api/bookmarks';
+import { toggleSavedItem, SAVED_ITEMS_KEY, isItemSavedSync, subscribeSavedItems } from '@/api/bookmarks';
 import { submitReport } from'@/api/moderation';
 import { haptics } from'@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
@@ -113,8 +113,12 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  const [editOpen, setEditOpen] = useState(false);
 
  React.useEffect(() => {
- setBookmarked(!!post.isBookmarkedByMe);
- }, [post.isBookmarkedByMe]);
+    setBookmarked(isItemSavedSync('post', post.id) || !!post.isBookmarkedByMe);
+    const unsubscribe = subscribeSavedItems(() => {
+      setBookmarked(isItemSavedSync('post', post.id));
+    });
+    return unsubscribe;
+  }, [post.id, post.isBookmarkedByMe]);
 
  // Full screen image lightbox
  const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -253,26 +257,47 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
 
  /** Saves/unsaves this post into the one shared saved_items store. */
  async function handleToggleBookmark() {
- if (savingBookmark) return;
- haptics.light();
- const next = !bookmarked;
- setBookmarked(next);
- setSavingBookmark(true);
- try {
- await toggleSavedItem('post', post.id, next, {
- title: post.title,
- subtitle: `${post.authorName} • c/${post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}`,
- });
- await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
- await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('post') });
- } catch (err: any) {
- setBookmarked(!next);
- haptics.error();
- Alert.alert(next ? 'Could not save' : 'Could not remove', getFriendlyErrorMessage(err, 'Please try again.'));
- } finally {
- setSavingBookmark(false);
- }
- }
+    if (savingBookmark) return;
+    haptics.light();
+    const next = !bookmarked;
+    setBookmarked(next);
+    setSavingBookmark(true);
+    try {
+      await toggleSavedItem('post', post.id, next, {
+        title: post.title,
+        subtitle: `${post.authorName} • c/${post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}`,
+      });
+      queryClient.setQueriesData({ queryKey: ['feed'] }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) {
+          return old.map((p: any) => (p.id === post.id ? { ...p, isBookmarkedByMe: next } : p));
+        }
+        if (old.pages) {
+          return {
+            ...old,
+            pages: old.pages.map((page: any) =>
+              Array.isArray(page)
+                ? page.map((p: any) => (p.id === post.id ? { ...p, isBookmarkedByMe: next } : p))
+                : page
+            ),
+          };
+        }
+        return old;
+      });
+      queryClient.setQueryData(['post', post.id], (old: any) => {
+        if (!old) return old;
+        return { ...old, isBookmarkedByMe: next };
+      });
+      await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
+      await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('post') });
+    } catch (err: any) {
+      setBookmarked(!next);
+      haptics.error();
+      Alert.alert(next ? 'Could not save' : 'Could not remove', getFriendlyErrorMessage(err, 'Please try again.'));
+    } finally {
+      setSavingBookmark(false);
+    }
+  }
 
  /**
   * deletePost throws when the database refused the delete, so nothing is removed
@@ -358,16 +383,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
       {post.authorVerified || post.authorRole === 'admin' ? (
         <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} />
       ) : null}
-      <AppText tone="secondary" variant="caption" style={{ fontSize: 11, flexShrink: 0 }}>
-        •{' '}
-        {post.authorRole === 'student'
-          ? 'Student'
-          : post.authorRole === 'alumni'
-          ? 'Alumni'
-          : post.authorRole === 'admin'
-          ? 'Admin'
-          : 'Staff'}
-      </AppText>
+      
     </View>
     {/* Row 2: Channel · Pinned · Time — all inline on one line */}
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1, flexWrap: 'wrap' }}>

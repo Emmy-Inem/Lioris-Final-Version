@@ -68,6 +68,26 @@ export const DEFAULT_CAMPUS_PORTAL_LINKS: Record<string, PortalLink[]> = {
     { id: 'cu-5', campusCode: 'CU', title: 'Covenant Admissions Portal', url: 'https://admissions.covenantuniversity.edu.ng/', category: 'Admissions', icon: 'document-text-outline', active: true, displayOrder: 5 },
     { id: 'cu-6', campusCode: 'CU', title: 'Covenant University Official Website', url: 'https://covenantuniversity.edu.ng/', category: 'Central Portal', icon: 'globe-outline', active: true, displayOrder: 6 },
   ],
+  KDU: [
+    { id: 'kdu-1', campusCode: 'KDU', title: 'KDU Student Portal', url: 'https://koladaisiuniversity.edu.ng/portal/', category: 'Academic', icon: 'school-outline', active: true, displayOrder: 1 },
+    { id: 'kdu-2', campusCode: 'KDU', title: 'KDU LMS & e-Learning', url: 'https://lms.koladaisiuniversity.edu.ng/', category: 'Classes', icon: 'laptop-outline', active: true, displayOrder: 2 },
+    { id: 'kdu-3', campusCode: 'KDU', title: 'KDU University Library', url: 'https://library.koladaisiuniversity.edu.ng/', category: 'Library', icon: 'book-outline', active: true, displayOrder: 3 },
+    { id: 'kdu-4', campusCode: 'KDU', title: 'KDU Central University Portal', url: 'https://koladaisiuniversity.edu.ng/', category: 'Central Portal', icon: 'globe-outline', active: true, displayOrder: 4 },
+  ],
+  NOUN: [
+    { id: 'noun-1', campusCode: 'NOUN', title: 'NOUN Student Portal (PAS)', url: 'https://www.nouonline.net/', category: 'Academic', icon: 'school-outline', active: true, displayOrder: 1 },
+    { id: 'noun-2', campusCode: 'NOUN', title: 'NOUN e-Courseware Library', url: 'https://nou.edu.ng/courseware/', category: 'Library', icon: 'book-outline', active: true, displayOrder: 2 },
+    { id: 'noun-3', campusCode: 'NOUN', title: 'NOUN e-Learn Virtual Campus', url: 'https://mylearningspace.nou.edu.ng/', category: 'Classes', icon: 'laptop-outline', active: true, displayOrder: 3 },
+    { id: 'noun-4', campusCode: 'NOUN', title: 'NOUN Central University Website', url: 'https://nou.edu.ng/', category: 'Central Portal', icon: 'globe-outline', active: true, displayOrder: 4 },
+  ],
+  ESUT: [
+    { id: 'esut-1', campusCode: 'ESUT', title: 'ESUT Student Portal', url: 'https://portal.esut.edu.ng/', category: 'Academic', icon: 'school-outline', active: true, displayOrder: 1 },
+    { id: 'esut-2', campusCode: 'ESUT', title: 'ESUT E-Library & Catalog', url: 'https://library.esut.edu.ng/', category: 'Library', icon: 'book-outline', active: true, displayOrder: 2 },
+    { id: 'esut-3', campusCode: 'ESUT', title: 'ESUT Virtual Learning LMS', url: 'https://lms.esut.edu.ng/', category: 'Classes', icon: 'laptop-outline', active: true, displayOrder: 3 },
+    { id: 'esut-4', campusCode: 'ESUT', title: 'ESUT Undergraduate Admissions', url: 'https://admissions.esut.edu.ng/', category: 'Admissions', icon: 'document-text-outline', active: true, displayOrder: 4 },
+    { id: 'esut-5', campusCode: 'ESUT', title: 'ESUT Bursary & Payments', url: 'https://portal.esut.edu.ng/', category: 'Finance', icon: 'card-outline', active: true, displayOrder: 5 },
+    { id: 'esut-6', campusCode: 'ESUT', title: 'ESUT Official University Website', url: 'https://esut.edu.ng/', category: 'Central Portal', icon: 'globe-outline', active: true, displayOrder: 6 },
+  ],
   GLOBAL: [
     { id: 'glob-1', campusCode: 'GLOBAL', title: 'National Academic Repository (JAMB)', url: 'https://efacility.jamb.gov.ng/', category: 'National', icon: 'school-outline', active: true, displayOrder: 1 },
     { id: 'glob-2', campusCode: 'GLOBAL', title: 'National Universities Commission (NUC)', url: 'https://www.nuc.edu.ng/', category: 'Commission', icon: 'globe-outline', active: true, displayOrder: 2 },

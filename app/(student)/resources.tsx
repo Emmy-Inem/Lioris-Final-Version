@@ -96,6 +96,7 @@ const UNIVERSITY_PORTAL_FILTERS = [
   { code: 'CU', label: 'Covenant (CU)' },
   { code: 'KDU', label: 'KDU' },
   { code: 'NOUN', label: 'NOUN' },
+  { code: 'ESUT', label: 'ESUT' },
   { code: 'GLOBAL', label: 'National Portals' },
 ];
 
@@ -139,7 +140,11 @@ export default function ResourcesScreen() {
     enabled: !!user,
   });
 
-  const isStaffOrAdmin = user?.role === 'admin' || user?.actualRole === 'admin' || user?.isSuperAdmin === true || user?.role === 'staff' || (user?.email && user.email.toLowerCase().trim() === 'inememmanuel@gmail.com');
+  const isSuperAdmin =
+    user?.isSuperAdmin === true ||
+    user?.adminRole === 'super_admin' ||
+    (user?.email && user.email.toLowerCase().trim() === 'inememmanuel@gmail.com') ||
+    (profile as any)?.admin_role === 'super_admin';
 
   // Determine user's effective campus (e.g. UNILAG, UI, FUNAAB)
   const effectiveCampus =
@@ -154,8 +159,8 @@ export default function ResourcesScreen() {
   const institutionInfo = effectiveCampus !== 'GLOBAL' ? getInstitutionByCode(effectiveCampus) : null;
   const campusDisplayName = institutionInfo?.shortName || (effectiveCampus !== 'GLOBAL' ? effectiveCampus : 'Campus');
 
-  // Non-admin students are strictly isolated to their own university or National Portals
-  const activePortalCampus = resolveActivePortalTarget(user?.role, selectedPortalFilter, effectiveCampus);
+  // Only Super Admin can see all campuses' portals; others are strictly isolated to their own campus or National Portals
+  const activePortalCampus = resolveActivePortalTarget(isSuperAdmin ? 'admin' : 'student', selectedPortalFilter, effectiveCampus);
 
   const { data: portalLinks = [] } = useQuery({
     queryKey: ['portalLinks', activePortalCampus],
@@ -451,11 +456,11 @@ export default function ResourcesScreen() {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, fontSize: 10.5 }}>
-              {isStaffOrAdmin && selectedPortalFilter === 'ALL'
+              {isSuperAdmin && selectedPortalFilter === 'ALL'
                 ? 'ALL PORTAL DIRECTORIES'
                 : `${campusDisplayName.toUpperCase()} DIRECTORY`}
             </AppText>
-            {isStaffOrAdmin && selectedPortalFilter !== 'CURRENT' && selectedPortalFilter !== 'ALL' && (
+            {isSuperAdmin && selectedPortalFilter !== 'CURRENT' && selectedPortalFilter !== 'ALL' && (
               <View
                 style={{
                   backgroundColor: `${colors.brandPrimary}20`,
@@ -475,8 +480,8 @@ export default function ResourcesScreen() {
           </AppText>
         </View>
 
-        {/* University Selector Filter: Admin gets all campuses, Student only gets their campus + national portals */}
-        {isStaffOrAdmin ? (
+        {/* University Selector Filter: Super Admin gets all campuses, others only get their campus + national portals */}
+        {isSuperAdmin ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -585,7 +590,7 @@ export default function ResourcesScreen() {
                 }}
               >
                 <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 9.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  {portal.campusCode && portal.campusCode !== 'GLOBAL' && isStaffOrAdmin && selectedPortalFilter === 'ALL' ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
+                  {portal.campusCode && portal.campusCode !== 'GLOBAL' && isSuperAdmin && selectedPortalFilter === 'ALL' ? `${portal.campusCode} · ` : ''}{portal.category || 'Portal'}
                 </AppText>
                 <AppText weight="bold" variant="caption" numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 15, minHeight: 30 }}>
                   {portal.title}
@@ -897,7 +902,7 @@ export default function ResourcesScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                 <AppText variant="caption" weight="bold" tone="secondary" numberOfLines={1} style={{ letterSpacing: 1 }}>
-                  {isStaffOrAdmin && selectedPortalFilter === 'ALL'
+                  {isSuperAdmin && selectedPortalFilter === 'ALL'
                     ? 'CAMPUS DIRECTORIES & OFFICIAL PORTALS'
                     : `${(institutionInfo?.name || campusDisplayName).toUpperCase()} OFFICIAL PORTALS`}
                 </AppText>
@@ -955,7 +960,7 @@ export default function ResourcesScreen() {
             </View>
 
             {/* Desktop Portal Filter Selector */}
-            {isStaffOrAdmin ? (
+            {isSuperAdmin ? (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}

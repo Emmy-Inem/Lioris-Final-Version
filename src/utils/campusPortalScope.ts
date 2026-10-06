@@ -26,6 +26,7 @@ export function resolveAllowedPortalFilters(
       { code: 'CU', label: 'Covenant (CU)' },
       { code: 'KDU', label: 'KDU' },
       { code: 'NOUN', label: 'NOUN' },
+      { code: 'ESUT', label: 'ESUT' },
       { code: 'GLOBAL', label: 'National Portals' },
     ];
   }

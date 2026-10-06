@@ -208,8 +208,18 @@ export function SettingsScreen() {
   const { scope, setScope, activeCampusCode, homeInstitutionCode } = useCampusScope();
   const [workspaceScopeModalOpen, setWorkspaceScopeModalOpen] = useState(false);
 
-  // Collapsible category state: all categories expanded by default.
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  // Collapsible category state: Account is open by default so categories are not all collapsed automatically;
+  // users can click whichever category they want expanded.
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    workspace: true,
+    appearance: true,
+    accessibility: true,
+    notifications: true,
+    security: true,
+    preview: true,
+    privacy: true,
+    legal: true,
+  });
 
   const isSectionCollapsed = (key: string) => !!collapsedSections[key];
 
@@ -883,6 +893,11 @@ export function SettingsScreen() {
   }
 
   async function handleUploadResume() {
+    const isAlumni = user?.role === 'alumni' || user?.actualRole === 'alumni';
+    if (!isAlumni) {
+      toast.error('Résumé/CV upload is only available to alumni members.');
+      return;
+    }
     haptics.light();
     setUploadingResume(true);
     try {
@@ -1090,41 +1105,43 @@ export function SettingsScreen() {
                   </View>
                 </View>
 
-                {/* Résumé / CV on file - reused as the default across every job application */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: spacing.sm,
-                    backgroundColor: colors.divider,
-                    borderRadius: radius.md,
-                    padding: spacing.md,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
-                    <Ionicons
-                      name={profile?.resumeUrl ? 'document-text' : 'document-attach-outline'}
-                      size={20}
-                      color={profile?.resumeUrl ? colors.brandPrimary : colors.textSecondary}
-                    />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <AppText weight="bold" variant="bodySmall">
-                        My Résumé / CV
-                      </AppText>
-                      <AppText tone="secondary" variant="caption">
-                        {profile?.resumeUrl ? 'On file - used by default on job applications' : 'Not uploaded yet'}
-                      </AppText>
+                {/* Résumé / CV on file - only shown for alumni */}
+                {(user?.role === 'alumni' || user?.actualRole === 'alumni') && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: spacing.sm,
+                      backgroundColor: colors.divider,
+                      borderRadius: radius.md,
+                      padding: spacing.md,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                      <Ionicons
+                        name={profile?.resumeUrl ? 'document-text' : 'document-attach-outline'}
+                        size={20}
+                        color={profile?.resumeUrl ? colors.brandPrimary : colors.textSecondary}
+                      />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <AppText weight="bold" variant="bodySmall">
+                          My Résumé / CV
+                        </AppText>
+                        <AppText tone="secondary" variant="caption">
+                          {profile?.resumeUrl ? 'On file - used by default on job applications' : 'Not uploaded yet'}
+                        </AppText>
+                      </View>
                     </View>
+                    <AppButton
+                      label={uploadingResume ? 'Uploading…' : profile?.resumeUrl ? 'Update' : 'Upload'}
+                      variant="secondary"
+                      size="sm"
+                      loading={uploadingResume}
+                      onPress={handleUploadResume}
+                    />
                   </View>
-                  <AppButton
-                    label={uploadingResume ? 'Uploading…' : profile?.resumeUrl ? 'Update' : 'Upload'}
-                    variant="secondary"
-                    size="sm"
-                    loading={uploadingResume}
-                    onPress={handleUploadResume}
-                  />
-                </View>
+                )}
 
                 <View style={{ paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
                   <AppButton

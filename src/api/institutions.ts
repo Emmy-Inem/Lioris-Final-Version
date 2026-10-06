@@ -34,6 +34,7 @@ export const LAUNCH_INSTITUTIONS: Institution[] = [
   { code: 'CU', name: 'Covenant University', domain: 'covenantuniversity.edu.ng', shortName: 'CU', location: 'Ota, Ogun', primaryColor: '#DC2626' },
   { code: 'KDU', name: 'KolaDaisi University', domain: 'koladaisiuniversity.edu.ng', shortName: 'KDU', location: 'Ibadan, Oyo', primaryColor: '#1E3A8A' },
   { code: 'NOUN', name: 'National Open University of Nigeria', domain: 'noun.edu.ng', shortName: 'NOUN', location: 'Abuja (National)', primaryColor: '#0284C7' },
+  { code: 'ESUT', name: 'Enugu State University of Science and Technology', domain: 'esut.edu.ng', shortName: 'ESUT', location: 'Agbani, Enugu', primaryColor: '#0D9488' },
 ];
 
 function rowToInstitution(row: any): Institution {

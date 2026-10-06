@@ -21,6 +21,7 @@ const KNOWN_INSTITUTION_DOMAINS = [
   'covenantuniversity.edu.ng',
   'kdu.edu.ng',
   'noun.edu.ng',
+  'esut.edu.ng',
 ];
 
 const INSTITUTION_NAMES: Record<string, string> = {
@@ -33,6 +34,7 @@ const INSTITUTION_NAMES: Record<string, string> = {
   CU: 'Covenant University',
   KDU: 'Koladaisi University',
   NOUN: 'National Open University of Nigeria',
+  ESUT: 'Enugu State University of Science and Technology',
 };
 
 /**

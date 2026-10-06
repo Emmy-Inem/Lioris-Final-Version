@@ -23,7 +23,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, updatePostComment, deletePostComment, extractMentionHandles, resolvePostMentions, buildPostShareUrl, PostComment } from '@/api/posts';
-import { toggleSavedItem, SAVED_ITEMS_KEY } from '@/api/bookmarks';
+import { toggleSavedItem, SAVED_ITEMS_KEY, isItemSavedSync, subscribeSavedItems } from '@/api/bookmarks';
 import { canManageCommunityCategory } from '@/api/communities';
 import { getMyProfile } from '@/api/profile';
 import { submitReport } from '@/api/moderation';
@@ -67,7 +67,7 @@ export function PostDetailScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const handleGoBack = () => {
     if (router.canGoBack()) {
-      handleGoBack();
+      router.back();
     } else {
       router.replace(`/${roleGroup}/feed` as any);
     }
@@ -93,6 +93,14 @@ export function PostDetailScreen() {
   const [liked, setLiked] = useState(!!post?.isLikedByMe);
   const [likesCount, setLikesCount] = useState(post?.likesCount ?? 0);
   const [bookmarked, setBookmarked] = useState(!!post?.isBookmarkedByMe);
+  React.useEffect(() => {
+    if (!post?.id) return;
+    setBookmarked(isItemSavedSync('post', post.id) || !!post.isBookmarkedByMe);
+    const unsubscribe = subscribeSavedItems(() => {
+      setBookmarked(isItemSavedSync('post', post.id));
+    });
+    return unsubscribe;
+  }, [post?.id, post?.isBookmarkedByMe]);
   const [savingBookmark, setSavingBookmark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -400,6 +408,27 @@ export function PostDetailScreen() {
         title: post.title,
         subtitle: `${post.authorName} • c/${post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}`,
       });
+      queryClient.setQueriesData({ queryKey: ['feed'] }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) {
+          return old.map((p: any) => (p.id === post.id ? { ...p, isBookmarkedByMe: next } : p));
+        }
+        if (old.pages) {
+          return {
+            ...old,
+            pages: old.pages.map((page: any) =>
+              Array.isArray(page)
+                ? page.map((p: any) => (p.id === post.id ? { ...p, isBookmarkedByMe: next } : p))
+                : page
+            ),
+          };
+        }
+        return old;
+      });
+      queryClient.setQueryData(['post', post.id], (old: any) => {
+        if (!old) return old;
+        return { ...old, isBookmarkedByMe: next };
+      });
       await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
       await queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('post') });
     } catch (err: any) {
@@ -512,16 +541,7 @@ export function PostDetailScreen() {
   {post.authorVerified || post.authorRole === 'admin' ? (
   <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} />
   ) : null}
-  <AppText tone="secondary" variant="caption" style={{ fontSize: 12, flexShrink: 0 }}>
-  •{' '}
-  {post.authorRole === 'student'
-    ? 'Student'
-    : post.authorRole === 'alumni'
-    ? 'Alumni'
-    : post.authorRole === 'admin'
-    ? 'Admin'
-    : 'Staff'}
-  </AppText>
+  
   </View>
   <AppText tone="secondary" variant="caption">
   {timeAgo(post.createdAt)}{post.institutionCode ? ` • ${post.institutionCode}` : ''}

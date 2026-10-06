@@ -21,6 +21,7 @@ import { queryClient } from '@/api/queryClient';
 import { loadBlockedUserIds } from '@/api/connections';
 import { clearLocalNotificationsCache } from '@/api/notifications';
 import { resetToDefaultCampusScope, persistCampus } from '@/hooks/useViewScope';
+import { clearSavedItemsMemoryCache } from '@/api/bookmarks';
 
 // ---------------------------------------------------------------------------
 // Admin "View As / Support Mode" impersonation - session backup helpers.
@@ -445,6 +446,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // reload (notably on web) must never see the previous user's
         // just-created notifications merged back into their list.
         clearLocalNotificationsCache();
+        clearSavedItemsMemoryCache();
         if (!isExplicitLogout.current) {
           router.replace('/(auth)/login');
         }
@@ -796,6 +798,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         persistCampus(undefined);
         resetToDefaultCampusScope();
         clearLocalNotificationsCache();
+        clearSavedItemsMemoryCache();
         try {
           queryClient.clear();
         } catch {

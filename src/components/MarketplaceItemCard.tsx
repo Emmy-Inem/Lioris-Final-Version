@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { MarketplaceListing } from'@/api/types';
 import { isWishlisted, toggleWishlist, markListingSold, deleteListing } from '@/api/marketplace';
+import { SAVED_ITEMS_KEY, subscribeSavedItems } from '@/api/bookmarks';
 import { useSignedUrl } from '@/api/signedUrls';
 import { submitReport } from '@/api/moderation';
 import { getOrCreateConversationWithUser, sendMessage } from '@/api/messaging';
@@ -47,7 +48,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   const segments = useSegments();
   const roleGroup = segments[0];
   const queryClient = useQueryClient();
-  const [saved, setSaved] = useState(isWishlisted(item.id));
+  const [saved, setSaved] = useState(() => isWishlisted(item.id));
   const [messaging, setMessaging] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'cash'>('cash');
@@ -58,6 +59,15 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   const [togglingSold, setTogglingSold] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
+
+  // Sync wishlist state reactively across cards and tabs
+  useEffect(() => {
+    setSaved(isWishlisted(item.id));
+    const unsubscribe = subscribeSavedItems(() => {
+      setSaved(isWishlisted(item.id));
+    });
+    return unsubscribe;
+  }, [item.id]);
 
   // Fresh data from the list wins over a locally-applied edit/sold-toggle -
   // the overrides only bridge the gap until the next refetch.
@@ -88,6 +98,9 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  haptics.light();
  const next = await toggleWishlist(item.id, { title: displayTitle, subtitle: displayPrice, imageUrl: displayImageUrl });
  setSaved(next);
+ void queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
+ void queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('marketplace') });
+ void queryClient.invalidateQueries({ queryKey: ['marketplace'] });
  }
 
  function handleReport() {

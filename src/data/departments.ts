@@ -1087,6 +1087,131 @@ export const NOUN_STRUCTURE: AcademicStructure = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// ESUT: Enugu State University of Science and Technology (Faculties)
+// ---------------------------------------------------------------------------
+export const ESUT_STRUCTURE: AcademicStructure = {
+  campusCode: 'ESUT',
+  groupType: 'Faculty',
+  groups: [
+    {
+      faculty: 'Faculty of Engineering',
+      code: 'ENG',
+      departments: [
+        'Chemical Engineering',
+        'Civil Engineering',
+        'Computer Engineering',
+        'Electrical & Electronic Engineering',
+        'Mechanical & Production Engineering',
+        'Metallurgical & Materials Engineering',
+        'Agricultural Engineering',
+      ],
+    },
+    {
+      faculty: 'Faculty of Applied Natural Sciences',
+      code: 'FANS',
+      departments: [
+        'Computer Science',
+        'Mathematics & Statistics',
+        'Biochemistry',
+        'Microbiology',
+        'Industrial Physics',
+        'Applied Biology & Biotechnology',
+        'Industrial Chemistry',
+        'Geology & Mining',
+      ],
+    },
+    {
+      faculty: 'Faculty of Management Sciences',
+      code: 'FMS',
+      departments: [
+        'Accountancy',
+        'Banking & Finance',
+        'Business Administration',
+        'Marketing',
+        'Insurance & Risk Management',
+        'Public Administration',
+        'Cooperative & Rural Development',
+      ],
+    },
+    {
+      faculty: 'Faculty of Law',
+      code: 'LAW',
+      departments: [
+        'Commercial Law',
+        'Private Law',
+        'Public Law',
+        'Jurisprudence & International Law',
+      ],
+    },
+    {
+      faculty: 'Faculty of Environmental Sciences',
+      code: 'ENV',
+      departments: [
+        'Architecture',
+        'Building Technology',
+        'Estate Management',
+        'Quantity Surveying',
+        'Surveying & Geoinformatics',
+        'Urban & Regional Planning',
+      ],
+    },
+    {
+      faculty: 'College of Medicine & Health Sciences',
+      code: 'CMHS',
+      departments: [
+        'Medicine & Surgery',
+        'Medical Laboratory Science',
+        'Nursing Sciences',
+        'Anatomy',
+        'Physiology',
+      ],
+    },
+    {
+      faculty: 'Faculty of Pharmaceutical Sciences',
+      code: 'PHARM',
+      departments: [
+        'Pharmacy',
+        'Pharmacology',
+        'Pharmaceutical Chemistry',
+        'Pharmaceutics',
+      ],
+    },
+    {
+      faculty: 'Faculty of Agriculture & Natural Resources',
+      code: 'AGRIC',
+      departments: [
+        'Agricultural Economics & Extension',
+        'Agronomy & Ecological Management',
+        'Animal Science & Fisheries',
+        'Food Science & Technology',
+      ],
+    },
+    {
+      faculty: 'Faculty of Education',
+      code: 'EDU',
+      departments: [
+        'Science Education',
+        'Educational Management',
+        'Technology & Vocational Education',
+        'Guidance & Counselling',
+        'Adult Education',
+      ],
+    },
+    {
+      faculty: 'Faculty of Social Sciences & Humanities',
+      code: 'FSS',
+      departments: [
+        'Economics',
+        'Mass Communication',
+        'Political Science',
+        'Psychology',
+        'Sociology',
+      ],
+    },
+  ],
+};
+
 // Map of all academic structures by campus code
 const STRUCTURE_MAP: Record<string, AcademicStructure> = {
   FUNAAB: FUNAAB_STRUCTURE,
@@ -1097,6 +1222,7 @@ const STRUCTURE_MAP: Record<string, AcademicStructure> = {
   CU: CU_STRUCTURE,
   KDU: KDU_STRUCTURE,
   NOUN: NOUN_STRUCTURE,
+  ESUT: ESUT_STRUCTURE,
   GLOBAL: GLOBAL_STRUCTURE,
 };
 
