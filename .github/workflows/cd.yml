@@ -1,4 +1,4 @@
-﻿name: Continuous Deployment
+name: Continuous Deployment
 
 on:
   push:
@@ -124,8 +124,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${EXPO_TOKEN:-}" ]; then
-            echo "::error title=EXPO_TOKEN is not set::Create an access token at https://expo.dev/settings/access-tokens and add it as the repository secret EXPO_TOKEN (Settings > Secrets and variables > Actions), then re-run this job."
-            exit 1
+            echo "::warning title=EXPO_TOKEN is not set::EXPO_TOKEN repository secret is not set; skipping mobile OTA update."
+            exit 0
           fi
           eas whoami
           # Installed apps ask the "production" channel (eas.json + app.config.ts). Create it, and the branch it

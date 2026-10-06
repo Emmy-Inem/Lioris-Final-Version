@@ -3,7 +3,6 @@ const STORAGE_KEY_BASE = 'lioris_visited_portals_v1';
 // Safe runtime detection without breaking Node test runner
 let secureStore: any = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   secureStore = require('expo-secure-store');
 } catch {
   // Node.js test runner or environment without expo-secure-store

@@ -26,9 +26,16 @@
   // ---- 2. Service worker -----------------------------------------------------
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/sw.js').catch(function () {
-        /* Installability and offline shell are optional; the app works without them. */
-      });
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then(function (reg) {
+          if (reg) {
+            reg.update().catch(function () {});
+          }
+        })
+        .catch(function () {
+          /* Installability and offline shell are optional; the app works without them. */
+        });
     });
   }
 

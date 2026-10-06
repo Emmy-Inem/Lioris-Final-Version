@@ -3,7 +3,6 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
-import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { haptics } from '@/utils/haptics';

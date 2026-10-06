@@ -9,7 +9,7 @@
  *    deploy has removed them from the server.
  *  - Everything else (Supabase, storage, APIs, other origins) is never touched.
  */
-const VERSION = 'lioris-v2';
+const VERSION = 'lioris-v3';
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 const MAX_STATIC_ENTRIES = 160;
