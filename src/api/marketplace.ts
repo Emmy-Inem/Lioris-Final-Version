@@ -325,8 +325,14 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
    throw new Error('Your account is currently suspended from creating marketplace listings.');
  }
 
- const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
- const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || profile?.verification_status === 'verified' || isEdu;
+ const isPrivilegedUser =
+    profile?.role === 'admin' ||
+    profile?.role === 'staff' ||
+    profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    (profile as any)?.admin_role === 'super_admin';
+  const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
+  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified' || isEdu;
  if (!isVerified) {
    throw new Error('Only verified students can create listings on the campus marketplace. Please verify your student status.');
  }

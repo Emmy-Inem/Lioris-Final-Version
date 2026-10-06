@@ -488,8 +488,14 @@ export async function createResource(
     throw new Error('Your account is currently suspended from uploading resources.');
   }
 
+  const isPrivilegedUser =
+    uploaderProfile?.role === 'admin' ||
+    uploaderProfile?.role === 'staff' ||
+    uploaderProfile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    (uploaderProfile as any)?.admin_role === 'super_admin';
   const isEdu = !!(uploaderProfile?.email && uploaderProfile.email.toLowerCase().endsWith('.edu.ng') && uploaderProfile.verification_status !== 'rejected');
-  const isVerified = uploaderProfile?.role === 'admin' || uploaderProfile?.role === 'staff' || uploaderProfile?.verification_status === 'verified' || isEdu;
+  const isVerified = isPrivilegedUser || uploaderProfile?.verification_status === 'verified' || isEdu;
   if (!isVerified) {
     throw new Error('Only verified student accounts can upload academic resources. Please verify your student status.');
   }

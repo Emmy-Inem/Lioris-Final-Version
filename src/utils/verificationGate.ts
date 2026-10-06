@@ -1,8 +1,14 @@
 export interface MinimalUserProfile {
+  id?: string;
   email?: string;
   isVerified?: boolean;
   verificationStatus?: 'none' | 'pending' | 'verified' | 'rejected' | string;
   userType?: string;
+  role?: string;
+  actualRole?: string;
+  adminRole?: string | null;
+  isSuperAdmin?: boolean;
+  isCampusAdmin?: boolean;
 }
 
 const KNOWN_INSTITUTION_DOMAINS = [
@@ -43,18 +49,33 @@ export function isOfficialInstitutionalEmail(email?: string | null): boolean {
 /**
  * Checks if a user is an unverified personal account.
  * 
- * Returns true if:
- * 1. The account is unverified (isVerified is false or verificationStatus !== 'verified')
- * 2. AND the email does NOT belong to an official university institutional domain (.edu.ng)
- * 3. AND the account is not an administrator or staff.
+ * Returns false (meaning user has FULL verified access) if:
+ * 1. The account is a Super Admin or Platform Administrator.
+ * 2. The account is staff.
+ * 3. The account has isVerified = true or verificationStatus = 'verified'.
+ * 4. The account uses an official accredited university email (.edu.ng).
  */
 export function isUnverifiedPersonalUser(
   profile: MinimalUserProfile | null | undefined,
 ): boolean {
   if (!profile) return false;
 
-  // Admins and staff have elevated verification privilege
-  if (profile.userType === 'admin' || profile.userType === 'staff') {
+  const emailLower = (profile.email || '').toLowerCase().trim();
+  const isMasterAdminEmail = emailLower === 'inememmanuel@gmail.com';
+
+  // Super admins, admins, and staff have absolute verified access everywhere across the platform
+  if (
+    isMasterAdminEmail ||
+    profile.isSuperAdmin ||
+    profile.userType === 'admin' ||
+    profile.role === 'admin' ||
+    profile.actualRole === 'admin' ||
+    profile.adminRole === 'super_admin' ||
+    profile.adminRole === 'campus_admin' ||
+    profile.userType === 'staff' ||
+    profile.role === 'staff' ||
+    profile.actualRole === 'staff'
+  ) {
     return false;
   }
 

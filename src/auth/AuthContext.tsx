@@ -193,34 +193,51 @@ async function persist(user: SessionUser) {
 // restored-admin session should always reflect who is *actually* signed in
 // right now, never a stale previewed role left over from before the swap.
 async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']>): Promise<SessionUser> {
- const userEmail = session.user.email ?? '';
- const { data: profile } = await supabase
- .from('profiles')
- .select('role, full_name, admin_role, campus_code')
- .eq('id', session.user.id)
- .maybeSingle();
+  const userEmail = (session.user.email ?? '').toLowerCase().trim();
+  const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
 
- const role = (profile?.role || 'student') as UserRole;
- const adminRole = profile?.admin_role as AdminRoleType | null | undefined;
- const isSuperAdmin = role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (profile?.campus_code === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com')));
- const isCampusAdmin = role === 'admin' && !isSuperAdmin;
- const campusCode = profile?.campus_code || null;
- const fullName =
- profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
+  let profile: any = null;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role, full_name, admin_role, campus_code')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    if (!error && data) {
+      profile = data;
+    } else if (error) {
+      const { data: fallbackData } = await supabase
+        .from('profiles')
+        .select('role, full_name, campus_code')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      if (fallbackData) profile = fallbackData;
+    }
+  } catch (err) {
+    console.warn('[AuthContext] fetchSessionUserForSession profile query failed:', err);
+  }
 
- return {
- id: session.user.id,
- fullName,
- email: userEmail,
- role,
- actualRole: role,
- adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
- campusCode,
- isSuperAdmin,
- isCampusAdmin,
- onboardingComplete: true,
- mfaVerified: !roleRequiresMfa(role),
- };
+  const role = isMasterAdminEmail ? 'admin' : ((profile?.role || 'student') as UserRole);
+  const adminRole = isMasterAdminEmail ? 'super_admin' : (profile?.admin_role as AdminRoleType | null | undefined);
+  const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (profile?.campus_code === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com'))));
+  const isCampusAdmin = role === 'admin' && !isSuperAdmin;
+  const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || null);
+  const fullName =
+    profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
+
+  return {
+    id: session.user.id,
+    fullName,
+    email: userEmail,
+    role,
+    actualRole: isMasterAdminEmail ? 'admin' : role,
+    adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+    campusCode,
+    isSuperAdmin,
+    isCampusAdmin,
+    onboardingComplete: true,
+    mfaVerified: !roleRequiresMfa(role),
+  };
 }
 
 function generateUUID() {
@@ -303,25 +320,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
         const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
         if (session?.user && mounted) {
-          const userEmail = session.user.email ?? '';
-
           // Securely query verified database profile for role with 3s timeout
-          const profilePromise = supabase
-            .from('profiles')
-            .select('role, full_name, onboarding_complete, department, admin_role, campus_code')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          const profileTimeout = new Promise<{ data: null }>((resolve) =>
-            setTimeout(() => resolve({ data: null }), 3000)
-          );
-          const { data: profile } = await Promise.race([profilePromise, profileTimeout]);
+          const userEmail = (session.user.email ?? '').toLowerCase().trim();
+          const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
+
+          let profile: any = null;
+          try {
+            const profilePromise = supabase
+              .from('profiles')
+              .select('role, full_name, onboarding_complete, department, admin_role, campus_code')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            const profileTimeout = new Promise<{ data: null; error?: any }>((resolve) =>
+              setTimeout(() => resolve({ data: null }), 3000)
+            );
+            const { data, error } = await Promise.race([profilePromise, profileTimeout]);
+            if (!error && data) {
+              profile = data;
+            } else if (error) {
+              const { data: fallbackData } = await supabase
+                .from('profiles')
+                .select('role, full_name, onboarding_complete, department, campus_code')
+                .eq('id', session.user.id)
+                .maybeSingle();
+              if (fallbackData) profile = fallbackData;
+            }
+          } catch {}
 
           const storedUser = await getSessionUser();
           const fallbackRole = (storedUser?.actualRole || userRef.current?.actualRole || 'student') as UserRole;
-          const role = (profile?.role || fallbackRole) as UserRole;
-          const adminRole = (profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined;
-          const campusCode = profile?.campus_code || storedUser?.campusCode || null;
-          const isSuperAdmin = role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com')));
+          const role = isMasterAdminEmail ? 'admin' : ((profile?.role || fallbackRole) as UserRole);
+          const adminRole = isMasterAdminEmail ? 'super_admin' : ((profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined);
+          const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || storedUser?.campusCode || null);
+          const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com'))));
           const isCampusAdmin = role === 'admin' && !isSuperAdmin;
           const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || storedUser?.fullName || userRef.current?.fullName || userEmail.split('@')[0] || 'Campus Member';
           
@@ -421,9 +452,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (session?.user && mounted) {
-        const userEmail = session.user.email ?? '';
-
         // Securely query database profile for role with 3s timeout failsafe
+        const userEmail = (session.user.email ?? '').toLowerCase().trim();
+        const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
+
         let profile: any = null;
         try {
           const profileFetch = supabase
@@ -435,7 +467,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setTimeout(() => reject(new Error('Profile query timeout on resume')), 3000)
           );
           const result = await Promise.race([profileFetch, timeout]);
-          profile = result?.data ?? null;
+          if (!result?.error && result?.data) {
+            profile = result.data;
+          } else if (result?.error) {
+            const { data: fallbackData } = await supabase
+              .from('profiles')
+              .select('role, full_name, campus_code')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            if (fallbackData) profile = fallbackData;
+          }
         } catch (fetchErr) {
           console.warn('[AuthContext] Profile query timed out or failed on resume, using cached session metadata:', fetchErr);
         }
@@ -443,10 +484,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const storedUser = await getSessionUser();
         const fallbackRole = (userRef.current?.actualRole || storedUser?.actualRole || 'student') as UserRole;
-        const role = (profile?.role || fallbackRole) as UserRole;
-        const adminRole = (profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined;
-        const campusCode = profile?.campus_code || storedUser?.campusCode || null;
-        const isSuperAdmin = role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com')));
+        const role = isMasterAdminEmail ? 'admin' : ((profile?.role || fallbackRole) as UserRole);
+        const adminRole = isMasterAdminEmail ? 'super_admin' : ((profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined);
+        const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || storedUser?.campusCode || null);
+        const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com'))));
         const isCampusAdmin = role === 'admin' && !isSuperAdmin;
         const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userRef.current?.fullName || storedUser?.fullName || userEmail.split('@')[0] || 'Campus Member';
 
@@ -583,7 +624,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Admin's local "View As" preview (see switchRole above) - collapsing
       // role to match rather than risk a preview going stale against a role
       // that just changed for real.
-      const isSuperAdmin = newRole === 'admin' && (current.adminRole === 'super_admin' || (!current.adminRole && (current.campusCode === 'GLOBAL' || current.email === 'inememmanuel@gmail.com')));
+      const isSuperAdmin = (current.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') || (newRole === 'admin' && (current.adminRole === 'super_admin' || (!current.adminRole && (current.campusCode === 'GLOBAL' || current.email === 'inememmanuel@gmail.com')))) || (current.actualRole === 'admin' && current.isSuperAdmin);
       const isCampusAdmin = newRole === 'admin' && !isSuperAdmin;
       const nextUser: SessionUser = {
         ...current,
@@ -647,13 +688,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const session = await authApi.login({ email, password, captchaToken });
         await setTokens(session.accessToken, session.refreshToken);
 
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('department, is_suspended, deactivated_at, onboarding_complete, admin_role, campus_code')
-          .eq('id', session.user.id)
-          .maybeSingle();
+        const userEmail = (email || '').toLowerCase().trim();
+        const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
 
-        if (prof?.is_suspended) {
+        let prof: any = null;
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('department, is_suspended, deactivated_at, onboarding_complete, admin_role, campus_code')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          if (!error && data) {
+            prof = data;
+          } else if (error) {
+            const { data: fallbackProf } = await supabase
+              .from('profiles')
+              .select('department, is_suspended, deactivated_at, onboarding_complete, campus_code')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            if (fallbackProf) prof = fallbackProf;
+          }
+        } catch {}
+
+        if (prof?.is_suspended && !isMasterAdminEmail) {
           isExplicitLogout.current = true;
           await clearTokens();
           await setSessionUser(null as any);
@@ -662,9 +719,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error('Your campus account has been suspended by administration. Access to this campus network has been revoked.');
         }
 
-        // Logging back in is the reactivation step for a self-deactivated
-        // account (see deactivateMyAccount in Settings) - best-effort, never
-        // blocks a successful sign-in.
         if (prof?.deactivated_at) {
           try {
             await supabase.rpc('reactivate_my_account');
@@ -675,23 +729,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           prof?.onboarding_complete === true ||
           (prof?.onboarding_complete !== false && Boolean(prof?.department)) ||
           session.user.role === 'admin' ||
-          session.user.role === 'staff';
+          session.user.role === 'staff' ||
+          isMasterAdminEmail;
 
-        const adminRole = prof?.admin_role as AdminRoleType | null | undefined;
-        const campusCode = prof?.campus_code || null;
-        const isSuperAdmin = session.user.role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || email === 'inememmanuel@gmail.com')));
-        const isCampusAdmin = session.user.role === 'admin' && !isSuperAdmin;
+        const userRole = isMasterAdminEmail ? 'admin' : session.user.role;
+        const adminRole = isMasterAdminEmail ? 'super_admin' : (prof?.admin_role as AdminRoleType | null | undefined);
+        const campusCode = isMasterAdminEmail ? 'GLOBAL' : (prof?.campus_code || null);
+        const isSuperAdmin = isMasterAdminEmail || (userRole === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com'))));
+        const isCampusAdmin = userRole === 'admin' && !isSuperAdmin;
 
         const nextUser: SessionUser = {
           ...session.user,
-          actualRole: session.user.role,
+          role: userRole,
+          actualRole: userRole,
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           campusCode,
           isSuperAdmin,
           isCampusAdmin,
           onboardingComplete: isOnboarded,
-          onboardingStep: isOnboarded ? undefined : firstOnboardingStep(session.user.role),
-          mfaVerified: !roleRequiresMfa(session.user.role),
+          onboardingStep: isOnboarded ? undefined : firstOnboardingStep(userRole),
+          mfaVerified: !roleRequiresMfa(userRole),
         };
         await persist(nextUser);
         setUser(nextUser);

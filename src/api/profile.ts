@@ -32,15 +32,17 @@ export function invalidateProfileCache(userId: string) {
  * from Supabase, or as a base for empty fields.
  */
 function defaultProfileFor(user: { id: string; fullName: string; role: UserRole; email?: string }): UserProfile {
- if (profileState.has(user.id)) return profileState.get(user.id)!;
+  if (profileState.has(user.id)) return profileState.get(user.id)!;
 
- const isAdmin = user.role === 'admin';
- const resolvedEmail = user.email || `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`;
+  const emailLower = (user.email || '').toLowerCase().trim();
+  const isMasterAdmin = emailLower === 'inememmanuel@gmail.com';
+  const isAdmin = user.role === 'admin' || isMasterAdmin;
+  const resolvedEmail = user.email || (isMasterAdmin ? 'inememmanuel@gmail.com' : `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`);
  const username = user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
 
  // Authoritatively derive campus institution from email domain
- const emailLower = resolvedEmail.toLowerCase();
- let inst = getInstitutionForEmail(emailLower);
+  const instEmailLower = resolvedEmail.toLowerCase();
+ let inst = getInstitutionForEmail(instEmailLower);
  let instCode = inst?.code;
  let instName = inst?.name;
 
@@ -60,18 +62,19 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
    fullName: user.fullName || 'User',
    username,
    email: resolvedEmail,
-   userType: user.role,
-   graduationYear: undefined,
-   bio: '',
-   department: 'General Studies',
-   interests: [],
-   institutionName: instName,
-   institutionCode: instCode,
-   avatarUrl: undefined,
-   coverUrl: undefined,
-   isVerified,
-   isCampusAmbassador: false,
-   verificationStatus,
+   userType: isAdmin ? 'admin' : user.role,
+    adminRole: isMasterAdmin ? 'super_admin' : (isAdmin ? 'campus_admin' : null),
+    graduationYear: undefined,
+    bio: '',
+    department: 'General Studies',
+    interests: [],
+    institutionName: instName,
+    institutionCode: instCode,
+    avatarUrl: undefined,
+    coverUrl: undefined,
+    isVerified,
+    isCampusAmbassador: false,
+    verificationStatus,
    postsCount: 0,
    resourcesCount: 0,
    eventsCount: 0,
@@ -123,23 +126,42 @@ export async function getMyProfile(user?: {
  }
 
  const fallback = defaultProfileFor(resolvedUser);
- try {
- const { data, error } = await supabase
- .from('profiles')
- .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, admin_role, is_suspended, is_campus_ambassador, graduation_year, industry, company, job_title, location, linkedin_url')
- .eq('id', resolvedUser.id)
- .single();
-   if (!error && data) {
-     const emailLower = (resolvedUser.email || '').toLowerCase();
-     const isPersonalAccount =
-       emailLower.endsWith('@gmail.com') ||
-       emailLower.endsWith('@yahoo.com') ||
-       emailLower.endsWith('@hotmail.com') ||
-       emailLower.endsWith('@outlook.com');
+  try {
+    let data: any = null;
+    let error: any = null;
 
-     // Use DB role as authoritative source (may differ from auth metadata if admin changed it)
-     const dbRole = (data.role || resolvedUser.role) as UserRole;
-     const isAdmin = dbRole === 'admin';
+    const fullRes = await supabase
+      .from('profiles')
+      .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, admin_role, is_suspended, is_campus_ambassador, graduation_year, industry, company, job_title, location, linkedin_url')
+      .eq('id', resolvedUser.id)
+      .maybeSingle();
+
+    if (!fullRes.error && fullRes.data) {
+      data = fullRes.data;
+    } else if (fullRes.error) {
+      // Degrade gracefully if admin_role column does not exist on profiles table yet
+      const fallbackRes = await supabase
+        .from('profiles')
+        .select('id, full_name, username, bio, department, faculty, level, interests, campus_code, avatar_url, banner_url, resume_url, verification_status, role, is_suspended, is_campus_ambassador, graduation_year, industry, company, job_title, location, linkedin_url')
+        .eq('id', resolvedUser.id)
+        .maybeSingle();
+      if (!fallbackRes.error && fallbackRes.data) {
+        data = fallbackRes.data;
+      } else {
+        error = fallbackRes.error;
+      }
+    }
+
+    if (data) {
+      const emailLower = (resolvedUser.email || '').toLowerCase().trim();
+      const isPersonalAccount =
+        emailLower.endsWith('@gmail.com') ||
+        emailLower.endsWith('@yahoo.com') ||
+        emailLower.endsWith('@hotmail.com') ||
+        emailLower.endsWith('@outlook.com');
+      const isMasterAdmin = emailLower === 'inememmanuel@gmail.com';
+      const dbRole = isMasterAdmin ? 'admin' : ((data.role || resolvedUser.role) as UserRole);
+      const isAdmin = dbRole === 'admin' || isMasterAdmin;
 
      const matchedInst = resolvedUser.email ? getInstitutionForEmail(resolvedUser.email) : null;
      const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL' && !isPersonalAccount);
@@ -184,26 +206,26 @@ export async function getMyProfile(user?: {
 
      const merged: UserProfile = {
        ...fallback,
-       adminRole: (data.admin_role as any) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null),
-       fullName: data.full_name || fallback.fullName,
-       username: data.username || fallback.username,
-       bio: data.bio || fallback.bio,
-       department: data.department || fallback.department,
-       faculty: data.faculty || fallback.faculty,
-       academicLevel: data.level || fallback.academicLevel,
-       interests: data.interests || fallback.interests,
-       institutionName: inst?.name || fallback.institutionName || 'Campus Network',
-       institutionCode: inst?.code || fallback.institutionCode,
-       avatarUrl: data.avatar_url || fallback.avatarUrl,
-       coverUrl: data.banner_url || fallback.coverUrl,
-       resumeUrl: data.resume_url || null,
-       graduationYear: data.graduation_year ?? fallback.graduationYear ?? null,
-       industry: data.industry || null,
-       company: data.company || null,
-       jobTitle: data.job_title || null,
-       location: data.location || null,
-       linkedinUrl: data.linkedin_url || null,
-       userType: dbRole,
+       adminRole: isMasterAdmin ? 'super_admin' : ((data.admin_role as any) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null)),
+        fullName: data.full_name || fallback.fullName,
+        username: data.username || fallback.username,
+        bio: data.bio || fallback.bio,
+        department: data.department || fallback.department,
+        faculty: data.faculty || fallback.faculty,
+        academicLevel: data.level || fallback.academicLevel,
+        interests: data.interests || fallback.interests,
+        institutionName: inst?.name || fallback.institutionName || 'Campus Network',
+        institutionCode: inst?.code || fallback.institutionCode,
+        avatarUrl: data.avatar_url || fallback.avatarUrl,
+        coverUrl: data.banner_url || fallback.coverUrl,
+        resumeUrl: data.resume_url || null,
+        graduationYear: data.graduation_year ?? fallback.graduationYear ?? null,
+        industry: data.industry || null,
+        company: data.company || null,
+        jobTitle: data.job_title || null,
+        location: data.location || null,
+        linkedinUrl: data.linkedin_url || null,
+        userType: isAdmin ? 'admin' : dbRole,
        isVerified,
        isCampusAmbassador: !!data.is_campus_ambassador,
        verificationStatus,

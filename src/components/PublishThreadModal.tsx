@@ -119,7 +119,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
   const { isFeatureEnabled } = useFeatureFlags();
   const globalWorkspaceEnabled =
     isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope');
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = !!(user?.role === 'admin' || user?.actualRole === 'admin' || user?.isSuperAdmin || (user?.email && user.email.toLowerCase().trim() === 'inememmanuel@gmail.com'));
   const { campusCode, homeInstitutionCode } = useCampusScope();
   const effectiveCampus = (campusCode && campusCode !== 'GLOBAL') ? campusCode : homeInstitutionCode;
   const toast = useToast();

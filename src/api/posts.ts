@@ -790,8 +790,16 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
     throw new Error('Your account is currently suspended from posting content.');
   }
 
+  const isPrivilegedUser =
+    authorRole === 'admin' ||
+    authorRole === 'staff' ||
+    profile?.role === 'admin' ||
+    profile?.role === 'staff' ||
+    profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    (profile as any)?.admin_role === 'super_admin';
   const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
-  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || profile?.verification_status === 'verified' || isEdu;
+  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified' || isEdu;
   if (!isVerified) {
     throw new Error('Only verified student accounts can publish forum posts and threads. Please verify your student status.');
   }

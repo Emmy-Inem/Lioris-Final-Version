@@ -139,7 +139,7 @@ export default function ResourcesScreen() {
     enabled: !!user,
   });
 
-  const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff';
+  const isStaffOrAdmin = user?.role === 'admin' || user?.actualRole === 'admin' || user?.isSuperAdmin === true || user?.role === 'staff' || (user?.email && user.email.toLowerCase().trim() === 'inememmanuel@gmail.com');
 
   // Determine user's effective campus (e.g. UNILAG, UI, FUNAAB)
   const effectiveCampus =

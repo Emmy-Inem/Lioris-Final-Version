@@ -131,9 +131,12 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
     .eq('id', userId)
     .single();
 
+  const isMasterAdmin =
+    profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
   const isEduEmail = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
-  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || profile?.verification_status === 'verified' || isEduEmail;
-  const isAmbassadorOrAdmin = profile?.is_campus_ambassador || profile?.role === 'admin' || profile?.role === 'staff';
+  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin || profile?.verification_status === 'verified' || isEduEmail;
+  const isAmbassadorOrAdmin = profile?.is_campus_ambassador || profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin;
 
   if (!isVerified) {
     throw new Error('You need a verified student account to propose a discussion space.');

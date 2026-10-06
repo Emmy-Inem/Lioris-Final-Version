@@ -73,7 +73,7 @@ function findActiveChannel(channels: ForumCommunityRecord[], selected: string | 
 export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = !!(user?.role === 'admin' || user?.actualRole === 'admin' || user?.isSuperAdmin || (user?.email && user.email.toLowerCase().trim() === 'inememmanuel@gmail.com'));
   const { isFeatureEnabled } = useFeatureFlags();
   const { isDesktop, isWideDesktop } = useResponsive();
   const insets = useSafeAreaInsets();

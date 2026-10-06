@@ -90,6 +90,43 @@ test('isUnverifiedPersonalUser does not flag admins or staff', () => {
     }),
     false
   );
+
+  // Super Admin by email
+  assert.equal(
+    isUnverifiedPersonalUser({
+      email: 'inememmanuel@gmail.com',
+      isVerified: false,
+      verificationStatus: 'none',
+      userType: 'student',
+    }),
+    false
+  );
+
+  // Super Admin previewing student role
+  assert.equal(
+    isUnverifiedPersonalUser({
+      email: 'inememmanuel@gmail.com',
+      isVerified: false,
+      verificationStatus: 'none',
+      role: 'student',
+      actualRole: 'admin',
+      isSuperAdmin: true,
+      adminRole: 'super_admin',
+    }),
+    false
+  );
+
+  // Super Admin flag without email match
+  assert.equal(
+    isUnverifiedPersonalUser({
+      email: 'otheradmin@gmail.com',
+      isVerified: false,
+      verificationStatus: 'none',
+      role: 'student',
+      isSuperAdmin: true,
+    }),
+    false
+  );
 });
 
 test('isUnverifiedPersonalUser handles null or undefined profiles safely', () => {
