@@ -547,7 +547,7 @@ export default function SupportDeskScreen() {
                 {selectedTicket.origin === 'ai_escalation' && selectedTicket.chatTranscript && (
                   <View style={{ marginBottom: spacing.md, padding: spacing.md, backgroundColor: isDark ? '#1E1B4B' : '#EEF2FF', borderRadius: radius.md, borderWidth: 1, borderColor: isDark ? '#3730A3' : '#C7D2FE' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <Ionicons name="sparkles" size={14} color={isDark ? '#A5B4FC' : '#4338CA'} />
+                      <Ionicons name="flash-outline" size={14} color={isDark ? '#A5B4FC' : '#4338CA'} />
                       <AppText weight="bold" style={{ color: isDark ? '#A5B4FC' : '#4338CA', fontSize: 13 }}>
                         AI Assistant Conversation
                       </AppText>

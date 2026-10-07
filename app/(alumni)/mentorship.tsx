@@ -184,7 +184,7 @@ export default function AlumniMentorshipScreen() {
         ) : !profile ? (
           <SolidCard radius={20} style={{ gap: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="sparkles-outline" size={20} color={colors.brandPrimary} />
+              <Ionicons name="people-outline" size={20} color={colors.brandPrimary} />
               <AppText weight="bold">Become a mentor</AppText>
             </View>
             <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 19 }}>

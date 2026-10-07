@@ -223,7 +223,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     }
     const isAmbassadorOrAdmin = !!(profile?.isCampusAmbassador || isAdmin || user?.role === 'staff');
     if (!isAmbassadorOrAdmin) {
-      toast.info('Discussion spaces are curated by official Campus Ambassadors.');
+      toast.info('Discussion spaces are curated by campus moderators.');
       return;
     }
     haptics.medium();

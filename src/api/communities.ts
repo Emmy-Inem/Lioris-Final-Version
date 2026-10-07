@@ -143,7 +143,7 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
   }
 
   if (!isAmbassadorOrAdmin) {
-    throw new Error('Campus discussion spaces are curated by official Campus Ambassadors. Apply to become an ambassador to create new spaces.');
+    throw new Error('Campus discussion spaces are curated by campus moderators and leads. Contact moderation to create new spaces.');
   }
 
   const effectiveCampus = (payload.campusCode && payload.campusCode !== 'GLOBAL' && payload.campusCode !== 'ALL')

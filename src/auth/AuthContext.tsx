@@ -367,9 +367,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const cachedOnboarding = userRef.current?.onboardingComplete ?? storedUser?.onboardingComplete;
           const isOnboarded = profile
             ? (profile.onboarding_complete === true ||
-               (profile.onboarding_complete !== false && Boolean(profile.department)) ||
                role === 'admin' ||
-               role === 'staff')
+               role === 'staff' ||
+               isMasterAdminEmail)
             : (cachedOnboarding ?? (role === 'admin' || role === 'staff'));
 
           const nextUser: SessionUser = {
@@ -504,9 +504,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const cachedOnboarding = userRef.current?.onboardingComplete ?? storedUser?.onboardingComplete;
         const isOnboarded = profile
           ? (profile.onboarding_complete === true ||
-             (profile.onboarding_complete !== false && Boolean(profile.department)) ||
              role === 'admin' ||
-             role === 'staff')
+             role === 'staff' ||
+             isMasterAdminEmail)
           : (cachedOnboarding ?? (role === 'admin' || role === 'staff'));
 
         // Returning to the app re-emits SIGNED_IN for the account that is already
@@ -731,7 +731,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const isOnboarded =
           prof?.onboarding_complete === true ||
-          (prof?.onboarding_complete !== false && Boolean(prof?.department)) ||
           session.user.role === 'admin' ||
           session.user.role === 'staff' ||
           isMasterAdminEmail;

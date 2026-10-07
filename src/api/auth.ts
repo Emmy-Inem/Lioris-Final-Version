@@ -533,6 +533,14 @@ export async function verifyPasswordResetOtpAndSetPassword(
 
   clearOtpFailures(cleanEmail);
 
+  if (data.session) {
+    try {
+      await supabase.auth.setSession(data.session);
+    } catch {
+      // non-blocking if already set
+    }
+  }
+
   const { error: updateError } = await supabase.auth.updateUser({
     password: newPassword,
   });
@@ -543,6 +551,32 @@ export async function verifyPasswordResetOtpAndSetPassword(
 
   return { success: true };
 }
+
+export async function verifyRecoveryHash(tokenHash: string): Promise<boolean> {
+  const { data, error } = await supabase.auth.verifyOtp({
+    token_hash: tokenHash,
+    type: 'recovery',
+  });
+  if (error || !data?.session) {
+    throw new Error(getFriendlyErrorMessage(error, 'Invalid or expired recovery link.'));
+  }
+  try {
+    await supabase.auth.setSession(data.session);
+  } catch {}
+  return true;
+}
+
+export async function exchangeRecoveryAuthCode(code: string): Promise<boolean> {
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error || !data?.session) {
+    throw new Error(getFriendlyErrorMessage(error, 'Invalid or expired recovery link.'));
+  }
+  try {
+    await supabase.auth.setSession(data.session);
+  } catch {}
+  return true;
+}
+
 
 // Real Supabase email confirmation via supabase.auth.verifyOtp - no custom
 // backend involved. Supabase issues signup OTPs as type 'signup'; some

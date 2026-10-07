@@ -287,7 +287,7 @@ export default function RegisterScreen() {
      }}
      style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
    >
-     <Ionicons name="sparkles" size={14} color={colors.brandPrimary} />
+     <Ionicons name="school-outline" size={14} color={colors.brandPrimary} />
      <AppText variant="caption" tone="brand" weight="bold">
        Don't see your university? Join Waitlist
      </AppText>

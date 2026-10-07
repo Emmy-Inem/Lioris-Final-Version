@@ -29,7 +29,7 @@ type CategoryFilter = typeof CATEGORIES[number];
 export default function ExploreForumsScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
-  const { isDesktop } = useResponsive();
+  const { isDesktop, width } = useResponsive();
   const toast = useToast();
   const queryClient = useQueryClient();
   const segments = useSegments();
@@ -46,7 +46,7 @@ export default function ExploreForumsScreen() {
     enabled: !!user,
   });
 
-  const isAmbassadorOrAdmin = !!(
+  const isModeratorOrAdmin = !!(
     profile?.isCampusAmbassador ||
     user?.role === 'admin' ||
     user?.actualRole === 'admin' ||
@@ -59,7 +59,7 @@ export default function ExploreForumsScreen() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('All');
   const [proposingOpen, setProposingOpen] = useState(false);
-  const [ambassadorInfoOpen, setAmbassadorInfoOpen] = useState(false);
+  const [spaceInfoOpen, setSpaceInfoOpen] = useState(false);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -153,6 +153,8 @@ export default function ExploreForumsScreen() {
     }
   }
 
+  const isSmallMobile = width < 400;
+
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
@@ -160,7 +162,8 @@ export default function ExploreForumsScreen() {
         style={{ flex: 1, width: '100%' }}
         contentContainerStyle={{
           paddingBottom: isDesktop ? 60 : 120,
-          paddingTop: spacing.sm,
+          paddingTop: spacing.xs,
+          paddingHorizontal: isDesktop ? 0 : 2,
           gap: spacing.md,
           maxWidth: isDesktop ? 860 : undefined,
           width: '100%',
@@ -168,9 +171,17 @@ export default function ExploreForumsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Navigation Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+        {/* Navigation Header - Responsive Mobile & Desktop Layout */}
+        <View
+          style={{
+            flexDirection: isSmallMobile ? 'column' : 'row',
+            alignItems: isSmallMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            marginBottom: spacing.xs,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
             <Pressable
               onPress={() => {
                 if (router.canGoBack()) router.back();
@@ -186,15 +197,16 @@ export default function ExploreForumsScreen() {
                 borderColor: colors.border,
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
               <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
             </Pressable>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <AppText weight="bold" variant={isDesktop ? 'h1' : 'h3'}>
+              <AppText weight="bold" variant={isDesktop ? 'h1' : 'h3'} numberOfLines={1}>
                 {isGlobalActive ? 'Global Discussion Spaces' : `${effectiveCampus} Discussion Spaces`}
               </AppText>
-              <AppText tone="secondary" variant="caption">
+              <AppText tone="secondary" variant="caption" numberOfLines={1}>
                 {isGlobalActive
                   ? `Discover and join student communities across all campuses (${communities.length > 1 ? communities.length - 1 : communities.length} available)`
                   : `Curated campus communities for ${effectiveCampus} (${communities.length > 1 ? communities.length - 1 : communities.length} available)`}
@@ -208,88 +220,72 @@ export default function ExploreForumsScreen() {
                 setVerificationModalOpen(true);
                 return;
               }
-              if (!isAmbassadorOrAdmin) {
-                setAmbassadorInfoOpen(true);
-                return;
-              }
               setProposingOpen(true);
             }}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 5,
+              gap: 6,
               paddingHorizontal: 14,
               paddingVertical: 8,
               borderRadius: radius.pill,
-              backgroundColor: isAmbassadorOrAdmin ? colors.brandPrimary : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'),
+              backgroundColor: colors.brandPrimary,
+              alignSelf: isSmallMobile ? 'stretch' : 'auto',
+              justifyContent: 'center',
             }}
           >
-            <Ionicons name={isAmbassadorOrAdmin ? 'add' : 'sparkles'} size={16} color={isAmbassadorOrAdmin ? '#FFFFFF' : colors.textPrimary} />
-            <AppText variant="caption" weight="bold" style={{ color: isAmbassadorOrAdmin ? '#FFFFFF' : colors.textPrimary }}>
-              {isAmbassadorOrAdmin ? 'Create Space' : 'Ambassador Spaces'}
+            <Ionicons name="add-outline" size={16} color="#FFFFFF" />
+            <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF' }}>
+              Propose Space
             </AppText>
           </Pressable>
         </View>
 
-        {/* Campus Ambassador Callout Banner */}
+        {/* Discussion Spaces Clean Overview Banner */}
         {!isGlobalActive && (
           <SolidCard
             frosted
             radius={16}
             style={{
               padding: spacing.md,
-              flexDirection: 'row',
-              alignItems: 'center',
+              flexDirection: isSmallMobile ? 'column' : 'row',
+              alignItems: isSmallMobile ? 'flex-start' : 'center',
               gap: 12,
               borderLeftWidth: 4,
-              borderLeftColor: isAmbassadorOrAdmin ? '#10B981' : colors.brandPrimary,
+              borderLeftColor: colors.brandPrimary,
             }}
           >
-            <View
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+              <Ionicons
+                name="chatbubbles-outline"
+                size={24}
+                color={colors.brandPrimary}
+              />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText weight="bold" variant="bodySmall">
+                  {effectiveCampus} Campus Discussion Spaces
+                </AppText>
+                <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11.5, lineHeight: 16 }}>
+                  Course-specific channels and departmental communities curated for verified students of {effectiveCampus}.
+                </AppText>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => setSpaceInfoOpen(true)}
+              hitSlop={8}
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: 12,
-                backgroundColor: isAmbassadorOrAdmin ? 'rgba(16,185,129,0.15)' : colors.brandPrimary + '15',
-                alignItems: 'center',
-                justifyContent: 'center',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: radius.pill,
+                backgroundColor: colors.brandPrimary + '15',
+                alignSelf: isSmallMobile ? 'flex-start' : 'center',
               }}
             >
-              <Ionicons
-                name={isAmbassadorOrAdmin ? 'ribbon' : 'sparkles'}
-                size={20}
-                color={isAmbassadorOrAdmin ? '#10B981' : colors.brandPrimary}
-              />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <AppText weight="bold" variant="bodySmall">
-                  {isAmbassadorOrAdmin ? `Official ${effectiveCampus} Campus Ambassador` : `${effectiveCampus} Discussion Spaces`}
-                </AppText>
-                {isAmbassadorOrAdmin && <Badge label="Ambassador Active" tone="success" />}
-              </View>
-              <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: 11.5 }}>
-                {isAmbassadorOrAdmin
-                  ? `As a verified Campus Ambassador, you have authority to create and manage discussion spaces for ${effectiveCampus}.`
-                  : `Discussion spaces are specific to ${effectiveCampus} and curated by designated Campus Ambassadors.`}
+              <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
+                About Spaces
               </AppText>
-            </View>
-            {!isAmbassadorOrAdmin && (
-              <Pressable
-                onPress={() => setAmbassadorInfoOpen(true)}
-                hitSlop={8}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: radius.pill,
-                  backgroundColor: colors.brandPrimary + '18',
-                }}
-              >
-                <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
-                  Learn More
-                </AppText>
-              </Pressable>
-            )}
+            </Pressable>
           </SolidCard>
         )}
 
@@ -350,7 +346,7 @@ export default function ExploreForumsScreen() {
           })}
         </ScrollView>
 
-        {/* Community Directory List */}
+        {/* Community Directory List - Mobile Optimized */}
         <View style={{ gap: spacing.md }}>
           {filtered.map((ch) => {
             const joined = isJoined(ch);
@@ -361,29 +357,27 @@ export default function ExploreForumsScreen() {
             return (
               <SolidCard
                 key={ch.id}
-                radius={20}
+                radius={18}
                 frosted
                 style={{
                   padding: spacing.md,
                   borderLeftWidth: 4,
                   borderLeftColor: ch.accentColor,
+                  gap: 10,
                 }}
               >
-                {/* Header row */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-                    <View
-                      style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: 15,
-                        backgroundColor: ch.accentColor + '18',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Ionicons name={ch.icon} size={24} color={ch.accentColor} />
-                    </View>
+                {/* Header row - Responsive flex wrapping on mobile */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    flexWrap: isSmallMobile ? 'wrap' : 'nowrap',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 160 }}>
+                    <Ionicons name={ch.icon} size={24} color={ch.accentColor} />
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <AppText weight="bold" variant="body">
@@ -410,12 +404,13 @@ export default function ExploreForumsScreen() {
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 4,
-                      paddingHorizontal: 13,
-                      paddingVertical: 7,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
                       borderRadius: radius.pill,
                       backgroundColor: joined ? (isDark ? 'rgba(16,185,129,0.15)' : '#DCFCE7') : colors.brandPrimary,
                       borderWidth: 1,
                       borderColor: joined ? (isDark ? 'rgba(16,185,129,0.40)' : '#86EFAC') : colors.brandPrimary,
+                      alignSelf: isSmallMobile ? 'flex-end' : 'auto',
                     }}
                   >
                     <Ionicons name={joined ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={joined ? '#10B981' : '#FFFFFF'} />
@@ -430,11 +425,11 @@ export default function ExploreForumsScreen() {
                 </View>
 
                 {/* Description */}
-                <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 20, marginBottom: 10 }}>
+                <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 20 }}>
                   {ch.description}
                 </AppText>
 
-                {/* Bottom Details Bar */}
+                {/* Bottom Details Bar - Responsive */}
                 <View
                   style={{
                     flexDirection: 'row',
@@ -447,19 +442,19 @@ export default function ExploreForumsScreen() {
                     gap: 8,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 150 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1, minWidth: 120 }}>
                     <Ionicons name="shield-checkmark" size={13} color={colors.textSecondary} />
                     <AppText variant="caption" tone="secondary" numberOfLines={1} style={{ fontSize: 11 }}>
                       <AppText weight="bold" tone="primary" style={{ fontSize: 11 }}>
-                        {ch.moderatorBadge}:{' '}
+                        Moderated by:{' '}
                       </AppText>
-                      {ch.moderatorTitle}
+                      {ch.moderatorTitle || 'Campus Rep'}
                     </AppText>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                      {ch.rules.length} rules
+                      {ch.rules.length} guidelines
                     </AppText>
                     <Pressable
                       onPress={() => {
@@ -504,7 +499,7 @@ export default function ExploreForumsScreen() {
               backgroundColor: 'rgba(0,0,0,0.6)',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 24,
+              padding: 20,
               zIndex: 99,
             }}
           >
@@ -513,7 +508,7 @@ export default function ExploreForumsScreen() {
                 Propose New Discussion Space
               </AppText>
               <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
-                Submit a new community space for peer discussion. Campus admins will review your request.
+                Submit a new community space for peer discussion on {effectiveCampus}. It will go live after review by campus moderators.
               </AppText>
               <TextInput
                 value={newName}
@@ -609,8 +604,8 @@ export default function ExploreForumsScreen() {
           </View>
         )}
 
-        {/* Campus Ambassador Info Modal */}
-        {ambassadorInfoOpen && (
+        {/* Discussion Spaces Info Modal */}
+        {spaceInfoOpen && (
           <View
             style={{
               position: 'absolute',
@@ -618,35 +613,23 @@ export default function ExploreForumsScreen() {
               backgroundColor: 'rgba(0,0,0,0.6)',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 24,
+              padding: 20,
               zIndex: 99,
             }}
           >
             <SolidCard frosted radius={20} style={{ width: '100%', maxWidth: 480, padding: spacing.lg }}>
               <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
-                <View
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 26,
-                    backgroundColor: colors.brandPrimary + '15',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: spacing.xs,
-                  }}
-                >
-                  <Ionicons name="ribbon" size={28} color={colors.brandPrimary} />
-                </View>
-                <AppText variant="h3" weight="bold" style={{ textAlign: 'center' }}>
-                  {effectiveCampus} Campus Ambassadors
+                <Ionicons name="chatbubbles-outline" size={32} color={colors.brandPrimary} />
+                <AppText variant="h3" weight="bold" style={{ textAlign: 'center', marginTop: 8 }}>
+                  {effectiveCampus} Discussion Spaces
                 </AppText>
                 <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2 }}>
-                  Leading Student Voice & Discussion Spaces
+                  Curated Student Communities
                 </AppText>
               </View>
 
               <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 21, marginBottom: spacing.md }}>
-                To maintain high quality, prevent spam, and ensure relevant campus dialogue, specific discussion spaces for {effectiveCampus} are proposed and curated by official Campus Ambassadors.
+                Discussion spaces are dedicated forums for academic courses, department talk, and campus activities on {effectiveCampus}.
               </AppText>
 
               <View
@@ -662,21 +645,21 @@ export default function ExploreForumsScreen() {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                  <AppText variant="caption" weight="semiBold">Curate exclusive discussion spaces for your university</AppText>
+                  <AppText variant="caption" weight="semiBold">Curated discussion spaces for your university</AppText>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                  <AppText variant="caption" weight="semiBold">Help new students navigate campus life & academics</AppText>
+                  <AppText variant="caption" weight="semiBold">Connect with classmates across academic levels</AppText>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                  <AppText variant="caption" weight="semiBold">Direct communication channel with university moderation</AppText>
+                  <AppText variant="caption" weight="semiBold">Safe, spam-free spaces guided by campus moderation</AppText>
                 </View>
               </View>
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <Pressable
-                  onPress={() => setAmbassadorInfoOpen(false)}
+                  onPress={() => setSpaceInfoOpen(false)}
                   style={{
                     flex: 1,
                     paddingVertical: 12,
@@ -693,11 +676,11 @@ export default function ExploreForumsScreen() {
                 </Pressable>
                 <Pressable
                   onPress={() => {
-                    setAmbassadorInfoOpen(false);
+                    setSpaceInfoOpen(false);
                     if (isUnverified) {
                       setVerificationModalOpen(true);
                     } else {
-                      toast.info('Your interest has been noted. Campus admins review ambassador applicants regularly.');
+                      setProposingOpen(true);
                     }
                   }}
                   style={{
@@ -709,7 +692,7 @@ export default function ExploreForumsScreen() {
                   }}
                 >
                   <AppText weight="bold" tone="inverse">
-                    {isUnverified ? 'Verify Account First' : 'Express Interest'}
+                    Propose a Space
                   </AppText>
                 </Pressable>
               </View>

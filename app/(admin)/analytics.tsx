@@ -891,7 +891,7 @@ export default function AdminAnalyticsScreen() {
               </View>
             ) : (
               <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
-                <Ionicons name="sparkles-outline" size={32} color={colors.textSecondary} />
+                <Ionicons name="analytics-outline" size={32} color={colors.textSecondary} />
                 <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
                   No feature interactions recorded yet for this institution or timeframe.
                 </AppText>
