@@ -181,6 +181,58 @@ test.describe('authenticated role portals', () => {
     await expect(page.getByText(/Needs attention/i).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/Quick Services/i)).toHaveCount(0);
   });
+
+  test('a super admin sees resources from every campus with origin tags', async ({ page }) => {
+    await seedAuthenticatedSession(page, 'admin');
+    await page.route('**/rest/v1/resources*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'e2e-ui-resource',
+            title: 'UI Course Notes',
+            description: 'University of Ibadan material',
+            course_code: 'UI 101',
+            course_title: 'General Studies',
+            resource_type: 'lecture_note',
+            uploader_id: 'e2e-ui-author',
+            upvotes_count: 0,
+            downloads_count: 0,
+            created_at: new Date().toISOString(),
+            is_approved: true,
+            rejection_reason: null,
+            campus_code: 'UI',
+            profiles: { full_name: 'UI Student', role: 'student', department: 'General Studies' },
+          },
+          {
+            id: 'e2e-unilag-resource',
+            title: 'UNILAG Course Notes',
+            description: 'University of Lagos material',
+            course_code: 'UL 101',
+            course_title: 'General Studies',
+            resource_type: 'lecture_note',
+            uploader_id: 'e2e-unilag-author',
+            upvotes_count: 0,
+            downloads_count: 0,
+            created_at: new Date().toISOString(),
+            is_approved: true,
+            rejection_reason: null,
+            campus_code: 'UNILAG',
+            profiles: { full_name: 'UNILAG Student', role: 'student', department: 'General Studies' },
+          },
+        ]),
+      }),
+    );
+
+    await page.goto('/(student)/resources');
+    await waitForApp(page);
+
+    await expect(page.getByText('UI Course Notes')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('UNILAG Course Notes')).toBeVisible();
+    await expect(page.getByText('UI', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('UNILAG', { exact: true }).first()).toBeVisible();
+  });
 });
 
 test.describe('student onboarding continuity', () => {

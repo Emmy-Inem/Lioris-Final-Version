@@ -221,7 +221,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
 
   const role = isMasterAdminEmail ? 'admin' : ((profile?.role || 'student') as UserRole);
   const adminRole = isMasterAdminEmail ? 'super_admin' : (profile?.admin_role as AdminRoleType | null | undefined);
-  const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (profile?.campus_code === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com'))));
+  const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
   const isCampusAdmin = role === 'admin' && !isSuperAdmin;
   const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || null);
   const fullName =
@@ -251,7 +251,7 @@ function generateUUID() {
 }
 
 function defaultSessionUser(userEmail: string, role: UserRole, fullName: string, adminRole?: AdminRoleType | null, campusCode?: string | null): SessionUser {
-  const isSuperAdmin = role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com')));
+  const isSuperAdmin = userEmail.toLowerCase().trim() === 'inememmanuel@gmail.com' || (role === 'admin' && adminRole === 'super_admin');
   const isCampusAdmin = role === 'admin' && !isSuperAdmin;
   return {
     id: generateUUID(),
@@ -294,7 +294,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const role = stored.role as UserRole;
           const actualRole = (stored.actualRole ?? stored.role) as UserRole;
           const adminRole = stored.adminRole as AdminRoleType | null | undefined;
-          const isSuperAdmin = actualRole === 'admin' && (adminRole === 'super_admin' || (!adminRole && (stored.campusCode === 'GLOBAL' || stored.email === 'inememmanuel@gmail.com')));
+          const isSuperAdmin = stored.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' || (actualRole === 'admin' && adminRole === 'super_admin');
           const isCampusAdmin = actualRole === 'admin' && !isSuperAdmin;
           const initialUser: SessionUser = {
             ...stored,
@@ -354,7 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const role = isMasterAdminEmail ? 'admin' : ((profile?.role || fallbackRole) as UserRole);
           const adminRole = isMasterAdminEmail ? 'super_admin' : ((profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined);
           const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || storedUser?.campusCode || null);
-          const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com'))));
+          const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
           const isCampusAdmin = role === 'admin' && !isSuperAdmin;
           const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || storedUser?.fullName || userRef.current?.fullName || userEmail.split('@')[0] || 'Campus Member';
           
@@ -501,7 +501,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const role = isMasterAdminEmail ? 'admin' : ((profile?.role || fallbackRole) as UserRole);
         const adminRole = isMasterAdminEmail ? 'super_admin' : ((profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined);
         const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || storedUser?.campusCode || null);
-        const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com'))));
+        const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
         const isCampusAdmin = role === 'admin' && !isSuperAdmin;
         const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userRef.current?.fullName || storedUser?.fullName || userEmail.split('@')[0] || 'Campus Member';
 
@@ -638,7 +638,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Admin's local "View As" preview (see switchRole above) - collapsing
       // role to match rather than risk a preview going stale against a role
       // that just changed for real.
-      const isSuperAdmin = (current.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') || (newRole === 'admin' && (current.adminRole === 'super_admin' || (!current.adminRole && (current.campusCode === 'GLOBAL' || current.email === 'inememmanuel@gmail.com')))) || (current.actualRole === 'admin' && current.isSuperAdmin);
+      const isSuperAdmin = (current.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') || (newRole === 'admin' && current.adminRole === 'super_admin') || (current.actualRole === 'admin' && current.isSuperAdmin);
       const isCampusAdmin = newRole === 'admin' && !isSuperAdmin;
       const nextUser: SessionUser = {
         ...current,
@@ -653,7 +653,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userRef.current = nextUser;
       setUser(nextUser);
       try {
-        queryClient.clear();
+        queryClient.removeQueries({
+          predicate: (query) => {
+            const root = String(query.queryKey[0] ?? '');
+            return !['profile', 'view-scope', 'active-campus-code'].includes(root);
+          },
+        });
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
       } catch {
         // Non-blocking
       }
@@ -748,7 +754,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userRole = isMasterAdminEmail ? 'admin' : session.user.role;
         const adminRole = isMasterAdminEmail ? 'super_admin' : (prof?.admin_role as AdminRoleType | null | undefined);
         const campusCode = isMasterAdminEmail ? 'GLOBAL' : (prof?.campus_code || null);
-        const isSuperAdmin = isMasterAdminEmail || (userRole === 'admin' && (adminRole === 'super_admin' || (!adminRole && (campusCode === 'GLOBAL' || userEmail === 'inememmanuel@gmail.com'))));
+        const isSuperAdmin = isMasterAdminEmail || (userRole === 'admin' && adminRole === 'super_admin');
         const isCampusAdmin = userRole === 'admin' && !isSuperAdmin;
 
         const nextUser: SessionUser = {
@@ -880,12 +886,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: newRole,
         };
         await persist(nextUser);
+        userRef.current = nextUser;
         setUser(nextUser);
         if (newRole === 'student') {
           resetToDefaultCampusScope();
         }
         try {
-          queryClient.clear();
+          // Role previews share the real admin identity and profile. Keep the
+          // profile and workspace selections mounted so the admin's avatar /
+          // cover and selected campus do not disappear between portals, but
+          // discard role-dependent content before the destination renders.
+          queryClient.removeQueries({
+            predicate: (query) => {
+              const root = String(query.queryKey[0] ?? '');
+              return !['profile', 'view-scope', 'active-campus-code'].includes(root);
+            },
+          });
         } catch {
           // Non-blocking
         }

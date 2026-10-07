@@ -33,6 +33,7 @@ export interface ResourceCardProps {
   isBookmarked?: boolean;
   onToggleBookmark?: () => void;
   onReport?: (resource: Resource) => void;
+  showCampusTag?: boolean;
 }
 
 export const ResourceCard = React.memo(function ResourceCard({
@@ -41,6 +42,7 @@ export const ResourceCard = React.memo(function ResourceCard({
   isBookmarked: externalBookmarked,
   onToggleBookmark: externalToggleBookmark,
   onReport,
+  showCampusTag = false,
 }: ResourceCardProps) {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
@@ -209,6 +211,12 @@ export const ResourceCard = React.memo(function ResourceCard({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
             <Badge label={resource.courseCode || 'GEN'} tone="neutral" />
             <Badge label={resource.category} tone="neutral" />
+            {showCampusTag ? (
+              <Badge
+                label={resource.campusCode && resource.campusCode !== 'GLOBAL' ? resource.campusCode : 'GLOBAL'}
+                tone="neutral"
+              />
+            ) : null}
             {resource.fileSize ? (
               <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5 }}>
                 {resource.fileSize}

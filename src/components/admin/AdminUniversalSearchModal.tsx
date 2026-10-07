@@ -21,6 +21,7 @@ import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
+import { useAuth } from '@/auth/AuthContext';
 
 interface AdminUniversalSearchModalProps {
   visible: boolean;
@@ -142,6 +143,9 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled, setFeature } = useFeatureFlags();
   const { showBots, toggleBotVisibility } = useBotVisibility();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.actualRole === 'admin' && user.isSuperAdmin;
+  const campusAdminCampus = user?.isCampusAdmin ? user.campusCode?.toUpperCase() || null : null;
 
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<SearchCategory>('all');
@@ -177,25 +181,37 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
 
     const timer = setTimeout(async () => {
       try {
+        let postsQuery = supabase
+          .from('posts')
+          .select('id, title, category, author_name, campus_code')
+          .ilike('title', `%${trimmed}%`)
+          .limit(5);
+        let resourcesQuery = supabase
+          .from('resources')
+          .select('id, title, course_code, file_format, campus_code')
+          .or(`title.ilike.%${trimmed}%,course_code.ilike.%${trimmed}%`)
+          .limit(5);
+
+        if (campusAdminCampus) {
+          postsQuery = postsQuery.eq('campus_code', campusAdminCampus);
+          resourcesQuery = resourcesQuery.eq('campus_code', campusAdminCampus);
+        }
+
         const [membersRes, postsRes, resourcesRes] = await Promise.all([
           // profiles.email is no longer selectable via a plain table query
           // (docs/security/security-assessment-2026-09-28.md, finding 1.1);
           // this admin-only search goes through a role-checked RPC instead.
           supabase.rpc('admin_search_profiles', { p_query: trimmed, p_limit: 5 }),
-          supabase
-            .from('posts')
-            .select('id, title, category, author_name, campus_code')
-            .ilike('title', `%${trimmed}%`)
-            .limit(5),
-          supabase
-            .from('resources')
-            .select('id, title, course_code, file_format, campus_code')
-            .or(`title.ilike.%${trimmed}%,course_code.ilike.%${trimmed}%`)
-            .limit(5),
+          postsQuery,
+          resourcesQuery,
         ]);
 
         if (isMounted) {
-          setMemberResults(membersRes.data ?? []);
+          setMemberResults(
+            (membersRes.data ?? []).filter(
+              (member: any) => !campusAdminCampus || member.campus_code?.toUpperCase() === campusAdminCampus,
+            ),
+          );
           setPostResults(postsRes.data ?? []);
           setResourceResults(resourcesRes.data ?? []);
           setLoading(false);
@@ -209,21 +225,25 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, campusAdminCampus]);
 
   const matchedFeatures = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return ADMIN_FEATURES;
-    return ADMIN_FEATURES.filter(
+    const visibleFeatures = ADMIN_FEATURES.filter(
+      (feature) => isSuperAdmin || feature.category !== 'Platform' || feature.route === '/(admin)/analytics',
+    );
+    if (!q) return visibleFeatures;
+    return visibleFeatures.filter(
       (f) =>
         f.title.toLowerCase().includes(q) ||
         f.description.toLowerCase().includes(q) ||
         f.category.toLowerCase().includes(q) ||
         f.keywords.some((kw) => kw.includes(q)),
     );
-  }, [query]);
+  }, [query, isSuperAdmin]);
 
   const matchedControls = useMemo(() => {
+    if (!isSuperAdmin) return [];
     const q = query.trim().toLowerCase();
     const items: Array<{
       id: string;
@@ -266,7 +286,7 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
     }
 
     return items;
-  }, [query, showBots, isAlumniNetworkOn, toggleBotVisibility, setFeature]);
+  }, [query, showBots, isAlumniNetworkOn, toggleBotVisibility, setFeature, isSuperAdmin]);
 
   function navigateTo(route: string) {
     haptics.light();
@@ -571,6 +591,7 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
                         By {p.author_name || 'Member'} • {p.category || 'General'}
                       </AppText>
                     </View>
+                    {p.campus_code && <Badge label={p.campus_code} tone="brand" />}
                     <Badge label="Discussion" tone="neutral" />
                   </Pressable>
                 ))}
@@ -596,6 +617,7 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
                         {r.course_code ? `${r.course_code} • ` : ''}{r.file_format?.toUpperCase() || 'DOCUMENT'}
                       </AppText>
                     </View>
+                    {r.campus_code && <Badge label={r.campus_code} tone="brand" />}
                     <Badge label="Resource" tone="neutral" />
                   </Pressable>
                 ))}

@@ -7,6 +7,7 @@ import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { parseRpcError, RpcError } from '../utils/rpcErrors';
 import { resolveMediaUrl as resolveSignedMediaUrl, resolveMediaUrls as resolveSignedMediaUrls } from './signedUrls';
+import { resolveCampusReadScope } from '../utils/campusAccess';
 
 
 let locallyCreatedEvents: CampusEvent[] = [];
@@ -133,28 +134,38 @@ function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: s
 }
 
 export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]> {
+  let userCampus = 'GLOBAL';
   try {
     const { data: authData } = await supabase.auth.getUser();
-    let userCampus = query.campusCode;
-    let userRole = 'student';
+    const stored = await getSessionUser();
+    let userRole = stored?.actualRole || stored?.role || 'student';
+    let adminRole: string | null = null;
+    let profileCampus: string | null = null;
 
     if (authData?.user?.id) {
       const { data: prof } = await supabase
         .from('profiles')
-        .select('campus_code, role')
+        .select('campus_code, role, admin_role')
         .eq('id', authData.user.id)
         .maybeSingle();
-      if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
+      profileCampus = prof?.campus_code || null;
       if (prof?.role) userRole = prof.role;
+      adminRole = prof?.admin_role || null;
     }
 
-    if (!userCampus && authData?.user?.email) {
-      // Domain match, not substring. The previous chain mis-assigned campuses
-      // (`includes('oau')` claimed joaustin@unilag.edu.ng for OAU) and hardcoded
-      // demo names above the real domain. Every demo account is @ui.edu.ng, so
-      // plain domain matching already covers them.
-      userCampus = getInstitutionForEmail(authData.user.email)?.code;
-    }
+    const inferredCampus =
+      profileCampus ||
+      authData?.user?.user_metadata?.campus_code ||
+      (authData?.user?.email ? getInstitutionForEmail(authData.user.email)?.code : undefined);
+    userCampus = resolveCampusReadScope(
+      {
+        role: userRole,
+        adminRole: adminRole || stored?.adminRole || authData?.user?.user_metadata?.admin_role,
+        campusCode: inferredCampus || stored?.campusCode,
+        email: authData?.user?.email || stored?.email,
+      },
+      query.campusCode,
+    );
 
     const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
     const currentUserId = authData?.user?.id;
@@ -177,6 +188,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
         // Only members of that university see that university's events.
         const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
         const activeCampus = (userCampus || 'GLOBAL').toUpperCase();
+        if (activeCampus === 'ALL') return true;
         if (activeCampus === 'GLOBAL') {
           return rowCampus === 'GLOBAL';
         }
@@ -228,7 +240,9 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     for (const e of pool) {
       if (!merged.some((m) => m.id === e.id) && !isUserBlocked(e.organizerId) && !isUserMuted(e.organizerId)) {
         const eCampus = (e.campusCode || 'GLOBAL').toUpperCase();
-        if (activeCampus === 'GLOBAL') {
+        if (activeCampus === 'ALL') {
+          merged.push(e);
+        } else if (activeCampus === 'GLOBAL') {
           if (eCampus === 'GLOBAL') merged.push(e);
         } else if (eCampus === 'GLOBAL' || eCampus === activeCampus) {
           merged.push(e);
@@ -238,7 +252,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     return filterEvents(merged, { ...query, campusCode: userCampus }, currentUserId, isStaffOrAdmin);
   } catch (err) {
     console.warn('[Events] Supabase listEvents error, showing local pool only:', err);
-    return filterEvents([...locallyCreatedEvents], query);
+    return filterEvents([...locallyCreatedEvents], { ...query, campusCode: userCampus });
   }
 }
 

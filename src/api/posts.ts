@@ -13,6 +13,7 @@ import { assertSafeHttpUrl } from '../utils/safeUrl';
 import { SEED_FORUM_POSTS } from '../data/seedForumPosts';
 import { getSeedCommentsForPost } from '../data/seedForumComments';
 import { isBotPost, isBotVisibilityEnabled } from '../utils/botVisibility';
+import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -259,6 +260,8 @@ export interface FeedQuery {
   * Either way a campus post from ANOTHER university is never shown.
   */
  viewScope?: 'campus' | 'global';
+  /** Verified super-admin-only: include campus-scoped threads from every institution. */
+  includeAllCampuses?: boolean;
   showBots?: boolean;
   /**
    * 0-based page past the first. Only takes effect when `pageSize` is also
@@ -295,12 +298,20 @@ function filterPosts(pool: Post[], query: FeedQuery): Post[] {
   const isOwnCampusPost = (p: Post) =>
     !!viewerCode && !!p.institutionCode && p.institutionCode.toUpperCase() === viewerCode;
 
-  if (query.viewScope === 'global') {
+  if (query.includeAllCampuses) {
+    // Super-admin authorization is established inside listFeedPosts before
+    // this flag can reach the filter. Campus/global badges remain on every
+    // post so the combined network is still attributable.
+  } else if (query.viewScope === 'global') {
     // Own campus + global. Without a known viewer campus we can only be sure
     // about the global ones, so those are all that is shown.
     results = results.filter((p) => isGlobalPost(p) || isOwnCampusPost(p));
   } else if (viewerCode) {
     results = results.filter((p) => isOwnCampusPost(p));
+  } else {
+    // Unknown identity/campus must fail closed. Without this branch a failed
+    // profile lookup made the campus feed include every institution.
+    results = results.filter((p) => isGlobalPost(p));
   }
 
   // 'global' is the broadest portal scope (staff/alumni/admin forum routes all
@@ -332,17 +343,33 @@ function filterPosts(pool: Post[], query: FeedQuery): Post[] {
 }
 
 export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
-  let viewerInstitutionCode = query.viewerInstitutionCode;
+  let viewerInstitutionCode: string | undefined;
+  let includeAllCampuses = false;
   try {
     const { data: authData } = await supabase.auth.getUser();
+    const stored = await getSessionUser();
     const viewerId = authData?.user?.id;
-
-    if (!viewerInstitutionCode && authData?.user?.email) {
-      // Domain match, not substring - this decides which campus's posts the
-      // viewer is allowed to see, so `email.includes('adeola')` claiming
-      // adeola@unilag.edu.ng for UI was a real cross-campus leak.
-      viewerInstitutionCode = getInstitutionForEmail(authData.user.email)?.code;
+    let profile: any = null;
+    if (viewerId) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('role, admin_role, campus_code')
+        .eq('id', viewerId)
+        .maybeSingle();
+      profile = data;
     }
+    const identity = {
+      role: profile?.role || stored?.actualRole || authData?.user?.user_metadata?.role,
+      adminRole: profile?.admin_role || stored?.adminRole || authData?.user?.user_metadata?.admin_role,
+      campusCode:
+        profile?.campus_code ||
+        stored?.campusCode || authData?.user?.user_metadata?.campus_code ||
+        (authData?.user?.email ? getInstitutionForEmail(authData.user.email)?.code : undefined),
+      email: authData?.user?.email || stored?.email,
+    };
+    const resolvedCampus = resolveCampusReadScope(identity, query.viewerInstitutionCode);
+    includeAllCampuses = isSuperAdminIdentity(identity) && (query.includeAllCampuses === true || resolvedCampus === 'ALL');
+    viewerInstitutionCode = includeAllCampuses || resolvedCampus === 'GLOBAL' ? undefined : resolvedCampus;
 
     const { rows } = await selectPostsWithFallback((select) => {
       let dbQuery = supabase.from('posts').select(select).order('created_at', { ascending: false });
@@ -376,12 +403,16 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     }
     // Drafts/scheduled rows are dropped by filterPosts (the author's own come
     // back from the database; everyone else's are already hidden by RLS).
-    const visible = filterPosts(merged, { ...query, viewerInstitutionCode });
+    const visible = filterPosts(merged, { ...query, viewerInstitutionCode, includeAllCampuses });
     return await decorateViewerState(visible, viewerId);
   } catch (err) {
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
     const isFirstPage = (query.page ?? 0) === 0;
-    return filterPosts(isFirstPage ? [...locallyCreatedPosts, ...SEED_FORUM_POSTS] : [], { ...query, viewerInstitutionCode });
+    return filterPosts(isFirstPage ? [...locallyCreatedPosts, ...SEED_FORUM_POSTS] : [], {
+      ...query,
+      viewerInstitutionCode,
+      includeAllCampuses,
+    });
   }
 }
 

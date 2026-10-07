@@ -21,6 +21,7 @@ import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import { buildCsv, downloadCsv } from '@/utils/csvExport';
+import { useAuth } from '@/auth/AuthContext';
 
 interface RecentActiveUser {
   id: string;
@@ -100,10 +101,16 @@ function formatRelativeTime(dateStr: string | null): string {
 export default function AdminAnalyticsScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
   const adminBadges = useAdminBadges();
+  const lockedCampus = user?.isCampusAdmin && user?.campusCode ? user.campusCode.toUpperCase() : null;
 
   const [timeRangeDays, setTimeRangeDays] = useState<number>(30);
-  const [campusFilter, setCampusFilter] = useState<string>('ALL');
+  const [requestedCampusFilter, setRequestedCampusFilter] = useState<string>('ALL');
+  const campusFilter = lockedCampus || requestedCampusFilter;
+  const setCampusFilter = (value: string) => {
+    if (!lockedCampus) setRequestedCampusFilter(value);
+  };
   const [userSearch, setUserSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [exportingCsv, setExportingCsv] = useState(false);
@@ -354,7 +361,7 @@ export default function AdminAnalyticsScreen() {
           </View>
         </View>
 
-        {/* Institution / Campus Filter - Mobile-Optimized Horizontal Scroll */}
+        {/* Super Admin can compare campuses; Campus Admin is locked to their assignment. */}
         <View
           style={{
             backgroundColor: colors.surface,
@@ -366,9 +373,9 @@ export default function AdminAnalyticsScreen() {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
             <AppText variant="caption" weight="bold" tone="secondary">
-              FILTER BY UNIVERSITY / CAMPUS:
+              {lockedCampus ? 'ASSIGNED UNIVERSITY / CAMPUS:' : 'FILTER BY UNIVERSITY / CAMPUS:'}
             </AppText>
-            {campusFilter !== 'ALL' && (
+            {!lockedCampus && campusFilter !== 'ALL' && (
               <Pressable
                 onPress={() => {
                   haptics.light();
@@ -382,64 +389,74 @@ export default function AdminAnalyticsScreen() {
               </Pressable>
             )}
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: spacing.xs, alignItems: 'center' }}
-            {...({ 'data-horizontal-scroll': 'true' } as any)}
-          >
+          {lockedCampus ? (
             <Pressable
-              onPress={() => {
-                haptics.light();
-                setCampusFilter('ALL');
-              }}
+              disabled
               style={{
                 paddingHorizontal: 14,
                 paddingVertical: 7,
                 borderRadius: radius.pill,
-                backgroundColor: campusFilter === 'ALL' ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                alignSelf: 'flex-start',
+                backgroundColor: colors.brandPrimary,
                 borderWidth: 1,
-                borderColor: campusFilter === 'ALL' ? colors.brandPrimary : colors.border,
+                borderColor: colors.brandPrimary,
               }}
             >
-              <AppText
-                variant="caption"
-                weight="bold"
-                tone={campusFilter === 'ALL' ? 'inverse' : 'primary'}
-              >
-                All Institutions
+              <AppText variant="caption" weight="bold" tone="inverse">
+                {activeCampusName}
               </AppText>
             </Pressable>
-
-            {LAUNCH_INSTITUTIONS.map((inst) => {
-              const active = campusFilter === inst.code;
-              return (
-                <Pressable
-                  key={inst.code}
-                  onPress={() => {
-                    haptics.light();
-                    setCampusFilter(inst.code);
-                  }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 7,
-                    borderRadius: radius.pill,
-                    backgroundColor: active ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
-                    borderWidth: 1,
-                    borderColor: active ? colors.brandPrimary : colors.border,
-                  }}
-                >
-                  <AppText
-                    variant="caption"
-                    weight="bold"
-                    tone={active ? 'inverse' : 'primary'}
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: spacing.xs, alignItems: 'center' }}
+              {...({ 'data-horizontal-scroll': 'true' } as any)}
+            >
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setCampusFilter('ALL');
+                }}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: radius.pill,
+                  backgroundColor: campusFilter === 'ALL' ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: campusFilter === 'ALL' ? colors.brandPrimary : colors.border,
+                }}
+              >
+                <AppText variant="caption" weight="bold" tone={campusFilter === 'ALL' ? 'inverse' : 'primary'}>
+                  All Institutions
+                </AppText>
+              </Pressable>
+              {LAUNCH_INSTITUTIONS.map((inst) => {
+                const active = campusFilter === inst.code;
+                return (
+                  <Pressable
+                    key={inst.code}
+                    onPress={() => {
+                      haptics.light();
+                      setCampusFilter(inst.code);
+                    }}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      borderRadius: radius.pill,
+                      backgroundColor: active ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                      borderWidth: 1,
+                      borderColor: active ? colors.brandPrimary : colors.border,
+                    }}
                   >
-                    {inst.shortName || inst.name}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                    <AppText variant="caption" weight="bold" tone={active ? 'inverse' : 'primary'}>
+                      {inst.shortName || inst.name}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
 
         {/* Real User Activity KPI Cards */}

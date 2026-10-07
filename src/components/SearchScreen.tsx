@@ -53,6 +53,7 @@ export function SearchScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
+  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
   const { campusCode } = useCampusScope();
   const { scope: forumScope } = useForumScope();
   // Carries a prefilled query in from callers like DesktopTopBar's search submit
@@ -187,7 +188,7 @@ export function SearchScreen() {
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}
-          renderItem={({ item }) => <PostCard post={item} />}
+          renderItem={({ item }) => <PostCard post={item} forceScopeBadge={isSuperAdmin} />}
           ListEmptyComponent={!isLoading.posts ? <EmptyState title={TAB_EMPTY_TITLE.posts} description={`No results for "${debouncedTrimmed}".`} /> : null}
         />
       ) : tab === 'events' ? (
@@ -208,7 +209,7 @@ export function SearchScreen() {
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
             {(resources ?? []).map((item) => (
               <View key={item.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : { marginBottom: spacing.sm }}>
-                <ResourceCard resource={item} onPreview={setReadingResource} onReport={setReportingResource} />
+                <ResourceCard resource={item} onPreview={setReadingResource} onReport={setReportingResource} showCampusTag={isSuperAdmin} />
               </View>
             ))}
           </View>

@@ -48,7 +48,7 @@ for (const { name, path } of PAGES) {
 }
 
 const ROLE_DASHBOARDS: ReadonlyArray<{ role: TestUserRole; path: string; marker: RegExp }> = [
-  { role: 'student', path: '/(student)/dashboard', marker: /Student Services/i },
+  { role: 'student', path: '/(student)/dashboard', marker: /Quick Services/i },
   { role: 'alumni', path: '/(alumni)/dashboard', marker: /Alumni Action Hub/i },
   { role: 'staff', path: '/(staff)/dashboard', marker: /Faculty Staff/i },
   { role: 'admin', path: '/(admin)/dashboard', marker: /Needs attention/i },

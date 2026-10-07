@@ -58,6 +58,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const segments = useSegments();
   const roleGroup = segments[0] ?? '(student)';
   const { user } = useAuth();
+  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
   const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
 
   const isAlumniScope = scope === 'alumni' || roleGroup === '(alumni)';
@@ -87,9 +88,11 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   }
 
   // Strictly bind to the current workspace's university institution
-  const currentCampus = (campusCode && campusCode !== 'GLOBAL') ? campusCode : homeInstitutionCode;
+  const currentCampus = isSuperAdmin
+    ? ((campusCode && campusCode !== 'GLOBAL') ? campusCode : 'ALL')
+    : ((campusCode && campusCode !== 'GLOBAL') ? campusCode : homeInstitutionCode);
   const institution = currentCampus ? getInstitutionByCode(currentCampus) : undefined;
-  const institutionName = institution?.name ?? 'Campus';
+  const institutionName = currentCampus === 'ALL' ? 'All Campus Networks' : institution?.name ?? 'Campus';
 
   // Automatic Horizontal Carousel State
   const [activeSlide, setActiveSlide] = useState(0);

@@ -141,24 +141,24 @@ export default function ResourcesScreen() {
     enabled: !!user,
   });
 
-  const isSuperAdmin =
-    user?.isSuperAdmin === true ||
-    user?.adminRole === 'super_admin' ||
-    (user?.email && user.email.toLowerCase().trim() === 'inememmanuel@gmail.com') ||
-    (profile as any)?.admin_role === 'super_admin';
+  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
 
   // Determine user's effective campus (e.g. UNILAG, UI, FUNAAB)
-  const effectiveCampus =
-    (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
+  const effectiveCampus = isSuperAdmin
+    ? (campusCode && campusCode !== 'GLOBAL' ? campusCode : 'ALL')
+    : (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
       ? profile.institutionCode
       : (campusCode && campusCode !== 'GLOBAL')
       ? campusCode
       : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL')
       ? homeInstitutionCode
       : 'GLOBAL';
+  const uploadCampus = effectiveCampus === 'ALL' ? 'GLOBAL' : effectiveCampus;
 
   const institutionInfo = effectiveCampus !== 'GLOBAL' ? getInstitutionByCode(effectiveCampus) : null;
-  const campusDisplayName = institutionInfo?.shortName || (effectiveCampus !== 'GLOBAL' ? effectiveCampus : 'Campus');
+  const campusDisplayName = effectiveCampus === 'ALL'
+    ? 'All Campuses'
+    : institutionInfo?.shortName || (effectiveCampus !== 'GLOBAL' ? effectiveCampus : 'Campus');
 
   // Only Super Admin can see all campuses' portals; others are strictly isolated to their own campus or National Portals
   const activePortalCampus = resolveActivePortalTarget(isSuperAdmin ? 'admin' : 'student', selectedPortalFilter, effectiveCampus);
@@ -274,7 +274,7 @@ export default function ResourcesScreen() {
     }
     try {
       const { fileBlob, ...rest } = payload;
-      await createResource({ ...rest, campusCode: effectiveCampus }, fileBlob);
+      await createResource({ ...rest, campusCode: uploadCampus }, fileBlob);
       queryClient.invalidateQueries({ queryKey: ['resources'] });
       toast.success('Resource uploaded successfully! Pending moderation review.');
     } catch (err: any) {
@@ -1226,6 +1226,7 @@ export default function ResourcesScreen() {
                   {isMineView ? <MyUploadStatusBanner resource={res} /> : null}
                   <ResourceCard
                     resource={res}
+                    showCampusTag={isSuperAdmin && effectiveCampus === 'ALL'}
                     onPreview={setReadingResource}
                     isBookmarked={bookmarkedIds.includes(res.id)}
                     onToggleBookmark={async () => {
@@ -1273,6 +1274,7 @@ export default function ResourcesScreen() {
               {isMineView ? <MyUploadStatusBanner resource={item} /> : null}
               <ResourceCard
                 resource={item}
+                showCampusTag={isSuperAdmin && effectiveCampus === 'ALL'}
                 onPreview={setReadingResource}
                 isBookmarked={bookmarkedIds.includes(item.id)}
                 onToggleBookmark={async () => {

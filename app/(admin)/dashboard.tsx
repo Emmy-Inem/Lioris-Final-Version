@@ -181,7 +181,11 @@ export default function AdminOverviewScreen() {
                 borderColor: colors.border,
               }}
             >
-              <AppText variant="caption" weight="bold" tone="secondary" style={{ fontSize: 11 }}>
+              <AppText
+                variant="caption"
+                weight="bold"
+                style={{ fontSize: 11, color: isDark ? colors.textPrimary : '#475467' }}
+              >
                 {isDesktop ? 'Ctrl + K' : 'Search'}
               </AppText>
             </View>

@@ -14,7 +14,9 @@ export default function AdminLayout() {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
-  const isSuperAdmin = user?.isSuperAdmin ?? true;
+  // Default closed while auth is resolving: a campus admin must never see a
+  // flash of platform-wide controls simply because `user` is briefly null.
+  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
 
   const tabsContent = (
     <BlurredTabsHost renderTabBar={(p, t) => <FloatingLiquidGlassTabBarView {...p} blurTarget={t} />}>

@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { FORUM_COMMUNITIES } from '../constants/forumCommunities';
+import { resolveCampusReadScope } from '../utils/campusAccess';
 
 export interface ForumCommunityRecord {
   id: string;
@@ -67,11 +68,35 @@ function mapRow(row: any): ForumCommunityRecord {
 /** Approved communities, plus the caller's own pending/rejected proposals so they can track status. */
 export async function listCommunities(campusCode?: string): Promise<ForumCommunityRecord[]> {
   try {
+    const [{ data: authData }, stored] = await Promise.all([
+      supabase.auth.getUser(),
+      getSessionUser(),
+    ]);
+    let profile: any = null;
+    const userId = authData?.user?.id || stored?.id;
+    if (userId) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('role, admin_role, campus_code')
+        .eq('id', userId)
+        .maybeSingle();
+      profile = data;
+    }
+    const effectiveCampus = resolveCampusReadScope(
+      {
+        role: profile?.role || stored?.actualRole || stored?.role,
+        adminRole: profile?.admin_role || stored?.adminRole,
+        campusCode: profile?.campus_code || stored?.campusCode,
+        email: authData?.user?.email || stored?.email,
+      },
+      campusCode,
+    );
     const { data, error } = await supabase.from('forum_communities').select('*').order('created_at', { ascending: true });
     if (error) throw error;
     if (!data || data.length === 0) return fallbackCommunities();
     const mapped = data.map(mapRow);
-    if (campusCode && campusCode !== 'GLOBAL' && campusCode !== 'ALL') {
+    if (effectiveCampus === 'ALL') return mapped;
+    if (effectiveCampus !== 'GLOBAL') {
       // A campus feed is the union of shared/global spaces and that campus's
       // own spaces. The former implementation returned only campus-specific
       // rows as soon as one existed, hiding every launch space; when none
@@ -81,10 +106,10 @@ export async function listCommunities(campusCode?: string): Promise<ForumCommuni
         (community) =>
           !community.campusCode ||
           community.campusCode === 'GLOBAL' ||
-          community.campusCode === campusCode,
+          community.campusCode?.toUpperCase() === effectiveCampus,
       );
     }
-    return mapped;
+    return mapped.filter((community) => !community.campusCode || community.campusCode === 'GLOBAL');
   } catch (err) {
     console.warn('[Communities] listCommunities failed, showing launch defaults only:', err);
     return fallbackCommunities();

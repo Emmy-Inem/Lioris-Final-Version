@@ -7,6 +7,7 @@ import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
 import { assertUuid } from '../utils/postgrest';
+import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
 
 // Content types a resource upload may be stored with.
 const ALLOWED_RESOURCE_MIME_TYPES = new Set([
@@ -196,32 +197,28 @@ function mapResourceRow(row: any): Resource {
 }
 
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
-  let userCampus = (query as any).campusCode;
+  let userCampus = 'GLOBAL';
   try {
     const { data: authData } = await supabase.auth.getUser();
-    let userRole = 'student';
+    const stored = await getSessionUser();
     let prof: any = null;
     if (authData?.user?.id) {
       const { data } = await supabase.from('profiles').select('campus_code, role, admin_role').eq('id', authData.user.id).maybeSingle();
       prof = data;
-      if (prof?.campus_code && !userCampus) userCampus = prof.campus_code;
-      if (prof?.role) userRole = prof.role;
-      if (!userCampus && authData.user.user_metadata?.campus_code) {
-        userCampus = authData.user.user_metadata.campus_code;
-      }
-    }
-
-    if (!userCampus && authData?.user?.email) {
-      userCampus = getInstitutionForEmail(authData.user.email)?.code;
     }
 
     const userEmail = authData?.user?.email?.toLowerCase().trim();
-    const isSuperAdmin =
-      userEmail === 'inememmanuel@gmail.com' ||
-      prof?.admin_role === 'super_admin' ||
-      prof?.role === 'super_admin' ||
-      authData?.user?.user_metadata?.role === 'super_admin' ||
-      authData?.user?.user_metadata?.admin_role === 'super_admin';
+    const identity = {
+      role: prof?.role || stored?.actualRole || authData?.user?.user_metadata?.role,
+      adminRole: prof?.admin_role || stored?.adminRole || authData?.user?.user_metadata?.admin_role,
+      campusCode:
+        prof?.campus_code ||
+        stored?.campusCode || authData?.user?.user_metadata?.campus_code ||
+        (authData?.user?.email ? getInstitutionForEmail(authData.user.email)?.code : undefined),
+      email: userEmail || stored?.email,
+    };
+    const isSuperAdmin = isSuperAdminIdentity(identity);
+    userCampus = resolveCampusReadScope(identity, query.campusCode);
 
     const pageSize = query.pageSize ?? 100;
     const page = Math.max(0, query.page ?? 0);
@@ -252,8 +249,8 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
       dbQuery = targetCampus === 'GLOBAL'
         ? dbQuery.eq('campus_code', 'GLOBAL')
         : dbQuery.in('campus_code', [targetCampus, 'GLOBAL']);
-    } else if ((query as any).campusCode && (query as any).campusCode !== 'ALL') {
-      const targetCampus = (query as any).campusCode.toUpperCase();
+    } else if (userCampus !== 'ALL') {
+      const targetCampus = userCampus;
       dbQuery = targetCampus === 'GLOBAL'
         ? dbQuery.eq('campus_code', 'GLOBAL')
         : dbQuery.in('campus_code', [targetCampus, 'GLOBAL']);
@@ -315,10 +312,10 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     const merged = [...dbResources];
     for (const r of pool) {
       if (!merged.some((m) => m.id === r.id || (m.title.toLowerCase() === r.title.toLowerCase() && m.courseCode.toLowerCase() === r.courseCode.toLowerCase())) && !isUserBlocked(r.authorId) && !isUserMuted(r.authorId)) {
-        if (isSuperAdmin && (!(query as any).campusCode || (query as any).campusCode === 'ALL')) {
+        if (isSuperAdmin && userCampus === 'ALL') {
           merged.push(r);
         } else {
-          const targetCampus = (isSuperAdmin && (query as any).campusCode ? (query as any).campusCode : (userCampus || 'GLOBAL')).toUpperCase();
+          const targetCampus = userCampus;
           const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
           if (targetCampus === 'GLOBAL') {
             if (rCampus === 'GLOBAL') merged.push(r);
@@ -335,7 +332,7 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     return filterResources(withRatings, query);
   } catch (err) {
     console.warn('[Resources] listResources failed, showing local pool:', err);
-    const targetCampus = ((query as any).campusCode || (userCampus || 'GLOBAL')).toUpperCase();
+    const targetCampus = userCampus;
     const fallbackPool = [...locallyCreatedResources].filter((r) => {
       const rCampus = ((r as any).campusCode || 'GLOBAL').toUpperCase();
       if (targetCampus === 'ALL') return true;

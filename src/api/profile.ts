@@ -31,18 +31,29 @@ export function invalidateProfileCache(userId: string) {
  * Default empty profile used while a user's `profiles` record is loading
  * from Supabase, or as a base for empty fields.
  */
-function defaultProfileFor(user: { id: string; fullName: string; role: UserRole; email?: string }): UserProfile {
+function defaultProfileFor(user: {
+  id: string;
+  fullName: string;
+  role: UserRole;
+  email?: string;
+  adminRole?: 'super_admin' | 'campus_admin' | null;
+  campusCode?: string | null;
+  isSuperAdmin?: boolean;
+}): UserProfile {
   if (profileState.has(user.id)) return profileState.get(user.id)!;
 
   const emailLower = (user.email || '').toLowerCase().trim();
   const isMasterAdmin = emailLower === 'inememmanuel@gmail.com';
   const isAdmin = user.role === 'admin' || isMasterAdmin;
+  const isSuperAdmin = isMasterAdmin || user.isSuperAdmin === true || user.adminRole === 'super_admin';
   const resolvedEmail = user.email || (isMasterAdmin ? 'inememmanuel@gmail.com' : `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.')}@lioris.edu`);
  const username = user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
 
  // Authoritatively derive campus institution from email domain
   const instEmailLower = resolvedEmail.toLowerCase();
- let inst = getInstitutionForEmail(instEmailLower);
+ let inst = user.campusCode && user.campusCode !== 'GLOBAL'
+   ? getInstitutionByCode(user.campusCode)
+   : getInstitutionForEmail(instEmailLower);
  let instCode = inst?.code;
  let instName = inst?.name;
 
@@ -63,13 +74,13 @@ function defaultProfileFor(user: { id: string; fullName: string; role: UserRole;
    username,
    email: resolvedEmail,
    userType: isAdmin ? 'admin' : user.role,
-    adminRole: isMasterAdmin ? 'super_admin' : (isAdmin ? 'campus_admin' : null),
+    adminRole: isSuperAdmin ? 'super_admin' : (isAdmin ? (user.adminRole || 'campus_admin') : null),
     graduationYear: undefined,
     bio: '',
     department: 'General Studies',
     interests: [],
     institutionName: instName,
-    institutionCode: instCode,
+    institutionCode: isSuperAdmin ? 'GLOBAL' : instCode,
     avatarUrl: undefined,
     coverUrl: undefined,
     isVerified,
@@ -90,9 +101,21 @@ export async function getMyProfile(user?: {
  id: string;
  fullName?: string;
  role?: UserRole;
+ actualRole?: UserRole;
+ adminRole?: 'super_admin' | 'campus_admin' | null;
+ isSuperAdmin?: boolean;
+ campusCode?: string | null;
  email?: string;
 }): Promise<UserProfile> {
- let resolvedUser: { id: string; fullName: string; role: UserRole; email?: string } = {
+ let resolvedUser: {
+   id: string;
+   fullName: string;
+   role: UserRole;
+   email?: string;
+   adminRole?: 'super_admin' | 'campus_admin' | null;
+   campusCode?: string | null;
+   isSuperAdmin?: boolean;
+ } = {
  id: 'me',
  fullName: 'User',
  role: 'student',
@@ -102,8 +125,11 @@ export async function getMyProfile(user?: {
  resolvedUser = {
  id: user.id,
  fullName: user.fullName || 'User',
- role: (user.role || 'student') as UserRole,
+ role: (user.actualRole || user.role || 'student') as UserRole,
  email: user.email,
+ adminRole: user.adminRole,
+ campusCode: user.campusCode,
+ isSuperAdmin: user.isSuperAdmin,
  };
  } else {
  const { data: authData } = await supabase.auth.getUser();
@@ -121,6 +147,9 @@ export async function getMyProfile(user?: {
  fullName: stored?.fullName || 'User',
  role: (stored?.role || 'student') as UserRole,
  email: stored?.email,
+ adminRole: stored?.adminRole === 'super_admin' ? 'super_admin' : stored?.adminRole === 'campus_admin' ? 'campus_admin' : null,
+ campusCode: stored?.campusCode,
+ isSuperAdmin: stored?.adminRole === 'super_admin',
  };
  }
  }
@@ -162,6 +191,10 @@ export async function getMyProfile(user?: {
       const isMasterAdmin = emailLower === 'inememmanuel@gmail.com';
       const dbRole = isMasterAdmin ? 'admin' : ((data.role || resolvedUser.role) as UserRole);
       const isAdmin = dbRole === 'admin' || isMasterAdmin;
+      const resolvedAdminRole = isMasterAdmin
+        ? 'super_admin'
+        : ((data.admin_role as 'super_admin' | 'campus_admin' | null | undefined) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null));
+      const isSuperAdmin = isAdmin && resolvedAdminRole === 'super_admin';
 
      const matchedInst = resolvedUser.email ? getInstitutionForEmail(resolvedUser.email) : null;
      const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL' && !isPersonalAccount);
@@ -182,8 +215,8 @@ export async function getMyProfile(user?: {
        supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
      }
 
-      let rawCampus = data.campus_code;
-      if (!rawCampus || rawCampus === 'GLOBAL') {
+      let rawCampus = isSuperAdmin ? 'GLOBAL' : data.campus_code;
+      if (!isSuperAdmin && (!rawCampus || rawCampus === 'GLOBAL')) {
         const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: null }));
         const metaCampus = authData?.user?.user_metadata?.campus_code as string | undefined;
         const stored = await getStoredCampus();
@@ -201,12 +234,14 @@ export async function getMyProfile(user?: {
         }
       }
 
-      const campusCode = (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
+      const campusCode = isSuperAdmin
+        ? 'GLOBAL'
+        : (rawCampus && rawCampus !== 'GLOBAL') ? rawCampus : fallback.institutionCode;
       const inst = (campusCode && campusCode !== 'GLOBAL') ? getInstitutionByCode(campusCode) : null;
 
      const merged: UserProfile = {
        ...fallback,
-       adminRole: isMasterAdmin ? 'super_admin' : ((data.admin_role as any) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null)),
+       adminRole: resolvedAdminRole,
         fullName: data.full_name || fallback.fullName,
         username: data.username || fallback.username,
         bio: data.bio || fallback.bio,
@@ -215,7 +250,7 @@ export async function getMyProfile(user?: {
         academicLevel: data.level || fallback.academicLevel,
         interests: data.interests || fallback.interests,
         institutionName: inst?.name || fallback.institutionName || 'Campus Network',
-        institutionCode: inst?.code || fallback.institutionCode,
+        institutionCode: isSuperAdmin ? 'GLOBAL' : (inst?.code || fallback.institutionCode),
         avatarUrl: data.avatar_url || fallback.avatarUrl,
         coverUrl: data.banner_url || fallback.coverUrl,
         resumeUrl: data.resume_url || null,
@@ -339,7 +374,12 @@ export async function uploadCoverImage(
  // short-lived signed URLs when rendering it. A public URL here worked only
  // before the bucket was secured and is why some covers appeared broken.
  const coverUrl = filePath;
- await updateProfileImages(userId, { coverUrl });
+ try {
+   await updateProfileImages(userId, { coverUrl });
+ } catch (error) {
+   await supabase.storage.from('campus-media').remove([filePath]).catch(() => undefined);
+   throw error;
+ }
  return coverUrl;
 }
 
@@ -347,13 +387,7 @@ export async function updateProfileImages(
  userId: string,
  updates: { avatarUrl?: string | null; coverUrl?: string | null },
 ): Promise<UserProfile> {
-  const current = profileState.get(userId) || defaultProfileFor({ id: userId, fullName: 'You', role: 'student' });
- const updated: UserProfile = {
- ...current,
- ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
- ...(updates.coverUrl !== undefined ? { coverUrl: updates.coverUrl } : {}),
- };
- profileState.set(userId, updated);
+ const current = profileState.get(userId) || defaultProfileFor({ id: userId, fullName: 'You', role: 'student' });
 
  const patch: any = {};
  if (updates.avatarUrl !== undefined) patch.avatar_url = updates.avatarUrl;
@@ -362,6 +396,13 @@ export async function updateProfileImages(
    const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
    if (error) throw new Error(getFriendlyErrorMessage(error, 'Could not update your profile image.'));
  }
+
+ const updated: UserProfile = {
+   ...current,
+   ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
+   ...(updates.coverUrl !== undefined ? { coverUrl: updates.coverUrl } : {}),
+ };
+ profileState.set(userId, updated);
 
  return updated;
 }

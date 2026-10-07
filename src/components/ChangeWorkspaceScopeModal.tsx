@@ -140,8 +140,8 @@ export function ChangeWorkspaceScopeModal({
  <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
  <ScopeOption
  icon="school"
- title="My Campus Network"
- subtitle={`${cleanHomeName} (${cleanHomeCode})`}
+ title={isAdmin ? 'All Campus Networks' : 'My Campus Network'}
+ subtitle={isAdmin ? 'Resources, events and discussions from every campus' : `${cleanHomeName} (${cleanHomeCode})`}
  selected={scope === 'campus' && (!activeCampusCode || activeCampusCode === cleanHomeCode)}
  onPress={() => {
  setActiveCampusCode(undefined);

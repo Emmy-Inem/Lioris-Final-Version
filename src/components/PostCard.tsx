@@ -90,9 +90,11 @@ interface PostCardProps {
   post: Post;
   /** True when this session's user created, or was appointed to moderate, this post's community - see CommunityFeedScreen's myManagedCategories. Grants the same pin/remove controls as admin/staff, scoped to this one community. */
   canModerateCommunity?: boolean;
+  /** Keep the originating campus visible in the super-admin all-campus network. */
+  forceScopeBadge?: boolean;
 }
 
-export const PostCard = React.memo(function PostCard({ post, canModerateCommunity = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, canModerateCommunity = false, forceScopeBadge = false }: PostCardProps) {
  const { colors, spacing, radius, isDark } = useTheme();
  const insets = useSafeAreaInsets();
  const { user } = useAuth();
@@ -102,7 +104,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  const { isFeatureEnabled } = useFeatureFlags();
  // The University / Global tag only means something while the forum can show more than one
  // audience; with the Global toggle off every thread is campus-only, so the tag is just noise.
- const showScopeBadge = isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope');
+ const showScopeBadge = forceScopeBadge || (isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope'));
 
  const [liked, setLiked] = useState(!!post.isLikedByMe);
  const [likesCount, setLikesCount] = useState(post.likesCount);

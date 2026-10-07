@@ -72,7 +72,7 @@ export async function fetchAdminAnalyticsSummary(
   const normalizedCampus = campusCode && campusCode !== 'ALL' ? campusCode : null;
 
   try {
-    const { data, error } = await supabase.rpc('get_admin_analytics_summary', {
+    const { data, error } = await supabase.rpc('get_scoped_admin_analytics_summary', {
       p_days: days,
       p_campus_code: normalizedCampus,
     });
@@ -99,7 +99,7 @@ export async function fetchAdminAnalyticsSummary(
       };
     }
     if (error) {
-      console.warn('[Analytics] get_admin_analytics_summary RPC error, falling back to direct table queries:', error.message);
+      console.warn('[Analytics] scoped analytics RPC error, falling back to permitted table queries:', error.message);
     }
   } catch (err: any) {
     console.warn('[Analytics] fetchAdminAnalyticsSummary RPC invocation failed:', err);

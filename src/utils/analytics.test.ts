@@ -60,11 +60,11 @@ test('analytics and bot visibility logic', async (t) => {
   await t.test('analytics is situated under the platform admin group', async () => {
     // @ts-ignore TS5097
     const { adminGroupForPath } = await import('../components/admin/adminNav.ts');
-    const groupForAnalytics = adminGroupForPath('/analytics');
+    const groupForAnalytics = adminGroupForPath('/analytics', true);
     assert.ok(groupForAnalytics, 'group should be resolved');
     assert.equal(groupForAnalytics.key, 'platform', 'analytics must belong to platform group');
 
-    const groupForAdminAnalytics = adminGroupForPath('/(admin)/analytics');
+    const groupForAdminAnalytics = adminGroupForPath('/(admin)/analytics', true);
     assert.ok(groupForAdminAnalytics);
     assert.equal(groupForAdminAnalytics.key, 'platform');
   });

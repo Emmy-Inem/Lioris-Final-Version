@@ -37,7 +37,11 @@ export default function ExploreForumsScreen() {
 
   const { scope: forumScope, globalEnabled } = useForumScope();
   const { campusCode: activeCampus, homeInstitutionCode } = useCampusScope();
-  const effectiveCampus = (activeCampus && activeCampus !== 'GLOBAL') ? activeCampus : (homeInstitutionCode || 'UNILAG');
+  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
+  const showAllCampuses = isSuperAdmin && (!activeCampus || activeCampus === 'GLOBAL');
+  const effectiveCampus = showAllCampuses
+    ? 'ALL'
+    : (activeCampus && activeCampus !== 'GLOBAL') ? activeCampus : (homeInstitutionCode || 'UNILAG');
   const isGlobalActive = globalEnabled && forumScope === 'global';
 
   const { data: profile } = useQuery({
@@ -66,8 +70,8 @@ export default function ExploreForumsScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const { data: communities = [] } = useQuery({
-    queryKey: ['communities', isGlobalActive ? 'global' : effectiveCampus],
-    queryFn: () => listCommunities(isGlobalActive ? undefined : effectiveCampus),
+    queryKey: ['communities', showAllCampuses ? 'all-campuses' : isGlobalActive ? 'global' : effectiveCampus],
+    queryFn: () => listCommunities(showAllCampuses ? 'ALL' : isGlobalActive ? undefined : effectiveCampus),
   });
 
   const { data: joinedIds = DEFAULT_JOINED_COMMUNITY_IDS, refetch: refetchJoined } = useQuery({
@@ -204,10 +208,12 @@ export default function ExploreForumsScreen() {
             </Pressable>
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText weight="bold" variant={isDesktop ? 'h1' : 'h3'} numberOfLines={1}>
-                {isGlobalActive ? 'Global Discussion Spaces' : `${effectiveCampus} Discussion Spaces`}
+                {showAllCampuses ? 'All-Campus Discussion Spaces' : isGlobalActive ? 'Global Discussion Spaces' : `${effectiveCampus} Discussion Spaces`}
               </AppText>
               <AppText tone="secondary" variant="caption" numberOfLines={1}>
-                {isGlobalActive
+                {showAllCampuses
+                  ? `Review discussion spaces from every campus (${communities.length > 1 ? communities.length - 1 : communities.length} available)`
+                  : isGlobalActive
                   ? `Discover and join student communities across all campuses (${communities.length > 1 ? communities.length - 1 : communities.length} available)`
                   : `Curated campus communities for ${effectiveCampus} (${communities.length > 1 ? communities.length - 1 : communities.length} available)`}
               </AppText>
@@ -389,6 +395,9 @@ export default function ExploreForumsScreen() {
                           </AppText>
                         </View>
                         {ch.approvalStatus === 'pending' && <Badge label="Under Review" tone="warning" />}
+                        {showAllCampuses ? (
+                          <Badge label={ch.campusCode && ch.campusCode !== 'GLOBAL' ? ch.campusCode : 'GLOBAL'} tone="neutral" />
+                        ) : null}
                       </View>
                       <AppText tone="secondary" variant="caption" style={{ fontSize: 11, marginTop: 2 }}>
                         👥 {realMembers} members • 💬 {realThreads} discussions
@@ -574,7 +583,7 @@ export default function ExploreForumsScreen() {
                       await proposeCommunity({
                         label: newName.trim(),
                         description: newDesc.trim(),
-                        campusCode: isGlobalActive ? undefined : effectiveCampus,
+                        campusCode: showAllCampuses || isGlobalActive ? undefined : effectiveCampus,
                       });
                       await queryClient.invalidateQueries({ queryKey: ['communities'] });
                       toast.success(`Space proposal submitted for ${effectiveCampus} review!`);

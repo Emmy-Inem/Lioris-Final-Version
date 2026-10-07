@@ -73,7 +73,8 @@ function findActiveChannel(channels: ForumCommunityRecord[], selected: string | 
 export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
-  const isAdmin = !!(user?.role === 'admin' || user?.actualRole === 'admin' || user?.isSuperAdmin || (user?.email && user.email.toLowerCase().trim() === 'inememmanuel@gmail.com'));
+  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
+  const isAdmin = user?.role === 'admin' || user?.actualRole === 'admin';
   const { isFeatureEnabled } = useFeatureFlags();
   const { isDesktop, isWideDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
@@ -171,13 +172,14 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   }
 
   const isGlobalForum = globalWorkspaceEnabled && viewScope === 'global';
+  const showAllCampuses = isSuperAdmin && !activeCampusCode;
   const effectiveCampusCode = (activeCampusCode && activeCampusCode !== 'GLOBAL')
     ? activeCampusCode
     : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL' ? homeInstitutionCode : undefined);
 
   const { data: fetchedCommunities } = useQuery({
-    queryKey: ['communities', isGlobalForum ? 'global' : effectiveCampusCode],
-    queryFn: () => listCommunities(isGlobalForum ? undefined : effectiveCampusCode),
+    queryKey: ['communities', showAllCampuses ? 'all-campuses' : isGlobalForum ? 'global' : effectiveCampusCode],
+    queryFn: () => listCommunities(showAllCampuses ? 'ALL' : isGlobalForum ? undefined : effectiveCampusCode),
   });
   const CHANNELS = React.useMemo(
     () => [ALL_THREADS_CHANNEL, ...(fetchedCommunities ?? [])],
@@ -348,8 +350,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     queryFn: () => getMyProfile(user!),
     enabled: !!user,
   });
-  const viewerInstitutionCode =
-    activeCampusCode && activeCampusCode !== 'GLOBAL'
+  const viewerInstitutionCode = showAllCampuses
+    ? undefined
+    : activeCampusCode && activeCampusCode !== 'GLOBAL'
       ? activeCampusCode
       : homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
       ? homeInstitutionCode
@@ -413,13 +416,14 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, selectedChannel, showBots],
+    queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, showAllCampuses, selectedChannel, showBots],
     queryFn: ({ pageParam }) =>
       listFeedPosts({
         scope,
         q: debouncedQuery || undefined,
         viewScope,
         viewerInstitutionCode,
+        includeAllCampuses: showAllCampuses,
         category: selectedChannel === 'Polls' ? undefined : selectedChannel ?? undefined,
         showBots,
         page: pageParam,
@@ -470,8 +474,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // replaces the fabricated membersCount/onlineCount numbers that used to
   // be hardcoded on every community.
   const { data: allCommunityPosts } = useQuery({
-    queryKey: ['feed', scope, 'community-stats', viewScope, viewerInstitutionCode],
-    queryFn: () => listFeedPosts({ scope, viewScope, viewerInstitutionCode }),
+    queryKey: ['feed', scope, 'community-stats', viewScope, viewerInstitutionCode, showAllCampuses],
+    queryFn: () => listFeedPosts({ scope, viewScope, viewerInstitutionCode, includeAllCampuses: showAllCampuses }),
   });
 
   const { data: liveCommunityStats } = useQuery({
@@ -566,7 +570,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </AppText>
         </View>
 
-        {!isDesktop && globalWorkspaceEnabled && (
+        {!isDesktop && showAllCampuses ? (
+          <Badge label="All Campuses" tone="neutral" />
+        ) : !isDesktop && globalWorkspaceEnabled ? (
           <View
             style={{
               flexDirection: 'row',
@@ -600,7 +606,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               );
             })}
           </View>
-        )}
+        ) : null}
       </View>
 
       {/* 24h Campus Stories & Fleets */}
@@ -1053,7 +1059,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 {/* Scope Switcher for desktop */}
-                <View
+                {showAllCampuses ? (
+                  <Badge label="All Campuses" tone="neutral" />
+                ) : <View
                   style={{
                     flexDirection: 'row',
                     backgroundColor: colors.surface,
@@ -1082,7 +1090,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                       </Pressable>
                     );
                   })}
-                </View>
+                </View>}
 
               </View>
             </View>
@@ -1436,7 +1444,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               windowSize={7}
               contentContainerStyle={{ paddingBottom: 40 }}
               renderItem={({ item }) => (
-                <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} />
+                <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} forceScopeBadge={showAllCampuses} />
               )}
               showsVerticalScrollIndicator={true}
               onRefresh={handleRefresh}
@@ -1633,7 +1641,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         windowSize={7}
         contentContainerStyle={{ paddingBottom: 120 }}
         renderItem={({ item }) => (
-          <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} />
+          <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} forceScopeBadge={showAllCampuses} />
         )}
         showsVerticalScrollIndicator={false}
         onRefresh={handleRefresh}

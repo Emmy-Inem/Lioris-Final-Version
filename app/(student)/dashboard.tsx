@@ -510,10 +510,13 @@ export default function StudentDashboard() {
                         }}
                         hitSlop={10}
                         accessibilityLabel="Dismiss notice from home"
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 3, opacity: 0.7 }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
                       >
-                        <Ionicons name="checkmark-done" size={15} color={colors.textSecondary} />
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                        <Ionicons name="checkmark-done" size={15} color={isDark ? colors.textPrimary : '#475467'} />
+                        <AppText
+                          variant="caption"
+                          style={{ fontSize: 11, color: isDark ? colors.textPrimary : '#475467' }}
+                        >
                           Dismiss
                         </AppText>
                       </Pressable>
