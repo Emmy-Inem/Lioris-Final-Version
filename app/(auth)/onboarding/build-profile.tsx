@@ -179,8 +179,10 @@ export default function BuildProfileScreen() {
 
       await advance();
     } catch (err: any) {
-      toast.warning('We could not save your profile details just now - you can update them in Settings.');
-      await advance();
+      haptics.error();
+      const message = err?.message || 'We could not save your academic profile. Check your connection and try again.';
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }

@@ -258,7 +258,7 @@ export function SettingsScreen() {
   };
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
-  const isSuperAdmin = user?.actualRole === 'admin';
+  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
   // Everything is one vertical scroll, split into labelled categories. The workspace scope and the
   // role switcher are admin tools, so members never see those two categories.
   const SETTINGS_SECTIONS = isSuperAdmin

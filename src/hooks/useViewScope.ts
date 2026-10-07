@@ -113,7 +113,8 @@ export function useViewScope() {
   const isStudent = userRole === 'student';
   let canExploreWorkspaces = false;
   try {
-    canExploreWorkspaces = useAuth()?.user?.actualRole === 'admin';
+    const currentUser = useAuth()?.user;
+    canExploreWorkspaces = currentUser?.actualRole === 'admin' && currentUser?.isSuperAdmin === true;
   } catch {
     // outside AuthProvider (e.g. isolated tests)
   }

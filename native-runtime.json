@@ -1,6 +1,6 @@
 {
-  "runtimeVersion": "1.1.0",
-  "configSignature": "d6727e584a974254",
+  "runtimeVersion": "1.1.1",
+  "configSignature": "eb7fce7e7478e146",
   "nativePackages": [
     "@config-plugins/react-native-webrtc@15.0",
     "@expo/dom-webview@57.0",

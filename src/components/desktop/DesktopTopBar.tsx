@@ -86,7 +86,7 @@ export function DesktopTopBar() {
  const unreadNotifications = (notifications ?? []).filter((n: any) => !n.openedAt);
  const unreadCount = unreadNotifications.length;
  const role = user?.role || 'student';
- const isSuperAdmin = user?.actualRole === 'admin';
+ const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
 
  // Listen for global Cmd+K / Ctrl+K keyboard shortcut on web
   useEffect(() => {

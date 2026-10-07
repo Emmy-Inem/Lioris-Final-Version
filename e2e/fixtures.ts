@@ -105,9 +105,21 @@ export type TestUserRole = 'student' | 'alumni' | 'staff' | 'admin';
 export async function seedAuthenticatedSession(
   page: Page,
   role: TestUserRole,
-  options: { currentConsent?: boolean; tutorialComplete?: boolean } = {},
+  options: {
+    currentConsent?: boolean;
+    tutorialComplete?: boolean;
+    onboardingComplete?: boolean;
+    onboardingStep?: string;
+    superAdmin?: boolean;
+  } = {},
 ) {
-  const { currentConsent = true, tutorialComplete = true } = options;
+  const {
+    currentConsent = true,
+    tutorialComplete = true,
+    onboardingComplete = true,
+    onboardingStep,
+    superAdmin = role === 'admin',
+  } = options;
   // A dashboard test should inspect the dashboard, not the separate legal
   // re-consent flow. A dedicated accessibility test covers that dialog.
   await page.route('**/rest/v1/rpc/latest_consent', (route) =>
@@ -119,22 +131,69 @@ export async function seedAuthenticatedSession(
     }),
   );
 
-  await page.addInitScript(({ seedRole, hasCompletedTutorial }) => {
+  await page.addInitScript(({ seedRole, hasCompletedTutorial, hasCompletedOnboarding, savedOnboardingStep, isSuperAdmin }) => {
+    const userId = `e2e-${seedRole}-user`;
+    const email = `${seedRole}.e2e@example.com`;
+    const now = Math.floor(Date.now() / 1000);
+    const encode = (value: unknown) =>
+      btoa(JSON.stringify(value)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const accessToken = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({
+      sub: userId,
+      email,
+      role: 'authenticated',
+      aud: 'authenticated',
+      iat: now,
+      exp: now + 3600,
+    })}.e2e-signature`;
     const user = {
-      id: `e2e-${seedRole}-user`,
+      id: userId,
       fullName: `E2E ${seedRole[0].toUpperCase()}${seedRole.slice(1)}`,
-      email: `${seedRole}.e2e@example.com`,
+      email,
       role: seedRole,
       actualRole: seedRole,
-      onboardingComplete: true,
+      onboardingComplete: hasCompletedOnboarding,
+      ...(hasCompletedOnboarding || !savedOnboardingStep ? {} : { onboardingStep: savedOnboardingStep }),
       mfaVerified: true,
+      ...(seedRole === 'admin'
+        ? {
+            adminRole: isSuperAdmin ? 'super_admin' : 'campus_admin',
+            isSuperAdmin,
+            isCampusAdmin: !isSuperAdmin,
+            campusCode: isSuperAdmin ? 'GLOBAL' : 'UI',
+          }
+        : { campusCode: 'UI' }),
     };
 
-    localStorage.setItem('lioris.accessToken', `e2e-${seedRole}-access-token`);
+    localStorage.setItem('lioris.accessToken', accessToken);
     localStorage.setItem('lioris.refreshToken', `e2e-${seedRole}-refresh-token`);
     localStorage.setItem('lioris.sessionUser', JSON.stringify(user));
+    localStorage.setItem(
+      'sb-fdtnbluslkabwsmspbem-auth-token',
+      JSON.stringify({
+        access_token: accessToken,
+        refresh_token: `e2e-${seedRole}-refresh-token`,
+        expires_at: now + 3600,
+        expires_in: 3600,
+        token_type: 'bearer',
+        user: {
+          id: userId,
+          email,
+          role: 'authenticated',
+          aud: 'authenticated',
+          user_metadata: { full_name: user.fullName },
+          app_metadata: { provider: 'email', providers: ['email'] },
+          created_at: new Date().toISOString(),
+        },
+      }),
+    );
     if (hasCompletedTutorial) {
       localStorage.setItem(`lioris_nav_walkthrough_${user.id}`, 'true');
     }
-  }, { seedRole: role, hasCompletedTutorial: tutorialComplete });
+  }, {
+    seedRole: role,
+    hasCompletedTutorial: tutorialComplete,
+    hasCompletedOnboarding: onboardingComplete,
+    savedOnboardingStep: onboardingStep,
+    isSuperAdmin: superAdmin,
+  });
 }

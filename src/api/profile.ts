@@ -383,9 +383,8 @@ export async function updateMyProfile(
  userId = data?.user?.id || stored?.id || 'me';
  }
 
-  const current = profileState.get(userId) || defaultProfileFor({ id: userId, fullName: 'You', role: 'student' });
+ const current = profileState.get(userId) || defaultProfileFor({ id: userId, fullName: 'You', role: 'student' });
  const updated: UserProfile = { ...current, ...patch };
- profileState.set(userId, updated);
 
  try {
  const dbPatch: any = {
@@ -451,6 +450,7 @@ export async function updateMyProfile(
    // Session fallback for offline/network
  }
 
+ profileState.set(userId, updated);
  return updated;
 }
 

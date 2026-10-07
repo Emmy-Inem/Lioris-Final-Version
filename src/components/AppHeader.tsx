@@ -72,7 +72,7 @@ export function AppHeader() {
   // if you forget you switched. This banner is the one place it's always
   // visible, since AppHeader renders on every mobile screen.
   const { scope, setScope, activeCampusCode, homeInstitutionCode, setActiveCampusCode } = useCampusScope();
-  const canSwitchCampus = user?.actualRole === 'admin';
+  const canSwitchCampus = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
   const isExploringOtherCampus = canSwitchCampus && !!activeCampusCode && activeCampusCode !== homeInstitutionCode;
   const exploringInstitutionName = isExploringOtherCampus
     ? getInstitutionByCode(activeCampusCode!)?.name ?? activeCampusCode

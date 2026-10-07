@@ -3,7 +3,8 @@ import { UserRole } from '@/api/types';
 /**
  * Streamlined onboarding flow for new users:
  * 1. build-profile: University, College/Faculty, Department, Level, optional photo & bio.
- * 2. select-interests: Quick topic tags to personalize student feeds and events.
+ * 2. select-interests: Legacy-compatible route for joining real campus discussion spaces.
+ *    Keeping the path prevents older paused sessions from breaking.
  * 3. verify: Prove campus membership with one photo. Always skippable - it is also reachable
  *    later from the profile and the home-screen notice, so it never blocks first-time onboarding.
  * 4. get-started: Campus welcome and seamless launch to dashboard.

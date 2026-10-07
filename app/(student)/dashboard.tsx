@@ -139,11 +139,10 @@ export default function StudentDashboard() {
       return bTime - aTime;
     });
 
-  // Mirrors exactly what public.mentor_directory (src/api/mentorship.ts's
-  // mentor search) actually scores a student against: department and
-  // interests (campus_code is set at signup, so it is never "missing").
-  // Bio isn't part of that match score, so it isn't nudged for here.
-  const missingMentorshipFields = !!profile && (!profile.department?.trim() || !(profile.interests && profile.interests.length > 0));
+  // Department is the only essential mentorship field. Interests remain an
+  // optional profile enhancement; onboarding no longer forces students to
+  // choose generic interest tags before they can enter their campus.
+  const missingMentorshipFields = !!profile && !profile.department?.trim();
 
   const firstName = profile?.fullName?.split(' ')[0] ?? user?.fullName?.split(' ')[0] ?? 'Student';
   const { url: resolvedCoverUrl } = useSignedUrl('campus-media', profile?.coverUrl);
@@ -433,7 +432,7 @@ export default function StudentDashboard() {
                 Complete Your Profile
               </AppText>
               <AppText tone="secondary" style={{ fontSize: 11.5, lineHeight: 15, marginTop: 2 }}>
-                Add your department and interests to get better alumni mentor matches.
+                Add your department to get better alumni mentor matches.
               </AppText>
               <Pressable
                 accessibilityRole="button"

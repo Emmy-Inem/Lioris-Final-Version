@@ -207,9 +207,9 @@ export function DesktopSidebar() {
  {!collapsed && (
  <View style={{ gap: 6, marginTop: 4 }}>
  <Pressable
- onPress={user?.actualRole === 'admin' ? () => setWorkspaceModalOpen(true) : undefined}
- accessibilityRole={user?.actualRole === 'admin' ? 'button' : undefined}
- accessibilityLabel={user?.actualRole === 'admin' ? 'Switch campus network' : undefined}
+ onPress={user?.actualRole === 'admin' && user?.isSuperAdmin ? () => setWorkspaceModalOpen(true) : undefined}
+ accessibilityRole={user?.actualRole === 'admin' && user?.isSuperAdmin ? 'button' : undefined}
+ accessibilityLabel={user?.actualRole === 'admin' && user?.isSuperAdmin ? 'Switch campus network' : undefined}
  style={[
  styles.campusPill,
  {
@@ -222,7 +222,7 @@ export function DesktopSidebar() {
  <AppText variant="caption" weight="semiBold" style={{ flex: 1, fontSize: 11 }}>
  {campusName}
  </AppText>
- {user?.actualRole === 'admin' && <Ionicons name="swap-horizontal" size={13} color={colors.textSecondary} />}
+ {user?.actualRole === 'admin' && user?.isSuperAdmin && <Ionicons name="swap-horizontal" size={13} color={colors.textSecondary} />}
  </Pressable>
  </View>
  )}

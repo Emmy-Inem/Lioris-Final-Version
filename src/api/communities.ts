@@ -72,8 +72,17 @@ export async function listCommunities(campusCode?: string): Promise<ForumCommuni
     if (!data || data.length === 0) return fallbackCommunities();
     const mapped = data.map(mapRow);
     if (campusCode && campusCode !== 'GLOBAL' && campusCode !== 'ALL') {
-      const campusSpecific = mapped.filter((c) => c.campusCode === campusCode);
-      return campusSpecific.length > 0 ? campusSpecific : mapped;
+      // A campus feed is the union of shared/global spaces and that campus's
+      // own spaces. The former implementation returned only campus-specific
+      // rows as soon as one existed, hiding every launch space; when none
+      // existed it returned every other campus instead. Both outcomes broke
+      // onboarding and leaked irrelevant campus directories.
+      return mapped.filter(
+        (community) =>
+          !community.campusCode ||
+          community.campusCode === 'GLOBAL' ||
+          community.campusCode === campusCode,
+      );
     }
     return mapped;
   } catch (err) {

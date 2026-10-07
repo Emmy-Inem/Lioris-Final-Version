@@ -174,7 +174,7 @@ export default function StudentMentorshipScreen() {
                   Recommended for you
                 </AppText>
                 <AppText tone="secondary" variant="caption" style={{ marginTop: -8 }}>
-                  Based on your interests, department and campus.
+                  Based on your profile, department and campus.
                 </AppText>
                 {renderMentors(recommended)}
                 <AppText variant="h3" weight="bold">

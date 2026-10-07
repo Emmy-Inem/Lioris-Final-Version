@@ -18,7 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'lioris',
   // Bumped for react-native-webrtc (native WebRTC calling on iOS/Android) - a new
   // native module, so OTA cannot carry it; see the native-runtime guard note below.
-  version: '1.1.0',
+  version: '1.1.1',
   // Over-the-air updates (expo-updates). An update is only delivered to installs with the same runtime version, so
   // `version` must change whenever native code does (new/upgraded native module, plugin or permission change);
   // `npm run native-runtime` fails CI until it does. See docs/operations/mobile-releases.md.
@@ -99,6 +99,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
+    'expo-asset',
     'expo-secure-store',
     'expo-font',
     'expo-sharing',

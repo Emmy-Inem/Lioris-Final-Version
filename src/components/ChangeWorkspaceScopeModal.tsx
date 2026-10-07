@@ -40,7 +40,7 @@ export function ChangeWorkspaceScopeModal({
   // Keep this available while a real admin is previewing the student or
   // alumni workspace. `role` is the previewed role; `actualRole` is the
   // database-verified account role and cannot be changed by the preview tool.
-  const isAdmin = user?.actualRole === 'admin';
+  const isAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
 
   // Guest explored campuses list (exclude home institution and global)
   const cleanHomeCode = (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL') ? homeInstitutionCode : '';

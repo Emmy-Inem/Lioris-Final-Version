@@ -45,8 +45,8 @@ export function RoleGate({
   }
 
   if (user.role !== allow) {
-    if (user.actualRole === 'admin') {
-      // Root Admin has full access across all portals (student, staff, alumni)
+    if (user.actualRole === 'admin' && user.isSuperAdmin) {
+      // Super Admin has full access across all portals (student, staff, alumni)
       // to audit, inspect, and assist users without being kicked out.
       return <>{children}</>;
     }

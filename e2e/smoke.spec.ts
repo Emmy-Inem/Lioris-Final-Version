@@ -134,7 +134,7 @@ test.describe('route protection', () => {
 
 test.describe('authenticated role portals', () => {
   const portals: ReadonlyArray<{ role: TestUserRole; route: string; marker: RegExp }> = [
-    { role: 'student', route: '/(student)/dashboard', marker: /Student Services/i },
+    { role: 'student', route: '/(student)/dashboard', marker: /Quick Services/i },
     { role: 'alumni', route: '/(alumni)/dashboard', marker: /Alumni Action Hub/i },
     { role: 'staff', route: '/(staff)/dashboard', marker: /Faculty Staff/i },
     { role: 'admin', route: '/(admin)/dashboard', marker: /Needs attention/i },
@@ -158,7 +158,7 @@ test.describe('authenticated role portals', () => {
     await waitForApp(page);
 
     await expect(page).toHaveURL(/dashboard/, { timeout: 20_000 });
-    await expect(page.getByText(/Student Services/i)).toBeVisible();
+    await expect(page.getByText(/Quick Services/i)).toBeVisible();
     await expect(page.getByText(/Needs attention/i)).toHaveCount(0);
   });
 
@@ -167,9 +167,58 @@ test.describe('authenticated role portals', () => {
     await page.goto('/(student)/dashboard');
     await waitForApp(page);
 
-    await expect(page.getByText(/Student Services/i)).toBeVisible();
+    await expect(page.getByText(/Quick Services/i)).toBeVisible();
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('lioris.sessionUser') || '{}'));
     expect(stored.actualRole).toBe('admin');
+    expect(stored.adminRole).toBe('super_admin');
+  });
+
+  test('a campus admin cannot use the super-admin student preview', async ({ page }) => {
+    await seedAuthenticatedSession(page, 'admin', { superAdmin: false });
+    await page.goto('/(student)/dashboard');
+    await waitForApp(page);
+
+    await expect(page.getByText(/Needs attention/i).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Quick Services/i)).toHaveCount(0);
+  });
+});
+
+test.describe('student onboarding continuity', () => {
+  test('a paused legacy interests step resumes as campus discussion spaces', async ({ page, problems }) => {
+    await seedAuthenticatedSession(page, 'student', {
+      onboardingComplete: false,
+      onboardingStep: '/(auth)/onboarding/select-interests',
+    });
+    await page.goto('/');
+    await waitForApp(page);
+
+    await expect(page).toHaveURL(/onboarding\/select-interests/, { timeout: 20_000 });
+    await expect(page.getByText('Join discussion spaces')).toBeVisible();
+    await expect(page.getByText('Pick your interests')).toHaveCount(0);
+    await expect(page.getByRole('checkbox', { name: /Academic & Courses/i })).toBeVisible();
+    expect(problems.consoleErrors, 'console errors').toEqual([]);
+  });
+
+  test('discussion-space choices advance and survive a reload', async ({ page }) => {
+    await seedAuthenticatedSession(page, 'student', {
+      onboardingComplete: false,
+      onboardingStep: '/(auth)/onboarding/select-interests',
+    });
+    await page.goto('/');
+    await waitForApp(page);
+
+    const polls = page.getByRole('checkbox', { name: /Polls & Votes/i });
+    await expect(polls).not.toBeChecked();
+    await polls.click();
+    await expect(polls).toBeChecked();
+    await page.getByRole('button', { name: /Continue with \d+ selected|Skip for now/ }).click();
+
+    await expect(page).toHaveURL(/onboarding\/verify/, { timeout: 20_000 });
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('lioris.sessionUser') || '{}'));
+    expect(stored.onboardingComplete).toBe(false);
+    expect(stored.onboardingStep).toBe('/(auth)/onboarding/verify');
+    await page.reload();
+    await expect(page).toHaveURL(/onboarding\/verify/, { timeout: 20_000 });
   });
 });
 

@@ -371,6 +371,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                role === 'staff' ||
                isMasterAdminEmail)
             : (cachedOnboarding ?? (role === 'admin' || role === 'staff'));
+          const sameAccount =
+            userRef.current?.id === session.user.id || storedUser?.id === session.user.id;
 
           const nextUser: SessionUser = {
             id: session.user.id,
@@ -383,7 +385,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isSuperAdmin,
             isCampusAdmin,
             onboardingComplete: isOnboarded,
-            mfaVerified: !roleRequiresMfa(activeRole),
+            onboardingStep: isOnboarded
+              ? undefined
+              : userRef.current?.onboardingStep || storedUser?.onboardingStep || firstOnboardingStep(role),
+            // MFA verification belongs to this still-valid local session. A
+            // full logout clears the stored projection, while a reload must
+            // not force staff/admin through the challenge again.
+            mfaVerified: sameAccount
+              ? (userRef.current?.mfaVerified ?? storedUser?.mfaVerified ?? !roleRequiresMfa(activeRole))
+              : !roleRequiresMfa(activeRole),
           };
           await persist(nextUser);
           await setTokens(session.access_token, session.refresh_token ?? session.access_token);
@@ -808,21 +818,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       },
       async setOnboardingStep(path) {
-        setUser((prev) => {
-          if (!prev) return prev;
-          const next = { ...prev, onboardingStep: path };
-          persist(next);
-          return next;
-        });
+        const current = userRef.current;
+        if (!current) return;
+        const next = { ...current, onboardingStep: path };
+        // Persist before navigating. The old state-callback fire-and-forgot
+        // this write, so a fast reload could reopen the previous step.
+        await persist(next);
+        userRef.current = next;
+        setUser(next);
       },
       async completeOnboarding() {
         const currentUserId = userRef.current?.id;
-        setUser((prev) => {
-          if (!prev) return prev;
-          const next = { ...prev, onboardingComplete: true, onboardingStep: undefined };
-          persist(next);
-          return next;
-        });
+        const current = userRef.current;
+        if (!current) return;
+        const next = { ...current, onboardingComplete: true, onboardingStep: undefined };
+        await persist(next);
+        userRef.current = next;
+        setUser(next);
         // Best-effort server sync so "has onboarded" survives a cleared
         // browser/new device, not just this session's local storage.
         if (currentUserId) {
@@ -838,12 +850,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async verifyMfa(code) {
         await authApi.verifyMfaCode(code.trim());
-        setUser((prev) => {
-          if (!prev) return prev;
-          const next = { ...prev, mfaVerified: true };
-          persist(next);
-          return next;
-        });
+        const current = userRef.current;
+        if (!current) return;
+        const next = { ...current, mfaVerified: true };
+        await persist(next);
+        userRef.current = next;
+        setUser(next);
       },
       async switchRole(newRole: UserRole) {
         // Gated on actualRole (the real, database-verified identity), not
