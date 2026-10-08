@@ -151,7 +151,7 @@ export async function fetchAdminAnalyticsSummary(
 
     // Campus aggregation - initialize with known launch institutions so all appear
     const campusMap = new Map<string, { total: number; real: number; verified: number; active7d: number }>();
-    const DEFAULT_CAMPUS_CODES = ['UI', 'UNILAG', 'FUNAAB', 'UNN', 'OAU', 'CU'];
+    const DEFAULT_CAMPUS_CODES = ['UI', 'UNILAG', 'FUNAAB', 'UNN', 'OAU', 'CU', 'KDU', 'NOUN', 'ESUT', 'MUN'];
     for (const code of DEFAULT_CAMPUS_CODES) {
       campusMap.set(code, { total: 0, real: 0, verified: 0, active7d: 0 });
     }

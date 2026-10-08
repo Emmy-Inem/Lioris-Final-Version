@@ -24,6 +24,17 @@ token_verifications = 30
 # Session refreshes per 5-minute window, per IP (Supabase default: 150).
 token_refresh = 150
 
+[auth.email]
+# All confirmation and recovery screens use a six-digit code.
+otp_length = 6
+otp_expiry = 3600
+
+# Local Auth mirror of the hosted recovery template. The hosted project must use
+# the same HTML under Authentication > Email Templates > Reset password.
+[auth.email.template.recovery]
+subject = "Reset your Lioris password"
+content_path = "./supabase/templates/recovery.html"
+
 # --- verify_jwt = true: the Supabase gateway rejects requests without a valid user JWT ---
 
 [functions.gemini-proxy]

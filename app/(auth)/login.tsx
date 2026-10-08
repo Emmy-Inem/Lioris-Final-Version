@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppText } from '@/components/AppText';
@@ -15,10 +15,6 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { joinWaitlist } from '@/api/institutions';
 import { isEmailConfirmationRequired } from '@/api/auth';
-import {
- sendPasswordResetEmail,
- verifyPasswordResetOtpAndSetPassword,
-} from '@/api/auth';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
 import { haptics } from '@/utils/haptics';
 import { getFriendlyErrorMessage, isCredentialError, isNetworkError } from '@/utils/errors';
@@ -42,12 +38,13 @@ const SLIDES = [
 ];
 
 export default function LoginScreen() {
+ const params = useLocalSearchParams<{ email?: string }>();
  const { colors, spacing, radius, isDark, toggleTheme } = useTheme();
  const { isDesktop } = useResponsive();
  const { login } = useAuth();
  const [portal, setPortal] = useState<'student' | 'alumni'>('student');
  const [slide, setSlide] = useState(0);
- const [email, setEmail] = useState('');
+ const [email, setEmail] = useState(typeof params.email === 'string' ? params.email : '');
  const [password, setPassword] = useState('');
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
@@ -58,73 +55,6 @@ export default function LoginScreen() {
  const [waitlistSchool, setWaitlistSchool] = useState('');
  const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
-
- // Forgot password modal state
- const [forgotModalOpen, setForgotModalOpen] = useState(false);
- const [forgotEmail, setForgotEmail] = useState('');
- const [forgotOtp, setForgotOtp] = useState('');
- const [forgotNewPassword, setForgotNewPassword] = useState('');
- const [forgotError, setForgotError] = useState<string | null>(null);
- const [forgotStep, setForgotStep] = useState<'request' | 'sent'>('request');
- const [submittingForgot, setSubmittingForgot] = useState(false);
-
- async function handleSendRecoveryCode() {
- setForgotError(null);
- if (!forgotEmail.trim()) {
- setForgotError('Please enter your registered email address.');
- haptics.error();
- return;
- }
- setSubmittingForgot(true);
- try {
- const res = await sendPasswordResetEmail(forgotEmail.trim(), captchaToken || undefined);
- setForgotStep('sent');
- haptics.success();
- if (res?.warning) {
-  Alert.alert('Security Notice', res.warning);
- }
- } catch (err: any) {
- haptics.error();
- if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
- setForgotError('Security verification failed. Please complete the security check.');
- return;
- }
- setForgotError(getFriendlyErrorMessage(err, 'Could not send recovery code. Please verify your email.'));
- } finally {
- setSubmittingForgot(false);
- }
- }
-
- async function handleResetPasswordSubmit() {
- setForgotError(null);
- if (!forgotOtp.trim()) {
- setForgotError('Please enter the 6-digit recovery code.');
- haptics.error();
- return;
- }
- if (!forgotNewPassword || forgotNewPassword.length < 8) {
- setForgotError('New password must be at least 8 characters long.');
- haptics.error();
- return;
- }
- setSubmittingForgot(true);
- try {
- await verifyPasswordResetOtpAndSetPassword(forgotEmail.trim(), forgotOtp.trim(), forgotNewPassword);
- haptics.success();
- Alert.alert('Password Updated', 'Your password has been successfully reset. You can now log in.');
- setPassword(forgotNewPassword);
- setEmail(forgotEmail.trim());
- setForgotModalOpen(false);
- setForgotStep('request');
- setForgotOtp('');
- setForgotNewPassword('');
- } catch (err: any) {
- haptics.error();
- setForgotError(getFriendlyErrorMessage(err, 'Invalid or expired recovery code. Please try again.'));
- } finally {
- setSubmittingForgot(false);
- }
- }
 
  async function handleJoinWaitlist() {
  setSubmittingWaitlist(true);
@@ -658,195 +588,6 @@ export default function LoginScreen() {
  </ScrollView>
  )}
 
- {/* Forgot Password Modal */}
- <Modal visible={forgotModalOpen} transparent animationType="fade" onRequestClose={() => setForgotModalOpen(false)}>
- <View accessibilityViewIsModal style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
- <SolidCard style={{ width: '100%', maxWidth: 420 }}>
- <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
- <AppText variant="h3" weight="bold">
- Reset Password
- </AppText>
- <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setForgotModalOpen(false)} hitSlop={8}>
- <Ionicons name="close" size={20} color={colors.textSecondary} />
- </Pressable>
- </View>
-
- {forgotError ? (
- <View
- style={{
- flexDirection: 'row',
- alignItems: 'center',
- gap: 8,
- backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : '#FEE2E2',
- borderColor: colors.critical,
- borderWidth: 1,
- borderRadius: radius.md,
- paddingHorizontal: spacing.md,
- paddingVertical: spacing.sm,
- marginBottom: spacing.md,
- }}
- >
- <Ionicons name="alert-circle" size={18} color={colors.critical} />
- <AppText
- variant="bodySmall"
- weight="semiBold"
- style={{ color: colors.critical, flex: 1 }}
- >
- {forgotError}
- </AppText>
- </View>
- ) : null}
-
-      {forgotStep === 'request' ? (
-        <>
-          <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
-            Enter your registered email address and we'll send you a password recovery link and code.
-          </AppText>
-          <AppTextField
-            label="Email"
-            placeholder="you@example.com"
-            value={forgotEmail}
-            onChangeText={(text) => {
-              setForgotEmail(text);
-              if (forgotError) setForgotError(null);
-            }}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              gap: 8,
-              backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : '#FEF9C3',
-              borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : '#FDE047',
-              borderWidth: 1,
-              borderRadius: radius.md,
-              padding: spacing.sm,
-              marginTop: spacing.sm,
-              marginBottom: spacing.xs,
-            }}
-          >
-            <Ionicons name="information-circle" size={18} color={isDark ? '#FACC15' : '#CA8A04'} style={{ marginTop: 1, flexShrink: 0 }} />
-            <AppText variant="caption" style={{ color: isDark ? '#FEF08A' : '#854D0E', flex: 1, lineHeight: 16 }}>
-              <AppText weight="bold" style={{ color: isDark ? '#FEF08A' : '#854D0E' }}>Spam / Junk Folder Notice: </AppText>
-              Password recovery emails may be filtered to your Spam or Junk folder. If not received in 1-2 minutes, check Spam and search for "Lioris".
-            </AppText>
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-            <AppButton label="Cancel" variant="ghost" onPress={() => setForgotModalOpen(false)} />
-            <AppButton
-              label="Send Link & Code"
-              disabled={!forgotEmail.trim() || submittingForgot}
-              loading={submittingForgot}
-              onPress={handleSendRecoveryCode}
-            />
-          </View>
-          <View style={{ alignItems: 'center', marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider }}>
-            <Pressable
-              onPress={() => {
-                setForgotModalOpen(false);
-                router.push({
-                  pathname: '/(auth)/reset-password' as any,
-                  params: { email: forgotEmail.trim() || undefined },
-                });
-              }}
-              hitSlop={8}
-            >
-              <AppText tone="brand" variant="caption" weight="semiBold">
-                Open Full Reset Password Screen →
-              </AppText>
-            </Pressable>
-          </View>
-        </>
-      ) : (
-        <>
-          <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
-            <Ionicons name="shield-checkmark" size={36} color={colors.brandPrimary} />
-            <AppText weight="bold" variant="h3" style={{ marginTop: spacing.xs }}>
-              Enter Recovery Code
-            </AppText>
-            <AppText tone="secondary" variant="caption" style={{ textAlign: 'center', marginTop: 2 }}>
-              We sent a recovery link and 6-digit code to {forgotEmail}. Click the email link or enter your code below.
-            </AppText>
-          </View>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              gap: 8,
-              backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : '#FEF9C3',
-              borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : '#FDE047',
-              borderWidth: 1,
-              borderRadius: radius.md,
-              padding: spacing.sm,
-              marginBottom: spacing.md,
-            }}
-          >
-            <Ionicons name="mail-unread" size={18} color={isDark ? '#FACC15' : '#CA8A04'} style={{ marginTop: 1, flexShrink: 0 }} />
-            <AppText variant="caption" style={{ color: isDark ? '#FEF08A' : '#854D0E', flex: 1, lineHeight: 16 }}>
-              <AppText weight="bold" style={{ color: isDark ? '#FEF08A' : '#854D0E' }}>Can't find the email? </AppText>
-              Please check your <AppText weight="bold" style={{ color: isDark ? '#FEF08A' : '#854D0E' }}>Spam / Junk folder</AppText>. Mark the email as "Not Spam" or add Lioris to your safe sender list.
-            </AppText>
-          </View>
-
-          <AppTextField
-            label="6-Digit Recovery Code"
-            placeholder="123456"
-            value={forgotOtp}
-            onChangeText={(text) => {
-              setForgotOtp(text);
-              if (forgotError) setForgotError(null);
-            }}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-
-          <AppTextField
-            label="New Password"
-            placeholder="At least 8 characters"
-            value={forgotNewPassword}
-            onChangeText={(text) => {
-              setForgotNewPassword(text);
-              if (forgotError) setForgotError(null);
-            }}
-            secureTextEntry
-          />
-
-          <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md }}>
-            <AppButton label="Back" variant="ghost" onPress={() => setForgotStep('request')} />
-            <AppButton
-              label="Update Password"
-              disabled={!forgotOtp.trim() || !forgotNewPassword || submittingForgot}
-              loading={submittingForgot}
-              onPress={handleResetPasswordSubmit}
-            />
-          </View>
-
-          <View style={{ alignItems: 'center', marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider }}>
-            <Pressable
-              onPress={() => {
-                setForgotModalOpen(false);
-                router.push({
-                  pathname: '/(auth)/reset-password' as any,
-                  params: { email: forgotEmail.trim() || undefined, code: forgotOtp.trim() || undefined },
-                });
-              }}
-              hitSlop={8}
-            >
-              <AppText tone="brand" variant="caption" weight="semiBold">
-                Open Full Reset Password Screen →
-              </AppText>
-            </Pressable>
-          </View>
-        </>
-      )}
- </SolidCard>
- </View>
- </Modal>
  </ScreenContainer>
  );
 }

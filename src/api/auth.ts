@@ -500,15 +500,19 @@ export async function verifyPasswordResetOtpAndSetPassword(
   token: string,
   newPassword: string,
 ): Promise<{ success: boolean }> {
+  await verifyPasswordResetOtp(email, token);
+  return updateUserPassword(newPassword);
+}
+
+/** Verifies a recovery OTP and establishes the short-lived recovery session. */
+export async function verifyPasswordResetOtp(
+  email: string,
+  token: string,
+): Promise<{ success: boolean }> {
   const cleanEmail = email.trim().toLowerCase();
-  const cleanToken = token.trim();
-  if (!cleanToken) throw new Error('Recovery code is required.');
-  if (!newPassword || !isPasswordValid(newPassword)) {
-    const unmet = checkPassword(newPassword ?? '')
-      .filter((c) => !c.met)
-      .map((c) => c.label.toLowerCase());
-    throw new Error(`New password does not meet the password policy: ${unmet.join(', ')}.`);
-  }
+  const cleanToken = token.trim().replace(/\D/g, '');
+  if (!cleanEmail) throw new Error('Email address is required.');
+  if (!/^\d{6}$/.test(cleanToken)) throw new Error('Enter the 6-digit recovery code from your email.');
 
   // Check rate limit: max 5 failed attempts per 10-minute window
   checkOtpRateLimit(cleanEmail);
@@ -539,14 +543,6 @@ export async function verifyPasswordResetOtpAndSetPassword(
     } catch {
       // non-blocking if already set
     }
-  }
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    password: newPassword,
-  });
-
-  if (updateError) {
-    throw new Error(getFriendlyErrorMessage(updateError, 'Failed to update password.'));
   }
 
   return { success: true };

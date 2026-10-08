@@ -54,7 +54,7 @@ const CATEGORY_FILTERS = [
   'Hostel',
 ];
 
-const AVAILABLE_CAMPUSES = ['FUNAAB', 'UI', 'UNILAG', 'OAU', 'UNN', 'CU', 'KDU', 'NOUN'];
+const AVAILABLE_CAMPUSES = ['FUNAAB', 'UI', 'UNILAG', 'OAU', 'UNN', 'CU', 'KDU', 'NOUN', 'ESUT', 'MUN'];
 
 export function CampusMapModal({
   visible,
@@ -81,12 +81,11 @@ export function CampusMapModal({
   const [query, setQuery] = useState(initialLandmarkName || '');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [landmarks, setLandmarks] = useState<CampusLandmark[]>(() => {
-    const local = getCampusLandmarks(targetCampus);
-    return local.length > 0 ? local : getCampusLandmarks('FUNAAB');
+    return getCampusLandmarks(targetCampus);
   });
   const [selectedLandmark, setSelectedLandmark] = useState<CampusLandmark>(() => {
     const local = getCampusLandmarks(targetCampus);
-    return local[0] || getCampusLandmarks('FUNAAB')[0] || CAMPUS_LANDMARKS[0];
+    return local[0] || CAMPUS_LANDMARKS[0];
   });
   const [loadingOsm, setLoadingOsm] = useState(false);
 

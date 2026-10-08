@@ -1831,7 +1831,7 @@ export default function UserDirectoryScreen() {
                   </View>
                 ) : (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.lg }}>
-                    {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
+                    {LAUNCH_INSTITUTIONS.map((institution) => institution.code).map((c) => (
                       <Pressable
                         key={c}
                         onPress={() => setNewCampus(c)}
@@ -1976,7 +1976,7 @@ export default function UserDirectoryScreen() {
                   </View>
                 ) : (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
-                    {['UI', 'UNILAG', 'OAU', 'FUNAAB', 'CU', 'GLOBAL'].map((c) => (
+                    {LAUNCH_INSTITUTIONS.map((institution) => institution.code).map((c) => (
                       <Pressable
                         key={c}
                         onPress={() => setEditCampus(c)}

@@ -89,6 +89,12 @@ export const CAMPUS_CENTERS: Record<string, CampusCenter> = {
     latitude: 6.3072,
     longitude: 7.5457,
   },
+  MUN: {
+    code: 'MUN',
+    name: 'Madonna University, Nigeria (Elele Campus)',
+    latitude: 5.1017,
+    longitude: 6.8176,
+  },
 };
 
 export const CAMPUS_LANDMARKS: CampusLandmark[] = [
@@ -1792,6 +1798,51 @@ export const CAMPUS_LANDMARKS: CampusLandmark[] = [
     longitude: 7.5468,
     description: 'Student secretariat, food court, stationery stores, cyber cafes, and peer recreation area.',
     walkingTip: 'Central hub between student hostels and academic faculties.',
+  },
+  // MADONNA UNIVERSITY, NIGERIA (ELELE CAMPUS)
+  {
+    id: 'mun-elele-campus',
+    name: 'Madonna University Elele Campus',
+    shortCode: 'ELELE',
+    campus: 'MUN',
+    category: 'Administrative',
+    latitude: 5.1017,
+    longitude: 6.8176,
+    description: 'The university\'s Elele campus in Rivers State and the main map hub for Madonna University on Lioris.',
+    walkingTip: 'Use live map results for the most current building and gate details.',
+  },
+  {
+    id: 'mun-elele-library',
+    name: 'Madonna University Library (Elele)',
+    shortCode: 'LIBRARY',
+    campus: 'MUN',
+    category: 'Library',
+    latitude: 5.1022,
+    longitude: 6.8180,
+    description: 'Academic library services for students and researchers at the Elele campus.',
+    walkingTip: 'Confirm the building entrance using campus signs or live map results.',
+  },
+  {
+    id: 'mun-teaching-hospital',
+    name: 'Madonna University Teaching Hospital',
+    shortCode: 'MUTH',
+    campus: 'MUN',
+    category: 'Medical',
+    latitude: 5.1009,
+    longitude: 6.8184,
+    description: 'Teaching and clinical-services location associated with the Elele health-sciences campus.',
+    walkingTip: 'Check posted hospital directions for the correct clinic or department.',
+  },
+  {
+    id: 'mun-elele-academic-area',
+    name: 'Elele Academic Area',
+    shortCode: 'ACADEMIC',
+    campus: 'MUN',
+    category: 'Lecture Hall',
+    latitude: 5.1025,
+    longitude: 6.8171,
+    description: 'Academic buildings and lecture facilities serving Madonna University students at Elele.',
+    walkingTip: 'Use live map results and on-campus signs to locate a specific faculty.',
   },
 ];
 

@@ -26,6 +26,13 @@ export const CAMPUS_COORDINATES: Record<string, CampusCoordinates> = {
     longitude: 3.3986,
     city: 'Akoka, Lagos State',
   },
+  FUNAAB: {
+    name: 'Federal University of Agriculture, Abeokuta',
+    shortName: 'FUNAAB',
+    latitude: 7.2258,
+    longitude: 3.4406,
+    city: 'Abeokuta, Ogun State',
+  },
   OAU: {
     name: 'Obafemi Awolowo University',
     shortName: 'OAU',
@@ -95,6 +102,13 @@ export const CAMPUS_COORDINATES: Record<string, CampusCoordinates> = {
     latitude: 6.3072,
     longitude: 7.5457,
     city: 'Agbani, Enugu State',
+  },
+  MUN: {
+    name: 'Madonna University, Nigeria',
+    shortName: 'MUN',
+    latitude: 5.1017,
+    longitude: 6.8176,
+    city: 'Elele, Rivers State',
   },
 };
 

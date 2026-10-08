@@ -88,6 +88,14 @@ export const DEFAULT_CAMPUS_PORTAL_LINKS: Record<string, PortalLink[]> = {
     { id: 'esut-5', campusCode: 'ESUT', title: 'ESUT Bursary & Payments', url: 'https://portal.esut.edu.ng/', category: 'Finance', icon: 'card-outline', active: true, displayOrder: 5 },
     { id: 'esut-6', campusCode: 'ESUT', title: 'ESUT Official University Website', url: 'https://esut.edu.ng/', category: 'Central Portal', icon: 'globe-outline', active: true, displayOrder: 6 },
   ],
+  MUN: [
+    { id: 'mun-1', campusCode: 'MUN', title: 'Madonna University Student Portal', url: 'https://madonna.skool-board.com/', category: 'Academic', icon: 'school-outline', active: true, displayOrder: 1 },
+    { id: 'mun-2', campusCode: 'MUN', title: 'Madonna University Website', url: 'https://www.madonnauniversity.edu.ng/', category: 'Central Portal', icon: 'globe-outline', active: true, displayOrder: 2 },
+    { id: 'mun-3', campusCode: 'MUN', title: 'Academics & Programmes', url: 'https://www.madonnauniversity.edu.ng/academics/', category: 'Academic', icon: 'library-outline', active: true, displayOrder: 3 },
+    { id: 'mun-4', campusCode: 'MUN', title: 'University Library', url: 'https://www.madonnauniversity.edu.ng/library-5/', category: 'Library', icon: 'book-outline', active: true, displayOrder: 4 },
+    { id: 'mun-5', campusCode: 'MUN', title: 'Fees & Payment Guide', url: 'https://www.madonnauniversity.edu.ng/mode-of-payment-2/', category: 'Finance', icon: 'card-outline', active: true, displayOrder: 5 },
+    { id: 'mun-6', campusCode: 'MUN', title: 'Campus & Facilities', url: 'https://www.madonnauniversity.edu.ng/campus-facilities/', category: 'Campus Services', icon: 'business-outline', active: true, displayOrder: 6 },
+  ],
   GLOBAL: [
     { id: 'glob-1', campusCode: 'GLOBAL', title: 'National Academic Repository (JAMB)', url: 'https://efacility.jamb.gov.ng/', category: 'National', icon: 'school-outline', active: true, displayOrder: 1 },
     { id: 'glob-2', campusCode: 'GLOBAL', title: 'National Universities Commission (NUC)', url: 'https://www.nuc.edu.ng/', category: 'Commission', icon: 'globe-outline', active: true, displayOrder: 2 },

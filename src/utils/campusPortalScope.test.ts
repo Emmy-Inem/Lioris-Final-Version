@@ -3,18 +3,18 @@ import assert from 'node:assert/strict';
 // @ts-ignore TS5097
 import { resolveAllowedPortalFilters, resolveActivePortalTarget } from './campusPortalScope.ts';
 
-test('resolveAllowedPortalFilters returns 12 options for admin and staff', () => {
+test('resolveAllowedPortalFilters returns 13 options for admin and staff', () => {
   const adminFilters = resolveAllowedPortalFilters('admin', 'UNILAG');
-  assert.equal(adminFilters.length, 12);
+  assert.equal(adminFilters.length, 13);
   assert.ok(adminFilters.some((f) => f.code === 'ALL'));
   assert.ok(adminFilters.some((f) => f.code === 'UI'));
   assert.ok(adminFilters.some((f) => f.code === 'KDU'));
   assert.ok(adminFilters.some((f) => f.code === 'NOUN'));
   assert.ok(adminFilters.some((f) => f.code === 'ESUT'));
+  assert.ok(adminFilters.some((f) => f.code === 'MUN'));
 
   const staffFilters = resolveAllowedPortalFilters('staff', 'FUNAAB');
-  assert.equal(staffFilters.length, 12);
-  assert.ok(adminFilters.some((f) => f.code === 'ESUT'));
+  assert.equal(staffFilters.length, 13);
   assert.ok(staffFilters.some((f) => f.code === 'UNILAG'));
 });
 

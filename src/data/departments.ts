@@ -1212,6 +1212,76 @@ export const ESUT_STRUCTURE: AcademicStructure = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// MUN: Madonna University, Nigeria (official undergraduate programme groups)
+// ---------------------------------------------------------------------------
+export const MUN_STRUCTURE: AcademicStructure = {
+  campusCode: 'MUN',
+  groupType: 'Faculty',
+  groups: [
+    {
+      faculty: 'Faculty of Management Sciences',
+      code: 'MAN',
+      departments: ['Accounting', 'Banking & Finance', 'Business Administration', 'Entrepreneurship', 'Marketing', 'Public Administration'],
+    },
+    {
+      faculty: 'Faculty of Computing & Information Technology',
+      code: 'CIT',
+      departments: ['Computer Science', 'Cybersecurity', 'Information Technology', 'Software Engineering'],
+    },
+    {
+      faculty: 'Faculty of Law',
+      code: 'LAW',
+      departments: ['Law'],
+    },
+    {
+      faculty: 'Faculty of Medicine & Basic Medical Sciences',
+      code: 'MED',
+      departments: ['Medicine & Surgery', 'Anatomy', 'Biochemistry', 'Physiology'],
+    },
+    {
+      faculty: 'Faculty of Pharmacy',
+      code: 'PHA',
+      departments: ['Pharmacy'],
+    },
+    {
+      faculty: 'Faculty of Engineering & Technology',
+      code: 'ENG',
+      departments: ['Chemical Engineering', 'Civil Engineering', 'Electrical & Electronics Engineering', 'Mechanical Engineering'],
+    },
+    {
+      faculty: 'Faculty of Environmental Sciences',
+      code: 'ENV',
+      departments: ['Architecture', 'Building Technology', 'Estate Management'],
+    },
+    {
+      faculty: 'Faculty of Sciences',
+      code: 'SCI',
+      departments: ['Chemistry', 'Mathematics', 'Microbiology', 'Physics'],
+    },
+    {
+      faculty: 'Faculty of Social Sciences',
+      code: 'SOC',
+      departments: ['Economics', 'Political Science', 'Psychology', 'Sociology'],
+    },
+    {
+      faculty: 'Faculty of Arts & Humanities',
+      code: 'ART',
+      departments: ['English', 'History & International Studies', 'Philosophy', 'Religious Studies'],
+    },
+    {
+      faculty: 'Faculty of Communication & Media Studies',
+      code: 'CMS',
+      departments: ['Broadcasting', 'Information & Media Studies', 'Mass Communication', 'Public Relations'],
+    },
+    {
+      faculty: 'Faculty of Education',
+      code: 'EDU',
+      departments: ['Education'],
+    },
+  ],
+};
+
 // Map of all academic structures by campus code
 const STRUCTURE_MAP: Record<string, AcademicStructure> = {
   FUNAAB: FUNAAB_STRUCTURE,
@@ -1223,6 +1293,7 @@ const STRUCTURE_MAP: Record<string, AcademicStructure> = {
   KDU: KDU_STRUCTURE,
   NOUN: NOUN_STRUCTURE,
   ESUT: ESUT_STRUCTURE,
+  MUN: MUN_STRUCTURE,
   GLOBAL: GLOBAL_STRUCTURE,
 };
 

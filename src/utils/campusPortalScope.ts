@@ -27,6 +27,7 @@ export function resolveAllowedPortalFilters(
       { code: 'KDU', label: 'KDU' },
       { code: 'NOUN', label: 'NOUN' },
       { code: 'ESUT', label: 'ESUT' },
+      { code: 'MUN', label: 'Madonna (MUN)' },
       { code: 'GLOBAL', label: 'National Portals' },
     ];
   }

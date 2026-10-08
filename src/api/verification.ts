@@ -236,6 +236,7 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
           else if (upper.includes('KDU') || upper.includes('KOLADAISI')) campusCode = 'KDU';
           else if (upper.includes('NOUN') || upper.includes('NATIONAL OPEN')) campusCode = 'NOUN';
           else if (upper.includes('ESUT') || upper.includes('ENUGU STATE')) campusCode = 'ESUT';
+          else if (upper.includes('MADONNA') || upper.includes('MADONNA UNIVERSITY')) campusCode = 'MUN';
         }
 
         const { error } = await supabase.from('verifications').insert({

@@ -35,6 +35,7 @@ export const LAUNCH_INSTITUTIONS: Institution[] = [
   { code: 'KDU', name: 'KolaDaisi University', domain: 'koladaisiuniversity.edu.ng', shortName: 'KDU', location: 'Ibadan, Oyo', primaryColor: '#1E3A8A' },
   { code: 'NOUN', name: 'National Open University of Nigeria', domain: 'noun.edu.ng', shortName: 'NOUN', location: 'Abuja (National)', primaryColor: '#0284C7' },
   { code: 'ESUT', name: 'Enugu State University of Science and Technology', domain: 'esut.edu.ng', shortName: 'ESUT', location: 'Agbani, Enugu', primaryColor: '#0D9488' },
+  { code: 'MUN', name: 'Madonna University, Nigeria', domain: 'madonnauniversity.edu.ng', shortName: 'MUN', location: 'Elele, Rivers • Okija, Anambra • Akpugo, Enugu', primaryColor: '#7C1D3A', websiteUrl: 'https://www.madonnauniversity.edu.ng/' },
 ];
 
 function rowToInstitution(row: any): Institution {

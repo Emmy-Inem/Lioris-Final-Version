@@ -38,15 +38,6 @@ const CATEGORY_LABELS: Record<string, EventCategory> = {
 };
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>;
 
-const CAMPUSES = [
-  { code: 'UI', label: 'UI (Ibadan)' },
-  { code: 'UNILAG', label: 'UNILAG (Lagos)' },
-  { code: 'OAU', label: 'OAU (Ife)' },
-  { code: 'FUNAAB', label: 'FUNAAB (Abeokuta)' },
-  { code: 'CU', label: 'Covenant (Ota)' },
-  { code: 'GLOBAL', label: 'Global / All Campuses' },
-];
-
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
