@@ -741,7 +741,10 @@ export default function StudentDashboard() {
                   }
 
                   return (
-                    <Pressable key={item.id} onPress={() => router.push('/(student)/resources')}>
+                    <Pressable
+                      key={item.id}
+                      onPress={() => router.push({ pathname: '/(student)/resources', params: { resourceId: item.itemId } })}
+                    >
                       <SolidCard radius={16} style={{ padding: 13 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>

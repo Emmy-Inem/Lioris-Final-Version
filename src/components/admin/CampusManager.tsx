@@ -37,8 +37,14 @@ interface FormState {
   domains: string[];
   color: string;
   website: string;
+  studentPortal: string;
+  libraryUrl: string;
+  lmsUrl: string;
 }
-const EMPTY_FORM: FormState = { code: '', name: '', shortName: '', location: '', domains: [], color: CAMPUS_COLORS[0], website: '' };
+const EMPTY_FORM: FormState = {
+  code: '', name: '', shortName: '', location: '', domains: [], color: CAMPUS_COLORS[0],
+  website: '', studentPortal: '', libraryUrl: '', lmsUrl: '',
+};
 
 /**
  * Admin > Platform > Campuses: every university on Lioris with its email domains, members and portal links, plus
@@ -96,6 +102,9 @@ export function CampusManager() {
       domains: c.emailDomains ?? [],
       color: c.primaryColor ?? CAMPUS_COLORS[0],
       website: c.websiteUrl ?? '',
+      studentPortal: '',
+      libraryUrl: '',
+      lmsUrl: '',
     });
     setFormError(null);
     setFormOpen({ mode: 'edit' });
@@ -106,6 +115,8 @@ export function CampusManager() {
     if (mode === 'create' && !isValidCampusCode(form.code)) return 'The code needs 2 to 16 letters or digits, starting with a letter (example: LASU).';
     if (!isValidHexColor(form.color)) return 'The colour must look like #1D4ED8.';
     if (form.website.trim() && !/^https?:\/\//i.test(form.website.trim())) return 'The website must start with https://';
+    const invalidLink = [form.studentPortal, form.libraryUrl, form.lmsUrl].find((url) => url.trim() && !/^https?:\/\//i.test(url.trim()));
+    if (invalidLink) return 'Every starter link must start with https://';
     return null;
   }
 
@@ -125,6 +136,13 @@ export function CampusManager() {
       websiteUrl: form.website.trim() || undefined,
       allowUnresolvedDomains: options.allowUnresolvedDomains,
       waitlistEntryId: formOpen.request?.id,
+      seedPortalLinks: formOpen.mode === 'create'
+        ? [
+            form.studentPortal.trim() ? { title: 'Student Portal', url: form.studentPortal.trim(), category: 'Academic', icon: 'school-outline' } : null,
+            form.libraryUrl.trim() ? { title: 'University Library', url: form.libraryUrl.trim(), category: 'Library', icon: 'library-outline' } : null,
+            form.lmsUrl.trim() ? { title: 'Learning Management System', url: form.lmsUrl.trim(), category: 'Academic', icon: 'laptop-outline' } : null,
+          ].filter(Boolean) as NonNullable<CampusInput['seedPortalLinks']>
+        : undefined,
     };
     try {
       const { institution, warnings } =
@@ -343,8 +361,8 @@ export function CampusManager() {
           }}
           placeholder="e.g. Lagos State University"
         />
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          <View style={{ flexGrow: 1, flexBasis: 220 }}>
             <AppTextField
               label="Campus code *"
               value={form.code}
@@ -358,7 +376,7 @@ export function CampusManager() {
               helperText={editing ? undefined : 'Short and permanent - it labels everything on this campus.'}
             />
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flexGrow: 1, flexBasis: 220 }}>
             <AppTextField label="Short name" value={form.shortName} onChangeText={(v) => set('shortName', v.slice(0, 24))} placeholder={form.code || 'LASU'} />
           </View>
         </View>
@@ -407,9 +425,15 @@ export function CampusManager() {
 
         <AppTextField label="Website (optional)" value={form.website} onChangeText={(v) => set('website', v)} placeholder="https://www.lasu.edu.ng" autoCapitalize="none" keyboardType="url" />
         {!editing ? (
-          <AppText variant="caption" tone="secondary">
-            After adding the campus, use "Portal links" on its card to publish its student portal, library and other shortcuts.
-          </AppText>
+          <View style={{ gap: spacing.xs }}>
+            <AppText weight="bold" variant="bodySmall">Starter services (optional)</AppText>
+            <AppText variant="caption" tone="secondary">
+              Add the main services now. They become available to the new campus immediately and can be edited later.
+            </AppText>
+            <AppTextField label="Student portal" value={form.studentPortal} onChangeText={(v) => set('studentPortal', v)} placeholder="https://portal.university.edu" autoCapitalize="none" keyboardType="url" />
+            <AppTextField label="Library" value={form.libraryUrl} onChangeText={(v) => set('libraryUrl', v)} placeholder="https://library.university.edu" autoCapitalize="none" keyboardType="url" />
+            <AppTextField label="Learning platform" value={form.lmsUrl} onChangeText={(v) => set('lmsUrl', v)} placeholder="https://lms.university.edu" autoCapitalize="none" keyboardType="url" />
+          </View>
         ) : null}
       </FormSheet>
 

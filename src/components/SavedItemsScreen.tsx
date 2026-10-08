@@ -88,7 +88,7 @@ export function SavedItemsScreen() {
         router.push(`/${roleGroup}/events/${item.itemId}` as any);
         break;
       case 'resource':
-        router.push(`/${roleGroup}/resources` as any);
+        router.push({ pathname: '/(student)/resources', params: { resourceId: item.itemId } });
         break;
       case 'job':
         router.push(`/${roleGroup}/jobs` as any);

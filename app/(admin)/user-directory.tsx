@@ -4,6 +4,7 @@ import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from'@/components/ScreenContainer';
 import { AppHeader } from'@/components/AppHeader';
 import { AppText } from'@/components/AppText';
@@ -31,7 +32,7 @@ import {
  readEdgeFunctionError,
  verifyMfaCode,
 } from '@/api/auth';
-import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import { listCampuses } from '@/api/institutions';
 import { usePullRefreshHandler } from '@/components/PullToRefresh';
 import { getUserDiagnostics, UserDiagnostics } from '@/api/adminDiagnostics';
 import { useToast } from '@/context/ToastContext';
@@ -127,6 +128,11 @@ export default function UserDirectoryScreen() {
  const [users, setUsers] = useState<DirectoryUser[]>([]);
  const [loading, setLoading] = useState(true);
  const [loadError, setLoadError] = useState<string | null>(null);
+ const { data: institutions = [] } = useQuery({ queryKey: ['campuses'], queryFn: listCampuses });
+ const activeInstitutions = React.useMemo(
+   () => institutions.filter((institution) => institution.isActive !== false),
+   [institutions],
+ );
 
  const loadProfiles = React.useCallback(async () => {
  setLoading(true);
@@ -179,18 +185,25 @@ export default function UserDirectoryScreen() {
     }
   }, [currentUser?.isCampusAdmin, currentUser?.campusCode]);
 
+  React.useEffect(() => {
+    const preferred = currentUser?.isCampusAdmin && currentUser.campusCode
+      ? currentUser.campusCode
+      : activeInstitutions.find((institution) => institution.code !== 'GLOBAL')?.code;
+    if (preferred) setNewCampus((current) => current || preferred);
+  }, [activeInstitutions, currentUser?.isCampusAdmin, currentUser?.campusCode]);
+
   // Drag-down-to-refresh on the installed web app reloads this list instead of the whole page.
   usePullRefreshHandler(loadProfiles);
 
-  // Every campus that exists (launch list) plus any code a profile actually carries.
+  // Every campus from the live registry plus any legacy code a profile still carries.
   const campusFilters = React.useMemo(() => {
     if (currentUser?.isCampusAdmin && currentUser?.campusCode) {
       return [currentUser.campusCode];
     }
-    const codes = new Set<string>(LAUNCH_INSTITUTIONS.map((i) => i.code));
+    const codes = new Set<string>(activeInstitutions.map((i) => i.code));
     users.forEach((u) => codes.add(u.campus));
     return [ALL_CAMPUSES, ...Array.from(codes)];
-  }, [users, currentUser?.isCampusAdmin, currentUser?.campusCode]);
+  }, [users, currentUser?.isCampusAdmin, currentUser?.campusCode, activeInstitutions]);
 
  // Selected User Actions & Details Drawer
  const [selectedUser, setSelectedUser] = useState<DirectoryUser | null>(null);
@@ -241,7 +254,7 @@ export default function UserDirectoryScreen() {
  const [newMatric, setNewMatric] = useState('');
  const [newDepartment, setNewDepartment] = useState('Computer Science');
  const [newRole, setNewRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
- const [newCampus, setNewCampus] = useState('UI');
+ const [newCampus, setNewCampus] = useState('');
  const [newAdminRole, setNewAdminRole] = useState<'super_admin' | 'campus_admin'>('campus_admin');
  const [isProvisioning, setIsProvisioning] = useState(false);
 
@@ -270,7 +283,7 @@ export default function UserDirectoryScreen() {
   const [editModalUser, setEditModalUser] = useState<DirectoryUser | null>(null);
   const [editFullName, setEditFullName] = useState('');
   const [editMatric, setEditMatric] = useState('');
-  const [editCampus, setEditCampus] = useState('UI');
+  const [editCampus, setEditCampus] = useState('');
   const [editDepartment, setEditDepartment] = useState('');
   const [editRole, setEditRole] = useState<'Student' | 'Alumni' | 'Staff' | 'Admin'>('Student');
   const [editAdminRole, setEditAdminRole] = useState<'super_admin' | 'campus_admin'>('campus_admin');
@@ -309,7 +322,7 @@ export default function UserDirectoryScreen() {
     setEditModalUser(target);
     setEditFullName(target.fullName);
     setEditMatric(target.matricNo === 'Not Assigned' ? '' : target.matricNo);
-    setEditCampus(target.campus || 'UI');
+    setEditCampus(target.campus || activeInstitutions[0]?.code || '');
     setEditDepartment(target.department);
     setEditRole(target.role);
     setEditAdminRole(target.adminRole || 'campus_admin');
@@ -1541,7 +1554,7 @@ export default function UserDirectoryScreen() {
  </View>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
  <AppText tone="secondary"variant="caption">Campus Node</AppText>
- <AppText weight="bold"variant="caption">{LAUNCH_INSTITUTIONS.find((i) => i.code === detailModalUser.campus)?.name ?? detailModalUser.campus}</AppText>
+ <AppText weight="bold"variant="caption">{institutions.find((i) => i.code === detailModalUser.campus)?.name ?? detailModalUser.campus}</AppText>
  </View>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
  <AppText tone="secondary"variant="caption">Faculty & Department</AppText>
@@ -1831,7 +1844,7 @@ export default function UserDirectoryScreen() {
                   </View>
                 ) : (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.lg }}>
-                    {LAUNCH_INSTITUTIONS.map((institution) => institution.code).map((c) => (
+                    {activeInstitutions.map((institution) => institution.code).map((c) => (
                       <Pressable
                         key={c}
                         onPress={() => setNewCampus(c)}
@@ -1976,7 +1989,7 @@ export default function UserDirectoryScreen() {
                   </View>
                 ) : (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
-                    {LAUNCH_INSTITUTIONS.map((institution) => institution.code).map((c) => (
+                    {activeInstitutions.map((institution) => institution.code).map((c) => (
                       <Pressable
                         key={c}
                         onPress={() => setEditCampus(c)}

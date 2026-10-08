@@ -17,7 +17,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { fetchAdminAnalyticsSummary, AdminAnalyticsSummary } from '@/api/analytics';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
-import { LAUNCH_INSTITUTIONS } from '@/api/institutions';
+import { listCampuses } from '@/api/institutions';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import { buildCsv, downloadCsv } from '@/utils/csvExport';
@@ -104,6 +104,7 @@ export default function AdminAnalyticsScreen() {
   const { user } = useAuth();
   const adminBadges = useAdminBadges();
   const lockedCampus = user?.isCampusAdmin && user?.campusCode ? user.campusCode.toUpperCase() : null;
+  const { data: institutions = [] } = useQuery({ queryKey: ['campuses'], queryFn: listCampuses });
 
   const [timeRangeDays, setTimeRangeDays] = useState<number>(30);
   const [requestedCampusFilter, setRequestedCampusFilter] = useState<string>('ALL');
@@ -224,9 +225,9 @@ export default function AdminAnalyticsScreen() {
 
   const activeCampusName = useMemo(() => {
     if (campusFilter === 'ALL') return 'All Higher Institutions';
-    const found = LAUNCH_INSTITUTIONS.find((i) => i.code === campusFilter);
+    const found = institutions.find((i) => i.code === campusFilter);
     return found ? found.name : campusFilter;
-  }, [campusFilter]);
+  }, [campusFilter, institutions]);
 
   async function handleExportCsv() {
     if (!summary) return;
@@ -431,7 +432,7 @@ export default function AdminAnalyticsScreen() {
                   All Institutions
                 </AppText>
               </Pressable>
-              {LAUNCH_INSTITUTIONS.map((inst) => {
+              {institutions.filter((inst) => inst.isActive !== false).map((inst) => {
                 const active = campusFilter === inst.code;
                 return (
                   <Pressable
@@ -945,7 +946,7 @@ export default function AdminAnalyticsScreen() {
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
               {(summary?.campus_metrics ?? []).map((campus) => {
-                const institution = LAUNCH_INSTITUTIONS.find((i) => i.code === campus.campus_code);
+                const institution = institutions.find((i) => i.code === campus.campus_code);
                 const name = institution ? institution.shortName : campus.campus_code;
                 const fullName = institution ? institution.name : campus.campus_code;
                 const verifyPct = campus.real_members > 0 ? Math.round((campus.verified_members / campus.real_members) * 100) : 0;

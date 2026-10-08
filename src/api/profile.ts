@@ -393,8 +393,23 @@ export async function updateProfileImages(
  if (updates.avatarUrl !== undefined) patch.avatar_url = updates.avatarUrl;
  if (updates.coverUrl !== undefined) patch.banner_url = updates.coverUrl;
  if (Object.keys(patch).length > 0) {
-   const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
+   patch.updated_at = new Date().toISOString();
+   const { data, error } = await supabase
+     .from('profiles')
+     .update(patch)
+     .eq('id', userId)
+     .select('id, avatar_url, banner_url')
+     .maybeSingle();
    if (error) throw new Error(getFriendlyErrorMessage(error, 'Could not update your profile image.'));
+   // PostgREST can return no error when RLS silently excludes an UPDATE. Do
+   // not tell the user their photo is saved unless the row came back.
+   if (!data) throw new Error('Your profile image could not be saved. Please sign in again and retry.');
+   if (updates.avatarUrl !== undefined && data.avatar_url !== updates.avatarUrl) {
+     throw new Error('Your profile photo did not persist. Please try again.');
+   }
+   if (updates.coverUrl !== undefined && data.banner_url !== updates.coverUrl) {
+     throw new Error('Your cover photo did not persist. Please try again.');
+   }
  }
 
  const updated: UserProfile = {

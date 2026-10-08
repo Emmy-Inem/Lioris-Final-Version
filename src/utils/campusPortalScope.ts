@@ -12,22 +12,16 @@ export function resolveAllowedPortalFilters(
   userRole: string | undefined,
   effectiveCampus: string,
   institutionName?: string,
+  campuses: Array<{ code: string; name: string; shortName?: string; isActive?: boolean }> = [],
 ): CampusPortalFilterOption[] {
   const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
   if (isStaffOrAdmin) {
     return [
       { code: 'CURRENT', label: `My Campus (${effectiveCampus})` },
       { code: 'ALL', label: 'All Universities' },
-      { code: 'UNILAG', label: 'UNILAG' },
-      { code: 'UI', label: 'UI' },
-      { code: 'FUNAAB', label: 'FUNAAB' },
-      { code: 'UNN', label: 'UNN' },
-      { code: 'OAU', label: 'OAU' },
-      { code: 'CU', label: 'Covenant (CU)' },
-      { code: 'KDU', label: 'KDU' },
-      { code: 'NOUN', label: 'NOUN' },
-      { code: 'ESUT', label: 'ESUT' },
-      { code: 'MUN', label: 'Madonna (MUN)' },
+      ...campuses
+        .filter((campus) => campus.code !== 'GLOBAL' && campus.isActive !== false)
+        .map((campus) => ({ code: campus.code, label: campus.shortName || campus.name })),
       { code: 'GLOBAL', label: 'National Portals' },
     ];
   }

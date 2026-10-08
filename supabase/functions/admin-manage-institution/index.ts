@@ -137,6 +137,19 @@ Deno.serve(async (req: Request) => {
   if (!auth.ok) return auth.response;
   const { user: caller } = auth.caller;
 
+  // Campus provisioning changes the platform's trust boundary (not merely
+  // one campus), so a campus admin must never be able to call this endpoint
+  // directly even if they discover it outside the hidden UI.
+  const { data: callerProfile, error: callerProfileError } = await admin
+    .from('profiles')
+    .select('admin_role')
+    .eq('id', caller.id)
+    .maybeSingle();
+  const isSuperAdmin = caller.email?.toLowerCase() === 'inememmanuel@gmail.com' || callerProfile?.admin_role === 'super_admin';
+  if (callerProfileError || !isSuperAdmin) {
+    return jsonResponse(req, { error: 'forbidden', message: 'Only a Super Admin can create or change campuses.' }, 403);
+  }
+
   const limited = await consumeRateLimit(admin, `manage-institution:${caller.id}`, 30, 3600);
   if (limited === 'limited') return jsonResponse(req, { error: 'rate_limited', message: 'Too many campus changes. Try again later.' }, 429);
   if (limited === 'error') return jsonResponse(req, { error: 'unavailable', message: 'Could not verify the request rate. Try again shortly.' }, 503);

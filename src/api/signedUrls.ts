@@ -344,11 +344,20 @@ export function useSignedUrl(
     loading: !!path && !initial,
     error: null,
   }));
+  const [refreshTick, setRefreshTick] = useState(0);
   const activeRef = useRef(0);
 
   useEffect(() => {
     const token = ++activeRef.current;
     let cancelled = false;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const scheduleRefresh = () => {
+      refreshTimer = setTimeout(
+        () => setRefreshTick((value) => value + 1),
+        Math.max(30_000, TTL_SECONDS * 1000 - REFRESH_MARGIN_MS),
+      );
+    };
 
     if (!path) {
       setState({ url: null, loading: false, error: null });
@@ -358,7 +367,8 @@ export function useSignedUrl(
     const hit = minFreshMs === undefined ? peekSignedUrl(bucket, path) : null;
     if (hit) {
       setState({ url: hit, loading: false, error: null });
-      return;
+      scheduleRefresh();
+      return () => clearTimeout(refreshTimer);
     }
 
     setState((prev) => ({ url: prev.url, loading: true, error: null }));
@@ -368,6 +378,7 @@ export function useSignedUrl(
         if (cancelled || token !== activeRef.current) return;
         if (url) {
           setState({ url, loading: false, error: null });
+          scheduleRefresh();
         } else {
           setState({
             url: null,
@@ -383,8 +394,9 @@ export function useSignedUrl(
 
     return () => {
       cancelled = true;
+      if (refreshTimer) clearTimeout(refreshTimer);
     };
-  }, [bucket, path, minFreshMs]);
+  }, [bucket, path, minFreshMs, refreshTick]);
 
   return state;
 }

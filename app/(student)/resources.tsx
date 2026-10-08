@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Alert, FlatList, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
 import { ScreenContainer } from'@/components/ScreenContainer';
@@ -20,10 +21,10 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { recordPortalLinkVisit } from '@/utils/portalVisits';
-import { listResources, createResource, listMyResources } from '@/api/resources';
+import { listResources, createResource, getResource, listMyResources } from '@/api/resources';
 import { listPortalLinks, PortalLink } from '@/api/portalLinks';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
-import { getInstitutionByCode } from '@/api/institutions';
+import { getInstitutionByCode, listCampuses } from '@/api/institutions';
 import { useToast } from '@/context/ToastContext';
 import { resolveActivePortalTarget } from '@/utils/campusPortalScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
@@ -86,28 +87,13 @@ function MyUploadStatusBanner({ resource }: { resource: Resource }) {
   );
 }
 
-const UNIVERSITY_PORTAL_FILTERS = [
-  { code: 'CURRENT', label: 'My Campus' },
-  { code: 'ALL', label: 'All Universities' },
-  { code: 'UNILAG', label: 'UNILAG' },
-  { code: 'UI', label: 'UI' },
-  { code: 'FUNAAB', label: 'FUNAAB' },
-  { code: 'UNN', label: 'UNN' },
-  { code: 'OAU', label: 'OAU' },
-  { code: 'CU', label: 'Covenant (CU)' },
-  { code: 'KDU', label: 'KDU' },
-  { code: 'NOUN', label: 'NOUN' },
-  { code: 'ESUT', label: 'ESUT' },
-  { code: 'MUN', label: 'Madonna (MUN)' },
-  { code: 'GLOBAL', label: 'National Portals' },
-];
-
 export default function ResourcesScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
   const { isDesktop } = useResponsive();
   const toast = useToast();
   const queryClient = useQueryClient();
+  const { resourceId } = useLocalSearchParams<{ resourceId?: string }>();
   const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>('CURRENT');
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
@@ -123,6 +109,21 @@ export default function ResourcesScreen() {
   const [reportingResource, setReportingResource] = useState<Resource | null>(null);
   const { isFeatureEnabled } = useFeatureFlags();
   const { bookmarkedIds, toggleBookmark } = useResourceBookmarks();
+
+  const linkedResource = useQuery({
+    queryKey: ['resources', 'deep-link', resourceId],
+    queryFn: () => getResource(resourceId!),
+    enabled: typeof resourceId === 'string' && /^[0-9a-f-]{36}$/i.test(resourceId),
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (linkedResource.data) setReadingResource(linkedResource.data);
+  }, [linkedResource.data]);
+
+  useEffect(() => {
+    if (linkedResource.error) toast.error((linkedResource.error as Error).message);
+  }, [linkedResource.error, toast]);
 
   // Desktop horizontal scroll refs
   const portalsScrollRef = useRef<ScrollView>(null);
@@ -143,6 +144,18 @@ export default function ResourcesScreen() {
   });
 
   const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
+  const { data: campuses = [] } = useQuery({ queryKey: ['campuses'], queryFn: listCampuses });
+  const universityPortalFilters = React.useMemo(
+    () => [
+      { code: 'CURRENT', label: 'My Campus' },
+      { code: 'ALL', label: 'All Universities' },
+      ...campuses
+        .filter((campus) => campus.code !== 'GLOBAL' && campus.isActive !== false)
+        .map((campus) => ({ code: campus.code, label: campus.shortName || campus.name })),
+      { code: 'GLOBAL', label: 'National Portals' },
+    ],
+    [campuses],
+  );
 
   // Determine user's effective campus (e.g. UNILAG, UI, FUNAAB)
   const effectiveCampus = isSuperAdmin
@@ -494,7 +507,7 @@ export default function ResourcesScreen() {
             style={{ marginBottom: 8 }}
             contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
           >
-            {UNIVERSITY_PORTAL_FILTERS.map((item) => {
+            {universityPortalFilters.map((item) => {
               const isSelected = selectedPortalFilter === item.code;
               return (
                 <Pressable
@@ -973,7 +986,7 @@ export default function ResourcesScreen() {
                 style={{ marginBottom: 10 }}
                 contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
               >
-                {UNIVERSITY_PORTAL_FILTERS.map((item) => {
+                {universityPortalFilters.map((item) => {
                   const isSelected = selectedPortalFilter === item.code;
                   return (
                     <Pressable

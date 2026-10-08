@@ -196,6 +196,19 @@ function mapResourceRow(row: any): Resource {
   } as Resource;
 }
 
+/** Loads one material by its stable id; database RLS still enforces campus access. */
+export async function getResource(resourceId: string): Promise<Resource> {
+  assertUuid(resourceId, 'resource id');
+  const { data, error } = await supabase
+    .from('resources')
+    .select('*, profiles:uploader_id(full_name, role, avatar_url, department)')
+    .eq('id', resourceId)
+    .maybeSingle();
+  if (error) throw new Error('Could not open this course material. Please try again.');
+  if (!data) throw new Error('This course material is no longer available, or you do not have access to it.');
+  return mapResourceRow(data);
+}
+
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
   let userCampus = 'GLOBAL';
   try {

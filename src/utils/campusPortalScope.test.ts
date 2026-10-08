@@ -3,18 +3,21 @@ import assert from 'node:assert/strict';
 // @ts-ignore TS5097
 import { resolveAllowedPortalFilters, resolveActivePortalTarget } from './campusPortalScope.ts';
 
-test('resolveAllowedPortalFilters returns 13 options for admin and staff', () => {
-  const adminFilters = resolveAllowedPortalFilters('admin', 'UNILAG');
-  assert.equal(adminFilters.length, 13);
+test('resolveAllowedPortalFilters builds admin and staff options from live campuses', () => {
+  const campuses = [
+    { code: 'UNILAG', name: 'University of Lagos', shortName: 'UNILAG' },
+    { code: 'NEWU', name: 'New University' },
+    { code: 'OLDU', name: 'Old University', isActive: false },
+    { code: 'GLOBAL', name: 'Global Network' },
+  ];
+  const adminFilters = resolveAllowedPortalFilters('admin', 'UNILAG', undefined, campuses);
+  assert.equal(adminFilters.length, 5);
   assert.ok(adminFilters.some((f) => f.code === 'ALL'));
-  assert.ok(adminFilters.some((f) => f.code === 'UI'));
-  assert.ok(adminFilters.some((f) => f.code === 'KDU'));
-  assert.ok(adminFilters.some((f) => f.code === 'NOUN'));
-  assert.ok(adminFilters.some((f) => f.code === 'ESUT'));
-  assert.ok(adminFilters.some((f) => f.code === 'MUN'));
+  assert.ok(adminFilters.some((f) => f.code === 'NEWU'));
+  assert.ok(!adminFilters.some((f) => f.code === 'OLDU'));
 
-  const staffFilters = resolveAllowedPortalFilters('staff', 'FUNAAB');
-  assert.equal(staffFilters.length, 13);
+  const staffFilters = resolveAllowedPortalFilters('staff', 'UNILAG', undefined, campuses);
+  assert.equal(staffFilters.length, 5);
   assert.ok(staffFilters.some((f) => f.code === 'UNILAG'));
 });
 
