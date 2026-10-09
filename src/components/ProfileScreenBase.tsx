@@ -26,6 +26,7 @@ import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useSignedUrl } from '@/api/signedUrls';
+import { SUPABASE_URL } from '@/api/supabase';
 import { pickImageFromLibrary } from '@/utils/pickImage';
 import { CropKind, ImageCropperModal } from './ImageCropperModal';
 import { ImageViewerModal } from './ImageViewerModal';
@@ -147,8 +148,21 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     enabled: !!user,
   });
 
-  const { url: resolvedCoverUrl } = useSignedUrl('campus-media', profile?.coverUrl);
-  const activeCover = resolvedCoverUrl ? { uri: resolvedCoverUrl } : null;
+  const { url: signedCoverUrl } = useSignedUrl('campus-media', profile?.coverUrl);
+  const activeCover = useMemo(() => {
+    if (profile?.coverUrl && /^(https?:|data:|blob:|file:)/i.test(profile.coverUrl)) {
+      return { uri: profile.coverUrl };
+    }
+    if (signedCoverUrl) {
+      return { uri: signedCoverUrl };
+    }
+    if (profile?.coverUrl) {
+      const cleanPath = profile.coverUrl.replace(/^\/+/, '');
+      return { uri: `${SUPABASE_URL}/storage/v1/object/public/avatars/${cleanPath}` };
+    }
+    return null;
+  }, [profile?.coverUrl, signedCoverUrl]);
+  const resolvedCoverUrl = activeCover?.uri ?? null;
 
   const [unpublishedSubFilter, setUnpublishedSubFilter] = useState<'all' | 'drafts' | 'scheduled'>('all');
 
@@ -356,7 +370,14 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
   async function handleSubmitVerification(data: {
     institutionClaimed: string;
-    documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
+    documentType:
+      | 'Student ID'
+      | 'Admission Letter'
+      | 'Course Registration Form'
+      | 'School Fees Receipt'
+      | 'Library Card'
+      | 'Staff ID'
+      | 'Alumni Certificate';
     documentReference?: string;
     documentPhotoUri?: string | null;
     photoBlob?: Blob;

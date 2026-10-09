@@ -207,7 +207,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('role, full_name, admin_role, campus_code, department')
+      .select('role, full_name, admin_role, campus_code, department, onboarding_complete, onboarding_step')
       .eq('id', session.user.id)
       .maybeSingle();
     if (!error && data) {
@@ -215,7 +215,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
     } else if (error) {
       const { data: fallbackData } = await supabase
         .from('profiles')
-        .select('role, full_name, campus_code, department')
+        .select('role, full_name, campus_code, department, onboarding_complete, onboarding_step')
         .eq('id', session.user.id)
         .maybeSingle();
       if (fallbackData) profile = fallbackData;
@@ -243,7 +243,8 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
     department: profile?.department || null,
     isSuperAdmin,
     isCampusAdmin,
-    onboardingComplete: true,
+    onboardingComplete: isMasterAdminEmail || role === 'admin' || role === 'staff' || profile?.onboarding_complete === true,
+    onboardingStep: profile?.onboarding_step || undefined,
     mfaVerified: !roleRequiresMfa(role),
   };
 }
@@ -863,16 +864,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await persist(next);
         userRef.current = next;
         setUser(next);
-        // Best-effort server sync so "has onboarded" survives a cleared
-        // browser/new device, not just this session's local storage.
+
+        // Ensure database row is fully synchronized with onboarding_complete, campus_code, and department
         if (currentUserId) {
-          supabase
-            .from('profiles')
-            .update({ onboarding_complete: true, onboarding_step: null })
-            .eq('id', currentUserId)
-            .then(({ error }) => {
-              if (error) console.warn('[Auth] Failed to persist onboarding_complete:', error.message);
-            });
+          const updatePayload: Record<string, any> = {
+            onboarding_complete: true,
+            onboarding_step: null,
+          };
+          if (current.campusCode && current.campusCode !== 'GLOBAL') {
+            updatePayload.campus_code = current.campusCode;
+          }
+          if (current.department && current.department.trim()) {
+            updatePayload.department = current.department.trim();
+          }
+          try {
+            const { error } = await supabase
+              .from('profiles')
+              .update(updatePayload)
+              .eq('id', currentUserId);
+            if (error) console.warn('[Auth] Failed to persist onboarding_complete:', error.message);
+          } catch (err) {
+            console.warn('[Auth] completeOnboarding network error:', err);
+          }
         }
         registerForPushNotificationsAsync().catch(() => {});
       },

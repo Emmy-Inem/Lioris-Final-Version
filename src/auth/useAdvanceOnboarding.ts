@@ -35,7 +35,8 @@ export function useAdvanceOnboarding(currentPath: string) {
       }
 
       await completeOnboarding();
-      router.replace('/');
+      const dest = userRole === 'alumni' ? '/(alumni)/dashboard' : '/(student)/dashboard';
+      router.replace(dest as any);
     }
   };
 }

@@ -43,6 +43,7 @@ export default function GetStartedScreen() {
   const { spacing, colors, radius } = useTheme();
   const { user, refreshUser } = useAuth();
   const advance = useAdvanceOnboarding('/(auth)/onboarding/get-started');
+  const { completeOnboarding } = useAuth();
   const [submitting, setSubmitting] = useState(false);
 
   const isAlumni = user?.role === 'alumni';
@@ -67,6 +68,10 @@ export default function GetStartedScreen() {
     }
     setSubmitting(true);
     try {
+      await completeOnboarding();
+      const dest = user?.role === 'alumni' ? '/(alumni)/dashboard' : '/(student)/dashboard';
+      router.replace(dest as any);
+    } catch {
       await advance();
     } finally {
       setSubmitting(false);

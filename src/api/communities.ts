@@ -169,7 +169,7 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
     profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
   const isEduEmail = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
-  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin || profile?.verification_status === 'verified' || isEduEmail;
+  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin || profile?.verification_status === 'verified' || isEduEmail || profile?.is_campus_ambassador;
   const isAmbassadorOrAdmin = profile?.is_campus_ambassador || profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin;
 
   if (!isVerified) {

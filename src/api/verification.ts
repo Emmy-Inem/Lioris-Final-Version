@@ -9,7 +9,14 @@ export interface VerificationRequest {
  id: string;
  userId: string;
  applicantName: string;
- documentType: 'Student ID' | 'Admission Letter' | 'Staff ID' | 'Alumni Certificate';
+ documentType:
+    | 'Student ID'
+    | 'Admission Letter'
+    | 'Course Registration Form'
+    | 'School Fees Receipt'
+    | 'Library Card'
+    | 'Staff ID'
+    | 'Alumni Certificate';
  documentReference?: string;
  institutionClaimed: string;
  submittedAt: string;
@@ -136,11 +143,14 @@ function parseReviewNotes(notes?: string | null): {
  rejectionReason?: string;
 } {
  const known: VerificationRequest['documentType'][] = [
-  'Student ID',
-  'Admission Letter',
-  'Staff ID',
-  'Alumni Certificate',
- ];
+    'Student ID',
+    'Admission Letter',
+    'Course Registration Form',
+    'School Fees Receipt',
+    'Library Card',
+    'Staff ID',
+    'Alumni Certificate',
+  ];
  let raw = (notes || '').trim();
  let rejectionReason: string | undefined;
 

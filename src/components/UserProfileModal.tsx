@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useSegments } from 'expo-router';
@@ -21,6 +21,7 @@ import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { getPublicProfile } from '@/api/profile';
 import { submitReport } from '@/api/moderation';
 import { useSignedUrl } from '@/api/signedUrls';
+import { SUPABASE_URL } from '@/api/supabase';
 import { UserProfile, UserRole } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
@@ -118,7 +119,19 @@ export function UserProfileModal({
  const isOwnProfile = !!currentUser?.id && currentUser.id === userId;
 
  const stockCover = effectiveCover ? STOCK_IMAGES[effectiveCover] : null;
- const { url: resolvedCoverUrl } = useSignedUrl('campus-media', stockCover ? null : effectiveCover);
+ const { url: signedCoverUrl } = useSignedUrl('campus-media', stockCover ? null : effectiveCover);
+  const resolvedCoverUrl = useMemo(() => {
+    if (stockCover) return stockCover;
+    if (effectiveCover && /^(https?:|data:|blob:|file:)/i.test(effectiveCover)) {
+      return effectiveCover;
+    }
+    if (signedCoverUrl) return signedCoverUrl;
+    if (effectiveCover) {
+      const cleanPath = effectiveCover.replace(/^\/+/, '');
+      return `${SUPABASE_URL}/storage/v1/object/public/avatars/${cleanPath}`;
+    }
+    return null;
+  }, [stockCover, effectiveCover, signedCoverUrl]);
  const coverSource = stockCover ?? (resolvedCoverUrl ? { uri: resolvedCoverUrl } : null);
 
  async function handleToggleConnect() {

@@ -372,7 +372,7 @@ export async function uploadAvatarImage(
  fileExt = 'jpg',
 ): Promise<string> {
  const { data: authData } = await supabase.auth.getUser();
- const effectiveUserId = (userId && userId !== 'me') ? userId : authData?.user?.id;
+ const effectiveUserId = authData?.user?.id || (userId && userId !== 'me' ? userId : null);
  if (!effectiveUserId) throw new Error('You must be signed in to upload a profile photo.');
 
  const buffer = await toArrayBufferFromInput(imageInput);
@@ -403,7 +403,7 @@ export async function uploadCoverImage(
  fileExt = 'jpg',
 ): Promise<string> {
  const { data: authData } = await supabase.auth.getUser();
- const effectiveUserId = (userId && userId !== 'me') ? userId : authData?.user?.id;
+ const effectiveUserId = authData?.user?.id || (userId && userId !== 'me' ? userId : null);
  if (!effectiveUserId) throw new Error('You must be signed in to upload a cover photo.');
 
  const buffer = await toArrayBufferFromInput(imageInput);
@@ -450,7 +450,7 @@ export async function updateProfileImages(
  updates: { avatarUrl?: string | null; coverUrl?: string | null },
 ): Promise<UserProfile> {
  const { data: authData } = await supabase.auth.getUser();
- const effectiveUserId = (userId && userId !== 'me') ? userId : authData?.user?.id;
+ const effectiveUserId = authData?.user?.id || (userId && userId !== 'me' ? userId : null);
  if (!effectiveUserId) throw new Error('You must be signed in to update profile images.');
 
  const current = profileState.get(effectiveUserId) || defaultProfileFor({ id: effectiveUserId, fullName: 'You', role: 'student' });
@@ -470,12 +470,16 @@ export async function updateProfileImages(
    // PostgREST can return no error when RLS silently excludes an UPDATE. Do
    // not tell the user their photo is saved unless the row came back.
    if (!data) throw new Error('Your profile image could not be saved. Please sign in again and retry.');
-   if (updates.avatarUrl !== undefined && data.avatar_url !== updates.avatarUrl) {
-     throw new Error('Your profile photo did not persist. Please try again.');
-   }
-   if (updates.coverUrl !== undefined && data.banner_url !== updates.coverUrl) {
-     throw new Error('Your cover photo did not persist. Please try again.');
-   }
+   if (updates.avatarUrl !== undefined && updates.avatarUrl !== null && data.avatar_url !== updates.avatarUrl) {
+      if (!data.avatar_url?.endsWith(updates.avatarUrl) && !updates.avatarUrl?.endsWith(data.avatar_url)) {
+        throw new Error('Your profile photo did not persist. Please try again.');
+      }
+    }
+   if (updates.coverUrl !== undefined && updates.coverUrl !== null && data.banner_url !== updates.coverUrl) {
+      if (!data.banner_url?.endsWith(updates.coverUrl) && !updates.coverUrl?.endsWith(data.banner_url)) {
+        throw new Error('Your cover photo did not persist. Please try again.');
+      }
+    }
  }
 
  const updated: UserProfile = {

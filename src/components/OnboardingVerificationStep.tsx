@@ -21,7 +21,13 @@ type VerificationState = 'loading' | 'verified' | 'pending' | 'needs_documents';
 type DocumentType = SubmitVerificationPayload['documentType'];
 
 const DOCUMENT_CHOICES: Record<'student' | 'alumni', DocumentType[]> = {
-  student: ['Student ID', 'Admission Letter'],
+  student: [
+    'Student ID',
+    'Course Registration Form',
+    'School Fees Receipt',
+    'Admission Letter',
+    'Library Card',
+  ],
   alumni: ['Alumni Certificate', 'Student ID'],
 };
 
@@ -155,7 +161,15 @@ export function OnboardingVerificationStep({ currentPath }: OnboardingVerificati
           disabled={!photoUri}
           fullWidth
         />
-        <AppButton label="I'll do this later" variant="ghost" onPress={() => advance()} disabled={submitting} fullWidth />
+        <AppButton
+          label="I'll do this later"
+          variant="ghost"
+          onPress={async () => {
+            await advance();
+          }}
+          disabled={submitting}
+          fullWidth
+        />
       </View>
     ) : (
       <AppButton label="Continue" onPress={() => advance()} disabled={state === 'loading'} fullWidth />
