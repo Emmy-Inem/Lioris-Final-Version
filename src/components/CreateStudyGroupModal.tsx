@@ -62,8 +62,10 @@ export function CreateStudyGroupModal({ visible, onClose, onSubmit, initial, def
     setError(null);
     if (form.name.trim().length < 3) return setError('Give the pod a name (at least 3 characters), e.g. "CSC 301 revision squad".');
     if (!form.courseCode.trim()) return setError('Add the course code (e.g. CSC 301) so classmates can find it.');
-    const link = (form.meetingLink ?? '').trim();
-    if (link && !/^https?:\/\//i.test(link)) return setError('The meeting link must start with https://');
+    let link = (form.meetingLink ?? '').trim();
+    if (link && !/^https?:\/\//i.test(link)) {
+      link = 'https://' + link;
+    }
     haptics.medium();
     setSaving(true);
     try {

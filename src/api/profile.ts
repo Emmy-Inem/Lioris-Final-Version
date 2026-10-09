@@ -334,8 +334,11 @@ export async function uploadAvatarImage(
  imageBlob: Blob | ArrayBuffer,
  fileExt = 'jpg',
 ): Promise<string> {
- const normalizedExt = fileExt.toLowerCase().replace(/^image\//, '') === 'png' ? 'png' :
-   fileExt.toLowerCase().replace(/^image\//, '') === 'webp' ? 'webp' : 'jpg';
+ const blobType = (imageBlob instanceof Blob ? imageBlob.type : '') || '';
+ const rawExt = (blobType ? blobType.replace(/^image\//, '') : fileExt)
+   .toLowerCase()
+   .replace(/^jpeg$/, 'jpg');
+ const normalizedExt = ['jpg', 'png', 'webp'].includes(rawExt) ? rawExt : 'jpg';
  const byteLength = imageBlob instanceof ArrayBuffer ? imageBlob.byteLength : imageBlob.size;
  await assertWithinStorageQuota(byteLength, 'image');
  const filePath = `${userId}/avatar_${Date.now()}.${normalizedExt}`;

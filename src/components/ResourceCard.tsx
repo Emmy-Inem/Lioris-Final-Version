@@ -24,6 +24,7 @@ import { isResourceBookmarked, toggleResourceBookmark } from '@/utils/resourceBo
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
+import { resolveMediaUrl } from '@/api/signedUrls';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { ReportResourceModal } from './ReportResourceModal';
 
@@ -122,7 +123,12 @@ export const ResourceCard = React.memo(function ResourceCard({
     setDownloading(true);
     try {
       if (resource.fileUrl) {
-        if (!isSafeHttpUrl(resource.fileUrl) || !(await openExternalUrl(resource.fileUrl))) {
+        let openUrl = resource.fileUrl;
+        const signed = await resolveMediaUrl('resources', resource.fileUrl);
+        if (signed) {
+          openUrl = signed;
+        }
+        if (!isSafeHttpUrl(openUrl) || !(await openExternalUrl(openUrl))) {
           Alert.alert('Download Unavailable', 'This resource has an invalid or unsafe file link.');
           return;
         }

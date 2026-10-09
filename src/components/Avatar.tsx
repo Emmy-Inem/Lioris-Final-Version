@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { useTheme } from '@/theme/ThemeProvider';
+import { SUPABASE_URL } from '@/api/supabase';
 
 const AVATAR_FEMALE = require('../../assets/images/avatar_female.jpg');
 const AVATAR_FEMALE_2 = require('../../assets/images/avatar_female_2.jpg');
@@ -103,9 +104,20 @@ interface AvatarProps {
 export function Avatar({ name, uri, size = 44, role }: AvatarProps) {
   const { colors, isDark } = useTheme();
 
-  const imageSource = uri
-    ? (PRESET_MAP[uri] ?? ((uri.startsWith('http') || uri.startsWith('file') || uri.startsWith('data:')) ? { uri } : null))
-    : null;
+  const imageSource = (() => {
+    if (!uri) return null;
+    const trimmed = uri.trim();
+    if (!trimmed) return null;
+    if (PRESET_MAP[trimmed]) return PRESET_MAP[trimmed];
+    if (trimmed.startsWith('http') || trimmed.startsWith('file') || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+      return { uri: trimmed };
+    }
+    if (/^[0-9a-fA-F-]{36}\//.test(trimmed) || trimmed.includes('/')) {
+      const cleanPath = trimmed.replace(/^\/+/, '');
+      return { uri: `${SUPABASE_URL}/storage/v1/object/public/avatars/${cleanPath}` };
+    }
+    return null;
+  })();
 
   const parts = (name || '').trim().split(/\s+/).filter(Boolean);
   const initials = parts.length > 1

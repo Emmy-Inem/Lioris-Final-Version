@@ -5201,6 +5201,105 @@ console.log('\n== security and role gap fixes ==');
   });
 }
 
+
+// ---------------------------------------------------------------------------
+// profile media and learner gap fixes (20261019000000_profile_media_and_learner_fixes.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== profile media and learner fixes (20261019000000_profile_media_and_learner_fixes.sql) ==');
+{
+  await check('20261019000000_profile_media_and_learner_fixes.sql applies cleanly', async () => {
+    await applyFile(db, 'supabase/migrations/20261019000000_profile_media_and_learner_fixes.sql', true, () => {});
+  });
+
+  await check('20261019000000_profile_media_and_learner_fixes.sql is idempotent', async () => {
+    await applyFile(db, 'supabase/migrations/20261019000000_profile_media_and_learner_fixes.sql', true, () => {});
+  });
+
+  await check('profiles.banner_url: accepts private-bucket storage path and full URLs', async () => {
+    await as(U.s1, async (c) => {
+      // 1. Bare storage path as written by uploadCoverImage()
+      const pathVal = `${U.s1}/cover_${Date.now()}.jpg`;
+      const r1 = await c.t(`UPDATE public.profiles SET banner_url = $1 WHERE id = $2`, [pathVal, U.s1]);
+      assert(r1.ok, 'updating banner_url with storage path refused: ' + r1.err?.message);
+
+      // 2. Full https URL
+      const urlVal = 'https://example.com/banner.jpg';
+      const r2 = await c.t(`UPDATE public.profiles SET banner_url = $1 WHERE id = $2`, [urlVal, U.s1]);
+      assert(r2.ok, 'updating banner_url with https URL refused: ' + r2.err?.message);
+
+      // 3. Unsafe script scheme denied
+      const r3 = await c.t(`UPDATE public.profiles SET banner_url = $1 WHERE id = $2`, ['javascript:alert(1)', U.s1]);
+      denied(r3, /chk_profiles_banner_url_url_scheme/, 'unsafe banner_url value');
+    });
+  });
+
+  await check('profiles.avatar_url: accepts storage path, preset name, and full URLs', async () => {
+    await as(U.s1, async (c) => {
+      // 1. Bare storage path as written by uploadAvatarImage()
+      const pathVal = `${U.s1}/avatar_${Date.now()}.jpg`;
+      const r1 = await c.t(`UPDATE public.profiles SET avatar_url = $1 WHERE id = $2`, [pathVal, U.s1]);
+      assert(r1.ok, 'updating avatar_url with storage path refused: ' + r1.err?.message);
+
+      // 2. Preset key
+      const presetVal = 'avatar_female';
+      const r2 = await c.t(`UPDATE public.profiles SET avatar_url = $1 WHERE id = $2`, [presetVal, U.s1]);
+      assert(r2.ok, 'updating avatar_url with preset refused: ' + r2.err?.message);
+
+      // 3. Full https URL
+      const urlVal = 'https://example.com/avatar.jpg';
+      const r3 = await c.t(`UPDATE public.profiles SET avatar_url = $1 WHERE id = $2`, [urlVal, U.s1]);
+      assert(r3.ok, 'updating avatar_url with https URL refused: ' + r3.err?.message);
+
+      // 4. Unsafe script scheme denied
+      const r4 = await c.t(`UPDATE public.profiles SET avatar_url = $1 WHERE id = $2`, ['javascript:alert(1)', U.s1]);
+      denied(r4, /chk_profiles_avatar_url_url_scheme/, 'unsafe avatar_url value');
+    });
+  });
+
+  await check('chat_messages.media_url: accepts private-bucket storage path and full URLs', async () => {
+    const [ch] = (await admin(`INSERT INTO public.chat_channels (name, created_by, is_direct_message) VALUES ('dm_media', $1, true) RETURNING id`, [U.s1])).rows;
+    await admin(`INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [ch.id, U.s2]);
+
+    await as(U.s1, async (c) => {
+      // 1. Bare storage path as written by sendMessage()
+      const pathVal = `${U.s1}/media_${Date.now()}_file.pdf`;
+      const r1 = await c.t(
+        `INSERT INTO public.chat_messages (id, channel_id, sender_id, content, media_url) VALUES (gen_random_uuid(), $1, $2, 'File', $3)`,
+        [ch.id, U.s1, pathVal]
+      );
+      assert(r1.ok, 'inserting chat message with storage path media_url refused: ' + r1.err?.message);
+
+      // 2. Unsafe script scheme denied
+      const r2 = await c.t(
+        `INSERT INTO public.chat_messages (id, channel_id, sender_id, content, media_url) VALUES (gen_random_uuid(), $1, $2, 'Bad', $3)`,
+        [ch.id, U.s1, 'javascript:alert(1)']
+      );
+      denied(r2, /chk_chat_messages_media_url_url_scheme/, 'unsafe media_url value');
+    });
+  });
+
+  await check('resources.file_url: accepts private-bucket storage path and full URLs', async () => {
+    await as(U.s1, async (c) => {
+      // 1. Bare storage path
+      const pathVal = `${U.s1}/resources_${Date.now()}_doc.pdf`;
+      const r1 = await c.t(
+        `INSERT INTO public.resources (id, uploader_id, campus_code, title, course_title, course_code, resource_type, file_url, is_approved)
+         VALUES (gen_random_uuid(), $1, 'UNILAG', 'Path Resource', 'Intro to CS', 'CSC 101', 'lecture_note', $2, true)`,
+        [U.s1, pathVal]
+      );
+      assert(r1.ok, 'inserting resource with storage path file_url refused: ' + r1.err?.message);
+
+      // 2. Unsafe script scheme denied
+      const r2 = await c.t(
+        `INSERT INTO public.resources (id, uploader_id, campus_code, title, course_title, course_code, resource_type, file_url, is_approved)
+         VALUES (gen_random_uuid(), $1, 'UNILAG', 'Bad Resource', 'Intro to CS', 'CSC 101', 'lecture_note', $2, true)`,
+        [U.s1, 'javascript:alert(1)']
+      );
+      denied(r2, /chk_resources_file_url_url_scheme/, 'unsafe file_url value');
+    });
+  });
+}
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n== Summary: ${results.length - failed.length}/${results.length} checks passed ==`);
 if (failed.length) { for (const f of failed) console.log(` FAILED: ${f.name}\n    ${f.err}`); process.exit(1); }

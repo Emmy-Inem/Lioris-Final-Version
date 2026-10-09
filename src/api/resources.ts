@@ -176,7 +176,7 @@ function mapResourceRow(row: any): Resource {
     // Undefined when the upload recorded no size - ResourceCard omits the
     // chip rather than showing an invented "2.5 MB".
     fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : undefined,
-    fileUrl: sanitizeHttpUrl(row.file_url) ?? null,
+    fileUrl: sanitizeHttpUrl(row.file_url) ?? (row.file_url ? String(row.file_url).trim() : null),
     authorName: row.profiles?.full_name || 'Campus Student',
     authorId: row.uploader_id,
     authorRole: (row.profiles?.role || 'student') as any,

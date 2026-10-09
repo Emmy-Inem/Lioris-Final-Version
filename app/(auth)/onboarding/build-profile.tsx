@@ -157,12 +157,16 @@ export default function BuildProfileScreen() {
       if (photoUri && user?.id) {
         try {
           const res = await fetch(photoUri);
-          const blob = await res.blob();
-          await uploadAvatarImage(user.id, blob);
+          const arrayBuffer = await res.arrayBuffer();
+          const ext = photoUri.toLowerCase().includes('.png') || photoUri.startsWith('data:image/png')
+            ? 'png'
+            : photoUri.toLowerCase().includes('.webp') || photoUri.startsWith('data:image/webp')
+            ? 'webp'
+            : 'jpg';
+          await uploadAvatarImage(user.id, arrayBuffer, ext);
         } catch (uploadErr) {
           console.warn('[BuildProfile] Avatar upload failed:', uploadErr);
-          // Only persist directly if photoUri is already an http(s) URL (satisfies chk_profiles_avatar_url_url_scheme)
-          if (/^https?:\/\//i.test(photoUri)) {
+          if (/^https?:\/\//i.test(photoUri) || /^[A-Za-z0-9_-]+$/.test(photoUri)) {
             try {
               await updateMyProfile({ avatarUrl: photoUri });
             } catch {
