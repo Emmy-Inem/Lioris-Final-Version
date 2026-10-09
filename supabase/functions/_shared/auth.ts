@@ -3,12 +3,22 @@
 import { createClient, type SupabaseClient, type User } from 'https://esm.sh/@supabase/supabase-js@2';
 import { jsonResponse } from './cors.ts';
 
+export interface AuthedProfile {
+  id: string;
+  role: string;
+  admin_role?: string | null;
+  campus_code?: string | null;
+  is_suspended?: boolean;
+  email?: string | null;
+}
+
 export interface AuthedCaller {
   user: User;
   token: string;
   callerClient: SupabaseClient;
   /** JWT `aal` claim: 'aal1' | 'aal2' | undefined */
   aal: string | undefined;
+  profile?: AuthedProfile;
 }
 
 export type AuthResult = { ok: true; caller: AuthedCaller } | { ok: false; response: Response };
@@ -112,7 +122,7 @@ export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } 
 
   const { data: profile, error } = await caller.callerClient
     .from('profiles')
-    .select('role, is_suspended')
+    .select('id, role, admin_role, campus_code, is_suspended, email')
     .eq('id', caller.user.id)
     .single();
 
@@ -123,6 +133,8 @@ export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } 
     };
   }
 
+  caller.profile = profile;
+
   const requireMfa = opts.requireMfa ?? true;
   const mfaMode = Deno.env.get('REQUIRE_ADMIN_MFA');
   if (requireMfa && mfaMode !== 'false' && caller.aal !== 'aal2') {
@@ -130,6 +142,43 @@ export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } 
     if (mustStepUp) {
       return { ok: false, response: jsonResponse(req, { error: 'mfa_required' }, 403) };
     }
+  }
+  return result;
+}
+
+/**
+ * Check whether a verified admin caller is a Super Admin.
+ * Root Super Admin (inememmanuel@gmail.com or admin_role = 'super_admin') maintains
+ * absolute platform-wide authority.
+ */
+export function isCallerSuperAdmin(caller: { user: User; profile?: { admin_role?: string; email?: string } }): boolean {
+  return (
+    caller.profile?.admin_role === 'super_admin' ||
+    caller.user.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    caller.profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com'
+  );
+}
+
+/**
+ * Super-Admin-only gate: verifies caller is an admin AND has admin_role = 'super_admin'
+ * or is inememmanuel@gmail.com.
+ */
+export async function requireSuperAdmin(req: Request, opts: { requireMfa?: boolean } = {}): Promise<AuthResult> {
+  const result = await requireAdmin(req, opts);
+  if (!result.ok) return result;
+  const { caller } = result;
+
+  const isSuper = isCallerSuperAdmin(caller);
+
+  if (!isSuper) {
+    return {
+      ok: false,
+      response: jsonResponse(
+        req,
+        { error: 'Forbidden. Super Administrator privileges are required to perform this action.' },
+        403,
+      ),
+    };
   }
   return result;
 }

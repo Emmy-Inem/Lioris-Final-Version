@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingShell } from '@/components/OnboardingShell';
 import { AppButton } from '@/components/AppButton';
@@ -49,6 +50,11 @@ export default function GetStartedScreen() {
 
   async function handleFinish() {
     haptics.medium();
+    const isAcademic = user?.role === 'student' || user?.role === 'alumni';
+    if (isAcademic && (!user?.campusCode || user.campusCode === 'GLOBAL' || !user?.department)) {
+      router.replace('/(auth)/onboarding/build-profile');
+      return;
+    }
     setSubmitting(true);
     try {
       await advance();

@@ -25,7 +25,7 @@
 // Deployment (verify_jwt ON):  supabase functions deploy admin-review-paid-event
 
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
-import { isUuid, requireAdmin } from '../_shared/auth.ts';
+import { isUuid, requireAdmin, isCallerSuperAdmin } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
@@ -245,6 +245,20 @@ Deno.serve(async (req: Request) => {
     }
     if (!isUuid(b.eventId)) throw new Fail(400, 'bad_request', 'eventId must be an event id.');
     const eventId = b.eventId as string;
+
+    const isSuper = isCallerSuperAdmin(auth.caller);
+    if (!isSuper) {
+      const callerCampus = auth.caller.profile?.campus_code;
+      const { data: ev, error: evErr } = await admin.from('events').select('id, campus_code').eq('id', eventId).maybeSingle();
+      if (evErr) throw new Fail(500, 'db_error', 'Could not verify event permissions.');
+      if (!ev) throw new Fail(404, 'not_found', 'That paid event does not exist.');
+      if (
+        !callerCampus ||
+        (ev.campus_code && ev.campus_code !== 'GLOBAL' && ev.campus_code !== callerCampus)
+      ) {
+        throw new Fail(403, 'forbidden', 'Campus Admins can only review events within their registered campus node.');
+      }
+    }
 
     const limit = action === 'check_link' ? 40 : 60;
     const limited = await consumeRateLimit(admin, `paid-event-${action === 'check_link' ? 'check' : 'decide'}:${caller.id}`, limit, 3600);

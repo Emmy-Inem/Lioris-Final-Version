@@ -19,6 +19,7 @@ import { listAuditLogEntriesPage } from '@/api/auditLog';
 import { AuditLogAction, AuditLogEntry } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { buildCsv, downloadCsv, CsvColumn } from '@/utils/csvExport';
+import { useAuth } from '@/auth/AuthContext';
 
 /**
  * The one audit trail. (There used to be two screens over the same log - "System Audit Trail" and
@@ -134,6 +135,8 @@ function dateInputToIsoBound(value: string, endOfDay: boolean): string | undefin
 export default function AuditLogsScreen() {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
+  const lockedCampus = user?.isCampusAdmin && user?.campusCode ? user.campusCode.toUpperCase() : undefined;
   const [filter, setFilter] = useState('All');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -155,8 +158,8 @@ export default function AuditLogsScreen() {
   }, [filterKey]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['audit-log', filterKey, page],
-    queryFn: () => listAuditLogEntriesPage({ since, until, actorSearch: trimmedActorSearch || undefined, page, pageSize: PAGE_SIZE }),
+    queryKey: ['audit-log', filterKey, page, lockedCampus],
+    queryFn: () => listAuditLogEntriesPage({ since, until, actorSearch: trimmedActorSearch || undefined, institutionCode: lockedCampus, page, pageSize: PAGE_SIZE }),
   });
 
   useEffect(() => {

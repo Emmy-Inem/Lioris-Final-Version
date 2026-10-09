@@ -337,7 +337,8 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
    throw new Error('Only verified students can create listings on the campus marketplace. Please verify your student status.');
  }
 
- let campusCode = (payload as any).campusCode || profile?.campus_code || 'GLOBAL';
+  const isSuperAdmin = (profile as any)?.admin_role === 'super_admin' || profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' || authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
+  let campusCode = isSuperAdmin ? ((payload as any).campusCode || profile?.campus_code || 'GLOBAL') : (profile?.campus_code || 'GLOBAL');
  if (!campusCode) campusCode = 'GLOBAL';
 
  const priceClean = parsePriceOrThrow(payload.price);

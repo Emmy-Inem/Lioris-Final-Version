@@ -18,6 +18,16 @@ export function useAdvanceOnboarding(currentPath: string) {
       await setOnboardingStep(next);
       router.replace(next as any);
     } else {
+      // Ensure student/alumni users have actually completed university and department
+      const isAcademicRole = userRole === 'student' || userRole === 'alumni';
+      const hasAcademicProfile = !!(user?.campusCode && user.campusCode !== 'GLOBAL' && user?.department && user.department.trim());
+
+      if (isAcademicRole && !hasAcademicProfile) {
+        await setOnboardingStep('/(auth)/onboarding/build-profile');
+        router.replace('/(auth)/onboarding/build-profile');
+        return;
+      }
+
       await completeOnboarding();
       router.replace('/');
     }

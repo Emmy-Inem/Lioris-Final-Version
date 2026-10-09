@@ -41,7 +41,7 @@
 //   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<service role key> ALLOWED_ORIGINS=<...>
 
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
-import { isUuid, requireAdmin } from '../_shared/auth.ts';
+import { isUuid, requireSuperAdmin } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
@@ -63,8 +63,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { error: 'Server misconfiguration. Missing required secrets.' }, 500);
   }
 
-  // --- 1. Caller must be an admin with an MFA (AAL2) session ----------------
-  const auth = await requireAdmin(req);
+  // --- 1. Caller must be a Super Admin with an MFA (AAL2) session ----------------
+  const auth = await requireSuperAdmin(req);
   if (!auth.ok) return auth.response;
   const { user: callerUser } = auth.caller;
 

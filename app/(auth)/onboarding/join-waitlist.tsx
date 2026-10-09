@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
+import { router } from 'expo-router';
 import { OnboardingShell } from '@/components/OnboardingShell';
 import { AppTextField } from '@/components/AppTextField';
 import { AppButton } from '@/components/AppButton';
 import { AppText } from '@/components/AppText';
-import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
 import { useAuth } from '@/auth/AuthContext';
 import { joinWaitlist } from '@/api/institutions';
 import { useToast } from '@/context/ToastContext';
@@ -29,12 +29,16 @@ function guessInstitutionName(email?: string): string {
 }
 
 export default function JoinWaitlistScreen() {
-  const advance = useAdvanceOnboarding('/(auth)/onboarding/join-waitlist');
-  const { user } = useAuth();
+  const { user, setOnboardingStep } = useAuth();
   const toast = useToast();
   const [universityName, setUniversityName] = useState(() => guessInstitutionName(user?.email));
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  async function handleContinue() {
+    await setOnboardingStep('/(auth)/onboarding/build-profile');
+    router.replace('/(auth)/onboarding/build-profile');
+  }
 
   async function handleJoinWaitlist() {
     if (!universityName.trim()) return;
@@ -57,7 +61,7 @@ export default function JoinWaitlistScreen() {
       subtitle="Lioris is live at a handful of campuses so far. Confirm your institution below and we'll fast-track it - you can keep using Lioris in the meantime with a default campus feed."
       footer={
         submitted ? (
-          <AppButton label="Continue" onPress={() => advance()} fullWidth />
+          <AppButton label="Continue" onPress={handleContinue} fullWidth />
         ) : (
           <AppButton
             label="Join the waitlist"

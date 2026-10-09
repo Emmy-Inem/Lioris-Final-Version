@@ -22,7 +22,7 @@
 // Deployment (verify_jwt ON): supabase functions deploy admin-review-giving-campaign
 
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
-import { isUuid, requireAdmin } from '../_shared/auth.ts';
+import { isUuid, requireAdmin, isCallerSuperAdmin } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
@@ -84,6 +84,24 @@ Deno.serve(async (req: Request) => {
     }
     if (!isUuid(b.campaignId)) throw new Fail(400, 'bad_request', 'campaignId must be a campaign id.');
     const campaignId = b.campaignId as string;
+
+    const isSuper = isCallerSuperAdmin(auth.caller);
+    if (!isSuper) {
+      const callerCampus = auth.caller.profile?.campus_code;
+      const { data: campaign, error: campError } = await admin
+        .from('giving_campaigns')
+        .select('id, campus_code')
+        .eq('id', campaignId)
+        .maybeSingle();
+      if (campError) throw new Fail(500, 'db_error', 'Could not verify giving campaign permissions.');
+      if (!campaign) throw new Fail(404, 'not_found', 'Giving campaign not found.');
+      if (
+        !callerCampus ||
+        (campaign.campus_code && campaign.campus_code !== 'GLOBAL' && campaign.campus_code !== callerCampus)
+      ) {
+        throw new Fail(403, 'forbidden', 'Campus Admins can only review giving campaigns within their registered campus node.');
+      }
+    }
 
     const limited = await consumeRateLimit(admin, `giving-campaign-decide:${caller.id}`, 60, 3600);
     if (limited === 'limited') return jsonResponse(req, { error: 'rate_limited', message: 'Too many requests. Try again later.' }, 429);

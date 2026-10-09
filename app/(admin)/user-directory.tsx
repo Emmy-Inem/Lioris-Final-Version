@@ -553,7 +553,13 @@ export default function UserDirectoryScreen() {
  // Core suspend/restore mutation - shared between the single-item toggle
  // below and the bulk suspend flow, so both go through Supabase the same
  // way (RPC first, direct column update as a fallback).
- async function setSuspendedCore(target: DirectoryUser, nextSuspended: boolean) {
+  async function setSuspendedCore(target: DirectoryUser, nextSuspended: boolean) {
+    if (currentUser?.isCampusAdmin && (target.role === 'Admin' || (currentUser.campusCode && target.campus !== currentUser.campusCode))) {
+      throw new Error('Campus Admins cannot suspend administrators or users outside their registered campus.');
+    }
+    if ((target as any).adminRole === 'super_admin' || target.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') {
+      throw new Error('Super Administrators cannot be suspended.');
+    }
  const { supabase } = await import('@/api/supabase');
  if (nextSuspended) {
  const { error } = await supabase.rpc('suspend_user_account', {
@@ -573,7 +579,10 @@ export default function UserDirectoryScreen() {
  // Core verify mutation - there was no existing single-item "verify" action
  // in this screen (only suspend/role-change/wipe), so this is the shared
  // primitive both the new single-item and bulk verify actions call.
- async function verifyUserCore(target: DirectoryUser) {
+  async function verifyUserCore(target: DirectoryUser) {
+    if (currentUser?.isCampusAdmin && currentUser.campusCode && target.campus !== currentUser.campusCode) {
+      throw new Error('Campus Admins cannot verify users outside their registered campus.');
+    }
  const { supabase } = await import('@/api/supabase');
  const { error } = await supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', target.id);
  if (error) throw error;
@@ -640,6 +649,10 @@ export default function UserDirectoryScreen() {
  }
 
  async function handleToggleAmbassador(target: DirectoryUser) {
+   if (currentUser?.isCampusAdmin && (target.role === 'Admin' || (currentUser.campusCode && target.campus !== currentUser.campusCode))) {
+     Alert.alert('Permission Denied', 'Campus Admins cannot assign ambassadors outside their campus or to administrators.');
+     return;
+   }
    haptics.medium();
    const nextStatus = !target.isCampusAmbassador;
    try {
@@ -922,7 +935,11 @@ export default function UserDirectoryScreen() {
  await retry();
  }
 
- async function handleWipeAccount(target: DirectoryUser) {
+  async function handleWipeAccount(target: DirectoryUser) {
+    if (!currentUser?.isSuperAdmin) {
+      Alert.alert('Permission Denied', 'Only Super Administrators can permanently delete user accounts.');
+      return;
+    }
  haptics.error();
  Alert.alert(
  'Permanently Delete Account?',
@@ -990,6 +1007,16 @@ export default function UserDirectoryScreen() {
  // the Supabase Admin API, so every device currently signed in is forced to log
  // back in. This is disruptive for the target, hence the confirmation first.
  function handleForceSignOut(target: DirectoryUser) {
+ if (currentUser?.isCampusAdmin && (target.role === 'Admin' || (currentUser.campusCode && target.campus !== currentUser.campusCode))) {
+   Alert.alert('Permission Denied', 'Campus Admins cannot sign out administrators or users outside their registered campus.');
+   return;
+ }
+ if ((target as any).adminRole === 'super_admin' || target.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') {
+   if (!currentUser?.isSuperAdmin) {
+     Alert.alert('Permission Denied', 'Super Administrators cannot be forced to sign out by campus admins.');
+     return;
+   }
+ }
  haptics.medium();
  Alert.alert(
  'Force Sign Out?',
@@ -1007,6 +1034,16 @@ export default function UserDirectoryScreen() {
  }
 
  async function confirmForceSignOut(target: DirectoryUser) {
+ if (currentUser?.isCampusAdmin && (target.role === 'Admin' || (currentUser.campusCode && target.campus !== currentUser.campusCode))) {
+   Alert.alert('Permission Denied', 'Campus Admins cannot sign out administrators or users outside their registered campus.');
+   return;
+ }
+ if ((target as any).adminRole === 'super_admin' || target.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') {
+   if (!currentUser?.isSuperAdmin) {
+     Alert.alert('Permission Denied', 'Super Administrators cannot be forced to sign out by campus admins.');
+     return;
+   }
+ }
  if (forceSigningOutId) return;
  setForceSigningOutId(target.id);
  try {
@@ -1443,7 +1480,7 @@ export default function UserDirectoryScreen() {
             </Pressable>
             )}
 
-            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && (
+            {!(currentUser?.isCampusAdmin && (selectedUser.role === 'Admin' || (currentUser.campusCode && selectedUser.campus !== currentUser.campusCode))) && selectedUser.id !== currentUser?.id && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 disabled={forceSigningOutId === selectedUser.id}
@@ -1456,7 +1493,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && !selectedUser.isVerified && (
+            {!(currentUser?.isCampusAdmin && (selectedUser.role === 'Admin' || (currentUser.campusCode && selectedUser.campus !== currentUser.campusCode))) && !selectedUser.isVerified && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleVerifyUser(selectedUser)}
@@ -1466,7 +1503,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && (
+            {!(currentUser?.isCampusAdmin && (selectedUser.role === 'Admin' || (currentUser.campusCode && selectedUser.campus !== currentUser.campusCode))) && selectedUser.id !== currentUser?.id && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleToggleAmbassador(selectedUser)}
@@ -1478,7 +1515,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {selectedUser.role !== 'Admin' && selectedUser.id !== currentUser?.id && (
+            {currentUser?.isSuperAdmin && selectedUser.role !== 'Admin' && selectedUser.id !== currentUser?.id && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleImpersonate(selectedUser)}
@@ -1488,7 +1525,7 @@ export default function UserDirectoryScreen() {
               </Pressable>
             )}
 
-            {!(currentUser?.isCampusAdmin && selectedUser.role === 'Admin') && selectedUser.id !== currentUser?.id && (
+            {currentUser?.isSuperAdmin && selectedUser.id !== currentUser?.id && (
               <Pressable
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.sm }}
                 onPress={() => handleWipeAccount(selectedUser)}

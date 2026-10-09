@@ -330,7 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             const profilePromise = supabase
               .from('profiles')
-              .select('role, full_name, onboarding_complete, department, admin_role, campus_code')
+              .select('role, full_name, onboarding_complete, onboarding_step, department, admin_role, campus_code')
               .eq('id', session.user.id)
               .maybeSingle();
             const profileTimeout = new Promise<{ data: null; error?: any }>((resolve) =>
@@ -342,7 +342,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else if (error) {
               const { data: fallbackData } = await supabase
                 .from('profiles')
-                .select('role, full_name, onboarding_complete, department, campus_code')
+                .select('role, full_name, onboarding_complete, onboarding_step, department, campus_code')
                 .eq('id', session.user.id)
                 .maybeSingle();
               if (fallbackData) profile = fallbackData;
@@ -387,7 +387,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             onboardingComplete: isOnboarded,
             onboardingStep: isOnboarded
               ? undefined
-              : userRef.current?.onboardingStep || storedUser?.onboardingStep || firstOnboardingStep(role),
+              : profile?.onboarding_step || userRef.current?.onboardingStep || storedUser?.onboardingStep || firstOnboardingStep(role),
             // MFA verification belongs to this still-valid local session. A
             // full logout clears the stored projection, while a reload must
             // not force staff/admin through the challenge again.
@@ -715,7 +715,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { data, error } = await supabase
             .from('profiles')
-            .select('department, is_suspended, deactivated_at, onboarding_complete, admin_role, campus_code')
+            .select('department, is_suspended, deactivated_at, onboarding_complete, onboarding_step, admin_role, campus_code')
             .eq('id', session.user.id)
             .maybeSingle();
           if (!error && data) {
@@ -723,7 +723,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else if (error) {
             const { data: fallbackProf } = await supabase
               .from('profiles')
-              .select('department, is_suspended, deactivated_at, onboarding_complete, campus_code')
+              .select('department, is_suspended, deactivated_at, onboarding_complete, onboarding_step, campus_code')
               .eq('id', session.user.id)
               .maybeSingle();
             if (fallbackProf) prof = fallbackProf;
@@ -766,7 +766,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isSuperAdmin,
           isCampusAdmin,
           onboardingComplete: isOnboarded,
-          onboardingStep: isOnboarded ? undefined : firstOnboardingStep(userRole),
+          onboardingStep: isOnboarded ? undefined : (prof?.onboarding_step || firstOnboardingStep(userRole)),
           mfaVerified: !roleRequiresMfa(userRole),
         };
         await persist(nextUser);
@@ -832,6 +832,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await persist(next);
         userRef.current = next;
         setUser(next);
+        if (current.id) {
+          supabase
+            .from('profiles')
+            .update({ onboarding_step: path })
+            .eq('id', current.id)
+            .then(({ error }) => {
+              if (error) console.warn('[Auth] Failed to persist onboarding_step:', error.message);
+            });
+        }
       },
       async completeOnboarding() {
         const currentUserId = userRef.current?.id;
@@ -846,7 +855,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (currentUserId) {
           supabase
             .from('profiles')
-            .update({ onboarding_complete: true })
+            .update({ onboarding_complete: true, onboarding_step: null })
             .eq('id', currentUserId)
             .then(({ error }) => {
               if (error) console.warn('[Auth] Failed to persist onboarding_complete:', error.message);

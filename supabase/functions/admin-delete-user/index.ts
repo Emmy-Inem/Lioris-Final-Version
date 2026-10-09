@@ -29,7 +29,7 @@
 // SUPABASE_URL and SUPABASE_ANON_KEY are provided automatically at runtime.
 
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
-import { isUuid, requireAdmin } from '../_shared/auth.ts';
+import { isUuid, requireSuperAdmin } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { createServiceClient } from '../_shared/ratelimit.ts';
 import { eraseUser } from '../_shared/purge.ts';
@@ -49,8 +49,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { error: 'Server misconfiguration. Missing required secrets.' }, 500);
   }
 
-  // --- 1. Caller must be an admin with an MFA (AAL2) session ----------------
-  const auth = await requireAdmin(req);
+  // --- 1. Caller must be a Super Admin with an MFA (AAL2) session ----------------
+  const auth = await requireSuperAdmin(req);
   if (!auth.ok) return auth.response;
   const { user: callerUser } = auth.caller;
 
@@ -83,12 +83,32 @@ Deno.serve(async (req: Request) => {
     // --- 3. Target checks (service role: bypasses RLS) ----------------------
     const { data: targetProfile, error: profileError } = await admin
       .from('profiles')
-      .select('role')
+      .select('role, admin_role, email')
       .eq('id', targetUserId)
       .maybeSingle();
     if (profileError) {
       console.error('[admin-delete-user] profile lookup failed:', profileError.message);
       return jsonResponse(req, { error: 'Unexpected server error while deleting the account.' }, 500);
+    }
+
+    if (
+      targetProfile?.admin_role === 'super_admin' ||
+      targetProfile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com'
+    ) {
+      return jsonResponse(
+        req,
+        { error: 'Root Super Administrator accounts cannot be deleted.' },
+        403,
+      );
+    }
+
+    const { data: targetAuthUser } = await admin.auth.admin.getUserById(targetUserId);
+    if (targetAuthUser?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') {
+      return jsonResponse(
+        req,
+        { error: 'Root Super Administrator accounts cannot be deleted.' },
+        403,
+      );
     }
 
     // Admins must be demoted first. Because no admin can be deleted here, this

@@ -54,6 +54,15 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { error: 'Confirmation required: send { "confirm": "DELETE" }.' }, 400);
   }
 
+  const callerEmail = (auth.caller.user.email ?? '').toLowerCase().trim();
+  if (callerEmail === 'inememmanuel@gmail.com') {
+    return jsonResponse(
+      req,
+      { error: 'The primary root administrator account cannot be deleted.' },
+      403,
+    );
+  }
+
   const verdict = await consumeRateLimit(admin, `delete-account:${uid}`, 3, 60 * 60);
   if (verdict === 'error') return jsonResponse(req, { error: 'Service temporarily unavailable.' }, 503);
   if (verdict === 'limited') {
@@ -63,13 +72,27 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Last-admin guard: the platform must always keep at least one active admin.
+    // Super-admin & last-admin guards:
+    // Root Super Admin and Super Admins cannot be deleted via self-service deletion.
+    // The platform must always keep at least one active admin.
     const { data: profile, error: profileError } = await admin
       .from('profiles')
-      .select('role')
+      .select('role, admin_role, email')
       .eq('id', uid)
       .maybeSingle();
     if (profileError) throw profileError;
+
+    if (
+      profile?.admin_role === 'super_admin' ||
+      profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com'
+    ) {
+      return jsonResponse(
+        req,
+        { error: 'Super Administrator accounts cannot be deleted through self-service deletion.' },
+        403,
+      );
+    }
+
     if (profile?.role === 'admin') {
       const others = await countActiveAdmins(admin, uid);
       if (others < 1) {

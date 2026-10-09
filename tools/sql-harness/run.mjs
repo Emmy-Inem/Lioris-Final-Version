@@ -1179,7 +1179,7 @@ const currentProductMigrations = [
   'supabase/migrations/20261009030000_student_transparency_and_appeals.sql',
   'supabase/migrations/20261009040000_resource_seed_stats_reset.sql',
   'supabase/migrations/20261010000000_event_creation_fix.sql',
-  'supabase/migrations/20261010000000_resource_ratings_self_rating_guard.sql',
+  'supabase/migrations/20261010010000_resource_ratings_self_rating_guard.sql',
   'supabase/migrations/20261011000000_super_admin_and_campus_admin_hierarchy.sql',
 ];
 for (const file of currentProductMigrations) {
@@ -5058,6 +5058,145 @@ console.log('\n== super admin & campus admin hierarchy ==');
       const res = (await c.q(`SELECT * FROM public.admin_get_user_profiles()`)).rows;
       assert(res.length > 0, 'profiles returned for Super Admin');
       assert(res.some((p) => p.campus_code !== 'UNILAG'), 'Super Admin receives profiles across multiple campuses');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// security and role gap fixes (20261018000000_security_and_role_gap_fixes.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== security and role gap fixes ==');
+{
+  await check('20261018000000_security_and_role_gap_fixes.sql applies cleanly', async () => {
+    await applyFile(db, 'supabase/migrations/20261018000000_security_and_role_gap_fixes.sql', true, () => {});
+  });
+  await check('20261018000000_security_and_role_gap_fixes.sql is idempotent', async () => {
+    await applyFile(db, 'supabase/migrations/20261018000000_security_and_role_gap_fixes.sql', true, () => {});
+  });
+
+  await check('student cannot mark onboarding_complete without campus and department', async () => {
+    await as(U.s4, async (c) => {
+      await c.q(`UPDATE public.profiles SET onboarding_complete = true, department = '' WHERE id = $1`, [U.s4]);
+      const r = await c.q(`SELECT onboarding_complete FROM public.profiles WHERE id = $1`, [U.s4]);
+      eq(r.rows[0].onboarding_complete, false, 'uncompleted academic profile cannot be marked complete');
+    });
+  });
+
+  await check('super admin cannot be suspended via suspend_user_account by campus admin', async () => {
+    await as(U.adminB, async (c) => {
+      const r = await c.t(`SELECT public.suspend_user_account($1, 'test')`, [U.adminA]);
+      denied(r, /Campus Admins cannot suspend administrator accounts/, 'Campus admin cannot suspend Super Admin');
+    });
+
+    await as(U.adminA, async (c) => {
+      const r = await c.t(`SELECT public.suspend_user_account($1, 'Policy violation')`, [U.s4]);
+      assert(r.ok, 'Super Admin can suspend user account: ' + r.err?.message);
+    });
+  });
+
+  await check('normal student cannot insert pinned post', async () => {
+    await as(U.s2, async (c) => {
+      const r = await c.q(
+        `INSERT INTO public.posts (author_id, campus_code, title, content, category, is_pinned)
+         VALUES ($1, 'UNILAG', 'Student Pinned Post', 'Should be unpinned', 'General', true) RETURNING is_pinned`,
+        [U.s2]
+      );
+      eq(r.rows[0].is_pinned, false, 'normal student post is unpinned');
+    });
+  });
+
+  await check('student cannot self-join direct message chat channels', async () => {
+    // Create a DM channel between s1 and s2
+    const dmChan = (await admin(
+      `INSERT INTO public.chat_channels (name, created_by, is_direct_message, campus_code)
+       VALUES ('dm-s1-s2', $1, true, 'UNILAG') RETURNING id`,
+      [U.s1]
+    )).rows[0].id;
+
+    // s3 (unrelated student) tries to self-join the DM
+    await as(U.s3, async (c) => {
+      const r = await c.t(
+        `INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ($1, $2)`,
+        [dmChan, U.s3]
+      );
+      denied(r, null, 'third-party student cannot self-join direct message channel');
+    });
+  });
+
+  await check('auth_is_super_admin correctly identifies super admin vs campus admin vs student', async () => {
+    await as(U.adminA, async (c) => {
+      const r = await c.q(`SELECT public.auth_is_super_admin() AS is_super`);
+      eq(r.rows[0].is_super, true, 'Super Admin returns true');
+    });
+    await as(U.adminB, async (c) => {
+      const r = await c.q(`SELECT public.auth_is_super_admin() AS is_super`);
+      eq(r.rows[0].is_super, false, 'Campus Admin returns false');
+    });
+    await as(U.s1, async (c) => {
+      const r = await c.q(`SELECT public.auth_is_super_admin() AS is_super`);
+      eq(r.rows[0].is_super, false, 'Student returns false');
+    });
+  });
+
+  await check('admin_paid_events_overview scopes events to campus for Campus Admin while Super Admin sees all', async () => {
+    // Insert a paid event in UI
+    const evUI = (await admin(
+      `INSERT INTO public.events (creator_id, campus_code, title, description, venue, ticket_type, ticket_price, payment_method, start_time, end_time, status)
+       VALUES ($1, 'UI', 'UI Gala Event', 'UI Gala Description', 'UI Hall', 'paid', 2500, 'at_venue', now() + interval '5 days', now() + interval '5 days 3 hours', 'upcoming')
+       RETURNING id`,
+      [U.s3]
+    )).rows[0].id;
+
+    // Insert a paid event in UNILAG
+    const evUnilag = (await admin(
+      `INSERT INTO public.events (creator_id, campus_code, title, description, venue, ticket_type, ticket_price, payment_method, start_time, end_time, status)
+       VALUES ($1, 'UNILAG', 'UNILAG Fest', 'UNILAG Fest Description', 'UNILAG Hall', 'paid', 3000, 'at_venue', now() + interval '6 days', now() + interval '6 days 4 hours', 'upcoming')
+       RETURNING id`,
+      [U.s1]
+    )).rows[0].id;
+
+    // Campus Admin (adminB at UNILAG) calls admin_paid_events_overview
+    await as(U.adminB, async (c) => {
+      const res = (await c.q(`SELECT public.admin_paid_events_overview() AS list`)).rows[0].list;
+      assert(Array.isArray(res), 'overview returned an array');
+      const hasUnilag = res.some((e) => e.event_id === evUnilag);
+      const hasUI = res.some((e) => e.event_id === evUI);
+      eq(hasUnilag, true, 'Campus Admin sees their own campus paid event');
+      eq(hasUI, false, 'Campus Admin does not see other campus paid event');
+    });
+
+    // Super Admin (adminA) calls admin_paid_events_overview
+    await as(U.adminA, async (c) => {
+      const res = (await c.q(`SELECT public.admin_paid_events_overview() AS list`)).rows[0].list;
+      assert(Array.isArray(res), 'overview returned an array');
+      const hasUnilag = res.some((e) => e.event_id === evUnilag);
+      const hasUI = res.some((e) => e.event_id === evUI);
+      eq(hasUnilag, true, 'Super Admin sees UNILAG event');
+      eq(hasUI, true, 'Super Admin sees UI event');
+    });
+  });
+
+  await check('giving_campaigns RLS scopes updates to campus for Campus Admin while Super Admin can update any', async () => {
+    // Insert campaign for UI
+    const campUI = (await admin(
+      `INSERT INTO public.giving_campaigns (creator_id, campus_code, title, giving_url)
+       VALUES ($1, 'UI', 'UI Science Lab Fund', 'https://giveto.ui.edu.ng/lab')
+       RETURNING id`,
+      [U.s3]
+    )).rows[0].id;
+
+    // Campus Admin at UNILAG (adminB) tries to update UI campaign
+    await as(U.adminB, async (c) => {
+      await c.q(`UPDATE public.giving_campaigns SET title = 'Hacked Title' WHERE id = $1`, [campUI]);
+      const r = await c.q(`SELECT title FROM public.giving_campaigns WHERE id = $1`, [campUI]);
+      eq(r.rows[0].title, 'UI Science Lab Fund', 'Campus Admin cannot modify campaign outside their campus');
+    });
+
+    // Super Admin (adminA) can update UI campaign
+    await as(U.adminA, async (c) => {
+      await c.q(`UPDATE public.giving_campaigns SET title = 'Updated by Super Admin' WHERE id = $1`, [campUI]);
+      const r = await c.q(`SELECT title FROM public.giving_campaigns WHERE id = $1`, [campUI]);
+      eq(r.rows[0].title, 'Updated by Super Admin', 'Super Admin can modify any campaign');
     });
   });
 }
