@@ -329,57 +329,116 @@ export async function verifyProfileEmail(userId: string): Promise<UserProfile> {
  return profile;
 }
 
+function toArrayBufferFromInput(input: Blob | ArrayBuffer | string): Promise<ArrayBuffer> | ArrayBuffer {
+  if (input instanceof ArrayBuffer) return input;
+  if (input instanceof Blob) return input.arrayBuffer();
+  if (typeof input === 'string') {
+    const cleanB64 = input.includes(',') ? input.split(',')[1] : input;
+    if (/^[A-Za-z0-9+/=]+$/.test(cleanB64.trim()) && cleanB64.length > 20) {
+      const binaryString = atob(cleanB64.trim());
+      const len = binaryString.length;
+      const u8 = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        u8[i] = binaryString.charCodeAt(i);
+      }
+      return u8.buffer;
+    }
+    return (async () => {
+      try {
+        if (input.startsWith('file://') || input.startsWith('/')) {
+          const FileSystem = await import('expo-file-system');
+          const b64 = await FileSystem.readAsStringAsync(input, { encoding: FileSystem.EncodingType.Base64 });
+          const binaryString = atob(b64);
+          const len = binaryString.length;
+          const u8 = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            u8[i] = binaryString.charCodeAt(i);
+          }
+          return u8.buffer;
+        }
+      } catch {
+        // Fall back to fetch
+      }
+      const res = await fetch(input);
+      return res.arrayBuffer();
+    })();
+  }
+  return new ArrayBuffer(0);
+}
+
 export async function uploadAvatarImage(
  userId: string,
- imageBlob: Blob | ArrayBuffer,
+ imageInput: Blob | ArrayBuffer | string,
  fileExt = 'jpg',
 ): Promise<string> {
- const blobType = (imageBlob instanceof Blob ? imageBlob.type : '') || '';
+ const { data: authData } = await supabase.auth.getUser();
+ const effectiveUserId = (userId && userId !== 'me') ? userId : authData?.user?.id;
+ if (!effectiveUserId) throw new Error('You must be signed in to upload a profile photo.');
+
+ const buffer = await toArrayBufferFromInput(imageInput);
+ const blobType = (imageInput instanceof Blob ? imageInput.type : '') || '';
  const rawExt = (blobType ? blobType.replace(/^image\//, '') : fileExt)
    .toLowerCase()
    .replace(/^jpeg$/, 'jpg');
  const normalizedExt = ['jpg', 'png', 'webp'].includes(rawExt) ? rawExt : 'jpg';
- const byteLength = imageBlob instanceof ArrayBuffer ? imageBlob.byteLength : imageBlob.size;
- await assertWithinStorageQuota(byteLength, 'image');
- const filePath = `${userId}/avatar_${Date.now()}.${normalizedExt}`;
- const { error } = await supabase.storage.from('avatars').upload(filePath, imageBlob, {
- contentType: normalizedExt === 'png' ? 'image/png' : normalizedExt === 'webp' ? 'image/webp' : 'image/jpeg',
- upsert: true,
+ await assertWithinStorageQuota(buffer.byteLength, 'image');
+ const filePath = `${effectiveUserId}/avatar_${Date.now()}.${normalizedExt}`;
+ const { error } = await supabase.storage.from('avatars').upload(filePath, buffer, {
+   contentType: normalizedExt === 'png' ? 'image/png' : normalizedExt === 'webp' ? 'image/webp' : 'image/jpeg',
+   upsert: true,
  });
  if (error) {
- throw new Error(getFriendlyErrorMessage(error, 'Could not upload the profile photo. Please try again.'));
+   throw new Error(getFriendlyErrorMessage(error, 'Could not upload the profile photo. Please try again.'));
  }
  const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
  const avatarUrl = publicUrlData?.publicUrl || filePath;
 
- await updateProfileImages(userId, { avatarUrl });
+ await updateProfileImages(effectiveUserId, { avatarUrl });
  return avatarUrl;
 }
 
 export async function uploadCoverImage(
  userId: string,
- imageBlob: Blob | ArrayBuffer,
+ imageInput: Blob | ArrayBuffer | string,
  fileExt = 'jpg',
 ): Promise<string> {
+ const { data: authData } = await supabase.auth.getUser();
+ const effectiveUserId = (userId && userId !== 'me') ? userId : authData?.user?.id;
+ if (!effectiveUserId) throw new Error('You must be signed in to upload a cover photo.');
+
+ const buffer = await toArrayBufferFromInput(imageInput);
  const rawExt = fileExt.toLowerCase().replace(/^image\//, '').replace(/^jpeg$/, 'jpg');
  const normalizedExt = ['jpg', 'png', 'webp'].includes(rawExt) ? rawExt : 'jpg';
- const byteLength = imageBlob instanceof ArrayBuffer ? imageBlob.byteLength : imageBlob.size;
- await assertWithinStorageQuota(byteLength, 'image');
- const filePath = `${userId}/cover_${Date.now()}.${normalizedExt}`;
- const { error } = await supabase.storage.from('campus-media').upload(filePath, imageBlob, {
+ await assertWithinStorageQuota(buffer.byteLength, 'image');
+
+ const filePath = `${effectiveUserId}/cover_${Date.now()}.${normalizedExt}`;
+
+ // Upload to avatars bucket (which is public) so cover photos never expire and display for unverified students
+ let coverUrl = filePath;
+ const { error: avatarUploadError } = await supabase.storage.from('avatars').upload(filePath, buffer, {
    contentType: normalizedExt === 'png' ? 'image/png' : normalizedExt === 'webp' ? 'image/webp' : 'image/jpeg',
    upsert: true,
  });
- if (error) {
-   throw new Error(getFriendlyErrorMessage(error, 'Could not upload the cover image. Please try again.'));
+
+ if (!avatarUploadError) {
+   const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+   coverUrl = publicUrlData?.publicUrl || filePath;
+ } else {
+   // Fallback to campus-media bucket
+   const { error: mediaError } = await supabase.storage.from('campus-media').upload(filePath, buffer, {
+     contentType: normalizedExt === 'png' ? 'image/png' : normalizedExt === 'webp' ? 'image/webp' : 'image/jpeg',
+     upsert: true,
+   });
+   if (mediaError) {
+     throw new Error(getFriendlyErrorMessage(mediaError, 'Could not upload the cover image. Please try again.'));
+   }
+   coverUrl = filePath;
  }
- // campus-media is private. Persist the stable object path; components mint
- // short-lived signed URLs when rendering it. A public URL here worked only
- // before the bucket was secured and is why some covers appeared broken.
- const coverUrl = filePath;
+
  try {
-   await updateProfileImages(userId, { coverUrl });
+   await updateProfileImages(effectiveUserId, { coverUrl });
  } catch (error) {
+   await supabase.storage.from('avatars').remove([filePath]).catch(() => undefined);
    await supabase.storage.from('campus-media').remove([filePath]).catch(() => undefined);
    throw error;
  }
@@ -390,7 +449,11 @@ export async function updateProfileImages(
  userId: string,
  updates: { avatarUrl?: string | null; coverUrl?: string | null },
 ): Promise<UserProfile> {
- const current = profileState.get(userId) || defaultProfileFor({ id: userId, fullName: 'You', role: 'student' });
+ const { data: authData } = await supabase.auth.getUser();
+ const effectiveUserId = (userId && userId !== 'me') ? userId : authData?.user?.id;
+ if (!effectiveUserId) throw new Error('You must be signed in to update profile images.');
+
+ const current = profileState.get(effectiveUserId) || defaultProfileFor({ id: effectiveUserId, fullName: 'You', role: 'student' });
 
  const patch: any = {};
  if (updates.avatarUrl !== undefined) patch.avatar_url = updates.avatarUrl;
@@ -400,7 +463,7 @@ export async function updateProfileImages(
    const { data, error } = await supabase
      .from('profiles')
      .update(patch)
-     .eq('id', userId)
+     .eq('id', effectiveUserId)
      .select('id, avatar_url, banner_url')
      .maybeSingle();
    if (error) throw new Error(getFriendlyErrorMessage(error, 'Could not update your profile image.'));

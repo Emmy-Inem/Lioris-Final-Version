@@ -169,6 +169,10 @@ interface AuthContextValue {
  endImpersonation: () => Promise<void>;
  isPasswordRecovery: boolean;
  clearPasswordRecovery: () => void;
+ /** Update session user in-memory and in persistent storage. */
+ updateUser: (patch: Partial<SessionUser>) => Promise<void>;
+ /** Refresh session user from Supabase database profiles row. */
+ refreshUser: () => Promise<SessionUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -948,6 +952,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isPasswordRecovery,
       clearPasswordRecovery() {
         setIsPasswordRecovery(false);
+      },
+      async updateUser(patch: Partial<SessionUser>) {
+        const current = userRef.current;
+        if (!current) return;
+        const next: SessionUser = { ...current, ...patch };
+        await persist(next);
+        userRef.current = next;
+        setUser(next);
+      },
+      async refreshUser(): Promise<SessionUser | null> {
+        const current = userRef.current;
+        if (!current?.id) return null;
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, full_name, admin_role, campus_code, department')
+            .eq('id', current.id)
+            .maybeSingle();
+          if (profile) {
+            const next: SessionUser = {
+              ...current,
+              fullName: profile.full_name || current.fullName,
+              campusCode: (current.isSuperAdmin && profile.campus_code === 'GLOBAL') ? 'GLOBAL' : (profile.campus_code || current.campusCode),
+              department: profile.department || current.department,
+            };
+            await persist(next);
+            userRef.current = next;
+            setUser(next);
+            return next;
+          }
+        } catch {
+          // Non-blocking
+        }
+        return current;
       },
     }),
     [user, isLoading, impersonation, isPasswordRecovery],

@@ -2,6 +2,7 @@
 
 import { createClient, type SupabaseClient, type User } from 'https://esm.sh/@supabase/supabase-js@2';
 import { jsonResponse } from './cors.ts';
+import { createServiceClient } from './ratelimit.ts';
 
 export interface AuthedProfile {
   id: string;
@@ -120,20 +121,32 @@ export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } 
   if (!result.ok) return result;
   const { caller } = result;
 
-  const { data: profile, error } = await caller.callerClient
+  // Use the service client to query profiles so RLS never blocks verifying admin credentials.
+  const adminClient = createServiceClient() ?? caller.callerClient;
+  const { data: profile, error } = await adminClient
     .from('profiles')
     .select('id, role, admin_role, campus_code, is_suspended, email')
     .eq('id', caller.user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !profile || profile.role !== 'admin' || profile.is_suspended === true) {
+  const isRootSuperAdmin =
+    caller.user.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
+    profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
+
+  if (!isRootSuperAdmin && (error || !profile || profile.role !== 'admin' || profile.is_suspended === true)) {
     return {
       ok: false,
       response: jsonResponse(req, { error: 'Forbidden. Admin privileges are required to perform this action.' }, 403),
     };
   }
 
-  caller.profile = profile;
+  caller.profile = profile ?? {
+    id: caller.user.id,
+    role: 'admin',
+    admin_role: 'super_admin',
+    email: caller.user.email,
+    is_suspended: false,
+  };
 
   const requireMfa = opts.requireMfa ?? true;
   const mfaMode = Deno.env.get('REQUIRE_ADMIN_MFA');
@@ -151,7 +164,7 @@ export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } 
  * Root Super Admin (inememmanuel@gmail.com or admin_role = 'super_admin') maintains
  * absolute platform-wide authority.
  */
-export function isCallerSuperAdmin(caller: { user: User; profile?: { admin_role?: string; email?: string } }): boolean {
+export function isCallerSuperAdmin(caller: { user: User; profile?: { admin_role?: string | null; email?: string | null } }): boolean {
   return (
     caller.profile?.admin_role === 'super_admin' ||
     caller.user.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||

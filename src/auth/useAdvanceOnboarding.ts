@@ -9,7 +9,7 @@ import { nextOnboardingStep } from './onboardingSteps';
  * onboarding complete and sends the user to the dashboard.
  */
 export function useAdvanceOnboarding(currentPath: string) {
-  const { user, setOnboardingStep, completeOnboarding } = useAuth();
+  const { user, setOnboardingStep, completeOnboarding, refreshUser } = useAuth();
 
   return async function advance() {
     const userRole = user?.role || 'student';
@@ -20,7 +20,13 @@ export function useAdvanceOnboarding(currentPath: string) {
     } else {
       // Ensure student/alumni users have actually completed university and department
       const isAcademicRole = userRole === 'student' || userRole === 'alumni';
-      const hasAcademicProfile = !!(user?.campusCode && user.campusCode !== 'GLOBAL' && user?.department && user.department.trim());
+      let hasAcademicProfile = !!(user?.campusCode && user.campusCode !== 'GLOBAL' && user?.department && user.department.trim());
+
+      if (isAcademicRole && !hasAcademicProfile) {
+        // Fetch fresh profile from DB to verify if saved in a prior step
+        const refreshed = await refreshUser();
+        hasAcademicProfile = !!(refreshed?.campusCode && refreshed.campusCode !== 'GLOBAL' && refreshed?.department && refreshed.department.trim());
+      }
 
       if (isAcademicRole && !hasAcademicProfile) {
         await setOnboardingStep('/(auth)/onboarding/build-profile');

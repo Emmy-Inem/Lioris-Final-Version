@@ -58,7 +58,34 @@ export async function renderCrop(
   context.crop({ originX: rect.originX, originY: rect.originY, width: rect.width, height: rect.height });
   context.resize({ width: outWidth });
   const rendered = await context.renderAsync();
-  const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: JPEG_QUALITY });
-  const response = await fetch(saved.uri);
-  return { bytes: await response.arrayBuffer(), previewUri: saved.uri };
+  const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: JPEG_QUALITY, base64: true });
+
+  let bytes: ArrayBuffer;
+  if (saved.base64) {
+    const cleanB64 = saved.base64.includes(',') ? saved.base64.split(',')[1] : saved.base64;
+    const binaryString = atob(cleanB64);
+    const len = binaryString.length;
+    const u8 = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      u8[i] = binaryString.charCodeAt(i);
+    }
+    bytes = u8.buffer;
+  } else {
+    try {
+      const FileSystem = await import('expo-file-system');
+      const b64 = await FileSystem.readAsStringAsync(saved.uri, { encoding: FileSystem.EncodingType.Base64 });
+      const binaryString = atob(b64);
+      const len = binaryString.length;
+      const u8 = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        u8[i] = binaryString.charCodeAt(i);
+      }
+      bytes = u8.buffer;
+    } catch {
+      const response = await fetch(saved.uri);
+      bytes = await response.arrayBuffer();
+    }
+  }
+
+  return { bytes, previewUri: saved.uri };
 }

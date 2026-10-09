@@ -41,7 +41,7 @@ const MAJOR_FEATURES: FeatureHighlight[] = [
 
 export default function GetStartedScreen() {
   const { spacing, colors, radius } = useTheme();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const advance = useAdvanceOnboarding('/(auth)/onboarding/get-started');
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,7 +51,17 @@ export default function GetStartedScreen() {
   async function handleFinish() {
     haptics.medium();
     const isAcademic = user?.role === 'student' || user?.role === 'alumni';
-    if (isAcademic && (!user?.campusCode || user.campusCode === 'GLOBAL' || !user?.department)) {
+    let currentCampus = user?.campusCode;
+    let currentDept = user?.department;
+
+    if (isAcademic && (!currentCampus || currentCampus === 'GLOBAL' || !currentDept)) {
+      // Re-check database directly before bouncing to prevent false infinite loops
+      const refreshed = await refreshUser();
+      currentCampus = refreshed?.campusCode;
+      currentDept = refreshed?.department;
+    }
+
+    if (isAcademic && (!currentCampus || currentCampus === 'GLOBAL' || !currentDept)) {
       router.replace('/(auth)/onboarding/build-profile');
       return;
     }

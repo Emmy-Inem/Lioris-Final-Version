@@ -37,7 +37,8 @@ const POSTGRADUATE_PROGRAMMES = [
 export default function BuildProfileScreen() {
   const { campuses: campusChoices } = useCampusRegistry();
   const { colors, spacing, radius } = useTheme();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const advance = useAdvanceOnboarding('/(auth)/onboarding/build-profile');
   const toast = useToast();
 
@@ -134,8 +135,14 @@ export default function BuildProfileScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
-    if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+      if (result.assets[0].base64) {
+        setPhotoBase64(result.assets[0].base64);
+      }
+    }
   }
 
   async function handleContinue() {
@@ -154,19 +161,18 @@ export default function BuildProfileScreen() {
     haptics.medium();
     setSubmitting(true);
     try {
-      if (photoUri && user?.id) {
+      if ((photoBase64 || photoUri) && user?.id) {
         try {
-          const res = await fetch(photoUri);
-          const arrayBuffer = await res.arrayBuffer();
-          const ext = photoUri.toLowerCase().includes('.png') || photoUri.startsWith('data:image/png')
+          const uploadPayload = photoBase64 || photoUri!;
+          const ext = photoUri?.toLowerCase().includes('.png') || photoUri?.startsWith('data:image/png')
             ? 'png'
-            : photoUri.toLowerCase().includes('.webp') || photoUri.startsWith('data:image/webp')
+            : photoUri?.toLowerCase().includes('.webp') || photoUri?.startsWith('data:image/webp')
             ? 'webp'
             : 'jpg';
-          await uploadAvatarImage(user.id, arrayBuffer, ext);
+          await uploadAvatarImage(user.id, uploadPayload, ext);
         } catch (uploadErr) {
           console.warn('[BuildProfile] Avatar upload failed:', uploadErr);
-          if (/^https?:\/\//i.test(photoUri) || /^[A-Za-z0-9_-]+$/.test(photoUri)) {
+          if (photoUri && (/^https?:\/\//i.test(photoUri) || /^[A-Za-z0-9_-]+$/.test(photoUri))) {
             try {
               await updateMyProfile({ avatarUrl: photoUri });
             } catch {
@@ -184,6 +190,9 @@ export default function BuildProfileScreen() {
         academicLevel: user?.role === 'alumni' ? 'Alumni' : level,
         bio: bio.trim() || undefined,
       });
+
+      // Synchronously update AuthContext session user so subsequent onboarding steps have campusCode & department
+      await updateUser({ campusCode, department });
 
       await advance();
     } catch (err: any) {
