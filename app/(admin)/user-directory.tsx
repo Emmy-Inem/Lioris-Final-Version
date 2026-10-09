@@ -17,6 +17,7 @@ import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { UserTypeBadge } from'@/components/UserTypeBadge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { AmbassadorBadge } from '@/components/AmbassadorBadge';
 import { ActionSheetModal } from'@/components/ActionSheetModal';
 import { EmptyState } from'@/components/EmptyState';
 import { ShimmerCardList } from'@/components/ShimmerSkeleton';
@@ -112,7 +113,7 @@ function generateSecureTempPassword(): string {
  return chars.join('');
 }
 
-const ROLE_FILTERS = ['All Roles', 'Student', 'Alumni', 'Staff', 'Admin'];
+const ROLE_FILTERS = ['All Roles', 'Ambassadors', 'Student', 'Alumni', 'Staff', 'Admin'];
 const ALL_CAMPUSES = 'All Campuses';
 
 export default function UserDirectoryScreen() {
@@ -289,6 +290,7 @@ export default function UserDirectoryScreen() {
   const [editAdminRole, setEditAdminRole] = useState<'super_admin' | 'campus_admin'>('campus_admin');
   const [editVerified, setEditVerified] = useState(false);
   const [editSuspended, setEditSuspended] = useState(false);
+  const [editIsAmbassador, setEditIsAmbassador] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
 
   // Diagnostics (user_mutes / job_alerts / notification_preferences summary)
@@ -328,6 +330,7 @@ export default function UserDirectoryScreen() {
     setEditAdminRole(target.adminRole || 'campus_admin');
     setEditVerified(target.isVerified);
     setEditSuspended(target.suspended);
+    setEditIsAmbassador(!!target.isCampusAmbassador);
     setDiagnosticsExpanded(false);
     setDiagnosticsData(null);
     setDiagnosticsError(null);
@@ -359,6 +362,19 @@ export default function UserDirectoryScreen() {
       if (currentUser?.isSuperAdmin) {
         updates.admin_role = editRole === 'Admin' ? editAdminRole : null;
       }
+      if (editIsAmbassador !== !!editModalUser.isCampusAmbassador) {
+        if (editIsAmbassador && editRole !== 'Student') {
+          Alert.alert('Invalid Role', 'Only students can be appointed as Campus Ambassadors.');
+          setEditSaving(false);
+          return;
+        }
+        if (editIsAmbassador && editSuspended) {
+          Alert.alert('Account Suspended', 'Cannot appoint a suspended student as Campus Ambassador.');
+          setEditSaving(false);
+          return;
+        }
+        await setCampusAmbassadorStatus(editModalUser.id, editIsAmbassador);
+      }
       const res = await adminUpdateUserProfile(editModalUser.id, updates);
 
       if (res.success) {
@@ -375,6 +391,7 @@ export default function UserDirectoryScreen() {
                   isVerified: editVerified,
                   suspended: editSuspended,
                   adminRole: editRole === 'Admin' ? (currentUser?.isSuperAdmin ? editAdminRole : u.adminRole) : null,
+                  isCampusAmbassador: editRole === 'Student' ? editIsAmbassador : false,
                 }
               : u,
           ),
@@ -409,7 +426,7 @@ export default function UserDirectoryScreen() {
   }
 
  const filtered = users.filter((u) => {
- const matchesRole = role === 'All Roles' || u.role === role;
+ const matchesRole = role === 'All Roles' ? true : role === 'Ambassadors' ? !!u.isCampusAmbassador : u.role === role;
  const matchesCampus = campus === ALL_CAMPUSES || u.campus === campus;
  const matchesQuery =
  u.fullName.toLowerCase().includes(query.toLowerCase()) ||

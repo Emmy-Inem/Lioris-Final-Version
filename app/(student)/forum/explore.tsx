@@ -226,6 +226,15 @@ export default function ExploreForumsScreen() {
                 setVerificationModalOpen(true);
                 return;
               }
+              const isAmbassadorOrAdmin = !!(profile?.isCampusAmbassador || user?.actualRole === 'admin' || user?.actualRole === 'staff');
+              if (!isAmbassadorOrAdmin) {
+                Alert.alert(
+                  'Campus Ambassador Curation',
+                  'Discussion spaces are curated by official Campus Ambassadors and campus moderators to keep academic communities organized.\n\nWant to curate spaces for your faculty or department? Contact your campus representative or apply to become an ambassador.',
+                  [{ text: 'Understood', style: 'default' }]
+                );
+                return;
+              }
               setProposingOpen(true);
             }}
             style={{
@@ -513,9 +522,17 @@ export default function ExploreForumsScreen() {
             }}
           >
             <SolidCard frosted radius={20} style={{ width: '100%', maxWidth: 480, padding: spacing.lg }}>
-              <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
-                Propose New Discussion Space
-              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
+                <Ionicons name="star" size={18} color="#D97706" />
+                <AppText variant="h3" weight="bold">
+                  Propose New Discussion Space
+                </AppText>
+              </View>
+              <View style={{ alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: 'rgba(245, 158, 11, 0.15)', borderWidth: 1, borderColor: '#F59E0B', marginBottom: spacing.xs }}>
+                <AppText variant="caption" weight="bold" style={{ color: '#D97706', fontSize: 11 }}>
+                  Campus Ambassador Curation
+                </AppText>
+              </View>
               <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
                 Submit a new community space for peer discussion on {effectiveCampus}. It will go live after review by campus moderators.
               </AppText>

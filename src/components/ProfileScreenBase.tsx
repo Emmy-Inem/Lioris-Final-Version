@@ -16,6 +16,7 @@ import { AppButton } from './AppButton';
 import { PostCard } from './PostCard';
 import { Badge } from './Badge';
 import { VerifiedBadge } from './VerifiedBadge';
+import { AmbassadorBadge } from './AmbassadorBadge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -531,6 +532,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
             </AppText>
             {profile.verificationStatus === 'verified' || user?.role === 'admin' ? (
               <VerifiedBadge size={18} role={user?.role} name={profile.fullName} />
+            ) : null}
+            {profile.isCampusAmbassador ? (
+              <AmbassadorBadge size={13} label="Ambassador" />
             ) : null}
           </View>
           <AppText tone="brand" weight="semiBold" variant="bodySmall">

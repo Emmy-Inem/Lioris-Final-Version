@@ -18,6 +18,7 @@ import { AppButton } from '@/components/AppButton';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { AmbassadorBadge } from '@/components/AmbassadorBadge';
 import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
 import { EventCard } from '@/components/EventCard';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -357,6 +358,9 @@ export default function StudentDashboard() {
                     </AppText>
                     {profile?.verificationStatus === 'verified' || user?.role === 'admin' ? (
                       <VerifiedBadge size={16} name={profile?.fullName || firstName} role={user?.role} />
+                    ) : null}
+                    {profile?.isCampusAmbassador ? (
+                      <AmbassadorBadge size={11} label="Ambassador" />
                     ) : null}
                     <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>

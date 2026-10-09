@@ -5300,6 +5300,142 @@ console.log('\n== profile media and learner fixes (20261019000000_profile_media_
   });
 }
 
+// ---------------------------------------------------------------------------
+// campus ambassador and student role hardening (20261020000000_campus_ambassador_and_student_role_hardening.sql)
+// ---------------------------------------------------------------------------
+console.log('\n== campus ambassador and student role hardening (20261020000000_campus_ambassador_and_student_role_hardening.sql) ==');
+{
+  await check('20261020000000_campus_ambassador_and_student_role_hardening.sql applies cleanly', async () => {
+    await applyFile(db, 'supabase/migrations/20261020000000_campus_ambassador_and_student_role_hardening.sql', true, () => {});
+  });
+
+  await check('20261020000000_campus_ambassador_and_student_role_hardening.sql is idempotent', async () => {
+    await applyFile(db, 'supabase/migrations/20261020000000_campus_ambassador_and_student_role_hardening.sql', true, () => {});
+  });
+
+  await check('set_campus_ambassador_status enforces campus scope, role, and suspension checks', async () => {
+    // 1. Regular student s1 cannot call set_campus_ambassador_status
+    await as(U.s1, async (c) => {
+      const r = await c.t(`SELECT public.set_campus_ambassador_status($1, true)`, [U.s2]);
+      denied(r, /admin_required/, 'regular student cannot assign ambassador');
+    });
+
+    // 2. Campus Admin (adminB at UNILAG) cannot appoint ambassador at UI (s3)
+    await as(U.adminB, async (c) => {
+      const r = await c.t(`SELECT public.set_campus_ambassador_status($1, true)`, [U.s3]);
+      denied(r, /unauthorized_campus_scope/, 'campus admin cannot assign ambassador outside their campus');
+    });
+
+    // 3. Campus Admin cannot appoint alumni as campus ambassador
+    await as(U.adminB, async (c) => {
+      const r = await c.t(`SELECT public.set_campus_ambassador_status($1, true)`, [U.alumni]);
+      denied(r, /invalid_target_role/, 'cannot appoint non-student as campus ambassador');
+    });
+
+    // 4. Cannot appoint suspended student as campus ambassador
+    await admin(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+    await admin(`UPDATE public.profiles SET is_suspended = true WHERE id = $1`, [U.s4]);
+    await admin(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+    await as(U.adminB, async (c) => {
+      const r = await c.t(`SELECT public.set_campus_ambassador_status($1, true)`, [U.s4]);
+      denied(r, /cannot_appoint_suspended_user/, 'cannot appoint suspended student as campus ambassador');
+    });
+    await admin(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+    await admin(`UPDATE public.profiles SET is_suspended = false WHERE id = $1`, [U.s4]);
+    await admin(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+
+    // 5. Campus Admin CAN appoint active student on their campus (s2 at UNILAG)
+    await as(U.adminB, async (c) => {
+      const r = await c.t(`SELECT public.set_campus_ambassador_status($1, true)`, [U.s2]);
+      assert(r.ok, 'campus admin appointment of local student succeeded: ' + r.err?.message);
+      const chk = await c.su(`SELECT is_campus_ambassador FROM public.profiles WHERE id = $1`, [U.s2]);
+      eq(chk.rows[0].is_campus_ambassador, true, 'is_campus_ambassador updated to true');
+    });
+
+    // 6. Super Admin (adminA) CAN appoint student at any campus (s3 at UI)
+    await as(U.adminA, async (c) => {
+      const r = await c.t(`SELECT public.set_campus_ambassador_status($1, true)`, [U.s3]);
+      assert(r.ok, 'super admin appointment of student at UI succeeded: ' + r.err?.message);
+      const chk = await c.su(`SELECT is_campus_ambassador FROM public.profiles WHERE id = $1`, [U.s3]);
+      eq(chk.rows[0].is_campus_ambassador, true, 'is_campus_ambassador updated to true');
+    });
+  });
+
+  await check('create_study_group allows institutional .edu.ng students regardless of verification_status column', async () => {
+    // Seed a student with an institutional .edu.ng email but verification_status = 'unverified'
+    const eduStudent = id(42);
+    await mkUser(eduStudent, 'scholar@unilag.edu.ng', 'UNILAG');
+    await as(U.adminA, async (c) => {
+      await c.q(`UPDATE public.profiles SET verification_status = 'unverified' WHERE id = $1`, [eduStudent]);
+    });
+
+    await as(eduStudent, async (c) => {
+      const r = await c.t(
+        `SELECT public.create_study_group(
+          p_name := 'CSC 301 Study Pod',
+          p_description := 'Algorithms and Complexity revision group',
+          p_campus := 'UNILAG',
+          p_department := 'Computer Science',
+          p_course_code := 'CSC 301',
+          p_max_members := 15
+        ) AS group_id`
+      );
+      assert(r.ok, 'institutional student could create study group: ' + r.err?.message);
+      assert(r.rows[0]?.group_id, 'study group created and ID returned');
+    });
+  });
+
+  await check('request_mentorship accepts storage paths in p_document_url', async () => {
+    // Setup U.alumni as a verified mentor accepting mentees
+    await admin(`ALTER TABLE public.profiles DISABLE TRIGGER tr_prevent_profile_role_escalation`);
+    await admin(`UPDATE public.profiles SET verification_status = 'verified' WHERE id = $1`, [U.alumni]);
+    await admin(`ALTER TABLE public.profiles ENABLE TRIGGER tr_prevent_profile_role_escalation`);
+    await admin(`INSERT INTO public.mentor_profiles (user_id, is_accepting, max_mentees) VALUES ($1, true, 5) ON CONFLICT (user_id) DO UPDATE SET is_accepting = true`, [U.alumni]);
+
+    // 1. Mentorship request with bare storage path
+    await as(U.s1, async (c) => {
+      const r1 = await c.t(
+        `SELECT public.request_mentorship(
+          p_mentor_id := $1,
+          p_track := 'Distributed Systems',
+          p_pitch := 'I am a 300 level student eager to learn distributed architectures and system design.',
+          p_document_url := $2
+        ) AS request_id`,
+        [U.alumni, `${U.s1}/cv_doc.pdf`]
+      );
+      assert(r1.ok, 'request_mentorship with storage path succeeded: ' + r1.err?.message);
+      assert(r1.rows[0]?.request_id, 'request_id returned');
+
+      // Clear the first request so the next request is not rejected as duplicate
+      await c.su(`DELETE FROM public.mentorships WHERE student_id = $1 AND mentor_id = $2`, [U.s1, U.alumni]);
+
+      // 2. Mentorship request with full https URL
+      const r2 = await c.t(
+        `SELECT public.request_mentorship(
+          p_mentor_id := $1,
+          p_track := 'Cloud Architecture',
+          p_pitch := 'I am seeking hands-on cloud engineering experience for production deployments.',
+          p_document_url := 'https://example.com/portfolio.pdf'
+        ) AS request_id`,
+        [U.alumni]
+      );
+      assert(r2.ok, 'request_mentorship with https URL succeeded: ' + r2.err?.message);
+
+      // 3. Mentorship request with malicious javascript: URL denied
+      const r3 = await c.t(
+        `SELECT public.request_mentorship(
+          p_mentor_id := $1,
+          p_track := 'Security',
+          p_pitch := 'Malicious attempt to test document link validation in request_mentorship.',
+          p_document_url := 'javascript:alert(1)'
+        ) AS request_id`,
+        [U.alumni]
+      );
+      denied(r3, /invalid_input/, 'malicious document_url denied');
+    });
+  });
+}
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n== Summary: ${results.length - failed.length}/${results.length} checks passed ==`);
 if (failed.length) { for (const f of failed) console.log(` FAILED: ${f.name}\n    ${f.err}`); process.exit(1); }

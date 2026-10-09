@@ -103,6 +103,7 @@ export interface SessionUser {
  actualRole: UserRole;
  adminRole?: AdminRoleType | null;
  campusCode?: string | null;
+ department?: string | null;
  isSuperAdmin: boolean;
  isCampusAdmin: boolean;
  onboardingComplete: boolean;
@@ -202,7 +203,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('role, full_name, admin_role, campus_code')
+      .select('role, full_name, admin_role, campus_code, department')
       .eq('id', session.user.id)
       .maybeSingle();
     if (!error && data) {
@@ -210,7 +211,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
     } else if (error) {
       const { data: fallbackData } = await supabase
         .from('profiles')
-        .select('role, full_name, campus_code')
+        .select('role, full_name, campus_code, department')
         .eq('id', session.user.id)
         .maybeSingle();
       if (fallbackData) profile = fallbackData;
@@ -235,6 +236,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
     actualRole: isMasterAdminEmail ? 'admin' : role,
     adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
     campusCode,
+    department: profile?.department || null,
     isSuperAdmin,
     isCampusAdmin,
     onboardingComplete: true,
@@ -261,6 +263,7 @@ function defaultSessionUser(userEmail: string, role: UserRole, fullName: string,
     actualRole: role,
     adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
     campusCode: campusCode || (isSuperAdmin ? 'GLOBAL' : null),
+    department: null,
     isSuperAdmin,
     isCampusAdmin,
     onboardingComplete: false,
@@ -302,6 +305,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             actualRole,
             adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
             campusCode: stored.campusCode || (isSuperAdmin ? 'GLOBAL' : null),
+            department: stored.department || null,
             isSuperAdmin,
             isCampusAdmin,
             onboardingComplete: isComplete,
@@ -382,6 +386,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             actualRole: role,
             adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
             campusCode,
+            department: profile?.department || storedUser?.department || userRef.current?.department || null,
             isSuperAdmin,
             isCampusAdmin,
             onboardingComplete: isOnboarded,
@@ -533,6 +538,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           actualRole: role,
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           campusCode,
+          department: profile?.department || storedUser?.department || userRef.current?.department || null,
           isSuperAdmin,
           isCampusAdmin,
           onboardingComplete: isOnboarded,
@@ -549,6 +555,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           current.actualRole === nextUser.actualRole &&
           current.adminRole === nextUser.adminRole &&
           current.campusCode === nextUser.campusCode &&
+          current.department === nextUser.department &&
           current.onboardingComplete === nextUser.onboardingComplete &&
           current.mfaVerified === nextUser.mfaVerified
         ) {
@@ -763,6 +770,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           actualRole: userRole,
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           campusCode,
+          department: prof?.department || null,
           isSuperAdmin,
           isCampusAdmin,
           onboardingComplete: isOnboarded,
@@ -789,6 +797,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           actualRole: session.user.role,
           adminRole: null,
           campusCode: payload.campusCode || null,
+          department: (payload as any).department || null,
           isSuperAdmin: false,
           isCampusAdmin: false,
           onboardingComplete: false,

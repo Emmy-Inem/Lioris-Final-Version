@@ -7,6 +7,7 @@ import { AppText } from './AppText';
 import { Avatar } from './Avatar';
 import { UserTypeBadge } from './UserTypeBadge';
 import { VerifiedBadge } from './VerifiedBadge';
+import { AmbassadorBadge } from './AmbassadorBadge';
 import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { AppTextField } from './AppTextField';
@@ -387,6 +388,9 @@ export function UserProfileModal({
   <VerifiedBadge size={18} role={effectiveRole} name={effectiveName} />
  ) : null}
  <UserTypeBadge role={effectiveRole} />
+ {fetchedProfile?.isCampusAmbassador ? (
+   <AmbassadorBadge size={13} label="Ambassador" />
+ ) : null}
  </View>
 
  {profileLoading ? (

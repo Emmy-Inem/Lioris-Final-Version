@@ -48,6 +48,7 @@ import { formatWhen, parseLocalDateTime, relativeTime, endTimeOf } from '@/utils
 import { parseRpcError } from '@/utils/rpcErrors';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
+import { resolveMediaUrl } from '@/api/signedUrls';
 import { haptics } from '@/utils/haptics';
 
 type Role = 'student' | 'alumni';
@@ -536,9 +537,22 @@ function OverviewPanel({
         <Fact label="Proposed plan" value={m.planOutline} />
         <Fact label="Requested" value={m.createdAt ? formatWhen(m.createdAt) : null} />
         {m.startedAt ? <Fact label="Started" value={formatWhen(m.startedAt)} /> : null}
-        {m.documentUrl && isSafeHttpUrl(m.documentUrl) ? (
+        {m.documentUrl ? (
           <Pressable
-            onPress={() => void openExternalUrl(m.documentUrl as string)}
+            onPress={async () => {
+              try {
+                let openUrl = m.documentUrl;
+                const signed = await resolveMediaUrl('resources', m.documentUrl!);
+                if (signed) {
+                  openUrl = signed;
+                }
+                if (!openUrl || !isSafeHttpUrl(openUrl) || !(await openExternalUrl(openUrl))) {
+                  Alert.alert('Document Unavailable', 'This document link could not be opened safely.');
+                }
+              } catch {
+                Alert.alert('Document Unavailable', 'Could not open document link.');
+              }
+            }}
             accessibilityRole="link"
             style={{
               flexDirection: 'row',

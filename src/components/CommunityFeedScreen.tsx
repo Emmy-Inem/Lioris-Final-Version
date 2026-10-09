@@ -1920,6 +1920,15 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             <Pressable
               onPress={() => {
                 haptics.light();
+                const isAmbassadorOrAdmin = !!(profile?.isCampusAmbassador || isAdmin || user?.role === 'staff');
+                if (!isAmbassadorOrAdmin) {
+                  Alert.alert(
+                    'Campus Ambassador Curation',
+                    'Discussion spaces are curated by official Campus Ambassadors and campus moderators to keep student forums organized.\n\nWant to curate spaces for your faculty or department? Contact your campus representative or apply to become an ambassador.',
+                    [{ text: 'Understood', style: 'default' }]
+                  );
+                  return;
+                }
                 setSubForumsDirectoryOpen(false);
                 setProposeCommunityOpen(true);
               }}
