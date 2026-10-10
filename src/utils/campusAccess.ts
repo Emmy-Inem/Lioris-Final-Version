@@ -1,5 +1,6 @@
 export interface CampusAccessIdentity {
   role?: string | null;
+  actualRole?: string | null;
   adminRole?: string | null;
   campusCode?: string | null;
   email?: string | null;
@@ -8,9 +9,10 @@ export interface CampusAccessIdentity {
 export function isSuperAdminIdentity(identity?: CampusAccessIdentity | null): boolean {
   if (!identity) return false;
   const email = identity.email?.trim().toLowerCase();
+  const effectiveRole = identity.actualRole || identity.role;
   return (
     email === 'inememmanuel@gmail.com' ||
-    (identity.role === 'admin' && identity.adminRole === 'super_admin')
+    (effectiveRole === 'admin' && identity.adminRole === 'super_admin')
   );
 }
 

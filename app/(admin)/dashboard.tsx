@@ -138,7 +138,7 @@ export default function AdminOverviewScreen() {
                     : (memberCount != null ? `${memberCount.toLocaleString()} members across all campuses` : 'Multi-campus hub')}
                 </AppText>
               </View>
-              <Avatar name={user?.fullName ?? (user?.isSuperAdmin ? 'Super Administrator' : 'Campus Administrator')} uri={profile?.avatarUrl} size={56} role="admin" />
+              <Avatar name={user?.fullName ?? (user?.isSuperAdmin ? 'Super Administrator' : 'Campus Administrator')} uri={profile?.avatarUrl ?? user?.avatarUrl} size={56} role="admin" />
             </View>
           </View>
         </GlassCard>

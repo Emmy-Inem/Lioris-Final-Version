@@ -243,7 +243,7 @@ export default function AlumniDashboard() {
                     backgroundColor: 'rgba(15, 23, 42, 0.5)',
                   }}
                 >
-                  <Avatar name={fullName} uri={profile?.avatarUrl} size={isDesktop ? 58 : 50} role="alumni" />
+                  <Avatar name={fullName} uri={profile?.avatarUrl ?? user?.avatarUrl} size={isDesktop ? 58 : 50} role="alumni" />
                 </Pressable>
 
                 <View style={{ flex: 1, minWidth: 0 }}>

@@ -39,8 +39,15 @@ function defaultProfileFor(user: {
   adminRole?: 'super_admin' | 'campus_admin' | null;
   campusCode?: string | null;
   isSuperAdmin?: boolean;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
 }): UserProfile {
-  if (profileState.has(user.id)) return profileState.get(user.id)!;
+  if (profileState.has(user.id)) {
+    const existing = profileState.get(user.id)!;
+    if (user.avatarUrl && !existing.avatarUrl) existing.avatarUrl = user.avatarUrl;
+    if (user.coverUrl && !existing.coverUrl) existing.coverUrl = user.coverUrl;
+    return existing;
+  }
 
   const emailLower = (user.email || '').toLowerCase().trim();
   const isMasterAdmin = emailLower === 'inememmanuel@gmail.com';
@@ -81,8 +88,8 @@ function defaultProfileFor(user: {
     interests: [],
     institutionName: instName,
     institutionCode: isSuperAdmin ? 'GLOBAL' : instCode,
-    avatarUrl: undefined,
-    coverUrl: undefined,
+    avatarUrl: user.avatarUrl || undefined,
+    coverUrl: user.coverUrl || undefined,
     isVerified,
     isCampusAmbassador: false,
     verificationStatus,
@@ -98,24 +105,28 @@ function defaultProfileFor(user: {
 }
 
 export async function getMyProfile(user?: {
- id: string;
- fullName?: string;
- role?: UserRole;
- actualRole?: UserRole;
- adminRole?: 'super_admin' | 'campus_admin' | null;
- isSuperAdmin?: boolean;
- campusCode?: string | null;
- email?: string;
+  id: string;
+  fullName?: string;
+  role?: UserRole;
+  actualRole?: UserRole;
+  adminRole?: 'super_admin' | 'campus_admin' | null;
+  isSuperAdmin?: boolean;
+  campusCode?: string | null;
+  email?: string;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
 }): Promise<UserProfile> {
  let resolvedUser: {
-   id: string;
-   fullName: string;
-   role: UserRole;
-   email?: string;
-   adminRole?: 'super_admin' | 'campus_admin' | null;
-   campusCode?: string | null;
-   isSuperAdmin?: boolean;
- } = {
+  id: string;
+  fullName: string;
+  role: UserRole;
+  email?: string;
+  adminRole?: 'super_admin' | 'campus_admin' | null;
+  campusCode?: string | null;
+  isSuperAdmin?: boolean;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
+} = {
  id: 'me',
  fullName: 'User',
  role: 'student',
@@ -123,14 +134,16 @@ export async function getMyProfile(user?: {
 
  if (user) {
  resolvedUser = {
- id: user.id,
- fullName: user.fullName || 'User',
- role: (user.actualRole || user.role || 'student') as UserRole,
- email: user.email,
- adminRole: user.adminRole,
- campusCode: user.campusCode,
- isSuperAdmin: user.isSuperAdmin,
- };
+    id: user.id,
+    fullName: user.fullName || 'User',
+    role: (user.actualRole || user.role || 'student') as UserRole,
+    email: user.email,
+    adminRole: user.adminRole,
+    campusCode: user.campusCode,
+    isSuperAdmin: user.isSuperAdmin,
+    avatarUrl: user.avatarUrl,
+    coverUrl: user.coverUrl,
+  };
  } else {
  const { data: authData } = await supabase.auth.getUser();
  if (authData?.user) {
@@ -150,9 +163,11 @@ export async function getMyProfile(user?: {
  adminRole: stored?.adminRole === 'super_admin' ? 'super_admin' : stored?.adminRole === 'campus_admin' ? 'campus_admin' : null,
  campusCode: stored?.campusCode,
  isSuperAdmin: stored?.adminRole === 'super_admin',
- };
- }
- }
+        avatarUrl: stored?.avatarUrl,
+        coverUrl: stored?.coverUrl,
+      };
+    }
+  }
 
  const fallback = defaultProfileFor(resolvedUser);
   try {
@@ -251,8 +266,8 @@ export async function getMyProfile(user?: {
         interests: data.interests || fallback.interests,
         institutionName: inst?.name || fallback.institutionName || 'Campus Network',
         institutionCode: isSuperAdmin ? 'GLOBAL' : (inst?.code || fallback.institutionCode),
-        avatarUrl: data.avatar_url || fallback.avatarUrl,
-        coverUrl: data.banner_url || fallback.coverUrl,
+        avatarUrl: data.avatar_url || resolvedUser.avatarUrl || fallback.avatarUrl,
+        coverUrl: data.banner_url || resolvedUser.coverUrl || fallback.coverUrl,
         resumeUrl: data.resume_url || null,
         graduationYear: data.graduation_year ?? fallback.graduationYear ?? null,
         industry: data.industry || null,
@@ -269,9 +284,11 @@ export async function getMyProfile(user?: {
  return merged;
  }
  } catch {
- // Session fallback
- }
- return fallback;
+    // Session fallback
+  }
+  if (resolvedUser.avatarUrl && !fallback.avatarUrl) fallback.avatarUrl = resolvedUser.avatarUrl;
+  if (resolvedUser.coverUrl && !fallback.coverUrl) fallback.coverUrl = resolvedUser.coverUrl;
+  return fallback;
 }
 
 export function seedProfileUsername(
@@ -487,9 +504,8 @@ export async function updateProfileImages(
    ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
    ...(updates.coverUrl !== undefined ? { coverUrl: updates.coverUrl } : {}),
  };
- profileState.set(userId, updated);
-
- return updated;
+ profileState.set(effectiveUserId, updated);
+  return updated;
 }
 
 export async function updateMyProfile(

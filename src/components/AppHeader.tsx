@@ -384,7 +384,7 @@ export function AppHeader() {
           accessibilityLabel="Open profile"
           style={{ marginLeft: 2 }}
         >
-          <Avatar name={user?.fullName ?? 'You'} uri={profile?.avatarUrl} size={32} />
+          <Avatar name={user?.fullName ?? 'You'} uri={profile?.avatarUrl ?? user?.avatarUrl} size={32} />
         </Pressable>
       </View>
  </View>

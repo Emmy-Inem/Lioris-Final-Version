@@ -104,6 +104,8 @@ export interface SessionUser {
  adminRole?: AdminRoleType | null;
  campusCode?: string | null;
  department?: string | null;
+ avatarUrl?: string;
+ coverUrl?: string;
  isSuperAdmin: boolean;
  isCampusAdmin: boolean;
  onboardingComplete: boolean;
@@ -186,6 +188,9 @@ async function persist(user: SessionUser) {
  actualRole: user.actualRole,
  adminRole: user.adminRole,
  campusCode: user.campusCode,
+ department: user.department,
+ avatarUrl: user.avatarUrl,
+ coverUrl: user.coverUrl,
  onboardingComplete: user.onboardingComplete,
  onboardingStep: user.onboardingStep,
  mfaVerified: user.mfaVerified,
@@ -207,7 +212,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('role, full_name, admin_role, campus_code, department, onboarding_complete, onboarding_step')
+      .select('role, full_name, admin_role, campus_code, department, onboarding_complete, onboarding_step, avatar_url, banner_url')
       .eq('id', session.user.id)
       .maybeSingle();
     if (!error && data) {
@@ -215,7 +220,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
     } else if (error) {
       const { data: fallbackData } = await supabase
         .from('profiles')
-        .select('role, full_name, campus_code, department, onboarding_complete, onboarding_step')
+        .select('role, full_name, campus_code, department, onboarding_complete, onboarding_step, avatar_url, banner_url')
         .eq('id', session.user.id)
         .maybeSingle();
       if (fallbackData) profile = fallbackData;
@@ -241,6 +246,8 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
     adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
     campusCode,
     department: profile?.department || null,
+    avatarUrl: profile?.avatar_url || undefined,
+    coverUrl: profile?.banner_url || undefined,
     isSuperAdmin,
     isCampusAdmin,
     onboardingComplete: isMasterAdminEmail || role === 'admin' || role === 'staff' || profile?.onboarding_complete === true,
@@ -311,6 +318,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
             campusCode: stored.campusCode || (isSuperAdmin ? 'GLOBAL' : null),
             department: stored.department || null,
+            avatarUrl: stored.avatarUrl || undefined,
+            coverUrl: stored.coverUrl || undefined,
             isSuperAdmin,
             isCampusAdmin,
             onboardingComplete: isComplete,
@@ -339,7 +348,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             const profilePromise = supabase
               .from('profiles')
-              .select('role, full_name, onboarding_complete, onboarding_step, department, admin_role, campus_code')
+              .select('role, full_name, onboarding_complete, onboarding_step, department, admin_role, campus_code, avatar_url, banner_url')
               .eq('id', session.user.id)
               .maybeSingle();
             const profileTimeout = new Promise<{ data: null; error?: any }>((resolve) =>
@@ -351,7 +360,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else if (error) {
               const { data: fallbackData } = await supabase
                 .from('profiles')
-                .select('role, full_name, onboarding_complete, onboarding_step, department, campus_code')
+                .select('role, full_name, onboarding_complete, onboarding_step, department, campus_code, avatar_url, banner_url')
                 .eq('id', session.user.id)
                 .maybeSingle();
               if (fallbackData) profile = fallbackData;
@@ -392,6 +401,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
             campusCode,
             department: profile?.department || storedUser?.department || userRef.current?.department || null,
+            avatarUrl: profile?.avatar_url || storedUser?.avatarUrl || userRef.current?.avatarUrl || undefined,
+            coverUrl: profile?.banner_url || storedUser?.coverUrl || userRef.current?.coverUrl || undefined,
             isSuperAdmin,
             isCampusAdmin,
             onboardingComplete: isOnboarded,
@@ -484,7 +495,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const profileFetch = supabase
             .from('profiles')
-            .select('role, full_name, admin_role, campus_code')
+            .select('role, full_name, admin_role, campus_code, avatar_url, banner_url')
             .eq('id', session.user.id)
             .maybeSingle();
           const timeout = new Promise<any>((_, reject) =>
@@ -496,7 +507,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else if (result?.error) {
             const { data: fallbackData } = await supabase
               .from('profiles')
-              .select('role, full_name, campus_code')
+              .select('role, full_name, campus_code, avatar_url, banner_url')
               .eq('id', session.user.id)
               .maybeSingle();
             if (fallbackData) profile = fallbackData;
@@ -544,6 +555,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           campusCode,
           department: profile?.department || storedUser?.department || userRef.current?.department || null,
+          avatarUrl: profile?.avatar_url || (sameAccount ? current?.avatarUrl : undefined) || storedUser?.avatarUrl || undefined,
+          coverUrl: profile?.banner_url || (sameAccount ? current?.coverUrl : undefined) || storedUser?.coverUrl || undefined,
           isSuperAdmin,
           isCampusAdmin,
           onboardingComplete: isOnboarded,
@@ -727,7 +740,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { data, error } = await supabase
             .from('profiles')
-            .select('department, is_suspended, deactivated_at, onboarding_complete, onboarding_step, admin_role, campus_code')
+            .select('department, is_suspended, deactivated_at, onboarding_complete, onboarding_step, admin_role, campus_code, avatar_url, banner_url')
             .eq('id', session.user.id)
             .maybeSingle();
           if (!error && data) {
@@ -735,7 +748,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else if (error) {
             const { data: fallbackProf } = await supabase
               .from('profiles')
-              .select('department, is_suspended, deactivated_at, onboarding_complete, onboarding_step, campus_code')
+              .select('department, is_suspended, deactivated_at, onboarding_complete, onboarding_step, campus_code, avatar_url, banner_url')
               .eq('id', session.user.id)
               .maybeSingle();
             if (fallbackProf) prof = fallbackProf;
@@ -776,6 +789,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           campusCode,
           department: prof?.department || null,
+          avatarUrl: prof?.avatar_url || undefined,
+          coverUrl: prof?.banner_url || undefined,
           isSuperAdmin,
           isCampusAdmin,
           onboardingComplete: isOnboarded,

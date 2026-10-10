@@ -114,6 +114,8 @@ export interface StoredSessionUser {
   adminRole?: string | null;
   campusCode?: string | null;
   department?: string | null;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
 }
 
 export async function setSessionUser(user: StoredSessionUser) {

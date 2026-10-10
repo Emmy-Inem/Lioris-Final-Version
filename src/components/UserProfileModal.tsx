@@ -119,7 +119,8 @@ export function UserProfileModal({
  const isOwnProfile = !!currentUser?.id && currentUser.id === userId;
 
  const stockCover = effectiveCover ? STOCK_IMAGES[effectiveCover] : null;
- const { url: signedCoverUrl } = useSignedUrl('campus-media', stockCover ? null : effectiveCover);
+ const coverPathForSigning = (effectiveCover && !stockCover && !/^(https?:|data:|blob:|file:)/i.test(effectiveCover)) ? effectiveCover : null;
+ const { url: signedCoverUrl } = useSignedUrl('campus-media', coverPathForSigning);
   const resolvedCoverUrl = useMemo(() => {
     if (stockCover) return stockCover;
     if (effectiveCover && /^(https?:|data:|blob:|file:)/i.test(effectiveCover)) {

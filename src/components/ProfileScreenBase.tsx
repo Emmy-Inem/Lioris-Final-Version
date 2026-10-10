@@ -148,7 +148,11 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     enabled: !!user,
   });
 
-  const { url: signedCoverUrl } = useSignedUrl('campus-media', profile?.coverUrl);
+  // Only try to sign a URL if it looks like a bare storage path (not already a public/signed URL)
+  const coverPathForSigning = (profile?.coverUrl && !/^(https?:|data:|blob:|file:)/i.test(profile.coverUrl))
+    ? profile.coverUrl
+    : null;
+  const { url: signedCoverUrl } = useSignedUrl('campus-media', coverPathForSigning);
   const activeCover = useMemo(() => {
     if (profile?.coverUrl && /^(https?:|data:|blob:|file:)/i.test(profile.coverUrl)) {
       return { uri: profile.coverUrl };

@@ -182,7 +182,10 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
 
     const filteredRows = (data ?? [])
       .filter((row: any) => !isUserBlocked(row.creator_id) && !isUserMuted(row.creator_id))
-      .filter((row: any) => !isEventEndedPast5Days({ endAt: row.end_time, startAt: row.start_time }))
+      .filter((row: any) => {
+        if (isStaffOrAdmin || query.scope === 'all') return true;
+        return !isEventEndedPast5Days({ endAt: row.end_time, startAt: row.start_time });
+      })
       .filter((row: any) => {
         // Strict university workspace isolation:
         // Only members of that university see that university's events.
@@ -190,7 +193,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
         const activeCampus = (userCampus || 'GLOBAL').toUpperCase();
         if (activeCampus === 'ALL') return true;
         if (activeCampus === 'GLOBAL') {
-          return rowCampus === 'GLOBAL';
+          return rowCampus === 'GLOBAL' || row.visibility_scope === 'global';
         }
         return rowCampus === activeCampus || rowCampus === 'GLOBAL';
       });

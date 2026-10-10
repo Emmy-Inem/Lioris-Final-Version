@@ -337,7 +337,7 @@ export default function StudentDashboard() {
                     backgroundColor: 'rgba(15, 23, 42, 0.5)',
                   }}
                 >
-                  <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} uri={profile?.avatarUrl} size={isDesktop ? 58 : 50} />
+                  <Avatar name={profile?.fullName ?? user?.fullName ?? 'Student'} uri={profile?.avatarUrl ?? user?.avatarUrl} size={isDesktop ? 58 : 50} />
                 </Pressable>
 
                 <View style={{ flex: 1, minWidth: 0 }}>
