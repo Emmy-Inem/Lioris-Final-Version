@@ -149,23 +149,24 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   });
 
   // Only try to sign a URL if it looks like a bare storage path (not already a public/signed URL)
-  const coverPathForSigning = (profile?.coverUrl && !/^(https?:|data:|blob:|file:)/i.test(profile.coverUrl))
-    ? profile.coverUrl
+  const rawCover = profile?.coverUrl || user?.coverUrl || (user as any)?.bannerUrl || null;
+  const coverPathForSigning = (rawCover && !/^(https?:|data:|blob:|file:)/i.test(rawCover))
+    ? rawCover
     : null;
   const { url: signedCoverUrl } = useSignedUrl('campus-media', coverPathForSigning);
   const activeCover = useMemo(() => {
-    if (profile?.coverUrl && /^(https?:|data:|blob:|file:)/i.test(profile.coverUrl)) {
-      return { uri: profile.coverUrl };
+    if (rawCover && /^(https?:|data:|blob:|file:)/i.test(rawCover)) {
+      return { uri: rawCover };
     }
     if (signedCoverUrl) {
       return { uri: signedCoverUrl };
     }
-    if (profile?.coverUrl) {
-      const cleanPath = profile.coverUrl.replace(/^\/+/, '');
+    if (rawCover) {
+      const cleanPath = rawCover.replace(/^\/+/, '');
       return { uri: `${SUPABASE_URL}/storage/v1/object/public/avatars/${cleanPath}` };
     }
     return null;
-  }, [profile?.coverUrl, signedCoverUrl]);
+  }, [rawCover, signedCoverUrl]);
   const resolvedCoverUrl = activeCover?.uri ?? null;
 
   const [unpublishedSubFilter, setUnpublishedSubFilter] = useState<'all' | 'drafts' | 'scheduled'>('all');
@@ -334,7 +335,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
   /** Re-crop the picture that is already on the profile. */
   function handleAdjustPhoto(kind: CropKind) {
-    const current = kind === 'avatar' ? profile?.avatarUrl : resolvedCoverUrl;
+    const current = kind === 'avatar' ? (profile?.avatarUrl ?? user?.avatarUrl) : resolvedCoverUrl;
     if (!current || !/^(https?:|data:|blob:|file:)/.test(current)) {
       Alert.alert('Nothing to adjust', 'Choose a picture first, then you can adjust how it is cropped.');
       return;
@@ -343,7 +344,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   }
 
   function handleViewPhoto(kind: CropKind) {
-    const current = kind === 'avatar' ? profile?.avatarUrl : resolvedCoverUrl;
+    const current = kind === 'avatar' ? (profile?.avatarUrl ?? user?.avatarUrl) : resolvedCoverUrl;
     if (!current) return;
     afterSheetCloses(() =>
       setViewer({ uri: current, caption: kind === 'avatar' ? 'Profile photo' : 'Cover photo' }),
@@ -502,7 +503,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  <SolidCard radius={22} style={{ padding: isDesktop ? spacing.lg : spacing.md, position: 'relative' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.sm }}>
  <Pressable accessibilityRole="button" accessibilityLabel="Change profile photo" onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
- <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={isDesktop ? 96 : 76} />
+ <Avatar name={profile?.fullName ?? user?.fullName ?? 'You'} uri={profile?.avatarUrl ?? user?.avatarUrl ?? undefined} size={isDesktop ? 96 : 76} />
  <View
  style={{
  position: 'absolute',
@@ -970,20 +971,20 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Avatar name={profile.fullName} uri={profile.avatarUrl ?? undefined} size={48} />
+                <Avatar name={profile?.fullName ?? user?.fullName ?? 'You'} uri={profile?.avatarUrl ?? user?.avatarUrl ?? undefined} size={48} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <AppText weight="bold" variant="bodySmall">
                     Profile Photo
                   </AppText>
                   <AppText tone="secondary" variant="caption">
-                    {profile.avatarUrl ? 'Custom photo active' : 'Default initials avatar'}
+                    {(profile?.avatarUrl || user?.avatarUrl) ? 'Custom photo active' : 'Default initials avatar'}
                   </AppText>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                 <View style={{ flexGrow: 1, flexBasis: '46%' }}>
                   <AppButton
-                    label={uploadingAvatar ? 'Saving…' : profile.avatarUrl ? 'Replace' : 'Upload photo'}
+                    label={uploadingAvatar ? 'Saving…' : (profile?.avatarUrl || user?.avatarUrl) ? 'Replace' : 'Upload photo'}
                     variant="primary"
                     size="sm"
                     icon="image-outline"
@@ -992,7 +993,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                     fullWidth
                   />
                 </View>
-                {profile.avatarUrl ? (
+                {(profile?.avatarUrl || user?.avatarUrl) ? (
                   <>
                     <View style={{ flexGrow: 1, flexBasis: '46%' }}>
                       <AppButton label="Adjust crop" variant="secondary" size="sm" icon="crop-outline" onPress={() => handleAdjustPhoto('avatar')} fullWidth />
@@ -1045,7 +1046,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                 <View style={{ flexGrow: 1, flexBasis: '46%' }}>
                   <AppButton
-                    label={uploadingCover ? 'Saving…' : profile.coverUrl ? 'Replace' : 'Upload banner'}
+                    label={uploadingCover ? 'Saving…' : (resolvedCoverUrl || profile?.coverUrl || user?.coverUrl) ? 'Replace' : 'Upload banner'}
                     variant="primary"
                     size="sm"
                     icon="image-outline"
@@ -1054,7 +1055,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                     fullWidth
                   />
                 </View>
-                {profile.coverUrl ? (
+                {(resolvedCoverUrl || profile?.coverUrl || user?.coverUrl) ? (
                   <>
                     <View style={{ flexGrow: 1, flexBasis: '46%' }}>
                       <AppButton label="Adjust crop" variant="secondary" size="sm" icon="crop-outline" onPress={() => handleAdjustPhoto('cover')} fullWidth />
