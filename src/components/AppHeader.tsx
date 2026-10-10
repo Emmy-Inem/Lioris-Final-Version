@@ -73,7 +73,7 @@ export function AppHeader() {
   // visible, since AppHeader renders on every mobile screen.
   const { scope, setScope, activeCampusCode, homeInstitutionCode, setActiveCampusCode } = useCampusScope();
   const canSwitchCampus = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
-  const isExploringOtherCampus = canSwitchCampus && !!activeCampusCode && activeCampusCode !== homeInstitutionCode;
+  const isExploringOtherCampus = canSwitchCampus && !!activeCampusCode && activeCampusCode !== 'ALL' && activeCampusCode !== 'GLOBAL' && activeCampusCode !== homeInstitutionCode;
   const exploringInstitutionName = isExploringOtherCampus
     ? getInstitutionByCode(activeCampusCode!)?.name ?? activeCampusCode
     : null;

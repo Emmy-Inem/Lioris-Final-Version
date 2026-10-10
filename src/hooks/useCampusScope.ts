@@ -3,22 +3,22 @@ import { useAuth } from '@/auth/AuthContext';
 import { useViewScope } from './useViewScope';
 import { getMyProfile } from '@/api/profile';
 import { getInstitutionForEmail } from '@/api/institutions';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 
 /**
  * Resolves the campusCode that should be passed into any campus-scoped
  * list query (marketplace, jobs, events, resources, study groups).
  *
- * Settings -> "Change Workspace Scope" lets a user pick Campus vs Global,
- * and lets an admin additionally preview another campus entirely
- * ("Explore Other Campus Workspaces"). Previously that choice only ever
- * changed the accent color and a header label - none of the list screens
- * read it, so every list silently defaulted to the caller's own home
- * campus (via src/api/*.ts's own "infer from my profile" fallback)
- * regardless of what was selected. Passing an explicit campusCode here
- * (instead of leaving it undefined) is what makes the toggle real:
- *   - scope === 'global'  -> 'GLOBAL' (see everything, not just home campus)
- *   - scope === 'campus'  -> the admin's chosen activeCampusCode, or the
- *     viewer's own home campus if they haven't picked one
+ * For Super Admin:
+ * - By default (when no specific campus workspace is actively picked to explore),
+ *   Super Admin sees ALL universities at once across Dashboard, Events,
+ *   Resources, Portals, and Discussions (returns 'ALL').
+ * - When exploring a specific campus (via "Explore Other Campus Workspaces"),
+ *   it returns that specific university code (e.g. 'UNILAG', 'UI').
+ *
+ * For Regular Students, Campus Admins & Staff:
+ * - Strictly isolated to their own university (homeInstitutionCode).
+ * - They cannot explore other universities or see content from other institutions.
  */
 export function useCampusScope() {
   const { user } = useAuth();
@@ -29,6 +29,8 @@ export function useCampusScope() {
     queryFn: () => getMyProfile(user!),
     enabled: !!user,
   });
+
+  const isSuperAdmin = isSuperAdminIdentity(user);
 
   // Match on the email *domain*, not a substring of the whole address.
   // The old substring test mis-assigned campuses in ways that break the
@@ -50,7 +52,22 @@ export function useCampusScope() {
     : (deducedFromEmail && deducedFromEmail !== 'GLOBAL')
     ? deducedFromEmail
     : undefined;
-  const campusCode = scope === 'global' ? 'GLOBAL' : (activeCampusCode && activeCampusCode !== 'GLOBAL' ? activeCampusCode : homeInstitutionCode);
 
-  return { scope, setScope, activeCampusCode, setActiveCampusCode, campusCode, homeInstitutionCode };
+  // Super Admin view:
+  // If activeCampusCode is explicitly chosen (e.g. 'UNILAG' or 'UI' when exploring), scope to that campus.
+  // When no specific campus is selected (or when set to 'ALL' / 'GLOBAL'),
+  // Super Admin defaults to 'ALL' - seeing every university at once across all resources, events, discussions.
+  // Regular students / campus staff / campus ambassadors:
+  // Strictly isolated to their own home university (or GLOBAL if national).
+  const campusCode = isSuperAdmin
+    ? (activeCampusCode && activeCampusCode !== 'GLOBAL' && activeCampusCode !== 'ALL'
+        ? activeCampusCode
+        : 'ALL')
+    : (scope === 'global'
+        ? 'GLOBAL'
+        : (activeCampusCode && activeCampusCode !== 'GLOBAL'
+            ? activeCampusCode
+            : homeInstitutionCode || 'GLOBAL'));
+
+  return { scope, setScope, activeCampusCode, setActiveCampusCode, campusCode, homeInstitutionCode, isSuperAdmin };
 }

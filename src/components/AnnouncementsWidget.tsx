@@ -64,7 +64,7 @@ export function AnnouncementsWidget({
  // narrow to the campus being viewed itself, or another university's notices show up on home.
  .filter((a) => {
  const target = (a.campusCode || 'GLOBAL').toUpperCase();
- if (target === 'GLOBAL' || viewerCampus === 'GLOBAL') return true;
+ if (target === 'GLOBAL' || viewerCampus === 'GLOBAL' || viewerCampus === 'ALL') return true;
  return !!viewerCampus && target === viewerCampus.toUpperCase();
  })
  .filter((a) => {

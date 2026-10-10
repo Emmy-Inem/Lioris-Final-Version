@@ -4,10 +4,12 @@ export interface CampusAccessIdentity {
   adminRole?: string | null;
   campusCode?: string | null;
   email?: string | null;
+  isSuperAdmin?: boolean | null;
 }
 
 export function isSuperAdminIdentity(identity?: CampusAccessIdentity | null): boolean {
   if (!identity) return false;
+  if (identity.isSuperAdmin === true) return true;
   const email = identity.email?.trim().toLowerCase();
   const effectiveRole = identity.actualRole || identity.role;
   return (

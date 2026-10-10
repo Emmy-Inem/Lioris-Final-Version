@@ -28,7 +28,7 @@ function getLocalPool(): MarketplaceListing[] {
 function filterListings(pool: MarketplaceListing[], query: MarketplaceQuery): MarketplaceListing[] {
  let results = pool.filter((item) => !isUserBlocked(item.sellerId) && !isUserMuted(item.sellerId));
 
- if (query.campusCode && query.campusCode !== 'GLOBAL') {
+ if (query.campusCode && query.campusCode !== 'GLOBAL' && query.campusCode !== 'ALL') {
  results = results.filter(
  (item) => !(item as any).campusCode || (item as any).campusCode === 'GLOBAL' || (item as any).campusCode === query.campusCode,
  );
@@ -109,8 +109,9 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  const dbListings: MarketplaceListing[] = (data ?? [])
  .filter((row: any) => !isUserBlocked(row.seller_id) && !isUserMuted(row.seller_id))
   .filter((row: any) => {
-    if (isStaffOrAdmin && !query.campusCode) return true;
+    if (isStaffOrAdmin && (!query.campusCode || query.campusCode === 'ALL')) return true;
     const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
+    if (targetCampus === 'ALL') return true;
     const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
     if (targetCampus === 'GLOBAL') {
       return rowCampus === 'GLOBAL';

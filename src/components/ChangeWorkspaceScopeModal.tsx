@@ -47,7 +47,7 @@ export function ChangeWorkspaceScopeModal({
   const cleanHomeName = (homeInstitution && !homeInstitution.includes('Global')) ? homeInstitution : 'Campus Network';
 
   const [guestWorkspaces, setGuestWorkspaces] = useState<{ code: string; name: string; description: string }[]>(
-    LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== cleanHomeCode && inst.code !== 'GLOBAL').map((inst) => ({
+    LAUNCH_INSTITUTIONS.filter((inst) => (isAdmin ? true : inst.code !== cleanHomeCode) && inst.code !== 'GLOBAL').map((inst) => ({
       code: inst.code,
       name: inst.name,
       description: `${inst.shortName} Campus Community`,
@@ -65,7 +65,7 @@ export function ChangeWorkspaceScopeModal({
     listCampuses().then((campuses) => {
       setGuestWorkspaces(
         campuses
-          .filter((inst) => inst.isActive !== false && inst.code !== cleanHomeCode && inst.code !== 'GLOBAL')
+          .filter((inst) => inst.isActive !== false && (isAdmin ? true : inst.code !== cleanHomeCode) && inst.code !== 'GLOBAL')
           .map((inst) => ({
             code: inst.code,
             name: inst.name,

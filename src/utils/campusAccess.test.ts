@@ -23,3 +23,16 @@ test('super admins default to all campuses and may narrow deliberately', () => {
   assert.equal(resolveCampusReadScope(superAdmin, 'GLOBAL'), 'GLOBAL');
 });
 
+test('super admin previewing student role still has cross-campus access', () => {
+  const previewing = {
+    role: 'student',
+    actualRole: 'admin',
+    isSuperAdmin: true,
+    campusCode: 'UI',
+    email: 'inememmanuel@gmail.com',
+  };
+  assert.equal(isSuperAdminIdentity(previewing), true);
+  assert.equal(resolveCampusReadScope(previewing), 'ALL');
+  assert.equal(resolveCampusReadScope(previewing, 'ALL'), 'ALL');
+  assert.equal(resolveCampusReadScope(previewing, 'UNILAG'), 'UNILAG');
+});

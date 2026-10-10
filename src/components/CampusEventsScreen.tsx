@@ -68,7 +68,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
-  const { campusCode, homeInstitutionCode } = useCampusScope();
+  const { campusCode, homeInstitutionCode, activeCampusCode } = useCampusScope();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
@@ -89,10 +89,10 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
   // Strictly bind to the current workspace's university institution
   const currentCampus = isSuperAdmin
-    ? ((campusCode && campusCode !== 'GLOBAL') ? campusCode : 'ALL')
-    : ((campusCode && campusCode !== 'GLOBAL') ? campusCode : homeInstitutionCode);
-  const institution = currentCampus ? getInstitutionByCode(currentCampus) : undefined;
-  const institutionName = currentCampus === 'ALL' ? 'All Campus Networks' : institution?.name ?? 'Campus';
+    ? (activeCampusCode && activeCampusCode !== 'GLOBAL' && activeCampusCode !== 'ALL' ? activeCampusCode : 'ALL')
+    : ((campusCode && campusCode !== 'GLOBAL') ? campusCode : homeInstitutionCode || 'GLOBAL');
+  const institution = currentCampus !== 'ALL' ? getInstitutionByCode(currentCampus) : undefined;
+  const institutionName = currentCampus === 'ALL' ? 'All Nigerian Universities' : institution?.name ?? 'Campus';
 
   // Automatic Horizontal Carousel State
   const [activeSlide, setActiveSlide] = useState(0);

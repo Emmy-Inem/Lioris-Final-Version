@@ -142,9 +142,11 @@ export function DesktopSidebar() {
 
   const campusName = activeCampusCode
     ? getInstitutionByCode(activeCampusCode)?.name || activeCampusCode
-    : profile?.institutionName && profile.institutionCode !== 'GLOBAL'
-      ? profile.institutionName
-      : 'Campus';
+    : isSuperAdmin
+      ? 'All Campuses (Global)'
+      : profile?.institutionName && profile.institutionCode !== 'GLOBAL'
+        ? profile.institutionName
+        : 'Campus';
 
   return (
     <View

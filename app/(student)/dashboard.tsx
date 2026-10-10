@@ -39,6 +39,8 @@ import { Announcement } from '@/api/types';
 import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
+import { getInstitutionByCode } from '@/api/institutions';
 import {
   getVisitedPortalLinks,
   recordPortalLinkVisit,
@@ -52,7 +54,7 @@ export default function StudentDashboard() {
   const queryClient = useQueryClient();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
-  const { campusCode, homeInstitutionCode } = useCampusScope();
+  const { campusCode, homeInstitutionCode, activeCampusCode } = useCampusScope();
   const insets = useSafeAreaInsets();
 
   const [campusMapOpen, setCampusMapOpen] = useState(false);
@@ -69,14 +71,19 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
-  const effectiveCampus =
-    homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
-      ? homeInstitutionCode
-      : campusCode && campusCode !== 'GLOBAL'
-      ? campusCode
-      : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
-      ? profile.institutionCode
-      : '';
+  const isSuperAdmin = isSuperAdminIdentity(user);
+
+  const effectiveCampus = isSuperAdmin
+    ? (activeCampusCode && activeCampusCode !== 'GLOBAL' && activeCampusCode !== 'ALL'
+        ? activeCampusCode
+        : 'ALL')
+    : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
+        ? homeInstitutionCode
+        : campusCode && campusCode !== 'GLOBAL'
+        ? campusCode
+        : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
+        ? profile.institutionCode
+        : 'GLOBAL');
 
   // 1. Announcements & Important Alerts
   const { data: announcements = [] } = useQuery({
@@ -91,8 +98,8 @@ export default function StudentDashboard() {
     queryFn: () =>
       listFeedPosts({
         scope: 'student',
-        viewerInstitutionCode: effectiveCampus || undefined,
-        viewScope: effectiveCampus ? 'campus' : 'global',
+        viewerInstitutionCode: effectiveCampus === 'ALL' ? undefined : (effectiveCampus || undefined),
+        viewScope: effectiveCampus === 'ALL' ? 'global' : (effectiveCampus ? 'campus' : 'global'),
         showBots,
       }),
   });
@@ -114,7 +121,7 @@ export default function StudentDashboard() {
   // 5. Active Study Pods (enrolled only)
   const { data: studyGroups = [] } = useQuery({
     queryKey: ['study-groups', 'dashboard', effectiveCampus],
-    queryFn: () => listStudyGroups(effectiveCampus || undefined, { mineOnly: true }),
+    queryFn: () => listStudyGroups(effectiveCampus === 'ALL' ? undefined : (effectiveCampus || undefined), { mineOnly: true }),
     enabled: isFeatureEnabled('study_groups'),
   });
 
@@ -182,7 +189,7 @@ export default function StudentDashboard() {
     .filter((a) => !isRead(a.id))
     .filter((a) => {
       const target = (a.campusCode || 'GLOBAL').toUpperCase();
-      if (target === 'GLOBAL') return true;
+      if (effectiveCampus === 'ALL' || target === 'GLOBAL') return true;
       return !!effectiveCampus && target === effectiveCampus.toUpperCase();
     })
     .filter((a) => !a.expiresAt || new Date(a.expiresAt).getTime() > Date.now());
@@ -314,7 +321,9 @@ export default function StudentDashboard() {
                 >
                   <Ionicons name="school" size={13} color="#68D391" style={heroTextShadowStyle} />
                   <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
-                    {profile?.institutionName ?? 'Campus Network'}
+                    {effectiveCampus === 'ALL'
+                      ? 'All Campus Networks (Global)'
+                      : ((activeCampusCode && getInstitutionByCode(activeCampusCode)?.name) || profile?.institutionName) ?? 'Campus Network'}
                   </AppText>
                 </View>
               </View>
@@ -376,7 +385,7 @@ export default function StudentDashboard() {
                       heroTextShadowStyle,
                     ]}
                   >
-                    {[profile?.department, profile?.institutionCode].filter(Boolean).join(' • ') ||
+                    {[profile?.department, effectiveCampus === 'ALL' ? 'Global Admin' : (profile?.institutionCode || effectiveCampus)].filter(Boolean).join(' • ') ||
                       'Complete your profile'}
                   </AppText>
 

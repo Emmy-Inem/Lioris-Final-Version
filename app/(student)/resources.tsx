@@ -94,7 +94,7 @@ export default function ResourcesScreen() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const { resourceId } = useLocalSearchParams<{ resourceId?: string }>();
-  const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>('CURRENT');
+  const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>(user?.actualRole === 'admin' && user?.isSuperAdmin ? 'ALL' : 'CURRENT');
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -136,7 +136,7 @@ export default function ResourcesScreen() {
     }
   };
 
-  const { campusCode, homeInstitutionCode } = useCampusScope();
+  const { campusCode, homeInstitutionCode, activeCampusCode } = useCampusScope();
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
     queryFn: () => getMyProfile(user!),
@@ -145,21 +145,9 @@ export default function ResourcesScreen() {
 
   const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
   const { data: campuses = [] } = useQuery({ queryKey: ['campuses'], queryFn: listCampuses });
-  const universityPortalFilters = React.useMemo(
-    () => [
-      { code: 'CURRENT', label: 'My Campus' },
-      { code: 'ALL', label: 'All Universities' },
-      ...campuses
-        .filter((campus) => campus.code !== 'GLOBAL' && campus.isActive !== false)
-        .map((campus) => ({ code: campus.code, label: campus.shortName || campus.name })),
-      { code: 'GLOBAL', label: 'National Portals' },
-    ],
-    [campuses],
-  );
-
   // Determine user's effective campus (e.g. UNILAG, UI, FUNAAB)
   const effectiveCampus = isSuperAdmin
-    ? (campusCode && campusCode !== 'GLOBAL' ? campusCode : 'ALL')
+    ? (activeCampusCode && activeCampusCode !== 'GLOBAL' && activeCampusCode !== 'ALL' ? activeCampusCode : 'ALL')
     : (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
       ? profile.institutionCode
       : (campusCode && campusCode !== 'GLOBAL')
@@ -169,10 +157,22 @@ export default function ResourcesScreen() {
       : 'GLOBAL';
   const uploadCampus = effectiveCampus === 'ALL' ? 'GLOBAL' : effectiveCampus;
 
-  const institutionInfo = effectiveCampus !== 'GLOBAL' ? getInstitutionByCode(effectiveCampus) : null;
+  const institutionInfo = effectiveCampus !== 'GLOBAL' && effectiveCampus !== 'ALL' ? getInstitutionByCode(effectiveCampus) : null;
   const campusDisplayName = effectiveCampus === 'ALL'
     ? 'All Campuses'
     : institutionInfo?.shortName || (effectiveCampus !== 'GLOBAL' ? effectiveCampus : 'Campus');
+
+  const universityPortalFilters = React.useMemo(
+    () => [
+      { code: 'ALL', label: 'All Universities' },
+      { code: 'CURRENT', label: effectiveCampus === 'ALL' ? 'National Hub' : `My Campus (${effectiveCampus})` },
+      ...campuses
+        .filter((campus) => campus.code !== 'GLOBAL' && campus.isActive !== false)
+        .map((campus) => ({ code: campus.code, label: campus.shortName || campus.name })),
+      { code: 'GLOBAL', label: 'National Portals' },
+    ],
+    [campuses, effectiveCampus],
+  );
 
   // Only Super Admin can see all campuses' portals; others are strictly isolated to their own campus or National Portals
   const activePortalCampus = resolveActivePortalTarget(isSuperAdmin ? 'admin' : 'student', selectedPortalFilter, effectiveCampus);

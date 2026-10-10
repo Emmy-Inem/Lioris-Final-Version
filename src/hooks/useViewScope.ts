@@ -167,14 +167,14 @@ export function useViewScope() {
     })();
   }, [queryClient, isStudent]);
 
-  // When switching to the student role during a session, ensure workspace defaults to campus
+  // When switching to the student role during a session, ensure workspace defaults to campus for regular users
   const prevRoleRef = useRef(userRole);
   useEffect(() => {
-    if (userRole === 'student' && prevRoleRef.current !== 'student') {
+    if (userRole === 'student' && prevRoleRef.current !== 'student' && !canExploreWorkspaces) {
       resetToDefaultCampusScope(queryClient);
     }
     prevRoleRef.current = userRole;
-  }, [userRole, queryClient]);
+  }, [userRole, queryClient, canExploreWorkspaces]);
 
   function setScope(nextScope: ViewScope) {
     queryClient.setQueryData(VIEW_SCOPE_KEY, nextScope);

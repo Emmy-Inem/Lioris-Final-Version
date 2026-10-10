@@ -72,7 +72,7 @@ export interface ListStudyGroupsOptions {
 export async function listStudyGroups(campusCode?: string, options: ListStudyGroupsOptions = {}): Promise<StudyGroup[]> {
   await requireSession();
   const { data, error } = await supabase.rpc('list_study_groups', {
-    p_campus: campusCode && campusCode !== 'GLOBAL' ? campusCode : null,
+    p_campus: campusCode && campusCode !== 'GLOBAL' && campusCode !== 'ALL' ? campusCode : null,
     p_q: options.q?.trim() || null,
     p_id: null,
     p_mine_only: options.mineOnly ?? false,

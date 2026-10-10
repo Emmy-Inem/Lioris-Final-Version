@@ -160,9 +160,11 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     userCampus = resolveCampusReadScope(
       {
         role: userRole,
+        actualRole: stored?.actualRole || userRole,
         adminRole: adminRole || stored?.adminRole || authData?.user?.user_metadata?.admin_role,
         campusCode: inferredCampus || stored?.campusCode,
         email: authData?.user?.email || stored?.email,
+        isSuperAdmin: ((stored as any)?.isSuperAdmin ?? false) || authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com',
       },
       query.campusCode,
     );

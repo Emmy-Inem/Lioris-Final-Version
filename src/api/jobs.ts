@@ -140,8 +140,9 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  // instead). closeJob() always hides it regardless of expires_at.
  .filter((row: any) => row.is_closed !== true && (!row.expires_at || new Date(row.expires_at).getTime() > Date.now()))
     .filter((row: any) => {
-      if (isStaffOrAdmin && !query.campusCode) return true;
+      if (isStaffOrAdmin && (!query.campusCode || query.campusCode === 'ALL')) return true;
       const targetCampus = (userCampus || 'GLOBAL').toUpperCase();
+      if (targetCampus === 'ALL') return true;
       const rowCampus = (row.campus_code || 'GLOBAL').toUpperCase();
       if (targetCampus === 'GLOBAL') {
         return rowCampus === 'GLOBAL' || !!row.is_remote;
