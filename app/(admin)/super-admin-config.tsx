@@ -139,15 +139,6 @@ export default function CampusesAndSecurityScreen() {
       <View style={{ paddingTop: isDesktop ? 4 : 8 }}>
         <AdminSectionTabs group="platform" />
       </View>
-      <View style={{ marginBottom: spacing.md }}>
-        <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
-          Campuses & Security
-        </AppText>
-        <AppText tone="secondary" variant="caption">
-          The universities on Lioris, upload limits and maintenance mode
-        </AppText>
-      </View>
-
       <ScrollView
         style={{ flex: 1, width: '100%', minHeight: 0 }}
         showsVerticalScrollIndicator={false}
@@ -155,6 +146,15 @@ export default function CampusesAndSecurityScreen() {
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.lg }}
       >
+        <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.sm }}>
+          <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
+            Campuses & Security
+          </AppText>
+          <AppText tone="secondary" variant="caption">
+            The universities on Lioris, upload limits and maintenance mode
+          </AppText>
+        </View>
+
         {/* Campuses */}
         <CampusManager />
 

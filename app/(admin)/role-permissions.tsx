@@ -238,6 +238,7 @@ export default function RolePermissionsScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: spacing.xs, paddingVertical: 4 }}
             style={{ marginBottom: spacing.md, flexGrow: 0 }}
+            {...({ 'data-horizontal-scroll': 'true' } as any)}
           >
             {ROLE_TABS.map((tab) => {
               const selected = activeRole === tab.key;
@@ -329,6 +330,7 @@ export default function RolePermissionsScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: spacing.xs }}
               style={{ flexGrow: 0 }}
+              {...({ 'data-horizontal-scroll': 'true' } as any)}
             >
               {categories.map((cat) => {
                 const selected = categoryFilter === cat;

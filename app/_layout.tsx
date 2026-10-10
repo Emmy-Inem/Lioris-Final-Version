@@ -111,24 +111,22 @@ export default function RootLayout() {
             width: 100% !important;
           }
 
-          /* Vertical scroll containers: smooth touch scroll & vertical pan with natural pull-to-refresh */
+          /* Vertical scroll containers: smooth touch scroll without blocking nested horizontal scrollbars */
           div[style*="overflow-y: auto"],
           div[style*="overflow-y: scroll"],
           .r-overflowY-156q2ks {
             -webkit-overflow-scrolling: touch !important;
-            touch-action: pan-y !important;
+            touch-action: pan-x pan-y !important;
           }
 
-          /* Horizontal scroll containers: smooth touch scroll & horizontal pan without blocking vertical touch */
+          /* Horizontal scroll containers: smooth horizontal touch pan */
           div[style*="overflow-x: auto"],
           div[style*="overflow-x: scroll"],
           .r-overflowX-156q2ks,
-          .r-overflowX-1udh08x,
           [data-horizontal-scroll="true"] {
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-x: contain !important;
             touch-action: pan-x pan-y !important;
-            display: flex !important;
           }
 
           /* Hide physical scrollbars everywhere on mobile viewports (< 1024px) */

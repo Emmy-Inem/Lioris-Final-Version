@@ -97,6 +97,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const [localChannel, setLocalChannel] = React.useState<string | null>(params.category || _storedChannel);
   const selectedChannel = localChannel;
   const setSelectedChannel = (ch: string | null) => { setLocalChannel(ch); _setChannel(ch); };
+  const channelScrollRef = useRef<ScrollView>(null);
+  const channelScrollXRef = useRef(0);
+  const channelViewportWidthRef = useRef(0);
+  const channelLayoutsRef = useRef<Record<string, { x: number; width: number }>>({});
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
   const [subForumsDirectoryOpen, setSubForumsDirectoryOpen] = useState(false);
   const [proposeCommunityOpen, setProposeCommunityOpen] = useState(false);
@@ -735,19 +739,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         </View>
       )}
 
-      {/* Sticky Sub-Forums Navigation Bar */}
-      <View
-        style={[
-          { paddingVertical: 4, marginBottom: spacing.xs, zIndex: 15 },
-          Platform.OS === 'web' && ({
-            position: 'sticky',
-            top: 0,
-            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-          } as any),
-        ]}
-      >
       {/* Sub-Forums Navigation Bar */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, paddingHorizontal: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -765,8 +756,16 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
       {/* Horizontal Channel Filter Pills */}
       <ScrollView
+        ref={channelScrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          channelScrollXRef.current = e.nativeEvent.contentOffset.x;
+        }}
+        onLayout={(e) => {
+          channelViewportWidthRef.current = e.nativeEvent.layout.width;
+        }}
         contentContainerStyle={{ gap: 8, paddingRight: 16, paddingBottom: 6 }}
         style={{ width: '100%', flexGrow: 0, marginBottom: spacing.xs }}
         {...({ 'data-horizontal-scroll': 'true' } as any)}
@@ -778,7 +777,33 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           return (
             <Pressable
               key={ch.id}
-              onPress={() => setSelectedChannel(ch.category)}
+              onLayout={(e) => {
+                const { x, width } = e.nativeEvent.layout;
+                channelLayoutsRef.current[ch.id] = { x, width };
+              }}
+              onPress={() => {
+                const preservedX = channelScrollXRef.current;
+                setSelectedChannel(ch.category);
+                requestAnimationFrame(() => {
+                  const pillLayout = channelLayoutsRef.current[ch.id];
+                  const viewportWidth = channelViewportWidthRef.current;
+                  let targetX = preservedX;
+                  if (pillLayout && viewportWidth > 0) {
+                    const leftPad = 12;
+                    const rightPad = 24;
+                    if (pillLayout.x < preservedX + leftPad) {
+                      targetX = Math.max(0, pillLayout.x - leftPad);
+                    } else if (pillLayout.x + pillLayout.width > preservedX + viewportWidth - rightPad) {
+                      targetX = Math.max(0, pillLayout.x + pillLayout.width - viewportWidth + rightPad);
+                    }
+                  }
+                  channelScrollXRef.current = targetX;
+                  channelScrollRef.current?.scrollTo({
+                    x: targetX,
+                    animated: targetX !== preservedX,
+                  });
+                });
+              }}
               accessibilityRole="button"
               accessibilityState={{ selected }}
               style={[
@@ -853,7 +878,6 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </AppText>
         </Pressable>
       </ScrollView>
-      </View>
 
       {/* Reddit-Style Sub-Forum Space Banner when a specific community is active */}
       {selectedChannel !== null && (
@@ -1649,7 +1673,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={renderHeader()}
         initialNumToRender={8}
         maxToRenderPerBatch={8}
         windowSize={7}

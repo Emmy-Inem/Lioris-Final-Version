@@ -204,30 +204,11 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       </View>
 
       {/* Section: Automatic & Manual Stackable Spotlight Events Carousel */}
-      {filter === 'all' && !searchQuery && carouselData.length > 0 ? (
+      {!searchQuery && carouselData.length > 0 ? (
         <SpotlightEventsCarousel events={carouselData} roleGroup={roleGroup} />
       ) : null}
 
-    </View>
-  );
-
-  const renderMobileFilterBar = () => (
-    <View
-      style={[
-        {
-          paddingVertical: 6,
-          marginBottom: spacing.xs,
-          zIndex: 25,
-          backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-        },
-        Platform.OS === 'web' && ({
-          position: 'sticky',
-          top: 0,
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-        } as any),
-      ]}
-    >
+      <View style={{ paddingVertical: 6, marginBottom: spacing.xs }}>
         {/* Search Input */}
         <View
           style={{
@@ -267,6 +248,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 6, paddingRight: 16, paddingBottom: 4 }}
           style={{ width: '100%', flexGrow: 0 }}
+          {...({ 'data-horizontal-scroll': 'true' } as any)}
         >
           {activeFilters.map((f) => {
             const active = filter === f.key;
@@ -325,6 +307,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           })}
         </ScrollView>
       </View>
+    </View>
   );
 
   return (
@@ -374,7 +357,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           </View>
 
           {/* Section: Featured & Sponsored Events Spotlight Carousel */}
-          {filter === 'all' && !searchQuery && carouselData.length > 0 ? (
+          {!searchQuery && carouselData.length > 0 ? (
             <View style={{ marginBottom: spacing.sm }}>
               <SpotlightEventsCarousel events={carouselData} roleGroup={roleGroup} />
             </View>
@@ -385,16 +368,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
             radius={18}
             padded={false}
             contentStyle={{ padding: spacing.md }}
-            style={[
-              { marginBottom: spacing.lg, zIndex: 20 },
-              Platform.OS === 'web' && ({
-                position: 'sticky',
-                top: 0,
-                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.45)' : '0 8px 24px rgba(0,0,0,0.06)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-              } as any),
-            ]}
+            style={{ marginBottom: spacing.lg }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
               {/* Search Field */}
@@ -433,6 +407,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                 ref={desktopFiltersScrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                {...({ 'data-horizontal-scroll': 'true' } as any)}
                 style={[
                   { flex: 1, minWidth: 0 },
                   Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
@@ -526,29 +501,23 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           )}
         </ScrollView>
       ) : (
-        /* Mobile Feed with Sticky Header and Horizontal Carousel */
+        /* Mobile Feed with Header and Horizontal Carousel */
         <FlatList
-          data={[{ id: '__sticky_filter__' }, ...filtered]}
+          data={filtered}
           keyExtractor={(item) => item.id}
-          stickyHeaderIndices={[0]}
           initialNumToRender={8}
           maxToRenderPerBatch={8}
           windowSize={7}
-          renderItem={({ item }) => {
-            if (item.id === '__sticky_filter__') {
-              return renderMobileFilterBar();
-            }
-            return (
-              <View style={{ marginBottom: 12 }}>
-                <EventCard event={item as CampusEvent} />
-              </View>
-            );
-          }}
-          ListHeaderComponent={renderHeader}
+          renderItem={({ item }) => (
+            <View style={{ marginBottom: 12 }}>
+              <EventCard event={item} />
+            </View>
+          )}
+          ListHeaderComponent={renderHeader()}
           showsVerticalScrollIndicator={false}
           onRefresh={refetch}
           refreshing={isRefetching}
-          contentContainerStyle={{ paddingBottom: 150, minHeight: '100%' }}
+          contentContainerStyle={{ paddingBottom: 150 }}
           ListEmptyComponent={
             isLoading ? (
               <EventCardSkeletonGrid count={4} />

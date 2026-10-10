@@ -507,6 +507,7 @@ export default function ResourcesScreen() {
             showsHorizontalScrollIndicator={false}
             style={{ marginBottom: 8 }}
             contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
+            {...({ 'data-horizontal-scroll': 'true' } as any)}
           >
             {universityPortalFilters.map((item) => {
               const isSelected = selectedPortalFilter === item.code;
@@ -624,26 +625,8 @@ export default function ResourcesScreen() {
         </ScrollView>
       </View>
 
-    </View>
-  );
-
-  const renderMobileResourcesFilterBar = () => (
-    <View
-      style={[
-        {
-          paddingVertical: 6,
-          marginBottom: spacing.xs,
-          zIndex: 25,
-          backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-        },
-        Platform.OS === 'web' && ({
-          position: 'sticky',
-          top: 0,
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-        } as any),
-      ]}
-    >
+      {/* Academic Repository & Study Files Filter Bar */}
+      <View style={{ paddingVertical: 6, marginBottom: spacing.xs }}>
         <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, marginBottom: 6, fontSize: 10.5 }}>
           ACADEMIC REPOSITORY & STUDY FILES
         </AppText>
@@ -748,7 +731,8 @@ export default function ResourcesScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 6, paddingVertical: 2 }}
+          contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
+          {...({ 'data-horizontal-scroll': 'true' } as any)}
         >
           {RESOURCE_CATEGORIES.map((cat) => {
             const isActive = filters.resourceType === cat.filter;
@@ -806,6 +790,7 @@ export default function ResourcesScreen() {
           })}
         </ScrollView>
       </View>
+    </View>
   );
   return (
     <ScreenContainer glow={true}>
@@ -1003,6 +988,7 @@ export default function ResourcesScreen() {
                 showsHorizontalScrollIndicator={false}
                 style={{ marginBottom: 10 }}
                 contentContainerStyle={{ gap: 6, paddingVertical: 2, paddingRight: 16 }}
+                {...({ 'data-horizontal-scroll': 'true' } as any)}
               >
                 {universityPortalFilters.map((item) => {
                   const isSelected = selectedPortalFilter === item.code;
@@ -1083,6 +1069,7 @@ export default function ResourcesScreen() {
               ref={portalsScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
+              {...({ 'data-horizontal-scroll': 'true' } as any)}
               style={[
                 { flexGrow: 0 },
                 Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
@@ -1124,16 +1111,7 @@ export default function ResourcesScreen() {
           {/* Filter & Search Toolbar */}
           <SolidCard
             radius={18}
-            style={[
-              { padding: spacing.md, marginBottom: spacing.lg, zIndex: 25 },
-              Platform.OS === 'web' && ({
-                position: 'sticky',
-                top: 0,
-                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.45)' : '0 8px 24px rgba(0,0,0,0.06)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-              } as any),
-            ]}
+            style={{ padding: spacing.md, marginBottom: spacing.lg }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
               {/* Search Input */}
@@ -1172,6 +1150,7 @@ export default function ResourcesScreen() {
                 ref={categoriesScrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                {...({ 'data-horizontal-scroll': 'true' } as any)}
                 style={[
                   { flex: 1, minWidth: 0 },
                   Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
@@ -1305,20 +1284,15 @@ export default function ResourcesScreen() {
           )}
         </ScrollView>
       ) : (
-        /* Mobile Single Column FlatList with Sticky Filter Bar */
+        /* Mobile Single Column FlatList */
         <FlatList
-          data={[{ id: '__sticky_resources_filter__' }, ...displayedResources]}
+          data={displayedResources}
           keyExtractor={(item) => item.id}
-          stickyHeaderIndices={[0]}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={renderHeader()}
           initialNumToRender={8}
           maxToRenderPerBatch={8}
-          contentContainerStyle={{ paddingBottom: 130, minHeight: '100%' }}
-          renderItem={({ item }) => {
-            if (item.id === '__sticky_resources_filter__') {
-              return renderMobileResourcesFilterBar();
-            }
-            const res = item as Resource;
+          contentContainerStyle={{ paddingBottom: 130 }}
+          renderItem={({ item: res }) => {
             return (
               <View>
                 {isMineView ? <MyUploadStatusBanner resource={res} /> : null}

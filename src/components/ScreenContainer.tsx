@@ -47,14 +47,14 @@ export function ScreenContainer({
  const content = (
  <View
  style={[
- styles.flex,
+ scrollable ? styles.scrollableContent : styles.flex,
  !noPadding && { paddingHorizontal: containerPadding },
  isDesktop && !fluidWidth && {
  maxWidth: contentMaxWidth,
  width: '100%',
  alignSelf: 'center',
  },
- Platform.OS === 'web' && { flex: 1, minHeight: 0 },
+ !scrollable && Platform.OS === 'web' && { flex: 1, minHeight: 0 },
  style,
  ]}
  {...rest}
@@ -107,5 +107,10 @@ const styles = StyleSheet.create({
  minHeight: 0,
  minWidth: 0,
  ...(Platform.OS === 'web' ? { height: '100%' } : {}),
+ },
+ scrollableContent: {
+ flexGrow: 1,
+ width: '100%',
+ minWidth: 0,
  },
 });
